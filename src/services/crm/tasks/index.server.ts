@@ -1,13 +1,7 @@
 'use server';
 
 import type { CrmTask } from '@/types/crm';
-
-interface TasksStats {
-  total: number;
-  completed: number;
-  pending: number;
-  overdue: number;
-}
+import type { TasksStats } from './contracts';
 
 // Sample implementation for server-side - replace with actual server repo later
 class SampleTasksRepository {
@@ -101,5 +95,5 @@ export async function completeTask(id: string, notes = ''): Promise<void> {
 }
 
 export async function getTasksStats(userId: string | null = null): Promise<TasksStats> {
-  return repo.getTasksStats(userId);
+  return repo.getTasksStats(userId ?? undefined);
 }

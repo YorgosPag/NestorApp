@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef } from 'react';
-import type { Contact } from '@/types/contacts';
+import type { Contact, CompanyContact, IndividualContact, ServiceContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
@@ -49,37 +49,59 @@ export function useContactLivePreview({
     }
 
     try {
-      // Create a temporary contact with updated data
-      const updatedContact: Contact = {
-        ...editContact!,
-        // Map form data back to contact properties
-        type: formData.type,
+      const existingContact = editContact as Contact;
+
+      if (formData.type === 'company') {
+        const vatNumber = (
+          formData.vatNumber ||
+          formData.afm ||
+          formData.companyVatNumber ||
+          (existingContact.type === 'company' ? existingContact.vatNumber : '')
+        );
+
+        const updatedContact: CompanyContact = {
+          ...existingContact,
+          type: 'company',
+          companyName: formData.companyName,
+          vatNumber,
+          legalForm: formData.legalForm || undefined,
+          taxOffice:
+            formData.taxOffice ||
+            (existingContact.type === 'company' ? existingContact.taxOffice : undefined),
+          registrationNumber:
+            formData.gemiNumber ||
+            (existingContact.type === 'company' ? existingContact.registrationNumber : undefined),
+          emails: existingContact.emails,
+          phones: existingContact.phones
+        };
+
+        return updatedContact;
+      }
+
+      if (formData.type === 'service') {
+        const updatedContact: ServiceContact = {
+          ...existingContact,
+          type: 'service',
+          serviceName: formData.serviceName,
+          serviceType: formData.serviceType,
+          emails: existingContact.emails,
+          phones: existingContact.phones
+        };
+
+        return updatedContact;
+      }
+
+      const updatedContact: IndividualContact = {
+        ...existingContact,
+        type: 'individual',
         firstName: formData.firstName,
         lastName: formData.lastName,
-        companyName: formData.companyName,
-        serviceName: formData.serviceName,
-
-        // 🏢 ΓΕΜΗ & Company Information
-        vatNumber: formData.vatNumber || formData.afm || editContact?.vatNumber || '',
-        gemiNumber: formData.gemiNumber,
-        legalForm: formData.legalForm || undefined,
-        gemiStatus: formData.gemiStatus,
-        distintiveTitle: formData.distintiveTitle,
-        kadCode: formData.kadCode,
-        activityDescription: formData.activityDescription,
-        activityType: formData.activityType,
-        chamber: formData.chamber,
-
-        // 💰 Capital & Financial
-        capital: formData.capital,
-        currency: formData.currency,
-        extrabalanceCapital: formData.extrabalanceCapital,
-
-        // 📧 Contact Information - Keep existing structure
-        emails: editContact!.emails,
-        phones: editContact!.phones,
-
-        // Other fields that should be updated live...
+        vatNumber:
+          formData.vatNumber ||
+          formData.afm ||
+          (existingContact.type === 'individual' ? existingContact.vatNumber : undefined),
+        emails: existingContact.emails,
+        phones: existingContact.phones
       };
 
       return updatedContact;
@@ -95,18 +117,13 @@ export function useContactLivePreview({
     formData.lastName,
     formData.companyName,
     formData.serviceName,
+    formData.serviceType,
     formData.vatNumber,
+    formData.companyVatNumber,
+    formData.afm,
     formData.gemiNumber,
     formData.legalForm,
-    formData.gemiStatus,
-    formData.distintiveTitle,
-    formData.kadCode,
-    formData.activityDescription,
-    formData.activityType,
-    formData.chamber,
-    formData.capital,
-    formData.currency,
-    formData.extrabalanceCapital,
+    formData.taxOffice,
     editContact?.id // Track only ID to prevent deep comparison
   ]);
 

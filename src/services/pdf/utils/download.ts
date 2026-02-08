@@ -11,7 +11,8 @@ export const downloadPDF = (pdfData: Uint8Array, filename: string) => {
     return;
   }
 
-  const blob = new Blob([pdfData], { type: 'application/pdf' });
+  const blobData = Uint8Array.from(pdfData);
+  const blob = new Blob([blobData], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   
   const link = document.createElement('a');

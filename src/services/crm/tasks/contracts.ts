@@ -1,6 +1,12 @@
 'use server';
 import type { CrmTask } from '@/types/crm';
-import type { getTasksStats } from './services/TasksService';
+
+export interface TasksStats {
+  total: number;
+  completed: number;
+  pending: number;
+  overdue: number;
+}
 
 export interface ITasksRepository {
   add(data: Omit<CrmTask,'id'|'createdAt'|'updatedAt'|'completedAt'|'reminderSent'>): Promise<{id:string}>;
@@ -13,7 +19,7 @@ export interface ITasksRepository {
   update(id: string, updates: Partial<CrmTask>): Promise<void>;
   delete(id: string): Promise<void>;
   deleteAll(): Promise<number>;
-  getStats(userId?: string|null): Promise<Awaited<ReturnType<typeof getTasksStats>>>;
+  getStats(userId?: string|null): Promise<TasksStats>;
 }
 
 export interface ITasksService {
@@ -28,5 +34,5 @@ export interface ITasksService {
   deleteTask(taskId: string): Promise<{ success: boolean }>;
   deleteAllTasks(): Promise<{ success: boolean; deletedCount: number }>;
   completeTask(taskId: string, notes?: string): Promise<{ success: boolean }>;
-  getTasksStats(userId?: string | null): Promise<Awaited<ReturnType<typeof getTasksStats>>>;
+  getTasksStats(userId?: string | null): Promise<TasksStats>;
 }

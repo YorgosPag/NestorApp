@@ -14,7 +14,8 @@ import {
   ContactRelationship,
   OrganizationTree,
   OrganizationHierarchyNode,
-  ContactWithRelationship
+  ContactWithRelationship,
+  RelationshipType
 } from '@/types/contacts/relationships';
 import { Contact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -134,43 +135,25 @@ export class OrganizationHierarchyService {
         };
       }
 
-      // Build departments από REAL data
-      const departments: Record<string, any[]> = {};
-      employees.forEach(emp => {
-        const dept = emp.relationship.department || 'Γενικό';
-        if (!departments[dept]) {
-          departments[dept] = [];
-        }
-        departments[dept].push({
-          position: emp.relationship.position,
-          relationshipType: emp.relationship.relationshipType
-        });
-      });
+      // Build hierarchy nodes and derive structured data
+      const nodes = await this.buildHierarchyNodes(employees);
+      const nodesWithLevels = await this.calculateHierarchyLevels(nodes);
+      const departments = this.buildDepartmentBreakdown(nodesWithLevels);
+      const statistics = this.calculateOrganizationStatistics(nodesWithLevels, departments);
+      const topLevel = this.identifyTopLevelExecutives(nodesWithLevels);
 
-      console.log('🏢 HIERARCHY: Built departments:', Object.keys(departments));
+      const children = nodesWithLevels
+        .map(node => ({
+          id: node.contact.id,
+          position: node.relationship.position,
+          relationshipType: node.relationship.relationshipType
+        }))
+        .filter(child => Boolean(child.id)) as Array<{
+          id: string;
+          position?: string;
+          relationshipType?: string;
+        }>;
 
-      // Calculate REAL statistics
-      const statistics = {
-        totalEmployees: employees.length,
-        totalDepartments: Object.keys(departments).length,
-        averageTeamSize: employees.length > 0 ? Math.round(employees.length / Math.max(Object.keys(departments).length, 1)) : 0,
-        hierarchyDepth: this.calculateRealHierarchyDepth(employees)
-      };
-
-      // Convert employees to simple format για topLevel
-      const topLevel = employees.map(emp => ({
-        contact: emp.contact,
-        relationship: emp.relationship,
-        position: emp.relationship.position,
-        relationshipType: emp.relationship.relationshipType
-      }));
-
-      // 🔧 CRITICAL FIX: Create children array for OrganizationTree component
-      const children = employees.map(emp => ({
-        id: emp.contact.id!, // The contact ID of the employee
-        position: emp.relationship.position,
-        relationshipType: emp.relationship.relationshipType
-      }));
 
       console.log('👥 HIERARCHY: Created children array with', children.length, 'employees:',
         children.map(c => ({ id: c.id, position: c.position, type: c.relationshipType }))
@@ -259,7 +242,7 @@ export class OrganizationHierarchyService {
         const relationships = await RelationshipQueryBuilder
           .create()
           .fromContact(currentEmployee)
-          .ofTypes(['employee', 'manager', 'director', 'reports_to'])
+          .ofTypes(['employee', 'manager', 'director'])
           .activeOnly()
           .compile();
 
@@ -429,7 +412,14 @@ export class OrganizationHierarchyService {
    */
   private static async getOrganizationEmployees(organizationId: string): Promise<ContactWithRelationship[]> {
     try {
-      const employmentTypes = ['employee', 'manager', 'director', 'executive', 'civil_servant', 'department_head'];
+      const employmentTypes: RelationshipType[] = [
+        'employee',
+        'manager',
+        'director',
+        'executive',
+        'civil_servant',
+        'department_head'
+      ];
       const relationships = await FirestoreRelationshipAdapter.getOrganizationEmployees(organizationId, employmentTypes);
 
       const employees: ContactWithRelationship[] = [];

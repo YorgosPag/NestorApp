@@ -333,7 +333,7 @@ export const createPlatformIconStyles = (
 /**
  * 📝 Generate Platform Label Styles
  */
-export const generatePlatformLabelStyles = (size: 'xs' | 'sm' | 'md' = 'xs') => {
+export const generatePlatformLabelStyles = (size: 'xs' | 'sm' | 'base' = 'xs') => {
   return designSystem.cn(
     designSystem.getTypographyClass(size, 'medium'),
     'transition-opacity duration-200',

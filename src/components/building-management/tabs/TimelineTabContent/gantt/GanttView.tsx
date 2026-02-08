@@ -37,6 +37,11 @@ import {
   Pencil,
   Palette,
   Trash2,
+  Download,
+  FileText,
+  ImageIcon,
+  FileImage,
+  Table2,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -48,6 +53,13 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { typography as designTypography } from '@/styles/design-tokens';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +74,12 @@ import {
 import { UnifiedColorPicker } from '@/subapps/dxf-viewer/ui/color';
 import type { Building } from '../../../BuildingsPageContent';
 
+import {
+  exportGanttToPDF,
+  exportGanttAsImage,
+  exportGanttToExcel,
+} from '@/services/gantt-export';
+import type { GanttExportFormat } from '@/services/gantt-export';
 import { useConstructionGantt } from '../../../hooks/useConstructionGantt';
 import { ConstructionPhaseDialog } from '../../../dialogs/ConstructionPhaseDialog';
 import type { GanttTaskStatus } from './gantt-mock-data';
@@ -119,7 +137,7 @@ const AVAILABLE_VIEW_MODES: ViewMode[] = [
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function GanttView({ building }: GanttViewProps) {
-  const { t } = useTranslation('building');
+  const { t, i18n } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
   const iconSizes = useIconSizes();
   const typography = useTypography();
@@ -164,6 +182,10 @@ export function GanttView({ building }: GanttViewProps) {
   const [colorPickerTarget, setColorPickerTarget] = useState<ColorPickerTarget | null>(null);
   const [pendingColor, setPendingColor] = useState('#3b82f6');
   const contextMenuRef = useRef<HTMLElement>(null);
+
+  // ─── Export State ─────────────────────────────────────────────────────
+  const ganttChartRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Custom hover tooltip state — portal-based to escape overflow containers
   const [tooltipData, setTooltipData] = useState<HoverTooltipData | null>(null);
@@ -351,16 +373,115 @@ export function GanttView({ building }: GanttViewProps) {
   // which clips it behind the header. This custom tooltip uses createPortal to
   // document.body, escaping all overflow containers.
 
+  // Tooltip labels with safe fallback — ensures correct language even if
+  // namespace lazy-loading hasn't completed when the tooltip first renders
+  const tooltipLabels = useMemo(() => {
+    const isGreek = i18n.language === 'el';
+    const safeLabel = (key: string, el: string, en: string): string => {
+      const result = t(`tabs.timeline.gantt.tooltip.${key}`);
+      // If t() returned the full key path (namespace not loaded), use fallback
+      return result.includes('.') ? (isGreek ? el : en) : result;
+    };
+    return {
+      start: safeLabel('start', 'Έναρξη', 'Start'),
+      end: safeLabel('end', 'Λήξη', 'End'),
+      duration: safeLabel('duration', 'Διάρκεια', 'Duration'),
+      progress: safeLabel('progress', 'Πρόοδος', 'Progress'),
+      days: safeLabel('days', 'ημέρες', 'days'),
+    };
+  }, [t, i18n.language]);
+
+  // Context menu labels with same safe fallback pattern
+  const contextMenuLabels = useMemo(() => {
+    const isGreek = i18n.language === 'el';
+    const safeLabel = (key: string, el: string, en: string): string => {
+      const result = t(`tabs.timeline.gantt.contextMenu.${key}`);
+      return result.includes('.') ? (isGreek ? el : en) : result;
+    };
+    return {
+      editPhase: safeLabel('editPhase', 'Επεξεργασία Φάσης', 'Edit Phase'),
+      editTask: safeLabel('editTask', 'Επεξεργασία Εργασίας', 'Edit Task'),
+      newPhase: safeLabel('newPhase', 'Νέα Φάση', 'New Phase'),
+      newTask: safeLabel('newTask', 'Νέα Εργασία', 'New Task'),
+      changeColor: safeLabel('changeColor', 'Αλλαγή Χρώματος', 'Change Color'),
+      colorPickerTitle: safeLabel('colorPickerTitle', 'Επιλογή Χρώματος Μπάρας', 'Choose Bar Color'),
+      delete: safeLabel('delete', 'Διαγραφή', 'Delete'),
+    };
+  }, [t, i18n.language]);
+
+  // Export labels with safe fallback (same pattern as tooltip/contextMenu)
+  const exportLabels = useMemo(() => {
+    const isGreek = i18n.language === 'el';
+    const safeLabel = (key: string, el: string, en: string): string => {
+      const result = t(`tabs.timeline.gantt.export.${key}`);
+      return result.includes('.') ? (isGreek ? el : en) : result;
+    };
+    return {
+      export: safeLabel('export', 'Εξαγωγή', 'Export'),
+      pdf: safeLabel('pdf', 'PDF (Έγγραφο)', 'PDF (Document)'),
+      png: safeLabel('png', 'PNG (Εικόνα)', 'PNG (Image)'),
+      svg: safeLabel('svg', 'SVG (Διάνυσμα)', 'SVG (Vector)'),
+      excel: safeLabel('excel', 'Excel (Δεδομένα)', 'Excel (Data)'),
+    };
+  }, [t, i18n.language]);
+
+  // Export handler — dispatches to format-specific exporter
+  const handleExport = useCallback(async (format: GanttExportFormat) => {
+    if (!ganttChartRef.current || isExporting) return;
+    setIsExporting(true);
+    try {
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const baseName = `Gantt_${building.name ?? 'Chart'}_${timestamp}`;
+      const ext = format === 'excel' ? 'xlsx' : format;
+
+      switch (format) {
+        case 'pdf':
+          await exportGanttToPDF({
+            format,
+            filename: `${baseName}.pdf`,
+            buildingName: building.name ?? '',
+            taskGroups,
+            chartElement: ganttChartRef.current,
+          });
+          break;
+        case 'png':
+        case 'svg':
+          await exportGanttAsImage(ganttChartRef.current, format, `${baseName}.${ext}`);
+          break;
+        case 'excel':
+          await exportGanttToExcel({
+            format,
+            filename: `${baseName}.xlsx`,
+            buildingName: building.name ?? '',
+            taskGroups,
+            chartElement: ganttChartRef.current,
+          });
+          break;
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  }, [building.name, taskGroups, isExporting]);
+
+  // Compute tooltip coordinates clamped to viewport
+  const computeTooltipPosition = useCallback((clientX: number, clientY: number) => {
+    const tooltipWidth = 220;
+    const tooltipHeight = 120;
+    return {
+      x: Math.min(clientX + 16, window.innerWidth - tooltipWidth - 8),
+      y: Math.max(8, Math.min(clientY - tooltipHeight, window.innerHeight - tooltipHeight - 8)),
+    };
+  }, []);
+
   const handleGanttPointerMove = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     const taskItem = target.closest('.rmg-task-item') as HTMLElement | null;
 
-    // Update position via ref (no re-render needed for position changes)
+    // Update position via ref (no re-render needed for same-task moves)
     if (tooltipElRef.current && taskItem) {
-      const x = Math.min(e.clientX + 16, window.innerWidth - 220);
-      const y = Math.max(8, e.clientY - 110);
-      tooltipElRef.current.style.left = `${x}px`;
-      tooltipElRef.current.style.top = `${y}px`;
+      const pos = computeTooltipPosition(e.clientX, e.clientY);
+      tooltipElRef.current.style.left = `${pos.x}px`;
+      tooltipElRef.current.style.top = `${pos.y}px`;
     }
 
     if (!taskItem) {
@@ -377,6 +498,9 @@ export function GanttView({ building }: GanttViewProps) {
 
     if (taskName === hoveredTaskRef.current) return;
     hoveredTaskRef.current = taskName;
+
+    // Calculate initial position for correct first-frame render
+    const initialPos = computeTooltipPosition(e.clientX, e.clientY);
 
     for (const group of taskGroups) {
       const matched = group.tasks.find((tsk) => tsk.name === taskName);
@@ -396,6 +520,8 @@ export function GanttView({ building }: GanttViewProps) {
           endDate: end.toLocaleDateString('el-GR'),
           duration: durationDays,
           progress: taskProgress,
+          x: initialPos.x,
+          y: initialPos.y,
         });
         return;
       }
@@ -403,12 +529,41 @@ export function GanttView({ building }: GanttViewProps) {
 
     hoveredTaskRef.current = '';
     setTooltipData(null);
-  }, [taskGroups]);
+  }, [taskGroups, computeTooltipPosition]);
 
   const handleGanttPointerLeave = useCallback(() => {
     hoveredTaskRef.current = '';
     setTooltipData(null);
   }, []);
+
+  // Refresh tooltip data when taskGroups change (after drag/resize/progress edit)
+  useEffect(() => {
+    const taskName = hoveredTaskRef.current;
+    if (!taskName || !tooltipData) return;
+
+    for (const group of taskGroups) {
+      const matched = group.tasks.find((tsk) => tsk.name === taskName);
+      if (matched) {
+        const start = matched.startDate instanceof Date
+          ? matched.startDate : new Date(matched.startDate);
+        const end = matched.endDate instanceof Date
+          ? matched.endDate : new Date(matched.endDate);
+        const durationDays = Math.ceil(
+          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const taskProgress = (matched as Task & { progress?: number }).progress ?? 0;
+
+        setTooltipData((prev) => prev ? {
+          ...prev,
+          startDate: start.toLocaleDateString('el-GR'),
+          endDate: end.toLocaleDateString('el-GR'),
+          duration: durationDays,
+          progress: taskProgress,
+        } : null);
+        return;
+      }
+    }
+  }, [taskGroups]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally watches only taskGroups
 
   // Timeline bounds — aligned to month boundaries for correct bar positioning
   const timelineBounds = useMemo(() => {
@@ -481,7 +636,7 @@ export function GanttView({ building }: GanttViewProps) {
 
   return (
     <section className={cn('flex flex-col', spacingTokens.gap.sm)} aria-label={t('tabs.timeline.gantt.title')}>
-      {/* Toolbar: New Phase / New Task */}
+      {/* Toolbar: New Phase / New Task / Export */}
       <nav className={cn('flex items-center', spacingTokens.gap.sm)} aria-label="Gantt actions">
         <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
           <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
@@ -496,6 +651,39 @@ export function GanttView({ building }: GanttViewProps) {
             <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
             {t('tabs.timeline.gantt.actions.newTask')}
           </Button>
+        )}
+
+        {/* Export Dropdown — PDF, PNG, SVG, Excel */}
+        {!isEmpty && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isExporting}>
+                <Download className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {isExporting
+                  ? t('tabs.timeline.gantt.export.exporting')
+                  : exportLabels.export}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <FileText className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.pdf}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('png')}>
+                <ImageIcon className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.png}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('svg')}>
+                <FileImage className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.svg}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <Table2 className={cn(iconSizes.xs, spacingTokens.margin.right.sm)} />
+                {exportLabels.excel}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </nav>
 
@@ -532,32 +720,34 @@ export function GanttView({ building }: GanttViewProps) {
           onPointerLeave={handleGanttPointerLeave}
         >
           <CardContent className={spacingTokens.padding.none} onMouseDownCapture={handleGanttMouseDown}>
-            <GanttChart
-              tasks={taskGroups}
-              startDate={timelineBounds.startDate}
-              endDate={timelineBounds.endDate}
-              title={t('tabs.timeline.gantt.title')}
-              headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
-              viewMode={viewMode}
-              viewModes={AVAILABLE_VIEW_MODES}
-              onViewModeChange={setViewMode}
-              darkMode={isDarkMode}
-              showProgress
-              showCurrentDateMarker
-              todayLabel={t('tabs.timeline.gantt.toolbar.today')}
-              editMode
-              allowProgressEdit
-              allowTaskResize
-              allowTaskMove
-              movementThreshold={5}
-              onTaskUpdate={handleTaskUpdate}
-              onTaskClick={handleTaskClick}
-              onTaskDoubleClick={handleTaskDoubleClick}
-              onGroupClick={handleGroupClick}
-              locale="el-GR"
-              fontSize={designTypography.fontSize.sm}
-              getTaskColor={getTaskBarColor}
-            />
+            <div ref={ganttChartRef}>
+              <GanttChart
+                tasks={taskGroups}
+                startDate={timelineBounds.startDate}
+                endDate={timelineBounds.endDate}
+                title={t('tabs.timeline.gantt.title')}
+                headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
+                viewMode={viewMode}
+                viewModes={AVAILABLE_VIEW_MODES}
+                onViewModeChange={setViewMode}
+                darkMode={isDarkMode}
+                showProgress
+                showCurrentDateMarker
+                todayLabel={t('tabs.timeline.gantt.toolbar.today')}
+                editMode
+                allowProgressEdit
+                allowTaskResize
+                allowTaskMove
+                movementThreshold={5}
+                onTaskUpdate={handleTaskUpdate}
+                onTaskClick={handleTaskClick}
+                onTaskDoubleClick={handleTaskDoubleClick}
+                onGroupClick={handleGroupClick}
+                locale="el-GR"
+                fontSize={designTypography.fontSize.sm}
+                getTaskColor={getTaskBarColor}
+              />
+            </div>
           </CardContent>
         </Card>
       )}
@@ -566,8 +756,13 @@ export function GanttView({ building }: GanttViewProps) {
       {contextMenu && createPortal(
         <nav
           ref={contextMenuRef}
-          className="fixed z-50 min-w-48 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          className="min-w-48 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+          style={{
+            position: 'fixed',
+            left: Math.min(contextMenu.x, window.innerWidth - 200),
+            top: Math.min(contextMenu.y, window.innerHeight - 280),
+            zIndex: 999999,
+          }}
           role="menu"
         >
           <button
@@ -578,8 +773,8 @@ export function GanttView({ building }: GanttViewProps) {
           >
             <Pencil className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
             {contextMenu.isPhaseBar
-              ? t('tabs.timeline.gantt.contextMenu.editPhase')
-              : t('tabs.timeline.gantt.contextMenu.editTask')}
+              ? contextMenuLabels.editPhase
+              : contextMenuLabels.editTask}
           </button>
           <div className="-mx-1 my-1 h-px bg-border" role="separator" />
           <button
@@ -589,7 +784,7 @@ export function GanttView({ building }: GanttViewProps) {
             onClick={handleNewPhaseFromMenu}
           >
             <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-            {t('tabs.timeline.gantt.contextMenu.newPhase')}
+            {contextMenuLabels.newPhase}
           </button>
           <button
             type="button"
@@ -598,7 +793,7 @@ export function GanttView({ building }: GanttViewProps) {
             onClick={handleNewTaskFromMenu}
           >
             <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-            {t('tabs.timeline.gantt.contextMenu.newTask')}
+            {contextMenuLabels.newTask}
           </button>
           <div className="-mx-1 my-1 h-px bg-border" role="separator" />
           <button
@@ -608,7 +803,7 @@ export function GanttView({ building }: GanttViewProps) {
             onClick={handleChangeColorFromMenu}
           >
             <Palette className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-            {t('tabs.timeline.gantt.contextMenu.changeColor')}
+            {contextMenuLabels.changeColor}
           </button>
           <div className="-mx-1 my-1 h-px bg-border" role="separator" />
           <button
@@ -618,7 +813,7 @@ export function GanttView({ building }: GanttViewProps) {
             onClick={handleDeleteFromMenu}
           >
             <Trash2 className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-            {t('tabs.timeline.gantt.contextMenu.delete')}
+            {contextMenuLabels.delete}
           </button>
         </nav>,
         document.body
@@ -628,25 +823,30 @@ export function GanttView({ building }: GanttViewProps) {
       {tooltipData && createPortal(
         <aside
           ref={tooltipElRef}
-          className="fixed z-[99999] min-w-48 rounded border bg-popover p-2 text-popover-foreground text-xs shadow-lg pointer-events-none"
-          style={{ left: 0, top: 0 }}
+          className="min-w-48 rounded border bg-popover p-2 text-popover-foreground text-xs shadow-lg pointer-events-none"
+          style={{
+            position: 'fixed',
+            left: tooltipData.x,
+            top: tooltipData.y,
+            zIndex: 999999,
+          }}
         >
           <p className="font-bold mb-1">{tooltipData.name}</p>
           <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
             <dt className="text-muted-foreground font-semibold">
-              {t('tabs.timeline.gantt.tooltip.start')}:
+              {tooltipLabels.start}:
             </dt>
             <dd>{tooltipData.startDate}</dd>
             <dt className="text-muted-foreground font-semibold">
-              {t('tabs.timeline.gantt.tooltip.end')}:
+              {tooltipLabels.end}:
             </dt>
             <dd>{tooltipData.endDate}</dd>
             <dt className="text-muted-foreground font-semibold">
-              {t('tabs.timeline.gantt.tooltip.duration')}:
+              {tooltipLabels.duration}:
             </dt>
-            <dd>{tooltipData.duration} {t('tabs.timeline.gantt.tooltip.days')}</dd>
+            <dd>{tooltipData.duration} {tooltipLabels.days}</dd>
             <dt className="text-muted-foreground font-semibold">
-              {t('tabs.timeline.gantt.tooltip.progress')}:
+              {tooltipLabels.progress}:
             </dt>
             <dd>{tooltipData.progress}%</dd>
           </dl>
@@ -681,7 +881,7 @@ export function GanttView({ building }: GanttViewProps) {
       <Dialog open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('tabs.timeline.gantt.contextMenu.colorPickerTitle')}</DialogTitle>
+            <DialogTitle>{contextMenuLabels.colorPickerTitle}</DialogTitle>
           </DialogHeader>
           <UnifiedColorPicker
             variant="full"

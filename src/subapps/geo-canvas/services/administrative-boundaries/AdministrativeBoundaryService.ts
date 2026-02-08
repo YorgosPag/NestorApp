@@ -923,24 +923,44 @@ export class AdministrativeBoundaryService {
     return lat >= 34.5 && lat <= 42.0 && lng >= 19.0 && lng <= 29.5;
   }
 
+
+  private getStringProperty(properties: Record<string, unknown> | null, key: string): string | undefined {
+    const value = properties?.[key];
+    return typeof value === 'string' ? value : undefined;
+  }
+
+  private getIdProperty(properties: Record<string, unknown> | null, key: string): string | undefined {
+    const value = properties?.[key];
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return String(value);
+    return undefined;
+  }
+
+  private getPolygonRings(geometry: Geometry): number[][][] | null {
+    if (geometry.type !== 'Polygon') return null;
+    const coordinates = geometry.coordinates;
+    if (!Array.isArray(coordinates) || coordinates.length === 0) return null;
+    if (!Array.isArray(coordinates[0])) return null;
+    return coordinates as number[][][];
+  }
+
   /**
    * Calculate center point από boundary geometry
    */
   calculateBoundaryCenter(geometry: Geometry): [number, number] | null {
-    if (geometry.type === 'Polygon') {
-      const coordinates = geometry.coordinates[0]; // First ring
-      if (coordinates.length === 0) return null;
+    const rings = this.getPolygonRings(geometry);
+    if (!rings || rings.length === 0) return null;
 
-      const lngs = coordinates.map((coord: number[]) => coord[0]);
-      const lats = coordinates.map((coord: number[]) => coord[1]);
+    const coordinates = rings[0]; // First ring
+    if (coordinates.length === 0) return null;
 
-      const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
-      const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+    const lngs = coordinates.map((coord: number[]) => coord[0]);
+    const lats = coordinates.map((coord: number[]) => coord[1]);
 
-      return [centerLng, centerLat];
-    }
+    const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
+    const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
 
-    return null;
+    return [centerLng, centerLat];
   }
 
   /**
@@ -948,8 +968,9 @@ export class AdministrativeBoundaryService {
    */
   simplifyBoundary(geometry: Geometry, tolerance = 0.001): Geometry {
     // Simple Douglas-Peucker-style simplification
-    if (geometry.type === 'Polygon') {
-      const simplified = geometry.coordinates.map(ring =>
+    const rings = this.getPolygonRings(geometry);
+    if (rings) {
+      const simplified = rings.map(ring =>
         this.simplifyRing(ring, tolerance)
       );
 

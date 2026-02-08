@@ -84,6 +84,7 @@ export async function createAssignmentPolicy(
     id: `rule_${index + 1}`,
   }));
 
+  const createdAt = new Date().toISOString();
   const newPolicy: AssignmentPolicy = {
     id: newPolicyRef.id,
     companyId: input.companyId,
@@ -95,11 +96,14 @@ export async function createAssignmentPolicy(
     taskDefaults: input.taskDefaults,
     status: 'active',
     createdBy: input.createdBy,
-    createdAt: serverTimestamp() as Timestamp,
+    createdAt,
     version: 1,
   };
 
-  await setDoc(newPolicyRef, newPolicy);
+  await setDoc(newPolicyRef, {
+    ...newPolicy,
+    createdAt: serverTimestamp()
+  });
 
   return { id: newPolicyRef.id, policy: newPolicy };
 }
@@ -287,14 +291,18 @@ export async function updateAssignmentPolicy(
     }
 
     // Build update data
+    const updatedAt = new Date().toISOString();
     const updateData: Partial<AssignmentPolicy> = {
       ...input,
       updatedBy: input.updatedBy,
-      updatedAt: serverTimestamp() as Timestamp,
+      updatedAt,
       version: (current.version || 1) + 1,
     };
 
-    await updateDoc(policyDoc, updateData);
+    await updateDoc(policyDoc, {
+      ...updateData,
+      updatedAt: serverTimestamp()
+    });
 
     logger.info('Policy updated successfully', { policyId, companyId });
     return { success: true };

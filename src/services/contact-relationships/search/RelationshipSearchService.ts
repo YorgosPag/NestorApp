@@ -372,7 +372,7 @@ export class RelationshipSearchService {
     filters: AdvancedSearchFilters,
     options: {
       includeInactive?: boolean;
-      sortBy?: string;
+      sortBy?: keyof ContactRelationship;
       sortOrder?: 'asc' | 'desc';
       limit?: number;
       offset?: number;

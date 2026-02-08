@@ -18,28 +18,35 @@ import type {
   AdminSearchQuery,
   AdvancedSearchFilters,
   BoundingBox,
-  SearchHistoryEntry
+  SearchHistoryEntry,
+  SearchAnalytics
 } from '../types/administrative-types';
 
 // ✅ ENTERPRISE: GeoJSON type declarations for administrative boundaries
-declare global {
-  namespace GeoJSON {
-    interface Feature {
-      type: 'Feature';
-      geometry: Geometry;
-      properties: Record<string, unknown>;
-      id?: string | number;
-    }
-    interface FeatureCollection {
-      type: 'FeatureCollection';
-      features: Feature[];
-    }
-    interface Geometry {
-      type: string;
-      coordinates?: number[] | number[][] | number[][][] | number[][][][];
-    }
-  }
-}
+
+type AdminPosition = [number, number] | [number, number, number];
+type AdminCoordinates =
+  | AdminPosition
+  | AdminPosition[]
+  | AdminPosition[][]
+  | AdminPosition[][][];
+
+type AdminGeometry = {
+  type: string;
+  coordinates?: AdminCoordinates;
+};
+
+type AdminFeature = {
+  type: 'Feature';
+  geometry: AdminGeometry | null;
+  properties: Record<string, unknown> | null;
+  id?: string | number;
+};
+
+type AdminFeatureCollection = {
+  type: 'FeatureCollection';
+  features: AdminFeature[];
+};
 
 // ============================================================================
 // HOOK TYPES
@@ -59,7 +66,7 @@ interface UseAdministrativeBoundariesReturn {
   isLoading: boolean;
   error: string | null;
   searchResults: AdminSearchResult[];
-  currentBoundary: GeoJSON.Feature | GeoJSON.FeatureCollection | null;
+  currentBoundary: AdminFeature | AdminFeatureCollection | null;
   detectedType: 'municipality' | 'region' | 'general' | null;
   suggestions: string[];
   searchHistory: SearchHistoryEntry[];
@@ -69,15 +76,15 @@ interface UseAdministrativeBoundariesReturn {
   smartSearch: (query: string) => Promise<void>;
   advancedSearch: (query: AdminSearchQuery) => Promise<void>;
   advancedSearchWithFilters: (query: string, filters: AdvancedSearchFilters) => Promise<AdminSearchResult[]>;
-  getMunicipalityBoundary: (name: string) => Promise<GeoJSON.Feature | null>;
-  getRegionBoundary: (name: string) => Promise<GeoJSON.Feature | null>;
-  getMunicipalitiesInRegion: (regionName: string) => Promise<GeoJSON.FeatureCollection | null>;
+  getMunicipalityBoundary: (name: string) => Promise<AdminFeature | null>;
+  getRegionBoundary: (name: string) => Promise<AdminFeature | null>;
+  getMunicipalitiesInRegion: (regionName: string) => Promise<AdminFeatureCollection | null>;
 
   // Phase 6: Postal Code Support
   searchPostalCodes: (searchTerm: string) => Promise<AdminSearchResult[]>;
-  getPostalCodeBoundary: (postalCode: string) => Promise<GeoJSON.Feature | null>;
-  getPostalCodesInMunicipality: (municipalityName: string) => Promise<GeoJSON.FeatureCollection | null>;
-  getPostalCodesInBounds: (bounds: BoundingBox) => Promise<GeoJSON.FeatureCollection | null>;
+  getPostalCodeBoundary: (postalCode: string) => Promise<AdminFeature | null>;
+  getPostalCodesInMunicipality: (municipalityName: string) => Promise<AdminFeatureCollection | null>;
+  getPostalCodesInBounds: (bounds: BoundingBox) => Promise<AdminFeatureCollection | null>;
 
   clearResults: () => void;
   clearCache: () => void;
@@ -92,7 +99,7 @@ interface UseAdministrativeBoundariesReturn {
 
   // Utilities
   isWithinGreece: (lat: number, lng: number) => boolean;
-  calculateCenter: (geometry: GeoJSON.Geometry) => [number, number] | null;
+  calculateCenter: (geometry: AdminGeometry) => [number, number] | null;
   getCacheStats: () => CacheStats;
 }
 
@@ -107,7 +114,8 @@ interface CacheStats {
 interface SearchHistoryExport {
   version: string;
   exportedAt: number;
-  entries: SearchHistoryEntry[];
+  history: SearchHistoryEntry[];
+  analytics: SearchAnalytics;
 }
 
 // ============================================================================
@@ -131,7 +139,7 @@ export function useAdministrativeBoundaries(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<AdminSearchResult[]>([]);
-  const [currentBoundary, setCurrentBoundary] = useState<GeoJSON.Feature | GeoJSON.FeatureCollection | null>(null);
+  const [currentBoundary, setCurrentBoundary] = useState<AdminFeature | AdminFeatureCollection | null>(null);
   const [detectedType, setDetectedType] = useState<'municipality' | 'region' | 'general' | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
@@ -309,7 +317,7 @@ export function useAdministrativeBoundaries(
   /**
    * Get municipality boundary
    */
-  const getMunicipalityBoundary = useCallback(async (name: string): Promise<GeoJSON.Feature | null> => {
+  const getMunicipalityBoundary = useCallback(async (name: string): Promise<AdminFeature | null> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -340,7 +348,7 @@ export function useAdministrativeBoundaries(
   /**
    * Get region boundary
    */
-  const getRegionBoundary = useCallback(async (name: string): Promise<GeoJSON.Feature | null> => {
+  const getRegionBoundary = useCallback(async (name: string): Promise<AdminFeature | null> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -371,7 +379,7 @@ export function useAdministrativeBoundaries(
   /**
    * Get municipalities σε region
    */
-  const getMunicipalitiesInRegion = useCallback(async (regionName: string): Promise<GeoJSON.FeatureCollection | null> => {
+  const getMunicipalitiesInRegion = useCallback(async (regionName: string): Promise<AdminFeatureCollection | null> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -431,7 +439,7 @@ export function useAdministrativeBoundaries(
   /**
    * Get postal code boundary by 5-digit code
    */
-  const getPostalCodeBoundary = useCallback(async (postalCode: string): Promise<GeoJSON.Feature | null> => {
+  const getPostalCodeBoundary = useCallback(async (postalCode: string): Promise<AdminFeature | null> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -462,7 +470,7 @@ export function useAdministrativeBoundaries(
   /**
    * Get all postal codes σε specific municipality
    */
-  const getPostalCodesInMunicipality = useCallback(async (municipalityName: string): Promise<GeoJSON.FeatureCollection | null> => {
+  const getPostalCodesInMunicipality = useCallback(async (municipalityName: string): Promise<AdminFeatureCollection | null> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -493,7 +501,7 @@ export function useAdministrativeBoundaries(
   /**
    * Get postal codes in geographic bounding box
    */
-  const getPostalCodesInBounds = useCallback(async (bounds: BoundingBox): Promise<GeoJSON.FeatureCollection | null> => {
+  const getPostalCodesInBounds = useCallback(async (bounds: BoundingBox): Promise<AdminFeatureCollection | null> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -560,7 +568,7 @@ export function useAdministrativeBoundaries(
   /**
    * Calculate center από boundary geometry
    */
-  const calculateCenter = useCallback((geometry: GeoJSON.Geometry): [number, number] | null => {
+  const calculateCenter = useCallback((geometry: AdminGeometry): [number, number] | null => {
     return administrativeBoundaryService.calculateBoundaryCenter(geometry);
   }, []);
 

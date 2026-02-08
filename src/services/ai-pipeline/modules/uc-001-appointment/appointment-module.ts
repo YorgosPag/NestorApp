@@ -59,8 +59,8 @@ interface AppointmentLookupData {
   senderName: string;
   senderContact: ContactMatch | null;
   isKnownContact: boolean;
-  requestedDate: string | undefined;
-  requestedTime: string | undefined;
+  requestedDate: string | null;
+  requestedTime: string | null;
   originalSubject: string;
   companyId: string;
 }
@@ -122,16 +122,16 @@ async function findContactByEmail(
  */
 function extractDateTimeFromEntities(
   entities?: Record<string, string | undefined>
-): { date: string | undefined; time: string | undefined } {
+): { date: string | null; time: string | null } {
   if (!entities) {
-    return { date: undefined, time: undefined };
+    return { date: null, time: null };
   }
 
   const dateKeys = ['eventDate', 'requestedDate', 'date', 'appointmentDate', 'preferredDate'];
   const timeKeys = ['requestedTime', 'time', 'appointmentTime', 'preferredTime', 'eventTime'];
 
-  let date: string | undefined;
-  let time: string | undefined;
+  let date: string | null = null;
+  let time: string | null = null;
 
   for (const key of dateKeys) {
     if (entities[key]) {
@@ -237,12 +237,12 @@ export class AppointmentModule implements IUCModule {
         {
           type: 'create_appointment',
           params: {
-            senderEmail: lookup?.senderEmail,
-            senderName: lookup?.senderName,
-            contactId: lookup?.senderContact?.contactId,
+            senderEmail: lookup?.senderEmail ?? null,
+            senderName: lookup?.senderName ?? null,
+            contactId: lookup?.senderContact?.contactId ?? null,
             isKnownContact: lookup?.isKnownContact ?? false,
-            requestedDate: lookup?.requestedDate,
-            requestedTime: lookup?.requestedTime,
+            requestedDate: lookup?.requestedDate ?? null,
+            requestedTime: lookup?.requestedTime ?? null,
             description: lookup?.originalSubject || ctx.intake.normalized.contentText?.slice(0, 500) || summary,
             companyId: ctx.companyId,
           },

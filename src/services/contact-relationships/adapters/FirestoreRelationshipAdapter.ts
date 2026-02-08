@@ -91,10 +91,9 @@ export class FirestoreRelationshipAdapter {
       RealtimeService.dispatchRelationshipCreated({
         relationshipId: relationship.id,
         relationship: {
-          sourceContactId: relationship.sourceContactId,
-          targetContactId: relationship.targetContactId,
-          relationshipType: relationship.relationshipType,
-          status: relationship.status,
+          sourceId: relationship.sourceContactId,
+          targetId: relationship.targetContactId,
+          type: relationship.relationshipType,
         },
         timestamp: Date.now(),
       });
@@ -146,8 +145,8 @@ export class FirestoreRelationshipAdapter {
       RealtimeService.dispatchRelationshipUpdated({
         relationshipId,
         updates: {
-          relationshipType: updates.relationshipType,
-          status: updates.status,
+          type: updates.relationshipType,
+          notes: updates.notes,
         },
         timestamp: Date.now(),
       });
@@ -236,9 +235,19 @@ export class FirestoreRelationshipAdapter {
       });
 
       // Sort by createdAt manually (since we can't use orderBy with OR)
+      const resolveMillis = (value: ContactRelationship['createdAt']): number => {
+        if (!value) return 0;
+        if (value instanceof Date) return value.getTime();
+        if (typeof value === 'object' && 'toDate' in value) {
+          const dateValue = (value as { toDate?: () => Date }).toDate?.();
+          return dateValue instanceof Date ? dateValue.getTime() : 0;
+        }
+        return 0;
+      };
+
       relationships.sort((a, b) => {
-        const aTime = a.createdAt?.toMillis?.() || 0;
-        const bTime = b.createdAt?.toMillis?.() || 0;
+        const aTime = resolveMillis(a.createdAt);
+        const bTime = resolveMillis(b.createdAt);
         return bTime - aTime; // Descending
       });
 
@@ -365,7 +374,7 @@ export class FirestoreRelationshipAdapter {
    *
    * Removes undefined values που Firestore δεν δέχεται
    */
-  static cleanFirestoreData(data: Record<string, any>): Record<string, any> {
+  static cleanFirestoreData(data: Record<string, unknown>): Record<string, unknown> {
     return Object.fromEntries(
       Object.entries(data).filter(([_, value]) => value !== undefined)
     );

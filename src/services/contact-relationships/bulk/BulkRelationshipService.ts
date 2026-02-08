@@ -109,11 +109,11 @@ export class BulkRelationshipService {
         console.log('🔍 BULK: Pre-validating relationships...');
         const validationResult = await this.bulkValidateRelationships(relationships);
 
-        if (validationResult.invalidCount > 0) {
-          console.warn('⚠️ BULK: Found validation errors:', validationResult.invalidCount);
+        if (validationResult.summary.invalidCount > 0) {
+          console.warn('⚠️ BULK: Found validation errors:', validationResult.summary.invalidCount);
 
           if (!continueOnError) {
-            throw new Error(`Validation failed για ${validationResult.invalidCount} relationships`);
+            throw new Error(`Validation failed για ${validationResult.summary.invalidCount} relationships`);
           }
 
           // Process only valid relationships

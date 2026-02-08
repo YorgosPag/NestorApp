@@ -262,7 +262,7 @@ export class LayerSyncManager {
     try {
       // Fire and forget - δεν θέλουμε να μπλοκάρει η εφαρμογή
       const eventDoc = doc(eventsCollection);
-      await setDoc(eventDoc, fullEvent);
+      void setDoc(eventDoc, fullEvent);
     } catch (error) {
       // Warning logging removed
     }

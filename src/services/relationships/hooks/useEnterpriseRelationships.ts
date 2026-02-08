@@ -322,7 +322,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
         errors: [{
           code: 'HOOK_ERROR',
           message: errorMessage,
-          entityType: 'unknown',
+          entityType: 'contact',
           entityId: relationshipId
         }]
       };

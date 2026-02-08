@@ -6,6 +6,7 @@
 import { FirestoreProjectsRepository } from './projects/repositories/FirestoreProjectsRepository';
 import { FirestoreProjectsRepository as NewFirestoreRepo } from './projects/repositories/projects-repository';
 import { ProjectsService } from './projects/services/ProjectsService';
+import type { ProjectStatus } from '@/types/project';
 
 // Initialize repositories and service
 const firestoreRepo = new FirestoreProjectsRepository();
@@ -52,7 +53,7 @@ export async function debugProjectData(projectId: string) {
  */
 export async function updateProject(
     projectId: string,
-    updates: { name?: string; title?: string; status?: string }
+    updates: { name?: string; title?: string; status?: ProjectStatus }
 ): Promise<{ success: boolean; error?: string }> {
     try {
         console.log(`🏗️ SERVER ACTION: updateProject called for: "${projectId}"`);

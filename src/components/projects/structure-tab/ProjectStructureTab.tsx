@@ -50,7 +50,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
       {/* 🏢 ENTERPRISE: Buildings list - minimal design */}
       <div className={spacing.spaceBetween.md}>
         {structure.buildings.map(building => (
-          <BuildingNode key={building.id} building={building} />
+          <BuildingNode key={String(building.id)} building={building} />
         ))}
       </div>
     </section>

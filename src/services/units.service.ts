@@ -17,12 +17,13 @@ import {
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Property } from '@/types/property-viewer';
-import type { UnitModel } from '@/types/unit';
+import type { UnitDoc, UnitModel } from '@/types/unit';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { normalizeUnit } from '@/utils/unit-normalizer';
 
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
@@ -41,7 +42,14 @@ const transformUnit = (doc: DocumentSnapshot<DocumentData> | QueryDocumentSnapsh
             unit[key] = data[key];
         }
     }
-    return unit as Property;
+    return unit as unknown as Property;
+};
+
+const normalizeUnitSnapshot = (
+  doc: DocumentSnapshot<DocumentData> | QueryDocumentSnapshot<DocumentData>
+): UnitModel => {
+  const data = doc.data() as UnitDoc;
+  return normalizeUnit({ ...data, id: doc.id });
 };
 
 /**
@@ -159,7 +167,7 @@ export async function getUnitsByBuildingAsModels(buildingId: string): Promise<Un
       }
       const q = query(collection(db, UNITS_COLLECTION), where('buildingId', '==', buildingId));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(transformUnit);
+      return querySnapshot.docs.map(normalizeUnitSnapshot);
     } catch (error) {
       throw error;
     }
@@ -276,7 +284,7 @@ export async function getUnitsByFeatures(featureCodes: string[]): Promise<UnitMo
       where('interiorFeatures', 'array-contains-any', featureCodes)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(transformUnit);
+    return querySnapshot.docs.map(normalizeUnitSnapshot);
   } catch (error) {
     throw error;
   }
@@ -293,7 +301,7 @@ export async function getUnitsByOperationalStatus(status: string): Promise<UnitM
       where('operationalStatus', '==', status)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(transformUnit);
+    return querySnapshot.docs.map(normalizeUnitSnapshot);
   } catch (error) {
     throw error;
   }
@@ -319,7 +327,7 @@ export async function getIncompleteUnits(): Promise<UnitModel[]> {
     results.forEach(snapshot => {
       snapshot.docs.forEach(doc => {
         if (!unitMap.has(doc.id)) {
-          unitMap.set(doc.id, transformUnit(doc));
+          unitMap.set(doc.id, normalizeUnitSnapshot(doc));
         }
       });
     });

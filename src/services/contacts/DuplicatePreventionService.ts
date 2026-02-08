@@ -141,21 +141,27 @@ export class DuplicatePreventionService {
       const exactMatches = await this.findExactMatches(candidateContact, finalConfig);
 
       if (exactMatches.length > 0) {
+        const exactMatchDetails = exactMatches.flatMap(contact => {
+          const contactId = contact.id;
+          if (!contactId) return [];
+          return [{
+            contactId,
+            matchedFields: this.getMatchedFields(candidateContact, contact, finalConfig),
+            confidence: 1.0,
+            matchType: 'exact' as const,
+            details: 'Exact match ™¨âŸž¡œ ©œ æ¢˜ «˜ ¡¨å© £˜ §œ›å˜'
+          }];
+        });
+        const exactContactId = exactMatches.find(contact => contact.id)?.id;
         return {
           isDuplicate: true,
           confidence: 1.0,
           matchingContacts: exactMatches,
-          matchDetails: exactMatches.map(contact => ({
-            contactId: contact.id,
-            matchedFields: this.getMatchedFields(candidateContact, contact, finalConfig),
-            confidence: 1.0,
-            matchType: 'exact' as const,
-            details: 'Exact match βρέθηκε σε όλα τα κρίσιμα πεδία'
-          })),
+          matchDetails: exactMatchDetails,
           recommendations: [{
             action: 'update',
-            reason: 'Exact duplicate βρέθηκε - συνιστάται update του existing contact',
-            contactId: exactMatches[0].id
+            reason: 'Exact duplicate ™¨âŸž¡œ - ©¬¤ ©«á«˜  update «¦¬ existing contact',
+            contactId: exactContactId
           }]
         };
       }
@@ -169,21 +175,27 @@ export class DuplicatePreventionService {
           const confidence = this.calculateConfidence(candidateContact, topMatch, finalConfig);
 
           if (confidence >= finalConfig.fuzzyTolerance) {
+            const fuzzyMatchDetails = fuzzyMatches.slice(0, 3).flatMap(contact => {
+              const contactId = contact.id;
+              if (!contactId) return [];
+              return [{
+                contactId,
+                matchedFields: this.getMatchedFields(candidateContact, contact, finalConfig),
+                confidence: this.calculateConfidence(candidateContact, contact, finalConfig),
+                matchType: 'fuzzy' as const,
+                details: `Fuzzy match £œ confidence ${(confidence * 100).toFixed(1)}%`
+              }];
+            });
+            const topMatchId = topMatch.id;
             return {
               isDuplicate: true,
               confidence,
               matchingContacts: fuzzyMatches.slice(0, 3), // Top 3 matches
-              matchDetails: fuzzyMatches.slice(0, 3).map(contact => ({
-                contactId: contact.id,
-                matchedFields: this.getMatchedFields(candidateContact, contact, finalConfig),
-                confidence: this.calculateConfidence(candidateContact, contact, finalConfig),
-                matchType: 'fuzzy' as const,
-                details: `Fuzzy match με confidence ${(confidence * 100).toFixed(1)}%`
-              })),
+              matchDetails: fuzzyMatchDetails,
               recommendations: [{
                 action: confidence > 0.95 ? 'merge' : 'skip',
-                reason: `Πιθανό duplicate με confidence ${(confidence * 100).toFixed(1)}%`,
-                contactId: topMatch.id
+                reason: ` Ÿ˜¤æ duplicate £œ confidence ${(confidence * 100).toFixed(1)}%`,
+                contactId: topMatchId
               }]
             };
           }
@@ -194,20 +206,25 @@ export class DuplicatePreventionService {
       const rapidDuplicates = await this.findRapidDuplicates(candidateContact, finalConfig);
 
       if (rapidDuplicates.length > 0) {
+        const rapidMatchDetails = rapidDuplicates.flatMap(contact => {
+          const contactId = contact.id;
+          if (!contactId) return [];
+          return [{
+            contactId,
+            matchedFields: ['timestamp', 'basicInfo'],
+            confidence: 0.99,
+            matchType: 'partial' as const,
+            details: 'Rapid duplicate detection - ›ž£ ¦¬¨šå˜ £â©˜ ©œ ¢åš˜ ›œ¬«œ¨æ¢œ§«˜'
+          }];
+        });
         return {
           isDuplicate: true,
           confidence: 0.99,
           matchingContacts: rapidDuplicates,
-          matchDetails: rapidDuplicates.map(contact => ({
-            contactId: contact.id,
-            matchedFields: ['timestamp', 'basicInfo'],
-            confidence: 0.99,
-            matchType: 'partial' as const,
-            details: 'Rapid duplicate detection - δημιουργία μέσα σε λίγα δευτερόλεπτα'
-          })),
+          matchDetails: rapidMatchDetails,
           recommendations: [{
             action: 'skip',
-            reason: 'Πιθανό accidental double-click - αποφυγή δημιουργίας duplicate'
+            reason: ' Ÿ˜¤æ accidental double-click - ˜§¦­¬šã ›ž£ ¦¬¨šå˜ª duplicate'
           }]
         };
       }
@@ -419,6 +436,7 @@ export class DuplicatePreventionService {
   private static deduplicateMatches(matches: Contact[]): Contact[] {
     const seen = new Set<string>();
     return matches.filter(contact => {
+      if (!contact.id) return false;
       if (seen.has(contact.id)) return false;
       seen.add(contact.id);
       return true;

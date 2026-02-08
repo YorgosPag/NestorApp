@@ -617,14 +617,16 @@ export class OverpassApiService {
     }
 
     // Convert Overpass geometry to GeoJSON coordinates
-    const coordinates = relation.geometry.map(point => [point.lon, point.lat]);
+    const coordinates: GeoJSONPosition[] = relation.geometry.map(
+      (point) => [point.lon, point.lat] as GeoJSONPosition
+    );
 
     // Close polygon if needed
     if (coordinates.length > 0) {
       const first = coordinates[0];
       const last = coordinates[coordinates.length - 1];
       if (first[0] !== last[0] || first[1] !== last[1]) {
-        coordinates.push([first[0], first[1]]);
+        coordinates.push([first[0], first[1]] as GeoJSONPosition);
       }
     }
 
@@ -667,7 +669,7 @@ export class OverpassApiService {
           const first = coordinates[0];
           const last = coordinates[coordinates.length - 1];
           if (first[0] !== last[0] || first[1] !== last[1]) {
-            coordinates.push([first[0], first[1]]);
+            coordinates.push([first[0], first[1]] as GeoJSONPosition);
           }
         }
 

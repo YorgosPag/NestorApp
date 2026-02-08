@@ -38,7 +38,6 @@ class ObligationsService implements IObligationsService {
       obligation: {
         title: result.title,
         status: result.status,
-        type: result.type,
       },
       timestamp: Date.now(),
     });
@@ -56,7 +55,6 @@ class ObligationsService implements IObligationsService {
         updates: {
           title: data.title,
           status: data.status,
-          type: data.type,
         },
         timestamp: Date.now(),
       });

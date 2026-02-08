@@ -15,6 +15,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ProjectBuilding } from '@/services/projects/contracts';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ZERO any)
@@ -67,13 +68,23 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
   });
 
   // 🏢 ENTERPRISE: Transform buildings data for display
-  const buildings: BuildingSummary[] = structure?.buildings.map(building => ({
-    id: building.id,
-    name: building.name,
-    unitsCount: building.units.length,
-    soldUnits: building.units.filter(u => u.status === 'sold').length,
-    totalArea: building.units.reduce((sum, u) => sum + (u.area || 0), 0),
-  })) || [];
+  const buildings: BuildingSummary[] = (structure?.buildings ?? []).map((building: ProjectBuilding) => {
+    const rawId = building.id;
+    const normalizedId = (typeof rawId === 'string' || typeof rawId === 'number')
+      ? rawId
+      : String(rawId ?? '');
+    const normalizedName = typeof building.name === 'string'
+      ? building.name
+      : String(building.name ?? '');
+
+    return {
+      id: normalizedId,
+      name: normalizedName,
+      unitsCount: building.units.length,
+      soldUnits: building.units.filter(u => u.status === 'sold').length,
+      totalArea: building.units.reduce((sum, u) => sum + (u.area || 0), 0),
+    };
+  });
 
   // 🏢 ENTERPRISE: Navigation handlers
   const handleViewBuilding = (buildingId: string | number) => {

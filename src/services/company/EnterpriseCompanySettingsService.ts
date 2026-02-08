@@ -431,6 +431,18 @@ export class EnterpriseCompanySettingsService {
     },
     contactId: string
   ): EnterpriseCompanySettings {
+    const defaultFromEmail =
+      contactData.defaultFromEmail ||
+      contactData.email ||
+      contactData.companyEmail ||
+      'info@company.local';
+    const defaultFromName =
+      contactData.defaultFromName ||
+      contactData.companyName ||
+      contactData.name ||
+      'Company';
+    const businessType = this.normalizeBusinessType(contactData.businessType);
+
     return {
       id: `legacy-${contactId}`,
       tenantId: contactData.tenantId,
@@ -468,8 +480,8 @@ export class EnterpriseCompanySettingsService {
       },
 
       communicationSettings: {
-        defaultFromEmail: contactData.defaultFromEmail || contactData.email,
-        defaultFromName: contactData.defaultFromName || contactData.companyName || contactData.name,
+        defaultFromEmail,
+        defaultFromName,
         phoneFormats: {
           local: '210 000 0000',
           international: '+30 210 000 0000',
@@ -479,7 +491,7 @@ export class EnterpriseCompanySettingsService {
 
       businessSettings: {
         industry: contactData.industry,
-        businessType: contactData.businessType || 'corporation',
+        businessType,
         defaultCurrency: 'EUR',
         defaultLanguage: 'el'
       },
@@ -497,6 +509,40 @@ export class EnterpriseCompanySettingsService {
         notes: 'Converted από legacy contact document'
       }
     };
+  }
+
+  private normalizeBusinessType(
+    value?: string
+  ): EnterpriseCompanySettings['businessSettings']['businessType'] {
+    if (!value) {
+      return 'other';
+    }
+
+    const allowed = [
+      'corporation',
+      'llc',
+      'partnership',
+      'sole_proprietorship',
+      'nonprofit',
+      'other'
+    ] as const;
+
+    return (allowed as readonly string[]).includes(value)
+      ? (value as EnterpriseCompanySettings['businessSettings']['businessType'])
+      : 'other';
+  }
+
+  private normalizeEnvironment(
+    value?: string
+  ): EnterpriseCompanySettings['environment'] {
+    if (!value) {
+      return 'all';
+    }
+
+    const allowed = ['development', 'staging', 'production', 'all'] as const;
+    return (allowed as readonly string[]).includes(value)
+      ? (value as EnterpriseCompanySettings['environment'])
+      : 'all';
   }
 
   // ========================================================================
@@ -585,8 +631,10 @@ export class EnterpriseCompanySettingsService {
       RealtimeService.dispatchWorkspaceUpdated({
         workspaceId: docId,
         updates: {
-          type: 'company_settings',
-          tenantId,
+          settings: {
+            type: 'company_settings',
+            tenantId
+          }
         },
         timestamp: Date.now(),
       });
@@ -612,7 +660,7 @@ export class EnterpriseCompanySettingsService {
       const settings = {
         ...FALLBACK_COMPANY_SETTINGS,
         tenantId,
-        environment: environment || 'all',
+        environment: this.normalizeEnvironment(environment),
         metadata: {
           ...FALLBACK_COMPANY_SETTINGS.metadata,
           createdAt: new Date(),

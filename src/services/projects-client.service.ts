@@ -15,7 +15,7 @@ import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Direct Firestore writes removed - now using Admin SDK via API endpoints
-import type { Project } from '@/types/project';
+import type { Project, ProjectStatus } from '@/types/project';
 import type { ProjectAddress } from '@/types/project/addresses';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -34,7 +34,7 @@ export interface ProjectCreatePayload {
   name: string;
   title?: string;
   description?: string;
-  status?: string;
+  status?: ProjectStatus;
   companyId: string;
   company?: string;
   // Legacy fields (auto-synced from primary address)
@@ -56,7 +56,7 @@ export interface ProjectUpdatePayload {
   name?: string;
   title?: string;
   description?: string;
-  status?: string;
+  status?: ProjectStatus;
   // Legacy fields (auto-synced from primary address)
   address?: string;
   city?: string;

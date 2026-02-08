@@ -54,21 +54,21 @@ interface LegacyPolygonData {
  * @returns UniversalPolygon compatible object
  */
 export function createPolygonFromLegacy(legacyData: LegacyPolygonData): UniversalPolygon {
-  const coordinates = legacyData.controlPoints.map(cp => [
-    cp.geoPoint.lng,
-    cp.geoPoint.lat
-  ]);
-
-  // Close polygon if complete and has 3+ points
-  if (legacyData.isComplete && coordinates.length >= 3) {
-    coordinates.push(coordinates[0]);
-  }
+  const points = legacyData.controlPoints.map((cp, index) => ({
+    id: cp.id || `legacy-point-${index}`,
+    x: cp.geoPoint.lng,
+    y: cp.geoPoint.lat,
+    isControlPoint: true,
+    sourceType: 'manual' as const
+  }));
 
   return {
     id: `legacy_${Date.now()}`,
-    type: 'simple',
-    coordinates,
-    properties: {
+    name: 'Legacy Polygon',
+    polygonType: 'simple',
+    points,
+    isClosed: legacyData.isComplete,
+    metadata: {
       source: 'legacy-migration',
       originalControlPoints: legacyData.controlPoints,
       migratedAt: new Date().toISOString(),

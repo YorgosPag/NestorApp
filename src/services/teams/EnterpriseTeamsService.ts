@@ -583,16 +583,21 @@ class EnterpriseTeamsService {
     organizationId: string,
     tenantId?: string
   ): Promise<EnterpriseTeam[]> {
+    const firestore = this.db;
+    if (!firestore) {
+      throw new Error('EnterpriseTeamsService not initialized');
+    }
+
     const teamsQuery = tenantId
       ? query(
-          collection(this.db, COLLECTIONS.TEAMS || 'teams'),
+          collection(firestore, COLLECTIONS.TEAMS),
           where('organizationId', '==', organizationId),
           where('tenantId', '==', tenantId),
           where('isActive', '==', true),
           orderBy('name')
         )
       : query(
-          collection(this.db, COLLECTIONS.TEAMS || 'teams'),
+          collection(firestore, COLLECTIONS.TEAMS),
           where('organizationId', '==', organizationId),
           where('isActive', '==', true),
           orderBy('name')
@@ -675,9 +680,14 @@ class EnterpriseTeamsService {
     organizationId: string,
     tenantId?: string
   ): Promise<EnterpriseTeamMember[]> {
+    const firestore = this.db;
+    if (!firestore) {
+      throw new Error('EnterpriseTeamsService not initialized');
+    }
+
     const membersQuery = tenantId
       ? query(
-          collection(this.db, COLLECTIONS.CONTACTS),
+          collection(firestore, COLLECTIONS.CONTACTS),
           where('type', '==', 'employee'),
           where('department', '==', teamId),
           where('organizationId', '==', organizationId),
@@ -686,7 +696,7 @@ class EnterpriseTeamsService {
           orderBy('displayName')
         )
       : query(
-          collection(this.db, COLLECTIONS.CONTACTS),
+          collection(firestore, COLLECTIONS.CONTACTS),
           where('type', '==', 'employee'),
           where('department', '==', teamId),
           where('organizationId', '==', organizationId),
@@ -787,11 +797,16 @@ class EnterpriseTeamsService {
     organizationId: string,
     tenantId?: string
   ): Promise<EnterpriseOrganizationChart> {
+    const firestore = this.db;
+    if (!firestore) {
+      throw new Error('EnterpriseTeamsService not initialized');
+    }
+
     const chartPath = tenantId
       ? `organization_charts/tenants/${tenantId}/${organizationId}/current`
       : `organization_charts/organizations/${organizationId}/current`;
 
-    const chartDoc = await getDoc(doc(this.db, chartPath));
+    const chartDoc = await getDoc(doc(firestore, chartPath));
 
     if (!chartDoc.exists()) {
       throw new Error(`Organization chart not found: ${chartPath}`);
@@ -824,15 +839,20 @@ class EnterpriseTeamsService {
     organizationId: string,
     tenantId?: string
   ): Promise<EnterprisePosition[]> {
+    const firestore = this.db;
+    if (!firestore) {
+      throw new Error('EnterpriseTeamsService not initialized');
+    }
+
     const positionsQuery = tenantId
       ? query(
-          collection(this.db, COLLECTIONS.ROLES || 'positions'),
+          collection(firestore, COLLECTIONS.ROLES),
           where('organizationId', '==', organizationId),
           where('tenantId', '==', tenantId),
           where('isApproved', '==', true)
         )
       : query(
-          collection(this.db, COLLECTIONS.ROLES || 'positions'),
+          collection(firestore, COLLECTIONS.ROLES),
           where('organizationId', '==', organizationId),
           where('isApproved', '==', true)
         );

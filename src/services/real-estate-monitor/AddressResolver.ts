@@ -20,7 +20,7 @@ import { GEOGRAPHIC_CONFIG, GeographicUtils } from '@/config/geographic-config';
 // ============================================================================
 
 export interface GreekAddress {
-  street: string;           // π.χ. "Λεωφόρος Κηφισίας"
+  street?: string;          // π.χ. "Λεωφόρος Κηφισίας"
   number?: string;          // π.χ. "45"
   area?: string;           // π.χ. "Μαρούσι"
   municipality?: string;    // π.χ. "Αμαρουσίου"

@@ -241,8 +241,8 @@ export class GeoAlertMemoryLeakDetector {
       // Observe memory-related performance entries
       // 🏢 ENTERPRISE: Type assertion for entryTypes (navigation is valid at runtime)
       this.performanceObserver.observe({
-        entryTypes: ['measure', 'navigation', 'resource'] as PerformanceObserverInit['entryTypes']
-      });
+        entryTypes: ['measure', 'navigation', 'resource']
+      } as PerformanceObserverInit);
     } catch (error) {
       console.warn('PerformanceObserver not available:', error);
     }

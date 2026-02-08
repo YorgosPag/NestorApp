@@ -655,7 +655,7 @@ describe('Performance tests', () => {
       ...completeUnitDoc,
       interiorFeatures: Array(100).fill('fireplace'),
       linkedSpaces: Array(50).fill(null).map((_, i) => ({
-        spaceType: 'parking' as const as const,
+        spaceType: 'parking' as const,
         spaceId: `space-${i}`,
         quantity: 1,
         inclusion: 'included' as const,
@@ -676,7 +676,7 @@ describe('Performance tests', () => {
     const deepDoc: UnitDoc = {
       ...completeUnitDoc,
       linkedSpaces: [{
-        spaceType: 'parking' as const as const,
+        spaceType: 'parking' as const,
         spaceId: 'deep-1',
         quantity: 1,
         inclusion: 'included' as const,

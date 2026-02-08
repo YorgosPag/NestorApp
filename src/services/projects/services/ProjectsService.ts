@@ -1,4 +1,4 @@
-import type { IProjectsService, IProjectsRepository, ProjectStructure } from '../contracts';
+import type { IProjectsService, IProjectsRepository, ProjectStructure, ProjectBuilding, ProjectUnit } from '../contracts';
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import type { Building } from '@/types/building/contracts';
@@ -35,20 +35,21 @@ export class ProjectsService implements IProjectsService {
 
     const buildingsData = await this.firestoreRepo.getBuildingsByProjectId(projectId);
 
-    const structureBuildings: Array<Building & { units: Array<Property & { customerName?: string | null }> }> = [];
+    const structureBuildings: ProjectBuilding[] = [];
     const allUnitOwnerIds = new Set<string>();
 
     for (const building of buildingsData) {
         // 🏢 ENTERPRISE: Use configurable building ID pattern
         const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-        const units = await this.firestoreRepo.getUnitsByBuildingId(`${buildingIdPattern}${building.id}`);
+        const units: ProjectUnit[] = (await this.firestoreRepo.getUnitsByBuildingId(`${buildingIdPattern}${building.id}`))
+          .map(unit => ({ ...unit }));
 
         units.forEach(u => {
             if (u.soldTo) allUnitOwnerIds.add(u.soldTo);
         });
 
         // ✅ ENTERPRISE: Proper typing with customerName property
-        const unitsWithCustomerName: Array<Property & { customerName?: string | null }> = units.map(unit => ({
+        const unitsWithCustomerName: ProjectUnit[] = units.map(unit => ({
             ...unit,
             customerName: null as string | null
         }));
@@ -57,15 +58,19 @@ export class ProjectsService implements IProjectsService {
         const { units: _, ...buildingWithoutUnits } = building;
         structureBuildings.push({
             ...buildingWithoutUnits,
-            units: unitsWithCustomerName
-        } as Building & { units: Array<Property & { customerName?: string | null }> });
+            units: unitsWithCustomerName,
+            storages: [],
+            parkingSpots: []
+        } as ProjectBuilding);
     }
 
     const contactsMap = new Map<string, string>();
     if (allUnitOwnerIds.size > 0) {
         const contacts = await this.firestoreRepo.getContactsByIds(Array.from(allUnitOwnerIds));
         contacts.forEach(contact => {
-            contactsMap.set(contact.id!, getContactDisplayName(contact));
+            if (contact.id) {
+                contactsMap.set(contact.id, getContactDisplayName(contact));
+            }
         });
     }
 
@@ -148,9 +153,6 @@ export class ProjectsService implements IProjectsService {
   }
 
   async debugProjectData(projectId: string): Promise<void> {
-    if (!db) {
-        return;
-    }
     try {
         const database = getAdminFirestore();
         if (!database) return;

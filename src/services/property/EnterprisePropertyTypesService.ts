@@ -345,8 +345,9 @@ export class EnterprisePropertyTypesService {
 
     try {
       // Query database for configuration
+      const firestore = this.db!;
       const configRef = doc(
-        this.db,
+        firestore,
         'property_types_configurations',
         `${tenantId}-${locale}-${environment}`
       );
@@ -462,7 +463,7 @@ export class EnterprisePropertyTypesService {
   ): Promise<Array<{ value: string; label: string; category?: string }>> {
     const propertyTypes = await this.getPropertyTypes(tenantId, locale, environment);
 
-    const options = propertyTypes.map(pt => ({
+    const options: Array<{ value: string; label: string; category?: PropertyTypeOption['category'] }> = propertyTypes.map(pt => ({
       value: pt.value,
       label: pt.label,
       category: pt.category
@@ -520,23 +521,39 @@ export class EnterprisePropertyTypesService {
 
     for (const rule of rules) {
       const fieldValue = propertyData[rule.fieldName];
+      const toNumber = (value: unknown): number | null => (
+        typeof value === 'number' && Number.isFinite(value) ? value : null
+      );
       let isRuleValid = true;
 
       switch (rule.operator) {
         case 'min':
-          isRuleValid = fieldValue >= rule.value;
+          {
+            const fieldNumber = toNumber(fieldValue);
+            const ruleNumber = toNumber(rule.value);
+            isRuleValid = fieldNumber !== null && ruleNumber !== null && fieldNumber >= ruleNumber;
+          }
           break;
         case 'max':
-          isRuleValid = fieldValue <= rule.value;
+          {
+            const fieldNumber = toNumber(fieldValue);
+            const ruleNumber = toNumber(rule.value);
+            isRuleValid = fieldNumber !== null && ruleNumber !== null && fieldNumber <= ruleNumber;
+          }
           break;
         case 'equals':
           isRuleValid = fieldValue === rule.value;
           break;
         case 'in':
-          isRuleValid = Array.isArray(rule.value) && rule.value.includes(fieldValue);
+          isRuleValid = Array.isArray(rule.value) && rule.value.some((value) => value === fieldValue);
           break;
         case 'regex':
-          isRuleValid = new RegExp(rule.value).test(fieldValue);
+          if (typeof fieldValue === 'string' && (typeof rule.value === 'string' || rule.value instanceof RegExp)) {
+            const regex = rule.value instanceof RegExp ? rule.value : new RegExp(rule.value);
+            isRuleValid = regex.test(fieldValue);
+          } else {
+            isRuleValid = false;
+          }
           break;
       }
 

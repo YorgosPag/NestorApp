@@ -56,6 +56,7 @@ export const COLLECTIONS = {
 
   // 👤 USER MANAGEMENT
   USERS: process.env.NEXT_PUBLIC_USERS_COLLECTION || 'users',
+  TEAMS: process.env.NEXT_PUBLIC_TEAMS_COLLECTION || 'teams',
   ROLES: process.env.NEXT_PUBLIC_ROLES_COLLECTION || 'roles',
   PERMISSIONS: process.env.NEXT_PUBLIC_PERMISSIONS_COLLECTION || 'permissions',
 
@@ -138,6 +139,7 @@ export const COLLECTIONS = {
   // ⚙️ USER PREFERENCES
   USER_NOTIFICATION_SETTINGS: process.env.NEXT_PUBLIC_USER_NOTIFICATION_SETTINGS_COLLECTION || 'user_notification_settings',
   USER_2FA_SETTINGS: process.env.NEXT_PUBLIC_USER_2FA_SETTINGS_COLLECTION || 'user_2fa_settings',
+  USER_PREFERENCES: process.env.NEXT_PUBLIC_USER_PREFERENCES_COLLECTION || 'user_preferences',
 
   // 🤖 BOT CONFIGURATIONS (PR1: Telegram Enterprise Refactor)
   BOT_CONFIGS: process.env.NEXT_PUBLIC_BOT_CONFIGS_COLLECTION || 'bot_configs',

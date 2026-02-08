@@ -12,7 +12,7 @@ import {
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { DuplicatePreventionService } from './contacts/DuplicatePreventionService';
-import { sanitizeContactData, validateContactData } from '@/utils/contactForm/utils/data-cleaning';
+import { sanitizeContactData, validateContactData, type ContactDataRecord } from '@/utils/contactForm/utils/data-cleaning';
 
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -60,7 +60,7 @@ type ContactFirestoreData = Omit<Contact, 'createdAt' | 'updatedAt'> & {
  * Allows partial Contact with archive fields, photo fields, and timestamps
  * Uses Record<string, unknown> for Firestore compatibility
  */
-type ContactUpdatePayload = Partial<Contact> & ContactArchiveFields & ContactPhotoFields & {
+type ContactUpdatePayload = Omit<Partial<Contact>, 'multiplePhotoURLs'> & ContactArchiveFields & ContactPhotoFields & {
   updatedAt?: FieldValue;
 };
 
@@ -135,7 +135,8 @@ export class ContactsService {
       console.log('🧹 ENTERPRISE SANITIZER: Starting pre-processing...');
 
       // Validate input data first
-      const validationResult = validateContactData(contactData);
+      const contactRecord = contactData as unknown as ContactDataRecord;
+      const validationResult = validateContactData(contactRecord);
       if (!validationResult.isValid) {
         console.error('❌ VALIDATION FAILED:', validationResult.errors);
         throw new Error(`VALIDATION_ERROR: ${validationResult.errors.join(', ')}`);
@@ -147,7 +148,10 @@ export class ContactsService {
       }
 
       // Sanitize data πριν την αποθήκευση
-      const sanitizedData = sanitizeContactData(contactData);
+      const sanitizedData = sanitizeContactData(contactRecord) as unknown as Omit<
+        Contact,
+        'id' | 'createdAt' | 'updatedAt'
+      >;
 
       console.log('✅ SANITIZATION COMPLETED:', {
         originalFields: Object.keys(contactData).length,
@@ -451,7 +455,7 @@ export class ContactsService {
       }
 
       // 🔍 DIAGNOSTIC STEP 2: Log raw document fields (each on separate line)
-      const ec = existingContact as Record<string, unknown>;
+      const ec = existingContact as unknown as Record<string, unknown>;
 
       // 🔍 LOG ALL KEYS in existing document
       console.log('📄 DIAGNOSTIC - ALL DOCUMENT KEYS:', Object.keys(ec).join(', '));
@@ -519,7 +523,7 @@ export class ContactsService {
           updateData.multiplePhotoURLs = [];
         } else if (updates.multiplePhotoURLs === null || updates.multiplePhotoURLs === undefined) {
           // Αν θέλουμε να διαγράψουμε το field τελείως από τη βάση
-          updateData.multiplePhotoURLs = deleteField();
+          updateData.multiplePhotoURLs = deleteField() as ContactPhotoFields['multiplePhotoURLs'];
         }
       }
 

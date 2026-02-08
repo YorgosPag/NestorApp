@@ -47,8 +47,10 @@ export class NavigationCompaniesService {
       RealtimeService.dispatchWorkspaceUpdated({
         workspaceId: 'navigation',
         updates: {
-          action: 'company_added',
-          contactId,
+          settings: {
+            action: 'company_added',
+            contactId,
+          }
         },
         timestamp: Date.now(),
       });
@@ -81,8 +83,10 @@ export class NavigationCompaniesService {
       RealtimeService.dispatchWorkspaceUpdated({
         workspaceId: 'navigation',
         updates: {
-          action: 'company_removed',
-          contactId,
+          settings: {
+            action: 'company_removed',
+            contactId,
+          }
         },
         timestamp: Date.now(),
       });

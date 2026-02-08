@@ -19,10 +19,24 @@ import { administrativeBoundaryService } from '../administrative-boundaries/Admi
 // SPATIAL UTILITIES
 // ============================================================================
 
+type SpatialPosition = [number, number] | [number, number, number];
+type SpatialCoordinates =
+  | SpatialPosition
+  | SpatialPosition[]
+  | SpatialPosition[][]
+  | SpatialPosition[][][];
+
+type SpatialGeometry = {
+  type: string;
+  coordinates?: SpatialCoordinates;
+  geometries?: SpatialGeometry[];
+};
+
+
 type FeatureCollectionLike = {
   type: 'FeatureCollection';
   features: Array<{
-    geometry: GeoJSON.Geometry | null;
+    geometry: SpatialGeometry | null;
     properties: Record<string, unknown> | null;
   }>;
 };
@@ -50,7 +64,7 @@ function pointInPolygon(point: [number, number], polygon: number[][]): boolean {
 /**
  * Calculate bounding box for geometry
  */
-function getBoundingBox(geometry: GeoJSON.Geometry): BoundingBox {
+function getBoundingBox(geometry: SpatialGeometry): BoundingBox {
   let minLng = Infinity, minLat = Infinity;
   let maxLng = -Infinity, maxLat = -Infinity;
 
@@ -63,7 +77,7 @@ function getBoundingBox(geometry: GeoJSON.Geometry): BoundingBox {
   }
 
   // 🏢 ENTERPRISE: Type-safe recursive coordinate processing
-  type GeoJSONCoordinates = number[] | number[][] | number[][][] | number[][][][];
+  type GeoJSONCoordinates = SpatialCoordinates | number[][][][];
   function processCoordinates(coords: GeoJSONCoordinates) {
     if (Array.isArray(coords[0])) {
       (coords as GeoJSONCoordinates[]).forEach(processCoordinates);
@@ -211,7 +225,7 @@ export class SpatialQueryService {
    * Find administrative boundaries that intersect with geometry
    */
   async findIntersecting(
-    geometry: GeoJSON.Geometry,
+    geometry: SpatialGeometry,
     adminLevels?: GreekAdminLevel[],
     maxResults = 20
   ): Promise<AdminSearchResult[]> {
@@ -227,7 +241,7 @@ export class SpatialQueryService {
    * Find administrative boundaries that contain the geometry
    */
   async findContaining(
-    geometry: GeoJSON.Geometry,
+    geometry: SpatialGeometry,
     adminLevels?: GreekAdminLevel[],
     maxResults = 10
   ): Promise<AdminSearchResult[]> {
@@ -243,7 +257,7 @@ export class SpatialQueryService {
    * Find administrative boundaries that are within the geometry
    */
   async findWithin(
-    geometry: GeoJSON.Geometry,
+    geometry: SpatialGeometry,
     adminLevels?: GreekAdminLevel[],
     maxResults = 50
   ): Promise<AdminSearchResult[]> {
@@ -407,8 +421,8 @@ export class SpatialQueryService {
    * Test spatial relationship between two geometries
    */
   private testSpatialRelationship(
-    geometry1: GeoJSON.Geometry,
-    geometry2: GeoJSON.Geometry,
+    geometry1: SpatialGeometry,
+    geometry2: SpatialGeometry,
     relationshipType: 'intersects' | 'contains' | 'within' | 'touches' | 'crosses'
   ): boolean {
     try {

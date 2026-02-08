@@ -126,7 +126,7 @@ export class EmailWorker {
       // Query for pending email jobs, ordered by creation time
       // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
       const q = query(
-        collection(database, COLLECTIONS.MESSAGES),
+        collection(COLLECTIONS.MESSAGES),
         where('channel', '==', 'email'),
         where('status', '==', 'pending'),
         where('type', '==', 'email'),

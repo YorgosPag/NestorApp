@@ -246,7 +246,11 @@ export function PolygonSystemProvider({
       polygon.config = { ...polygon.config, ...state.currentDrawing.config };
     }
 
-    dispatch({ type: 'FINISH_DRAWING', payload: polygon });
+    if (polygon) {
+      dispatch({ type: 'FINISH_DRAWING', payload: polygon });
+    } else {
+      dispatch({ type: 'FINISH_DRAWING' });
+    }
 
     return polygon;
   }, [state.currentRole, corePolygonSystem, state.currentDrawing]);

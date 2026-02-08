@@ -169,28 +169,23 @@ export const sendBulkMessages = (messages: BaseMessageInput[]) =>
 
 export const sendCampaignToLeads = async (leads: LeadData[], campaignData: CampaignData) => {
   try {
-    const messages: BaseMessageInput[] = leads
-      .map(lead => {
-        const to = campaignData.channel === MESSAGE_TYPES.EMAIL ? lead.email : lead.phone;
-        if (!to) {
-          return null;
-        }
+    const { variables: _variables, ...campaignBase } = campaignData;
+    const messages: BaseMessageInput[] = [];
 
-        return {
-          ...campaignData,
-          to,
-          variables: {
-            ...campaignData.variables,
-            leadName: lead.fullName || '',
-            leadEmail: lead.email || '',
-            leadPhone: lead.phone || ''
-          },
-          entityType: 'lead',
-          entityId: lead.id,
-          metadata: { ...campaignData.metadata, campaignType: 'bulk', automatedMessage: true }
-        };
-      })
-      .filter((message): message is BaseMessageInput => Boolean(message));
+    leads.forEach(lead => {
+      const to = campaignData.channel === MESSAGE_TYPES.EMAIL ? lead.email : lead.phone;
+      if (!to) {
+        return;
+      }
+
+      messages.push({
+        ...campaignBase,
+        to,
+        entityType: 'lead',
+        entityId: lead.id,
+        metadata: { ...campaignData.metadata, campaignType: 'bulk', automatedMessage: true }
+      });
+    });
 
     return await sendBulkMessages(messages);
   } catch (error) {
@@ -230,7 +225,8 @@ export const testChannel = (channelName: Channel) => {
  * Configuration helpers
  */
 export const getChannelTemplates = (channel: string) => {
-  const templates = (MESSAGE_TEMPLATES as Record<string, Record<string, string>>)[channel];
+  type TemplateValue = string | { subject: string; template: string };
+  const templates = (MESSAGE_TEMPLATES as Record<string, Record<string, TemplateValue>>)[channel];
   if (!templates) return [];
   return Object.keys(templates).map(key => ({
     value: key,

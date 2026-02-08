@@ -1,6 +1,7 @@
 // Design System Validation Utilities
 // Ensures proper usage of design tokens and prevents hardcoded values
 
+import type { CSSProperties } from 'react';
 import { designTokens } from '@/styles/design-tokens';
 
 // Type guards for design system compliance
@@ -90,7 +91,7 @@ export interface ValidatedComponentProps {
 // Component props interface for validation
 interface ComponentPropsToValidate {
   className?: string;
-  style?: Record<string, unknown>;
+  style?: Record<string, unknown> | CSSProperties;
   color?: string;
   backgroundColor?: string;
   borderColor?: string;

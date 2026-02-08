@@ -273,7 +273,7 @@ export interface CentralizedPolygonSystemHook {
   getCurrentDrawing: () => UniversalPolygon | null;
 
   /** Map integration */
-  setMapRef: (ref: React.RefObject<unknown>) => void;
+  setMapRef: (ref: React.RefObject<MapRef> | null) => void;
 
   /** Legacy compatibility */
   handlePolygonClosure: () => void;

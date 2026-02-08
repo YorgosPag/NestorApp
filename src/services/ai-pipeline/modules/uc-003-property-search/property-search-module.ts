@@ -359,8 +359,7 @@ async function sendReplyViaMailgun(params: {
     };
   }
 
-  // Derive "from" address: use Mailgun domain directly (mg.nestorconstruct.gr)
-  // The Mailgun sending domain IS the authorized sender — do NOT strip mg. prefix
+  // Derive "from" address: noreply@{MAILGUN_DOMAIN} (nestorconstruct.gr)
   const fromEmail = process.env.MAILGUN_FROM_EMAIL?.trim()
     ?? `noreply@${domain}`;
 

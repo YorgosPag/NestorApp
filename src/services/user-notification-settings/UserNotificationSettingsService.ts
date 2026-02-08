@@ -34,6 +34,7 @@ import {
   NotificationCategory,
   getDefaultNotificationSettings,
 } from './user-notification-settings.types';
+import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 
@@ -41,7 +42,7 @@ import { RealtimeService } from '@/services/realtime';
 // FIRESTORE COLLECTION
 // ============================================================================
 
-const COLLECTION_NAME = 'user_notification_settings';
+const COLLECTION_NAME = COLLECTIONS.USER_NOTIFICATION_SETTINGS;
 
 // ============================================================================
 // SERVICE CLASS
@@ -131,11 +132,15 @@ class UserNotificationSettingsService {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchUserSettingsUpdated({
         userId: settings.userId,
-        settingsType: 'notifications',
         updates: {
-          globalEnabled: settings.globalEnabled,
-          emailEnabled: settings.emailEnabled,
-          pushEnabled: settings.pushEnabled,
+          settingKey: 'notifications',
+          value: {
+            globalEnabled: settings.globalEnabled,
+            inAppEnabled: settings.inAppEnabled,
+            emailEnabled: settings.emailEnabled,
+            emailFrequency: settings.emailFrequency,
+            pushEnabled: settings.pushEnabled,
+          }
         },
         timestamp: Date.now(),
       });
@@ -168,8 +173,10 @@ class UserNotificationSettingsService {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchUserSettingsUpdated({
         userId,
-        settingsType: 'notifications',
-        updates,
+        updates: {
+          settingKey: 'notifications',
+          value: updates,
+        },
         timestamp: Date.now(),
       });
     } catch (error) {

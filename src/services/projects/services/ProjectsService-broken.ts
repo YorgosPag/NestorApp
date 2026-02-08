@@ -1,15 +1,10 @@
 
-import type { IProjectsService, IProjectsRepository, ProjectStructure } from '../contracts';
+import type { IProjectsService, IProjectsRepository, ProjectStructure, ProjectUnit, ProjectBuilding } from '../contracts';
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-
-const getFirebaseAdmin = async () => {
-  const admin = await import('firebase-admin/firestore');
-  return admin;
-};
 
 export class ProjectsService implements IProjectsService {
   private firestoreRepo: IProjectsRepository;
@@ -44,18 +39,19 @@ export class ProjectsService implements IProjectsService {
     const buildingsData = await this.firestoreRepo.getBuildingsByProjectId(projectId);
     // Debug logging removed
 
-    const structureBuildings = [];
+    const structureBuildings: ProjectBuilding[] = [];
     const allUnitOwnerIds = new Set<string>();
 
     for (const building of buildingsData) {
-        const units = await this.firestoreRepo.getUnitsByBuildingId(`building-${building.id}`);
+        const units: ProjectUnit[] = (await this.firestoreRepo.getUnitsByBuildingId(`building-${building.id}`))
+          .map(unit => ({ ...unit }));
         // Debug logging removed
         
         units.forEach(u => {
             if (u.soldTo) allUnitOwnerIds.add(u.soldTo);
         });
 
-        structureBuildings.push({ ...building, units });
+        structureBuildings.push({ ...building, units, storages: [], parkingSpots: [] });
     }
     
     // Debug logging removed
@@ -66,7 +62,9 @@ export class ProjectsService implements IProjectsService {
         const contacts = await this.firestoreRepo.getContactsByIds(Array.from(allUnitOwnerIds));
         // Debug logging removed
         contacts.forEach(contact => {
-            contactsMap.set(contact.id!, getContactDisplayName(contact));
+            if (contact.id) {
+                contactsMap.set(contact.id, getContactDisplayName(contact));
+            }
         });
     }
     
@@ -103,12 +101,15 @@ export class ProjectsService implements IProjectsService {
 
     const contacts = await this.firestoreRepo.getContactsByIds(customerIds);
 
-    return contacts.map(contact => ({
-      contactId: contact.id!,
-      name: getContactDisplayName(contact),
-      phone: getPrimaryPhone(contact) || null,
-      unitsCount: customerUnitCount[contact.id!] || 0,
-    }));
+    return contacts.flatMap(contact => {
+      if (!contact.id) return [];
+      return [{
+        contactId: contact.id,
+        name: getContactDisplayName(contact),
+        phone: getPrimaryPhone(contact) || null,
+        unitsCount: customerUnitCount[contact.id] || 0,
+      }];
+    });
   }
 
   async getProjectStats(projectId: string): Promise<ProjectStats> {
@@ -151,41 +152,32 @@ export class ProjectsService implements IProjectsService {
   }
 
   async debugProjectData(projectId: string): Promise<void> {
-    if (!db) {
-        // Error logging removed
-        return;
-    }
     try {
         // Debug logging removed
-        
-        const admin = await getFirebaseAdmin();
-        
-        const projectDoc = await admin.getDoc(admin.doc(db, COLLECTIONS.PROJECTS, projectId));
+        const db = getAdminFirestore();
+        const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
         // Debug logging removed
-        if (projectDoc.exists()) {
+        if (projectDoc.exists) {
             // Debug logging removed
         }
         
-        const buildingsQuery = admin.query(admin.collection(db, COLLECTIONS.BUILDINGS), admin.where('projectId', '==', projectId));
-        const buildings = await admin.getDocs(buildingsQuery);
+        const buildings = await db.collection(COLLECTIONS.BUILDINGS).where('projectId', '==', projectId).get();
         // Debug logging removed
-        buildings.docs.forEach((doc: admin.QueryDocumentSnapshot) => {
+        buildings.docs.forEach((doc) => {
             // Debug logging removed
         });
         
         for (const building of buildings.docs) {
-            const unitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('buildingId', '==', `building-${building.id}`));
-            const units = await admin.getDocs(unitsQuery);
+            const units = await db.collection(COLLECTIONS.UNITS).where('buildingId', '==', `building-${building.id}`).get();
             // Debug logging removed
-            units.docs.forEach((doc: admin.QueryDocumentSnapshot) => {
+            units.docs.forEach((doc) => {
                 const data = doc.data();
                 // Debug logging removed
             });
         }
         
         try {
-            const directUnitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('projectId', '==', projectId));
-            const directUnits = await admin.getDocs(directUnitsQuery);
+            const directUnits = await db.collection(COLLECTIONS.UNITS).where('projectId', '==', projectId).get();
             if (!directUnits.empty) {
                 // Debug logging removed
             }

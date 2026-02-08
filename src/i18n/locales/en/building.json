@@ -1041,6 +1041,16 @@
           "progress": "Progress",
           "days": "days"
         },
+        "export": {
+          "export": "Export",
+          "pdf": "PDF (Document)",
+          "png": "PNG (Image)",
+          "svg": "SVG (Vector)",
+          "excel": "Excel (Data)",
+          "exporting": "Exporting...",
+          "success": "Export completed",
+          "error": "Export error"
+        },
         "dialog": {
           "createPhase": "Create Phase",
           "editPhase": "Edit Phase",

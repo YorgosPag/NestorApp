@@ -12,6 +12,16 @@ import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import type { IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+
+const toDateValue = (value: unknown): Date => {
+  if (value instanceof Date) return value;
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const candidate = (value as { toDate?: () => Date }).toDate;
+    if (typeof candidate === 'function') return candidate();
+  }
+  return new Date();
+};
+
 export class FirestoreObligationsRepository implements IObligationsRepository {
   async getAll(): Promise<ObligationDocument[]> {
     try {
@@ -22,17 +32,20 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
       const snapshot = await getDocs(obligationsQuery);
 
-      const obligations = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        projectDetails: {
-          ...doc.data().projectDetails,
-          contractDate: doc.data().projectDetails?.contractDate?.toDate() || new Date(),
-          deliveryDate: doc.data().projectDetails?.deliveryDate?.toDate() || new Date()
-        }
-      })) as ObligationDocument[];
+      const obligations = snapshot.docs.map(doc => {
+        const data = doc.data() as Partial<ObligationDocument>;
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: toDateValue(data.createdAt),
+          updatedAt: toDateValue(data.updatedAt),
+          projectDetails: {
+            ...data.projectDetails,
+            contractDate: toDateValue(data.projectDetails?.contractDate),
+            deliveryDate: toDateValue(data.projectDetails?.deliveryDate)
+          }
+        } as ObligationDocument;
+      });
 
       // 🎯 PRODUCTION: Μείωση logging verbosity για obligations/new page
       // console.log(`✅ Loaded ${obligations.length} real obligations from Firebase`);
@@ -52,16 +65,16 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         return null;
       }
 
-      const data = snapshot.data();
+      const data = snapshot.data() as Partial<ObligationDocument>;
       return {
         id: snapshot.id,
         ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
+        createdAt: toDateValue(data.createdAt),
+        updatedAt: toDateValue(data.updatedAt),
         projectDetails: {
           ...data.projectDetails,
-          contractDate: data.projectDetails?.contractDate?.toDate() || new Date(),
-          deliveryDate: data.projectDetails?.deliveryDate?.toDate() || new Date()
+          contractDate: toDateValue(data.projectDetails?.contractDate),
+          deliveryDate: toDateValue(data.projectDetails?.deliveryDate)
         }
       } as ObligationDocument;
     } catch (error) {
@@ -211,7 +224,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     }
   }
 
-  async search(query: string, filters?: SearchFilters): Promise<ObligationDocument[]> {
+  async search(searchText: string, filters?: SearchFilters): Promise<ObligationDocument[]> {
     try {
       // Start with base query
       const baseQuery = collection(db, COLLECTIONS.OBLIGATIONS);
@@ -241,21 +254,24 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
       const snapshot = await getDocs(searchQuery);
 
-      let results = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        projectDetails: {
-          ...doc.data().projectDetails,
-          contractDate: doc.data().projectDetails?.contractDate?.toDate() || new Date(),
-          deliveryDate: doc.data().projectDetails?.deliveryDate?.toDate() || new Date()
-        }
-      })) as ObligationDocument[];
+      let results = snapshot.docs.map(doc => {
+        const data = doc.data() as Partial<ObligationDocument>;
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: toDateValue(data.createdAt),
+          updatedAt: toDateValue(data.updatedAt),
+          projectDetails: {
+            ...data.projectDetails,
+            contractDate: toDateValue(data.projectDetails?.contractDate),
+            deliveryDate: toDateValue(data.projectDetails?.deliveryDate)
+          }
+        } as ObligationDocument;
+      });
 
       // Apply text search filter (Firebase doesn't support full-text search natively)
-      if (query.trim()) {
-        const searchTerm = query.toLowerCase();
+      if (searchText.trim()) {
+        const searchTerm = searchText.toLowerCase();
         results = results.filter(o =>
           o.title.toLowerCase().includes(searchTerm) ||
           o.projectName.toLowerCase().includes(searchTerm) ||

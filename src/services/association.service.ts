@@ -89,6 +89,14 @@ export class AssociationService {
     try {
       const { sourceWorkspaceId, sourceContactId, targetEntityType, targetEntityId, targetWorkspaceId, reason, createdBy, metadata } = input;
 
+      if (!targetEntityType || !targetEntityId) {
+        return {
+          success: false,
+          error: 'Target entity type and ID are required',
+          errorCode: 'INVALID_TARGET'
+        };
+      }
+
       // Generate link ID
       const linkId = this.generateContactLinkId(sourceContactId, targetEntityType, targetEntityId);
 

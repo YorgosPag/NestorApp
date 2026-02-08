@@ -140,10 +140,10 @@ const getChartColors = (semanticColors: ReturnType<typeof useSemanticColors>) =>
   primary: GEO_COLORS.UI.PRIMARY,
   secondary: GEO_COLORS.UI.SECONDARY,
   accent: GEO_COLORS.UI.ACCENT,
-  danger: GEO_COLORS.UI.DESTRUCTIVE,
-  text: GEO_COLORS.UI.FOREGROUND,
-  textSecondary: GEO_COLORS.UI.MUTED_FOREGROUND,
-  grid: GEO_COLORS.UI.BORDER,
+  danger: GEO_COLORS.UI.DANGER,
+  text: GEO_COLORS.UI.TEXT,
+  textSecondary: GEO_COLORS.UI.TEXT_SECONDARY,
+  grid: GEO_COLORS.UI.GRID,
   background: GEO_COLORS.UI.BACKGROUND
 });
 

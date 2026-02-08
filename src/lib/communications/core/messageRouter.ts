@@ -4,7 +4,7 @@ import { MESSAGE_DIRECTIONS, MESSAGE_STATUSES, isChannelEnabled } from '../../co
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, FieldValue } from 'firebase/firestore';
 import type { Channel, BaseMessageInput, SendResult } from '@/types/communications';
-import type { MessageAttachment } from '@/types/conversations';
+import { ATTACHMENT_TYPES, type MessageAttachment } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
@@ -43,7 +43,7 @@ interface MessageRecordInput {
 
 /** Message status update */
 interface MessageStatusUpdate {
-  status: string;
+  status?: string;
   externalId?: string | null;
   entityType?: string;
   entityId?: string | null;
@@ -131,8 +131,19 @@ class MessageRouter {
         throw new Error(`Channel ${messageData.channel} is not enabled or configured`);
       }
 
+      const normalizedAttachments: MessageAttachment[] | undefined = messageData.attachments?.map((url) => ({
+        type: ATTACHMENT_TYPES.DOCUMENT,
+        url
+      }));
+
       const record = await this.createMessageRecord(
-        { ...messageData, content: messageData.content ?? '' },
+        {
+          ...messageData,
+          content: messageData.content ?? '',
+          entityType: messageData.entityType ?? undefined,
+          threadId: messageData.threadId ?? undefined,
+          attachments: normalizedAttachments
+        },
         MESSAGE_DIRECTIONS.OUTBOUND as 'outbound'
       );
       messageRecordId = record.id;
@@ -257,7 +268,7 @@ class MessageRouter {
    */
   async attemptLeadMatching(messageId: string, parsed: InboundParsed): Promise<string | null> {
     try {
-      const entityId: string | null = null; // TODO: Implement lead searching logic
+      let entityId: string | null = null; // TODO: Implement lead searching logic
       if (entityId) {
         await this.updateMessageStatus(messageId, { entityType: 'lead', entityId });
       }

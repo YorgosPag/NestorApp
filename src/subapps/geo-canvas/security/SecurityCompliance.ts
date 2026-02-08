@@ -370,7 +370,7 @@ export class GeoAlertSecurityCompliance {
     // Αν βρεθούν critical vulnerabilities, δημιούργησε incident
     const criticalVulns = assessment.vulnerabilities.filter(v => v.severity === 'critical');
     if (criticalVulns.length > 0) {
-      this.createSecurityIncident('vulnerability_detected', 'critical',
+      this.createSecurityIncident(this.mapIncidentType('vulnerability_detected'), 'critical',
         `Critical vulnerabilities detected: ${criticalVulns.length} findings`);
     }
 
@@ -439,7 +439,7 @@ export class GeoAlertSecurityCompliance {
     const anomalyScore = Math.random();
 
     if (anomalyScore > this.config.monitoring.alertThresholds.anomalyScoreThreshold) {
-      this.createSecurityIncident('anomaly_detected', 'medium',
+      this.createSecurityIncident(this.mapIncidentType('anomaly_detected'), 'medium',
         `Anomalous behavior detected with score: ${anomalyScore.toFixed(3)}`);
     }
   }
@@ -455,13 +455,13 @@ export class GeoAlertSecurityCompliance {
 
     // Check failed login attempts
     if (metrics.authentication.failedLogins > thresholds.failedLoginAttempts) {
-      this.createSecurityIncident('brute_force_attack', 'high',
+      this.createSecurityIncident(this.mapIncidentType('brute_force_attack'), 'high',
         `Excessive failed login attempts: ${metrics.authentication.failedLogins}`);
     }
 
     // Check vulnerability count
     if (metrics.vulnerabilities.critical > 0) {
-      this.createSecurityIncident('critical_vulnerability', 'critical',
+      this.createSecurityIncident(this.mapIncidentType('critical_vulnerability'), 'critical',
         `Critical vulnerabilities require immediate attention: ${metrics.vulnerabilities.critical}`);
     }
   }
@@ -469,6 +469,21 @@ export class GeoAlertSecurityCompliance {
   /**
    * 🚨 Security Incident Creation
    */
+  private mapIncidentType(
+    value: 'vulnerability_detected' | 'anomaly_detected' | 'brute_force_attack' | 'critical_vulnerability'
+  ): SecurityIncident['type'] {
+    switch (value) {
+      case 'vulnerability_detected':
+        return 'malware';
+      case 'critical_vulnerability':
+        return 'data_breach';
+      case 'brute_force_attack':
+      case 'anomaly_detected':
+      default:
+        return 'unauthorized_access';
+    }
+  }
+
   public createSecurityIncident(
     type: SecurityIncident['type'],
     severity: SecurityIncident['severity'],
@@ -615,7 +630,7 @@ export class GeoAlertSecurityCompliance {
       {
         control: `${framework}-SC-01`,
         requirement: 'System and Communications Protection',
-        status: 'partially_compliant',
+        status: 'non_compliant',
         evidence: ['TLS encryption', 'Data encryption at rest'],
         gaps: ['Missing network segmentation'],
         riskLevel: 'medium'

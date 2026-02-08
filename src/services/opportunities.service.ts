@@ -36,7 +36,7 @@ const transformOpportunity = (doc: DocumentSnapshot<DocumentData> | QueryDocumen
         }
     }
 
-    return opportunity as Opportunity;
+    return opportunity as unknown as Opportunity;
 };
 
 // Προσθήκη νέας ευκαιρίας

@@ -84,16 +84,23 @@ function getCentralizedLegalForms(): LegalFormOption[] {
     value: form.value.toUpperCase(),
     label: form.label,
     fullName: form.label.match(/\((.*?)\)/)?.[1] || form.label,
-    description: `Εταιρεία τύπου ${form.value.toUpperCase()}`,
+    description: form.label,
     jurisdiction: 'GR',
     minCapital: { amount: 0, currency: 'EUR' },
     minShareholders: form.value === 'ae' ? 1 : 2,
     maxShareholders: form.value === 'ae' ? undefined : 50,
     liabilityType: form.value === 'ae' ? 'limited' : 'unlimited',
+    requirements: [],
+    taxImplications: [],
+    registrationAuthorities: [],
+    requiredDocuments: [],
+    useCases: [],
+    advantages: [],
+    disadvantages: [],
+    order: centralizedForms.indexOf(form) + 1,
     isActive: true,
-    created: new Date(),
-    updated: new Date()
-  } as LegalFormOption));
+    effectiveDate: new Date()
+  }));
 }
 
 /**
@@ -106,16 +113,22 @@ function getCentralizedCompanyStatuses(): CompanyStatusOption[] {
   return centralizedStatuses.map(status => ({
     value: status.value,
     label: status.label,
-    description: `Κατάσταση εταιρείας: ${status.label}`,
+    description: status.label,
+    category: 'operational',
+    businessImpact: status.value === 'active' ? 'none' : 'limited',
+    legalImplications: [],
+    requiredActions: [],
+    allowedTransitions: [],
+    notificationRequirements: [],
+    reportingObligations: [],
+    order: centralizedStatuses.indexOf(status) + 1,
     isActive: status.value === 'active',
     workflow: {
       canTransitionTo: status.value === 'active' ? ['inactive', 'dissolved'] : [],
       requiresApproval: status.value === 'dissolved',
       autoReasons: []
-    },
-    created: new Date(),
-    updated: new Date()
-  } as CompanyStatusOption));
+    }
+  }));
 }
 
 // ============================================================================
@@ -492,9 +505,10 @@ export class EnterpriseBusinessRulesService {
     }
 
     try {
+      const firestore = this.db!;
       // Query database for configuration
       const configRef = doc(
-        this.db,
+        firestore,
         'business_rules_configurations',
         `${tenantId}-${jurisdiction}-${environment}`
       );

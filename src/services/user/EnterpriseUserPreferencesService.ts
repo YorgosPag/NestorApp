@@ -128,7 +128,7 @@ export interface UserPreferences {
   editorTools: EditorToolPreferences;
   display: DisplayPreferences;
   notifications: NotificationPreferences;
-  customSettings: Record<string, any>;
+  customSettings: Record<string, unknown>;
 }
 
 /**
@@ -167,7 +167,7 @@ export interface CompanyDefaultPreferencesConfig {
   id: string;
   tenantId: string;
   category: 'propertyViewer' | 'editorTools' | 'display' | 'notifications';
-  defaults: Record<string, any>;
+  defaults: Record<string, unknown>;
   isEnabled: boolean;
   priority: number;
   environment?: string;
@@ -187,9 +187,9 @@ export interface CompanyDefaultPreferencesConfig {
 
 class EnterpriseUserPreferencesService {
   private readonly CONFIG_COLLECTION = COLLECTIONS.CONFIG;
-  private readonly USER_PREFERENCES_COLLECTION = COLLECTIONS.USER_PREFERENCES || 'user_preferences';
+  private readonly USER_PREFERENCES_COLLECTION = COLLECTIONS.USER_PREFERENCES;
   private readonly preferencesCache = new Map<string, UserPreferences>();
-  private readonly companyDefaultsCache = new Map<string, Record<string, any>>();
+  private readonly companyDefaultsCache = new Map<string, Record<string, unknown>>();
   private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes για user preferences
   private cacheTimestamps = new Map<string, number>();
 
@@ -350,9 +350,11 @@ class EnterpriseUserPreferencesService {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchUserSettingsUpdated({
         userId,
-        settingsType: 'preferences',
         updates: {
-          categories: Object.keys(preferences),
+          settingKey: 'preferences',
+          value: {
+            categories: Object.keys(preferences),
+          }
         },
         timestamp: Date.now(),
       });
@@ -390,10 +392,12 @@ class EnterpriseUserPreferencesService {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchUserSettingsUpdated({
         userId,
-        settingsType: 'preferences',
         updates: {
-          category,
-          updatedKeys: Object.keys(updates),
+          settingKey: 'preferences',
+          value: {
+            category,
+            updatedKeys: Object.keys(updates),
+          }
         },
         timestamp: Date.now(),
       });
@@ -412,7 +416,7 @@ class EnterpriseUserPreferencesService {
   /**
    * 🏢 Load company default preferences
    */
-  async loadCompanyDefaults(tenantId?: string): Promise<Record<string, any>> {
+  async loadCompanyDefaults(tenantId?: string): Promise<Record<string, unknown>> {
     const cacheKey = `company_defaults_${tenantId || 'default'}`;
 
     // Check cache first
@@ -441,7 +445,7 @@ class EnterpriseUserPreferencesService {
       const q = query(collection(db, this.CONFIG_COLLECTION), ...constraints);
       const querySnapshot = await getDocs(q);
 
-      const defaults: Record<string, any> = {};
+      const defaults: Record<string, unknown> = {};
 
       querySnapshot.forEach((doc) => {
         const config = doc.data() as CompanyDefaultPreferencesConfig;
@@ -471,7 +475,7 @@ class EnterpriseUserPreferencesService {
    */
   private async mergePreferences(
     userPrefs: UserPreferences | null,
-    companyDefaults: Record<string, any>
+    companyDefaults: Record<string, unknown>
   ): Promise<UserPreferences> {
     const fallbackPrefs = this.getFallbackPreferences();
 
@@ -479,11 +483,19 @@ class EnterpriseUserPreferencesService {
     let mergedPrefs = { ...fallbackPrefs };
 
     // Apply company defaults
-    Object.keys(companyDefaults).forEach(category => {
-      if (mergedPrefs[category as keyof UserPreferences]) {
-        mergedPrefs[category as keyof UserPreferences] = {
-          ...mergedPrefs[category as keyof UserPreferences],
-          ...companyDefaults[category]
+    Object.keys(companyDefaults).forEach((category) => {
+      const key = category as keyof UserPreferences;
+      const defaultsForCategory = companyDefaults[category];
+
+      if (
+        mergedPrefs[key] &&
+        defaultsForCategory &&
+        typeof defaultsForCategory === 'object' &&
+        !Array.isArray(defaultsForCategory)
+      ) {
+        mergedPrefs[key] = {
+          ...mergedPrefs[key],
+          ...(defaultsForCategory as Partial<UserPreferences[typeof key]>)
         };
       }
     });
@@ -565,8 +577,8 @@ class EnterpriseUserPreferencesService {
           floor: [],
           propertyType: [],
           status: [],
-          priceRange: { min: undefined, max: undefined },
-          areaRange: { min: undefined, max: undefined },
+          priceRange: { min: null, max: null },
+          areaRange: { min: null, max: null },
           features: []
         },
         defaultStats: {

@@ -10,7 +10,6 @@
  * @enterprise Quality gates για AI provider
  */
 
-import { describe, it, expect } from '@jest/globals';
 import { MockAIAnalysisProvider } from '../providers/MockAIAnalysisProvider';
 import {
   validateAIAnalysisResult,

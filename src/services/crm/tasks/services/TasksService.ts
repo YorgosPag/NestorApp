@@ -1,5 +1,5 @@
 import type { CrmTask } from '@/types/crm';
-import type { ITasksService, ITasksRepository } from '../contracts';
+import type { ITasksService, ITasksRepository, TasksStats } from '../contracts';
 import { Timestamp, serverTimestamp } from 'firebase/firestore';
 
 let tasksServiceInstance: TasksService | null = null;
@@ -118,7 +118,7 @@ class TasksService implements ITasksService {
     }
   }
 
-  async getTasksStats(userId: string | null = null) {
+  async getTasksStats(userId: string | null = null): Promise<TasksStats> {
     try {
       return await this.repository.getStats(userId);
     } catch (error) {
@@ -152,4 +152,10 @@ export async function getTaskById(taskId: string, repository: ITasksRepository):
   'use server';
   const service = await createTasksService(repository);
   return service.getTaskById(taskId);
+}
+
+export async function getTasksStats(userId: string | null, repository: ITasksRepository): Promise<TasksStats> {
+  'use server';
+  const service = await createTasksService(repository);
+  return service.getTasksStats(userId);
 }

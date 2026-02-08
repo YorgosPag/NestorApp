@@ -38,7 +38,7 @@ export class TextRenderer implements ITextRenderer {
   addWrappedText(args: {
     doc: IPDFDoc; text: string; y: number; fontSize?: number;
     bold?: boolean; maxWidth: number; margins: Margins;
-    onPageBreak: () => void; lineStep?: number;
+    onPageBreak: () => number; lineStep?: number;
   }): number {
     let {
       doc, text, y, fontSize = FONT_SIZES.BODY, bold = false,

@@ -82,7 +82,7 @@ export class RelationshipValidationService {
 
     // Business rule validation (if contacts provided)
     if (sourceContact && targetContact) {
-      await this.validateBusinessRules(sourceContact, targetContact, data.relationshipType!);
+      this.validateBusinessRules(sourceContact.type, targetContact.type, data.relationshipType!);
     }
 
     // Data integrity validation

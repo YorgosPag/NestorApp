@@ -14,7 +14,7 @@
  * - Performance-optimized caching
  */
 
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -354,7 +354,7 @@ export class EnterprisePolygonStyleService {
       return this.configCache.get(cacheKey)!;
     }
 
-    const constraints = [orderBy('priority', 'asc')];
+    const constraints: QueryConstraint[] = [orderBy('priority', 'asc')];
 
     // Add tenant filter
     if (tenantId) {
@@ -550,7 +550,7 @@ export class EnterprisePolygonStyleService {
           polygonType: type as PolygonType,
           style,
           tenantId,
-          environment: environment || 'all',
+          environment: (environment || 'all') as EnterprisePolygonStyleConfig['environment'],
           theme: 'default',
           isEnabled: true,
           priority: index + 1,
@@ -572,7 +572,7 @@ export class EnterprisePolygonStyleService {
           polygonType: type as PolygonType,
           style: DARK_THEME_STYLES[type as PolygonType],
           tenantId,
-          environment: environment || 'all',
+          environment: (environment || 'all') as EnterprisePolygonStyleConfig['environment'],
           theme: 'dark',
           isEnabled: true,
           priority: index + 1,
@@ -594,7 +594,7 @@ export class EnterprisePolygonStyleService {
           polygonType: type as PolygonType,
           style: HIGH_CONTRAST_STYLES[type as PolygonType],
           tenantId,
-          environment: environment || 'all',
+          environment: (environment || 'all') as EnterprisePolygonStyleConfig['environment'],
           theme: 'high-contrast',
           isEnabled: true,
           priority: index + 1,

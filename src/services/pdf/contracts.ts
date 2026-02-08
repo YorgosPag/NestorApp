@@ -46,7 +46,7 @@ export type Margins = { top: number; right: number; bottom: number; left: number
 
 export interface ITextRenderer {
   addText(args: { doc: IPDFDoc; text: string; y: number; align?: 'left' | 'center' | 'right'; fontSize?: number; bold?: boolean; color?: [number, number, number]; margins: Margins; pageWidth: number }): number;
-  addWrappedText(args: { doc: IPDFDoc; text: string; y: number; fontSize?: number; bold?: boolean; maxWidth: number; margins: Margins; onPageBreak: () => void; lineStep?: number }): number;
+  addWrappedText(args: { doc: IPDFDoc; text: string; y: number; fontSize?: number; bold?: boolean; maxWidth: number; margins: Margins; onPageBreak: () => number; lineStep?: number }): number;
 }
 
 export interface IHeaderFooterRenderer {

@@ -40,6 +40,12 @@ export interface OrganizationHierarchyNode {
     size: number;
     budget?: number;
   };
+
+  /** ?? Direct reports count */
+  directReportCount?: number;
+
+  /** ?? Tenure duration in months */
+  tenureMonths?: number;
 }
 
 /**

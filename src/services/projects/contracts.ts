@@ -31,7 +31,7 @@ export type ProjectParking = Pick<ParkingSpot, 'id' | 'code' | 'type' | 'status'
  *
  * NOTE: Using intersection type (&) instead of extends to avoid conflict with Building's index signature
  */
-export type ProjectBuilding = Building & {
+export type ProjectBuilding = Omit<Building, 'units'> & {
   /** Units in this building */
   units: ProjectUnit[];
   /** Storage areas in this building */

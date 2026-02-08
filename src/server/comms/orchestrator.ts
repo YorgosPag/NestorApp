@@ -308,10 +308,11 @@ function getFromAddress(channel: CommunicationChannel, params: EnqueueMessagePar
  */
 function getPlatformName(channel: CommunicationChannel): string {
   const platforms: Record<CommunicationChannel, string> = {
-    email: 'mailgun',
-    telegram: 'telegram',
-    whatsapp: 'meta_cloud_api',
-    sms: 'sms_provider'
+    [COMMUNICATION_CHANNELS.EMAIL]: 'mailgun',
+    [COMMUNICATION_CHANNELS.TELEGRAM]: 'telegram',
+    [COMMUNICATION_CHANNELS.WHATSAPP]: 'meta_cloud_api',
+    [COMMUNICATION_CHANNELS.SMS]: 'sms_provider',
+    [COMMUNICATION_CHANNELS.MESSENGER]: 'messenger'
   };
   return platforms[channel] || channel;
 }
@@ -319,22 +320,24 @@ function getPlatformName(channel: CommunicationChannel): string {
 /**
  * Get channel-specific metadata
  */
-function getChannelSpecificMetadata(channel: CommunicationChannel, params: EnqueueMessageParams): ChannelMetadata {
+function getChannelSpecificMetadata(channel: CommunicationChannel, params: EnqueueMessageParams): Record<string, unknown> {
   const channelMeta = (params.metadata as Record<CommunicationChannel, unknown> | undefined)?.[channel] ?? {};
 
   switch (channel) {
     case 'telegram':
+      const telegramMeta = channelMeta as { chatId?: string; parseMode?: 'HTML' | 'Markdown' };
       return {
-        chatId: channelMeta.chatId || params.to,
-        parseMode: channelMeta.parseMode || 'HTML'
+        chatId: telegramMeta.chatId || params.to,
+        parseMode: telegramMeta.parseMode || 'HTML'
       };
     case 'whatsapp':
+      const whatsappMeta = channelMeta as { templateName?: string; templateParams?: WhatsAppTemplateParams };
       return {
-        templateName: channelMeta.templateName,
-        templateParams: channelMeta.templateParams
+        templateName: whatsappMeta.templateName,
+        templateParams: whatsappMeta.templateParams
       };
     default:
-      return channelMeta;
+      return channelMeta as Record<string, unknown>;
   }
 }
 
@@ -343,10 +346,11 @@ function getChannelSpecificMetadata(channel: CommunicationChannel, params: Enque
  */
 function getMaxAttempts(channel: CommunicationChannel, priority?: MessagePriority): number {
   const baseAttempts: Record<CommunicationChannel, number> = {
-    email: 3,
-    telegram: 5,
-    whatsapp: 3,
-    sms: 2
+    [COMMUNICATION_CHANNELS.EMAIL]: 3,
+    [COMMUNICATION_CHANNELS.TELEGRAM]: 5,
+    [COMMUNICATION_CHANNELS.WHATSAPP]: 3,
+    [COMMUNICATION_CHANNELS.SMS]: 2,
+    [COMMUNICATION_CHANNELS.MESSENGER]: 3
   };
 
   const base = baseAttempts[channel] || 3;

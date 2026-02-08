@@ -377,7 +377,9 @@ class EnterpriseNotificationService {
       ? `notification_configs/tenants/${tenantId}/${environment}`
       : `notification_configs/global/${environment}`;
 
-    const configDoc = await getDoc(doc(this.db, configPath));
+    const firestore = this.db!;
+
+    const configDoc = await getDoc(doc(firestore, configPath));
 
     if (!configDoc.exists()) {
       throw new Error(`Configuration not found: ${configPath}`);
@@ -470,7 +472,9 @@ class EnterpriseNotificationService {
       ? `notification_priorities/tenants/${tenantId}/${environment}`
       : `notification_priorities/global/${environment}`;
 
-    const prioritiesQuery = query(collection(this.db, prioritiesPath), where('isActive', '==', true));
+    const firestore = this.db!;
+
+    const prioritiesQuery = query(collection(firestore, prioritiesPath), where('isActive', '==', true));
     const prioritiesSnapshot = await getDocs(prioritiesQuery);
 
     const priorities: EnterpriseNotificationPriority[] = [];
@@ -550,7 +554,9 @@ class EnterpriseNotificationService {
       ? `notification_channels/tenants/${tenantId}/${environment}`
       : `notification_channels/global/${environment}`;
 
-    const channelsQuery = query(collection(this.db, channelsPath), where('isEnabled', '==', true));
+    const firestore = this.db!;
+
+    const channelsQuery = query(collection(firestore, channelsPath), where('isEnabled', '==', true));
     const channelsSnapshot = await getDocs(channelsQuery);
 
     const channels: EnterpriseChannelConfig[] = [];
@@ -629,7 +635,9 @@ class EnterpriseNotificationService {
       ? `severity_mappings/tenants/${tenantId}/${environment}`
       : `severity_mappings/global/${environment}`;
 
-    const mappingsSnapshot = await getDocs(collection(this.db, mappingsPath));
+    const firestore = this.db!;
+
+    const mappingsSnapshot = await getDocs(collection(firestore, mappingsPath));
 
     const mappings: EnterpriseSeverityMapping[] = [];
     mappingsSnapshot.forEach((doc) => {

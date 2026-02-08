@@ -632,11 +632,11 @@ export class GeoAlertPerformanceProfiler {
     };
   }
 
-  private detectEnvironment(): 'development' | 'production' | 'testing' {
+  private detectEnvironment(): 'development' | 'production' | 'test' {
     if (typeof process !== 'undefined' && process.env) {
       // ✅ ENTERPRISE: Type guard for NODE_ENV
       const env = process.env.NODE_ENV;
-      if (env === 'development' || env === 'production' || env === 'testing') {
+      if (env === 'development' || env === 'production' || env === 'test') {
         return env;
       }
       return 'development';
@@ -921,7 +921,9 @@ export class GeoAlertPerformanceProfiler {
     // Maintain buffer size
     if (this.traces.size > this.config.sampling.bufferSize) {
       const oldestKey = this.traces.keys().next().value;
-      this.traces.delete(oldestKey);
+      if (typeof oldestKey === 'string') {
+        this.traces.delete(oldestKey);
+      }
     }
   }
 
@@ -1190,8 +1192,8 @@ export class GeoAlertPerformanceProfiler {
 
       return { result, trace: trace! };
     } catch (error) {
-      const endTime = performance.now();
-      const trace = this.endTrace(traceId, { result: 'error', error: error.toString() });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const trace = this.endTrace(traceId, { result: 'error', error: errorMessage });
 
       throw error;
     }
@@ -1213,7 +1215,8 @@ export class GeoAlertPerformanceProfiler {
 
       return { result, trace: trace! };
     } catch (error) {
-      const trace = this.endTrace(traceId, { result: 'error', error: error.toString() });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const trace = this.endTrace(traceId, { result: 'error', error: errorMessage });
 
       throw error;
     }

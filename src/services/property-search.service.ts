@@ -13,6 +13,8 @@ import {
 import type { Property } from '@/types/property';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+const db = getAdminFirestore();
+
 // =============================================================================
 // 🏢 ENTERPRISE: Multi-collection search types (local_4.log architecture)
 // Units / Storage / Parking = παράλληλες οντότητες
@@ -303,7 +305,7 @@ export async function unifiedPropertySearch(searchText: string): Promise<Unified
       results.units = unitsSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Property))
         .filter(unit => {
-          const name = (unit.name || '').toLowerCase();
+          const name = (unit.code || '').toLowerCase();
           const type = (unit.type || '').toLowerCase();
           return name.includes(searchTerm) || type.includes(searchTerm) || searchTerm.length < 3;
         });

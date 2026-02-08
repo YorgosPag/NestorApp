@@ -266,10 +266,10 @@ export const MigrationHelpers = {
       const analytics = AnalyticsServiceClass;
 
       // Verify essential methods exist
-      return !!(
-        sharing.buildPlatformShareUrl &&
-        profiles.generateProfileUrl &&
-        analytics.trackShareEvent
+      return (
+        typeof sharing.buildPlatformShareUrl === 'function' &&
+        typeof profiles.generateProfileUrl === 'function' &&
+        typeof analytics.trackShareEvent === 'function'
       );
     } catch (error) {
       console.error('Migration validation failed:', error);
@@ -292,9 +292,6 @@ const SocialPlatformSystem = {
   Sharing: SharingServiceClass,
   Profiles: ProfileServiceClass,
   Analytics: AnalyticsServiceClass,
-
-  // Platform data
-  platforms: UNIFIED_SOCIAL_PLATFORMS,
 
   // High-level API
   ...SocialPlatforms,

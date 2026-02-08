@@ -88,7 +88,7 @@ export class WorkspaceService {
       description,
       companyId,
       status: 'active',
-      settings: settings || (await import('@/types/workspace')).DEFAULT_WORKSPACE_SETTINGS,
+      settings: settings || DEFAULT_WORKSPACE_SETTINGS,
       createdAt: new Date().toISOString(),
       createdBy,
       metadata,
@@ -106,9 +106,7 @@ export class WorkspaceService {
     RealtimeService.dispatchWorkspaceCreated({
       workspaceId,
       workspace: {
-        displayName,
-        type,
-        status: 'active',
+        name: displayName,
         companyId,
       },
       timestamp: Date.now(),
@@ -274,8 +272,7 @@ export class WorkspaceService {
     RealtimeService.dispatchWorkspaceUpdated({
       workspaceId,
       updates: {
-        displayName,
-        status,
+        name: displayName,
       },
       timestamp: Date.now(),
     });
@@ -309,7 +306,7 @@ export class WorkspaceService {
    */
   private static generateWorkspaceId(type: WorkspaceType, companyId?: string): string {
     if (type === 'office_directory') {
-      return (async () => (await import('@/types/workspace')).SPECIAL_WORKSPACE_IDS.OFFICE_DIRECTORY)();
+      return SPECIAL_WORKSPACE_IDS.OFFICE_DIRECTORY;
     }
 
     if (type === 'company' && companyId) {

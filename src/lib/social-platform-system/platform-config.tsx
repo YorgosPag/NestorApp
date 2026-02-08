@@ -384,7 +384,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-pink-400 via-red-500 to-yellow-500', // Instagram gradient
         hover: designSystem.cn(
           designSystem.getStatusColor('warning', 'bg'),
-          HOVER_SHADOWS.COLORED.PINK
+          HOVER_SHADOWS.COLORED.PURPLE
         ),
         text: designSystem.getStatusColor('foreground', 'text')
       },

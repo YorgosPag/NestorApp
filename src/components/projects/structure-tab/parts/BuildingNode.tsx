@@ -105,6 +105,8 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // RENDER
   // ==========================================================================
 
+  const buildingName = typeof building.name === 'string' ? building.name : String(building.name ?? '');
+
   return (
     <article>
       {/* 🏢 ENTERPRISE: Building header */}
@@ -118,7 +120,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
         }
         <NAVIGATION_ENTITIES.building.icon className={cn(NAVIGATION_ENTITIES.building.color)} size={20} />
         <div className="flex-1">
-          <div className={cn(typography.heading.sm, colors.text.foreground)}>{building.name}</div>
+          <div className={cn(typography.heading.sm, colors.text.foreground)}>{buildingName}</div>
           <div className={cn(typography.body.sm, colors.text.muted)}>
             {totalUnits} {t('structure.units', 'μονάδες')} • {totalStorages} {t('structure.storages', 'αποθήκες')} • {totalParkingSpots} {t('structure.parkingSpots', 'θέσεις')}
           </div>

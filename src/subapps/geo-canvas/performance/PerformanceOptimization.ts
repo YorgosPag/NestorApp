@@ -847,7 +847,7 @@ export class GeoAlertPerformanceOptimization {
       status: 'optimal',
       initialized: this.isInitialized,
       cdnProvider: this.cdnConfig.provider,
-      optimizationsEnabled,
+      optimizationsEnabled: enabledOptimizations,
       monitoringActive: this.monitoringInterval !== null
     };
   }

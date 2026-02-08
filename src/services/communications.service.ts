@@ -92,6 +92,22 @@ const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>
     return communication as Communication;
 };
 
+const resolveDateValue = (value: unknown): Date => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    return new Date(value);
+  }
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const dateValue = (value as { toDate?: () => Date }).toDate?.();
+    if (dateValue instanceof Date) {
+      return dateValue;
+    }
+  }
+  return new Date();
+};
+
 // ============================================================================
 // 🏢 ENTERPRISE: Shared triage query helper (Admin SDK)
 // ============================================================================
@@ -166,8 +182,8 @@ async function fetchTriageCommunications(params: {
   );
 
   const sorted = communications.sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
+    const dateA = resolveDateValue(a.createdAt).getTime();
+    const dateB = resolveDateValue(b.createdAt).getTime();
     return dateB - dateA;
   });
 
