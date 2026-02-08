@@ -177,6 +177,7 @@
       "originalMessage": "Original Message",
       "aiUnderstanding": "AI Understanding",
       "proposal": "Proposed Actions",
+      "aiBriefing": "AI Briefing — Calendar Availability",
       "draftReply": "Draft Reply"
     },
     "fields": {
@@ -189,10 +190,15 @@
       "reason": "Reason",
       "criteria": "Criteria",
       "matchingUnits": "matching",
-      "totalAvailable": "total available"
+      "totalAvailable": "total available",
+      "requestedDate": "Appointment Date",
+      "requestedTime": "Appointment Time",
+      "description": "Description",
+      "notSpecified": "Not specified"
     },
     "actions": {
-      "replyPropertyList": "Property search reply"
+      "replyPropertyList": "Property search reply",
+      "createAppointment": "Create appointment"
     },
     "stats": {
       "total": "Total",

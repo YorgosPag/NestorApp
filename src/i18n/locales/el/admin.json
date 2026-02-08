@@ -177,6 +177,7 @@
       "originalMessage": "Αρχικό Μήνυμα",
       "aiUnderstanding": "Κατανόηση AI",
       "proposal": "Προτεινόμενες Ενέργειες",
+      "aiBriefing": "Ενημέρωση AI — Διαθεσιμότητα Ημερολογίου",
       "draftReply": "Προσχέδιο Απάντησης"
     },
     "fields": {
@@ -189,10 +190,15 @@
       "reason": "Λόγος",
       "criteria": "Κριτήρια",
       "matchingUnits": "ταιριάζουν",
-      "totalAvailable": "διαθέσιμα συνολικά"
+      "totalAvailable": "διαθέσιμα συνολικά",
+      "requestedDate": "Ημ/νία Ραντεβού",
+      "requestedTime": "Ώρα Ραντεβού",
+      "description": "Περιγραφή",
+      "notSpecified": "Δεν ορίστηκε"
     },
     "actions": {
-      "replyPropertyList": "Απάντηση αναζήτησης ακινήτου"
+      "replyPropertyList": "Απάντηση αναζήτησης ακινήτου",
+      "createAppointment": "Δημιουργία ραντεβού"
     },
     "stats": {
       "total": "Σύνολο",

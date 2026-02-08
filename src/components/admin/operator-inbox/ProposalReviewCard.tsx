@@ -171,6 +171,77 @@ function ProposalActionRenderer({ action, spacing, typography, t }: ProposalActi
     );
   }
 
+  // ── create_appointment — UC-001 Appointment Request ──
+  if (action.type === 'create_appointment') {
+    const senderName = params.senderName as string | undefined;
+    const requestedDate = params.requestedDate as string | null;
+    const requestedTime = params.requestedTime as string | null;
+    const description = params.description as string | undefined;
+    const draftReply = params.draftReply as string | undefined;
+    const operatorBriefing = params.operatorBriefing as string | undefined;
+    const hasTimeConflict = params.hasTimeConflict as boolean | undefined;
+
+    const notSpecified = t('operatorInbox.fields.notSpecified');
+
+    return (
+      <section className={`${spacing.gap.sm} flex flex-col`}>
+        {/* Header: Action type + sender */}
+        <div className={`${spacing.gap.sm} flex flex-wrap items-center`}>
+          <Badge variant="outline">{t('operatorInbox.actions.createAppointment')}</Badge>
+          {senderName && (
+            <span className={`${typography.body.sm} text-muted-foreground`}>
+              → {senderName}
+            </span>
+          )}
+        </div>
+
+        {/* Appointment details */}
+        <dl className={`${spacing.gap.xs} grid grid-cols-[auto_1fr] ${typography.body.sm} text-muted-foreground`}>
+          <dt className="font-medium">{t('operatorInbox.fields.requestedDate')}:</dt>
+          <dd>{requestedDate ?? notSpecified}</dd>
+
+          <dt className="font-medium">{t('operatorInbox.fields.requestedTime')}:</dt>
+          <dd>{requestedTime ?? notSpecified}</dd>
+
+          {description && (
+            <>
+              <dt className="font-medium">{t('operatorInbox.fields.description')}:</dt>
+              <dd>{description}</dd>
+            </>
+          )}
+        </dl>
+
+        {/* AI Briefing — internal operator info (calendar availability) */}
+        {operatorBriefing && (
+          <Card className={`${spacing.margin.top.sm} ${hasTimeConflict ? 'border-destructive/50' : 'border-blue-500/50'}`}>
+            <CardContent className={spacing.padding.md}>
+              <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs} ${hasTimeConflict ? 'text-destructive' : 'text-blue-600 dark:text-blue-400'}`}>
+                {t('operatorInbox.sections.aiBriefing')}
+              </h5>
+              <div className={`${typography.body.sm} whitespace-pre-line text-muted-foreground`}>
+                {operatorBriefing}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Draft reply email */}
+        {draftReply && (
+          <Card className={spacing.margin.top.sm}>
+            <CardContent className={spacing.padding.md}>
+              <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs}`}>
+                {t('operatorInbox.sections.draftReply')}
+              </h5>
+              <div className={`${typography.body.sm} whitespace-pre-line text-muted-foreground`}>
+                {draftReply}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+    );
+  }
+
   // ── Generic fallback for other action types ──
   // Show only non-hidden params in a readable format
   const visibleParams = Object.entries(params).filter(

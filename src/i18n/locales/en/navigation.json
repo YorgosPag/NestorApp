@@ -238,6 +238,7 @@
     "communications": "Communications",
     "leads": "Leads & Opportunities",
     "tasks": "Tasks & Appointments",
+    "calendar": "Calendar",
     "pipeline": "Sales Pipeline",
     "teams": "Teams & Roles",
     "notifications": "Notifications"
@@ -252,6 +253,7 @@
   },
   "admin": {
     "aiInbox": "AI Inbox",
+    "operatorInbox": "Operator Inbox",
     "setup": "Admin Setup"
   },
   "badges": {

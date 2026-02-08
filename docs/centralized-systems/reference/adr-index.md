@@ -135,6 +135,7 @@
 | **ADR-099** | Polygon & Measurement Tolerances Centralization | ✅ APPROVED | 2026-01-31 | Drawing System | [📄](./adrs/ADR-099-polygon-measurement-tolerances-centralization.md) |
 | **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ IMPLEMENTED | 2026-02-08 | Security & Auth | [📄](./adrs/ADR-100-user-profile-sync.md) |
 | **ADR-101** | Deep Clone Centralization | ✅ APPROVED | 2026-01-31 | Data & State | [📄](./adrs/ADR-101-deep-clone-centralization.md) |
+| **ADR-103** | Availability Check & AI Operator Briefing | ✅ IMPLEMENTED | 2026-02-08 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-103-availability-check-operator-briefing.md) |
 | **ADR-102** | Origin Markers Centralization (DXF/Layer/Debug) | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-102-origin-markers-centralization-dxf-layer-debug.md) |
 | **ADR-104** | Entity Type Guards Centralization | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-104-entity-type-guards-centralization.md) |
 | **ADR-105** | Hit Test Fallback Tolerance Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-105-hit-test-fallback-tolerance-centralization.md) |

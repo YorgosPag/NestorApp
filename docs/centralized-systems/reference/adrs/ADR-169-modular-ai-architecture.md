@@ -203,6 +203,7 @@ AI_TIER_VISION=gpt-4o
 | 2026-02-07 | Enterprise Sections: Orchestration, Observability, Security, Governance, Escalation Precision, Contract Versioning, Config-Driven Thresholds, Replay Protection, Data Retention, Operational Runbooks |
 | 2026-02-07 | **Document Split**: ADR-169 → umbrella. Περιεχόμενο μεταφέρθηκε σε `docs/centralized-systems/ai/` (pipeline, use-cases, contracts, reliability, observability, security, governance, prerequisites) |
 | 2026-02-08 | **UC-001 Phase 2**: Email confirmation reply via Mailgun. Shared utilities centralized (`contact-lookup.ts`, `mailgun-sender.ts`). UC-001 + UC-003 refactored to use shared code |
+| 2026-02-08 | **ADR-103: Availability Check & AI Operator Briefing**: Server-side calendar availability check integrated into UC-001 LOOKUP/PROPOSE. Operator sees internal AI briefing with existing appointments and conflict detection. Navigation: AI Inbox + Operator Inbox moved to CRM section |
 
 ---
 

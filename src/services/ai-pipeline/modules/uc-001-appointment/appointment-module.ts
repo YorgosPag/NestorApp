@@ -25,6 +25,7 @@ import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
 import { sendReplyViaMailgun, type MailgunSendResult } from '../../shared/mailgun-sender';
+import { checkAvailability, type AvailabilityResult } from '../../shared/availability-check';
 import {
   PipelineIntentType,
   PipelineChannel,
@@ -59,6 +60,8 @@ interface AppointmentLookupData {
   requestedTime: string | null;
   originalSubject: string;
   companyId: string;
+  /** Calendar availability check result */
+  availability: AvailabilityResult | null;
 }
 
 // ============================================================================
@@ -203,6 +206,23 @@ export class AppointmentModule implements IUCModule {
       ctx.understanding?.entities
     );
 
+    // Check calendar availability for the requested date
+    let availability: AvailabilityResult | null = null;
+    try {
+      availability = await checkAvailability({
+        companyId: ctx.companyId,
+        requestedDate,
+        requestedTime,
+        requestId: ctx.requestId,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.warn('UC-001 LOOKUP: Availability check failed (non-fatal)', {
+        requestId: ctx.requestId,
+        error: msg,
+      });
+    }
+
     const lookupData: AppointmentLookupData = {
       senderEmail,
       senderName,
@@ -212,6 +232,7 @@ export class AppointmentModule implements IUCModule {
       requestedTime,
       originalSubject: ctx.intake.normalized.subject ?? '',
       companyId: ctx.companyId,
+      availability,
     };
 
     logger.info('UC-001 LOOKUP: Complete', {
@@ -220,6 +241,8 @@ export class AppointmentModule implements IUCModule {
       contactId: senderContact?.contactId,
       requestedDate,
       requestedTime,
+      isDateFree: availability?.isDateFree,
+      hasTimeConflict: availability?.hasTimeConflict,
     });
 
     return lookupData as unknown as Record<string, unknown>;
@@ -267,6 +290,8 @@ export class AppointmentModule implements IUCModule {
             description: description || summary,
             companyId: ctx.companyId,
             draftReply,
+            operatorBriefing: lookup?.availability?.operatorBriefing ?? null,
+            hasTimeConflict: lookup?.availability?.hasTimeConflict ?? false,
           },
         },
       ],

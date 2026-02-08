@@ -58,6 +58,7 @@ import {
   Inbox,
   Shield,
   CalendarDays,
+  UserCheck,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -92,8 +93,9 @@ const NAVIGATION_LABELS = {
   // 🏢 ENTERPRISE: File Manager
   file_manager: 'tools.fileManager',
 
-  // 🏢 ENTERPRISE: AI Inbox (Admin)
+  // 🏢 ENTERPRISE: AI Inbox & Operator Inbox (Admin — CRM section)
   ai_inbox: 'admin.aiInbox',
+  operator_inbox: 'admin.operatorInbox',
 
   // 🏢 ENTERPRISE: Admin Setup
   admin_setup: 'admin.setup',
@@ -441,6 +443,12 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               {  icon: BarChart, href: '/crm/dashboard' },
               {  icon: Users, href: '/crm/customers' },
               {  icon: Phone, href: '/crm/communications' },
+              {  icon: Inbox, href: '/admin/ai-inbox',
+                smartConfig: { priority: 'high', permissions: ['admin_access'] }
+              },
+              {  icon: UserCheck, href: '/admin/operator-inbox',
+                smartConfig: { priority: 'high', permissions: ['admin_access'] }
+              },
               {  icon: Target, href: '/crm/leads' },
               {  icon: ClipboardList, href: '/crm/tasks' },
               {  icon: CalendarDays, href: '/crm/calendar' },
@@ -536,15 +544,6 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               analyticsKey: 'nav_settings'
             },
             subItems: [
-              {
-                icon: Inbox,
-                href: '/admin/ai-inbox',
-                smartConfig: {
-                  priority: 'high',
-                  analyticsKey: 'nav_admin_ai_inbox',
-                  permissions: ['admin_access']
-                }
-              },
               {
                 icon: Shield,
                 href: '/admin/setup',
@@ -645,6 +644,7 @@ function getLabelKeyForPath(path: string): string {
 
     // Admin paths
     'admin/ai-inbox': 'ai_inbox',
+    'admin/operator-inbox': 'operator_inbox',
     'admin/setup': 'admin_setup',
 
     // Tools paths
