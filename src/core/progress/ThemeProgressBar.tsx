@@ -37,7 +37,7 @@ export function ThemeProgressBar({
     if (value >= 80) return colors.text.success;      // ✅ SEMANTIC: text-green-500 -> success text
     if (value >= 60) return 'text-primary';           // Keep primary (framework)
     if (value >= 40) return colors.text.warning;      // ✅ SEMANTIC: text-orange-500 -> warning text
-    return 'text-destructive';                        // Keep destructive (framework)
+    return colors.text.error;                         // ✅ SEMANTIC: error text
   };
 
   // ✅ ENTERPRISE: Theme-aware progress bar background colors using semantic system
@@ -45,7 +45,7 @@ export function ThemeProgressBar({
     if (value >= 80) return colors.bg.success;    // ✅ SEMANTIC: Green for 80%+
     if (value >= 60) return colors.bg.info;       // ✅ SEMANTIC: Blue for 60-79%
     if (value >= 40) return colors.bg.warning;    // ✅ SEMANTIC: Orange for 40-59%
-    return colors.bg.destructive;                 // ✅ SEMANTIC: Red for <40%
+    return colors.bg.error;                       // ✅ SEMANTIC: Red for <40%
   };
 
   // Size variations

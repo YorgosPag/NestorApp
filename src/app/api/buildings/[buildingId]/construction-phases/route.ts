@@ -89,6 +89,7 @@ export async function GET(
           actualStartDate: data.actualStartDate,
           actualEndDate: data.actualEndDate,
           progress: data.progress ?? 0,
+          barColor: data.barColor,
           description: data.description,
           createdAt: firestoreTimestampToISO(data.createdAt),
           updatedAt: firestoreTimestampToISO(data.updatedAt),
@@ -121,6 +122,7 @@ export async function GET(
           actualEndDate: data.actualEndDate,
           progress: data.progress ?? 0,
           dependencies: data.dependencies ?? [],
+          barColor: data.barColor,
           description: data.description,
           createdAt: firestoreTimestampToISO(data.createdAt),
           updatedAt: firestoreTimestampToISO(data.updatedAt),
@@ -310,8 +312,8 @@ export async function PATCH(
 
       // Sanitize updates: remove undefined values and system fields
       const allowedFields = type === 'task'
-        ? ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'dependencies', 'description', 'phaseId']
-        : ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'description'];
+        ? ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'dependencies', 'barColor', 'description', 'phaseId']
+        : ['name', 'code', 'order', 'status', 'plannedStartDate', 'plannedEndDate', 'actualStartDate', 'actualEndDate', 'progress', 'barColor', 'description'];
 
       const cleanUpdates: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(updates)) {

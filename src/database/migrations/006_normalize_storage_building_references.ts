@@ -446,7 +446,7 @@ export const migration: Migration = {
         const result = await dryRun();
         return {
           affectedRecords: result.storagesToMigrate,
-          data: result,
+          data: { dryRunResult: result },
           message: `Found ${result.storagesToMigrate} storages to migrate, ${result.unmatchedStorages} unmatched`
         };
       }

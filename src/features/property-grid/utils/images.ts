@@ -7,11 +7,10 @@ export const imageMap: Record<string, string> = {
   'Parking': 'https://placehold.co/600x400.png',
 };
 
+import type { Property } from '@/types/property-viewer';
+
 // 🏢 ENTERPRISE: Proper type for property image lookup
-interface PropertyWithType {
-  type?: string;
-  [key: string]: unknown;
-}
+type PropertyWithType = Pick<Property, 'type'>;
 
 export function getPropertyImage(property: PropertyWithType | null | undefined) {
   return imageMap[property?.type ?? ''] || 'https://placehold.co/600x400.png';

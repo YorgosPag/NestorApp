@@ -83,7 +83,7 @@ export async function getEnterprisePropertyTypes(options: {
         category
       );
 
-      const result = propertyTypes.map(pt => ({
+      const result: Array<{ value: string; label: string; category?: string }> = propertyTypes.map(pt => ({
         value: pt.value,
         label: pt.label,
         category: pt.category
@@ -107,7 +107,11 @@ export async function getEnterprisePropertyTypes(options: {
     console.warn('🏠 Failed to load enterprise property types, using fallback:', error);
 
     // ✅ ENTERPRISE: Enhanced fallback using centralized property types - NO MORE HARDCODED VALUES
-    const fallbackTypes = getPropertyTypeOptions();
+    const fallbackTypes = getPropertyTypeOptions().map(option => ({
+      value: option.value,
+      label: option.label,
+      category: 'mixed'
+    }));
 
     let filteredTypes = category
       ? fallbackTypes.filter(type => type.category === category)

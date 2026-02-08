@@ -7,9 +7,11 @@ import { ViewerTools } from '@/components/property-viewer/ViewerTools';
 import type { Property } from '@/types/property-viewer';
 
 /** Viewer props that can be passed through */
+type ViewerMode = 'view' | 'create' | 'measure' | 'edit';
+
 interface ViewerPassthroughProps {
-  viewMode?: string;
-  onViewModeChange?: (mode: string) => void;
+  viewMode: ViewerMode;
+  onViewModeChange: (mode: ViewerMode) => void;
   selectedPropertyId?: string | null;
   onPropertySelect?: (id: string | null) => void;
   isConnecting?: boolean;
@@ -23,11 +25,13 @@ interface FloorPlanEditorProps extends ViewerPassthroughProps {
 }
 
 export function FloorPlanEditor({ filteredProperties, ...viewerProps }: FloorPlanEditorProps) {
+  const floorPlanViewMode = viewerProps.viewMode === 'measure' ? 'view' : viewerProps.viewMode;
   return (
     <div className="flex-1 flex flex-col gap-4 min-w-0">
-      <ViewerTools {...viewerProps} onShowHistory={() => viewerProps.setShowHistoryPanel(true)} />
+      <ViewerTools {...viewerProps} />
       <FloorPlanViewer
         {...viewerProps}
+        viewMode={floorPlanViewMode}
         properties={filteredProperties}
       />
     </div>

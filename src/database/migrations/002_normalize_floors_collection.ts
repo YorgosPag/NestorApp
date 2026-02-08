@@ -26,6 +26,7 @@ interface BuildingRecord {
   name: string;
   projectId: string;
   projectName?: string;
+  project?: string;
   buildingFloors?: Array<{
     id: string;
     name: string;
@@ -145,6 +146,9 @@ class FloorsNormalizationMigrationSteps {
           for (const embeddedFloor of building.buildingFloors) {
             // Create normalized floor record with enterprise structure
             const normalizedFloor: FloorRecord = {
+              // Preserve any additional embedded data
+              ...embeddedFloor,
+
               id: embeddedFloor.id || `floor_${building.id}_${embeddedFloor.number}`,
               name: embeddedFloor.name,
               number: embeddedFloor.number,
@@ -167,8 +171,6 @@ class FloorsNormalizationMigrationSteps {
                 originalBuildingId: building.id
               },
 
-              // Preserve any additional embedded data
-              ...embeddedFloor
             };
 
             this.migrationData.floorsToCreate.push(normalizedFloor);
@@ -351,7 +353,10 @@ class FloorsNormalizationMigrationSteps {
         const integrityScore = (integrityResults.floorsWithValidBuildingIds / integrityResults.totalFloors) * 100;
         console.log(`   - Referential integrity: ${integrityScore.toFixed(1)}%`);
 
-        return integrityResults;
+        return {
+          affectedRecords: integrityResults.floorsFromMigration,
+          data: integrityResults
+        };
       },
       validate: async () => {
         // Migration successful if at least 95% of floors have valid foreign keys

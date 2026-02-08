@@ -32,9 +32,10 @@ export function useUrlPreselect({ selectedId, properties, onSelectFloor, setSele
         hasSelectedRef.current = true; // Mark as run
         setSelectedProperties([selectedId]);
 
-        if (propertyToSelect.floorId && onSelectFloor) {
+        const floorId = propertyToSelect.floorId;
+        if (floorId && onSelectFloor) {
           setTimeout(() => {
-            onSelectFloor(propertyToSelect.floorId);
+            onSelectFloor(floorId);
           }, 100);
         }
       }

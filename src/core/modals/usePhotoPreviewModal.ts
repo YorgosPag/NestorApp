@@ -246,7 +246,7 @@ export function openContactAvatarModal(
       break;
 
     default:
-      photoUrl = contact.photoURL || null;
+      photoUrl = null;
   }
 
   modal.openModal({

@@ -19,7 +19,6 @@ export function GridLayout({
       properties={filteredProperties}
       onSelect={handlePolygonSelect}
       selectedPropertyIds={selectedPropertyIds}
-      isReadOnly={true}
     />
   );
 }

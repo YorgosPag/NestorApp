@@ -1,17 +1,6 @@
 'use client';
 
-// Mock types for missing dependencies
-interface Property {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  building: string;
-  floor: string;
-  project: string;
-  buildingId: string;
-  floorId: string;
-}
+import type { Property } from '@/types/property-viewer';
 
 interface Suggestion {
   id: string;
@@ -87,7 +76,7 @@ export interface FloorPlanViewerLayoutProps {
 
   properties?: Property[];
   // Additional missing properties
-  onFloorChange?: (floorId: string | null) => void;
+  onFloorChange?: (floor: FloorData | string | null) => void;
   selectedPropertyId?: string | null;
   onPropertySelect?: (propertyId: string) => void;
   onPropertyCreate?: (property: Partial<Property>) => void;
@@ -98,5 +87,6 @@ export interface FloorPlanViewerLayoutProps {
   sidebarWidth?: number;
   connectionPairs?: Connection[];
   onConnectionPairsChange?: (pairs: Connection[]) => void;
+  layerVisibilityStates?: Record<string, { isVisible: boolean; opacity: number }>;
   className?: string;
 }

@@ -23,7 +23,7 @@ interface UseCanvasInteractionsProps {
   polylines: PolyLine[];
   setPolylines: (polylines: PolyLine[]) => void;
   currentPolyline: Point[];
-  setCurrentPolyline: (points: Point[]) => void;
+  setCurrentPolyline: (points: Point[] | ((prev: Point[]) => Point[])) => void;
   connectionPairs: ConnectionPair[];
   onConnectionPairsChange?: (pairs: ConnectionPair[]) => void;
   onPropertySelect?: (id: string | null) => void;

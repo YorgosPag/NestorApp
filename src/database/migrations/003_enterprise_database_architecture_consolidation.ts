@@ -470,7 +470,10 @@ class EnterpriseArchitectureConsolidationSteps {
           console.log('🎉 Enterprise standards compliance achieved!');
         }
 
-        return validationResults;
+        return {
+          affectedRecords: validationResults.totalDocumentsMigrated,
+          data: validationResults
+        };
       },
       validate: async () => {
         // Ensure high enterprise standards compliance (>= 95%)

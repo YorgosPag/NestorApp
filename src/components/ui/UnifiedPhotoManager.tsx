@@ -20,6 +20,12 @@ import {
 } from '@/components/generic/config/photo-config';
 import { openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
+import { asDate } from '@/lib/firestore/utils';
+
+const normalizeContactTimestamp = (value?: Date | string | { toDate: () => Date }): Date => {
+  const date = asDate(value);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+};
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -97,8 +103,8 @@ function IndividualPhotoManager({
       type: (formData.type || 'individual') as ContactType,
       status: formData.status || 'active',
       isFavorite: formData.isFavorite || false,
-      createdAt: formData.createdAt || new Date(),
-      updatedAt: formData.updatedAt || new Date(),
+      createdAt: normalizeContactTimestamp(formData.createdAt),
+      updatedAt: normalizeContactTimestamp(formData.updatedAt),
       multiplePhotoURLs: galleryPhotos.filter((url): url is string => url !== null)
     };
 
@@ -165,6 +171,8 @@ function CompanyPhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
+  const handleLogoChange = handlers.handleLogoChange ?? (() => {});
+
 
   // 🔍 DEBUG: Log formData photo fields
   React.useEffect(() => {
@@ -196,7 +204,7 @@ function CompanyPhotoManager({
               maxSize={5 * 1024 * 1024} // 5MB
               photoFile={formData.logoFile}
               photoPreview={formData.logoPreview}
-              onFileChange={handlers.handleLogoChange}
+              onFileChange={handleLogoChange}
               uploadHandler={uploadHandlers.logoUploadHandler}
               onUploadComplete={(result) => {
                 console.log('🔍 DEBUG: Logo upload completed!', { url: result.url, hasHandler: !!handlers.handleUploadedLogoURL });

@@ -88,7 +88,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder, getElementBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const {
     customerInfo,
@@ -107,7 +107,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
             {t('customerTab.customerInfo')}
             <div className="ml-auto">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AnimatedSpinner size="small" variant="info" />
+                <AnimatedSpinner size="small" className={colors.text.info} />
                 <span>{t('customerTab.loading')}</span>
               </div>
             </div>
@@ -202,7 +202,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
 
           {/* ENTERPRISE: Clickable Customer Profile Header */}
           <div
-            className={`flex items-start gap-4 p-3 ${quick.card} border border-transparent ${getStatusBorder('info', 'hover:')} hover:bg-primary/5 cursor-pointer transition-all duration-200 group`}
+            className={`flex items-start gap-4 p-3 ${quick.card} border border-transparent ${getStatusBorder('info')} ${getElementBorder('card', 'hover')} hover:bg-primary/5 cursor-pointer transition-all duration-200 group`}
             onClick={() => {
               // ENTERPRISE: Deep-link navigation με URL parameters
               const contactsUrl = `/contacts?filter=customer&contactId=${customerId}&source=unit`;

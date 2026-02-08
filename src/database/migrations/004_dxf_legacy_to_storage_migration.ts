@@ -29,6 +29,9 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
+import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
+import { createEmptyBounds } from '@/subapps/dxf-viewer/config/geometry-constants';
+import { DEFAULT_LEVEL_CONFIG } from '@/subapps/dxf-viewer/systems/levels/config';
 
 // 🏢 ENTERPRISE: Type-safe legacy scene structure (massive serialized DXF data)
 interface LegacyDxfScene {
@@ -58,12 +61,28 @@ interface MigrationStats {
   errors: string[];
 }
 
+const toSceneModel = (scene: LegacyDxfScene): SceneModel => {
+  const entities = Array.isArray(scene.entities) ? (scene.entities as SceneModel['entities']) : [];
+  const layers =
+    scene.layers && typeof scene.layers === 'object' && !Array.isArray(scene.layers)
+      ? (scene.layers as SceneModel['layers'])
+      : {};
+
+  return {
+    entities,
+    layers,
+    bounds: createEmptyBounds(),
+    units: DEFAULT_LEVEL_CONFIG.defaultUnits
+  };
+};
+
 export const dxfLegacyToStorageMigration: Migration = {
   id: '004_dxf_legacy_to_storage_migration',
   name: 'DXF Legacy Data → Firebase Storage Migration',
   version: '1.0.0',
   author: 'Claude AI Enterprise Architecture Assistant',
   description: 'Migrates legacy DXF files stored directly in Firestore to proper Firebase Storage + Metadata architecture',
+  createdAt: new Date(),
   dependencies: [], // No dependencies - can run standalone
 
   steps: [
@@ -168,7 +187,7 @@ export const dxfLegacyToStorageMigration: Migration = {
             const success = await DxfFirestoreService.saveToStorage(
               docSnap.id,
               data.fileName || `legacy_file_${docSnap.id}`,
-              data.scene
+              toSceneModel(data.scene)
             );
 
             if (success) {

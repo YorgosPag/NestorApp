@@ -1025,6 +1025,15 @@
           "newTask": "Νέα Εργασία",
           "loadSamples": "Φόρτωση Δειγμάτων"
         },
+        "contextMenu": {
+          "editPhase": "Επεξεργασία Φάσης",
+          "editTask": "Επεξεργασία Εργασίας",
+          "newPhase": "Νέα Φάση",
+          "newTask": "Νέα Εργασία",
+          "changeColor": "Αλλαγή Χρώματος",
+          "colorPickerTitle": "Επιλογή Χρώματος Μπάρας",
+          "delete": "Διαγραφή"
+        },
         "dialog": {
           "createPhase": "Δημιουργία Φάσης",
           "editPhase": "Επεξεργασία Φάσης",
@@ -1041,7 +1050,9 @@
           "taskNamePlaceholder": "π.χ. Σκυροδέτηση θεμελίωσης",
           "descriptionPlaceholder": "Προαιρετική περιγραφή...",
           "phase": "Φάση",
-          "selectPhase": "Επιλέξτε φάση..."
+          "selectPhase": "Επιλέξτε φάση...",
+          "cancel": "Ακύρωση",
+          "save": "Αποθήκευση"
         },
         "validation": {
           "nameRequired": "Το όνομα είναι υποχρεωτικό",

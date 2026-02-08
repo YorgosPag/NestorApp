@@ -278,7 +278,11 @@ export async function executeMigration(
     migrationId: MIGRATION_ID,
     executedAt: new Date(),
     affectedRecords,
-    rollbackData: migrationLog,
+    rollbackData: {
+      backupId: MIGRATION_ID,
+      timestamp: new Date(),
+      snapshotData: { migrationLog }
+    },
     errors: errors.length > 0 ? errors : undefined,
     executionTimeMs: Date.now() - startTime
   };
@@ -347,13 +351,23 @@ export const migration: Migration = {
       stepId: 'fetch_projects',
       description: 'Fetch all projects sorted by creation date',
       execute: async () => {
-        return fetchProjectsSorted();
+        const projects = await fetchProjectsSorted();
+        return {
+          affectedRecords: projects.length,
+          data: { projects }
+        };
       }
     },
     {
       stepId: 'assign_codes',
       description: 'Assign sequential project codes',
-      execute: async () => executeMigration({ dryRun: false }),
+      execute: async () => {
+        const result = await executeMigration({ dryRun: false });
+        return {
+          affectedRecords: result.affectedRecords,
+          data: { result }
+        };
+      },
       rollback: async () => {
         console.warn('Rollback requires manual intervention with rollbackData');
       }

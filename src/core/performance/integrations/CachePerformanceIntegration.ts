@@ -161,7 +161,7 @@ export class CachePerformanceIntegration {
 
     EnterpriseAPICache.prototype.get = function<T>(key: string): T | null {
       const startTime = performance.now();
-      const result = originalGet.call(this, key);
+      const result = originalGet.call(this, key) as T | null;
       const duration = performance.now() - startTime;
 
       // Record performance metric

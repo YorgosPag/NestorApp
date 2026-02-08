@@ -162,7 +162,10 @@ export async function loadCompanyStatuses(
     console.warn('Failed to load company statuses from service, using fallback:', error);
 
     // Fallback to centralized values
-    return getGemiStatusOptions();
+    return getGemiStatusOptions().map(option => ({
+      value: option.value,
+      label: option.label
+    }));
   }
 }
 

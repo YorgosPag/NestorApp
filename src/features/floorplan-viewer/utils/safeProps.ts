@@ -1,24 +1,12 @@
 // Safe props utilities με null protection
 
-// 🏢 ENTERPRISE: Proper types for floor data
-interface FloorData {
-  id?: string;
-  name?: string;
-  properties?: PropertyItem[];
-  metadata?: Record<string, unknown>;
-  floorPlanUrl?: string | null;
-  [key: string]: unknown;
-}
-
-interface PropertyItem {
-  id: string;
-  [key: string]: unknown;
-}
+import type { FloorData } from '../types';
+import type { Property } from '@/types/property-viewer';
 
 interface SafeFloor {
   id: string;
   name: string;
-  properties: PropertyItem[];
+  properties: Property[];
   metadata: Record<string, unknown>;
   floorPlanUrl: string | null;
   [key: string]: unknown;
@@ -59,7 +47,7 @@ export function isNodeEditMode(mode: string): boolean {
   return mode === 'edit' || mode === 'create';
 }
 
-export function safeGetProperty(properties: PropertyItem[], id: string | null): PropertyItem | null {
+export function safeGetProperty(properties: Property[], id: string | null): Property | null {
   if (!id || !Array.isArray(properties)) {
     return null;
   }
@@ -67,14 +55,14 @@ export function safeGetProperty(properties: PropertyItem[], id: string | null): 
 }
 
 export function safeUpdateProperties(
-  properties: PropertyItem[],
+  properties: Property[],
   id: string,
-  updates: Partial<PropertyItem>
-): PropertyItem[] {
+  updates: Partial<Property>
+): Property[] {
   if (!Array.isArray(properties)) {
     return [];
   }
   return properties.map(p =>
     (p && p.id === id) ? { ...p, ...updates } : p
-  ).filter((p): p is PropertyItem => Boolean(p));
+  ).filter((p): p is Property => Boolean(p));
 }

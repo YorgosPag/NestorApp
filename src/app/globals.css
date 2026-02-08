@@ -987,6 +987,18 @@ html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hov
   );
 }
 
+/* 🏢 ENTERPRISE: Gantt tooltip z-index fix (ADR-034) —
+   Library defaults (1000-1002) get hidden behind scrollbar.
+   Use centralized design-tokens z-index hierarchy: tooltip = 1800 */
+.rmg-tooltip,
+.rmg-tooltip-visible {
+  z-index: 1800 !important;
+}
+
+.rmg-progress-tooltip {
+  z-index: 1800 !important;
+}
+
 /* =============================================================
    ENTERPRISE NAVIGATION SCROLLBAR - EXCEPTION RULES
 

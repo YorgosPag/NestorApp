@@ -13,18 +13,12 @@ import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-
-/** Property data structure for list layout */
-interface PropertyData {
-  id: string;
-  name?: string;
-  [key: string]: unknown;
-}
+import type { Property } from '@/types/property-viewer';
 
 /** Viewer props interface */
 interface ViewerPropsType {
-  onSelectFloor?: (floorId: string) => void;
-  properties?: PropertyData[];
+  onSelectFloor?: (floorId: string | null) => void;
+  properties?: Property[];
   [key: string]: unknown;
 }
 
@@ -38,7 +32,7 @@ export function ListLayout({
   viewerProps,
 }: {
   isLoading: boolean;
-  filteredProperties: PropertyData[];
+  filteredProperties: Property[];
   selectedPropertyIds: string[];
   handlePolygonSelect: (id: string, isShiftClick: boolean) => void;
   hoveredPropertyId: string | null;
@@ -94,17 +88,17 @@ export function ListLayout({
           }
           floorId={
             selectedPropertyIds[0]
-              ? (filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.floorId as string | undefined) ?? null
+              ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.floorId ?? null
               : null
           }
           buildingId={
             selectedPropertyIds[0]
-              ? ((filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown>)?.buildingId as string | undefined) ?? null
+              ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.buildingId ?? null
               : null
           }
           floorNumber={
             selectedPropertyIds[0]
-              ? ((filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown>)?.floor as number | undefined) ?? null
+              ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.floor ?? null
               : null
           }
         />

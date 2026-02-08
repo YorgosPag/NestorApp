@@ -28,6 +28,8 @@ interface ProjectRecord {
 interface CompanyRecord {
   id: string;
   companyName: string;
+  type?: string;
+  status?: string;
   [key: string]: unknown;
 }
 
@@ -66,10 +68,13 @@ class ProjectCompanyMigrationSteps {
         );
 
         this.migrationData.companies = companiesSnapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }))
+          .map(doc => {
+            const data = doc.data() as CompanyRecord;
+            return {
+              id: doc.id,
+              ...data
+            };
+          })
           .filter(contact => contact.type === 'company' && contact.status === 'active') as CompanyRecord[];
 
         console.log(`   Found ${this.migrationData.companies.length} active companies`);
@@ -161,7 +166,10 @@ class ProjectCompanyMigrationSteps {
           throw new Error(`Found ${validationResults.invalidMappings} invalid mappings. Migration aborted.`);
         }
 
-        return validationResults;
+        return {
+          affectedRecords: validationResults.validMappings,
+          data: validationResults
+        };
       },
       validate: async () => {
         return this.migrationData.mappings.every(mapping =>
@@ -302,7 +310,10 @@ class ProjectCompanyMigrationSteps {
         const integrityScore = (integrityResults.projectsWithValidCompanyIds / integrityResults.totalProjects) * 100;
         console.log(`     - Data integrity: ${integrityScore.toFixed(1)}%`);
 
-        return integrityResults;
+        return {
+          affectedRecords: integrityResults.projectsWithValidCompanyIds,
+          data: integrityResults
+        };
       },
       validate: async () => {
         // Consider migration successful if at least 80% of projects have valid company IDs

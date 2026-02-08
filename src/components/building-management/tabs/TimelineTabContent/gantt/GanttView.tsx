@@ -33,6 +33,9 @@ import {
   Plus,
   FolderPlus,
   Loader2,
+  Pencil,
+  Palette,
+  Trash2,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -48,6 +51,21 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { UnifiedColorPicker } from '@/subapps/dxf-viewer/ui/color';
 import type { Building } from '../../../BuildingsPageContent';
 
 import { useConstructionGantt } from '../../../hooks/useConstructionGantt';
@@ -58,6 +76,20 @@ import type { GanttTaskStatus } from './gantt-mock-data';
 
 interface GanttViewProps {
   building: Building;
+}
+
+interface GanttContextMenuState {
+  x: number;
+  y: number;
+  taskId: string;
+  groupId: string;
+  isPhaseBar: boolean;
+}
+
+interface ColorPickerTarget {
+  id: string;
+  isPhase: boolean;
+  currentColor: string;
 }
 
 // ─── Gantt Bar Color Resolver ─────────────────────────────────────────────
@@ -109,6 +141,7 @@ export function GanttView({ building }: GanttViewProps) {
     closeDialog,
     handleTaskUpdate,
     handleTaskClick,
+    handleTaskDoubleClick,
     handleGroupClick,
     savePhase,
     updatePhase,
@@ -116,86 +149,155 @@ export function GanttView({ building }: GanttViewProps) {
     saveTask,
     updateTask,
     removeTask,
+    updateBarColor,
     phases,
+    tasks,
   } = useConstructionGantt(String(building.id));
 
-  // ─── Snap-to-Grid: Round dates to view-mode unit boundaries after drag ───
+  // Context menu state (right-click on Gantt bar)
+  const [contextMenu, setContextMenu] = useState<GanttContextMenuState | null>(null);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [colorPickerTarget, setColorPickerTarget] = useState<ColorPickerTarget | null>(null);
+  const [pendingColor, setPendingColor] = useState('#3b82f6');
 
-  const handleTaskUpdateWithSnap = useCallback(
-    (groupId: string, updatedTask: Task) => {
-      // DAY view: library already snaps, pass through
-      if (viewMode === ViewMode.DAY) {
-        handleTaskUpdate(groupId, updatedTask);
+  // Dynamic color resolver for Gantt bars — custom barColor overrides status color
+  const getTaskBarColor = useCallback(({ task }: TaskColorProps) => {
+    const extended = task as Task & { taskStatus?: GanttTaskStatus; barColor?: string };
+    // Custom barColor from Firestore takes priority
+    if (extended.barColor) {
+      return { backgroundColor: extended.barColor, textColor: 'white' };
+    }
+    const status = extended.taskStatus ?? 'notStarted';
+    const backgroundColor = STATUS_TO_CSS_COLOR[status] ?? STATUS_TO_CSS_COLOR.notStarted;
+    return { backgroundColor, textColor: 'white' };
+  }, []);
+
+  // ─── Context Menu Handlers ────────────────────────────────────────────
+
+  // Prevent right-click from starting a drag operation in the Gantt library
+  const handleGanttMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button === 2) {
+      // Right-click — stop propagation to prevent library drag
+      e.stopPropagation();
+    }
+  }, []);
+
+  // Detect which task bar was right-clicked (used by ContextMenu trigger)
+  const handleContextMenuCapture = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const taskItem = target.closest('.rmg-task-item') as HTMLElement | null;
+
+    if (!taskItem) {
+      // Not on a task bar — clear state, let browser default happen
+      setContextMenu(null);
+      return;
+    }
+
+    // Try data attribute first, fall back to name matching
+    const dataTaskId = taskItem.getAttribute('data-task-id');
+
+    if (dataTaskId) {
+      for (const group of taskGroups) {
+        const matched = group.tasks.find((tsk) => tsk.id === dataTaskId);
+        if (matched) {
+          setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            taskId: matched.id,
+            groupId: group.id,
+            isPhaseBar: matched.id.startsWith('phase-bar-'),
+          });
+          return;
+        }
+      }
+    }
+
+    // Fallback: match by task name text content
+    const taskNameEl = taskItem.querySelector('.rmg-task-item-name');
+    const taskName = taskNameEl?.textContent?.trim() ?? '';
+
+    for (const group of taskGroups) {
+      const matched = group.tasks.find((tsk) => tsk.name === taskName);
+      if (matched) {
+        setContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          taskId: matched.id,
+          groupId: group.id,
+          isPhaseBar: matched.id.startsWith('phase-bar-'),
+        });
         return;
       }
+    }
 
-      // For other views: snap start/end dates to the appropriate boundary
-      const snapDate = (date: Date | string, snapTo: 'start' | 'end'): Date => {
-        const d = date instanceof Date ? new Date(date) : new Date(date);
+    // No match found — clear state
+    setContextMenu(null);
+  }, [taskGroups]);
 
-        switch (viewMode) {
-          case ViewMode.WEEK: {
-            // Snap to Monday (start) or Sunday (end)
-            const day = d.getDay();
-            const diffToMonday = day === 0 ? -6 : 1 - day;
-            if (snapTo === 'start') {
-              d.setDate(d.getDate() + diffToMonday);
-            } else {
-              d.setDate(d.getDate() + diffToMonday + 6);
-            }
-            break;
-          }
-          case ViewMode.MONTH:
-            if (snapTo === 'start') {
-              d.setDate(1);
-            } else {
-              d.setMonth(d.getMonth() + 1, 0); // last day of month
-            }
-            break;
-          case ViewMode.QUARTER: {
-            const qMonth = Math.floor(d.getMonth() / 3) * 3;
-            if (snapTo === 'start') {
-              d.setMonth(qMonth, 1);
-            } else {
-              d.setMonth(qMonth + 3, 0); // last day of quarter
-            }
-            break;
-          }
-          case ViewMode.YEAR:
-            if (snapTo === 'start') {
-              d.setMonth(0, 1);
-            } else {
-              d.setMonth(11, 31);
-            }
-            break;
-          default:
-            break;
-        }
+  const handleEditFromMenu = useCallback(() => {
+    if (!contextMenu) return;
+    if (contextMenu.isPhaseBar) {
+      const phaseId = contextMenu.taskId.replace('phase-bar-', '');
+      const fullPhase = phases.find((p) => p.id === phaseId);
+      if (fullPhase) openEditPhaseDialog(fullPhase);
+    } else {
+      const fullTask = tasks.find((tsk) => tsk.id === contextMenu.taskId);
+      if (fullTask) openEditTaskDialog(fullTask);
+    }
+    setContextMenu(null);
+  }, [contextMenu, phases, tasks, openEditPhaseDialog, openEditTaskDialog]);
 
-        d.setHours(0, 0, 0, 0);
-        return d;
-      };
+  const handleNewPhaseFromMenu = useCallback(() => {
+    openCreatePhaseDialog();
+    setContextMenu(null);
+  }, [openCreatePhaseDialog]);
 
-      const snappedTask = {
-        ...updatedTask,
-        startDate: snapDate(updatedTask.startDate, 'start'),
-        endDate: snapDate(updatedTask.endDate, 'end'),
-      };
+  const handleNewTaskFromMenu = useCallback(() => {
+    if (!contextMenu) return;
+    openCreateTaskDialog(contextMenu.groupId);
+    setContextMenu(null);
+  }, [contextMenu, openCreateTaskDialog]);
 
-      handleTaskUpdate(groupId, snappedTask);
-    },
-    [viewMode, handleTaskUpdate]
-  );
+  const handleDeleteFromMenu = useCallback(async () => {
+    if (!contextMenu) return;
+    if (contextMenu.isPhaseBar) {
+      const phaseId = contextMenu.taskId.replace('phase-bar-', '');
+      await removePhase(phaseId);
+    } else {
+      await removeTask(contextMenu.taskId);
+    }
+    setContextMenu(null);
+  }, [contextMenu, removePhase, removeTask]);
 
-  // Dynamic color resolver for Gantt bars — reads taskStatus metadata
-  const getTaskBarColor = useCallback(({ task }: TaskColorProps) => {
-    const status = (task as Task & { taskStatus?: GanttTaskStatus }).taskStatus ?? 'notStarted';
-    const backgroundColor = STATUS_TO_CSS_COLOR[status] ?? STATUS_TO_CSS_COLOR.notStarted;
-    return {
-      backgroundColor,
-      textColor: 'white',
-    };
-  }, []);
+  const handleChangeColorFromMenu = useCallback(() => {
+    if (!contextMenu) return;
+    const isPhase = contextMenu.isPhaseBar;
+    const targetId = isPhase
+      ? contextMenu.taskId.replace('phase-bar-', '')
+      : contextMenu.taskId;
+
+    // Find current color
+    let currentColor = '#3b82f6';
+    if (isPhase) {
+      const phase = phases.find((p) => p.id === targetId);
+      if (phase?.barColor) currentColor = phase.barColor;
+    } else {
+      const task = tasks.find((tsk) => tsk.id === targetId);
+      if (task?.barColor) currentColor = task.barColor;
+    }
+
+    setColorPickerTarget({ id: targetId, isPhase, currentColor });
+    setPendingColor(currentColor);
+    setColorPickerOpen(true);
+    setContextMenu(null);
+  }, [contextMenu, phases, tasks]);
+
+  const handleColorPickerSave = useCallback(async () => {
+    if (!colorPickerTarget) return;
+    await updateBarColor(colorPickerTarget.id, colorPickerTarget.isPhase, pendingColor);
+    setColorPickerOpen(false);
+    setColorPickerTarget(null);
+  }, [colorPickerTarget, pendingColor, updateBarColor]);
 
   // Timeline bounds — aligned to month boundaries for correct bar positioning
   const timelineBounds = useMemo(() => {
@@ -310,36 +412,74 @@ export function GanttView({ building }: GanttViewProps) {
         </Card>
       )}
 
-      {/* Gantt Chart */}
+      {/* Gantt Chart — wrapped with ContextMenu for right-click support */}
       {!isEmpty && (
-        <Card className="border-0 shadow-none">
-          <CardContent className={spacingTokens.padding.none}>
-            <GanttChart
-              tasks={taskGroups}
-              startDate={timelineBounds.startDate}
-              endDate={timelineBounds.endDate}
-              title={t('tabs.timeline.gantt.title')}
-              headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
-              viewMode={viewMode}
-              viewModes={AVAILABLE_VIEW_MODES}
-              onViewModeChange={setViewMode}
-              darkMode={isDarkMode}
-              showProgress
-              showCurrentDateMarker
-              todayLabel={t('tabs.timeline.gantt.toolbar.today')}
-              editMode
-              allowProgressEdit
-              allowTaskResize
-              allowTaskMove
-              onTaskUpdate={handleTaskUpdateWithSnap}
-              onTaskClick={handleTaskClick}
-              onGroupClick={handleGroupClick}
-              locale="el-GR"
-              fontSize={designTypography.fontSize.sm}
-              getTaskColor={getTaskBarColor}
-            />
-          </CardContent>
-        </Card>
+        <ContextMenu onOpenChange={(open) => { if (!open) setContextMenu(null); }}>
+          <ContextMenuTrigger asChild onContextMenu={handleContextMenuCapture}>
+            <Card className="border-0 shadow-none">
+              <CardContent className={spacingTokens.padding.none} onMouseDownCapture={handleGanttMouseDown}>
+                <GanttChart
+                  tasks={taskGroups}
+                  startDate={timelineBounds.startDate}
+                  endDate={timelineBounds.endDate}
+                  title={t('tabs.timeline.gantt.title')}
+                  headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
+                  viewMode={viewMode}
+                  viewModes={AVAILABLE_VIEW_MODES}
+                  onViewModeChange={setViewMode}
+                  darkMode={isDarkMode}
+                  showProgress
+                  showCurrentDateMarker
+                  todayLabel={t('tabs.timeline.gantt.toolbar.today')}
+                  editMode
+                  allowProgressEdit
+                  allowTaskResize
+                  allowTaskMove
+                  movementThreshold={5}
+                  onTaskUpdate={handleTaskUpdate}
+                  onTaskClick={handleTaskClick}
+                  onTaskDoubleClick={handleTaskDoubleClick}
+                  onGroupClick={handleGroupClick}
+                  locale="el-GR"
+                  fontSize={designTypography.fontSize.sm}
+                  getTaskColor={getTaskBarColor}
+                />
+              </CardContent>
+            </Card>
+          </ContextMenuTrigger>
+          {contextMenu && (
+            <ContextMenuContent className="min-w-48">
+              <ContextMenuItem onClick={handleEditFromMenu}>
+                <Pencil className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {contextMenu.isPhaseBar
+                  ? t('tabs.timeline.gantt.contextMenu.editPhase')
+                  : t('tabs.timeline.gantt.contextMenu.editTask')}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={handleNewPhaseFromMenu}>
+                <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {t('tabs.timeline.gantt.contextMenu.newPhase')}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={handleNewTaskFromMenu}>
+                <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {t('tabs.timeline.gantt.contextMenu.newTask')}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={handleChangeColorFromMenu}>
+                <Palette className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {t('tabs.timeline.gantt.contextMenu.changeColor')}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onClick={handleDeleteFromMenu}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+                {t('tabs.timeline.gantt.contextMenu.delete')}
+              </ContextMenuItem>
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
       )}
 
       {/* Phase Status Legend */}
@@ -364,6 +504,30 @@ export function GanttView({ building }: GanttViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* ─── Color Picker Dialog ──────────────────────────────────────────── */}
+      <Dialog open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('tabs.timeline.gantt.contextMenu.colorPickerTitle')}</DialogTitle>
+          </DialogHeader>
+          <UnifiedColorPicker
+            variant="full"
+            value={pendingColor}
+            onChange={setPendingColor}
+            showPalettes
+            showRecent
+          />
+          <DialogFooter className={cn('flex justify-end', spacingTokens.gap.sm)}>
+            <Button variant="outline" onClick={() => setColorPickerOpen(false)}>
+              {t('tabs.timeline.gantt.dialog.cancel')}
+            </Button>
+            <Button onClick={handleColorPickerSave}>
+              {t('tabs.timeline.gantt.dialog.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Construction Phase/Task Dialog */}
       <ConstructionPhaseDialog

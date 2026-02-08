@@ -12,6 +12,7 @@ type ClassValue = string | number | boolean | undefined | null | Record<string, 
 /** Props type for mock container components */
 interface MockContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode;
+  [key: string]: unknown;
 }
 
 // Mock imports for missing dependencies

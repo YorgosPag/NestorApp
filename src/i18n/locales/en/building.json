@@ -1025,6 +1025,15 @@
           "newTask": "New Task",
           "loadSamples": "Load Samples"
         },
+        "contextMenu": {
+          "editPhase": "Edit Phase",
+          "editTask": "Edit Task",
+          "newPhase": "New Phase",
+          "newTask": "New Task",
+          "changeColor": "Change Color",
+          "colorPickerTitle": "Choose Bar Color",
+          "delete": "Delete"
+        },
         "dialog": {
           "createPhase": "Create Phase",
           "editPhase": "Edit Phase",
@@ -1041,7 +1050,9 @@
           "taskNamePlaceholder": "e.g. Foundation concrete pour",
           "descriptionPlaceholder": "Optional description...",
           "phase": "Phase",
-          "selectPhase": "Select phase..."
+          "selectPhase": "Select phase...",
+          "cancel": "Cancel",
+          "save": "Save"
         },
         "validation": {
           "nameRequired": "Name is required",

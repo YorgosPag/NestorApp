@@ -30,7 +30,7 @@ export const SEED_DATA_CONFIG = {
   // Environment detection
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
-  IS_STAGING: process.env.NODE_ENV === 'staging',
+  IS_STAGING: process.env.VERCEL_ENV === 'preview',
 
   // Debug information
   DEBUG: process.env.NEXT_PUBLIC_DEBUG === 'true',

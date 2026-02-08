@@ -36,6 +36,7 @@ import { FloorPlanViewer } from '@/components/property-viewer/FloorPlanViewer';
 
 // Import types
 import type { Property } from '@/types/property-viewer';
+import type { FloorData } from '@/features/floorplan-viewer/types';
 
 interface PropertyViewerWithLayersProps {
   floorId: string;
@@ -43,11 +44,7 @@ interface PropertyViewerWithLayersProps {
   properties: Property[];
   
   // Floor data
-  currentFloor?: {
-    id: string;
-    name: string;
-    pdfUrl?: string;
-  };
+  currentFloor?: FloorData;
   
   // Display options
   className?: string;
@@ -84,10 +81,10 @@ export function PropertyViewerWithLayers({
 
   // Load PDF background if available
   useEffect(() => {
-    if (currentFloor?.pdfUrl) {
-      setPdfBackgroundUrl(currentFloor.pdfUrl);
+    if (currentFloor?.floorPlanUrl) {
+      setPdfBackgroundUrl(currentFloor.floorPlanUrl);
     }
-  }, [currentFloor?.pdfUrl]);
+  }, [currentFloor?.floorPlanUrl]);
 
   // Zoom handlers
   const handleZoomIn = () => {
@@ -308,7 +305,7 @@ export function PropertyViewerWithLayers({
                 currentFloor={currentFloor}
                 floors={[currentFloor]}
                 properties={properties}
-                onSelectProperty={(propertyId) => {
+                onPropertySelect={(propertyId) => {
                   onPropertySelect?.(propertyId);
                 }}
                 // Read-only props

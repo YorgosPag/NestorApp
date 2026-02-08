@@ -67,6 +67,7 @@ export interface FloorPlanCanvasProps {
   floorData: FloorData;
   onFloorDataChange?: (data: FloorData) => void;
   mode?: 'view' | 'edit' | 'create';
+  onModeChange?: (mode: CanvasMode) => void;
   selectedPropertyIds?: string[];
   selectedPropertyId?: string | null;
   hoveredProperty?: string | null;
@@ -80,6 +81,12 @@ export interface FloorPlanCanvasProps {
   onPolygonUpdated?: (polygonId: string, vertices: Array<Point>) => void;
   onPropertyUpdate?: (propertyId: string, data: Partial<Property>) => void;
   onNavigateLevels?: (property: Property) => void;
+  enableConnections?: boolean;
+  showStatusLegend?: boolean;
+  showPropertyCount?: boolean;
+  connectionPairs?: ConnectionPair[];
+  onConnectionPairsChange?: (pairs: ConnectionPair[]) => void;
+  validationErrors?: ValidationError[];
   showGrid?: boolean;
   snapToGrid?: boolean;
   gridSize?: number;

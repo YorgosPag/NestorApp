@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { UnitsListHeader } from './list/UnitsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { UnitListCard } from '@/domain';
-import { CompactToolbar, unitsConfig } from '@/components/core/CompactToolbar';
+import { CompactToolbar, unitsConfig, type SortField } from '@/components/core/CompactToolbar';
 import { UnitTypeQuickFilters } from './UnitTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
@@ -15,8 +15,6 @@ import { matchesSearchTerm } from '@/lib/search/search';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-
-export type UnitSortKey = 'name' | 'price' | 'area';
 
 interface UnitsListProps {
   units: Property[];
@@ -36,11 +34,11 @@ export function UnitsList({
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   const [favorites, setFavorites] = useState<string[]>(['prop-1']);
-  const [sortBy, setSortBy] = useState<UnitSortKey>('name');
+  const [sortBy, setSortBy] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // CompactToolbar state
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
@@ -164,7 +162,7 @@ export function UnitsList({
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
           onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy as UnitSortKey);
+            setSortBy(newSortBy);
             setSortOrder(newSortOrder);
           }}
           hasSelectedContact={selectedUnitIds.length > 0}
@@ -202,7 +200,7 @@ export function UnitsList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
-              setSortBy(newSortBy as UnitSortKey);
+              setSortBy(newSortBy);
               setSortOrder(newSortOrder);
             }}
             hasSelectedContact={selectedUnitIds.length > 0}

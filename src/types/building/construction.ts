@@ -38,6 +38,7 @@ export interface ConstructionPhase {
   actualStartDate?: string;
   actualEndDate?: string;
   progress: number;                // 0-100
+  barColor?: string;               // Custom hex color for Gantt bar (#RRGGBB)
   description?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -60,6 +61,7 @@ export interface ConstructionTask {
   actualEndDate?: string;
   progress: number;                // 0-100
   dependencies?: string[];         // Array of task IDs
+  barColor?: string;               // Custom hex color for Gantt bar (#RRGGBB)
   description?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -89,6 +91,7 @@ export interface ConstructionPhaseUpdatePayload {
   actualStartDate?: string | null;
   actualEndDate?: string | null;
   progress?: number;
+  barColor?: string;
   description?: string;
 }
 
@@ -114,6 +117,7 @@ export interface ConstructionTaskUpdatePayload {
   actualStartDate?: string | null;
   actualEndDate?: string | null;
   progress?: number;
+  barColor?: string;
   dependencies?: string[];
   description?: string;
 }

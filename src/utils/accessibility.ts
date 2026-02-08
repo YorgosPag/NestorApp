@@ -383,7 +383,7 @@ export function generateId(prefix = 'accessibility-id'): string {
  * Manages live regions για dynamic content updates
  */
 export function useAriaLiveRegion(level: 'polite' | 'assertive' = 'polite') {
-  const regionRef = useRef<HTMLDivElement>(null);
+  const regionRef = useRef<HTMLDivElement | null>(null);
 
   const announce = useCallback((message: string) => {
     if (regionRef.current) {

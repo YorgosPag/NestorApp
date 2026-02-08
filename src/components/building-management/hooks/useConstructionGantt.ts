@@ -68,6 +68,7 @@ interface UseConstructionGanttReturn {
   // Gantt event handlers
   handleTaskUpdate: (groupId: string, updatedTask: Task) => void;
   handleTaskClick: (task: Task, group: TaskGroup) => void;
+  handleTaskDoubleClick: (task: Task) => void;
   handleGroupClick: (group: TaskGroup) => void;
 
   // CRUD
@@ -77,6 +78,7 @@ interface UseConstructionGanttReturn {
   saveTask: (data: ConstructionTaskCreatePayload) => Promise<boolean>;
   updateTask: (taskId: string, updates: Record<string, unknown>) => Promise<boolean>;
   removeTask: (taskId: string) => Promise<boolean>;
+  updateBarColor: (id: string, isPhase: boolean, color: string) => Promise<void>;
 
   // Reload
   reload: () => Promise<void>;
@@ -174,16 +176,6 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
 
     try {
       const data = await getConstructionData(buildingId);
-
-      // 🔍 DEBUG: Log loaded data to diagnose task visibility issue
-      console.log(`🔍 [useConstructionGantt] Loaded ${data.phases.length} phases, ${data.tasks.length} tasks`);
-      if (data.tasks.length > 0) {
-        console.log('🔍 [useConstructionGantt] Tasks:', data.tasks.map((t) => ({
-          id: t.id, name: t.name, phaseId: t.phaseId, status: t.status,
-        })));
-        console.log('🔍 [useConstructionGantt] Phase IDs:', data.phases.map((p) => p.id));
-      }
-
       setPhases(data.phases);
       setTasks(data.tasks);
     } catch (err) {
@@ -201,20 +193,10 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
   // ─── Convert to TaskGroup[] for react-modern-gantt ────────────────────
 
   const taskGroups = useMemo((): TaskGroup[] => {
-    // 🔍 DEBUG: Log matching
-    if (tasks.length > 0) {
-      console.log(`🔍 [taskGroups] Matching ${tasks.length} tasks against ${phases.length} phases`);
-    }
-
     return phases.map((phase) => {
       const phaseTasks = tasks
         .filter((task) => task.phaseId === phase.id)
         .sort((a, b) => a.order - b.order);
-
-      // 🔍 DEBUG: Log per-phase matching
-      if (tasks.length > 0) {
-        console.log(`🔍 [taskGroups] Phase "${phase.name}" (${phase.id}): ${phaseTasks.length} matched tasks`);
-      }
 
       let ganttTasks: Task[];
 
@@ -230,7 +212,8 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
             percent: task.progress,
             dependencies: task.dependencies ?? [],
             taskStatus: ganttStatus,
-            color: GANTT_STATUS_COLORS[ganttStatus],
+            color: task.barColor ?? GANTT_STATUS_COLORS[ganttStatus],
+            barColor: task.barColor,
           };
         });
       } else {
@@ -244,7 +227,8 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
           percent: phase.progress,
           dependencies: [],
           taskStatus: ganttStatus,
-          color: GANTT_STATUS_COLORS[ganttStatus],
+          color: phase.barColor ?? GANTT_STATUS_COLORS[ganttStatus],
+          barColor: phase.barColor,
         }];
       }
 
@@ -361,6 +345,28 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
     [phases, tasks, openEditPhaseDialog, openEditTaskDialog]
   );
 
+  // Double-click handler — opens edit dialog (library passes only task, no group)
+  const handleTaskDoubleClick = useCallback(
+    (clickedTask: Task) => {
+      // Synthetic phase bars → open phase editor
+      if (clickedTask.id.startsWith('phase-bar-')) {
+        const phaseId = clickedTask.id.replace('phase-bar-', '');
+        const fullPhase = phases.find((p) => p.id === phaseId);
+        if (fullPhase) {
+          openEditPhaseDialog(fullPhase);
+        }
+        return;
+      }
+
+      // Real task → open task editor
+      const fullTask = tasks.find((tsk) => tsk.id === clickedTask.id);
+      if (fullTask) {
+        openEditTaskDialog(fullTask);
+      }
+    },
+    [phases, tasks, openEditPhaseDialog, openEditTaskDialog]
+  );
+
   const handleGroupClick = useCallback(
     (group: TaskGroup) => {
       const fullPhase = phases.find((p) => p.id === group.id);
@@ -439,6 +445,22 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
     [buildingId, loadData]
   );
 
+  // ─── Bar Color Update ────────────────────────────────────────────────
+
+  const updateBarColor = useCallback(
+    async (id: string, isPhase: boolean, color: string) => {
+      if (isPhase) {
+        // Optimistic update
+        setPhases((prev) => prev.map((p) => p.id === id ? { ...p, barColor: color } : p));
+        await updateConstructionPhase(buildingId, id, { barColor: color });
+      } else {
+        setTasks((prev) => prev.map((tsk) => tsk.id === id ? { ...tsk, barColor: color } : tsk));
+        await updateConstructionTask(buildingId, id, { barColor: color });
+      }
+    },
+    [buildingId]
+  );
+
   return {
     taskGroups,
     stats,
@@ -455,6 +477,7 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
     closeDialog,
     handleTaskUpdate,
     handleTaskClick,
+    handleTaskDoubleClick,
     handleGroupClick,
     savePhase,
     updatePhase: updatePhaseHandler,
@@ -462,6 +485,7 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
     saveTask,
     updateTask: updateTaskHandler,
     removeTask,
+    updateBarColor,
     reload: loadData,
   };
 }

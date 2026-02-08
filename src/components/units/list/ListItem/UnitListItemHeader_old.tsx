@@ -1,15 +1,16 @@
 'use client';
 
 import React from 'react';
-import { UnitBadge } from '@/core/badges';
+import { PropertyBadge } from '@/core/badges';
 import { MapPin } from "lucide-react";
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import type { Property } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import type { LucideIcon } from 'lucide-react';
 
 interface UnitListItemHeaderProps {
   unit: Property;
-  getCategoryIcon: (category: string) => React.ElementType;
+  getCategoryIcon: (category: string) => LucideIcon;
   getCategoryLabel: (category: string) => string;
 }
 
@@ -38,7 +39,7 @@ export function UnitListItemHeader({
     >
       {/* 🏢 ENTERPRISE: Max 2 badges (status + type) */}
       <div className="flex items-center gap-2 mt-2 mb-2">
-        <UnitBadge status={unit.status as "for-sale" | "for-rent" | "sold" | "rented" | "reserved"} size="sm" />
+        <PropertyBadge status={unit.status} size="sm" />
         <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
           {getCategoryLabel(unit.type)}
         </span>

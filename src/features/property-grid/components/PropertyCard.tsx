@@ -28,7 +28,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         <img
           src={getPropertyImage(property)}
           alt={property.name}
-          className={`w-full h-full object-cover ${GROUP_HOVER_PATTERNS.SCALE_ON_GROUP} ${TRANSITION_PRESETS.SLOW_TRANSFORM}`}
+          className={`w-full h-full object-cover ${GROUP_HOVER_PATTERNS.SCALE_ON_GROUP} ${TRANSITION_PRESETS.SLOW_ALL}`}
         />
         <aside className="absolute top-3 left-3" role="status" aria-label={t('card.aria.propertyStatus')}>
           <PropertyBadge
@@ -67,23 +67,23 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
             <Square className={iconSizes.sm} />
             {property.area} m²
           </span>
-          {property.bedrooms !== undefined && property.bedrooms > 0 && (
+          {property.layout?.bedrooms !== undefined && property.layout.bedrooms > 0 && (
             <span className="flex items-center gap-1" itemProp="numberOfRooms">
               <Bed className={iconSizes.sm} />
-              {property.bedrooms}
+              {property.layout.bedrooms}
             </span>
           )}
-          {property.bathrooms !== undefined && property.bathrooms > 0 && (
+          {property.layout?.bathrooms !== undefined && property.layout.bathrooms > 0 && (
             <span className="flex items-center gap-1" itemProp="numberOfBathroomsTotal">
               <Bath className={iconSizes.sm} />
-              {property.bathrooms}
+              {property.layout.bathrooms}
             </span>
           )}
         </section>
 
-        {property.tags && property.tags.length > 0 && (
+        {property.features && property.features.length > 0 && (
           <section className="flex flex-wrap gap-1 mb-4" aria-label={t('card.aria.propertyTags')}>
-            {property.tags.slice(0, 3).map((tag: string, idx: number) => (
+            {property.features.slice(0, 3).map((tag: string, idx: number) => (
               <CommonBadge
                 key={idx}
                 status="feature"
