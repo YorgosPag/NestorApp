@@ -3,14 +3,13 @@
  * 🏢 ENTERPRISE: UC-001 APPOINTMENT REQUEST MODULE
  * =============================================================================
  *
- * First UC module for the Universal AI Pipeline.
  * Handles `appointment_request` intents — customers requesting meetings.
  *
  * Pipeline steps implemented:
- *   Step 3 LOOKUP  → Find sender in contacts, extract date/time from AI entities
- *   Step 4 PROPOSE → Suggest appointment creation for operator approval
- *   Step 6 EXECUTE → Create appointment document in Firestore
- *   Step 7 ACKNOWLEDGE → Log confirmation (Phase 2: real email)
+ *   Step 3 LOOKUP      → Find sender in contacts, extract date/time from AI entities
+ *   Step 4 PROPOSE     → Suggest appointment + draft confirmation email for operator approval
+ *   Step 6 EXECUTE     → Create appointment in Firestore + send confirmation email via Mailgun
+ *   Step 7 ACKNOWLEDGE → Verify email delivery status
  *
  * @module services/ai-pipeline/modules/uc-001-appointment
  * @see UC-001 (docs/centralized-systems/ai/use-cases/UC-001-appointment.md)
@@ -24,6 +23,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
+import { sendReplyViaMailgun, type MailgunSendResult } from '../../shared/mailgun-sender';
 import {
   PipelineIntentType,
   PipelineChannel,
@@ -49,11 +50,6 @@ const logger = createModuleLogger('UC_001_APPOINTMENT');
 // LOOKUP TYPES
 // ============================================================================
 
-interface ContactMatch {
-  contactId: string;
-  name: string;
-}
-
 interface AppointmentLookupData {
   senderEmail: string;
   senderName: string;
@@ -68,51 +64,6 @@ interface AppointmentLookupData {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/**
- * Server-side contact lookup by email using Admin SDK.
- *
- * MVP: Scans contacts for email match (limited to 50 docs per company).
- * Phase 2: Use flat `primaryEmail` field for direct indexed query.
- */
-async function findContactByEmail(
-  email: string,
-  companyId: string
-): Promise<ContactMatch | null> {
-  const adminDb = getAdminFirestore();
-
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
-    .where('companyId', '==', companyId)
-    .limit(50)
-    .get();
-
-  const normalizedEmail = email.toLowerCase().trim();
-
-  for (const doc of snapshot.docs) {
-    const data = doc.data();
-
-    // Check emails array (common pattern: [{ email: "...", label: "work" }])
-    const emails = data.emails as Array<{ email?: string }> | undefined;
-    if (emails?.some(e => e.email?.toLowerCase().trim() === normalizedEmail)) {
-      return {
-        contactId: doc.id,
-        name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string,
-      };
-    }
-
-    // Check flat email field
-    const flatEmail = data.email as string | undefined;
-    if (flatEmail?.toLowerCase().trim() === normalizedEmail) {
-      return {
-        contactId: doc.id,
-        name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string,
-      };
-    }
-  }
-
-  return null;
-}
 
 /**
  * Extract date/time from AI understanding entities.
@@ -150,6 +101,65 @@ function extractDateTimeFromEntities(
   return { date, time };
 }
 
+/**
+ * Build a confirmation email for an approved appointment request.
+ *
+ * Template in Greek — follows the same pattern as UC-003 buildDraftReply.
+ * Adapts content based on available date/time information.
+ */
+function buildAppointmentReply(params: {
+  senderName: string;
+  requestedDate: string | null;
+  requestedTime: string | null;
+  description: string;
+}): string {
+  const { senderName, requestedDate, requestedTime, description } = params;
+
+  const greeting = `Αγαπητέ/ή ${senderName},`;
+  const thanks = 'Σας ευχαριστούμε για το ενδιαφέρον σας και το αίτημα ραντεβού.';
+
+  // Build date/time display
+  const hasDate = requestedDate !== null;
+  const hasTime = requestedTime !== null;
+
+  let dateTimeText: string;
+  if (hasDate && hasTime) {
+    dateTimeText = `Το ραντεβού σας έχει εγκριθεί για ${requestedDate} στις ${requestedTime}.`;
+  } else if (hasDate) {
+    dateTimeText = `Το ραντεβού σας έχει εγκριθεί για ${requestedDate}. Θα σας ενημερώσουμε για την ακριβή ώρα.`;
+  } else if (hasTime) {
+    dateTimeText = `Λάβαμε την προτίμησή σας για ώρα ${requestedTime}. Θα σας ενημερώσουμε για την ακριβή ημερομηνία.`;
+  } else {
+    dateTimeText = 'Το αίτημά σας για ραντεβού έχει εγκριθεί. Θα επικοινωνήσουμε μαζί σας σύντομα για τον καθορισμό ημερομηνίας και ώρας.';
+  }
+
+  // Build description line (only if meaningful and not duplicate of subject)
+  const descriptionLine = description && description.length > 10
+    ? `Θέμα: ${description}`
+    : '';
+
+  const lines = [
+    greeting,
+    '',
+    thanks,
+    '',
+    dateTimeText,
+    '',
+  ];
+
+  if (descriptionLine) {
+    lines.push(descriptionLine, '');
+  }
+
+  lines.push(
+    'Σε περίπτωση που χρειαστεί αλλαγή ή ακύρωση, παρακαλούμε ενημερώστε μας εγκαίρως.',
+    '',
+    'Με εκτίμηση,',
+  );
+
+  return lines.join('\n');
+}
+
 // ============================================================================
 // UC-001 MODULE
 // ============================================================================
@@ -174,7 +184,7 @@ export class AppointmentModule implements IUCModule {
       companyId: ctx.companyId,
     });
 
-    // Find sender in contacts collection
+    // Find sender in contacts collection (centralized utility)
     let senderContact: ContactMatch | null = null;
     if (senderEmail) {
       try {
@@ -223,8 +233,19 @@ export class AppointmentModule implements IUCModule {
     const senderDisplay = lookup?.senderName ?? lookup?.senderEmail ?? 'Άγνωστος αποστολέας';
     const dateDisplay = lookup?.requestedDate ?? 'χωρίς ημερομηνία';
     const timeDisplay = lookup?.requestedTime ?? 'χωρίς ώρα';
+    const description = lookup?.originalSubject
+      || ctx.intake.normalized.contentText?.slice(0, 500)
+      || '';
 
     const summary = `Αίτημα ραντεβού από ${senderDisplay} για ${dateDisplay} ${timeDisplay}`;
+
+    // Build draft confirmation email for operator preview
+    const draftReply = buildAppointmentReply({
+      senderName: senderDisplay,
+      requestedDate: lookup?.requestedDate ?? null,
+      requestedTime: lookup?.requestedTime ?? null,
+      description,
+    });
 
     logger.info('UC-001 PROPOSE: Generating proposal', {
       requestId: ctx.requestId,
@@ -243,8 +264,9 @@ export class AppointmentModule implements IUCModule {
             isKnownContact: lookup?.isKnownContact ?? false,
             requestedDate: lookup?.requestedDate ?? null,
             requestedTime: lookup?.requestedTime ?? null,
-            description: lookup?.originalSubject || ctx.intake.normalized.contentText?.slice(0, 500) || summary,
+            description: description || summary,
             companyId: ctx.companyId,
+            draftReply,
           },
         },
       ],
@@ -258,7 +280,7 @@ export class AppointmentModule implements IUCModule {
   // ── Step 6: EXECUTE ─────────────────────────────────────────────────────
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
-    logger.info('UC-001 EXECUTE: Creating appointment', {
+    logger.info('UC-001 EXECUTE: Creating appointment + sending confirmation', {
       requestId: ctx.requestId,
     });
 
@@ -278,6 +300,7 @@ export class AppointmentModule implements IUCModule {
       const params = createAction.params;
       const now = new Date().toISOString();
 
+      // ── 1. Create appointment document in Firestore ──
       const appointmentDoc: Omit<AppointmentDocument, 'id'> = {
         companyId: (params.companyId as string) || ctx.companyId,
         pipelineRequestId: ctx.requestId,
@@ -315,9 +338,65 @@ export class AppointmentModule implements IUCModule {
         requesterEmail: params.senderEmail,
       });
 
+      // ── 2. Send confirmation email via Mailgun ──
+      const senderEmail = (params.senderEmail as string) ?? '';
+      const draftReply = (params.draftReply as string) ?? '';
+      const originalSubject = ctx.intake.normalized.subject ?? 'Αίτημα Ραντεβού';
+
+      let mailgunResult: MailgunSendResult = { success: false, error: 'No recipient' };
+
+      if (senderEmail && draftReply) {
+        mailgunResult = await sendReplyViaMailgun({
+          to: senderEmail,
+          subject: `Re: ${originalSubject}`,
+          textBody: draftReply,
+        });
+      } else if (senderEmail && !draftReply) {
+        // Fallback: build reply on-the-fly if draftReply is missing
+        const fallbackReply = buildAppointmentReply({
+          senderName: (params.senderName as string) ?? senderEmail,
+          requestedDate: (params.requestedDate as string) ?? null,
+          requestedTime: (params.requestedTime as string) ?? null,
+          description: (params.description as string) ?? '',
+        });
+
+        mailgunResult = await sendReplyViaMailgun({
+          to: senderEmail,
+          subject: `Re: ${originalSubject}`,
+          textBody: fallbackReply,
+        });
+      }
+
+      // Log email result
+      if (mailgunResult.success) {
+        logger.info('UC-001 EXECUTE: Confirmation email sent', {
+          requestId: ctx.requestId,
+          appointmentId: docRef.id,
+          messageId: mailgunResult.messageId,
+          to: senderEmail,
+        });
+      } else {
+        logger.warn('UC-001 EXECUTE: Email send failed (appointment still created)', {
+          requestId: ctx.requestId,
+          appointmentId: docRef.id,
+          error: mailgunResult.error,
+          to: senderEmail,
+        });
+      }
+
+      // Build side effects list
+      const sideEffects = [`appointment_created:${docRef.id}`];
+
+      if (mailgunResult.success) {
+        sideEffects.push(`email_sent:${mailgunResult.messageId ?? 'unknown'}`);
+      } else {
+        sideEffects.push(`email_failed:${mailgunResult.error ?? 'unknown'}`);
+      }
+
+      // Appointment creation is the primary action — email failure is non-fatal
       return {
         success: true,
-        sideEffects: [`appointment_created:${docRef.id}`],
+        sideEffects,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -338,18 +417,22 @@ export class AppointmentModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ─────────────────────────────────────────────────
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    // MVP: Log that confirmation would be sent
-    // Phase 2: Send real email via Mailgun
     const channel = (ctx.intake.channel ?? PipelineChannel.EMAIL) as PipelineChannelValue;
 
-    logger.info('UC-001 ACKNOWLEDGE: Confirmation pending (Phase 2: email sending)', {
+    // Check if confirmation email was sent in EXECUTE step
+    const emailSent = ctx.executionResult?.sideEffects?.some(
+      (se: string) => se.startsWith('email_sent:')
+    ) ?? false;
+
+    logger.info('UC-001 ACKNOWLEDGE: Confirmation delivery status', {
       requestId: ctx.requestId,
       channel,
+      emailSent,
       senderEmail: ctx.intake.normalized.sender.email,
     });
 
     return {
-      sent: false,
+      sent: emailSent,
       channel,
     };
   }

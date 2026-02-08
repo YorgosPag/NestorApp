@@ -23,6 +23,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { extractSearchCriteria, type PropertySearchCriteria } from '@/services/property-search.service';
+import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
+import { sendReplyViaMailgun, type MailgunSendResult } from '../../shared/mailgun-sender';
 import {
   PipelineIntentType,
   PipelineChannel,
@@ -46,11 +48,6 @@ const logger = createModuleLogger('UC_003_PROPERTY_SEARCH');
 // ============================================================================
 // TYPES
 // ============================================================================
-
-interface ContactMatch {
-  contactId: string;
-  name: string;
-}
 
 interface MatchedUnit {
   id: string;
@@ -80,49 +77,6 @@ interface PropertySearchLookupData {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/**
- * Server-side contact lookup by email using Admin SDK.
- * Same pattern as UC-001 — reused here for sender identification.
- */
-async function findContactByEmail(
-  email: string,
-  companyId: string
-): Promise<ContactMatch | null> {
-  const adminDb = getAdminFirestore();
-
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
-    .where('companyId', '==', companyId)
-    .limit(50)
-    .get();
-
-  const normalizedEmail = email.toLowerCase().trim();
-
-  for (const doc of snapshot.docs) {
-    const data = doc.data();
-
-    // Check emails array (common pattern: [{ email: "...", label: "work" }])
-    const emails = data.emails as Array<{ email?: string }> | undefined;
-    if (emails?.some(e => e.email?.toLowerCase().trim() === normalizedEmail)) {
-      return {
-        contactId: doc.id,
-        name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string,
-      };
-    }
-
-    // Check flat email field
-    const flatEmail = data.email as string | undefined;
-    if (flatEmail?.toLowerCase().trim() === normalizedEmail) {
-      return {
-        contactId: doc.id,
-        name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string,
-      };
-    }
-  }
-
-  return null;
-}
 
 /**
  * Statuses that indicate a unit is no longer available for sale/inquiry.
@@ -325,88 +279,6 @@ function buildDraftReply(
     '',
     'Με εκτίμηση,',
   ].join('\n');
-}
-
-// ============================================================================
-// MAILGUN EMAIL SENDING
-// ============================================================================
-
-interface MailgunSendResult {
-  success: boolean;
-  messageId?: string;
-  error?: string;
-}
-
-/**
- * Send a reply email via Mailgun API.
- *
- * Uses server-side env vars (MAILGUN_API_KEY, MAILGUN_DOMAIN).
- * Reuses same config pattern as EmailAdapter (server/comms/email-adapter.ts)
- * but without client-side Firebase dependencies.
- */
-async function sendReplyViaMailgun(params: {
-  to: string;
-  subject: string;
-  textBody: string;
-}): Promise<MailgunSendResult> {
-  const apiKey = process.env.MAILGUN_API_KEY?.trim();
-  const domain = process.env.MAILGUN_DOMAIN?.trim();
-
-  if (!apiKey || !domain) {
-    return {
-      success: false,
-      error: 'Mailgun not configured: missing MAILGUN_API_KEY or MAILGUN_DOMAIN',
-    };
-  }
-
-  // Derive "from" address: noreply@{MAILGUN_DOMAIN} (nestorconstruct.gr)
-  const fromEmail = process.env.MAILGUN_FROM_EMAIL?.trim()
-    ?? `noreply@${domain}`;
-
-  const region = process.env.MAILGUN_REGION === 'eu'
-    ? 'api.eu.mailgun.net'
-    : 'api.mailgun.net';
-  const url = `https://${region}/v3/${domain}/messages`;
-
-  try {
-    const formData = new FormData();
-    formData.append('from', fromEmail);
-    formData.append('to', params.to);
-    formData.append('subject', params.subject);
-    formData.append('text', params.textBody);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('UC-003 MAILGUN: API error', {
-        status: response.status,
-        body: errorText.slice(0, 500),
-      });
-      return {
-        success: false,
-        error: `Mailgun API ${response.status}: ${errorText.slice(0, 200)}`,
-      };
-    }
-
-    const result = await response.json() as { id?: string; message?: string };
-
-    logger.info('UC-003 MAILGUN: Email sent', { messageId: result.id });
-    return {
-      success: true,
-      messageId: result.id ?? undefined,
-    };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    logger.error('UC-003 MAILGUN: Send failed', { error: msg });
-    return { success: false, error: msg };
-  }
 }
 
 // ============================================================================

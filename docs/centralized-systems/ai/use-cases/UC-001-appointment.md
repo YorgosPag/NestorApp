@@ -14,10 +14,12 @@
 | Contact lookup by email | **IMPLEMENTED** (MVP: scan, Phase 2: indexed) |
 | Date/time extraction from AI entities | **IMPLEMENTED** (2026-02-07) |
 | Appointment creation in Firestore | **IMPLEMENTED** (2026-02-07) |
+| Draft reply template (Greek) | **IMPLEMENTED** (2026-02-08) |
+| Confirmation email via Mailgun | **IMPLEMENTED** (2026-02-08) |
+| Shared utilities centralization | **IMPLEMENTED** (2026-02-08) — `contact-lookup.ts`, `mailgun-sender.ts` |
 | Calendar availability / conflict detection | Phase 2 (PRE-001) |
 | Smart matching scenarios A/B/C | Phase 2 |
 | Lead creation for unknown senders | Phase 2 (PRE-002) |
-| Email confirmation (acknowledge step) | Phase 2 |
 
 ---
 
@@ -74,6 +76,46 @@ Email, Telegram, In-app, κ.λπ.
 | Ρόλος | Fallback |
 |-------|----------|
 | `salesManager` | `defaultResponsible` |
+
+## Email Reply Implementation (2026-02-08)
+
+### Pipeline Flow
+```
+Email "Θέλω ραντεβού" → AI detects appointment_request
+→ LOOKUP: Contact search + date/time extraction
+→ PROPOSE: Draft confirmation email + appointment data (operator preview)
+→ Operator approves → EXECUTE:
+  1. Create appointment in Firestore (appointments collection)
+  2. Send confirmation email via Mailgun (centralized sender)
+→ ACKNOWLEDGE: Verify email delivery status
+```
+
+### Confirmation Email Template (Greek)
+```
+Αγαπητέ/ή [Όνομα],
+
+Σας ευχαριστούμε για το ενδιαφέρον σας και το αίτημα ραντεβού.
+
+Το ραντεβού σας έχει εγκριθεί για [ημερομηνία] στις [ώρα].
+(ή: Θα επικοινωνήσουμε μαζί σας σύντομα αν δεν υπάρχει ημ/ώρα)
+
+Σε περίπτωση που χρειαστεί αλλαγή ή ακύρωση, παρακαλούμε ενημερώστε μας εγκαίρως.
+
+Με εκτίμηση,
+```
+
+### Shared Utilities
+| Utility | Path | Purpose |
+|---------|------|---------|
+| `findContactByEmail()` | `services/ai-pipeline/shared/contact-lookup.ts` | Sender identification |
+| `sendReplyViaMailgun()` | `services/ai-pipeline/shared/mailgun-sender.ts` | Email delivery |
+
+### Design Decisions
+- Email failure is **non-fatal** — appointment is still created even if email fails
+- `draftReply` is included in the proposal so operator can preview the email
+- Fallback: if `draftReply` is missing (e.g. operator modified actions), reply is built on-the-fly
+
+---
 
 ## AI Model Tier
 

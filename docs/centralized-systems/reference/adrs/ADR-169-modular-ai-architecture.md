@@ -202,6 +202,7 @@ AI_TIER_VISION=gpt-4o
 | 2026-02-07 | Enterprise Review: Model Policy tiers, Vision cost fix, Tech Stack alignment, Module Contracts (Zod + timestampIso + z.enum) |
 | 2026-02-07 | Enterprise Sections: Orchestration, Observability, Security, Governance, Escalation Precision, Contract Versioning, Config-Driven Thresholds, Replay Protection, Data Retention, Operational Runbooks |
 | 2026-02-07 | **Document Split**: ADR-169 → umbrella. Περιεχόμενο μεταφέρθηκε σε `docs/centralized-systems/ai/` (pipeline, use-cases, contracts, reliability, observability, security, governance, prerequisites) |
+| 2026-02-08 | **UC-001 Phase 2**: Email confirmation reply via Mailgun. Shared utilities centralized (`contact-lookup.ts`, `mailgun-sender.ts`). UC-001 + UC-003 refactored to use shared code |
 
 ---
 

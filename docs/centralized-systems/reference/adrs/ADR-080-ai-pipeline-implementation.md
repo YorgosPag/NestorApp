@@ -224,7 +224,7 @@ Email "Θέλω ραντεβού" → AI detects appointment_request intent
 - Calendar availability / conflict detection (PRE-001)
 - Smart matching scenarios (alternatives)
 - Lead creation for unknown senders
-- Email confirmation in acknowledge step
+- ~~Email confirmation in acknowledge step~~ → **IMPLEMENTED** (2026-02-08)
 
 ---
 
@@ -306,3 +306,5 @@ Mailgun webhook ✅
 | 2026-02-08 | **CRITICAL FIX**: OpenAI Responses API format — `json_schema` wrapper wrong for `/v1/responses` endpoint, spread schema fields directly into `text.format` |
 | 2026-02-08 | AI intent classification OPERATIONAL: `property_search` 90% confidence confirmed |
 | 2026-02-08 | UC-003 Property Search Module — LOOKUP (parse criteria + query available units) → PROPOSE (matched units + draft reply email) → EXECUTE (log lead inquiry) → ACKNOWLEDGE (Phase 2: email sending) |
+| 2026-02-08 | **Shared Utilities Centralization**: `findContactByEmail()` + `ContactMatch` → `shared/contact-lookup.ts`, `sendReplyViaMailgun()` + `MailgunSendResult` → `shared/mailgun-sender.ts`. Eliminates duplication between UC-001 and UC-003 |
+| 2026-02-08 | **UC-001 Phase 2: Email Confirmation** — PROPOSE now builds `draftReply` template (Greek). EXECUTE creates appointment + sends confirmation email via centralized Mailgun sender. ACKNOWLEDGE checks delivery status. Email failure is non-fatal (appointment still created) |
