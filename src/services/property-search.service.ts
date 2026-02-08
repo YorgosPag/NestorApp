@@ -1,15 +1,5 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  limit,
-  QueryConstraint,
-  startAfter,
-  DocumentSnapshot
-} from 'firebase/firestore';
+import type { CollectionReference, Query } from 'firebase-admin/firestore';
 import type { Property } from '@/types/property';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -169,25 +159,28 @@ export function extractSearchCriteria(searchText: string): PropertySearchCriteri
 /**
  * Builds a Firestore query from search criteria.
  */
-export function buildPropertyQuery(criteria: PropertySearchCriteria): QueryConstraint[] {
-  const constraints: QueryConstraint[] = [];
+export function buildPropertyQuery(
+  criteria: PropertySearchCriteria,
+  collectionRef: CollectionReference
+): Query {
+  let queryRef: Query = collectionRef;
 
   // Default to 'available' if no status is specified
-  constraints.push(where('status', '==', criteria.status || 'available'));
+  queryRef = queryRef.where('status', '==', criteria.status || 'available');
 
-  if (criteria.type) constraints.push(where('type', '==', criteria.type));
-  if (criteria.building) constraints.push(where('building', '==', criteria.building));
-  if (criteria.minPrice) constraints.push(where('price', '>=', criteria.minPrice));
-  if (criteria.maxPrice) constraints.push(where('price', '<=', criteria.maxPrice));
-  if (criteria.minArea) constraints.push(where('area', '>=', criteria.minArea));
-  if (criteria.maxArea) constraints.push(where('area', '<=', criteria.maxArea));
-  if (criteria.rooms) constraints.push(where('rooms', '==', criteria.rooms));
-  if (criteria.floor) constraints.push(where('floorNumber', '==', criteria.floor));
-  
-  constraints.push(orderBy(criteria.sortBy || 'price', criteria.sortOrder || 'asc'));
-  constraints.push(limit(criteria.limit || 10));
+  if (criteria.type) queryRef = queryRef.where('type', '==', criteria.type);
+  if (criteria.building) queryRef = queryRef.where('building', '==', criteria.building);
+  if (criteria.minPrice) queryRef = queryRef.where('price', '>=', criteria.minPrice);
+  if (criteria.maxPrice) queryRef = queryRef.where('price', '<=', criteria.maxPrice);
+  if (criteria.minArea) queryRef = queryRef.where('area', '>=', criteria.minArea);
+  if (criteria.maxArea) queryRef = queryRef.where('area', '<=', criteria.maxArea);
+  if (criteria.rooms) queryRef = queryRef.where('rooms', '==', criteria.rooms);
+  if (criteria.floor) queryRef = queryRef.where('floorNumber', '==', criteria.floor);
 
-  return constraints;
+  queryRef = queryRef.orderBy(criteria.sortBy || 'price', criteria.sortOrder || 'asc');
+  queryRef = queryRef.limit(criteria.limit || 10);
+
+  return queryRef;
 }
 
 /**
@@ -197,10 +190,10 @@ export async function searchProperties(searchInput: string | PropertySearchCrite
   'use server';
   try {
     const criteria = typeof searchInput === 'string' ? extractSearchCriteria(searchInput) : searchInput;
-    const constraints = buildPropertyQuery(criteria);
-    const q = query(collection(db, COLLECTIONS.UNITS), ...constraints);
-    const snapshot = await getDocs(q);
-    const properties = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+    const collectionRef = db.collection(COLLECTIONS.UNITS);
+    const q = buildPropertyQuery(criteria, collectionRef);
+    const snapshot = await q.get();
+    const properties = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Omit<Property, 'id'>) }));
 
     return {
       success: true,
@@ -223,9 +216,8 @@ export async function searchProperties(searchInput: string | PropertySearchCrite
 export async function getPropertySummary(criteria?: Partial<PropertySearchCriteria>): Promise<PropertySummary> {
   'use server';
   try {
-    const q = query(collection(db, COLLECTIONS.UNITS));
-    const snapshot = await getDocs(q);
-    const properties = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+    const snapshot = await db.collection(COLLECTIONS.UNITS).get();
+    const properties = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Omit<Property, 'id'>) }));
 
     const summary: PropertySummary = {
       totalProperties: properties.length,
@@ -300,10 +292,9 @@ export async function unifiedPropertySearch(searchText: string): Promise<Unified
 
     // 🏠 Search Units collection
     if (searchUnits) {
-      const unitsQuery = query(collection(db, COLLECTIONS.UNITS), limit(20));
-      const unitsSnapshot = await getDocs(unitsQuery);
+      const unitsSnapshot = await db.collection(COLLECTIONS.UNITS).limit(20).get();
       results.units = unitsSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Property))
+        .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Property, 'id'>) }))
         .filter(unit => {
           const name = (unit.code || '').toLowerCase();
           const type = (unit.type || '').toLowerCase();
@@ -313,10 +304,9 @@ export async function unifiedPropertySearch(searchText: string): Promise<Unified
 
     // 📦 Search Storage collection
     if (searchStorage) {
-      const storageQuery = query(collection(db, COLLECTIONS.STORAGE), limit(20));
-      const storageSnapshot = await getDocs(storageQuery);
+      const storageSnapshot = await db.collection(COLLECTIONS.STORAGE).limit(20).get();
       results.storageUnits = storageSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as StorageUnit))
+        .map(doc => ({ id: doc.id, ...(doc.data() as Omit<StorageUnit, 'id'>) }))
         .filter(storage => {
           const name = (storage.name || '').toLowerCase();
           return name.includes(searchTerm) || searchTerm.length < 3;
@@ -325,10 +315,9 @@ export async function unifiedPropertySearch(searchText: string): Promise<Unified
 
     // 🚗 Search Parking collection
     if (searchParking) {
-      const parkingQuery = query(collection(db, COLLECTIONS.PARKING_SPACES), limit(20));
-      const parkingSnapshot = await getDocs(parkingQuery);
+      const parkingSnapshot = await db.collection(COLLECTIONS.PARKING_SPACES).limit(20).get();
       results.parkingSpaces = parkingSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as ParkingSpace))
+        .map(doc => ({ id: doc.id, ...(doc.data() as Omit<ParkingSpace, 'id'>) }))
         .filter(parking => {
           const number = (parking.number || '').toLowerCase();
           const location = (parking.location || '').toLowerCase();

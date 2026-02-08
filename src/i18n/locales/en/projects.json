@@ -336,7 +336,90 @@
     "workers": "Workers",
     "timesheet": "Timesheet",
     "stampsCalculation": "Stamps Calculation",
-    "apdPayments": "APD & Payments"
+    "apdPayments": "APD & Payments",
+    "efkaDeclaration": "Project Declaration",
+    "workersTab": {
+      "title": "Project Workers",
+      "description": "Manage workers assigned to this project",
+      "addWorker": "Add Worker",
+      "removeWorker": "Remove",
+      "confirmRemove": "Are you sure you want to remove this worker from the project?",
+      "noWorkers": "No workers assigned to this project",
+      "noWorkersHint": "Click \"Add Worker\" to get started",
+      "totalWorkers": "Total workers",
+      "columns": {
+        "name": "Full Name",
+        "specialty": "Specialty",
+        "company": "Company",
+        "insuranceClass": "Insurance Class",
+        "status": "Status",
+        "hireDate": "Hire Date",
+        "actions": "Actions"
+      },
+      "employmentStatus": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "on_leave": "On Leave",
+        "terminated": "Terminated"
+      },
+      "employmentType": {
+        "permanent": "Permanent",
+        "temporary": "Temporary",
+        "contract": "Contract",
+        "intern": "Intern"
+      }
+    },
+    "efka": {
+      "title": "Project Declaration — EFKA",
+      "description": "Declaration details for e-EFKA & AMOE issuance",
+      "checklist": {
+        "title": "Required Information",
+        "completion": "Completion {{completed}}/{{total}}",
+        "allComplete": "All required information completed",
+        "employerVatNumber": "Employer VAT Number",
+        "projectAddress": "Project Address",
+        "projectDescription": "Project Description",
+        "startDate": "Start Date",
+        "estimatedEndDate": "Estimated End Date",
+        "estimatedWorkerCount": "Estimated Worker Count",
+        "projectCategory": "Project Category"
+      },
+      "status": {
+        "label": "Declaration Status",
+        "draft": "Draft",
+        "preparation": "In Preparation",
+        "submitted": "Submitted",
+        "active": "Active",
+        "amended": "Amended",
+        "closed": "Closed"
+      },
+      "amoe": {
+        "label": "AMOE",
+        "fullLabel": "Construction Project Registry Number",
+        "placeholder": "Will be assigned after submission",
+        "assigned": "AMOE: {{number}}"
+      },
+      "documents": {
+        "title": "EFKA Documents",
+        "e1": "E.1 — Employment Declaration",
+        "e3": "E.3 — Construction Project Declaration",
+        "e4": "E.4 — Personnel Table",
+        "status": {
+          "pending": "Pending",
+          "uploaded": "Uploaded",
+          "submitted": "Submitted",
+          "approved": "Approved"
+        }
+      },
+      "categories": {
+        "construction": "Construction",
+        "technical": "Technical"
+      },
+      "save": "Save",
+      "saved": "Saved",
+      "notes": "Notes",
+      "notesPlaceholder": "Add notes about the declaration..."
+    }
   },
   "parking": {
     "searchPlaceholder": "Code, owner, property...",

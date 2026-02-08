@@ -57,6 +57,7 @@ import {
   FolderTree,
   Inbox,
   Shield,
+  CalendarDays,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -120,7 +121,8 @@ const NAVIGATION_LABELS = {
   tasks_appointments: 'crm.tasks',
   sales_pipeline: 'crm.pipeline',
   teams_roles: 'crm.teams',
-  notifications: 'crm.notifications'
+  notifications: 'crm.notifications',
+  calendar: 'crm.calendar',
 };
 
 // 🏢 ENTERPRISE: Define MenuItem locally για compatibility
@@ -441,6 +443,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               {  icon: Phone, href: '/crm/communications' },
               {  icon: Target, href: '/crm/leads' },
               {  icon: ClipboardList, href: '/crm/tasks' },
+              {  icon: CalendarDays, href: '/crm/calendar' },
               {  icon: Filter, href: '/crm/pipeline' },
               {  icon: Users2, href: '/crm/teams' },
               {  icon: Bell, href: '/crm/notifications' },
@@ -627,6 +630,7 @@ function getLabelKeyForPath(path: string): string {
     'crm/communications': 'communications',
     'crm/leads': 'leads_opportunities',
     'crm/tasks': 'tasks_appointments',
+    'crm/calendar': 'calendar',
     'crm/pipeline': 'sales_pipeline',
     'crm/teams': 'teams_roles',
     'crm/notifications': 'notifications',

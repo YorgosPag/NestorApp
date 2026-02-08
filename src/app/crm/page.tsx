@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, Mail, BarChart3 } from 'lucide-react';
+import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, Mail, BarChart3, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -16,6 +16,7 @@ const crmSectionKeys = [
     { titleKey: 'crm.sections.emailAnalytics.title', href: '/crm/email-analytics', icon: BarChart3, descKey: 'crm.sections.emailAnalytics.description' },
     { titleKey: 'crm.sections.leads.title', href: '/crm/leads', icon: Target, descKey: 'crm.sections.leads.description' },
     { titleKey: 'crm.sections.tasks.title', href: '/crm/tasks', icon: ClipboardList, descKey: 'crm.sections.tasks.description' },
+    { titleKey: 'crm.sections.calendar.title', href: '/crm/calendar', icon: CalendarDays, descKey: 'crm.sections.calendar.description' },
     { titleKey: 'crm.sections.pipeline.title', href: '/crm/pipeline', icon: Filter, descKey: 'crm.sections.pipeline.description' },
     { titleKey: 'crm.sections.teams.title', href: '/crm/teams', icon: Users2, descKey: 'crm.sections.teams.description' },
     { titleKey: 'crm.sections.notifications.title', href: '/crm/notifications', icon: Bell, descKey: 'crm.sections.notifications.description' },

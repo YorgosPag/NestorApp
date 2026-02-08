@@ -41,6 +41,10 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { workspaceConverter } from '@/lib/firestore/converters/workspace.converter';
+import {
+  SPECIAL_WORKSPACE_IDS,
+  DEFAULT_WORKSPACE_SETTINGS,
+} from '@/types/workspace';
 import type {
   Workspace,
   WorkspaceType,
@@ -48,8 +52,6 @@ import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
   ListWorkspacesParams,
-  SPECIAL_WORKSPACE_IDS,
-  DEFAULT_WORKSPACE_SETTINGS,
 } from '@/types/workspace';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';

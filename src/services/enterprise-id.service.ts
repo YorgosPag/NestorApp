@@ -86,6 +86,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   // ==========================================================================
   // DEVOPS & OPERATIONS
   // ==========================================================================
+  CONTAINER: 'ctr',
   DEPLOYMENT: 'deploy',
   PIPELINE: 'pipe',
   BACKUP: 'backup',
@@ -501,6 +502,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * ?? Generate Container ID
+   * Format: ctr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateContainerId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CONTAINER).id;
+  }
+
+  /**
    * 🔄 Generate Pipeline ID
    * Format: pipe_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -749,6 +758,7 @@ export const generateAuditId = () => enterpriseIdService.generateAuditId();
 // DEVOPS & OPERATIONS
 // =============================================================================
 export const generateDeploymentId = () => enterpriseIdService.generateDeploymentId();
+export const generateContainerId = () => enterpriseIdService.generateContainerId();
 export const generatePipelineId = () => enterpriseIdService.generatePipelineId();
 export const generateBackupId = () => enterpriseIdService.generateBackupId();
 export const generateMigrationId = () => enterpriseIdService.generateMigrationId();

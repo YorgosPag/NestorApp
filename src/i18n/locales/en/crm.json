@@ -487,5 +487,93 @@
       "error": "Error sending message: {error}",
       "genericError": "Error sending message"
     }
+  },
+  "calendarPage": {
+    "title": "Calendar",
+    "description": "View and manage your schedule",
+    "views": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "agenda": "Agenda"
+    },
+    "filters": {
+      "allUsers": "All Users",
+      "myCalendar": "My Calendar",
+      "allTypes": "All Types"
+    },
+    "newEvent": "New Event",
+    "noEvents": "No events for this period",
+    "today": "Today",
+    "eventTypes": {
+      "appointment": "Appointment",
+      "call": "Call",
+      "meeting": "Meeting",
+      "viewing": "Viewing",
+      "follow_up": "Follow Up",
+      "email": "Email",
+      "document": "Document",
+      "other": "Other"
+    },
+    "dialog": {
+      "viewTitle": "Event Details",
+      "createTitle": "New Calendar Event",
+      "fields": {
+        "title": "Title",
+        "type": "Type",
+        "date": "Date",
+        "time": "Time",
+        "description": "Description",
+        "assignedTo": "Assigned To"
+      },
+      "actions": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "complete": "Complete",
+        "viewOriginal": "View Original"
+      }
+    }
+  },
+  "sections": {
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Overview of your CRM performance and metrics"
+    },
+    "customers": {
+      "title": "Contacts",
+      "description": "Manage your contacts and organizations"
+    },
+    "communications": {
+      "title": "Communications",
+      "description": "Unified inbox and communication history"
+    },
+    "emailAnalytics": {
+      "title": "Email Analytics",
+      "description": "Track email performance and engagement"
+    },
+    "leads": {
+      "title": "Leads & Opportunities",
+      "description": "Track and manage your sales opportunities"
+    },
+    "tasks": {
+      "title": "Tasks & Appointments",
+      "description": "Manage your tasks, reminders and follow-ups"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "description": "View and manage your schedule, appointments and tasks"
+    },
+    "pipeline": {
+      "title": "Sales Pipeline",
+      "description": "Visualize and manage your sales pipeline"
+    },
+    "teams": {
+      "title": "Teams & Roles",
+      "description": "Manage team members and their roles"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "View and manage your notifications"
+    }
   }
 }

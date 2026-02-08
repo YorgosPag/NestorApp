@@ -17,6 +17,8 @@
 import { useCallback } from 'react';
 import { mapStyleManager, type MapStyleType } from '../../services/map/MapStyleManager';
 import type { GeoCoordinate } from '../../types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
+import type { AffineTransformMatrix } from '../../floor-plan-system/types';
 
 // ============================================================================
 // 🏢 ENTERPRISE: MapLibre Type Definitions
@@ -89,9 +91,11 @@ export interface DrawingData {
  * Transform state from parent
  */
 export interface TransformState {
-  scale: number;
-  offsetX: number;
-  offsetY: number;
+  controlPoints: FloorPlanControlPoint[];
+  isCalibrated: boolean;
+  quality?: 'excellent' | 'good' | 'fair' | 'poor' | null;
+  rmsError?: number | null;
+  matrix?: AffineTransformMatrix | null;
 }
 
 /**

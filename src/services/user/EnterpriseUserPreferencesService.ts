@@ -480,7 +480,20 @@ class EnterpriseUserPreferencesService {
     const fallbackPrefs = this.getFallbackPreferences();
 
     // Start με fallback preferences
-    let mergedPrefs = { ...fallbackPrefs };
+    let mergedPrefs: UserPreferences = { ...fallbackPrefs };
+
+    const applyCategoryDefaults = <TKey extends keyof UserPreferences>(
+      key: TKey,
+      defaults: Partial<UserPreferences[TKey]>
+    ): void => {
+      mergedPrefs = {
+        ...mergedPrefs,
+        [key]: {
+          ...mergedPrefs[key],
+          ...defaults
+        }
+      };
+    };
 
     // Apply company defaults
     Object.keys(companyDefaults).forEach((category) => {
@@ -493,10 +506,7 @@ class EnterpriseUserPreferencesService {
         typeof defaultsForCategory === 'object' &&
         !Array.isArray(defaultsForCategory)
       ) {
-        mergedPrefs[key] = {
-          ...mergedPrefs[key],
-          ...(defaultsForCategory as Partial<UserPreferences[typeof key]>)
-        };
+        applyCategoryDefaults(key, defaultsForCategory as Partial<UserPreferences[typeof key]>);
       }
     });
 

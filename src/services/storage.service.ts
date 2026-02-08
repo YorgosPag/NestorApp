@@ -1,7 +1,7 @@
 'use server';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { StorageUnit } from '@/types/storage';
 
@@ -11,8 +11,7 @@ const db = getAdminFirestore();
 // Get a single storage unit by its ID
 export async function getStorageUnitById(id: string): Promise<StorageUnit | null> {
   try {
-    const docRef = doc(db, STORAGE_UNITS_COLLECTION, id);
-    const docSnap = await getDoc(docRef);
+    const docSnap: DocumentSnapshot = await db.collection(STORAGE_UNITS_COLLECTION).doc(id).get();
 
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() } as StorageUnit;

@@ -336,7 +336,90 @@
     "workers": "Εργατοτεχνίτες",
     "timesheet": "Παρουσιολόγιο",
     "stampsCalculation": "Υπολογισμός Ενσήμων",
-    "apdPayments": "ΑΠΔ & Πληρωμές"
+    "apdPayments": "ΑΠΔ & Πληρωμές",
+    "efkaDeclaration": "Αναγγελία Έργου",
+    "workersTab": {
+      "title": "Εργατοτεχνίτες Έργου",
+      "description": "Διαχείριση εργατοτεχνιτών συνδεδεμένων στο έργο",
+      "addWorker": "Προσθήκη Εργαζόμενου",
+      "removeWorker": "Αφαίρεση",
+      "confirmRemove": "Είστε σίγουροι ότι θέλετε να αφαιρέσετε αυτόν τον εργαζόμενο από το έργο;",
+      "noWorkers": "Δεν υπάρχουν εργαζόμενοι σε αυτό το έργο",
+      "noWorkersHint": "Πατήστε «Προσθήκη Εργαζόμενου» για να ξεκινήσετε",
+      "totalWorkers": "Σύνολο εργαζομένων",
+      "columns": {
+        "name": "Ονοματεπώνυμο",
+        "specialty": "Ειδικότητα",
+        "company": "Εταιρεία",
+        "insuranceClass": "Ασφ. Κατηγορία",
+        "status": "Κατάσταση",
+        "hireDate": "Ημ. Πρόσληψης",
+        "actions": "Ενέργειες"
+      },
+      "employmentStatus": {
+        "active": "Ενεργός",
+        "inactive": "Ανενεργός",
+        "on_leave": "Σε Άδεια",
+        "terminated": "Λήξη Σύμβασης"
+      },
+      "employmentType": {
+        "permanent": "Μόνιμος",
+        "temporary": "Προσωρινός",
+        "contract": "Σύμβαση Έργου",
+        "intern": "Ασκούμενος"
+      }
+    },
+    "efka": {
+      "title": "Αναγγελία Έργου — ΕΦΚΑ",
+      "description": "Δήλωση στοιχείων για e-ΕΦΚΑ & έκδοση ΑΜΟΕ",
+      "checklist": {
+        "title": "Απαιτούμενα Στοιχεία",
+        "completion": "Συμπλήρωση {{completed}}/{{total}}",
+        "allComplete": "Όλα τα στοιχεία συμπληρώθηκαν",
+        "employerVatNumber": "ΑΦΜ Εργοδότη",
+        "projectAddress": "Διεύθυνση Έργου",
+        "projectDescription": "Περιγραφή Έργου",
+        "startDate": "Ημερομηνία Έναρξης",
+        "estimatedEndDate": "Εκτιμώμενη Λήξη",
+        "estimatedWorkerCount": "Αριθμός Εργαζομένων",
+        "projectCategory": "Κατηγορία Έργου"
+      },
+      "status": {
+        "label": "Κατάσταση Αναγγελίας",
+        "draft": "Πρόχειρη",
+        "preparation": "Σε Προετοιμασία",
+        "submitted": "Υποβλήθηκε",
+        "active": "Ενεργή",
+        "amended": "Τροποποιημένη",
+        "closed": "Κλειστή"
+      },
+      "amoe": {
+        "label": "ΑΜΟΕ",
+        "fullLabel": "Αριθμός Μητρώου Οικοδομοτεχνικού Έργου",
+        "placeholder": "Θα αντιστοιχιστεί μετά την υποβολή",
+        "assigned": "ΑΜΟΕ: {{number}}"
+      },
+      "documents": {
+        "title": "Έγγραφα ΕΦΚΑ",
+        "e1": "Ε.1 — Αναγγελία Πρόσληψης",
+        "e3": "Ε.3 — Αναγγελία Οικοδομοτεχνικού Έργου",
+        "e4": "Ε.4 — Πίνακας Προσωπικού",
+        "status": {
+          "pending": "Εκκρεμεί",
+          "uploaded": "Ανεβασμένο",
+          "submitted": "Υποβλήθηκε",
+          "approved": "Εγκρίθηκε"
+        }
+      },
+      "categories": {
+        "construction": "Οικοδομικό",
+        "technical": "Τεχνικό"
+      },
+      "save": "Αποθήκευση",
+      "saved": "Αποθηκεύτηκε",
+      "notes": "Σημειώσεις",
+      "notesPlaceholder": "Προσθέστε σημειώσεις σχετικά με την αναγγελία..."
+    }
   },
   "parking": {
     "searchPlaceholder": "Κωδικός, ιδιοκτήτης, ακίνητο...",

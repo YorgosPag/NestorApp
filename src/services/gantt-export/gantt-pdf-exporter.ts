@@ -25,7 +25,9 @@ import { captureGanttAsDataUrl, flattenTaskGroupsToRows } from './gantt-export-u
 async function registerGreekFont(pdf: jsPDF): Promise<void> {
   const { ROBOTO_REGULAR_BASE64 } = await import('./roboto-font-data');
   pdf.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+  // "Identity-H" encoding is CRITICAL for Unicode/Greek support
+  // Without it, jsPDF defaults to WinAnsiEncoding (Latin-only)
+  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
   pdf.setFont('Roboto', 'normal');
 }
 
@@ -78,6 +80,7 @@ export async function exportGanttToPDF(options: GanttExportOptions): Promise<voi
 
   // 6. Data table on next page
   pdf.addPage();
+  pdf.setFont('Roboto', 'normal');
   const rows = flattenTaskGroupsToRows(taskGroups);
   autoTable(pdf, {
     head: [['Φάση', 'Εργασία', 'Έναρξη', 'Λήξη', 'Διάρκεια', 'Πρόοδος']],
@@ -91,7 +94,7 @@ export async function exportGanttToPDF(options: GanttExportOptions): Promise<voi
     ]),
     startY: 15,
     styles: { fontSize: 9, font: 'Roboto' },
-    headStyles: { fillColor: [59, 130, 246] },
+    headStyles: { fillColor: [59, 130, 246], font: 'Roboto' },
   });
 
   // 7. Trigger browser download

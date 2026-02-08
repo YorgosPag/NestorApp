@@ -676,7 +676,7 @@ export class GeoAlertCICDPipeline {
       },
       security: {
         enableSAST: true,
-        enableDASTٛ: false, // Μόνο για staging/production
+        enableDAST: false, // Μόνο για staging/production
         enableDependencyScanning: true,
         enableContainerScanning: true,
         enableSecretScanning: true,
