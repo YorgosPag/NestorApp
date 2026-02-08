@@ -176,7 +176,8 @@
     "sections": {
       "originalMessage": "Αρχικό Μήνυμα",
       "aiUnderstanding": "Κατανόηση AI",
-      "proposal": "Προτεινόμενες Ενέργειες"
+      "proposal": "Προτεινόμενες Ενέργειες",
+      "draftReply": "Προσχέδιο Απάντησης"
     },
     "fields": {
       "sender": "Αποστολέας",
@@ -185,7 +186,13 @@
       "confidence": "Βεβαιότητα AI",
       "urgency": "Επείγον",
       "summary": "Σύνοψη",
-      "reason": "Λόγος"
+      "reason": "Λόγος",
+      "criteria": "Κριτήρια",
+      "matchingUnits": "ταιριάζουν",
+      "totalAvailable": "διαθέσιμα συνολικά"
+    },
+    "actions": {
+      "replyPropertyList": "Απάντηση αναζήτησης ακινήτου"
     },
     "stats": {
       "total": "Σύνολο",

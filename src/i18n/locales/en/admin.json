@@ -176,7 +176,8 @@
     "sections": {
       "originalMessage": "Original Message",
       "aiUnderstanding": "AI Understanding",
-      "proposal": "Proposed Actions"
+      "proposal": "Proposed Actions",
+      "draftReply": "Draft Reply"
     },
     "fields": {
       "sender": "Sender",
@@ -185,7 +186,13 @@
       "confidence": "AI Confidence",
       "urgency": "Urgency",
       "summary": "Summary",
-      "reason": "Reason"
+      "reason": "Reason",
+      "criteria": "Criteria",
+      "matchingUnits": "matching",
+      "totalAvailable": "total available"
+    },
+    "actions": {
+      "replyPropertyList": "Property search reply"
     },
     "stats": {
       "total": "Total",

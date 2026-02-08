@@ -62,6 +62,7 @@ interface MatchedUnit {
   buildingId: string;
   price: number | null;
   status: string;
+  rooms: number | null;
 }
 
 interface PropertySearchLookupData {
@@ -124,11 +125,23 @@ async function findContactByEmail(
 }
 
 /**
+ * Statuses that indicate a unit is no longer available for sale/inquiry.
+ * Uses both legacy `status` and new `PropertyStatus` values.
+ */
+const EXCLUDED_STATUSES = new Set([
+  'sold', 'reserved', 'landowner', 'rented', 'off-market', 'unavailable',
+]);
+
+/**
  * Query available units from Firestore using Admin SDK.
- * Fetches all available units, then filters in-memory by criteria.
+ * Fetches all units, then filters in-memory by availability + criteria.
  *
- * Firestore limitation: Cannot combine multiple range filters.
- * Strategy: Single indexed query (status) + in-memory filtering.
+ * Domain separation:
+ * - `operationalStatus: 'ready'` = physically ready (new schema)
+ * - `status` ∉ EXCLUDED_STATUSES = not sold/reserved (legacy + new schema)
+ *
+ * Firestore limitation: Cannot combine multiple range filters or OR conditions.
+ * Strategy: Fetch all units → in-memory filtering.
  */
 async function queryAvailableUnits(
   companyId: string,
@@ -136,27 +149,45 @@ async function queryAvailableUnits(
 ): Promise<{ matching: MatchedUnit[]; totalAvailable: number }> {
   const adminDb = getAdminFirestore();
 
-  // Fetch all available units for this company
+  // Fetch all units (no status filter — handled in-memory for dual-schema support)
   const snapshot = await adminDb
     .collection(COLLECTIONS.UNITS)
-    .where('status', '==', 'available')
-    .limit(100)
+    .limit(200)
     .get();
 
-  const allAvailable: MatchedUnit[] = snapshot.docs.map(doc => {
+  const allAvailable: MatchedUnit[] = [];
+
+  for (const doc of snapshot.docs) {
     const data = doc.data();
-    return {
+    const status = (data.status as string) ?? '';
+    const operationalStatus = (data.operationalStatus as string) ?? '';
+
+    // Skip units that are sold/reserved/off-market
+    if (EXCLUDED_STATUSES.has(status)) continue;
+
+    // Skip units not physically ready (if operationalStatus exists)
+    if (operationalStatus && operationalStatus !== 'ready') continue;
+
+    // Resolve area: prefer `areas.gross`, fallback to `area`
+    const areas = data.areas as { gross?: number } | undefined;
+    const resolvedArea = (areas?.gross ?? data.area ?? 0) as number;
+
+    // Resolve rooms from layout.bedrooms
+    const layout = data.layout as { bedrooms?: number } | undefined;
+
+    allAvailable.push({
       id: doc.id,
       name: (data.name ?? '') as string,
       type: (data.type ?? '') as string,
-      area: (data.area ?? 0) as number,
+      area: resolvedArea,
       floor: (data.floor ?? 0) as number,
       building: (data.building ?? '') as string,
       buildingId: (data.buildingId ?? '') as string,
       price: typeof data.price === 'number' ? data.price : null,
-      status: (data.status ?? 'available') as string,
-    };
-  });
+      status: operationalStatus || status || 'unknown',
+      rooms: layout?.bedrooms ?? null,
+    });
+  }
 
   const totalAvailable = allAvailable.length;
 
@@ -175,9 +206,9 @@ async function queryAvailableUnits(
       if (!typeMatches) return false;
     }
 
-    // Rooms filter
+    // Rooms filter: prefer layout.bedrooms, fallback to type parsing
     if (criteria.rooms) {
-      const unitRooms = extractRoomsFromType(unit.type);
+      const unitRooms = unit.rooms ?? extractRoomsFromType(unit.type);
       if (unitRooms !== null && unitRooms !== criteria.rooms) return false;
     }
 
@@ -428,6 +459,7 @@ export class PropertySearchModule implements IUCModule {
               floor: u.floor,
               building: u.building,
               price: u.price,
+              rooms: u.rooms,
             })),
             totalAvailable,
             draftReply,

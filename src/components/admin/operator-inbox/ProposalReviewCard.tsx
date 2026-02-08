@@ -25,6 +25,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import type {
   PipelineContext,
+  PipelineAction,
   PipelineChannelValue,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
@@ -75,6 +76,123 @@ const getConfidenceColor = (confidence: number): string => {
   if (confidence >= 60) return 'text-yellow-600 dark:text-yellow-400';
   return 'text-red-600 dark:text-red-400';
 };
+
+// ============================================================================
+// PROPOSAL ACTION RENDERER
+// ============================================================================
+
+/** Internal fields that should never be shown to operators */
+const HIDDEN_ACTION_PARAMS = new Set([
+  'companyId', 'contactId', 'senderEmail', 'isKnownContact',
+]);
+
+interface MatchedUnitDisplay {
+  name?: string;
+  type?: string;
+  area?: number;
+  floor?: number;
+  building?: string;
+  price?: number | null;
+  rooms?: number | null;
+}
+
+interface ProposalActionRendererProps {
+  action: PipelineAction;
+  spacing: ReturnType<typeof useSpacingTokens>;
+  typography: ReturnType<typeof useTypography>;
+  t: (key: string) => string;
+}
+
+function ProposalActionRenderer({ action, spacing, typography, t }: ProposalActionRendererProps) {
+  const params = action.params;
+
+  // ── reply_property_list — UC-003 Property Search ──
+  if (action.type === 'reply_property_list') {
+    const senderName = params.senderName as string | undefined;
+    const criteriaSummary = params.criteriaSummary as string | undefined;
+    const matchingUnitsCount = params.matchingUnitsCount as number | undefined;
+    const totalAvailable = params.totalAvailable as number | undefined;
+    const matchingUnits = params.matchingUnits as MatchedUnitDisplay[] | undefined;
+    const draftReply = params.draftReply as string | undefined;
+
+    return (
+      <section className={`${spacing.gap.sm} flex flex-col`}>
+        {/* Header: Action type + summary */}
+        <div className={`${spacing.gap.sm} flex flex-wrap items-center`}>
+          <Badge variant="outline">{t('operatorInbox.actions.replyPropertyList')}</Badge>
+          {senderName && (
+            <span className={`${typography.body.sm} text-muted-foreground`}>
+              → {senderName}
+            </span>
+          )}
+        </div>
+
+        {/* Search results summary */}
+        <div className={`${spacing.gap.xs} flex flex-wrap items-center`}>
+          {criteriaSummary && (
+            <Badge variant="secondary">
+              {t('operatorInbox.fields.criteria')}: {criteriaSummary}
+            </Badge>
+          )}
+          <span className={typography.body.sm}>
+            {matchingUnitsCount ?? 0} {t('operatorInbox.fields.matchingUnits')} ({totalAvailable ?? 0} {t('operatorInbox.fields.totalAvailable')})
+          </span>
+        </div>
+
+        {/* Matched units list */}
+        {matchingUnits && matchingUnits.length > 0 && (
+          <ul className={`${spacing.margin.top.xs} ${spacing.gap.xs} list-disc list-inside`}>
+            {matchingUnits.map((unit, idx) => (
+              <li key={idx} className={`${typography.body.sm} text-muted-foreground`}>
+                <strong>{unit.name}</strong>
+                {unit.area ? ` — ${unit.area} τ.μ.` : ''}
+                {unit.floor ? `, ${unit.floor}ος` : ''}
+                {unit.building ? `, ${unit.building}` : ''}
+                {unit.price != null ? `, ${unit.price.toLocaleString('el-GR')}€` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Draft reply email */}
+        {draftReply && (
+          <Card className={spacing.margin.top.sm}>
+            <CardContent className={spacing.padding.md}>
+              <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs}`}>
+                {t('operatorInbox.sections.draftReply')}
+              </h5>
+              <div className={`${typography.body.sm} whitespace-pre-line text-muted-foreground`}>
+                {draftReply}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+    );
+  }
+
+  // ── Generic fallback for other action types ──
+  // Show only non-hidden params in a readable format
+  const visibleParams = Object.entries(params).filter(
+    ([key]) => !HIDDEN_ACTION_PARAMS.has(key)
+  );
+
+  return (
+    <div className={`${spacing.gap.xs} flex flex-col`}>
+      <Badge variant="outline">{action.type}</Badge>
+      {visibleParams.length > 0 && (
+        <dl className={`${spacing.gap.xs} grid grid-cols-[auto_1fr] ${typography.body.sm} text-muted-foreground`}>
+          {visibleParams.map(([key, value]) => (
+            <div key={key} className="contents">
+              <dt className="font-medium">{key}:</dt>
+              <dd>{typeof value === 'string' ? value : JSON.stringify(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
 
 // ============================================================================
 // COMPONENT
@@ -186,14 +304,17 @@ export function ProposalReviewCard({
             </header>
             <p className={typography.body.sm}>{proposal.summary}</p>
             {proposal.suggestedActions.length > 0 && (
-              <ul className={`${spacing.margin.top.sm} ${spacing.gap.xs} list-disc list-inside`}>
+              <div className={`${spacing.margin.top.sm} ${spacing.gap.md} flex flex-col`}>
                 {proposal.suggestedActions.map((action, idx) => (
-                  <li key={idx} className={`${typography.body.sm} text-muted-foreground`}>
-                    <Badge variant="outline" className="mr-1">{action.type}</Badge>
-                    {JSON.stringify(action.params)}
-                  </li>
+                  <ProposalActionRenderer
+                    key={idx}
+                    action={action}
+                    spacing={spacing}
+                    typography={typography}
+                    t={t}
+                  />
                 ))}
-              </ul>
+              </div>
             )}
           </CardContent>
         </Card>
