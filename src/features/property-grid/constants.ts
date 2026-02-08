@@ -46,8 +46,12 @@ export async function loadPropertyTypes(
 
     // Fallback to centralized labels
     return [
-      { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
-      ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+      { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES, category: 'mixed' },
+      ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({
+        value,
+        label,
+        category: 'mixed'
+      }))
     ];
   }
 }
@@ -90,7 +94,11 @@ export async function getEnterprisePropertyTypes(options: {
       }));
 
       if (includeAll) {
-        result.unshift({ value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES });
+        result.unshift({
+          value: 'all',
+          label: PROPERTY_FILTER_LABELS.ALL_TYPES,
+          category: category ?? 'mixed'
+        });
       }
 
       return result;
@@ -118,7 +126,10 @@ export async function getEnterprisePropertyTypes(options: {
       : fallbackTypes;
 
     if (includeAll) {
-      filteredTypes = [{ value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES }, ...filteredTypes];
+      filteredTypes = [
+        { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES, category: category ?? 'mixed' },
+        ...filteredTypes
+      ];
     }
 
     return filteredTypes;

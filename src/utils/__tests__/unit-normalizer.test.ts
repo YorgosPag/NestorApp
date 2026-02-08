@@ -27,25 +27,18 @@ import type {
 // TEST DATA
 // ============================================================================
 
-const mockTimestamp = {
-  seconds: 1706000000,
-  nanoseconds: 0,
-  toDate: () => new Date('2024-01-23T00:00:00Z'),
-  toMillis: () => 1706000000000,
-  isEqual: () => false,
-  valueOf: () => 1706000000000
-} as Timestamp;
+const mockTimestamp = Timestamp.fromDate(new Date('2024-01-23T00:00:00Z'));
 
 const minimalUnitDoc: UnitDoc = {
   id: 'unit-001',
   name: 'Unit 001',
-  type: 'Διαμέρισμα',
+  type: 'apartment',
   building: 'Building A',
   buildingId: 'building-a-id',
   project: 'Project Alpha',
   floorId: 'floor-01',
   floor: 1,
-  status: 'available',
+  status: 'for-sale',
   unitCoverage: {
     hasPhotos: false,
     hasFloorplans: false,
@@ -63,7 +56,7 @@ const completeUnitDoc: UnitDoc = {
   area: 85.5,
   description: 'Modern apartment with sea view',
   soldTo: 'contact-123',
-  saleDate: mockTimestamp,
+  saleDate: mockTimestamp.toDate().toISOString(),
   unitName: 'Sea View Apartment',
   areas: {
     gross: 100,
@@ -75,50 +68,50 @@ const completeUnitDoc: UnitDoc = {
     bedrooms: 2,
     bathrooms: 1,
     wc: 1,
-    kitchens: 1,
-    livingRooms: 1,
     balconies: 2,
-    hasOpenPlan: true
+    totalRooms: 4
   },
   orientations: ['north', 'east'],
   views: [
     { type: 'sea', quality: 'full' },
     { type: 'mountain', quality: 'partial' }
   ],
-  condition: {
-    general: 'excellent',
-    yearBuilt: 2020,
-    lastRenovation: 2023
-  },
+  condition: 'excellent',
   renovationYear: 2023,
   deliveryDate: mockTimestamp,
   systemsOverride: {
-    heating: ['central_gas'],
-    cooling: ['split_units'],
+    heatingType: 'central',
+    heatingFuel: 'natural-gas',
+    coolingType: 'split-units',
     waterHeating: 'solar'
   },
   energy: {
     class: 'A+',
-    certificate: 'CERT-2024-001',
-    consumption: 50
+    certificateId: 'CERT-2024-001',
+    certificateDate: mockTimestamp,
+    validUntil: mockTimestamp
   },
   finishes: {
-    flooring: 'wood_parquet',
-    windows: 'aluminum_thermal',
-    doors: 'security'
+    flooring: ['wood'],
+    windowFrames: 'aluminum',
+    glazing: 'double'
   },
-  interiorFeatures: ['fireplace', 'storage', 'wardrobes'],
-  securityFeatures: ['alarm', 'security_door', 'cctv'],
-  unitAmenities: ['parking_space', 'storage_room', 'garden'],
+  interiorFeatures: ['fireplace', 'smart-home'],
+  securityFeatures: ['alarm', 'security-door', 'cctv'],
+  unitAmenities: ['garden', 'pool'],
   linkedSpaces: [
     {
       spaceType: 'parking',
       spaceId: 'parking-001',
+      quantity: 1,
+      inclusion: 'included',
       metadata: { level: 'B1', number: '15' }
     },
     {
       spaceType: 'storage',
       spaceId: 'storage-001',
+      quantity: 1,
+      inclusion: 'included',
       metadata: { level: 'B1', size: '5sqm' }
     }
   ],
@@ -134,7 +127,7 @@ const backfillDefaults: BackfillDefaults = {
   // Identity fields
   id: 'default-id',
   name: 'Default Unit',
-  type: 'Διαμέρισμα',
+  type: 'apartment',
 
   // Hierarchy fields
   building: 'Default Building',
@@ -161,7 +154,7 @@ describe('normalizeUnit', () => {
       
       expect(result.id).toBe('unit-001');
       expect(result.name).toBe('Unit 001');
-      expect(result.type).toBe('Διαμέρισμα');
+      expect(result.type).toBe('apartment');
       expect(result.orientations).toEqual(['north', 'east']);
       expect(result.views).toHaveLength(2);
       expect(result.linkedSpaces).toHaveLength(2);
@@ -223,7 +216,7 @@ describe('normalizeUnit', () => {
       expect(result.building).toBe('Building A');
       expect(result.buildingId).toBe('building-a-id');
       expect(result.floor).toBe(1);
-      expect(result.status).toBe('available');
+      expect(result.status).toBe('for-sale');
 
       // Arrays should default to empty
       expect(result.orientations).toEqual([]);
@@ -262,7 +255,7 @@ describe('normalizeUnit', () => {
       
       expect(result.id).toBe('default-id');
       expect(result.name).toBe('Default Unit');
-      expect(result.type).toBe('Διαμέρισμα');
+      expect(result.type).toBe('apartment');
       expect(result.unitCoverage.updatedAt).toBe(mockTimestamp);
     });
 
@@ -280,7 +273,7 @@ describe('normalizeUnit', () => {
       
       expect(result.id).toBe('custom-id'); // Document value
       expect(result.name).toBe('Default Unit'); // Backfill value
-      expect(result.type).toBe('Διαμέρισμα'); // Backfill value
+      expect(result.type).toBe('apartment'); // Backfill value
     });
 
     test('should handle all extended fields during migration', () => {
@@ -346,10 +339,10 @@ describe('normalizeUnit', () => {
       
       // Test nested object integrity
       expect(result.areas?.gross).toBe(100);
-      expect(result.layout?.hasOpenPlan).toBe(true);
-      expect(result.condition?.general).toBe('excellent');
+      expect(result.layout?.totalRooms).toBe(4);
+      expect(result.condition).toBe('excellent');
       expect(result.energy?.class).toBe('A+');
-      expect(result.finishes?.flooring).toBe('wood_parquet');
+      expect(result.finishes?.flooring).toEqual(['wood']);
       
       // Test nested array structures
       expect(result.views?.[0]).toEqual({ type: 'sea', quality: 'full' });
@@ -463,13 +456,13 @@ describe('prepareUnitForFirestore', () => {
     // All required fields must be present
     expect(doc.id).toBe('unit-001');
     expect(doc.name).toBe('Unit 001');
-    expect(doc.type).toBe('Διαμέρισμα');
+    expect(doc.type).toBe('apartment');
     expect(doc.building).toBe('Building A');
     expect(doc.buildingId).toBe('building-a-id');
     expect(doc.project).toBe('Project Alpha');
     expect(doc.floorId).toBe('floor-01');
     expect(doc.floor).toBe(1);
-    expect(doc.status).toBe('available');
+    expect(doc.status).toBe('for-sale');
     expect(doc.unitCoverage).toBeDefined();
   });
 
@@ -519,9 +512,9 @@ describe('prepareUnitForFirestore', () => {
     // Non-empty arrays should be present
     expect(doc.orientations).toEqual(['north', 'east']);
     expect(doc.views).toHaveLength(2);
-    expect(doc.interiorFeatures).toEqual(['fireplace', 'storage', 'wardrobes']);
-    expect(doc.securityFeatures).toEqual(['alarm', 'security_door', 'cctv']);
-    expect(doc.unitAmenities).toEqual(['parking_space', 'storage_room', 'garden']);
+    expect(doc.interiorFeatures).toEqual(['fireplace', 'smart-home']);
+    expect(doc.securityFeatures).toEqual(['alarm', 'security-door', 'cctv']);
+    expect(doc.unitAmenities).toEqual(['garden', 'pool']);
     expect(doc.linkedSpaces).toHaveLength(2);
   });
 
@@ -568,7 +561,7 @@ describe('getUnitDisplaySummary', () => {
     expect(summary.subtitle).toEqual({
       key: 'unit.subtitle.format',
       params: {
-        type: 'Διαμέρισμα',
+        type: 'apartment',
         building: 'Building A',
         floor: 1
       }
@@ -610,9 +603,9 @@ describe('getUnitDisplaySummary', () => {
     const unitDoc = {
       ...minimalUnitDoc,
       linkedSpaces: [
-        { spaceType: 'parking', spaceId: 'p1', metadata: {} },
-        { spaceType: 'parking', spaceId: 'p2', metadata: {} },
-        { spaceType: 'parking', spaceId: 'p3', metadata: {} }
+        { spaceType: 'parking', spaceId: 'p1', quantity: 1, inclusion: 'included', metadata: {} },
+        { spaceType: 'parking', spaceId: 'p2', quantity: 1, inclusion: 'included', metadata: {} },
+        { spaceType: 'parking', spaceId: 'p3', quantity: 1, inclusion: 'included', metadata: {} }
       ]
     };
 
@@ -632,7 +625,7 @@ describe('getUnitDisplaySummary', () => {
   test('should not include Ready badge for non-ready units', () => {
     const unitDoc = {
       ...completeUnitDoc,
-      operationalStatus: 'under_construction'
+      operationalStatus: 'under-construction'
     };
 
     const unit = normalizeUnit(unitDoc);
@@ -660,10 +653,12 @@ describe('Performance tests', () => {
   test('should handle large arrays efficiently', () => {
     const largeDoc = {
       ...completeUnitDoc,
-      interiorFeatures: Array(100).fill('feature'),
+      interiorFeatures: Array(100).fill('fireplace'),
       linkedSpaces: Array(50).fill(null).map((_, i) => ({
         spaceType: 'parking' as const,
         spaceId: `space-${i}`,
+        quantity: 1,
+        inclusion: 'included',
         metadata: { index: i }
       }))
     };
@@ -683,17 +678,9 @@ describe('Performance tests', () => {
       linkedSpaces: [{
         spaceType: 'parking' as const,
         spaceId: 'deep-1',
-        metadata: {
-          level1: {
-            level2: {
-              level3: {
-                level4: {
-                  level5: 'deep value'
-                }
-              }
-            }
-          }
-        }
+        quantity: 1,
+        inclusion: 'included',
+        metadata: { level5: 'deep value' }
       }]
     };
     
@@ -701,9 +688,8 @@ describe('Performance tests', () => {
     const doc = prepareUnitForFirestore(unit);
     
     expect(doc.linkedSpaces?.[0].metadata).toBeDefined();
-    const metadata = doc.linkedSpaces?.[0].metadata as Record<string, Record<string, Record<string, Record<string, Record<string, string>>>>>;
-    expect(metadata.level1.level2.level3.level4.level5)
-      .toBe('deep value');
+    const metadata = doc.linkedSpaces?.[0].metadata as Record<string, string | number | boolean> | undefined;
+    expect(metadata?.level5).toBe('deep value');
   });
 });
 
@@ -743,3 +729,12 @@ describe('Type safety tests', () => {
     expect(typeof unit.price).toBe('string');
   });
 });
+
+
+
+
+
+
+
+
+

@@ -28,10 +28,11 @@ export interface LayerState {
 export interface FloorData {
   id: string;
   name: string;
-  level: number;
-  buildingId: string;
+  level?: number;
+  buildingId?: string;
   floorPlanUrl?: string;
   properties: Property[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface FloorPlanViewerLayoutProps {

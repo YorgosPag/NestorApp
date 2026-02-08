@@ -6,6 +6,7 @@
  */
 
 import type { DocumentData, QueryConstraint } from 'firebase/firestore';
+import type { ProjectStatus } from '@/types/project';
 
 // ============================================================================
 // CORE TYPES
@@ -249,7 +250,7 @@ export interface ProjectUpdatedPayload {
   updates: {
     name?: string;
     title?: string;
-    status?: string;
+    status?: ProjectStatus;
   };
   timestamp: number;
 }
@@ -340,7 +341,7 @@ export interface ProjectCreatedPayload {
   project: {
     name?: string;
     title?: string;
-    status?: string;
+    status?: ProjectStatus;
     companyId?: string;
   };
   timestamp: number;

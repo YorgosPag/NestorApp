@@ -239,7 +239,7 @@ export function useContactSubmission({
     }
 
     // 🔥 ENTERPRISE UPLOAD SYNCHRONIZATION: Block submission until all uploads complete
-    const uploadValidation = validateUploadState(formData);
+    const uploadValidation = validateUploadState(formData as unknown as Record<string, unknown>);
 
     if (!uploadValidation.isValid) {
       console.log('🚫 SUBMISSION: Upload validation failed:', uploadValidation);
@@ -373,7 +373,11 @@ export function useContactSubmission({
         }
 
         // Update existing contact
-        await ContactsService.updateContact(editContact.id, contactData);
+        const editContactId = editContact?.id;
+        if (!editContactId) {
+          return;
+        }
+        await ContactsService.updateContact(editContactId, contactData);
         notifications.success("contacts.submission.updateSuccess");
 
       } else {
@@ -482,7 +486,7 @@ export function useContactSubmission({
    * Provides comprehensive state information for optimal user experience
    */
   const getSubmissionState = useCallback((formData: ContactFormData) => {
-    const uploadValidation = validateUploadState(formData);
+    const uploadValidation = validateUploadState(formData as unknown as Record<string, unknown>);
     const isValidForm = validateFormData(formData);
 
     const isUploading = uploadValidation.pendingUploads > 0;

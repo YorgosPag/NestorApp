@@ -63,7 +63,7 @@ export function useContactLivePreview({
         vatNumber: formData.vatNumber,
         afm: formData.afm,
         gemiNumber: formData.gemiNumber,
-        legalForm: formData.legalForm,
+        legalForm: formData.legalForm || undefined,
         gemiStatus: formData.gemiStatus,
         distintiveTitle: formData.distintiveTitle,
         kadCode: formData.kadCode,

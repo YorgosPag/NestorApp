@@ -71,8 +71,8 @@ class ProjectCompanyMigrationSteps {
           .map(doc => {
             const data = doc.data() as CompanyRecord;
             return {
-              id: doc.id,
-              ...data
+              ...data,
+              id: doc.id
             };
           })
           .filter(contact => contact.type === 'company' && contact.status === 'active') as CompanyRecord[];
@@ -82,8 +82,8 @@ class ProjectCompanyMigrationSteps {
         // Fetch all projects
         const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
         this.migrationData.projects = projectsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          id: doc.id
         })) as ProjectRecord[];
 
         console.log(`   Found ${this.migrationData.projects.length} projects`);
@@ -279,8 +279,8 @@ class ProjectCompanyMigrationSteps {
         // Re-fetch projects to verify changes
         const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
         const updatedProjects = projectsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          id: doc.id
         })) as ProjectRecord[];
 
         const integrityResults = {
@@ -319,8 +319,8 @@ class ProjectCompanyMigrationSteps {
         // Consider migration successful if at least 80% of projects have valid company IDs
         const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
         const updatedProjects = projectsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          id: doc.id
         })) as ProjectRecord[];
 
         const validProjects = updatedProjects.filter(project =>

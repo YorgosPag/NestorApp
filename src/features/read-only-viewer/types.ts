@@ -19,6 +19,7 @@ export type ReadOnlyPropertyViewerLayoutProps = {
   handlePolygonSelect: (id: string | null) => void;
   onSelectFloor: (floorId: string | null) => void;
   handleUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
+  properties?: Property[];
   // catch-all for viewer props passthrough (required due to rest spread pattern)
   [key: string]: unknown;
 };

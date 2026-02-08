@@ -123,7 +123,9 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
   // Safe property selection
   const handlePropertySelect = React.useCallback((propertyId: string | null) => {
     console.log('🎯 Property selected:', propertyId);
-    onPropertySelect?.(propertyId);
+    if (propertyId) {
+      onPropertySelect?.(propertyId);
+    }
   }, [onPropertySelect]);
 
   // ✅ ENTERPRISE EVENT HANDLERS: Χρήση κεντρικοποιημένου zoom system

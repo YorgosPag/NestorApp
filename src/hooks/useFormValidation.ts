@@ -1,31 +1,60 @@
-import { useForm, UseFormProps, FieldValues, UseFormReturn } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, UseFormProps, FieldValues, UseFormReturn, type Path, type Resolver, type FieldErrors, type FieldError } from 'react-hook-form';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo } from 'react';
 
+const zodResolver = <TSchema extends z.ZodTypeAny>(
+  schema: TSchema
+): Resolver<z.infer<TSchema>> => async (values) => {
+  const result = await schema.safeParseAsync(values);
+
+  if (result.success) {
+    return { values: result.data, errors: {} };
+  }
+
+  const errors: FieldErrors<z.infer<TSchema>> = {};
+  const mutableErrors = errors as Record<string, FieldError>;
+  const flattened = result.error.flatten().fieldErrors;
+
+  Object.entries(flattened).forEach(([key, messages]) => {
+    const message = messages?.[0];
+    if (!message) {
+      return;
+    }
+    mutableErrors[key] = {
+      type: 'validation',
+      message
+    };
+  });
+
+  return { values: {}, errors };
+};
+
 // Enhanced form hook with Zod validation and i18n
-export function useFormValidation<TFieldValues extends FieldValues = FieldValues>(
-  schema: z.ZodSchema<TFieldValues>,
-  options?: Omit<UseFormProps<TFieldValues>, 'resolver'>
-): UseFormReturn<TFieldValues> & {
-  validateField: (field: keyof TFieldValues, value: unknown) => string | undefined;
-  validateAll: () => boolean;
-  getFieldError: (field: keyof TFieldValues) => string | undefined;
+export function useFormValidation<TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
+  options?: Omit<UseFormProps<z.infer<TSchema>>, 'resolver'>
+): UseFormReturn<z.infer<TSchema>> & {
+  validateField: (field: keyof z.infer<TSchema>, value: unknown) => string | undefined;
+  validateAll: () => Promise<boolean>;
+  getFieldError: (field: keyof z.infer<TSchema>) => string | undefined;
 } {
   const { t } = useTranslation('forms');
-  
-  const form = useForm<TFieldValues>({
+
+  const form = useForm<z.infer<TSchema>>({
     ...options,
     resolver: zodResolver(schema),
     mode: options?.mode || 'onChange', // Enable real-time validation
   });
 
   // Single field validation
-  const validateField = useCallback((field: keyof TFieldValues, value: unknown) => {
+  const validateField = useCallback((field: keyof z.infer<TSchema>, value: unknown) => {
     try {
       // Get the field schema from the full schema
-      const schemaWithShape = schema as z.ZodObject<Record<string, z.ZodType>>;
+      if (!(schema instanceof z.ZodObject)) {
+        return undefined;
+      }
+      const schemaWithShape = schema as z.ZodObject<Record<string, z.ZodTypeAny>>;
       const fieldSchema = schemaWithShape.shape?.[field as string];
       if (fieldSchema) {
         fieldSchema.parse(value);
@@ -40,12 +69,10 @@ export function useFormValidation<TFieldValues extends FieldValues = FieldValues
   }, [schema]);
 
   // Validate all fields
-  const validateAll = useCallback(() => {
-    return form.trigger();
-  }, [form]);
+  const validateAll = useCallback(() => form.trigger(), [form]);
 
   // Get field error with fallback
-  const getFieldError = useCallback((field: keyof TFieldValues) => {
+  const getFieldError = useCallback((field: keyof z.infer<TSchema>) => {
     const error = form.formState.errors[field];
     return error?.message as string | undefined;
   }, [form.formState.errors]);
@@ -59,21 +86,25 @@ export function useFormValidation<TFieldValues extends FieldValues = FieldValues
 }
 
 // Hook for dynamic schema creation based on form configuration
-export function useDynamicFormValidation<TFieldValues extends FieldValues>(
-  schemaConfig: Record<keyof TFieldValues, z.ZodType>,
-  options?: Omit<UseFormProps<TFieldValues>, 'resolver'>
-) {
+export function useDynamicFormValidation<TSchema extends z.ZodRawShape>(
+  schemaConfig: TSchema,
+  options?: Omit<UseFormProps<z.infer<z.ZodObject<TSchema>>>, 'resolver'>
+): UseFormReturn<z.infer<z.ZodObject<TSchema>>> & {
+  validateField: (field: keyof z.infer<z.ZodObject<TSchema>>, value: unknown) => string | undefined;
+  validateAll: () => Promise<boolean>;
+  getFieldError: (field: keyof z.infer<z.ZodObject<TSchema>>) => string | undefined;
+} {
   const schema = useMemo(() => z.object(schemaConfig), [schemaConfig]);
   return useFormValidation(schema, options);
 }
 
 // Hook for conditional validation based on form state
-export function useConditionalFormValidation<TFieldValues extends FieldValues>(
-  baseSchema: z.ZodSchema<TFieldValues>,
-  conditionalRules: (data: Partial<TFieldValues>) => z.ZodSchema<TFieldValues>,
-  options?: Omit<UseFormProps<TFieldValues>, 'resolver'>
+export function useConditionalFormValidation<TSchema extends z.ZodTypeAny>(
+  baseSchema: TSchema,
+  conditionalRules: (data: Partial<z.infer<TSchema>>) => TSchema,
+  options?: Omit<UseFormProps<z.infer<TSchema>>, 'resolver'>
 ) {
-  const form = useForm<TFieldValues>({
+  const form = useForm<z.infer<TSchema>>({
     ...options,
     mode: options?.mode || 'onChange',
   });
@@ -84,7 +115,7 @@ export function useConditionalFormValidation<TFieldValues extends FieldValues>(
   }, [form.watch(), baseSchema, conditionalRules]);
 
   // Override the validate method to use dynamic schema
-  const customValidate = useCallback(async (data: TFieldValues) => {
+  const customValidate = useCallback(async (data: z.infer<TSchema>) => {
     try {
       await currentSchema.parseAsync(data);
       return true;
@@ -96,7 +127,7 @@ export function useConditionalFormValidation<TFieldValues extends FieldValues>(
           errors[path] = { message: err.message };
         });
         Object.keys(errors).forEach(key => {
-          form.setError(key as keyof TFieldValues, errors[key]);
+          form.setError(key as Path<z.infer<TSchema>>, errors[key]);
         });
       }
       return false;

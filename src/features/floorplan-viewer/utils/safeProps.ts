@@ -34,12 +34,12 @@ export function ensureFloor(floor: FloorData | null | undefined): SafeFloor {
   }
 
   return {
+    ...floor,
     id: floor.id || 'default',
     name: floor.name || 'Floor',
     properties: Array.isArray(floor.properties) ? floor.properties : [],
     metadata: floor.metadata || {},
-    floorPlanUrl: floor.floorPlanUrl || null,
-    ...floor
+    floorPlanUrl: floor.floorPlanUrl || null
   };
 }
 
@@ -47,7 +47,7 @@ export function isNodeEditMode(mode: string): boolean {
   return mode === 'edit' || mode === 'create';
 }
 
-export function safeGetProperty(properties: Property[], id: string | null): Property | null {
+export function safeGetProperty(properties: Property[], id: string | null | undefined): Property | null {
   if (!id || !Array.isArray(properties)) {
     return null;
   }

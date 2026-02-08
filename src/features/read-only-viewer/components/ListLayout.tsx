@@ -52,6 +52,13 @@ export function ListLayout({
   const searchParams = useSearchParams();
   const activeMediaTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
   const showPropertyHoverInfo = activeMediaTab === 'floorplans';
+  const properties = viewerProps.properties ?? [];
+  const handleSelectFloor = React.useCallback(
+    (floorId: string | null) => {
+      viewerProps.onSelectFloor?.(floorId);
+    },
+    [viewerProps.onSelectFloor]
+  );
 
   return (
     // 🏢 ENTERPRISE: gap-2 (8px) from centralized tokens
@@ -116,8 +123,8 @@ export function ListLayout({
           <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>
             <PropertyDetailsPanel
               propertyIds={selectedPropertyIds}
-              onSelectFloor={viewerProps.onSelectFloor}
-              properties={viewerProps.properties}
+              onSelectFloor={handleSelectFloor}
+              properties={properties}
               onUpdateProperty={() => {}}
               isReadOnly={true}
             />

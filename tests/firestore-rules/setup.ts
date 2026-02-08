@@ -341,7 +341,7 @@ export async function seedTestData(
   docId: string,
   data: Record<string, unknown>
 ): Promise<void> {
-  await env.withSecurityRulesDisabled(async (context) => {
+  await env.withSecurityRulesDisabled(async (context: RulesTestContext) => {
     await context.firestore().collection(collection).doc(docId).set(data);
   });
 }
@@ -354,7 +354,7 @@ export async function seedMultipleDocuments(
   collection: string,
   documents: Array<{ id: string; data: Record<string, unknown> }>
 ): Promise<void> {
-  await env.withSecurityRulesDisabled(async (context) => {
+  await env.withSecurityRulesDisabled(async (context: RulesTestContext) => {
     const batch = context.firestore().batch();
     for (const doc of documents) {
       batch.set(context.firestore().collection(collection).doc(doc.id), doc.data);

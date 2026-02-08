@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { collection, query, orderBy, where, type DocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { InfiniteScrollPagination, PaginatedResult } from '@/lib/pagination';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -89,8 +89,8 @@ export function useFirestoreProjectsPaginated(
   // DOCUMENT MAPPER
   // ==========================================================================
 
-  const mapDocument = useCallback((doc: { id: string; data: () => Record<string, unknown> }): FirestoreProject => {
-    const data = doc.data();
+  const mapDocument = useCallback((doc: DocumentSnapshot): FirestoreProject => {
+    const data = (doc.data() ?? {}) as Record<string, unknown>;
 
     let mappedStatus = data.status as string;
     if (data.status === 'construction' || data.status === 'active') {

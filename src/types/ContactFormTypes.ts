@@ -1,4 +1,4 @@
-import type { ContactType, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
+import type { ContactType, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo, CompanyContact } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 export interface AddNewContactDialogProps {
@@ -83,7 +83,7 @@ export interface ContactFormData {
   serviceTaxOffice: string;
   serviceTitle: string;
   tradeName: string; // Διακριτικός Τίτλος
-  legalForm: string;
+  legalForm: CompanyContact['legalForm'] | '';
   gemiStatus: string;
   gemiStatusDate: string;
   chamber: string; // Επιμελητήριο / Τ.Υ. ΓΕΜΗ

@@ -463,7 +463,7 @@ function TabContentWrapper({
         <figure className="text-center text-muted-foreground">
           <Loader2 className={cn(iconSizes.lg, 'mx-auto mb-3 animate-spin')} aria-hidden="true" />
           <figcaption className="text-sm">
-            {t('common:loading.message', 'Φόρτωση...')}
+            {t('common:loading.message')}
           </figcaption>
         </figure>
       </div>
@@ -477,7 +477,7 @@ function TabContentWrapper({
         <figure className="text-center">
           <AlertCircle className={cn(iconSizes.xl, 'mx-auto mb-3 text-destructive')} aria-hidden="true" />
           <figcaption className="text-sm text-muted-foreground mb-4">
-            {t('common:error', 'Σφάλμα φόρτωσης')}
+            {t('common:error')}
           </figcaption>
           <Button
             variant="outline"
@@ -486,7 +486,7 @@ function TabContentWrapper({
             className="gap-2"
           >
             <RefreshCw className={iconSizes.sm} aria-hidden="true" />
-            {t('common:retry', 'Επανάληψη')}
+            {t('common:retry')}
           </Button>
         </figure>
       </div>
@@ -498,3 +498,5 @@ function TabContentWrapper({
 }
 
 export default ReadOnlyMediaViewer;
+
+

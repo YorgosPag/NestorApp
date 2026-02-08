@@ -316,7 +316,7 @@ export function PropertyViewerWithLayers({
                 isReadOnly={true}
                 // Layer visibility states
                 layerVisibilityStates={layerVisibilityStates}
-                pdfBackgroundUrl={pdfBackgroundUrl}
+                pdfBackgroundUrl={pdfBackgroundUrl ?? undefined}
               />
             </div>
           </div>

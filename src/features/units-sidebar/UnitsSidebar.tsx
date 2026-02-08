@@ -80,7 +80,7 @@ export function UnitsSidebar({
           data={selectedUnit}
           componentMapping={UNITS_COMPONENT_MAPPING}
           defaultTab="info"
-          theme="clean"
+          theme="default"
           // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
           translationNamespace="building"
           additionalData={{
@@ -138,8 +138,8 @@ export function UnitsSidebar({
       {/* 🏢 ENTERPRISE: Render details ONLY on mobile — prevents duplicate mount */}
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedUnit}
-        onClose={() => onSelectUnit(null)}
-        title={selectedUnit?.title || t('mobile.unitDetails')}
+        onClose={() => onSelectUnit('__none__', false)}
+        title={selectedUnit?.name || t('mobile.unitDetails')}
         actionButtons={
           <>
             <button
@@ -164,3 +164,4 @@ export function UnitsSidebar({
     </>
   );
 }
+

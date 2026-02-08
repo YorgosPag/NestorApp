@@ -20,11 +20,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-034-gantt-chart-construction-tracking.md
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { GanttChart, ViewMode } from 'react-modern-gantt';
 import type { Task, TaskColorProps } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Clock,
@@ -51,13 +52,6 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import {
   Dialog,
   DialogContent,
@@ -159,6 +153,41 @@ export function GanttView({ building }: GanttViewProps) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [colorPickerTarget, setColorPickerTarget] = useState<ColorPickerTarget | null>(null);
   const [pendingColor, setPendingColor] = useState('#3b82f6');
+  const contextMenuRef = useRef<HTMLElement>(null);
+
+  // Close context menu on outside click, Escape key, or scroll
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const handleOutsideMouseDown = (e: MouseEvent) => {
+      if (contextMenuRef.current?.contains(e.target as Node)) return;
+      setContextMenu(null);
+    };
+    const handleOutsideContextMenu = (e: MouseEvent) => {
+      if (contextMenuRef.current?.contains(e.target as Node)) return;
+      setContextMenu(null);
+    };
+    const handleScroll = () => setContextMenu(null);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+
+    // Delay to prevent the triggering right-click from immediately closing
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleOutsideMouseDown);
+      document.addEventListener('contextmenu', handleOutsideContextMenu);
+      document.addEventListener('scroll', handleScroll, true);
+      document.addEventListener('keydown', handleKeyDown);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleOutsideMouseDown);
+      document.removeEventListener('contextmenu', handleOutsideContextMenu);
+      document.removeEventListener('scroll', handleScroll, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [contextMenu]);
 
   // Dynamic color resolver for Gantt bars — custom barColor overrides status color
   const getTaskBarColor = useCallback(({ task }: TaskColorProps) => {
@@ -182,16 +211,19 @@ export function GanttView({ building }: GanttViewProps) {
     }
   }, []);
 
-  // Detect which task bar was right-clicked (used by ContextMenu trigger)
-  const handleContextMenuCapture = useCallback((e: React.MouseEvent) => {
+  // Detect which task bar was right-clicked — opens custom context menu
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     const taskItem = target.closest('.rmg-task-item') as HTMLElement | null;
 
     if (!taskItem) {
-      // Not on a task bar — clear state, let browser default happen
+      // Not on a task bar — let browser default context menu show
       setContextMenu(null);
       return;
     }
+
+    // Suppress browser context menu — we show our custom menu instead
+    e.preventDefault();
 
     // Try data attribute first, fall back to name matching
     const dataTaskId = taskItem.getAttribute('data-task-id');
@@ -230,7 +262,7 @@ export function GanttView({ building }: GanttViewProps) {
       }
     }
 
-    // No match found — clear state
+    // No match found — clear state, but still suppress browser menu on task bars
     setContextMenu(null);
   }, [taskGroups]);
 
@@ -412,74 +444,100 @@ export function GanttView({ building }: GanttViewProps) {
         </Card>
       )}
 
-      {/* Gantt Chart — wrapped with ContextMenu for right-click support */}
+      {/* Gantt Chart — with right-click context menu via portal */}
       {!isEmpty && (
-        <ContextMenu onOpenChange={(open) => { if (!open) setContextMenu(null); }}>
-          <ContextMenuTrigger asChild onContextMenu={handleContextMenuCapture}>
-            <Card className="border-0 shadow-none">
-              <CardContent className={spacingTokens.padding.none} onMouseDownCapture={handleGanttMouseDown}>
-                <GanttChart
-                  tasks={taskGroups}
-                  startDate={timelineBounds.startDate}
-                  endDate={timelineBounds.endDate}
-                  title={t('tabs.timeline.gantt.title')}
-                  headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
-                  viewMode={viewMode}
-                  viewModes={AVAILABLE_VIEW_MODES}
-                  onViewModeChange={setViewMode}
-                  darkMode={isDarkMode}
-                  showProgress
-                  showCurrentDateMarker
-                  todayLabel={t('tabs.timeline.gantt.toolbar.today')}
-                  editMode
-                  allowProgressEdit
-                  allowTaskResize
-                  allowTaskMove
-                  movementThreshold={5}
-                  onTaskUpdate={handleTaskUpdate}
-                  onTaskClick={handleTaskClick}
-                  onTaskDoubleClick={handleTaskDoubleClick}
-                  onGroupClick={handleGroupClick}
-                  locale="el-GR"
-                  fontSize={designTypography.fontSize.sm}
-                  getTaskColor={getTaskBarColor}
-                />
-              </CardContent>
-            </Card>
-          </ContextMenuTrigger>
-          {contextMenu && (
-            <ContextMenuContent className="min-w-48">
-              <ContextMenuItem onClick={handleEditFromMenu}>
-                <Pencil className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-                {contextMenu.isPhaseBar
-                  ? t('tabs.timeline.gantt.contextMenu.editPhase')
-                  : t('tabs.timeline.gantt.contextMenu.editTask')}
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={handleNewPhaseFromMenu}>
-                <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-                {t('tabs.timeline.gantt.contextMenu.newPhase')}
-              </ContextMenuItem>
-              <ContextMenuItem onClick={handleNewTaskFromMenu}>
-                <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-                {t('tabs.timeline.gantt.contextMenu.newTask')}
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={handleChangeColorFromMenu}>
-                <Palette className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-                {t('tabs.timeline.gantt.contextMenu.changeColor')}
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={handleDeleteFromMenu}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
-                {t('tabs.timeline.gantt.contextMenu.delete')}
-              </ContextMenuItem>
-            </ContextMenuContent>
-          )}
-        </ContextMenu>
+        <Card className="border-0 shadow-none" onContextMenu={handleContextMenu}>
+          <CardContent className={spacingTokens.padding.none} onMouseDownCapture={handleGanttMouseDown}>
+            <GanttChart
+              tasks={taskGroups}
+              startDate={timelineBounds.startDate}
+              endDate={timelineBounds.endDate}
+              title={t('tabs.timeline.gantt.title')}
+              headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
+              viewMode={viewMode}
+              viewModes={AVAILABLE_VIEW_MODES}
+              onViewModeChange={setViewMode}
+              darkMode={isDarkMode}
+              showProgress
+              showCurrentDateMarker
+              todayLabel={t('tabs.timeline.gantt.toolbar.today')}
+              editMode
+              allowProgressEdit
+              allowTaskResize
+              allowTaskMove
+              movementThreshold={5}
+              onTaskUpdate={handleTaskUpdate}
+              onTaskClick={handleTaskClick}
+              onTaskDoubleClick={handleTaskDoubleClick}
+              onGroupClick={handleGroupClick}
+              locale="el-GR"
+              fontSize={designTypography.fontSize.sm}
+              getTaskColor={getTaskBarColor}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Custom Context Menu — portal-rendered at exact cursor coordinates */}
+      {contextMenu && createPortal(
+        <nav
+          ref={contextMenuRef}
+          className="fixed z-50 min-w-48 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          role="menu"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={handleEditFromMenu}
+          >
+            <Pencil className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+            {contextMenu.isPhaseBar
+              ? t('tabs.timeline.gantt.contextMenu.editPhase')
+              : t('tabs.timeline.gantt.contextMenu.editTask')}
+          </button>
+          <div className="-mx-1 my-1 h-px bg-border" role="separator" />
+          <button
+            type="button"
+            role="menuitem"
+            className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={handleNewPhaseFromMenu}
+          >
+            <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+            {t('tabs.timeline.gantt.contextMenu.newPhase')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={handleNewTaskFromMenu}
+          >
+            <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+            {t('tabs.timeline.gantt.contextMenu.newTask')}
+          </button>
+          <div className="-mx-1 my-1 h-px bg-border" role="separator" />
+          <button
+            type="button"
+            role="menuitem"
+            className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={handleChangeColorFromMenu}
+          >
+            <Palette className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+            {t('tabs.timeline.gantt.contextMenu.changeColor')}
+          </button>
+          <div className="-mx-1 my-1 h-px bg-border" role="separator" />
+          <button
+            type="button"
+            role="menuitem"
+            className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none text-destructive hover:bg-destructive/10"
+            onClick={handleDeleteFromMenu}
+          >
+            <Trash2 className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
+            {t('tabs.timeline.gantt.contextMenu.delete')}
+          </button>
+        </nav>,
+        document.body
       )}
 
       {/* Phase Status Legend */}

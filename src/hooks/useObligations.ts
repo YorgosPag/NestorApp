@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { FirestoreObligationsRepository } from '@/services/obligations/InMemoryObligationsRepository';
-import type { ObligationDocument } from '@/types/obligations';
+import type { ObligationDocument, ObligationTemplate } from '@/types/obligations';
 
 // 🔥 ENTERPRISE: Firebase-based obligations hook
 export function useObligations() {

@@ -935,42 +935,57 @@ html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hov
    Enable horizontal scrolling + visible grid lines
    ============================================================= */
 
-/* 🏢 ENTERPRISE: Gantt timeline horizontal scrollbar */
+/* 🏢 ENTERPRISE: Gantt chart — high stacking context so tooltips
+   appear above elements below the chart (legend, cards) */
 .rmg-gantt-chart {
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+/* Allow overflow on the flex container (sibling of task-list & timeline) */
+.rmg-container {
   overflow: visible !important;
 }
 
+/* 🏢 ENTERPRISE: Timeline scroll + tooltip escape (ADR-034) —
+   overflow-x: auto provides horizontal scrolling.
+   overflow-y: clip (NOT auto) allows independent axis control.
+   overflow-clip-margin: 200px lets tooltips paint 200px beyond
+   the container bounds without being clipped.
+   CSS spec: visible + auto = auto (both axes). But clip + auto
+   keeps each axis independent — this is the key trick. */
 .rmg-timeline-container {
   overflow-x: auto !important;
+  overflow-y: clip !important;
+  overflow-clip-margin: 200px !important;
   scrollbar-width: thin !important;
-  scrollbar-color: #94a3b8 transparent !important;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent !important;
   -ms-overflow-style: auto !important;
 }
 
 .rmg-timeline-container::-webkit-scrollbar {
   display: block !important;
-  height: 8px !important;
+  height: 6px !important;
   background: transparent !important;
   visibility: visible !important;
-  opacity: 1 !important;
 }
 
 .rmg-timeline-container::-webkit-scrollbar-track {
   display: block !important;
-  background: rgba(0,0,0,0.05) !important;
-  border-radius: 4px !important;
+  background: transparent !important;
   visibility: visible !important;
 }
 
 .rmg-timeline-container::-webkit-scrollbar-thumb {
   display: block !important;
-  background: #94a3b8 !important;
-  border-radius: 4px !important;
+  background: hsl(var(--muted-foreground) / 0.25) !important;
+  border-radius: 3px !important;
   visibility: visible !important;
 }
 
 .rmg-timeline-container::-webkit-scrollbar-thumb:hover {
-  background: #64748b !important;
+  background: hsl(var(--muted-foreground) / 0.45) !important;
 }
 
 /* 🏢 ENTERPRISE: Gantt visual grid lines for MONTH/WEEK/QUARTER/YEAR views */
@@ -987,16 +1002,34 @@ html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hov
   );
 }
 
-/* 🏢 ENTERPRISE: Gantt tooltip z-index fix (ADR-034) —
-   Library defaults (1000-1002) get hidden behind scrollbar.
-   Use centralized design-tokens z-index hierarchy: tooltip = 1800 */
+/* 🏢 ENTERPRISE: Gantt tooltip fix (ADR-034) —
+   Tooltip appears ABOVE bar (flip) + max z-index to paint over header.
+   Combined with overflow-clip-margin on timeline-container, this
+   allows the tooltip to escape the scroll container vertically. */
 .rmg-tooltip,
-.rmg-tooltip-visible {
-  z-index: 1800 !important;
+.rmg-tooltip-visible,
+.rmg-progress-tooltip {
+  z-index: 99999 !important;
+  pointer-events: none;
+  top: auto !important;
+  bottom: calc(100% + 8px) !important;
 }
 
-.rmg-progress-tooltip {
-  z-index: 1800 !important;
+/* Gantt header: lower z-index so tooltip paints above it */
+.rmg-header {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Allow tooltips to overflow above/below task rows */
+.rmg-task-row,
+.rmg-task-list-row {
+  overflow: visible !important;
+}
+
+/* Task items: ensure hover z-index is very high for tooltip visibility */
+.rmg-task-item:hover {
+  z-index: 9999 !important;
 }
 
 /* =============================================================

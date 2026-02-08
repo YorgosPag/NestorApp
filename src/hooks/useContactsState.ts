@@ -170,7 +170,7 @@ export function useContactsState() {
         c.type === 'company' && (
           c.companyName?.toLowerCase().includes('παγωνη') ||
           c.displayName?.toLowerCase().includes('παγωνη') ||
-          c.isPrimary === true
+          c.isFavorite === true
         )
       );
       setSelectedContact(primaryCompany || allContacts[0]);
@@ -263,3 +263,4 @@ export function useContactsState() {
     forceDataRefresh,
   };
 }
+
