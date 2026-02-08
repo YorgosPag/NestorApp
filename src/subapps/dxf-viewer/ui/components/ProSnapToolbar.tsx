@@ -14,7 +14,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import type { TFunction } from 'i18next';
 
 // 🏢 ENTERPRISE: Snap mode key mapping for i18n
@@ -256,3 +256,4 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 };
 
 export default ProSnapToolbar;
+

@@ -14,7 +14,7 @@
     },
     "actions": {
       "select": "Επιλογή",
-      "hide": "Απόκρυψη", 
+      "hide": "Απόκρυψη",
       "show": "Εμφάνιση",
       "rename": "Μετονομασία"
     },
@@ -114,12 +114,35 @@
     }
   },
   "toolbar": {
+    "title": "Εργαλεία Σχεδίασης",
     "select": "Επιλογή",
     "pan": "Μετακίνηση Προβολής",
     "line": "Γραμμή",
     "rectangle": "Ορθογώνιο",
     "circle": "Κύκλος",
-    "polyline": "Πολυγραμμή"
+    "polyline": "Πολυγραμμή",
+    "draw": "Σχεδίαση",
+    "edit": "Επεξεργασία",
+    "status": "Κατάσταση:",
+    "type": "Τύπος:",
+    "duplicate": "Αντιγραφή ({{key}})",
+    "delete": "Διαγραφή ({{key}})",
+    "undo": "Αναίρεση ({{key}})",
+    "redo": "Επανάληψη ({{key}})",
+    "duplicateAction": "Αντιγραφή",
+    "deleteAction": "Διαγραφή",
+    "undoAction": "Αναίρεση",
+    "redoAction": "Επανάληψη",
+    "dragToMove": "Σύρετε για μετακίνηση",
+    "savePolygon": "Αποθήκευση πολυγώνου",
+    "needMorePoints": "Χρειάζονται τουλάχιστον 3 σημεία",
+    "cancelDrawing": "Ακύρωση σχεδίασης",
+    "ariaLabels": {
+      "drawingModes": "Λειτουργίες σχεδίασης",
+      "overlayType": "Τύπος επικάλυψης",
+      "overlayActions": "Ενέργειες επικάλυψης",
+      "historyControls": "Έλεγχοι ιστορικού"
+    }
   },
   "wizard": {
     "title": "Enhanced DXF Import",
@@ -332,13 +355,13 @@
       "ariaLabel": "Ρυθμίσεις Grips"
     },
     "line": {
-      "title": "Ρυθμίσεις Γραμμών",
+      "title": "Ρυθμίσεις Γραμμής",
       "actionsAriaLabel": "Ενέργειες ρυθμίσεων γραμμών",
       "reset": "Επαναφορά",
       "resetTitle": "Επαναφορά στις προεπιλεγμένες ρυθμίσεις",
       "factory": "Εργοστασιακές",
       "factoryTitle": "Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)",
-      "enabled": "Εμφάνιση γραμμής",
+      "enabled": "Εμφάνιση γραμμών",
       "disabledWarning": "Οι γραμμές είναι απενεργοποιημένες και δεν θα εμφανίζονται στην προσχεδίαση",
       "sections": {
         "templates": "Πρότυπα & Εργαλεία",
@@ -380,7 +403,7 @@
         "final": "Επιλογή Τελικού Χρώματος"
       },
       "factoryReset": {
-        "title": "Επαναφορά Εργοστασιακών Ρυθμίσεων",
+        "title": "Ρυθμίσεις Γραμμής",
         "warning": "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!",
         "lossTitle": "Θα χάσετε:",
         "lossList": {
@@ -454,37 +477,30 @@
         "cancelMessage": "Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων"
       },
       "ariaLabel": "Ρυθμίσεις Κειμένου"
-    }
-  },
-  "toolbar": {
-    "title": "Εργαλεία Σχεδίασης",
-    "select": "Επιλογή",
-    "pan": "Μετακίνηση Προβολής",
-    "line": "Γραμμή",
-    "rectangle": "Ορθογώνιο",
-    "circle": "Κύκλος",
-    "polyline": "Πολυγραμμή",
-    "draw": "Σχεδίαση",
-    "edit": "Επεξεργασία",
-    "status": "Κατάσταση:",
-    "type": "Τύπος:",
-    "duplicate": "Αντιγραφή ({{key}})",
-    "delete": "Διαγραφή ({{key}})",
-    "undo": "Αναίρεση ({{key}})",
-    "redo": "Επανάληψη ({{key}})",
-    "duplicateAction": "Αντιγραφή",
-    "deleteAction": "Διαγραφή",
-    "undoAction": "Αναίρεση",
-    "redoAction": "Επανάληψη",
-    "dragToMove": "Σύρετε για μετακίνηση",
-    "savePolygon": "Αποθήκευση πολυγώνου",
-    "needMorePoints": "Χρειάζονται τουλάχιστον 3 σημεία",
-    "cancelDrawing": "Ακύρωση σχεδίασης",
-    "ariaLabels": {
-      "drawingModes": "Λειτουργίες σχεδίασης",
-      "overlayType": "Τύπος επικάλυψης",
-      "overlayActions": "Ενέργειες επικάλυψης",
-      "historyControls": "Έλεγχοι ιστορικού"
+    },
+    "general": "Γενικές Ρυθμίσεις",
+    "specific": "Ειδικές Ρυθμίσεις",
+    "tabs": {
+      "drawing": "Σχεδίαση",
+      "measurements": "Μετρήσεις",
+      "draft": "Προσχέδιο",
+      "completion": "Ολοκλήρωση",
+      "hover": "Hover",
+      "selection": "Επιλογή"
+    },
+    "generalTabs": {
+      "lines": "Γραμμές",
+      "text": "Κείμενο",
+      "grips": "Grips"
+    },
+    "gridTabs": {
+      "grid": "Πλέγμα",
+      "rulers": "Χάρακες"
+    },
+    "subTabs": {
+      "lineAria": "Ρυθμίσεις Γραμμής {label}",
+      "textAria": "Ρυθμίσεις Κειμένου {label}",
+      "gripsAria": "Ρυθμίσεις Grips {label}"
     }
   },
   "layerActions": {
@@ -545,7 +561,72 @@
     "basicFunctions": "Ενεργοποίηση βασικών λειτουργιών"
   },
   "lineSettings": {
-    "selectTemplate": "Επιλέξτε πρότυπο..."
+    "selectTemplate": "Επιλογή προτύπου",
+    "types": {
+      "solid": "Συνεχής",
+      "dashed": "Διακεκομμένη",
+      "dotted": "Κουκκίδες",
+      "dashDot": "Παύλα-Κουκκίδα",
+      "dashDotDot": "Παύλα-Κουκκίδα-Κουκκίδα"
+    },
+    "caps": {
+      "butt": "Τετράγωνη",
+      "round": "Στρογγυλή",
+      "square": "Προεκτεταμένη"
+    },
+    "joins": {
+      "miter": "Αιχμηρή",
+      "round": "Στρογγυλή",
+      "bevel": "Λοξή"
+    },
+    "categories": {
+      "engineering": "Τεχνικά Σχέδια",
+      "architectural": "Αρχιτεκτονικά",
+      "electrical": "Ηλεκτρολογικά",
+      "custom": "Προσαρμοσμένα"
+    },
+    "templates": {
+      "mainLine": {
+        "name": "Κύρια Γραμμή",
+        "description": "Συνεχόμενη γραμμή για κύρια στοιχεία"
+      },
+      "centerLine": {
+        "name": "Κεντρική Γραμμή",
+        "description": "Παύλες-τελείες για άξονες συμμετρίας"
+      },
+      "hiddenLine": {
+        "name": "Κρυφή Γραμμή",
+        "description": "Διακεκομμένη γραμμή για κρυφά στοιχεία"
+      },
+      "dimensions": {
+        "name": "Διαστάσεις",
+        "description": "Λεπτή γραμμή για διαστάσεις"
+      },
+      "wall": {
+        "name": "Τοίχος",
+        "description": "Παχιά γραμμή για τοίχους"
+      },
+      "furniture": {
+        "name": "Έπιπλα",
+        "description": "Μεσαία γραμμή για έπιπλα"
+      },
+      "auxiliary": {
+        "name": "Βοηθητικές",
+        "description": "Διακεκομμένες γραμμές κατασκευής"
+      },
+      "cables": {
+        "name": "Καλώδια",
+        "description": "Συνεχόμενες γραμμές για καλώδια"
+      },
+      "signals": {
+        "name": "Σήματα",
+        "description": "Παύλες-τελείες για σήματα"
+      },
+      "grounding": {
+        "name": "Γείωση",
+        "description": "Διπλές τελείες για γείωση"
+      }
+    }
   },
   "gridSettings": {
     "visibility": {
@@ -868,7 +949,33 @@
     }
   },
   "entitiesSettings": {
-    "moreOptions": "Περισσότερες επιλογές"
+    "moreOptions": "Περισσότερες επιλογές",
+    "overrideGlobalSettings": "Χρήση ειδικών ρυθμίσεων",
+    "overrideDescriptions": {
+      "lineDraft": "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
+      "textDraft": "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση",
+      "gripsDraft": "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
+      "lineHover": "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
+      "lineSelection": "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
+      "lineCompletion": "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση"
+    },
+    "statusLabels": {
+      "general": "Γενικές Ρυθμίσεις",
+      "specificDraft": "Ειδικές Ρυθμίσεις Draft",
+      "specificHover": "Ειδικές Ρυθμίσεις Hover",
+      "specificSelection": "Ειδικές Ρυθμίσεις Selection",
+      "specificCompletion": "Ειδικές Ρυθμίσεις Completion",
+      "specific": "Ειδικές Ρυθμίσεις"
+    },
+    "toolSettings": {
+      "title": "Ρυθμίσεις {tool}",
+      "toolSettingsTitle": "Ρυθμίσεις Εργαλείου",
+      "comingSoon": "Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα"
+    },
+    "selectTool": {
+      "title": "Επιλέξτε Εργαλείο",
+      "description": "Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του"
+    }
   },
   "levelPanel": {
     "title": "Επίπεδα Έργου",
@@ -938,18 +1045,6 @@
       "hotColor": "Θερμό:"
     }
   },
-  "settings": {
-    "general": "Γενικές Ρυθμίσεις",
-    "specific": "Ειδικές Ρυθμίσεις",
-    "tabs": {
-      "drawing": "Σχεδίαση",
-      "measurements": "Μετρήσεις",
-      "draft": "Προσχέδιο",
-      "completion": "Ολοκλήρωση",
-      "hover": "Hover",
-      "selection": "Επιλογή"
-    }
-  },
   "overlayProperties": {
     "title": "Ιδιότητες Overlay",
     "selectOverlay": "Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.",
@@ -981,35 +1076,6 @@
       "perimeter": "Περίμετρος"
     },
     "ariaLabel": "Κάρτα περιοχής {name}"
-  },
-  "entitiesSettings": {
-    "moreOptions": "Περισσότερες επιλογές",
-    "overrideGlobalSettings": "Χρήση ειδικών ρυθμίσεων",
-    "overrideDescriptions": {
-      "lineDraft": "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
-      "textDraft": "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση",
-      "gripsDraft": "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
-      "lineHover": "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
-      "lineSelection": "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
-      "lineCompletion": "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση"
-    },
-    "statusLabels": {
-      "general": "Γενικές Ρυθμίσεις",
-      "specificDraft": "Ειδικές Ρυθμίσεις Draft",
-      "specificHover": "Ειδικές Ρυθμίσεις Hover",
-      "specificSelection": "Ειδικές Ρυθμίσεις Selection",
-      "specificCompletion": "Ειδικές Ρυθμίσεις Completion",
-      "specific": "Ειδικές Ρυθμίσεις"
-    },
-    "toolSettings": {
-      "title": "Ρυθμίσεις {tool}",
-      "toolSettingsTitle": "Ρυθμίσεις Εργαλείου",
-      "comingSoon": "Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα"
-    },
-    "selectTool": {
-      "title": "Επιλέξτε Εργαλείο",
-      "description": "Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του"
-    }
   },
   "calibration": {
     "title": "Βαθμονόμηση Συντεταγμένων",
@@ -1074,7 +1140,7 @@
         "description": "Ορισμός κλίμακας με μέτρηση γνωστής απόστασης στο σχέδιο.",
         "benefit": "Ακριβής βαθμονόμηση για προσαρμοσμένη κλίμακα"
       },
-      "settings": {
+      "settings__dup2": {
         "title": "Ρυθμίσεις Βαθμονόμησης",
         "distanceLabel": "Γνωστή Απόσταση:",
         "placeholder": "π.χ. 100",
@@ -1253,73 +1319,6 @@
     "zoomWindow": "Παράθυρο Zoom",
     "layering": "Επίπεδα"
   },
-  "lineSettings": {
-    "types": {
-      "solid": "Συνεχής",
-      "dashed": "Διακεκομμένη",
-      "dotted": "Κουκκίδες",
-      "dashDot": "Παύλα-Κουκκίδα",
-      "dashDotDot": "Παύλα-Κουκκίδα-Κουκκίδα"
-    },
-    "caps": {
-      "butt": "Τετράγωνη",
-      "round": "Στρογγυλή",
-      "square": "Προεκτεταμένη"
-    },
-    "joins": {
-      "miter": "Αιχμηρή",
-      "round": "Στρογγυλή",
-      "bevel": "Λοξή"
-    },
-    "categories": {
-      "engineering": "Τεχνικά Σχέδια",
-      "architectural": "Αρχιτεκτονικά",
-      "electrical": "Ηλεκτρολογικά",
-      "custom": "Προσαρμοσμένα"
-    },
-    "templates": {
-      "mainLine": {
-        "name": "Κύρια Γραμμή",
-        "description": "Συνεχόμενη γραμμή για κύρια στοιχεία"
-      },
-      "centerLine": {
-        "name": "Κεντρική Γραμμή",
-        "description": "Παύλες-τελείες για άξονες συμμετρίας"
-      },
-      "hiddenLine": {
-        "name": "Κρυφή Γραμμή",
-        "description": "Διακεκομμένη γραμμή για κρυφά στοιχεία"
-      },
-      "dimensions": {
-        "name": "Διαστάσεις",
-        "description": "Λεπτή γραμμή για διαστάσεις"
-      },
-      "wall": {
-        "name": "Τοίχος",
-        "description": "Παχιά γραμμή για τοίχους"
-      },
-      "furniture": {
-        "name": "Έπιπλα",
-        "description": "Μεσαία γραμμή για έπιπλα"
-      },
-      "auxiliary": {
-        "name": "Βοηθητικές",
-        "description": "Διακεκομμένες γραμμές κατασκευής"
-      },
-      "cables": {
-        "name": "Καλώδια",
-        "description": "Συνεχόμενες γραμμές για καλώδια"
-      },
-      "signals": {
-        "name": "Σήματα",
-        "description": "Παύλες-τελείες για σήματα"
-      },
-      "grounding": {
-        "name": "Γείωση",
-        "description": "Διπλές τελείες για γείωση"
-      }
-    }
-  },
   "snapModes": {
     "labels": {
       "auto": "Αυτόματο",
@@ -1483,5 +1482,48 @@
       },
       "newLevelWarning": "Θα δημιουργηθεί νέο επίπεδο:"
     }
+  },
+  "dxfViewer": {
+    "layers": {
+      "allCategories": "Όλες οι Κατηγορίες",
+      "electrical": "Ηλεκτρολογικά",
+      "plumbing": "Υδραυλικά",
+      "hvac": "HVAC"
+    },
+    "settings": {
+      "tabs": {
+        "drawing": "Σχεδίαση",
+        "measurements": "Μετρήσεις",
+        "draft": "Προσχέδιο",
+        "completion": "Ολοκλήρωση",
+        "hover": "Hover",
+        "selection": "Επιλογή"
+      }
+    },
+    "tools": {
+      "line": "Γραμμή (L)",
+      "rectangle": "Ορθογώνιο (R)",
+      "polygon": "Πολύγωνο (POL)",
+      "circle": "Κύκλος (C)",
+      "polyline": "Πολυγραμμή (PL)",
+      "radius": "Ακτίνα",
+      "diameter": "Διάμετρος"
+    },
+    "measurements": {
+      "distance": "Απόσταση",
+      "area": "Εμβαδόν",
+      "angle": "Γωνία"
+    }
+  },
+  "toolbarStatus": {
+    "tool": "Εργαλείο",
+    "zoom": "Ζουμ",
+    "snap": "Snap",
+    "on": "ΕΝΕΡΓΟ",
+    "off": "ΑΝΕΝΕΡΓΟ",
+    "commands": "Εντολές",
+    "coordinates": "Συντεταγμένες",
+    "shortcutsFallback": "D=Χάρακας | W=Παράθυρο Ζουμ | +/-=Ζουμ | F9=Πλέγμα | ESC=Άκυρο",
+    "unknownTool": "Άγνωστο"
   }
 }

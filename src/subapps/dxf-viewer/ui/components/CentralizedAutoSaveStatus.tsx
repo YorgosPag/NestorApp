@@ -22,7 +22,7 @@ import { useDxfSettings } from '../../settings-provider';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { zIndex as enterpriseZIndex } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import {
   centralizedAutoSaveStatusStyles,
   getStatusColorStyles,
@@ -332,3 +332,4 @@ export function CentralizedAutoSaveStatusCompact() {
     </div>
   );
 }
+

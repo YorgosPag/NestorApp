@@ -54,7 +54,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
@@ -374,3 +374,4 @@ export default CrosshairAppearanceSettings;
  * - ✅ Testable in isolation
  * - ✅ Cleaner parent component (CrosshairSettings → router only)
  */
+

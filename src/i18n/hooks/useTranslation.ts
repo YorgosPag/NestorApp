@@ -11,43 +11,51 @@ import { loadNamespace, type Namespace, type Language } from '../lazy-config';
  * @param namespace - Translation namespace (e.g., 'dxf-viewer', 'forms')
  * @returns Translation function and i18n utilities
  */
-export const useTranslation = (namespace?: string) => {
+export const useTranslation = (namespace?: string | string[]) => {
   const { t, i18n, ready } = useI18nextTranslation(namespace);
+  const namespaceKey = Array.isArray(namespace)
+    ? namespace.join('|')
+    : namespace || '';
+  const namespaces = namespaceKey ? namespaceKey.split('|') : [];
 
   // 🏢 ENTERPRISE: Track if this specific namespace is loaded
   const [namespaceLoaded, setNamespaceLoaded] = useState(() => {
     // Check if namespace is already loaded on mount
-    if (!namespace || namespace === 'common') {
+    if (namespaces.length === 0 || namespaces.every((ns) => ns === 'common')) {
       return true;
     }
-    return i18n.hasResourceBundle(i18n.language, namespace);
+    return namespaces.every((ns) => ns === 'common' || i18n.hasResourceBundle(i18n.language, ns));
   });
 
   // Lazy load namespace if specified
   useEffect(() => {
-    if (namespace && namespace !== 'common') {
+    if (namespaces.length > 0 && !namespaces.every((ns) => ns === 'common')) {
       // Check if already loaded
       const shouldForceReload = process.env.NODE_ENV === 'development';
-      if (!shouldForceReload && i18n.hasResourceBundle(i18n.language, namespace)) {
+      const allLoaded = namespaces.every((ns) => ns === 'common' || i18n.hasResourceBundle(i18n.language, ns));
+      if (!shouldForceReload && allLoaded) {
         setNamespaceLoaded(true);
         return;
       }
 
       // Load namespace asynchronously
       setNamespaceLoaded(false);
-      loadNamespace(namespace as Namespace, i18n.language as Language, shouldForceReload)
+      const namespacesToLoad = namespaces.filter((ns) => ns !== 'common');
+      Promise.all(
+        namespacesToLoad.map((ns) => loadNamespace(ns as Namespace, i18n.language as Language, shouldForceReload))
+      )
         .then(() => {
           setNamespaceLoaded(true);
           if (process.env.NODE_ENV === 'development') {
-            console.log(`✅ [i18n] Namespace "${namespace}" loaded for language "${i18n.language}"`);
+            console.log(`? [i18n] Namespace(s) "${namespacesToLoad.join(', ')}" loaded for language "${i18n.language}"`);
           }
         })
         .catch(error => {
-          console.error(`Failed to load namespace: ${namespace}`, error);
+          console.error(`Failed to load namespace(s): ${namespacesToLoad.join(', ')}`, error);
           setNamespaceLoaded(true); // Mark as loaded to prevent infinite loading
         });
     }
-  }, [namespace, i18n, i18n.language]);
+  }, [namespaceKey, i18n, i18n.language]);
 
   return {
     t,
@@ -61,8 +69,11 @@ export const useTranslation = (namespace?: string) => {
     changeLanguage: async (lng: string) => {
       try {
         // If we have a namespace, preload it for the new language
-        if (namespace && namespace !== 'common') {
-          await loadNamespace(namespace as Namespace, lng as Language);
+        if (namespaces.length > 0 && !namespaces.every((ns) => ns === 'common')) {
+          const namespacesToLoad = namespaces.filter((ns) => ns !== 'common');
+          await Promise.all(
+            namespacesToLoad.map((ns) => loadNamespace(ns as Namespace, lng as Language))
+          );
         }
         
         await i18n.changeLanguage(lng);

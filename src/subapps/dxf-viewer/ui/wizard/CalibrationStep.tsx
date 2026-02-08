@@ -11,7 +11,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 export function CalibrationStep() {
   const { t } = useTranslation('dxf-viewer');
@@ -157,3 +157,4 @@ export function CalibrationStep() {
     </section>
   );
 }
+

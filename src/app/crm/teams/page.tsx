@@ -4,12 +4,17 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users2, Plus, Settings, Shield, Loader2 } from 'lucide-react';
+import { Users2, Plus, Settings, Shield } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { enterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
-import type { EnterpriseTeam, EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
-import { useTranslation } from 'react-i18next';
+import type { EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useAuth } from '@/auth/contexts/AuthContext';
+import { Spinner } from '@/components/ui/spinner';
+import { cn, getSpacingClass } from '@/lib/design-system';
+import { createModuleLogger } from '@/lib/telemetry';
+import { getAvatarPlaceholderUrl } from '@/config/media-constants';
 
 interface DisplayTeam {
   id: string;
@@ -26,8 +31,12 @@ const getInitials = (name: string) => {
 }
 
 export default function CrmTeamsPage() {
+  const logger = createModuleLogger('crm/teams');
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
+  const pagePadding = getSpacingClass('p', 'lg');
+  const sectionMargin = getSpacingClass('m', 'lg', 'b');
+  const { user } = useAuth();
   const [teams, setTeams] = useState<DisplayTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +49,13 @@ export default function CrmTeamsPage() {
         setError(null);
 
         // Load teams configuration from database
-        const organizationId = 'default-org'; // This should come from user context
+        const organizationId = user?.companyId;
+        if (!organizationId) {
+          setError(t('teams.error.missingOrg'));
+          setTeams([]);
+          setLoading(false);
+          return;
+        }
         const teamsFromDb = await teamsService.getTeams(organizationId);
 
         // Transform to display format and load members
@@ -57,8 +72,8 @@ export default function CrmTeamsPage() {
 
         setTeams(displayTeams);
       } catch (err) {
-        console.error('Failed to load teams data:', err);
-        setError('Failed to load teams. Please try again.');
+        logger.error('Failed to load teams data', { error: err instanceof Error ? err.message : 'Unknown error' });
+        setError(t('teams.error.loadFailed'));
 
         // Fallback to empty state instead of hardcoded data
         setTeams([]);
@@ -73,10 +88,10 @@ export default function CrmTeamsPage() {
   // Show loading state
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <Loader2 className={`${iconSizes.xl} animate-spin mx-auto text-primary`} />
+      <div className={pagePadding}>
+        <div className={cn('flex items-center justify-center min-h-[400px]')}>
+          <div className={cn('text-center space-y-4')}>
+            <Spinner size="large" className={cn(iconSizes.xl, 'mx-auto text-primary')} />
             <p className="text-muted-foreground">{t('teams.loading')}</p>
           </div>
         </div>
@@ -87,9 +102,9 @@ export default function CrmTeamsPage() {
   // Show error state
   if (error) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
+      <div className={pagePadding}>
+        <div className={cn('flex items-center justify-center min-h-[400px]')}>
+          <div className={cn('text-center space-y-4')}>
             <div className={`${iconSizes.xl} bg-destructive/20 rounded-full flex items-center justify-center mx-auto`}>
               <Shield className={`${iconSizes.sm} text-destructive`} />
             </div>
@@ -113,30 +128,30 @@ export default function CrmTeamsPage() {
   // Show empty state
   if (teams.length === 0) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className={pagePadding}>
+        <div className={cn('flex items-center justify-between', sectionMargin)}>
           <div>
-            <div className="flex items-center gap-2">
-              <Users2 className={`${iconSizes.xl} text-primary`} />
+            <div className={cn('flex items-center gap-2')}>
+              <Users2 className={cn(iconSizes.xl, 'text-primary')} />
               <h1 className="text-3xl font-bold">{t('teams.title')}</h1>
             </div>
             <p className="text-muted-foreground">{t('teams.subtitle')}</p>
           </div>
           <Button>
-            <Plus className={`${iconSizes.sm} mr-2`} />
+            <Plus className={cn(iconSizes.sm, 'mr-2')} />
             {t('teams.newTeam')}
           </Button>
         </div>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <Users2 className={`${iconSizes.xl2} text-muted-foreground/50 mx-auto`} />
+        <div className={cn('flex items-center justify-center min-h-[400px]')}>
+          <div className={cn('text-center space-y-4')}>
+            <Users2 className={cn(iconSizes.xl2, 'text-muted-foreground/50 mx-auto')} />
             <div className="space-y-2">
               <p className="font-medium">{t('teams.empty.title')}</p>
               <p className="text-sm text-muted-foreground">
                 {t('teams.empty.description')}
               </p>
               <Button className="mt-4">
-                <Plus className={`${iconSizes.sm} mr-2`} />
+                <Plus className={cn(iconSizes.sm, 'mr-2')} />
                 {t('teams.createTeam')}
               </Button>
             </div>
@@ -147,26 +162,26 @@ export default function CrmTeamsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className={pagePadding}>
+      <div className={cn('flex items-center justify-between', sectionMargin)}>
         <div>
-            <div className="flex items-center gap-2">
-                <Users2 className={`${iconSizes.xl} text-primary`} />
+            <div className={cn('flex items-center gap-2')}>
+                <Users2 className={cn(iconSizes.xl, 'text-primary')} />
                 <h1 className="text-3xl font-bold">{t('teams.title')}</h1>
             </div>
           <p className="text-muted-foreground">{t('teams.subtitle')}</p>
         </div>
         <Button>
-          <Plus className={`${iconSizes.sm} mr-2`} />
+          <Plus className={cn(iconSizes.sm, 'mr-2')} />
           {t('teams.newTeam')}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6')}>
         {teams.map((team) => (
-          <Card key={team.id} className="flex flex-col">
+          <Card key={team.id} className={cn('flex flex-col')}>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className={cn('flex items-center justify-between')}>
                 <CardTitle>{team.name}</CardTitle>
                 <Button variant="ghost" size="sm">
                   <Settings className={iconSizes.sm} />
@@ -174,13 +189,13 @@ export default function CrmTeamsPage() {
               </div>
               <CardDescription>{team.description}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 space-y-4">
+            <CardContent className={cn('flex-1 space-y-4')}>
               <h4 className="text-sm font-medium text-muted-foreground">{t('teams.members', { count: team.members.length })}</h4>
-              <div className="space-y-3">
+              <div className={cn('space-y-3')}>
                 {team.members.map((member) => (
-                  <div key={member.id} className="flex items-center gap-3">
+                  <div key={member.id} className={cn('flex items-center gap-3')}>
                     <Avatar>
-                      <AvatarImage data-ai-hint="avatar person" src={`https://placehold.co/40x40.png?text=${getInitials(member.displayName)}`} />
+                      <AvatarImage data-ai-hint="avatar person" src={getAvatarPlaceholderUrl(getInitials(member.displayName))} />
                       <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -190,8 +205,8 @@ export default function CrmTeamsPage() {
                   </div>
                 ))}
               </div>
-               <div className="pt-4">
-                 <Button variant="outline" size="sm" className="w-full">
+               <div className={cn('pt-4')}>
+                 <Button variant="outline" size="sm" className={cn('w-full')}>
                     <Shield className={`${iconSizes.sm} mr-2`} />
                     {t('teams.managePermissions')}
                 </Button>

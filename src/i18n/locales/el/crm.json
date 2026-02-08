@@ -532,6 +532,10 @@
         "complete": "Ολοκλήρωση",
         "viewOriginal": "Προβολή Πρωτοτύπου"
       }
+    },
+    "stats": {
+      "ariaLabel": "Event statistics",
+      "separator": "•"
     }
   },
   "sections": {
@@ -574,6 +578,74 @@
     "notifications": {
       "title": "Ειδοποιήσεις",
       "description": "Δείτε και διαχειριστείτε τις ειδοποιήσεις σας"
+    }
+  },
+  "leadDetails": {
+    "errors": {
+      "noPhone": "No phone number available",
+      "noEmail": "No email address available"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "pending": "Pending",
+      "completed": "Completed"
+    },
+    "upcoming": {
+      "title": "Upcoming Tasks",
+      "viewAll": "View all tasks ({count})"
+    },
+    "loading": "Loading lead...",
+    "errorTitle": "Error",
+    "notFound": "Lead not found",
+    "backToLeads": "Back to Leads",
+    "navAria": "Lead profile navigation",
+    "backAria": "Back",
+    "headerTitle": "Lead Profile",
+    "contactSectionAria": "Contact details and quick actions",
+    "notesTitle": "Notes",
+    "tasksSectionAria": "Tasks and communication history",
+    "errorComponent": "Lead Details"
+  },
+  "notifications": {
+    "types": {
+      "newLead": "New Lead",
+      "taskDue": "Task",
+      "meetingReminder": "Meeting",
+      "contractSigned": "Contract",
+      "other": "Other"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minute": "{count} minute ago",
+      "minutes": "{count} minutes ago",
+      "hour": "{count} hour ago",
+      "hours": "{count} hours ago",
+      "day": "{count} day ago",
+      "days": "{count} days ago"
+    },
+    "errors": {
+      "loadFailed": "Failed to load notifications",
+      "updateFailed": "Failed to update notifications"
+    },
+    "title": "Notifications",
+    "description": "View and manage your notifications",
+    "filters": "Filters",
+    "markAllRead": "Mark all as read",
+    "loading": "Loading notifications...",
+    "empty": "No notifications",
+    "emptyDescription": "You are all caught up.",
+    "test": {
+      "create": "Test",
+      "creating": "Creating...",
+      "delete": "Delete test",
+      "title": "Test: New lead from website",
+      "body": "A test notification for CRM lead activity. (This is a development-only notification)"
+    }
+  },
+  "teams": {
+    "error": {
+      "missingOrg": "Missing organization context",
+      "loadFailed": "Failed to load teams. Please try again."
     }
   }
 }

@@ -347,6 +347,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'units',         // Units module
     'storage',       // 🏢 Storage management module - added 2026-01-24
     'parking',       // 🏢 Parking management module - added 2026-01-24
+    'dxf-viewer',    // ?? DXF viewer UI - avoids fallback-to-keys after language switch
     // Note: 'crm' loads on-demand via useTranslation('crm')
   ];
 

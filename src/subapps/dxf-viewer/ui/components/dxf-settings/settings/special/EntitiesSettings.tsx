@@ -46,7 +46,7 @@ import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPrevie
 import { INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ADR: Centralized DEFAULT_GRIP_SETTINGS - Single Source of Truth
@@ -243,18 +243,18 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   // Drawing tools - χρησιμοποιούν τα ίδια εικονίδια με την κεντρική εργαλειοθήκη
   // ✅ CENTRALIZED: Using DXF_DRAWING_SIMPLE_LABELS from central system - ZERO HARDCODED VALUES
   const drawingTools: MockToolIcon[] = [
-    { id: 'line', label: DXF_DRAWING_SIMPLE_LABELS.LINE, icon: Minus, hotkey: 'L' },
-    { id: 'rectangle', label: DXF_DRAWING_SIMPLE_LABELS.RECTANGLE, icon: Square, hotkey: 'R' },
-    { id: 'circle', label: DXF_DRAWING_SIMPLE_LABELS.CIRCLE, icon: CircleRadiusIcon, hotkey: 'C', dropdownOptions: [{ value: 'radius', label: 'Radius' }, { value: 'diameter', label: 'Diameter' }] }, // ✅ ENTERPRISE FIX: Proper dropdown option format
-    { id: 'polyline', label: DXF_DRAWING_SIMPLE_LABELS.POLYLINE, icon: Pen, hotkey: 'PL' },
-    { id: 'polygon', label: DXF_DRAWING_SIMPLE_LABELS.POLYGON, icon: Hexagon, hotkey: 'POL' }
+    { id: 'line', label: t(DXF_DRAWING_SIMPLE_LABELS.LINE), icon: Minus, hotkey: 'L' },
+    { id: 'rectangle', label: t(DXF_DRAWING_SIMPLE_LABELS.RECTANGLE), icon: Square, hotkey: 'R' },
+    { id: 'circle', label: t(DXF_DRAWING_SIMPLE_LABELS.CIRCLE), icon: CircleRadiusIcon, hotkey: 'C', dropdownOptions: [{ value: 'radius', label: t('dxfViewer.tools.radius') }, { value: 'diameter', label: t('dxfViewer.tools.diameter') }] }, // ✅ ENTERPRISE FIX: Proper dropdown option format
+    { id: 'polyline', label: t(DXF_DRAWING_SIMPLE_LABELS.POLYLINE), icon: Pen, hotkey: 'PL' },
+    { id: 'polygon', label: t(DXF_DRAWING_SIMPLE_LABELS.POLYGON), icon: Hexagon, hotkey: 'POL' }
   ];
 
   // ✅ CENTRALIZED: Using DXF_MEASUREMENT_SIMPLE_LABELS from central system - ZERO HARDCODED VALUES
   const measurementTools: MockToolIcon[] = [
-    { id: 'measure-distance', label: DXF_MEASUREMENT_SIMPLE_LABELS.DISTANCE, icon: Ruler, hotkey: 'DI' },
-    { id: 'measure-area', label: DXF_MEASUREMENT_SIMPLE_LABELS.AREA, icon: Square, hotkey: 'AREA' },
-    { id: 'measure-angle', label: DXF_MEASUREMENT_SIMPLE_LABELS.ANGLE, icon: Triangle, hotkey: 'ANG' }
+    { id: 'measure-distance', label: t(DXF_MEASUREMENT_SIMPLE_LABELS.DISTANCE), icon: Ruler, hotkey: 'DI' },
+    { id: 'measure-area', label: t(DXF_MEASUREMENT_SIMPLE_LABELS.AREA), icon: Square, hotkey: 'AREA' },
+    { id: 'measure-angle', label: t(DXF_MEASUREMENT_SIMPLE_LABELS.ANGLE), icon: Triangle, hotkey: 'ANG' }
   ];
 
   // ============================================================================
@@ -266,13 +266,13 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const specificTabs: TabDefinition[] = [
     {
       id: 'drawing',
-      label: DXF_SETTINGS_TAB_LABELS.DRAWING,
+      label: t(DXF_SETTINGS_TAB_LABELS.DRAWING),
       icon: Pen, // 🏢 ENTERPRISE: Lucide icon
       content: null, // Content rendered separately below
     },
     {
       id: 'measurements',
-      label: DXF_SETTINGS_TAB_LABELS.MEASUREMENTS,
+      label: t(DXF_SETTINGS_TAB_LABELS.MEASUREMENTS),
       icon: Ruler, // 🏢 ENTERPRISE: Lucide icon
       content: null, // Content rendered separately below
     },
@@ -293,25 +293,25 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const lineToolTabs: TabDefinition[] = [
     {
       id: 'draft',
-      label: DXF_SETTINGS_TAB_LABELS.DRAFT,
+      label: t(DXF_SETTINGS_TAB_LABELS.DRAFT),
       icon: PenLine, // 🏢 ENTERPRISE: Lucide icon for Προσχεδίαση
       content: null,
     },
     {
       id: 'completion',
-      label: DXF_SETTINGS_TAB_LABELS.COMPLETION,
+      label: t(DXF_SETTINGS_TAB_LABELS.COMPLETION),
       icon: CheckCircle2, // 🏢 ENTERPRISE: Lucide icon for Ολοκλήρωση
       content: null,
     },
     {
       id: 'hover',
-      label: DXF_SETTINGS_TAB_LABELS.HOVER,
+      label: t(DXF_SETTINGS_TAB_LABELS.HOVER),
       icon: Mouse, // 🏢 ENTERPRISE: Lucide icon for Hover
       content: null,
     },
     {
       id: 'selection',
-      label: DXF_SETTINGS_TAB_LABELS.SELECTION,
+      label: t(DXF_SETTINGS_TAB_LABELS.SELECTION),
       icon: SquareDashedMousePointer, // 🏢 ENTERPRISE: Lucide icon for Επιλογή
       content: null,
     },
@@ -470,7 +470,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'draft',
-              label: DXF_SETTINGS_TAB_LABELS.DRAFT,
+              label: t(DXF_SETTINGS_TAB_LABELS.DRAFT),
               color: 'blue-500',
               badgeColor: colors.bg.primary
             }}
@@ -510,7 +510,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'hover',
-              label: DXF_SETTINGS_TAB_LABELS.HOVER,
+              label: t(DXF_SETTINGS_TAB_LABELS.HOVER),
               color: 'yellow-500',
               badgeColor: colors.bg.warning
             }}
@@ -543,7 +543,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'selection',
-              label: DXF_SETTINGS_TAB_LABELS.SELECTION,
+              label: t(DXF_SETTINGS_TAB_LABELS.SELECTION),
               color: 'red-500',
               badgeColor: colors.bg.error
             }}
@@ -576,7 +576,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'completion',
-              label: DXF_SETTINGS_TAB_LABELS.COMPLETION,
+              label: t(DXF_SETTINGS_TAB_LABELS.COMPLETION),
               color: 'green-500',
               badgeColor: colors.bg.success
             }}
@@ -661,3 +661,4 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     </div>
   );
 };
+

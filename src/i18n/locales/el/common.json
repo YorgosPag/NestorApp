@@ -724,7 +724,13 @@
       "resetEmailSent": "Το email επαναφοράς στάλθηκε επιτυχώς",
       "resetError": "Σφάλμα κατά την αποστολή email",
       "googleSignIn": "Συνδεθήκατε με Google. Ο κωδικός διαχειρίζεται από το Google.",
-      "twoFactorTitle": "Επαλήθευση Δύο Παραγόντων",
+      "refreshTitle": "Refresh permissions",
+      "refreshDescription": "Force refresh your ID token after admin changes",
+      "refreshBody": "Use this after role/permission updates to reload your access token.",
+      "refreshButton": "Refresh permissions",
+      "refreshing": "Refreshing...",
+      "refreshSuccess": "Permissions refreshed successfully! Reloading page...",
+      "refreshError": "Failed to refresh permissions. Please try again.",
       "twoFactorDescription": "Προσθέστε επιπλέον επίπεδο ασφάλειας",
       "twoFactorNotAvailable": "Η επαλήθευση δύο παραγόντων θα είναι σύντομα διαθέσιμη",
       "sessionsTitle": "Ενεργές Συνεδρίες",
@@ -1687,6 +1693,29 @@
         "title": "Ανώνυμη Αναφορά",
         "description": "Υποβάλετε ανώνυμη αναφορά σφάλματος για βελτίωση της εφαρμογής."
       }
+    }
+  },
+  "debug": {
+    "title": "Debug",
+    "description": "Diagnostic tools and internal utilities",
+    "note": "These tools are intended for development and support.",
+    "links": {
+      "tokenInfo": "Token Info"
+    },
+    "tokenInfo": {
+      "loading": "Loading token info...",
+      "notAuthenticated": "Not authenticated",
+      "loginPrompt": "Please log in to view token information.",
+      "title": "Token Info - Custom Claims",
+      "userObject": "User Object",
+      "fullUserObject": "Full User Object (Raw)",
+      "keyInfo": "Key Debug Info",
+      "uid": "UID",
+      "email": "Email",
+      "globalRole": "Global Role",
+      "companyId": "Company ID",
+      "permissionsCount": "Permissions Count",
+      "missing": "MISSING"
     }
   }
 }

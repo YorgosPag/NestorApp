@@ -18,7 +18,8 @@ import { useState, useCallback } from 'react';
 import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { CalendarDays, Plus } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
+import { cn, getSpacingClass, getResponsiveClass } from '@/lib/design-system';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,7 +44,8 @@ export default function CrmCalendarPage() {
   const sp = useSpacingTokens();
   const typo = useTypography();
   const borders = useBorderTokens();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const pageGap = getSpacingClass('m', 'lg', 'b');
+  const { loading: authLoading } = useAuth();
 
   // Date range state — default to current month ± 1 month buffer
   const [dateRange, setDateRange] = useState(() => ({
@@ -75,9 +77,9 @@ export default function CrmCalendarPage() {
   // Auth loading state
   if (authLoading) {
     return (
-      <main className={`min-h-screen ${colors.bg.secondary} ${sp.padding.lg}`}>
-        <Skeleton className={`${iconSizes.xl} w-48 ${sp.margin.bottom.md}`} />
-        <Skeleton className={`h-[600px] w-full ${borders.radiusClass.lg}`} />
+      <main className={cn('min-h-screen', colors.bg.secondary, sp.padding.lg)}>
+        <Skeleton className={cn(iconSizes.xl, 'w-48', sp.margin.bottom.md)} />
+        <Skeleton className={cn('h-[600px] w-full', borders.radiusClass.lg)} />
       </main>
     );
   }
@@ -86,29 +88,29 @@ export default function CrmCalendarPage() {
     <>
       <Toaster position="top-right" />
 
-      <main className={`min-h-screen ${colors.bg.secondary}`}>
+      <main className={cn('min-h-screen', colors.bg.secondary)}>
         {/* Header */}
-        <header className={`${colors.bg.primary} shadow-sm border-b`}>
-          <div className={`${sp.padding.x.lg} ${sp.padding.y.md}`}>
-            <div className={`flex items-center justify-between`}>
-              <div className={`flex items-center ${sp.gap.sm}`}>
-                <CalendarDays className={`${iconSizes.lg} ${colors.text.info}`} />
+        <header className={cn(colors.bg.primary, 'shadow-sm border-b')}>
+          <div className={cn(sp.padding.x.lg, sp.padding.y.md)}>
+            <div className={cn('flex items-center justify-between')}>
+              <div className={cn('flex items-center', sp.gap.sm)}>
+                <CalendarDays className={cn(iconSizes.lg, colors.text.info)} />
                 <div>
                   <h1 className={typo.special.containerTitle}>
                     {t('calendarPage.title')}
                   </h1>
-                  <p className={`${typo.special.secondary} ${sp.margin.top.xs}`}>
+                  <p className={cn(typo.special.secondary, sp.margin.top.xs)}>
                     {t('calendarPage.description')}
                   </p>
                 </div>
               </div>
 
-              <div className={`flex items-center ${sp.gap.sm}`}>
+              <div className={cn('flex items-center', sp.gap.sm)}>
                 {/* Stats badges */}
                 {!loading && (
                   <nav
-                    className={`hidden md:flex items-center ${sp.gap.sm} ${typo.special.secondary}`}
-                    aria-label="Event statistics"
+                    className={cn('hidden', getResponsiveClass('md', 'flex'), 'items-center', sp.gap.sm, typo.special.secondary)}
+                    aria-label={t('calendarPage.stats.ariaLabel')}
                   >
                     <span>{stats.tasks} {t('tasks.title').toLowerCase()}</span>
                     <span aria-hidden="true">·</span>
@@ -117,7 +119,7 @@ export default function CrmCalendarPage() {
                 )}
 
                 <Button onClick={() => setCreateDialogOpen(true)}>
-                  <Plus className={`${iconSizes.sm} ${sp.margin.right.sm}`} />
+                  <Plus className={cn(iconSizes.sm, sp.margin.right.sm)} />
                   {t('calendarPage.newEvent')}
                 </Button>
               </div>
@@ -126,10 +128,10 @@ export default function CrmCalendarPage() {
         </header>
 
         {/* Calendar */}
-        <section className={`${sp.padding.x.lg} ${sp.padding.y.lg}`}>
-          <article className={`${colors.bg.primary} ${borders.radiusClass.lg} shadow ${sp.padding.md}`}>
+        <section className={cn(sp.padding.x.lg, sp.padding.y.lg, pageGap)}>
+          <article className={cn(colors.bg.primary, borders.radiusClass.lg, 'shadow', sp.padding.md)}>
             {loading ? (
-              <Skeleton className={`h-[600px] w-full ${borders.radiusClass.lg}`} />
+              <Skeleton className={cn('h-[600px] w-full', borders.radiusClass.lg)} />
             ) : (
               <CrmCalendar
                 events={events}

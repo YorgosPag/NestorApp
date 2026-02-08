@@ -20,7 +20,7 @@ import { useTabNavigation } from '../../hooks/useTabNavigation';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📦, 📏, 📝, 📐)
 import { Square, AlignJustify, Type, Ruler } from 'lucide-react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -224,3 +224,4 @@ export default RulersSettings;
  * - ✅ Consistent pattern with other routers
  * - ✅ Cleaner parent component (GridCategory)
  */
+

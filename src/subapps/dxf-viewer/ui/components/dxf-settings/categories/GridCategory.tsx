@@ -14,6 +14,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from '@/i18n';
 import { useTabNavigation } from '../hooks/useTabNavigation';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -89,6 +90,7 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
 
   // Tab navigation state (ADR-005)
   const { activeTab, setActiveTab } = useTabNavigation<GridMainTab>(defaultTab);
+  const { t } = useTranslation('dxf-viewer');
 
   // ============================================================================
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
@@ -97,14 +99,14 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
   const gridTabs: TabDefinition[] = [
     {
       id: 'grid',
-      label: 'Πλέγμα (Grid)',
-      icon: Grid3X3, // 🏢 ENTERPRISE: Lucide icon replacing 📋 emoji
+      label: t('settings.gridTabs.grid'),
+      icon: Grid3X3,
       content: null, // Content rendered separately below
     },
     {
       id: 'rulers',
-      label: 'Χάρακες (Rulers)',
-      icon: Ruler, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
+      label: t('settings.gridTabs.rulers'),
+      icon: Ruler,
       content: null, // Content rendered separately below
     },
   ];
@@ -209,3 +211,4 @@ export default GridCategory;
  * - ✅ Cleaner parent component (SpecificSettingsPanel)
  * - ✅ Lazy loadable (performance)
  */
+

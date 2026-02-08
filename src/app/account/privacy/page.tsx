@@ -16,7 +16,7 @@ import React from 'react';
 import { Lock, Eye, Database, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';

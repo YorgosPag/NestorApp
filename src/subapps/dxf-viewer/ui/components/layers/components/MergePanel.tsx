@@ -8,7 +8,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { PANEL_TOKENS } from '../../../../config/panel-tokens';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 interface MergePanelProps {
   selectedEntitiesForMerge: Set<string>;

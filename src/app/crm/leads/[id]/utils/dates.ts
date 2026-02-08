@@ -1,13 +1,14 @@
-
 'use client';
 
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { formatDateTime } from '@/lib/intl-utils';
 import type { FirestoreishTimestamp } from '@/types/crm';
-import { hardcodedColorValues } from '@/design-system/tokens/colors';
+import i18n from '@/i18n/config';
+import { getStatusColor } from '@/lib/design-system';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
-// 🏢 ENTERPRISE: Type guard for Firestore timestamps with toDate() method
+// ?? ENTERPRISE: Type guard for Firestore timestamps with toDate() method
 interface FirestoreTimestampLike {
   toDate: () => Date;
 }
@@ -19,11 +20,18 @@ function isFirestoreTimestamp(value: unknown): value is FirestoreTimestampLike {
          typeof (value as FirestoreTimestampLike).toDate === 'function';
 }
 
-// ✅ ENTERPRISE MIGRATION COMPLETE: formatDate now uses centralized intl-utils
+const unknownDateLabel = i18n.t('opportunities.unknownDate', { ns: 'crm' });
+const noDateLabel = i18n.t('tasks.noDate', { ns: 'crm' });
+const todayLabel = i18n.t('tasks.today', { ns: 'crm' });
+const tomorrowLabel = i18n.t('tasks.tomorrow', { ns: 'crm' });
+const overdueLabel = i18n.t('tasks.overdue', { ns: 'crm' });
+const mutedTextClass = COLOR_BRIDGE.text.muted;
+
+// ? ENTERPRISE MIGRATION COMPLETE: formatDate now uses centralized intl-utils
 export const formatDate = (timestamp?: FirestoreishTimestamp) => {
-  if (!timestamp) return 'Άγνωστη ημερομηνία';
+  if (!timestamp) return unknownDateLabel;
   try {
-    // 🏢 ENTERPRISE: Type-safe timestamp conversion
+    // ?? ENTERPRISE: Type-safe timestamp conversion
     let date: Date;
     if (timestamp instanceof Date) {
       date = timestamp;
@@ -32,39 +40,39 @@ export const formatDate = (timestamp?: FirestoreishTimestamp) => {
     } else if (isFirestoreTimestamp(timestamp)) {
       date = timestamp.toDate();
     } else {
-      return 'Άγνωστη ημερομηνία';
+      return unknownDateLabel;
     }
     return formatDateTime(date);
-  } catch (err) {
-    return 'Άγνωστη ημερομηνία';
+  } catch {
+    return unknownDateLabel;
   }
 };
 
 export const getTaskDateColor = (dueDate?: FirestoreishTimestamp | null, status?: string) => {
-    if (status === 'completed') return 'text-green-600';
-    if (!dueDate) return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
-    try {
-        const date = dueDate instanceof Date ? dueDate : new Date(dueDate as string);
-        if (isNaN(date.getTime())) return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
-        if (isPast(date) && !isToday(date)) return 'text-red-600';
-        if (isToday(date)) return 'text-blue-600';
-        if (isTomorrow(date)) return 'text-purple-600';
-        return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
-    } catch {
-        return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
-    }
+  if (status === 'completed') return getStatusColor('success', 'text');
+  if (!dueDate) return mutedTextClass;
+  try {
+    const date = dueDate instanceof Date ? dueDate : new Date(dueDate as string);
+    if (isNaN(date.getTime())) return mutedTextClass;
+    if (isPast(date) && !isToday(date)) return getStatusColor('error', 'text');
+    if (isToday(date)) return getStatusColor('info', 'text');
+    if (isTomorrow(date)) return getStatusColor('warning', 'text');
+    return mutedTextClass;
+  } catch {
+    return mutedTextClass;
+  }
 };
 
 export const formatTaskDate = (dueDate?: FirestoreishTimestamp | null) => {
-    if (!dueDate) return 'Χωρίς ημερομηνία';
-    try {
-        const date = dueDate instanceof Date ? dueDate : new Date(dueDate as string);
-        if (isNaN(date.getTime())) return 'Άγνωστη ημερομηνία';
-        if (isToday(date)) return `Σήμερα ${format(date, 'HH:mm')}`;
-        if (isTomorrow(date)) return `Αύριο ${format(date, 'HH:mm')}`;
-        if (isPast(date)) return `Εκπρόθεσμη ${format(date, 'dd/MM HH:mm')}`;
-        return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
-    } catch (err) {
-        return 'Άγνωστη ημερομηνία';
-    }
+  if (!dueDate) return noDateLabel;
+  try {
+    const date = dueDate instanceof Date ? dueDate : new Date(dueDate as string);
+    if (isNaN(date.getTime())) return unknownDateLabel;
+    if (isToday(date)) return `${todayLabel} ${format(date, 'HH:mm')}`;
+    if (isTomorrow(date)) return `${tomorrowLabel} ${format(date, 'HH:mm')}`;
+    if (isPast(date)) return `${overdueLabel} ${format(date, 'dd/MM HH:mm')}`;
+    return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
+  } catch {
+    return unknownDateLabel;
+  }
 };

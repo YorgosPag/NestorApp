@@ -22,7 +22,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 

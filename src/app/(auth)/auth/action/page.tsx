@@ -43,7 +43,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
 import LogoPagonis from '@/components/property-viewer/Logo_Pagonis';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -54,6 +53,7 @@ import { LanguageSwitcher } from '@/components/header/language-switcher';
 import { ThemeToggle } from '@/components/header/theme-toggle';
 import { Lock, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { AUTH_ROUTES } from '@/lib/routes';
+import { getSpacingClass } from '@/lib/design-system';
 
 // =============================================================================
 // TYPES
@@ -110,7 +110,6 @@ export default function AuthActionPage() {
 
   // 🏢 ENTERPRISE: Centralized design system hooks
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const typography = useTypography();
   const layout = useLayoutClasses();
@@ -347,7 +346,7 @@ export default function AuthActionPage() {
             <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
           </figure>
           <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>
-            Nestor Pagonis
+            {t('brand.name')}
           </h1>
         </header>
 
@@ -372,7 +371,7 @@ export default function AuthActionPage() {
           <CardContent>
             {/* Error Alert */}
             {state.errorMessage && (
-              <Alert variant="destructive" className="mb-4">
+              <Alert variant="destructive" className={getSpacingClass('m', 'md', 'b')}>
                 <AlertDescription>{state.errorMessage}</AlertDescription>
               </Alert>
             )}
@@ -484,7 +483,7 @@ export default function AuthActionPage() {
 
         {/* Footer */}
         <footer className={`${typography.body.xs} ${colors.text.muted} ${layout.textCenter}`}>
-          © 2026 Nestor Pagonis | Property Management System
+          {t('brand.footer')}
         </footer>
       </section>
     </section>

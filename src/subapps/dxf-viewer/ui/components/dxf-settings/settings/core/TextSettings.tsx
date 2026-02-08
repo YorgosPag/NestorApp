@@ -74,7 +74,7 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ADR-141: Centralized UI Text Input Constraints
 import { TEXT_METRICS_RATIOS, UI_TEXT_INPUT_CONSTRAINTS } from '../../../../../config/text-rendering-config';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 

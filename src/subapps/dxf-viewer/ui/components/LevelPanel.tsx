@@ -6,7 +6,7 @@
 const DEBUG_LEVEL_PANEL = false;
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import { Plus } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
@@ -424,3 +424,4 @@ export function LevelPanel({
     </div>
   );
 }
+

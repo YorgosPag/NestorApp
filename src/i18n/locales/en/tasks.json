@@ -85,7 +85,8 @@
       "contactId": "Contact",
       "projectId": "Project",
       "unitId": "Unit"
-    }
+    },
+    "loadingPlaceholder": "Loading..."
   },
   "time": {
     "overdue": "Overdue",
@@ -117,7 +118,7 @@
     "assignee": "Assign to",
     "dueDate": "Due date",
     "contact": "Related contact",
-    "project": "Related project", 
+    "project": "Related project",
     "tags": "Tags",
     "notes": "Notes",
     "attachments": "Attachments",
@@ -128,7 +129,7 @@
     "myTasks": "My tasks",
     "pending": "Pending",
     "overdue": "Overdue",
-    "completed": "Completed", 
+    "completed": "Completed",
     "highPriority": "High priority",
     "dueToday": "Due today",
     "dueThisWeek": "Due this week"

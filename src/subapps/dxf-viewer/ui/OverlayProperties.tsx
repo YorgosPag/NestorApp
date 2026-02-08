@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { getDynamicBackgroundClass } from '../../../components/ui/utils/dynamic-styles';
@@ -50,7 +50,7 @@ interface OverlayPropertiesProps {
  * The parent DraggableOverlayProperties provides FloatingPanel structure.
  */
 export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate }) => {
-  const { t } = useTranslation(['dxf-viewer', 'properties']);
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const [label, setLabel] = useState('');
@@ -183,3 +183,4 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 };
 
 export default OverlayProperties;
+

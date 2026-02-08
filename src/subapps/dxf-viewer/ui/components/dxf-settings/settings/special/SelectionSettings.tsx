@@ -11,7 +11,7 @@ import { RotateCcw, Square, SquareDashed } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 

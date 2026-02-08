@@ -17,6 +17,10 @@ import React from 'react';
 import { NotificationSettings } from '@/components/account/NotificationSettings';
 import { useAuth } from '@/auth';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { cn } from '@/lib/design-system';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ACCOUNT_NOTIFICATIONS_PAGE');
 
 export default function NotificationsPage() {
   const { user } = useAuth();
@@ -27,11 +31,13 @@ export default function NotificationsPage() {
   }
 
   return (
-    <section className={layout.flexColGap4}>
+    <section className={cn(layout.flexColGap4)}>
       <NotificationSettings
         userId={user.uid}
         onSettingsChange={(settings) => {
-          console.log('Notification settings changed:', settings.globalEnabled);
+          logger.info('Notification settings changed', {
+            globalEnabled: settings.globalEnabled
+          });
         }}
       />
     </section>

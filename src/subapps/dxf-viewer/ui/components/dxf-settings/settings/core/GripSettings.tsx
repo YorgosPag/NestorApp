@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import { Factory, RotateCcw } from 'lucide-react';  // 🏢 ENTERPRISE: Centralized Lucide icons
 import { useUnifiedGripPreview } from '../../../../hooks/useUnifiedSpecificSettings';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';

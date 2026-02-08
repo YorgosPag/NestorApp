@@ -24,7 +24,7 @@ import { RulerMajorLinesSettings } from './RulerMajorLinesSettings';
 import { RulerMinorLinesSettings } from './RulerMinorLinesSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 
@@ -169,3 +169,4 @@ export default RulerLinesSettings;
  * - After: 100 + 155 + 155 = 410 lines total (split across 3 files) ✅
  * - Per-file: 100, 155, 155 (all <200 lines) ✅ ✅ ✅
  */
+

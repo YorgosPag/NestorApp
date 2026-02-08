@@ -2,11 +2,12 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, Mail, BarChart3, CalendarDays } from 'lucide-react';
+import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, BarChart3, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn, getSpacingClass } from '@/lib/design-system';
 
 // 🌐 i18n: CRM sections use i18n keys
 const crmSectionKeys = [
@@ -25,13 +26,15 @@ const crmSectionKeys = [
 export default function CrmPage() {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('crm');
+  const pagePadding = getSpacingClass('p', 'lg');
+  const sectionMargin = getSpacingClass('m', 'lg', 'b');
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-            <div className={`flex ${iconSizes.xl2} items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg`}>
-                <AppWindow className={`${iconSizes.lg} text-white`} />
+    <div className={pagePadding}>
+      <div className={sectionMargin}>
+        <div className={cn('flex items-center gap-3 mb-2')}>
+            <div className={cn('flex items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg', iconSizes.xl2)}>
+                <AppWindow className={cn(iconSizes.lg, 'text-white')} />
             </div>
             <div>
                 <h1 className="text-3xl font-bold text-foreground">{t('page.title')}</h1>
@@ -41,14 +44,14 @@ export default function CrmPage() {
             </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6')}>
         {crmSectionKeys.map((section) => (
           <Link href={section.href} key={section.titleKey} legacyBehavior>
             <a className="block h-full">
-              <Card className={`h-full cursor-pointer group flex flex-col ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}>
+              <Card className={cn('h-full cursor-pointer group flex flex-col', COMPLEX_HOVER_EFFECTS.FEATURE_CARD)}>
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                    <div className={`p-3 rounded-full bg-muted ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-                      <section.icon className={`${iconSizes.lg} text-primary`} />
+                    <div className={cn('p-3 rounded-full bg-muted', TRANSITION_PRESETS.STANDARD_COLORS)}>
+                      <section.icon className={cn(iconSizes.lg, 'text-primary')} />
                     </div>
                     <CardTitle className="text-lg">{t(section.titleKey)}</CardTitle>
                 </CardHeader>

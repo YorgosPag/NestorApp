@@ -1,5 +1,5 @@
 /**
- * 🔔 NOTIFICATIONS API - USER NOTIFICATION LIST
+ * ?? NOTIFICATIONS API - USER NOTIFICATION LIST
  *
  * Provides access to user's personal notifications.
  *
@@ -8,7 +8,7 @@
  * @updated 2026-01-16 - AUTHZ PHASE 2: Added RBAC protection
  * @rateLimit STANDARD (60 req/min) - User notification list fetching
  *
- * 🔒 SECURITY:
+ * ?? SECURITY:
  * - Permission: notifications:notifications:view
  * - Admin SDK for secure server-side operations
  * - User isolation: Query filtered by ctx.uid
@@ -20,12 +20,13 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { fetchNotifications } from '@/services/notificationService';
 import type { Notification } from '@/types/notification';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // Response types for type-safe withAuth
-// 🏢 ENTERPRISE: NotificationItem extends Notification for API responses
-interface NotificationItem extends Notification {
-  // Already has all properties from Notification
-}
+// ?? ENTERPRISE: NotificationItem mirrors Notification for API responses
+type NotificationItem = Notification;
+
+const logger = createModuleLogger('api/notifications');
 
 type NotificationsListSuccess = {
   success: true;
@@ -53,9 +54,12 @@ const baseGET = async (request: NextRequest) => {
         const limit = parseInt(searchParams.get('limit') || '50');
         const unseenOnly = searchParams.get('unseen') === '1';
 
-        console.log(`🔔 [Notifications/List] Fetching notifications for user ${ctx.uid}...`);
-        console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
-        console.log(`📋 Filters: limit=${limit}, unseenOnly=${unseenOnly}`);
+        logger.info('Fetching notifications', {
+          userId: ctx.uid,
+          companyId: ctx.companyId,
+          limit,
+          unseenOnly
+        });
 
         // CRITICAL FIX: Use authenticated user's ID from context (NOT hardcoded!)
         const { items, cursor } = await fetchNotifications({
@@ -64,10 +68,15 @@ const baseGET = async (request: NextRequest) => {
           unseenOnly
         });
 
-        // 🏢 ENTERPRISE: Count unseen using delivery.state
+        // ?? ENTERPRISE: Count unseen using delivery.state
         const unseenCount = items.filter((item: Notification) => item.delivery.state !== 'seen').length;
 
-        console.log(`✅ [Notifications/List] Complete: ${items.length} notifications (${unseenCount} unseen)`);
+        logger.info('Notifications fetched', {
+          userId: ctx.uid,
+          companyId: ctx.companyId,
+          total: items.length,
+          unseen: unseenCount
+        });
 
         return NextResponse.json({
           success: true,
@@ -79,7 +88,7 @@ const baseGET = async (request: NextRequest) => {
           }
         });
       } catch (error) {
-        console.error('❌ [Notifications/List] Error:', {
+        logger.error('Notifications fetch failed', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

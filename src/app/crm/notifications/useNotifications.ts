@@ -16,6 +16,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { subscribeToNotifications, markNotificationsAsRead } from '@/services/notificationService';
 import type { Notification, Severity } from '@/types/notification';
+import i18n from '@/i18n/config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('crm/notifications');
 
 // ============================================================================
 // TYPES
@@ -95,10 +99,22 @@ function formatRelativeTime(isoDate: string): string {
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffSeconds < 60) return 'Μόλις τώρα';
-  if (diffMinutes < 60) return `${diffMinutes} ${diffMinutes === 1 ? 'λεπτό' : 'λεπτά'} πριν`;
-  if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'ώρα' : 'ώρες'} πριν`;
-  if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'μέρα' : 'μέρες'} πριν`;
+  if (diffSeconds < 60) return i18n.t('notifications.time.justNow', { ns: 'crm' });
+  if (diffMinutes < 60) {
+    return diffMinutes === 1
+      ? i18n.t('notifications.time.minute', { ns: 'crm', count: diffMinutes })
+      : i18n.t('notifications.time.minutes', { ns: 'crm', count: diffMinutes });
+  }
+  if (diffHours < 24) {
+    return diffHours === 1
+      ? i18n.t('notifications.time.hour', { ns: 'crm', count: diffHours })
+      : i18n.t('notifications.time.hours', { ns: 'crm', count: diffHours });
+  }
+  if (diffDays < 7) {
+    return diffDays === 1
+      ? i18n.t('notifications.time.day', { ns: 'crm', count: diffDays })
+      : i18n.t('notifications.time.days', { ns: 'crm', count: diffDays });
+  }
 
   // Format as date for older notifications
   return date.toLocaleDateString('el-GR', {
@@ -165,8 +181,8 @@ export function useNotifications(): UseNotificationsResult {
         setLoading(false);
       },
       (err: Error) => {
-        console.error('[CRM Notifications] Subscription error:', err);
-        setError('Σφάλμα φόρτωσης ειδοποιήσεων');
+        logger.error('Subscription error', { error: err.message });
+        setError(i18n.t('notifications.errors.loadFailed', { ns: 'crm' }));
         setLoading(false);
       }
     );
@@ -190,8 +206,8 @@ export function useNotifications(): UseNotificationsResult {
         prev.map((n) => (ids.includes(n.id) ? { ...n, read: true } : n))
       );
     } catch (err) {
-      console.error('[CRM Notifications] Mark as read error:', err);
-      setError('Σφάλμα ενημέρωσης ειδοποιήσεων');
+      logger.error('Mark as read error', { error: err instanceof Error ? err.message : 'Unknown error' });
+      setError(i18n.t('notifications.errors.updateFailed', { ns: 'crm' }));
     }
   }, []);
 

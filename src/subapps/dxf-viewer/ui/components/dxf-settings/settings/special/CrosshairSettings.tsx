@@ -27,7 +27,7 @@ import { CrosshairAppearanceSettings } from './CrosshairAppearanceSettings';
 import { CrosshairBehaviorSettings } from './CrosshairBehaviorSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
@@ -275,3 +275,4 @@ export default CrosshairSettings;
  * - After: 120 + 195 + 143 = 458 lines total (split across 3 files) ✅
  * - Per-file: 120, 195, 143 (all <200 lines) ✅ ✅ ✅
  */
+

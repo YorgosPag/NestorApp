@@ -8,7 +8,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { SceneModel } from '../../types/scene';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 interface SceneInfoSectionProps {
   scene: SceneModel | null;
@@ -116,3 +116,4 @@ export function EntityTypesSection({ scene, selectedEntityIds }: SceneInfoSectio
     </div>
   );
 }
+

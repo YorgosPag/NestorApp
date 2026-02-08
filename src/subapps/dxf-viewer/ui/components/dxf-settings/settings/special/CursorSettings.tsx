@@ -19,7 +19,7 @@ import {
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 

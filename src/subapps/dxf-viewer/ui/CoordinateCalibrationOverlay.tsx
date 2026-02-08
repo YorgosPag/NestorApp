@@ -21,7 +21,7 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centr
 // 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import {
   getCalibrationOverlayContainerStyles,
   getCalibrationDebugPanelStyles,
@@ -235,3 +235,4 @@ export default function CoordinateCalibrationOverlay({
     </div>
   );
 }
+

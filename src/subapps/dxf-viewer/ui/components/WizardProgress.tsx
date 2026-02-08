@@ -7,7 +7,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 interface WizardProgressProps {
   currentStep: number;
@@ -77,3 +77,4 @@ export function getDefaultStepLabels(t: (key: string) => string): string[] {
     t('wizardProgress.stepLabels.import')
   ];
 }
+

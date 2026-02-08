@@ -15,6 +15,8 @@ import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: Lucide icons for sub-tabs
 import { Minus, Type, GripVertical } from 'lucide-react';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n';
 
 export type SubTabType = 'draft' | 'completion' | 'hover' | 'selection';
 export type SubTabContent = 'line' | 'text' | 'grips';
@@ -86,6 +88,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   showPreview = true
 }) {
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer');
 
   // 🏢 ENTERPRISE: All hooks MUST be called before any early returns (React Rules of Hooks)
   // Helper για τα colors ανά τύπο - memoized για performance
@@ -116,23 +119,23 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   const subTabOptions: TabDefinition[] = React.useMemo(() => [
     {
       id: 'line',
-      label: 'Γραμμή',
+      label: t('settings.generalTabs.lines'),
       icon: Minus, // 🏢 ENTERPRISE: Lucide icon
       content: null,
     },
     {
       id: 'text',
-      label: 'Κείμενο',
+      label: t('settings.generalTabs.text'),
       icon: Type, // 🏢 ENTERPRISE: Lucide icon
       content: null,
     },
     {
       id: 'grips',
-      label: 'Grips',
+      label: t('settings.generalTabs.grips'),
       icon: GripVertical, // 🏢 ENTERPRISE: Lucide icon
       content: null,
     }
-  ], []);
+  ], [t]);
 
   // 🏢 ENTERPRISE: Handle sub-tab change - toggle behavior (click again to close)
   const handleSubTabChange = React.useCallback((subTabId: string) => {
@@ -189,7 +192,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
       {/* Line Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
       {/* LineSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'line' && (
-        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={`Ρυθμίσεις Γραμμής ${config.label}`}>
+        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={t('settings.subTabs.lineAria', { label: config.label })}>
           {overrideSettings?.line && (
             <OverrideToggle
               checked={overrideSettings.line.checked}
@@ -209,7 +212,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
       {/* Text Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
       {/* TextSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'text' && (
-        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={`Ρυθμίσεις Κειμένου ${config.label}`}>
+        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={t('settings.subTabs.textAria', { label: config.label })}>
           {overrideSettings?.text && (
             <OverrideToggle
               checked={overrideSettings.text.checked}
@@ -227,7 +230,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
       {/* Grips Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
       {/* GripSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'grips' && (
-        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={`Ρυθμίσεις Grips ${config.label}`}>
+        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={t('settings.subTabs.gripsAria', { label: config.label })}>
           {overrideSettings?.grips && (
             <OverrideToggle
               checked={overrideSettings.grips.checked}
@@ -246,3 +249,4 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
     </div>
   );
 });
+

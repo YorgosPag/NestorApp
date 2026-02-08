@@ -49,6 +49,7 @@
  */
 
 import React, { Suspense } from 'react';
+import { useTranslation } from '@/i18n';
 import { useTabNavigation } from '../hooks/useTabNavigation';
 import { PANEL_TOKENS } from '../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel/SelectionSettings)
@@ -128,6 +129,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
   // ============================================================================
 
   const { activeTab, setActiveTab } = useTabNavigation<GeneralTab>(defaultTab);
+  const { t } = useTranslation('dxf-viewer');
 
   // ============================================================================
   // HOOKS - Settings από DxfSettingsProvider
@@ -165,19 +167,19 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
   const generalTabs: TabDefinition[] = [
     {
       id: 'lines',
-      label: 'Γραμμές',
+      label: t('settings.generalTabs.lines'),
       icon: Minus,
       content: null, // Content rendered separately below
     },
     {
       id: 'text',
-      label: 'Κείμενο',
+      label: t('settings.generalTabs.text'),
       icon: Type,
       content: null, // Content rendered separately below
     },
     {
       id: 'grips',
-      label: 'Grips',
+      label: t('settings.generalTabs.grips'),
       icon: GripVertical,
       content: null, // Content rendered separately below
     },
@@ -317,3 +319,4 @@ export default GeneralSettingsPanel;
  * Note: Preview & CurrentSettingsDisplay removed for now (ADR-007: Keep It Simple).
  * Can be added back later if needed in Phase 2.5 or later.
  */
+

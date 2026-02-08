@@ -105,8 +105,10 @@ export type TemplateCategory = keyof typeof TEMPLATE_LABELS;
 // Predefined templates (αντιγραμμένα από dxf-viewer-kalo)
 export interface LineTemplate {
   name: string;
+  nameKey?: string;
   category: TemplateCategory;
   description: string;
+  descriptionKey?: string;
   settings: {
     lineType: LineType;
     lineWidth: number;
@@ -133,8 +135,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   // Engineering Templates
   {
     name: 'Κύρια Γραμμή',
+    nameKey: 'lineSettings.templates.mainLine.name',
     category: 'engineering',
     description: 'Συνεχόμενη γραμμή για κύρια στοιχεία',
+    descriptionKey: 'lineSettings.templates.mainLine.description',
     settings: {
       lineType: 'solid',
       lineWidth: 1.5,
@@ -158,8 +162,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   },
   {
     name: 'Κεντρική Γραμμή',
+    nameKey: 'lineSettings.templates.centerLine.name',
     category: 'engineering',
     description: 'Παύλες-τελείες για άξονες συμμετρίας',
+    descriptionKey: 'lineSettings.templates.centerLine.description',
     settings: {
       lineType: 'dash-dot',
       lineWidth: 0.8,
@@ -183,8 +189,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   },
   {
     name: 'Κρυφή Γραμμή',
+    nameKey: 'lineSettings.templates.hiddenLine.name',
     category: 'engineering',
     description: 'Διακεκομμένη γραμμή για κρυφά στοιχεία',
+    descriptionKey: 'lineSettings.templates.hiddenLine.description',
     settings: {
       lineType: 'dashed',
       lineWidth: 1.0,
@@ -208,8 +216,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   },
   {
     name: 'Διαστάσεις',
+    nameKey: 'lineSettings.templates.dimensions.name',
     category: 'engineering',
     description: 'Λεπτή γραμμή για διαστάσεις',
+    descriptionKey: 'lineSettings.templates.dimensions.description',
     settings: {
       lineType: 'solid',
       lineWidth: 0.5,
@@ -235,8 +245,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   // Architectural Templates
   {
     name: 'Τοίχος',
+    nameKey: 'lineSettings.templates.wall.name',
     category: 'architectural',
     description: 'Παχιά γραμμή για τοίχους',
+    descriptionKey: 'lineSettings.templates.wall.description',
     settings: {
       lineType: 'solid',
       lineWidth: 2.5,
@@ -260,8 +272,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   },
   {
     name: 'Έπιπλα',
+    nameKey: 'lineSettings.templates.furniture.name',
     category: 'architectural',
     description: 'Μεσαία γραμμή για έπιπλα',
+    descriptionKey: 'lineSettings.templates.furniture.description',
     settings: {
       lineType: 'solid',
       lineWidth: 1.2,
@@ -285,8 +299,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   },
   {
     name: 'Βοηθητικές',
+    nameKey: 'lineSettings.templates.auxiliary.name',
     category: 'architectural',
     description: 'Διακεκομμένες γραμμές κατασκευής',
+    descriptionKey: 'lineSettings.templates.auxiliary.description',
     settings: {
       lineType: 'dashed',
       lineWidth: 0.8,
@@ -312,8 +328,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   // Electrical Templates
   {
     name: 'Καλώδια',
+    nameKey: 'lineSettings.templates.cables.name',
     category: 'electrical',
     description: 'Συνεχόμενες γραμμές για καλώδια',
+    descriptionKey: 'lineSettings.templates.cables.description',
     settings: {
       lineType: 'solid',
       lineWidth: 1.8,
@@ -337,8 +355,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   },
   {
     name: 'Σήματα',
+    nameKey: 'lineSettings.templates.signals.name',
     category: 'electrical',
     description: 'Παύλες-τελείες για σήματα',
+    descriptionKey: 'lineSettings.templates.signals.description',
     settings: {
       lineType: 'dash-dot',
       lineWidth: 1.0,
@@ -362,8 +382,10 @@ export const LINE_TEMPLATES: LineTemplate[] = [
   },
   {
     name: 'Γείωση',
+    nameKey: 'lineSettings.templates.grounding.name',
     category: 'electrical',
     description: 'Διπλές τελείες για γείωση',
+    descriptionKey: 'lineSettings.templates.grounding.description',
     settings: {
       // ✅ ENTERPRISE FIX: Changed from 'double-dot' to 'dash-dot-dot' (canonical type)
       lineType: 'dash-dot-dot',
@@ -396,4 +418,11 @@ export function getTemplatesByCategory(category: TemplateCategory): LineTemplate
 // Helper function to get template by name
 export function getTemplateByName(name: string): LineTemplate | undefined {
   return LINE_TEMPLATES.find(template => template.name === name);
+}
+export function getTemplateLabel(template: LineTemplate, t: TFunction): string {
+  return template.nameKey ? t(template.nameKey) : template.name;
+}
+
+export function getTemplateDescription(template: LineTemplate, t: TFunction): string {
+  return template.descriptionKey ? t(template.descriptionKey) : template.description;
 }

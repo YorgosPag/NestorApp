@@ -12,6 +12,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn, getResponsiveClass, getSpacingClass } from '@/lib/design-system';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -81,6 +82,7 @@ export default function TaskDetailPage() {
   const { getStatusBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('tasks');
+  const sectionSpacing = getSpacingClass('m', 'md', 'b');
   const { t: tFilters } = useTranslation('filters');
 
   const [task, setTask] = useState<CrmTask | null>(null);
@@ -138,7 +140,7 @@ export default function TaskDetailPage() {
         setNotFound(false);
         setTask(data);
       }
-    } catch (err) {
+    } catch {
       setError(t('messages.loadingError'));
     } finally {
       setLoading(false);
@@ -280,7 +282,7 @@ export default function TaskDetailPage() {
               type="button"
               variant={showFilters ? 'default' : 'outline'}
               size="icon"
-              className="md:hidden"
+              className={getResponsiveClass('md', 'hidden')}
               onClick={() => setShowFilters(!showFilters)}
               aria-label={tFilters('title')}
             >
@@ -290,7 +292,7 @@ export default function TaskDetailPage() {
         }}
       />
 
-      <section className={`${layout.widthFull} overflow-hidden`} aria-label={t('detail.sections.summary')}>
+      <section className={cn(layout.widthFull, 'overflow-hidden', sectionSpacing)} aria-label={t('detail.sections.summary')}>
         <UnifiedDashboard
           stats={dashboardStats}
           columns={4}
@@ -299,7 +301,7 @@ export default function TaskDetailPage() {
       </section>
 
       <section className={layout.widthFull} aria-label={tFilters('title')}>
-        <aside className="hidden md:block" role="complementary" aria-label={tFilters('title')}>
+        <aside className={cn('hidden', getResponsiveClass('md', 'block'))} role="complementary" aria-label={tFilters('title')}>
           <AdvancedFiltersPanel
             config={taskFiltersConfig}
             filters={filters}
@@ -308,12 +310,12 @@ export default function TaskDetailPage() {
         </aside>
 
         {showFilters && (
-          <aside className="md:hidden" role="complementary" aria-label={tFilters('title')}>
+          <aside className={getResponsiveClass('md', 'hidden')} role="complementary" aria-label={tFilters('title')}>
             <AdvancedFiltersPanel
               config={taskFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
-              defaultOpen={true}
+              defaultOpen
             />
           </aside>
         )}
@@ -346,7 +348,7 @@ export default function TaskDetailPage() {
                         <div>
                           <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.contactId')}</dt>
                           <dd className={`${typography.body.sm} ${colors.text.primary}`}>
-                            {contactNameLoading ? '...' : (contactName || task.contactId)}
+                            {contactNameLoading ? t('detail.loadingPlaceholder') : (contactName || task.contactId)}
                           </dd>
                         </div>
                       </div>

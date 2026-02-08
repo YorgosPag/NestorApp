@@ -8,7 +8,7 @@ import { SearchInput } from '@/components/ui/search/SearchInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LayerFiltersProps } from './types';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 export function LayerFilters({
   searchQuery,
@@ -37,7 +37,7 @@ export function LayerFilters({
         <SelectContent>
           {categories.map(category => (
             <SelectItem key={category.value} value={category.value}>
-              {category.label}
+              {t(category.label)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -45,3 +45,4 @@ export function LayerFilters({
     </div>
   );
 }
+

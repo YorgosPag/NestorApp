@@ -14,7 +14,7 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ENTERPRISE: Centralized spacing tokens (same as UnitsList)
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Centralized OverlayListCard from domain cards
 import { OverlayListCard } from '@/domain/cards';
 
@@ -35,7 +35,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   onDelete,
   onToggleLayers,
 }) => {
-  const { t } = useTranslation(['dxf-viewer', 'properties']);
+  const { t } = useTranslation('dxf-viewer');
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing (same pattern as UnitsList)
@@ -154,3 +154,4 @@ export const OverlayList: React.FC<OverlayListProps> = ({
     </Card>
   );
 };
+

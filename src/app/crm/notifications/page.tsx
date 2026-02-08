@@ -1,17 +1,22 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// ?? i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import { useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bell, CheckCheck, Filter, Loader2, AlertCircle, Inbox, FlaskConical, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Filter, AlertCircle, Inbox, FlaskConical, Trash2 } from 'lucide-react';
 import { useNotifications } from './useNotifications';
 import { NotificationCard } from './NotificationCard';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Spinner } from '@/components/ui/spinner';
+import { createModuleLogger } from '@/lib/telemetry';
+import { cn, getSpacingClass } from '@/lib/design-system';
+
+const logger = createModuleLogger('crm/notifications');
 
 export default function CrmNotificationsPage() {
   const { t } = useTranslation('crm');
@@ -27,7 +32,9 @@ export default function CrmNotificationsPage() {
     markAllAsRead,
   } = useNotifications();
 
-  // 🧪 Create test notification (for development testing)
+  const contentPadding = getSpacingClass('p', 'lg');
+
+  // ?? Create test notification (for development testing)
   const createTestNotification = useCallback(async () => {
     if (!user?.uid) return;
 
@@ -36,8 +43,8 @@ export default function CrmNotificationsPage() {
       const docRef = await addDoc(collection(db, 'notifications'), {
         userId: user.uid,
         tenantId: 'default',
-        title: '🧪 Test: Νέο Lead από Website',
-        body: 'Ο Γιάννης Παπαδόπουλος έδειξε ενδιαφέρον για το έργο Κέντρο. (Αυτή είναι δοκιμαστική ειδοποίηση)',
+        title: t('notifications.test.title'),
+        body: t('notifications.test.body'),
         severity: 'info',
         channel: 'inapp',
         delivery: { state: 'delivered', attempts: 1 },
@@ -45,29 +52,29 @@ export default function CrmNotificationsPage() {
         createdAt: Timestamp.now()
       });
       setTestNotificationId(docRef.id);
-      console.log('✅ Test notification created:', docRef.id);
+      logger.info('Test notification created', { id: docRef.id });
     } catch (err) {
-      console.error('Failed to create test notification:', err);
+      logger.error('Failed to create test notification', { error: err instanceof Error ? err.message : 'Unknown error' });
     } finally {
       setIsCreatingTest(false);
     }
-  }, [user?.uid]);
+  }, [t, user?.uid]);
 
-  // 🗑️ Delete test notification
+  // ??? Delete test notification
   const deleteTestNotification = useCallback(async () => {
     if (!testNotificationId) return;
 
     try {
       await deleteDoc(doc(db, 'notifications', testNotificationId));
       setTestNotificationId(null);
-      console.log('🗑️ Test notification deleted');
+      logger.info('Test notification deleted');
     } catch (err) {
-      console.error('Failed to delete test notification:', err);
+      logger.error('Failed to delete test notification', { error: err instanceof Error ? err.message : 'Unknown error' });
     }
   }, [testNotificationId]);
 
   return (
-    <div className="p-8">
+    <div className={contentPadding}>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -84,7 +91,7 @@ export default function CrmNotificationsPage() {
               <CardDescription>{t('notifications.description')}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {/* 🧪 Test Buttons - Development Only */}
+              {/* ?? Test Buttons - Development Only */}
               {process.env.NODE_ENV === 'development' && (
                 <>
                   {!testNotificationId ? (
@@ -95,7 +102,7 @@ export default function CrmNotificationsPage() {
                       className="border-dashed"
                     >
                       <FlaskConical className={`${iconSizes.sm} mr-2`} />
-                      {isCreatingTest ? t('notifications.creating') : '🧪 Test'}
+                      {isCreatingTest ? t('notifications.test.creating') : t('notifications.test.create')}
                     </Button>
                   ) : (
                     <Button
@@ -104,7 +111,7 @@ export default function CrmNotificationsPage() {
                       className="border-dashed text-destructive hover:text-destructive"
                     >
                       <Trash2 className={`${iconSizes.sm} mr-2`} />
-                      {t('notifications.deleteTest')}
+                      {t('notifications.test.delete')}
                     </Button>
                   )}
                 </>
@@ -127,8 +134,8 @@ export default function CrmNotificationsPage() {
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <span className="ml-3 text-muted-foreground">{t('notifications.loading')}</span>
+              <Spinner size="large" className={cn('mr-3', 'text-muted-foreground')} />
+              <span className="text-muted-foreground">{t('notifications.loading')}</span>
             </div>
           )}
 

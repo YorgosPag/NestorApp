@@ -12,16 +12,18 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { cn, getSpacingClass } from '@/lib/design-system';
 
 export default function DebugHubPage() {
   const { t } = useTranslation('common');
   const layout = useLayoutClasses();
   const typography = useTypography();
   const colors = useSemanticColors();
+  const sectionGap = getSpacingClass('m', 'md', 'b');
 
   return (
     <PageContainer ariaLabel={t('debug.title')}>
-      <section className={layout.responsivePagePadding}>
+      <section className={cn(layout.responsivePagePadding, sectionGap)}>
         <Card className={layout.cardLgWidth}>
           <CardHeader>
             <CardTitle className={typography.heading.lg}>{t('debug.title')}</CardTitle>

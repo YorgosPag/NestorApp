@@ -5,6 +5,7 @@ import { useCursor } from '../../systems/cursor';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatPercent, formatCoordinate } from '../../rendering/entities/shared/distance-label-utils';
@@ -30,6 +31,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   mouseCoordinates = null,
   showCoordinates = false
 }) => {
+  const { t } = useTranslation('dxf-viewer');
   const { settings } = useCursor();
   const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -56,20 +58,62 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
     lastCoordinatesRef.current = mouseCoordinates;
     return mouseCoordinates;
   }, [mouseCoordinates]);
+
+  const toolLabelMap: Partial<Record<ToolType, string>> = {
+    select: 'tools.select',
+    pan: 'tools.pan',
+    'zoom-in': 'tools.zoomIn',
+    'zoom-out': 'tools.zoomOut',
+    'zoom-window': 'tools.zoomWindow',
+    'zoom-extents': 'tools.zoomExtents',
+    line: 'tools.line',
+    rectangle: 'tools.rectangle',
+    circle: 'tools.circle',
+    'circle-diameter': 'tools.circleDiameter',
+    'circle-2p-diameter': 'tools.circle2pDiameter',
+    'circle-3p': 'tools.circle3p',
+    'circle-chord-sagitta': 'tools.circleChordSagitta',
+    'circle-2p-radius': 'tools.circle2pRadius',
+    'circle-best-fit': 'tools.circleBestFit',
+    'circle-ttt': 'tools.circleTTT',
+    arc: 'tools.arc',
+    'arc-3p': 'tools.arc3p',
+    'arc-cse': 'tools.arcCenterStartEnd',
+    'arc-sce': 'tools.arcStartCenterEnd',
+    'line-perpendicular': 'tools.linePerpendicular',
+    'line-parallel': 'tools.lineParallel',
+    polyline: 'tools.polyline',
+    polygon: 'tools.polygon',
+    move: 'tools.move',
+    copy: 'tools.copy',
+    delete: 'tools.delete',
+    'measure-distance': 'tools.measureDistance',
+    'measure-distance-continuous': 'tools.measureDistanceContinuous',
+    'measure-area': 'tools.measureArea',
+    'measure-angle': 'tools.measureAngle',
+    'measure-angle-line-arc': 'tools.measureAngleLineArc',
+    'measure-angle-two-arcs': 'tools.measureAngleTwoArcs',
+    'measure-angle-measuregeom': 'tools.measureAngleMeasuregeom',
+    'measure-angle-constraint': 'tools.measureAngleConstraint',
+    layering: 'tools.layering',
+    'grip-edit': 'tools.gripEdit'
+  };
+  const toolLabelKey = toolLabelMap[activeTool];
+  const toolLabel = toolLabelKey ? t(toolLabelKey) : activeTool || t('toolbarStatus.unknownTool');
   
   return (
     <div className={`${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_MD} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} flex justify-between items-center`}>
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.LG}`}>
         <span>
-          Tool: <strong className={`${colors.text.info}`}>
-            {activeTool?.charAt(0)?.toUpperCase() + activeTool?.slice(1) || 'Unknown'}
+          {t('toolbarStatus.tool')}: <strong className={`${colors.text.info}`}>
+            {toolLabel}
           </strong>
         </span>
         
         <span className={`${colors.text.muted}`}>|</span>
         
         <span>
-          Zoom: <strong className={`${colors.text.success}`}>
+          {t('toolbarStatus.zoom')}: <strong className={`${colors.text.success}`}>
             {formatPercent(currentZoom)}
           </strong>
         </span>
@@ -77,8 +121,8 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
         <span className={`${colors.text.muted}`}>|</span>
         
         <span>
-          Snap: <strong className={snapEnabled ? `${colors.text.success}` : `${colors.text.error}`}>
-            {snapEnabled ? 'ON' : 'OFF'}
+          {t('toolbarStatus.snap')}: <strong className={snapEnabled ? `${colors.text.success}` : `${colors.text.error}`}>
+            {snapEnabled ? t('toolbarStatus.on') : t('toolbarStatus.off')}
           </strong>
         </span>
         
@@ -86,7 +130,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
           <>
             <span className={`${colors.text.muted}`}>|</span>
             <span>
-              Commands: <strong className={`${colors.text.warning}`}>{commandCount}</strong>
+              {t('toolbarStatus.commands')}: <strong className={`${colors.text.warning}`}>{commandCount}</strong>
             </span>
           </>
         )}
@@ -95,7 +139,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
           <>
             <span className={`${colors.text.muted}`}>|</span>
             <span>
-              Συντεταγμένες: <strong className={`${colors.text.accent}`}>
+              {t('toolbarStatus.coordinates')}: <strong className={`${colors.text.accent}`}>
                 {throttledCoordinates ?
                   `X: ${formatCoordinate(throttledCoordinates.x, precision)}, Y: ${formatCoordinate(throttledCoordinates.y, precision)}` :
                   `X: ${formatCoordinate(0, precision)}, Y: ${formatCoordinate(0, precision)}`}
@@ -125,7 +169,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
           </>
         ) : (
           /* Fallback: generic shortcuts */
-          <span>D=Ruler | W=ZoomWindow | +/-=Zoom | F9=Grid | ESC=Cancel</span>
+          <span>{t('toolbarStatus.shortcutsFallback')}</span>
         )}
       </div>
     </div>

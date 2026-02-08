@@ -14,7 +14,7 @@
     },
     "actions": {
       "select": "Select",
-      "hide": "Hide", 
+      "hide": "Hide",
       "show": "Show",
       "rename": "Rename"
     },
@@ -27,7 +27,7 @@
   },
   "confirmations": {
     "confirmed": "Action confirmed",
-    "cancelled": "Action cancelled", 
+    "cancelled": "Action cancelled",
     "irreversible": "⚠️ This action cannot be undone!",
     "delete": {
       "confirm": "Delete",
@@ -92,7 +92,10 @@
     "hierarchy": {
       "title": "Hierarchy",
       "description": "Project Hierarchy & Destinations",
-      "loading": "Loading hierarchy..."
+      "loading": "Loading hierarchy...",
+      "projectHierarchy": "Project Hierarchy",
+      "companies": "Companies",
+      "availableDestinations": "Available Destinations"
     },
     "layers": {
       "title": "Layers",
@@ -106,7 +109,72 @@
     "selectPanel": "Select a panel from the tabs"
   },
   "lineSettings": {
-    "selectTemplate": "Select template..."
+    "selectTemplate": "Select template",
+    "types": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted",
+      "dashDot": "Dash-Dot",
+      "dashDotDot": "Dash-Dot-Dot"
+    },
+    "caps": {
+      "butt": "Square",
+      "round": "Round",
+      "square": "Extended"
+    },
+    "joins": {
+      "miter": "Sharp",
+      "round": "Round",
+      "bevel": "Beveled"
+    },
+    "categories": {
+      "engineering": "Engineering Drawings",
+      "architectural": "Architectural",
+      "electrical": "Electrical",
+      "custom": "Custom"
+    },
+    "templates": {
+      "mainLine": {
+        "name": "Main Line",
+        "description": "Continuous line for main elements"
+      },
+      "centerLine": {
+        "name": "Center Line",
+        "description": "Dash-dot for symmetry axes"
+      },
+      "hiddenLine": {
+        "name": "Hidden Line",
+        "description": "Dashed line for hidden elements"
+      },
+      "dimensions": {
+        "name": "Dimensions",
+        "description": "Thin line for dimensions"
+      },
+      "wall": {
+        "name": "Wall",
+        "description": "Thick line for walls"
+      },
+      "furniture": {
+        "name": "Furniture",
+        "description": "Medium line for furniture"
+      },
+      "auxiliary": {
+        "name": "Auxiliary",
+        "description": "Dashed construction lines"
+      },
+      "cables": {
+        "name": "Cables",
+        "description": "Continuous lines for cables"
+      },
+      "signals": {
+        "name": "Signals",
+        "description": "Dash-dot for signals"
+      },
+      "grounding": {
+        "name": "Grounding",
+        "description": "Double dots for grounding"
+      }
+    }
   },
   "toolbar": {
     "title": "Drawing Tools",
@@ -482,6 +550,30 @@
         "cancelMessage": "Factory reset cancelled"
       },
       "ariaLabel": "Text Settings"
+    },
+    "general": "General Settings",
+    "specific": "Specific Settings",
+    "tabs": {
+      "drawing": "Drawing",
+      "measurements": "Measurements",
+      "draft": "Draft",
+      "completion": "Completion",
+      "hover": "Hover",
+      "selection": "Selection"
+    },
+    "generalTabs": {
+      "lines": "Lines",
+      "text": "Text",
+      "grips": "Grips"
+    },
+    "gridTabs": {
+      "grid": "Grid",
+      "rulers": "Rulers"
+    },
+    "subTabs": {
+      "lineAria": "Line Settings {label}",
+      "textAria": "Text Settings {label}",
+      "gripsAria": "Grips Settings {label}"
     }
   },
   "layerActions": {
@@ -681,7 +773,7 @@
         "description": "Set scale by measuring a known distance in the drawing.",
         "benefit": "Precise calibration for custom scale"
       },
-      "settings": {
+      "settings__dup1": {
         "title": "Calibration Settings",
         "distanceLabel": "Known Distance:",
         "placeholder": "e.g. 100",
@@ -1010,7 +1102,33 @@
     }
   },
   "entitiesSettings": {
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "overrideGlobalSettings": "Use specific settings",
+    "overrideDescriptions": {
+      "lineDraft": "Use specific line settings for draft",
+      "textDraft": "Use specific text settings for draft",
+      "gripsDraft": "Use specific grips settings for draft",
+      "lineHover": "Use specific line settings for hover",
+      "lineSelection": "Use specific line settings for selection",
+      "lineCompletion": "Use specific line settings for completion"
+    },
+    "statusLabels": {
+      "general": "General Settings",
+      "specificDraft": "Specific Draft Settings",
+      "specificHover": "Specific Hover Settings",
+      "specificSelection": "Specific Selection Settings",
+      "specificCompletion": "Specific Completion Settings",
+      "specific": "Specific Settings"
+    },
+    "toolSettings": {
+      "title": "Settings {tool}",
+      "toolSettingsTitle": "Tool Settings",
+      "comingSoon": "Settings for this tool will be added soon"
+    },
+    "selectTool": {
+      "title": "Select Tool",
+      "description": "Click on a tool to see its settings"
+    }
   },
   "levelPanel": {
     "title": "Project Levels",
@@ -1080,18 +1198,6 @@
       "hotColor": "Hot:"
     }
   },
-  "settings": {
-    "general": "General Settings",
-    "specific": "Specific Settings",
-    "tabs": {
-      "drawing": "Drawing",
-      "measurements": "Measurements",
-      "draft": "Draft",
-      "completion": "Completion",
-      "hover": "Hover",
-      "selection": "Selection"
-    }
-  },
   "overlayProperties": {
     "title": "Overlay Properties",
     "selectOverlay": "Select an overlay to view its properties.",
@@ -1123,35 +1229,6 @@
       "perimeter": "Perimeter"
     },
     "ariaLabel": "Region card {name}"
-  },
-  "entitiesSettings": {
-    "moreOptions": "More options",
-    "overrideGlobalSettings": "Use specific settings",
-    "overrideDescriptions": {
-      "lineDraft": "Use specific line settings for draft",
-      "textDraft": "Use specific text settings for draft",
-      "gripsDraft": "Use specific grips settings for draft",
-      "lineHover": "Use specific line settings for hover",
-      "lineSelection": "Use specific line settings for selection",
-      "lineCompletion": "Use specific line settings for completion"
-    },
-    "statusLabels": {
-      "general": "General Settings",
-      "specificDraft": "Specific Draft Settings",
-      "specificHover": "Specific Hover Settings",
-      "specificSelection": "Specific Selection Settings",
-      "specificCompletion": "Specific Completion Settings",
-      "specific": "Specific Settings"
-    },
-    "toolSettings": {
-      "title": "Settings {tool}",
-      "toolSettingsTitle": "Tool Settings",
-      "comingSoon": "Settings for this tool will be added soon"
-    },
-    "selectTool": {
-      "title": "Select Tool",
-      "description": "Click on a tool to see its settings"
-    }
   },
   "cadDock": {
     "panels": {
@@ -1247,73 +1324,6 @@
     "pan": "Pan View",
     "zoomWindow": "Zoom Window",
     "layering": "Layers"
-  },
-  "lineSettings": {
-    "types": {
-      "solid": "Solid",
-      "dashed": "Dashed",
-      "dotted": "Dotted",
-      "dashDot": "Dash-Dot",
-      "dashDotDot": "Dash-Dot-Dot"
-    },
-    "caps": {
-      "butt": "Square",
-      "round": "Round",
-      "square": "Extended"
-    },
-    "joins": {
-      "miter": "Sharp",
-      "round": "Round",
-      "bevel": "Beveled"
-    },
-    "categories": {
-      "engineering": "Engineering Drawings",
-      "architectural": "Architectural",
-      "electrical": "Electrical",
-      "custom": "Custom"
-    },
-    "templates": {
-      "mainLine": {
-        "name": "Main Line",
-        "description": "Continuous line for main elements"
-      },
-      "centerLine": {
-        "name": "Center Line",
-        "description": "Dash-dot for symmetry axes"
-      },
-      "hiddenLine": {
-        "name": "Hidden Line",
-        "description": "Dashed line for hidden elements"
-      },
-      "dimensions": {
-        "name": "Dimensions",
-        "description": "Thin line for dimensions"
-      },
-      "wall": {
-        "name": "Wall",
-        "description": "Thick line for walls"
-      },
-      "furniture": {
-        "name": "Furniture",
-        "description": "Medium line for furniture"
-      },
-      "auxiliary": {
-        "name": "Auxiliary",
-        "description": "Dashed construction lines"
-      },
-      "cables": {
-        "name": "Cables",
-        "description": "Continuous lines for cables"
-      },
-      "signals": {
-        "name": "Signals",
-        "description": "Dash-dot for signals"
-      },
-      "grounding": {
-        "name": "Grounding",
-        "description": "Double dots for grounding"
-      }
-    }
   },
   "snapModes": {
     "labels": {
@@ -1478,5 +1488,48 @@
       },
       "newLevelWarning": "New level will be created:"
     }
+  },
+  "dxfViewer": {
+    "layers": {
+      "allCategories": "All Categories",
+      "electrical": "Electrical",
+      "plumbing": "Plumbing",
+      "hvac": "HVAC"
+    },
+    "settings": {
+      "tabs": {
+        "drawing": "Drawing",
+        "measurements": "Measurements",
+        "draft": "Draft",
+        "completion": "Completion",
+        "hover": "Hover",
+        "selection": "Selection"
+      }
+    },
+    "tools": {
+      "line": "Line (L)",
+      "rectangle": "Rectangle (R)",
+      "polygon": "Polygon (POL)",
+      "circle": "Circle (C)",
+      "polyline": "Polyline (PL)",
+      "radius": "Radius",
+      "diameter": "Diameter"
+    },
+    "measurements": {
+      "distance": "Distance",
+      "area": "Area",
+      "angle": "Angle"
+    }
+  },
+  "toolbarStatus": {
+    "tool": "Tool",
+    "zoom": "Zoom",
+    "snap": "Snap",
+    "on": "ON",
+    "off": "OFF",
+    "commands": "Commands",
+    "coordinates": "Coordinates",
+    "shortcutsFallback": "D=Ruler | W=ZoomWindow | +/-=Zoom | F9=Grid | ESC=Cancel",
+    "unknownTool": "Unknown"
   }
 }

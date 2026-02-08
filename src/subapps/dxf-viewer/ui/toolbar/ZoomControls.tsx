@@ -16,7 +16,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 
@@ -191,3 +191,4 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
     </TooltipProvider>
   );
 };
+

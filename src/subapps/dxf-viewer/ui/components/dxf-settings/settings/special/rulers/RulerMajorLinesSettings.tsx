@@ -53,7 +53,7 @@ import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized Panel Layout tokens (spacing, gaps, margins)
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 export interface RulerMajorLinesSettingsProps {
   className?: string;
@@ -280,3 +280,4 @@ export default RulerMajorLinesSettings;
  * - ✅ Testable in isolation
  * - ✅ Cleaner parent component (RulerLinesSettings → router only)
  */
+

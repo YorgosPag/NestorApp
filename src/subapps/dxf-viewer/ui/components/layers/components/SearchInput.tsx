@@ -9,7 +9,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized typography tokens
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 interface DxfSearchInputProps {
   searchTerm: string;

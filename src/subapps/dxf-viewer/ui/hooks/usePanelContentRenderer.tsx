@@ -11,7 +11,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 // ✅ CENTRALIZED: Use existing LazyLoadWrapper system instead of duplicate React.lazy
 import {
@@ -133,3 +133,4 @@ export function usePanelContentRenderer({
 
   return { renderPanelContent };
 }
+

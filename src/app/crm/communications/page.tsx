@@ -46,6 +46,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useUserRole } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn, getSpacingClass, getResponsiveClass } from '@/lib/design-system';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // 🏢 ENTERPRISE: Domain card component
 import { ConversationListCard } from '@/domain';
@@ -76,11 +78,13 @@ import { PhotoUploadService } from '@/services/photo-upload.service';
 // ============================================================================
 
 export default function CrmCommunicationsPage() {
+  const logger = createModuleLogger('crm/communications');
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
+  const listPadding = getSpacingClass('m', 'md', 'b');
 
   // 🔐 ENTERPRISE: Auth state - stable, no flicker
   const { isLoading: authLoading, isAuthenticated, isAdmin } = useUserRole();
@@ -100,7 +104,6 @@ export default function CrmCommunicationsPage() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'status'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Filters state
   const [filters, setFilters] = useState<CommunicationsFilterState>(defaultCommunicationsFilters);
@@ -178,7 +181,6 @@ export default function CrmCommunicationsPage() {
   const {
     getReactions,
     toggleReaction,
-    initializeFromMessages,
   } = useMessageReactions({
     realtime: true,
     conversationId: selectedConversationId,
@@ -222,25 +224,25 @@ export default function CrmCommunicationsPage() {
 
   // 🏢 ENTERPRISE: Reply handler
   const handleReply = useCallback((message: MessageListItem) => {
-    console.log('[CrmCommunicationsPage] handleReply called:', message.id);
+    logger.info('Reply action', { messageId: message.id });
     startReply(message);
   }, [startReply]);
 
   // 🏢 ENTERPRISE: Forward handler
   const handleForward = useCallback((message: MessageListItem) => {
-    console.log('[CrmCommunicationsPage] handleForward called:', message.id);
+    logger.info('Forward action', { messageId: message.id });
     startForward(message);
   }, [startForward]);
 
   // 🏢 ENTERPRISE: Edit handler
   const handleEdit = useCallback((message: MessageListItem) => {
-    console.log('[CrmCommunicationsPage] handleEdit called:', message.id);
+    logger.info('Edit action', { messageId: message.id });
     startEdit(message);
   }, [startEdit]);
 
   // 🏢 ENTERPRISE: Pin handler
   const handleTogglePin = useCallback(async (messageId: string, shouldPin: boolean) => {
-    console.log('[CrmCommunicationsPage] handleTogglePin called:', messageId, 'shouldPin:', shouldPin);
+    logger.info('Toggle pin', { messageId, shouldPin });
     const message = messages.find(m => m.id === messageId);
     if (message) {
       await togglePin(messageId, message.content.text || '', message.senderName);
@@ -249,7 +251,7 @@ export default function CrmCommunicationsPage() {
 
   // 🏢 ENTERPRISE: Reaction handler (Telegram-style)
   const handleToggleReaction = useCallback(async (messageId: string, emoji: string) => {
-    console.log('[CrmCommunicationsPage] handleToggleReaction called:', messageId, 'emoji:', emoji);
+    logger.info('Toggle reaction', { messageId, emoji });
     await toggleReaction(messageId, emoji);
   }, [toggleReaction]);
 
@@ -268,7 +270,7 @@ export default function CrmCommunicationsPage() {
     onProgress: (progress: number) => void
   ): Promise<{ url: string; thumbnailUrl?: string } | null> => {
     try {
-      console.log('📎 [Communications] Uploading attachment:', file.name, file.type);
+      logger.info('Uploading attachment', { name: file.name, type: file.type });
 
       // Use legacy path that's allowed by Storage Rules
       const folderPath = file.type.startsWith('image/')
@@ -285,7 +287,7 @@ export default function CrmCommunicationsPage() {
         compressionUsage: 'document-scan',
       });
 
-      console.log('✅ [Communications] Attachment uploaded:', result.url);
+      logger.info('Attachment uploaded', { url: result.url });
       return { url: result.url };
     } catch (error) {
       console.error('❌ [Communications] Attachment upload failed:', error);
@@ -359,7 +361,7 @@ export default function CrmCommunicationsPage() {
                 size="sm"
                 onClick={() => setShowMobileFilters(!showMobileFilters)}
                 aria-label={t('inbox.filters.title')}
-                className="md:hidden"
+                className={getResponsiveClass('md', 'hidden')}
               >
                 <Filter className={iconSizes.sm} />
               </Button>,
@@ -389,7 +391,7 @@ export default function CrmCommunicationsPage() {
         )}
 
         {/* (2) Filters */}
-        <aside className="hidden md:block" role="complementary" aria-label={t('inbox.filters.channel')}>
+        <aside className={cn('hidden', getResponsiveClass('md', 'block'))} role="complementary" aria-label={t('inbox.filters.channel')}>
           <AdvancedFiltersPanel
             config={communicationsFiltersConfig}
             filters={filters}
@@ -399,7 +401,7 @@ export default function CrmCommunicationsPage() {
 
         {/* Mobile Filters Toggle */}
         {showMobileFilters && (
-          <aside className="block md:hidden" role="complementary" aria-label={t('inbox.filters.channel')}>
+          <aside className={cn('block', getResponsiveClass('md', 'hidden'))} role="complementary" aria-label={t('inbox.filters.channel')}>
             <AdvancedFiltersPanel
               config={communicationsFiltersConfig}
               filters={filters}
@@ -423,11 +425,11 @@ export default function CrmCommunicationsPage() {
               searchPlaceholder={t('inbox.search')}
               showToolbar={showToolbar}
               onToolbarToggle={setShowToolbar}
-              hideSearch={true}
+              hideSearch
             />
 
             {/* 🏢 ENTERPRISE: CompactToolbar - Same pattern as Contacts */}
-            <div className="hidden md:block">
+            <div className={cn('hidden', getResponsiveClass('md', 'block'))}>
               <CompactToolbar
                 config={communicationsConfig}
                 selectedItems={selectedItems}
@@ -437,9 +439,8 @@ export default function CrmCommunicationsPage() {
                 activeFilters={activeFilters}
                 onFiltersChange={setActiveFilters}
                 sortBy={sortBy}
-                onSortChange={(newSortBy, newSortOrder) => {
+                onSortChange={(newSortBy) => {
                   setSortBy(newSortBy as 'name' | 'date' | 'status');
-                  setSortOrder(newSortOrder);
                 }}
                 hasSelectedContact={selectedConversationId !== null}
                 onRefresh={handleRefreshAll}
@@ -449,7 +450,7 @@ export default function CrmCommunicationsPage() {
 
             {/* CompactToolbar - Mobile (toggleable) */}
             {showToolbar && (
-              <div className="md:hidden">
+              <div className={getResponsiveClass('md', 'hidden')}>
                 <CompactToolbar
                   config={communicationsConfig}
                   selectedItems={selectedItems}
@@ -459,9 +460,8 @@ export default function CrmCommunicationsPage() {
                   activeFilters={activeFilters}
                   onFiltersChange={setActiveFilters}
                   sortBy={sortBy}
-                  onSortChange={(newSortBy, newSortOrder) => {
+                  onSortChange={(newSortBy) => {
                     setSortBy(newSortBy as 'name' | 'date' | 'status');
-                    setSortOrder(newSortOrder);
                   }}
                   hasSelectedContact={selectedConversationId !== null}
                   onRefresh={handleRefreshAll}
@@ -473,13 +473,13 @@ export default function CrmCommunicationsPage() {
             <ChannelQuickFilters
               selectedTypes={selectedChannels}
               onTypeChange={setSelectedChannels}
-              compact={true}
+              compact
             />
 
             {/* List Content - States rendered INSIDE the panel */}
             <ScrollArea className="flex-1">
               {/* 🏢 ENTERPRISE: Centralized spacing tokens (same as UnitsList) */}
-              <div className={`${spacing.padding.sm} ${spacing.spaceBetween.sm}`}>
+              <div className={cn(spacing.padding.sm, spacing.spaceBetween.sm, listPadding)}>
                 {/* 🔐 State 1: Auth loading */}
                 {!authReady ? (
                   <div className="flex items-center justify-center p-8">

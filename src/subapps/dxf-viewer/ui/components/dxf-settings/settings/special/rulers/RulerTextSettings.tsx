@@ -24,7 +24,7 @@ import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Dynamic background class (ZERO inline styles)
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 export interface RulerTextSettingsProps {
   className?: string;
@@ -200,3 +200,4 @@ export default RulerTextSettings;
  * - ✅ Lazy loadable (performance)
  * - ✅ Cleaner parent component (RulersSettings)
  */
+

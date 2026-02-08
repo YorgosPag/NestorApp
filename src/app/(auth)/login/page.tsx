@@ -16,12 +16,13 @@
 // @enterprise ADR-040 - Route Groups Performance Optimization
 
 import { AuthForm } from '@/auth';
+import { cn } from '@/lib/design-system';
 
 export default function LoginPage() {
   // NOTE: No <main> here - ConditionalAppShell already provides the <main> wrapper
   // This avoids nested <main> tags which cause HTML semantic issues
   return (
-    <section className="min-h-screen bg-background flex items-center justify-center">
+    <section className={cn('min-h-screen bg-background flex items-center justify-center')}>
       <AuthForm defaultMode="signin" />
     </section>
   );

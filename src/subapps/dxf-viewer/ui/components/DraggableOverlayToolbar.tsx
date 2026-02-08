@@ -46,7 +46,7 @@ import { PANEL_LAYOUT, PanelPositionCalculator, PANEL_ANCHORING } from '../../co
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🎯 EVENT BUS: For polygon drawing communication with CanvasSection
 import { useEventBus } from '../../systems/events';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
@@ -130,7 +130,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   // 🌐 i18n - Load both namespaces for status labels
-  const { t } = useTranslation(['dxf-viewer', 'properties']);
+  const { t } = useTranslation('dxf-viewer');
 
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
@@ -476,3 +476,4 @@ export default DraggableOverlayToolbar;
  * ✅ Consistent with other floating panels
  * ✅ ~336 lines reduced to ~300 lines
  */
+

@@ -15,7 +15,9 @@ import { Toaster } from 'react-hot-toast';
 import { getTasksStats } from '@/services/tasks.service';
 import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal';
 import { TasksTab } from '@/components/crm/dashboard/TasksTab';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn, getSpacingClass } from '@/lib/design-system';
+import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Auth hook for race condition prevention
 import { useAuth } from '@/auth/contexts/AuthContext';
 // 🏢 ENTERPRISE: Centralized systems
@@ -39,8 +41,10 @@ interface TaskStats {
 }
 
 export default function CrmTasksPage() {
+  const logger = createModuleLogger('crm/tasks');
   const { t } = useTranslation('crm');
   const layout = useLayoutClasses();
+  const sectionSpacing = getSpacingClass('m', 'md', 'b');
   // 🏢 ENTERPRISE: Auth context for race condition prevention
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -61,7 +65,7 @@ export default function CrmTasksPage() {
       const statsData = await getTasksStats(null);
       setStats(statsData);
     } catch (error) {
-      console.error('Error fetching task stats:', error);
+      logger.error('Error fetching task stats', { error: error instanceof Error ? error.message : 'Unknown error' });
     } finally {
       setLoadingStats(false);
     }
@@ -147,12 +151,12 @@ export default function CrmTasksPage() {
 
       {/* 🏢 ENTERPRISE: Collapsible dashboard (same pattern as Contacts/Projects) */}
       {showDashboard && (
-        <section className="w-full overflow-hidden" aria-label={t('tasks.stats.total')}>
+        <section className={cn('w-full overflow-hidden', sectionSpacing)} aria-label={t('tasks.stats.total')}>
           <UnifiedDashboard
             stats={dashboardStats}
             columns={6}
             onCardClick={handleCardClick}
-            className={`${layout.dashboardPadding} overflow-hidden`}
+            className={cn(layout.dashboardPadding, 'overflow-hidden')}
           />
         </section>
       )}
@@ -167,7 +171,7 @@ export default function CrmTasksPage() {
 
       {/* 🏢 ENTERPRISE: Task list with centralized ListContainer */}
       <ListContainer>
-        <section className={`${layout.flexColGap4} flex-1 min-h-0`}>
+        <section className={cn(layout.flexColGap4, 'flex-1 min-h-0')}>
           <TasksTab filters={filters} onTaskCreated={handleTaskCreated} />
         </section>
       </ListContainer>

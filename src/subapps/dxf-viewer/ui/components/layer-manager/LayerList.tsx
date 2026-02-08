@@ -10,7 +10,7 @@ import type { LayerListProps } from './types';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerListProps) {
   const { t } = useTranslation('dxf-viewer');

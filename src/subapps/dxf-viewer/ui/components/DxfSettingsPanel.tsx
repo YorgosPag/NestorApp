@@ -36,6 +36,7 @@ import { Settings, SlidersHorizontal } from 'lucide-react';
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from '@/i18n';
 import { GeneralSettingsPanel } from './dxf-settings/panels/GeneralSettingsPanel';
 import { SpecificSettingsPanel } from './dxf-settings/panels/SpecificSettingsPanel';
 
@@ -89,6 +90,7 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
    * Active main tab state
    * - Default: 'specific' (most used tab)
    */
+  const { t } = useTranslation('dxf-viewer');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('specific');
 
   // ============================================================================
@@ -99,13 +101,13 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
   const mainTabs: TabDefinition[] = [
     {
       id: 'general',
-      label: 'Γενικές Ρυθμίσεις',
+      label: t('settings.general'),
       icon: Settings,
       content: null, // Content rendered separately below
     },
     {
       id: 'specific',
-      label: 'Ειδικές Ρυθμίσεις',
+      label: t('settings.specific'),
       icon: SlidersHorizontal,
       content: null, // Content rendered separately below
     },
@@ -222,3 +224,4 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
  * @see hooks/useTabNavigation.ts - Tab navigation hook (ADR-005)
  * @see ui/TabNavigation.tsx - Tab navigation component (ADR-004)
  */
+

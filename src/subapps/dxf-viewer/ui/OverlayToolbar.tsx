@@ -8,7 +8,7 @@ import { useDraggable } from '../../../hooks/useDraggable';
 // 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div
 const Separator = ({ orientation, className }: { orientation?: string; className?: string }) => (
@@ -57,7 +57,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   snapEnabled, onSnapToggle, selectedOverlayId, onDuplicate, onDelete,
   canUndo, canRedo, onUndo, onRedo, onToolChange, disableFloating = false,
 }) => {
-  const { t } = useTranslation(['dxf-viewer', 'properties']);
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -354,3 +354,4 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     </TooltipProvider>
   );
 };
+

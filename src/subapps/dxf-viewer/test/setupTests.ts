@@ -420,7 +420,7 @@ function validateVisualMatch(
   };
 }
 
-// Custom Jest matchers για visual testing
+// Custom Jest matchers for visual testing
 declare global {
   namespace jest {
     interface Matchers<R> {
@@ -430,7 +430,7 @@ declare global {
   }
 }
 
-// Extend Jest με visual regression matchers
+// Extend Jest for visual regression matchers
 const visualMatchers = {
   toMatchVisualBaseline(received: Buffer, baselinePath: string, options: VisualBaselineOptions = {}) {
     const pass = received instanceof Buffer && baselinePath.includes('.png');

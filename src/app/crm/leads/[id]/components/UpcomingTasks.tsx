@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -10,6 +9,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getTaskDateColor, formatTaskDate } from '../utils/dates';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn } from '@/lib/design-system';
 
 interface UpcomingTasksProps {
   tasks: CrmTask[];
@@ -19,7 +21,10 @@ interface UpcomingTasksProps {
 export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { quick, radius } = useBorderTokens();
+  const { quick, radiusClass } = useBorderTokens();
+  const { t } = useTranslation('crm');
+  const spacing = useSpacingTokens();
+
   const pendingTasks = useMemo(() => {
     return tasks
       .filter(task => task.status === 'pending' || task.status === 'in_progress')
@@ -31,25 +36,45 @@ export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
   }
 
   return (
-    <div className={`${colors.bg.primary} ${quick.card} shadow p-6`}>
-      <h3 className={`text-lg font-semibold mb-4 ${colors.text.foreground}`}>Επερχόμενες Εργασίες</h3>
-      <div className="space-y-3">
+    <div className={cn(colors.bg.primary, quick.card, 'shadow', spacing.padding.lg)}>
+      <h3 className={cn('text-lg font-semibold', spacing.margin.bottom.md, colors.text.foreground)}>
+        {t('leadDetails.upcoming.title')}
+      </h3>
+      <div className={spacing.spaceBetween.md}>
         {pendingTasks.slice(0, 5).map((task) => (
-          <div key={task.id} className={`flex items-center justify-between p-3 ${colors.bg.secondary} ${radius.lg}`}>
+          <div
+            key={task.id}
+            className={cn('flex items-center justify-between', spacing.padding.sm, colors.bg.secondary, radiusClass.lg)}
+          >
             <div className="flex-1">
-              <h5 className={`font-medium ${colors.text.foreground}`}>{task.title}</h5>
-              <div className={`flex items-center gap-4 text-sm ${colors.text.muted} mt-1`}>
+              <h5 className={cn('font-medium', colors.text.foreground)}>{task.title}</h5>
+              <div className={cn('flex items-center text-sm', spacing.gap.lg, colors.text.muted, spacing.margin.top.xs)}>
                 <span className={getTaskDateColor(task.dueDate, task.status)}>
-                  <Clock className={`${iconSizes.xs} inline mr-1`} />
+                  <Clock className={cn(iconSizes.xs, 'inline', spacing.margin.right.xs)} />
                   {formatTaskDate(task.dueDate)}
                 </span>
-                <span className={`px-2 py-1 ${radius.full} text-xs ${
-                  task.priority === 'urgent' ? `${colors.bg.error}/50 ${colors.text.error}` :
-                  task.priority === 'high' ? `${colors.bg.warning}/50 ${colors.text.warning}` :
-                  task.priority === 'medium' ? `${colors.bg.warning}/30 ${colors.text.warning}` :
-                  `${colors.bg.success}/50 ${colors.text.success}`
-                }`}>
-                  {task.priority === 'urgent' ? 'Επείγουσα' : task.priority === 'high' ? 'Υψηλή' : task.priority === 'medium' ? 'Μεσαία' : 'Χαμηλή'}
+                <span
+                  className={cn(
+                    spacing.padding.x.sm,
+                    spacing.padding.y.xs,
+                    radiusClass.full,
+                    'text-xs',
+                    task.priority === 'urgent'
+                      ? cn(`${colors.bg.error}/50`, colors.text.error)
+                      : task.priority === 'high'
+                      ? cn(`${colors.bg.warning}/50`, colors.text.warning)
+                      : task.priority === 'medium'
+                      ? cn(`${colors.bg.warning}/30`, colors.text.warning)
+                      : cn(`${colors.bg.success}/50`, colors.text.success)
+                  )}
+                >
+                  {task.priority === 'urgent'
+                    ? t('tasks.priority.urgent')
+                    : task.priority === 'high'
+                    ? t('tasks.priority.high')
+                    : task.priority === 'medium'
+                    ? t('tasks.priority.medium')
+                    : t('tasks.priority.low')}
                 </span>
               </div>
             </div>
@@ -57,8 +82,11 @@ export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
         ))}
         {pendingTasks.length > 5 && (
           <div className="text-center">
-            <button onClick={() => router.push('/crm/tasks')} className={`${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-sm`}>
-              Δείτε όλες τις εργασίες ({pendingTasks.length})
+            <button
+              onClick={() => router.push('/crm/tasks')}
+              className={cn(colors.text.info, INTERACTIVE_PATTERNS.PRIMARY_HOVER, 'text-sm')}
+            >
+              {t('leadDetails.upcoming.viewAll', { count: pendingTasks.length })}
             </button>
           </div>
         )}

@@ -91,7 +91,9 @@ import {
   getLineTypeLabel,
   getLineCapLabel,
   getLineJoinLabel,
-  getTemplateCategoryLabel
+  getTemplateCategoryLabel,
+  getTemplateLabel,
+  getTemplateDescription
 } from '../../../../../contexts/LineConstants';
 import type { LineType, LineCapStyle, LineJoinStyle } from '../../../../../settings-core/types';
 import type { TemplateCategory } from '../../../../../contexts/LineSettingsContext';
@@ -106,7 +108,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 // 🏢 ENTERPRISE: Centralized Button component (Radix)
 import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ADR-081: Centralized percentage formatting
@@ -333,28 +335,28 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     {
       category: 'engineering',
       categoryLabel: getTemplateCategoryLabel('engineering', t),
-      options: getTemplatesByCategory('engineering').map(t => ({
-        value: t.name,
-        label: t.name,
-        description: t.description
+      options: getTemplatesByCategory('engineering').map((template) => ({
+        value: template.name,
+        label: getTemplateLabel(template, t),
+        description: getTemplateDescription(template, t)
       }))
     },
     {
       category: 'architectural',
       categoryLabel: getTemplateCategoryLabel('architectural', t),
-      options: getTemplatesByCategory('architectural').map(t => ({
-        value: t.name,
-        label: t.name,
-        description: t.description
+      options: getTemplatesByCategory('architectural').map((template) => ({
+        value: template.name,
+        label: getTemplateLabel(template, t),
+        description: getTemplateDescription(template, t)
       }))
     },
     {
       category: 'electrical',
       categoryLabel: getTemplateCategoryLabel('electrical', t),
-      options: getTemplatesByCategory('electrical').map(t => ({
-        value: t.name,
-        label: t.name,
-        description: t.description
+      options: getTemplatesByCategory('electrical').map((template) => ({
+        value: template.name,
+        label: getTemplateLabel(template, t),
+        description: getTemplateDescription(template, t)
       }))
     }
   ];

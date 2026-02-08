@@ -1,16 +1,18 @@
-
 'use client';
 
 import React, { useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, User, Mail, Phone, Tag, Calendar, Edit3, Send, PhoneCall, Plus, Clock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { Toaster } from 'react-hot-toast';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn, getResponsiveClass } from '@/lib/design-system';
+import { createModuleLogger } from '@/lib/telemetry';
 
 import CommunicationsHistory from '@/components/CommunicationsHistory';
 import SendEmailModal from '@/components/email/SendEmailModal';
@@ -24,10 +26,14 @@ import { UpcomingTasks } from './components/UpcomingTasks';
 import { useLead } from './hooks/useLead';
 import { useLeadTasks } from './hooks/useLeadTasks';
 
+const logger = createModuleLogger('crm/lead-profile');
+
 export default function LeadProfilePage() {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  const { t } = useTranslation('crm');
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -57,10 +63,10 @@ export default function LeadProfilePage() {
 
   if (loadingLead) {
     return (
-      <div className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
+      <div className={cn('min-h-screen flex items-center justify-center', colors.bg.secondary)}>
         <div className="text-center">
-          <AnimatedSpinner size="large" className="mx-auto mb-2" />
-          <p className={`${colors.text.muted}`}>Φόρτωση lead...</p>
+          <AnimatedSpinner size="large" className={cn('mx-auto', spacing.margin.bottom.sm)} />
+          <p className={colors.text.muted}>{t('leadDetails.loading')}</p>
         </div>
       </div>
     );
@@ -68,16 +74,26 @@ export default function LeadProfilePage() {
 
   if (leadError || !lead) {
     return (
-      <div className={`min-h-screen ${colors.bg.secondary}`}>
-        <div className="container mx-auto px-6 py-8">
-          <div className={`${colors.bg.errorLight} ${getStatusBorder('error')} rounded-lg p-8 text-center`}>
-            <h2 className={`text-xl font-semibold ${colors.text.error} mb-2`}>Σφάλμα</h2>
-            <p className={`${colors.text.error} mb-4`}>{leadError || 'Το lead δεν βρέθηκε'}</p>
+      <div className={cn('min-h-screen', colors.bg.secondary)}>
+        <div className={cn('container mx-auto', spacing.padding.x.lg, spacing.padding.y.lg)}>
+          <div className={cn(colors.bg.errorLight, getStatusBorder('error'), 'rounded-lg text-center', spacing.padding.x.lg, spacing.padding.y.lg)}>
+            <h2 className={cn('text-xl font-semibold', colors.text.error, spacing.margin.bottom.sm)}>
+              {t('leadDetails.errorTitle')}
+            </h2>
+            <p className={cn(colors.text.error, spacing.margin.bottom.md)}>
+              {leadError || t('leadDetails.notFound')}
+            </p>
             <button
               onClick={() => router.push('/crm/leads')}
-              className={`px-4 py-2 ${colors.bg.info} text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={cn(
+                spacing.padding.x.md,
+                spacing.padding.y.sm,
+                colors.bg.info,
+                'text-white rounded-lg',
+                INTERACTIVE_PATTERNS.PRIMARY_HOVER
+              )}
             >
-              Επιστροφή στα Leads
+              {t('leadDetails.backToLeads')}
             </button>
           </div>
         </div>
@@ -88,45 +104,52 @@ export default function LeadProfilePage() {
   return (
     <>
       <Toaster position="top-right" />
-      <main className={`min-h-screen ${colors.bg.secondary}`}>
-        <header className={`${colors.bg.primary} shadow-sm border-b`}>
-          <div className="px-6 py-4">
-            <nav className="flex items-center gap-4" aria-label="Πλοήγηση lead profile">
+      <main className={cn('min-h-screen', colors.bg.secondary)}>
+        <header className={cn(colors.bg.primary, 'shadow-sm border-b')}>
+          <div className={cn(spacing.padding.x.lg, spacing.padding.y.md)}>
+            <nav className={cn('flex items-center', spacing.gap.md)} aria-label={t('leadDetails.navAria')}>
               <button
                 onClick={handleGoBack}
-                className={`p-2 rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-                aria-label="Επιστροφή"
+                className={cn('p-2 rounded-lg', INTERACTIVE_PATTERNS.SUBTLE_HOVER, TRANSITION_PRESETS.FAST_COLORS)}
+                aria-label={t('leadDetails.backAria')}
               >
                 <ArrowLeft className={iconSizes.md} />
               </button>
-              <div className="flex items-center gap-3">
-                <User className={`${iconSizes.lg} ${colors.text.info}`} />
+              <div className={cn('flex items-center', spacing.gap.sm)}>
+                <User className={cn(iconSizes.lg, colors.text.info)} />
                 <div>
-                  <h1 className={`text-2xl font-bold ${colors.text.primary}`}>{lead.fullName}</h1>
-                  <p className={`${colors.text.muted}`}>Lead Profile</p>
+                  <h1 className={cn('text-2xl font-bold', colors.text.primary)}>{lead.fullName}</h1>
+                  <p className={colors.text.muted}>{t('leadDetails.headerTitle')}</p>
                 </div>
               </div>
             </nav>
           </div>
         </header>
 
-        <section className="container mx-auto px-6 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <aside className="lg:col-span-1 space-y-6" aria-label="Στοιχεία επαφής και γρήγορες ενέργειες">
+        <section className={cn('container mx-auto', spacing.padding.x.lg, spacing.padding.y.lg)}>
+          <div className={cn('grid grid-cols-1 lg:grid-cols-3', spacing.gap.lg)}>
+            <aside className={cn(getResponsiveClass('lg', 'col-span-1'), spacing.spaceBetween.lg)} aria-label={t('leadDetails.contactSectionAria')}>
               <ContactCard lead={lead} />
               {lead.notes && (
-                <article className={`${colors.bg.primary} rounded-lg shadow p-6`}>
-                  <h4 className="font-medium mb-2">Σημειώσεις</h4>
-                  <p className={`text-sm ${colors.text.secondary} ${colors.bg.secondary} rounded p-3`}>{lead.notes}</p>
+                <article className={cn(colors.bg.primary, 'rounded-lg shadow', spacing.padding.lg)}>
+                  <h4 className={cn('font-medium', spacing.margin.bottom.sm)}>{t('leadDetails.notesTitle')}</h4>
+                  <p className={cn('text-sm', colors.text.secondary, colors.bg.secondary, 'rounded', spacing.padding.sm)}>
+                    {lead.notes}
+                  </p>
                 </article>
               )}
-              <QuickActions lead={lead} onEdit={() => setShowEditModal(true)} onNewTask={() => setShowTaskModal(true)} onSendEmail={() => setShowEmailModal(true)} />
+              <QuickActions
+                lead={lead}
+                onEdit={() => setShowEditModal(true)}
+                onNewTask={() => setShowTaskModal(true)}
+                onSendEmail={() => setShowEmailModal(true)}
+              />
               <TasksSummary tasks={tasks} loading={loadingTasks} />
             </aside>
 
-            <section className="lg:col-span-2 space-y-6" aria-label="Εργασίες και ιστορικό επικοινωνίας">
+            <section className={cn(getResponsiveClass('lg', 'col-span-2'), spacing.spaceBetween.lg)} aria-label={t('leadDetails.tasksSectionAria')}>
               <UpcomingTasks tasks={tasks} router={router} />
-              <article className={`${colors.bg.primary} rounded-lg shadow p-6`}>
+              <article className={cn(colors.bg.primary, 'rounded-lg shadow', spacing.padding.lg)}>
                 <CommunicationsHistory contactId={lead.id ?? ''} />
               </article>
             </section>
@@ -138,7 +161,7 @@ export default function LeadProfilePage() {
         lead={lead ? { id: lead.id || '', fullName: lead.fullName || '', email: lead.email || '' } : null}
         isOpen={showEmailModal}
         onClose={() => setShowEmailModal(false)}
-        onEmailSent={() => console.log('Email sent')}
+        onEmailSent={() => logger.info('Lead email sent', { leadId: lead?.id })}
       />
       {lead && (
         <EditOpportunityModal

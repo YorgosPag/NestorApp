@@ -16,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -317,3 +317,4 @@ export default RulerBackgroundSettings;
  * - ✅ Lazy loadable (performance)
  * - ✅ Cleaner parent component (RulersSettings)
  */
+

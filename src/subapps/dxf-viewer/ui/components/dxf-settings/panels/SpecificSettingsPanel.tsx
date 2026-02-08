@@ -6,7 +6,7 @@
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { PANEL_TOKENS, PanelTokenUtils, PANEL_LAYOUT } from '../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -300,3 +300,4 @@ export default SpecificSettingsPanel;
  * - ✅ Cleaner parent component (DxfSettingsPanel)
  * - ✅ Consistent architecture across all panels
  */
+

@@ -19,7 +19,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useAuth } from '@/auth';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';

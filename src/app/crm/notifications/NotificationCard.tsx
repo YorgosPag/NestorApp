@@ -1,39 +1,50 @@
 import { CommonBadge } from '@/core/badges';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useNotificationUtils } from './notification-utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { CrmNotificationData } from './useNotifications';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 export const NotificationCard = ({ notification }: { notification: CrmNotificationData }) => {
-  const { quick } = useBorderTokens();
+  const { quick, radiusClass } = useBorderTokens();
   const { getTypeStyles, getTypeLabel } = useNotificationUtils();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
 
   return (
-    <div className={cn(
-      "p-4 rounded-lg flex items-start gap-4 transition-colors",
-      notification.read ? "bg-muted/50" : `bg-card ${quick.card}`
-    )}>
-      <div className={cn(
-        "w-2 h-2 rounded-full mt-1.5 shrink-0",
-        notification.read ? colors.bg.muted : `${colors.bg.info} animate-pulse`
-      )}></div>
+    <div
+      className={cn(
+        spacing.padding.md,
+        radiusClass.lg,
+        'flex items-start transition-colors',
+        spacing.gap.md,
+        notification.read ? colors.bg.muted : cn(colors.bg.card, quick.card)
+      )}
+    >
+      <div
+        className={cn(
+          'w-2 h-2 shrink-0',
+          radiusClass.full,
+          spacing.margin.top.xs,
+          notification.read ? colors.bg.muted : cn(colors.bg.info, 'animate-pulse')
+        )}
+      />
       <div className="flex-1">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className={cn('flex items-center', spacing.gap.sm)}>
             <h4 className="font-semibold">{notification.title}</h4>
             <CommonBadge
               status="company"
               customLabel={getTypeLabel(notification.type)}
               variant="outline"
               size="sm"
-              className={cn("text-xs", getTypeStyles(notification.type))}
+              className={cn('text-xs', getTypeStyles(notification.type))}
             />
           </div>
-          <span className="text-xs text-muted-foreground">{notification.time}</span>
+          <span className={cn('text-xs', colors.text.secondary)}>{notification.time}</span>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">{notification.description}</p>
+        <p className={cn('text-sm', colors.text.secondary, spacing.margin.top.xs)}>{notification.description}</p>
       </div>
     </div>
   );

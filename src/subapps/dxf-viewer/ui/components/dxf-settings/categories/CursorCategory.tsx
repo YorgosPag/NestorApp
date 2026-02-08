@@ -25,7 +25,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 /**
  * CursorCategory - Cursor settings category with sub-tabs
@@ -199,3 +199,4 @@ export default CursorCategory;
  * - ✅ Consistent pattern with GeneralSettingsPanel
  * - ✅ Cleaner parent component (SpecificSettingsPanel)
  */
+

@@ -52,7 +52,7 @@ import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -279,3 +279,4 @@ export default RulerMinorLinesSettings;
  * - ✅ Testable in isolation
  * - ✅ Cleaner parent component (RulerLinesSettings → router only)
  */
+

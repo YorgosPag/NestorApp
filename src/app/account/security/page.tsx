@@ -21,8 +21,7 @@ import { SessionsList } from '@/components/account/SessionsList';
 import { TwoFactorEnrollment } from '@/components/account/TwoFactorEnrollment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useAuth, useAuthProviderInfo } from '@/auth';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -30,6 +29,9 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ACCOUNT_SECURITY_PAGE');
 
 export default function SecurityPage() {
   const { user, resetPassword, refreshToken } = useAuth();
@@ -41,7 +43,7 @@ export default function SecurityPage() {
   const typography = useTypography();
 
   // 🏢 ENTERPRISE: Typed provider detection via providerData
-  const { isPasswordUser, isOAuthUser, isGoogleUser } = useAuthProviderInfo();
+  const { isOAuthUser } = useAuthProviderInfo();
 
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -76,16 +78,16 @@ export default function SecurityPage() {
       await refreshToken();
       setRefreshMessage({
         type: 'success',
-        text: 'Permissions refreshed successfully! Reloading page...'
+        text: t('account.security.refreshSuccess')
       });
 
       // Auto-reload after 1.5 seconds to apply new permissions
       setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      logger.error('Token refresh failed', { error });
       setRefreshMessage({
         type: 'error',
-        text: 'Failed to refresh permissions. Please try again.'
+        text: t('account.security.refreshError')
       });
     } finally {
       setIsRefreshingToken(false);
@@ -169,7 +171,7 @@ export default function SecurityPage() {
         <TwoFactorEnrollment
           userId={user.uid}
           onStatusChange={(status) => {
-            console.log('2FA status changed:', status.status);
+            logger.info('2FA status changed', { status: status.status });
           }}
         />
       )}
@@ -180,7 +182,7 @@ export default function SecurityPage() {
           userId={user.uid}
           onSessionsChange={() => {
             // Optional: Handle session changes (e.g., refresh data)
-            console.log('Sessions updated');
+            logger.info('Sessions updated');
           }}
         />
       )}
@@ -190,17 +192,16 @@ export default function SecurityPage() {
         <CardHeader>
           <CardTitle className={layout.flexCenterGap2}>
             <RefreshCw className={iconSizes.md} aria-hidden="true" />
-            Refresh Permissions
+            {t('account.security.refreshTitle')}
           </CardTitle>
           <CardDescription>
-            Force refresh your ID token to load updated permissions after admin changes
+            {t('account.security.refreshDescription')}
           </CardDescription>
         </CardHeader>
 
         <CardContent className={layout.flexColGap4}>
           <p className={cn(typography.body.sm, colors.text.muted)}>
-            Use this after an administrator updates your roles or permissions.
-            This will reload your access token with the latest custom claims.
+            {t('account.security.refreshBody')}
           </p>
 
           {/* Status message */}
@@ -234,7 +235,7 @@ export default function SecurityPage() {
               )}
               aria-hidden="true"
             />
-            {isRefreshingToken ? 'Refreshing...' : 'Refresh Permissions'}
+            {isRefreshingToken ? t('account.security.refreshing') : t('account.security.refreshButton')}
           </Button>
         </CardContent>
       </Card>
