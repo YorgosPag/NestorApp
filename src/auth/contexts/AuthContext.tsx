@@ -31,16 +31,19 @@ import {
   signInWithPopup,
   MultiFactorResolver
 } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { sessionService } from '@/services/session';
 import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
 import { API_ROUTES, AUTH_EVENTS } from '@/config/domain-constants';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type {
   FirebaseAuthUser,
   SignUpData,
   SessionValidationStatus,
   SessionValidationResult,
-  SessionIssue
+  SessionIssue,
+  UserProfileDocument
 } from '../types/auth.types';
 
 // =============================================================================
@@ -316,6 +319,135 @@ async function clearServerSessionCookie(): Promise<void> {
 }
 
 // =============================================================================
+// 👤 JIT USER PROFILE PROVISIONING (ADR-100)
+// =============================================================================
+// Enterprise pattern: Google/Microsoft/Okta standard
+// Automatically creates/updates Firestore user profile on each sign-in
+//
+// Field-Level Source of Truth:
+// - Firebase Auth OWNS: email, emailVerified (always synced)
+// - Firestore DB OWNS: role, status, preferences (never overwritten)
+// - Conditional: displayName, photoURL (Auth → DB if DB has no value)
+// =============================================================================
+
+/**
+ * Sync Firebase Auth user data to Firestore /users/{uid} document.
+ * Creates a new profile on first login, updates system fields on subsequent logins.
+ * Non-blocking: failures are logged but never prevent authentication.
+ */
+async function syncUserProfileToFirestore(
+  firebaseUser: FirebaseUser,
+  customClaims: Record<string, unknown>
+): Promise<void> {
+  const userDocRef = doc(db, COLLECTIONS.USERS, firebaseUser.uid);
+
+  try {
+    const userSnapshot = await getDoc(userDocRef);
+    const now = new Date();
+    const authProvider = firebaseUser.providerData[0]?.providerId ?? 'unknown';
+
+    if (!userSnapshot.exists()) {
+      // CREATE: Full profile with defaults (JIT provisioning - first sign-in)
+      console.log('[ENTERPRISE] [AuthContext] Creating Firestore user profile (JIT):', firebaseUser.uid);
+
+      const newProfile: UserProfileDocument = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        displayName: firebaseUser.displayName ?? null,
+        givenName: null,
+        familyName: null,
+        photoURL: firebaseUser.photoURL ?? null,
+        companyId: typeof customClaims.companyId === 'string' ? customClaims.companyId : null,
+        globalRole: typeof customClaims.globalRole === 'string' ? customClaims.globalRole : null,
+        status: 'active',
+        emailVerified: firebaseUser.emailVerified,
+        loginCount: 1,
+        lastLoginAt: now,
+        createdAt: now,
+        updatedAt: now,
+        authProvider,
+      };
+
+      await setDoc(userDocRef, newProfile);
+      console.log('[ENTERPRISE] [AuthContext] User profile created successfully');
+    } else {
+      // UPDATE: Only system fields (preserve user-edited & admin-managed data)
+      console.log('[ENTERPRISE] [AuthContext] Updating Firestore user profile:', firebaseUser.uid);
+
+      const existingData = userSnapshot.data();
+      const currentLoginCount = typeof existingData.loginCount === 'number'
+        ? existingData.loginCount
+        : 0;
+
+      await setDoc(userDocRef, {
+        // Auth-authoritative fields (always sync from Auth provider)
+        email: firebaseUser.email ?? '',
+        displayName: firebaseUser.displayName ?? null,
+        photoURL: firebaseUser.photoURL ?? null,
+        emailVerified: firebaseUser.emailVerified,
+        // System fields
+        lastLoginAt: now,
+        loginCount: currentLoginCount + 1,
+        updatedAt: now,
+        // Claims (may change after admin actions)
+        companyId: typeof customClaims.companyId === 'string'
+          ? customClaims.companyId
+          : existingData.companyId ?? null,
+        globalRole: typeof customClaims.globalRole === 'string'
+          ? customClaims.globalRole
+          : existingData.globalRole ?? null,
+        authProvider,
+      }, { merge: true });
+
+      console.log('[ENTERPRISE] [AuthContext] User profile updated successfully');
+    }
+  } catch (syncError) {
+    // NON-BLOCKING: Never prevent login due to profile sync failure
+    console.warn('[AuthContext] User profile sync failed (non-blocking):', syncError);
+  }
+}
+
+/**
+ * Ensure dev-admin user document exists in Firestore (development mode only).
+ * Prevents "user not found" errors when looking up dev-admin UIDs.
+ */
+async function ensureDevUserProfile(): Promise<void> {
+  if (process.env.NODE_ENV !== 'development') return;
+
+  const devUid = 'dev-admin';
+  const devDocRef = doc(db, COLLECTIONS.USERS, devUid);
+
+  try {
+    const devSnapshot = await getDoc(devDocRef);
+    if (!devSnapshot.exists()) {
+      console.log('[ENTERPRISE] [AuthContext] Creating dev-admin user profile');
+      const now = new Date();
+      const devProfile: UserProfileDocument = {
+        uid: devUid,
+        email: 'dev@localhost',
+        displayName: 'Dev Admin',
+        givenName: 'Dev',
+        familyName: 'Admin',
+        photoURL: null,
+        companyId: null,
+        globalRole: 'admin',
+        status: 'active',
+        emailVerified: true,
+        loginCount: 0,
+        lastLoginAt: now,
+        createdAt: now,
+        updatedAt: now,
+        authProvider: 'development-bypass',
+      };
+      await setDoc(devDocRef, devProfile);
+      console.log('[ENTERPRISE] [AuthContext] Dev-admin user profile created');
+    }
+  } catch (devError) {
+    console.warn('[AuthContext] Failed to create dev-admin profile (non-blocking):', devError);
+  }
+}
+
+// =============================================================================
 // AUTH PROVIDER
 // =============================================================================
 
@@ -343,6 +475,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // ==========================================================================
 
   useEffect(() => {
+    // 👤 ENTERPRISE: Ensure dev-admin user document exists (development only)
+    ensureDevUserProfile();
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       console.log('[ENTERPRISE] [AuthContext] Auth state changed:', firebaseUser?.uid || 'No user');
 
@@ -390,6 +525,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         const authUser = buildAuthUser(firebaseUser, customClaims);
+
+        // 👤 ENTERPRISE: JIT User Profile Provisioning (ADR-100)
+        // Sync user profile to Firestore before components render
+        await syncUserProfileToFirestore(firebaseUser, customClaims);
 
         console.log('✅ [AuthContext] Valid session established:', authUser.email);
         setUser(authUser);

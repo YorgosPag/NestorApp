@@ -134,6 +134,57 @@ export interface UserTypeContextType {
 /**
  * Auth form modes
  */
+// =============================================================================
+// 📄 FIRESTORE USER PROFILE DOCUMENT
+// =============================================================================
+// Enterprise pattern: JIT (Just-In-Time) User Profile Provisioning
+// Used by Google, Microsoft, Okta for automatic user document creation
+//
+// Field-Level Source of Truth:
+// - Firebase Auth OWNS: email, emailVerified (always synced from Auth)
+// - Firestore DB OWNS: globalRole, companyId, status (admin-managed)
+// - Conditional sync: displayName, photoURL (Auth is authoritative unless user customizes)
+//
+// @see ADR-100: User Profile Sync
+// =============================================================================
+
+/**
+ * Firestore /users/{uid} document schema
+ * Represents the materialized user profile in Firestore
+ */
+export interface UserProfileDocument {
+  /** Firebase Auth UID (also used as document ID) */
+  uid: string;
+  /** Primary email from Firebase Auth */
+  email: string;
+  /** Combined display name */
+  displayName: string | null;
+  /** First name */
+  givenName: string | null;
+  /** Last name */
+  familyName: string | null;
+  /** Profile photo URL */
+  photoURL: string | null;
+  /** Company/tenant ID (multi-tenancy anchor) */
+  companyId: string | null;
+  /** Global role from custom claims */
+  globalRole: string | null;
+  /** Account status */
+  status: 'active' | 'inactive' | 'suspended';
+  /** Email verification status */
+  emailVerified: boolean;
+  /** Login counter (incremented on each sign-in) */
+  loginCount: number;
+  /** Last login timestamp */
+  lastLoginAt: Date;
+  /** Profile creation timestamp */
+  createdAt: Date;
+  /** Last update timestamp */
+  updatedAt: Date;
+  /** Auth provider identifier (email, google.com, etc.) */
+  authProvider: string;
+}
+
 export type AuthFormMode = 'signin' | 'signup' | 'reset';
 
 /**

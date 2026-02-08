@@ -15,6 +15,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import type { UserProfileDocument } from '@/auth/types/auth.types';
 import type { CrmTask, FirestoreishTimestamp } from '@/types/crm';
 import { getTaskById } from '@/services/tasks.service';
 import { PageContainer, ListContainer } from '@/core/containers';
@@ -100,10 +101,8 @@ export default function TaskDetailPage() {
       try {
         const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, task.assignedTo));
         if (userDoc.exists()) {
-          const data = userDoc.data();
-          setAssignedToName(
-            (data.displayName as string) || (data.email as string) || task.assignedTo
-          );
+          const userData = userDoc.data() as UserProfileDocument;
+          setAssignedToName(userData.displayName || userData.email || task.assignedTo);
         } else {
           setAssignedToName(task.assignedTo);
         }

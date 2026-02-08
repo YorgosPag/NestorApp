@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 141 ADRs | Last Updated: 2026-02-08
+**📊 Stats**: 142 ADRs | Last Updated: 2026-02-08
 
 ---
 
@@ -24,7 +24,7 @@
 | 📂 **Entity Systems** | 11 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 7 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 8 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
@@ -133,6 +133,7 @@
 | **ADR-096** | Interaction Timing Constants Centralization | ✅ APPROVED | 2026-01-31 | Tools & Keyboard | [📄](./adrs/ADR-096-interaction-timing-constants-centralization.md) |
 | **ADR-098** | Timing Delays Centralization (setTimeout/setInterval) | ✅ APPROVED | 2026-01-31 | Tools & Keyboard | [📄](./adrs/ADR-098-timing-delays-centralization-settimeout-setinterva.md) |
 | **ADR-099** | Polygon & Measurement Tolerances Centralization | ✅ APPROVED | 2026-01-31 | Drawing System | [📄](./adrs/ADR-099-polygon-measurement-tolerances-centralization.md) |
+| **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ IMPLEMENTED | 2026-02-08 | Security & Auth | [📄](./adrs/ADR-100-user-profile-sync.md) |
 | **ADR-101** | Deep Clone Centralization | ✅ APPROVED | 2026-01-31 | Data & State | [📄](./adrs/ADR-101-deep-clone-centralization.md) |
 | **ADR-102** | Origin Markers Centralization (DXF/Layer/Debug) | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-102-origin-markers-centralization-dxf-layer-debug.md) |
 | **ADR-104** | Entity Type Guards Centralization | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-104-entity-type-guards-centralization.md) |
@@ -359,6 +360,7 @@
 | **ADR-063** | Company Isolation via Custom Claims | ✅ ✅ Active | [View](./adrs/ADR-063-company-isolation-custom-claims.md) |
 | **ADR-068** | API Rate Limiting System | ✅ APPROVED | [View](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
+| **ADR-100** | JIT User Profile Sync (Firestore /users/{uid}) | ✅ IMPLEMENTED | [View](./adrs/ADR-100-user-profile-sync.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 
 ---
