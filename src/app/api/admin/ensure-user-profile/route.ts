@@ -59,16 +59,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const userDocRef = adminDb.collection(COLLECTIONS.USERS).doc(body.uid);
     const userSnapshot = await userDocRef.get();
 
+    const now = new Date();
+
     if (userSnapshot.exists) {
+      // UPDATE: Merge missing fields (e.g., displayName) into existing document
+      await userDocRef.set({
+        displayName: body.displayName ?? null,
+        givenName: body.givenName ?? null,
+        familyName: body.familyName ?? null,
+        email: body.email,
+        globalRole: body.globalRole ?? null,
+        updatedAt: now,
+      }, { merge: true });
+
+      console.log(`[ENTERPRISE] [ensure-user-profile] Updated profile for: ${body.uid}`);
+
       return NextResponse.json({
         success: true,
-        message: 'User profile already exists',
+        message: `User profile updated for ${body.uid}`,
         created: false,
       });
     }
 
-    // Create new user profile document
-    const now = new Date();
+    // CREATE: Full profile with defaults
     await userDocRef.set({
       uid: body.uid,
       email: body.email,
