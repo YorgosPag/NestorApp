@@ -17,6 +17,7 @@ import 'server-only';
 import { getModuleRegistry } from '../module-registry';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { AppointmentModule } from './uc-001-appointment';
+import { PropertySearchModule } from './uc-003-property-search';
 
 const logger = createModuleLogger('PIPELINE_MODULE_REGISTRATION');
 
@@ -36,10 +37,12 @@ export function registerAllPipelineModules(): void {
   // UC-001: Appointment Request
   registry.register(new AppointmentModule());
 
+  // UC-003: Property Search
+  registry.register(new PropertySearchModule());
+
   // Future modules:
   // registry.register(new InvoiceModule());         // UC-002
-  // registry.register(new DefectReportModule());     // UC-003
-  // registry.register(new PropertySearchModule());   // UC-004
+  // registry.register(new DefectReportModule());     // UC-004
 
   initialized = true;
 

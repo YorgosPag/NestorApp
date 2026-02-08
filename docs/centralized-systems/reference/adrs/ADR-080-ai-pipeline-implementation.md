@@ -303,3 +303,6 @@ Mailgun webhook ✅
 | 2026-02-08 | Email rendering centralization: SafeHTMLContent + EmailContentWithSignature → shared component |
 | 2026-02-08 | Operator Inbox: smart polling (15s auto-refresh) + toast notifications for new items |
 | 2026-02-08 | **CRITICAL FIX**: OpenAI JSON schema — `oneOf` incompatible with strict mode → split into 2 schemas (message_intent + document_classify), fix missing `required` arrays, nullable fields. Root cause of all emails returning "unknown" 50% |
+| 2026-02-08 | **CRITICAL FIX**: OpenAI Responses API format — `json_schema` wrapper wrong for `/v1/responses` endpoint, spread schema fields directly into `text.format` |
+| 2026-02-08 | AI intent classification OPERATIONAL: `property_search` 90% confidence confirmed |
+| 2026-02-08 | UC-003 Property Search Module — LOOKUP (parse criteria + query available units) → PROPOSE (matched units + draft reply email) → EXECUTE (log lead inquiry) → ACKNOWLEDGE (Phase 2: email sending) |

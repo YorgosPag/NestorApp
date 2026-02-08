@@ -52,6 +52,7 @@ export type {
 
 // UC Modules
 export { AppointmentModule } from './modules/uc-001-appointment';
+export { PropertySearchModule } from './modules/uc-003-property-search';
 export { registerAllPipelineModules } from './modules/register-modules';
 
 // Channel adapters
