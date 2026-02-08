@@ -35,14 +35,19 @@ type OpenAIRequestMessage = {
   content: OpenAIRequestContent[];
 };
 
+interface OpenAIResponsesFormat {
+  type: 'json_schema';
+  name: string;
+  description?: string;
+  strict?: boolean;
+  schema: Record<string, unknown>;
+}
+
 interface OpenAIRequestBody {
   model: string;
   input: OpenAIRequestMessage[];
   text?: {
-    format?: {
-      type: 'json_schema';
-      json_schema: Record<string, unknown>;
-    };
+    format?: OpenAIResponsesFormat;
   };
 }
 
@@ -241,6 +246,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       ? AI_DOCUMENT_CLASSIFY_SCHEMA
       : AI_MESSAGE_INTENT_SCHEMA;
 
+    // Responses API: name/strict/schema go directly in format (NOT nested in json_schema)
     const request: OpenAIRequestBody = {
       model,
       input: [
@@ -256,7 +262,10 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       text: {
         format: {
           type: 'json_schema',
-          json_schema: jsonSchema,
+          name: jsonSchema.name,
+          description: jsonSchema.description,
+          strict: jsonSchema.strict,
+          schema: jsonSchema.schema,
         },
       },
     };
