@@ -26,12 +26,25 @@ import { z } from 'zod';
  * @enterprise Single source of truth για message intents
  */
 export const IntentType = z.enum([
-  'delivery',           // Παράδοση υλικών/εξοπλισμού
-  'appointment',        // Ραντεβού/συνάντηση
-  'issue',              // Πρόβλημα/βλάβη
-  'payment',            // Πληρωμή/οικονομικό
-  'info_update',        // Ενημέρωση πληροφοριών
-  'triage_needed',      // Δεν μπορεί να ταξινομηθεί
+  // ── Legacy (backward-compatible) ──
+  'delivery',              // Παράδοση υλικών/εξοπλισμού
+  'appointment',           // Ραντεβού/συνάντηση (legacy alias)
+  'issue',                 // Πρόβλημα/βλάβη (legacy alias)
+  'payment',               // Πληρωμή/οικονομικό (legacy alias)
+  'info_update',           // Ενημέρωση πληροφοριών
+  'triage_needed',         // Δεν μπορεί να ταξινομηθεί
+  // ── Pipeline intent types (ADR-080) ──
+  'appointment_request',   // Αίτημα ραντεβού (UC-001)
+  'property_search',       // Αναζήτηση ακινήτου (UC-003)
+  'invoice',               // Τιμολόγιο (UC-002)
+  'document_request',      // Αίτημα εγγράφου
+  'outbound_send',         // Αποστολή μηνύματος
+  'report_request',        // Αίτημα αναφοράς
+  'dashboard_query',       // Ερώτηση dashboard
+  'status_inquiry',        // Ερώτηση κατάστασης
+  'defect_report',         // Αναφορά βλάβης
+  'procurement_request',   // Αίτημα προμήθειας
+  'payment_notification',  // Ειδοποίηση πληρωμής
 ]);
 
 export type IntentTypeValue = z.infer<typeof IntentType>;

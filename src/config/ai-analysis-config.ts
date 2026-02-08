@@ -32,10 +32,29 @@ export const AI_ANALYSIS_DEFAULTS = {
 } as const;
 
 export const AI_ANALYSIS_PROMPTS = {
-  MESSAGE_INTENT_SYSTEM:
-    'You are an enterprise AI classifier. Return JSON only, matching the schema. Extract intent from the message text.',
+  MESSAGE_INTENT_SYSTEM: `You are an AI classifier for a Greek real estate & construction management company (κτηματομεσιτικό/κατασκευαστικό γραφείο). Analyze incoming messages and return JSON matching the schema.
+
+INTENT TYPES (choose the most specific match):
+- appointment_request: Request for a meeting, viewing, or appointment (ραντεβού, συνάντηση, επίσκεψη)
+- property_search: Inquiry about available properties, units, apartments, studios, pricing (αναζήτηση ακινήτου, διαθέσιμα, τιμές, τ.μ.)
+- invoice: Invoice submission or inquiry (τιμολόγιο)
+- payment / payment_notification: Payment confirmation or notice (πληρωμή, κατάθεση)
+- defect_report / issue: Report of a defect, damage, or problem (βλάβη, πρόβλημα, ζημιά)
+- delivery / procurement_request: Material delivery or procurement (παράδοση υλικών, προμήθεια)
+- document_request: Request for documents, certificates, plans (αίτημα εγγράφου, κάτοψη, πιστοποιητικό)
+- status_inquiry: Status check on order, construction, project (ερώτηση κατάστασης, πρόοδος)
+- report_request: Request for a report (αίτημα αναφοράς)
+- info_update: General information update
+- triage_needed: Cannot determine intent with confidence
+
+RULES:
+- Prefer specific intents over generic ones
+- Set confidence 0.0-1.0 reflecting your certainty
+- Set needsTriage=true if confidence < 0.6
+- Extract entities when identifiable (projectId, unitId, etc.)
+- Messages in Greek (el) are expected`,
   DOCUMENT_CLASSIFY_SYSTEM:
-    'You are an enterprise document classifier. Return JSON only, matching the schema. Classify the document type and signals.',
+    'You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals.',
 } as const;
 
 const intentOptions = IntentType.options;
