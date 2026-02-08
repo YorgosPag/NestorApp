@@ -410,12 +410,10 @@ async function syncUserProfileToFirestore(
 /**
  * Ensure dev-admin user document exists in Firestore.
  * Uses server-side API endpoint (Admin SDK) to bypass Firestore rules.
- * In dev mode, there's no real Firebase Auth session, so client-side
- * Firestore writes fail with "Missing or insufficient permissions".
+ * Runs in ALL environments because legacy tasks have assignedTo: "dev-admin".
+ * Idempotent: if document already exists, does nothing.
  */
 async function ensureDevUserProfile(): Promise<void> {
-  if (process.env.NODE_ENV !== 'development') return;
-
   try {
     const response = await fetch('/api/admin/ensure-user-profile', {
       method: 'POST',
