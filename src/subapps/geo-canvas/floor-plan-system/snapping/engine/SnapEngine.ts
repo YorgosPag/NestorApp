@@ -12,7 +12,7 @@
  * - Provide snap results
  */
 
-import type { ParserResult } from '@/subapps/dxf-viewer/types/parser.types';
+import type { ParserResult } from '../../types';
 import { SnapPoint, SnapResult, SnapSettings, SnapPointCollection, SnapMode } from '../types';
 import { extractEndpoints, deduplicateSnapPoints } from './endpoint-detector';
 import { findNearestSnapPoint } from './snap-distance';

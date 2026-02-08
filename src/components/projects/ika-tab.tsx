@@ -14,7 +14,7 @@
  *
  * Receives `project` prop from UniversalTabsRenderer.
  *
- * @enterprise ADR-089 — IKA/EFKA Labor Compliance System
+ * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
 import React from 'react';
@@ -62,7 +62,7 @@ export function IkaTab({ project, data }: IkaTabProps) {
       id: 'timesheet',
       label: t('ika.timesheet'),
       icon: Clock,
-      content: <TimesheetTabContent />,
+      content: <TimesheetTabContent projectId={projectId} />,
     },
     {
       id: 'stamps-calculation',

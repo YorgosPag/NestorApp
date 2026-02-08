@@ -18,9 +18,10 @@
 import React, { memo } from 'react';
 import { Map } from 'react-map-gl/maplibre';
 import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
-import type { GeoControlPoint } from '../types';
-import type { UniversalPolygon } from '@geo-alert/core';
+import type { FloorPlanControlPoint } from '../floor-plan-system/types';
+import type { UniversalPolygon } from '@geo-alert/core/polygon-system/types';
 import type { ViewState } from '../hooks/map/useMapState';
+import type { TransformState, MapInstance } from '../hooks/map/useMapInteractions';
 import type { MapStyleType } from '../services/map/MapStyleManager';
 
 // Component imports
@@ -32,6 +33,8 @@ import {
   TransformationPreviewLayer,
   PolygonSystemLayers
 } from './map-layers';
+import type { CurrentDrawing } from './map-layers/LiveDrawingPreview';
+import type { GeoJSONFeatureCollection } from '../types';
 
 // Style imports
 import { interactiveMapStyles } from './InteractiveMap.styles';
@@ -41,34 +44,21 @@ import { interactiveMapStyles } from './InteractiveMap.styles';
 // ============================================================================
 
 // 🏢 ENTERPRISE: GeoJSON types for export function
-interface GeoJSONFeatureCollection {
-  type: 'FeatureCollection';
-  features: GeoJSONFeature[];
-}
-
-interface GeoJSONFeature {
-  type: 'Feature';
-  geometry: {
-    type: string;
-    coordinates: number[][] | number[][][] | number[][][][];
-  };
-  properties?: Record<string, unknown>;
-}
 
 export interface InteractiveMapPresentationProps {
   // Map Configuration
-  mapStyle: string;
+  mapStyle: string | object;
   viewState: ViewState;
   onViewStateChange: (viewState: ViewState) => void;
-  onLoad: () => void;
+  onLoad: (event: { target: MapInstance }) => void;
 
   // Event Handlers
   onClick: (event: MapLayerMouseEvent) => void;
   onMouseMove: (event: MapLayerMouseEvent) => void;
 
   // Layer Data
-  controlPoints: GeoControlPoint[];
-  currentDrawing: Array<{ x: number; y: number }>;
+  controlPoints: FloorPlanControlPoint[];
+  currentDrawing: CurrentDrawing | null;
   polygons: UniversalPolygon[];
 
   // Visibility Flags
@@ -87,17 +77,7 @@ export interface InteractiveMapPresentationProps {
   accuracyVisualizationMode: 'circles' | 'heatmap' | 'zones';
 
   // Transform State
-  transformState: {
-    isCalibrated: boolean;
-    controlPoints: Array<{
-      id: string;
-      dxf: { x: number; y: number };
-      geo: { lng: number; lat: number };
-      accuracy: number;
-    }>;
-    transformMatrix?: number[][];
-    calibrationAccuracy?: number;
-  };
+  transformState: TransformState;
 
   // Export Functions
   // 🏢 ENTERPRISE: Proper return type instead of any
@@ -199,8 +179,8 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         {/* ================================================================ */}
         {showPolygonLines && (
           <PolygonLinesLayer
-            currentDrawing={currentDrawing}
-            isDrawing={isDrawing}
+            controlPoints={controlPoints}
+            showControlPoints={showPolygonLines}
             isPolygonComplete={localIsPolygonComplete}
             mapLoaded={true}
           />
@@ -212,10 +192,9 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         {showCurrentDrawing && (
           <LiveDrawingPreview
             currentDrawing={currentDrawing}
-            isDrawing={isDrawing}
-            isPolygonComplete={localIsPolygonComplete}
+            enablePolygonDrawing={enablePolygonDrawing}
+            systemIsDrawing={isDrawing}
             hoveredCoordinate={hoveredCoordinate}
-            mapLoaded={true}
           />
         )}
 
@@ -300,3 +279,4 @@ InteractiveMapPresentation.displayName = 'InteractiveMapPresentation';
  * Receives ALL data and handlers από το InteractiveMapContainer.
  * Zero business logic - μόνο UI rendering responsibility.
  */
+

@@ -18,41 +18,26 @@
 import * as React from 'react';
 const { useRef, useEffect, useState, useCallback } = React;
 import type { Map as MaplibreMapType } from 'maplibre-gl';
-import type { GeoCoordinate, GeoControlPoint } from '../types';
+import type { GeoCoordinate } from '../types';
+import type { FloorPlanControlPoint } from '../floor-plan-system/types';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
 
-// ✅ ENTERPRISE: GeoJSON types for administrative boundaries
-type GeoJSONFeature = {
-  type: 'Feature';
-  geometry: {
-    type: string;
-    coordinates: number[][][] | number[][];
-  };
-  properties: Record<string, unknown>;
-};
+// ? ENTERPRISE: GeoJSON types for administrative boundaries
+type GeoJSONFeature = GeoJSON.Feature;
+type GeoJSONFeatureCollection = GeoJSON.FeatureCollection;
 
-type GeoJSONFeatureCollection = {
-  type: 'FeatureCollection';
-  features: GeoJSONFeature[];
-};
 // ✅ ENTERPRISE: Import centralized PolygonType from core
-import type { PolygonType } from '@geo-alert/core/polygon-system/types';
+import type { PolygonType, UniversalPolygon } from '@geo-alert/core/polygon-system/types';
 
 // Local polygon extensions for InteractiveMap compatibility
-type LocalPolygonType = PolygonType | 'freehand' | 'complex';
-type UniversalPolygon = {
-  id: string;
-  type: LocalPolygonType;
-  points: Array<[number, number]>;
-  settings: Record<string, unknown>;
-};
+type LocalPolygonType = PolygonType | 'complex';
 
 // Enterprise Services & Hooks
 import { elevationService } from '../services/map/ElevationService';
 import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleManager';
-import { useMapInteractions, type TransformState } from '../hooks/map/useMapInteractions';
+import { useMapInteractions, type TransformState, type DrawingData } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
 // 🏢 ENTERPRISE: Import maplibre types for proper map reference typing
 import type { Map as MaplibreMap } from 'maplibre-gl';
@@ -108,6 +93,8 @@ export interface InteractiveMapContainerProps {
       fillOpacity?: number;
     };
   }[];
+  showStatusBar?: boolean;
+  showMapControls?: boolean;
   /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
   children?: React.ReactNode;
 }
@@ -186,7 +173,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   // ========================================================================
 
   // Legacy polygon compatibility
-  const [completedPolygon, setCompletedPolygon] = useState<GeoControlPoint[] | null>(null);
+  const [completedPolygon, setCompletedPolygon] = useState<FloorPlanControlPoint[] | null>(null);
   const isPolygonComplete = mapState.localIsPolygonComplete || systemIsPolygonComplete;
 
   // Freehand drawing state
@@ -197,8 +184,24 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   const isInFreehandMode = useCallback(() => {
     const currentDrawing = getCurrentDrawing();
     // Enterprise type checking για freehand mode
-    return systemIsDrawing && currentDrawing && (currentDrawing.type as LocalPolygonType) === 'freehand';
+    return Boolean(systemIsDrawing && currentDrawing && (currentDrawing.type as LocalPolygonType) === 'freehand');
   }, [systemIsDrawing, getCurrentDrawing]);
+
+  const getDrawingData = useCallback((): DrawingData | null => {
+    const currentDrawing = getCurrentDrawing();
+    if (!currentDrawing) return null;
+
+    return {
+      points: currentDrawing.points.map((point) => ({
+        lng: point.x,
+        lat: point.y
+      })),
+      config: {
+        pointMode: currentDrawing.config?.pointMode,
+        freehandMode: currentDrawing.type === 'freehand'
+      }
+    };
+  }, [getCurrentDrawing]);
 
   // ========================================================================
   // 🎯 BUSINESS LOGIC: MAP INTERACTION HANDLERS
@@ -213,7 +216,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     isPolygonComplete,
     systemIsDrawing,
     addPoint,
-    getCurrentDrawing,
+    getCurrentDrawing: getDrawingData,
     finishDrawing,
     isInFreehandMode,
     isDraggingFreehand,
@@ -234,16 +237,16 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
       const result = await elevationService.getElevation(lng, lat);
 
       if (result !== null) {
-        // Enterprise type-safe coordinate update
-        mapState.setHoveredCoordinate((prev: GeoCoordinate | null) => {
-          if (!prev) return prev;
+        const previous = mapState.hoveredCoordinate;
+        if (!previous) return;
 
-          const isSameCoordinate =
-            Math.abs(prev.lat - lat) < 0.0001 &&
-            Math.abs(prev.lng - lng) < 0.0001;
+        const isSameCoordinate =
+          Math.abs(previous.lat - lat) < 0.0001 &&
+          Math.abs(previous.lng - lng) < 0.0001;
 
-          return isSameCoordinate ? { ...prev, alt: result } : prev;
-        });
+        if (isSameCoordinate) {
+          mapState.setHoveredCoordinate({ ...previous, alt: result });
+        }
       }
     } catch (error) {
       console.warn('Elevation fetch error:', error);
@@ -252,10 +255,12 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
   // Throttled elevation fetching
   useEffect(() => {
-    if (!mapState.hoveredCoordinate || mapState.hoveredCoordinate.alt !== undefined) return;
+    const hovered = mapState.hoveredCoordinate;
+    if (!hovered || hovered.alt !== undefined) return;
 
+    const { lng, lat } = hovered;
     const timeoutId = setTimeout(() => {
-      fetchElevationForCoordinate(mapState.hoveredCoordinate.lng, mapState.hoveredCoordinate.lat);
+      fetchElevationForCoordinate(lng, lat);
     }, 500);
 
     return () => clearTimeout(timeoutId);
@@ -368,6 +373,12 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   // 🎯 PRESENTATION LAYER DELEGATION
   // ========================================================================
 
+  const currentDrawingPreview = (() => {
+    const drawing = getCurrentDrawing();
+    return drawing ? { points: drawing.points, config: drawing.config } : null;
+  })();
+ 
+
   return (
     <div className={`relative ${className}`}>
       <InteractiveMapPresentation
@@ -393,7 +404,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
         // Layer Data
         controlPoints={transformState.controlPoints}
-        currentDrawing={getCurrentDrawing()?.points || []}
+        currentDrawing={currentDrawingPreview}
         polygons={polygons}
 
         // Visibility Flags
@@ -505,3 +516,5 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
  * This component implements the **Container Pattern** στο enterprise architecture.
  * Handles ALL business logic και delegates presentation σε InteractiveMapPresentation.
  */
+
+

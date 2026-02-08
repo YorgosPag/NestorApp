@@ -175,6 +175,9 @@ export class AWSProvider {
    */
   public getAWSFeatures(): CloudFeatures {
     return {
+      compute: true,
+      storage: true,
+      networking: true,
       autoScaling: true,
       loadBalancing: true,
       cdn: true,

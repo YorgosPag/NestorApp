@@ -338,8 +338,8 @@ describe('AccuracyValidator', () => {
       expect(report.issues).toBeDefined();
       expect(report.standards).toBeDefined();
 
-      expect(report.summary.overall).toBeOneOf(['pass', 'warning', 'fail']);
-      expect(report.summary.grade).toBeOneOf(['excellent', 'good', 'acceptable', 'poor']);
+      expect(['pass', 'warning', 'fail']).toContain(report.summary.overall);
+      expect(['excellent', 'good', 'acceptable', 'poor']).toContain(report.summary.grade);
       expect(report.summary.recommendation).toBeDefined();
     });
 

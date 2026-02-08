@@ -632,12 +632,15 @@ export class GeoAlertPerformanceProfiler {
     };
   }
 
-  private detectEnvironment(): 'development' | 'production' | 'test' {
+  private detectEnvironment(): 'development' | 'production' | 'testing' {
     if (typeof process !== 'undefined' && process.env) {
       // ✅ ENTERPRISE: Type guard for NODE_ENV
       const env = process.env.NODE_ENV;
-      if (env === 'development' || env === 'production' || env === 'test') {
+      if (env === 'development' || env === 'production') {
         return env;
+      }
+      if (env === 'test') {
+        return 'testing';
       }
       return 'development';
     }

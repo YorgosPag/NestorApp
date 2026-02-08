@@ -12,6 +12,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CrmTask, FirestoreishTimestamp } from '@/types/crm';
 import { getTaskById } from '@/services/tasks.service';
 import { PageContainer, ListContainer } from '@/core/containers';
@@ -21,6 +24,8 @@ import { AdvancedFiltersPanel, defaultTaskFilters, taskFiltersConfig, type TaskF
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
+import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
+import { useContactName } from '@/components/contacts/relationships/hooks/useContactName';
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
@@ -82,6 +87,33 @@ export default function TaskDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
+
+  // Resolve contact name from Firestore ID
+  const { contactName, loading: contactNameLoading } = useContactName(task?.contactId ?? undefined);
+
+  // Resolve assignedTo display name from Firestore users collection
+  const [assignedToName, setAssignedToName] = useState<string>('');
+  useEffect(() => {
+    if (!task?.assignedTo) return;
+
+    const resolveUserName = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, task.assignedTo));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setAssignedToName(
+            (data.displayName as string) || (data.email as string) || task.assignedTo
+          );
+        } else {
+          setAssignedToName(task.assignedTo);
+        }
+      } catch {
+        setAssignedToName(task.assignedTo);
+      }
+    };
+
+    resolveUserName();
+  }, [task?.assignedTo]);
   const [showFilters, setShowFilters] = useState(false);
 
   const formatTaskDate = useCallback((value: FirestoreishTimestamp | null | undefined) => {
@@ -175,12 +207,12 @@ export default function TaskDetailPage() {
       },
       {
         title: t('detail.labels.assignedTo'),
-        value: task.assignedTo,
+        value: assignedToName || task.assignedTo,
         icon: User,
         color: 'purple'
       }
     ];
-  }, [formatTaskDate, priorityLabel, statusLabel, t, tFilters, task]);
+  }, [assignedToName, formatTaskDate, priorityLabel, statusLabel, t, tFilters, task]);
 
   if (loading) {
     return (
@@ -299,7 +331,9 @@ export default function TaskDetailPage() {
                   <Badge variant="outline">{typeLabel}</Badge>
                 </header>
                 {task.description && (
-                  <p className={`${typography.body.sm} ${colors.text.secondary}`}>{task.description}</p>
+                  <div className={`${typography.body.sm} ${colors.text.secondary}`}>
+                    <SafeHTMLContent html={task.description} />
+                  </div>
                 )}
               </section>
 
@@ -312,7 +346,9 @@ export default function TaskDetailPage() {
                         <User className={`${iconSizes.sm} ${colors.text.muted}`} />
                         <div>
                           <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.contactId')}</dt>
-                          <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.contactId}</dd>
+                          <dd className={`${typography.body.sm} ${colors.text.primary}`}>
+                            {contactNameLoading ? '...' : (contactName || task.contactId)}
+                          </dd>
                         </div>
                       </div>
                     )}
@@ -345,7 +381,7 @@ export default function TaskDetailPage() {
                 <dl className={spacing.spaceBetween.md}>
                   <div>
                     <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.assignedTo')}</dt>
-                    <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.assignedTo}</dd>
+                    <dd className={`${typography.body.sm} ${colors.text.primary}`}>{assignedToName || task.assignedTo}</dd>
                   </div>
                   <div className={layout.flexCenterGap2}>
                     <Calendar className={`${iconSizes.sm} ${colors.text.muted}`} />

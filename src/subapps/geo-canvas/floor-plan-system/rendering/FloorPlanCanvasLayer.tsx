@@ -409,7 +409,7 @@ export function FloorPlanCanvasLayer({
     });
 
     // Calculate snap in DXF local coordinates
-    snapEngine.calculateSnap(localX, localY, radiusLocal);
+    snapEngine.calculateSnap(localX, localY);
   }, [snapEngine, map, floorPlan, transformMatrix]);
 
   /**
@@ -475,14 +475,14 @@ export function FloorPlanCanvasLayer({
     <div
       ref={containerRef}
       className={`floor-plan-canvas-layer ${className}`}
-      style={canvasUtilities.geoCanvas.floorPlanCanvasLayer.container(disableInteractions, !!onClick, zIndex)}
+      style={canvasUtilities.geoInteractive.floorPlanCanvasLayer.container(disableInteractions, !!onClick, zIndex)}
     >
       <canvas
         ref={canvasRef}
         onClick={onClick ? handleCanvasClick : undefined}
         onMouseMove={snapEngine ? handleMouseMove : undefined}
         style={{
-          ...canvasUtilities.geoCanvas.floorPlanCanvasLayer.canvas,
+          ...canvasUtilities.geoInteractive.floorPlanCanvasLayer.canvas,
           cursor: onClick && !disableInteractions ? 'crosshair' : 'default'
         }}
       />

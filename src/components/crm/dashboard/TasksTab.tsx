@@ -38,6 +38,7 @@ import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-ex
 import { HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Auth hook for race condition prevention
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
 
 type TimeframeFilter = 'all' | 'overdue' | 'today' | 'tomorrow' | 'week';
 
@@ -352,7 +353,7 @@ export function TasksTab() {
                           {leadName && <span className="flex items-center gap-1"><User className={iconSizes.xs} />{leadName}</span>}
                           {meta.location && <span className="flex items-center gap-1"><MapPin className={iconSizes.xs} />{meta.location}</span>}
                         </div>
-                        {task.description && <p className={`${colors.text.primary} mt-2`}>{task.description}</p>}
+                        {task.description && <div className={`${colors.text.primary} mt-2`}><SafeHTMLContent html={task.description} /></div>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">

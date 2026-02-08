@@ -13,7 +13,7 @@
  *
  * Data stored as `efkaDeclaration` field on the project document.
  *
- * @enterprise ADR-089 — IKA/EFKA Labor Compliance System
+ * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
 import React, { useState, useCallback } from 'react';

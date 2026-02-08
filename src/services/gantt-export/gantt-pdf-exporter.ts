@@ -28,6 +28,9 @@ async function registerGreekFont(pdf: jsPDF): Promise<void> {
   // "Identity-H" encoding is CRITICAL for Unicode/Greek support
   // Without it, jsPDF defaults to WinAnsiEncoding (Latin-only)
   pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
+  // Register same TTF as 'bold' — autoTable uses fontStyle:'bold' for header cells.
+  // Without this, header cells fall back to Helvetica (no Identity-H) → garbled Greek.
+  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'bold', undefined, 'Identity-H');
   pdf.setFont('Roboto', 'normal');
 }
 
@@ -94,7 +97,12 @@ export async function exportGanttToPDF(options: GanttExportOptions): Promise<voi
     ]),
     startY: 15,
     styles: { fontSize: 9, font: 'Roboto' },
-    headStyles: { fillColor: [59, 130, 246], font: 'Roboto' },
+    headStyles: { fillColor: [59, 130, 246] },
+    // Force Roboto on every cell (including headers) — autoTable v5
+    // does not always inherit styles.font for header cells
+    didParseCell: (data) => {
+      data.cell.styles.font = 'Roboto';
+    },
   });
 
   // 7. Trigger browser download

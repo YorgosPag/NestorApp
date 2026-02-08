@@ -332,7 +332,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           showGeocodingStatus={true}
           enableClickToFocus={true}
           onMarkerClick={handleMarkerClick}
-          height={400}
+          heightPreset="viewerStandard"
           className="rounded-lg border shadow-sm"
         />
       )}

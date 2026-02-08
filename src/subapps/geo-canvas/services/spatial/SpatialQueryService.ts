@@ -19,24 +19,19 @@ import { administrativeBoundaryService } from '../administrative-boundaries/Admi
 // SPATIAL UTILITIES
 // ============================================================================
 
-type SpatialPosition = [number, number] | [number, number, number];
 type SpatialCoordinates =
-  | SpatialPosition
-  | SpatialPosition[]
-  | SpatialPosition[][]
-  | SpatialPosition[][][];
+  | GeoJSON.Position
+  | GeoJSON.Position[]
+  | GeoJSON.Position[][]
+  | GeoJSON.Position[][][];
 
-type SpatialGeometry = {
-  type: string;
-  coordinates?: SpatialCoordinates;
-  geometries?: SpatialGeometry[];
-};
+type SpatialGeometry = GeoJSON.Geometry;
 
 
 type FeatureCollectionLike = {
   type: 'FeatureCollection';
   features: Array<{
-    geometry: SpatialGeometry | null;
+    geometry: GeoJSON.Geometry | null;
     properties: Record<string, unknown> | null;
   }>;
 };

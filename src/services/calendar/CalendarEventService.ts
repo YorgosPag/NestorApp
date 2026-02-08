@@ -62,11 +62,21 @@ export async function getCalendarEvents(
   const tasks = getTasksRepository();
   const appointments = getAppointmentsRepository();
 
-  // Fetch in parallel
-  const [taskList, appointmentList] = await Promise.all([
+  // Fetch in parallel — graceful degradation: if one source fails, show the other
+  const [taskResult, appointmentResult] = await Promise.allSettled([
     userId ? tasks.getByUser(userId) : tasks.getAll(),
     appointments.getByDateRange(start, end),
   ]);
+
+  const taskList = taskResult.status === 'fulfilled' ? taskResult.value : [];
+  const appointmentList = appointmentResult.status === 'fulfilled' ? appointmentResult.value : [];
+
+  if (taskResult.status === 'rejected') {
+    console.warn('[CalendarEventService] Tasks fetch failed:', taskResult.reason);
+  }
+  if (appointmentResult.status === 'rejected') {
+    console.warn('[CalendarEventService] Appointments fetch failed:', appointmentResult.reason);
+  }
 
   // Map to CalendarEvent, filtering out entries without dates
   const taskEvents = taskList

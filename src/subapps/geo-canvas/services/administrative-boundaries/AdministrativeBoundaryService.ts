@@ -7,40 +7,11 @@
  * @module services/administrative-boundaries/AdministrativeBoundaryService
  */
 
-// ✅ ENTERPRISE FIX: Define GeoJSON types locally to avoid module dependency
+// ? ENTERPRISE FIX: Use shared GeoJSON types for compatibility
+type Geometry = GeoJSON.Geometry;
+type Feature = GeoJSON.Feature;
+type FeatureCollection = GeoJSON.FeatureCollection;
 
-/** GeoJSON coordinate types - supports all geometry types */
-type GeoJSONPosition = [number, number] | [number, number, number];
-type GeoJSONCoordinates =
-  | GeoJSONPosition                           // Point
-  | GeoJSONPosition[]                         // LineString, MultiPoint
-  | GeoJSONPosition[][]                       // Polygon, MultiLineString
-  | GeoJSONPosition[][][];                    // MultiPolygon
-
-interface Geometry {
-  type: string;
-  coordinates?: GeoJSONCoordinates;
-}
-
-interface Feature {
-  type: 'Feature';
-  properties: Record<string, unknown> | null;
-  geometry: Geometry | null;
-}
-
-/** Categories for search suggestions */
-interface SuggestionCategories {
-  history: string[];
-  municipalities: string[];
-  regions: string[];
-  postalCodes: string[];
-  contextual: string[];
-}
-
-interface FeatureCollection {
-  type: 'FeatureCollection';
-  features: Feature[];
-}
 import { overpassApiService } from './OverpassApiService';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
@@ -122,17 +93,22 @@ export class AdministrativeBoundaryService {
         const boundary = await this.getMunicipalityBoundary(municipalityName);
 
         if (boundary) {
+          const properties = (boundary.properties ?? null) as Record<string, unknown> | null;
+          const boundaryId = this.getIdProperty(properties, 'id') ?? 'unknown';
+          const boundaryName = this.getStringProperty(properties, 'name') ?? municipalityName;
+          const boundaryRegion = this.getStringProperty(properties, 'region') ?? 'Unknown';
+          const boundaryNameEn = this.getStringProperty(properties, 'nameEn');
           results = [{
-            id: boundary.properties?.id || 'unknown',
-            name: boundary.properties?.name || municipalityName,
-            nameEn: boundary.properties?.nameEn,
+            id: boundaryId,
+            name: boundaryName,
+            nameEn: boundaryNameEn,
             adminLevel: GreekAdminLevel.MUNICIPALITY,
             hierarchy: {
               country: 'Ελλάδα',
-              region: boundary.properties?.region || 'Unknown',
-              municipality: boundary.properties?.name || municipalityName
+              region: boundaryRegion,
+              municipality: boundaryName
             },
-            geometry: boundary.geometry,
+            geometry: boundary.geometry ?? undefined,
             confidence: 0.95
           }];
         }
@@ -144,16 +120,20 @@ export class AdministrativeBoundaryService {
         const boundary = await this.getRegionBoundary(regionName);
 
         if (boundary) {
+          const properties = (boundary.properties ?? null) as Record<string, unknown> | null;
+          const boundaryId = this.getIdProperty(properties, 'id') ?? 'unknown';
+          const boundaryName = this.getStringProperty(properties, 'name') ?? regionName;
+          const boundaryNameEn = this.getStringProperty(properties, 'nameEn');
           results = [{
-            id: boundary.properties?.id || 'unknown',
-            name: boundary.properties?.name || regionName,
-            nameEn: boundary.properties?.nameEn,
+            id: boundaryId,
+            name: boundaryName,
+            nameEn: boundaryNameEn,
             adminLevel: GreekAdminLevel.REGION,
             hierarchy: {
               country: 'Ελλάδα',
-              region: boundary.properties?.name || regionName
+              region: boundaryName
             },
-            geometry: boundary.geometry,
+            geometry: boundary.geometry ?? undefined,
             confidence: 0.95
           }];
         }
@@ -1642,3 +1622,4 @@ export class AdministrativeBoundaryService {
 export const administrativeBoundaryService = new AdministrativeBoundaryService();
 
 export default administrativeBoundaryService;
+

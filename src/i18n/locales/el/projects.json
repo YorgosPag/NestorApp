@@ -419,6 +419,84 @@
       "saved": "Αποθηκεύτηκε",
       "notes": "Σημειώσεις",
       "notesPlaceholder": "Προσθέστε σημειώσεις σχετικά με την αναγγελία..."
+    },
+    "timesheetTab": {
+      "title": "Παρουσιολόγιο Εργοταξίου",
+      "description": "Καταγραφή & παρακολούθηση παρουσίας εργαζομένων",
+      "noProjectId": "Δεν βρέθηκε αναγνωριστικό έργου",
+      "noWorkers": "Δεν υπάρχουν εργαζόμενοι σε αυτό το έργο",
+      "noWorkersHint": "Προσθέστε εργαζόμενους από το tab «Εργατοτεχνίτες»",
+      "noEvents": "Δεν υπάρχουν καταγραφές για αυτή την ημέρα",
+      "addEvent": "Νέα Καταγραφή",
+      "today": "Σήμερα",
+      "viewMode": {
+        "daily": "Ημέρα",
+        "weekly": "Εβδομάδα",
+        "monthly": "Μήνας"
+      },
+      "dashboard": {
+        "present": "Παρόντες",
+        "absent": "Απόντες",
+        "offSite": "Εκτός Εργοταξίου",
+        "hoursToday": "Ώρες Σήμερα",
+        "of": "από"
+      },
+      "columns": {
+        "worker": "Εργαζόμενος",
+        "status": "Κατάσταση",
+        "checkIn": "Προσέλευση",
+        "checkOut": "Αποχώρηση",
+        "hours": "Ώρες",
+        "gaps": "Κενά",
+        "anomalies": "Ανωμαλίες",
+        "actions": "Ενέργειες"
+      },
+      "status": {
+        "present": "Παρών",
+        "absent": "Απών",
+        "offSite": "Εκτός",
+        "onBreak": "Διάλειμμα",
+        "checkedOut": "Αποχώρησε"
+      },
+      "eventTypes": {
+        "check_in": "Προσέλευση",
+        "check_out": "Αποχώρηση",
+        "break_start": "Έναρξη Διαλείμματος",
+        "break_end": "Λήξη Διαλείμματος",
+        "left_site": "Αποχώρηση από Εργοτάξιο",
+        "returned": "Επιστροφή",
+        "exit_permission": "Άδεια Εξόδου"
+      },
+      "methods": {
+        "manual": "Χειρόγραφο",
+        "qr": "QR Code",
+        "geofence": "Geofencing",
+        "nfc": "NFC"
+      },
+      "dialog": {
+        "title": "Νέα Καταγραφή Παρουσίας",
+        "selectWorker": "Επιλέξτε Εργαζόμενο",
+        "selectEventType": "Τύπος Καταγραφής",
+        "notes": "Σημειώσεις (προαιρετικά)",
+        "notesPlaceholder": "π.χ. Πήγε φαρμακείο",
+        "submit": "Καταγραφή",
+        "submitting": "Καταγράφεται...",
+        "success": "Η καταγραφή αποθηκεύτηκε",
+        "error": "Σφάλμα κατά την αποθήκευση"
+      },
+      "crews": {
+        "allCrews": "Όλα τα Συνεργεία",
+        "independent": "Ανεξάρτητοι Εργάτες",
+        "presentOf": "{{present}} από {{total}}"
+      },
+      "anomalies": {
+        "missingCheckout": "Λείπει αποχώρηση",
+        "missingCheckin": "Λείπει προσέλευση",
+        "unauthorizedAbsence": "Μη εγκεκριμένη απουσία",
+        "overtimeUndeclared": "Υπερωρία χωρίς δήλωση",
+        "longBreak": "Παρατεταμένο διάλειμμα",
+        "lateArrival": "Καθυστερημένη άφιξη"
+      }
     }
   },
   "parking": {

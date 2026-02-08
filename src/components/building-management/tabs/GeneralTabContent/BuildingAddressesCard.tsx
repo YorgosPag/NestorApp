@@ -479,7 +479,7 @@ export function BuildingAddressesCard({
                     showGeocodingStatus
                     enableClickToFocus
                     onMarkerClick={handleMarkerClick}
-                    height={300}
+                    heightPreset="viewerCompact"
                     className="rounded-lg border shadow-sm"
                   />
                 )}
@@ -501,7 +501,7 @@ export function BuildingAddressesCard({
                 showGeocodingStatus
                 enableClickToFocus
                 onMarkerClick={handleMarkerClick}
-                height={300}
+                heightPreset="viewerCompact"
                 className="rounded-lg border shadow-sm"
               />
             )}

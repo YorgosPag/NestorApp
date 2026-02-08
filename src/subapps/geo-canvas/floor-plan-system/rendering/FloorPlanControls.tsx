@@ -67,7 +67,7 @@ export function FloorPlanControls({
   return (
     <div
       className={`floor-plan-controls ${className}`}
-      style={canvasUtilities.geoCanvas.floorPlanControls.container}
+      style={canvasUtilities.geoInteractive.floorPlanControls.container}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">

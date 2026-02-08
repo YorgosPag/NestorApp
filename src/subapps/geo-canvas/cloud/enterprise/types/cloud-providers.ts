@@ -65,6 +65,9 @@ export interface CloudEndpoints {
  * Cloud features
  */
 export interface CloudFeatures {
+  compute: boolean;
+  storage: boolean;
+  networking: boolean;
   autoScaling: boolean;
   loadBalancing: boolean;
   cdn: boolean;

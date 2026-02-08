@@ -101,24 +101,28 @@ export class GCPProvider {
     if (this.config.credentials.serviceAccountKey) {
       const key = this.config.credentials.serviceAccountKey;
 
-      if (!key.type || key.type !== 'service_account') {
-        errors.push('GCP Service Account Key must be of type "service_account"');
-      }
+      if (typeof key === 'string') {
+        warnings.push('GCP Service Account Key provided as string; unable to validate structure');
+      } else {
+        if (!key.type || key.type !== 'service_account') {
+          errors.push('GCP Service Account Key must be of type "service_account"');
+        }
 
-      if (!key.project_id) {
-        errors.push('GCP Service Account Key must include project_id');
-      }
+        if (!key.project_id) {
+          errors.push('GCP Service Account Key must include project_id');
+        }
 
-      if (!key.private_key) {
-        errors.push('GCP Service Account Key must include private_key');
-      }
+        if (!key.private_key) {
+          errors.push('GCP Service Account Key must include private_key');
+        }
 
-      if (!key.client_email) {
-        errors.push('GCP Service Account Key must include client_email');
-      }
+        if (!key.client_email) {
+          errors.push('GCP Service Account Key must include client_email');
+        }
 
-      if (key.project_id !== this.config.credentials.projectId) {
-        warnings.push('Project ID in credentials does not match Service Account Key project_id');
+        if (key.project_id !== this.config.credentials.projectId) {
+          warnings.push('Project ID in credentials does not match Service Account Key project_id');
+        }
       }
     }
 
@@ -195,6 +199,9 @@ export class GCPProvider {
    */
   public getGCPFeatures(): CloudFeatures {
     return {
+      compute: true,
+      storage: true,
+      networking: true,
       autoScaling: true,
       loadBalancing: true,
       cdn: true,

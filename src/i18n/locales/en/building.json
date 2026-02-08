@@ -917,12 +917,32 @@
         "daysRemaining": "Days Remaining"
       },
       "milestones": {
-        "title": "Detailed Milestones"
+        "title": "Detailed Milestones",
+        "projectStart": "Project Start",
+        "projectStartDesc": "Construction begins and first works on site",
+        "foundation": "Foundation",
+        "foundationDesc": "Excavation, concrete foundation and waterproofing",
+        "structure": "Structure",
+        "structureDesc": "Frame construction, slabs and columns",
+        "walls": "Masonry & Plastering",
+        "wallsDesc": "External and internal masonry, plaster works",
+        "systems": "M&E Installations",
+        "systemsDesc": "Electrical, plumbing, heating, air conditioning",
+        "finishing": "Finishing Works",
+        "finishingDesc": "Flooring, painting, windows, sanitary ware",
+        "delivery": "Delivery",
+        "deliveryDesc": "Final inspection and building handover"
       },
       "milestone": {
         "progressLabel": "Milestone progress",
         "nextSteps": "Next steps:",
         "completedAt": "Completed on {date}"
+      },
+      "milestoneExport": {
+        "export": "Export",
+        "pdf": "PDF (Report)",
+        "excel": "Excel (Data)",
+        "exporting": "Exporting..."
       },
       "status": {
         "completed": "Completed",

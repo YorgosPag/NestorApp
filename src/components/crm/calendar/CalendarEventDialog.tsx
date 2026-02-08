@@ -21,6 +21,7 @@ import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -31,6 +32,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 
 import type { CalendarEvent } from '@/types/calendar-event';
+import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
 
 // ============================================================================
@@ -69,6 +71,9 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
             <Calendar className={iconSizes.md} />
             {t('calendarPage.dialog.viewTitle')}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t('calendarPage.dialog.viewTitle')}
+          </DialogDescription>
         </DialogHeader>
 
         <article className={sp.spaceBetween.md}>
@@ -95,11 +100,13 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
             </time>
           </section>
 
-          {/* Description */}
+          {/* Description — uses centralized SafeHTMLContent (ADR-072) for XSS-safe rendering with clickable links */}
           {event.description && (
             <section className={`flex items-start ${sp.gap.sm} ${typo.body.sm}`}>
               <FileText className={`${iconSizes.sm} shrink-0 ${sp.margin.top.xs} text-muted-foreground`} />
-              <p>{event.description}</p>
+              <div className="min-w-0 flex-1">
+                <SafeHTMLContent html={event.description} />
+              </div>
             </section>
           )}
 

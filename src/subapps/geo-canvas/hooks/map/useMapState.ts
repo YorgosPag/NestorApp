@@ -108,8 +108,13 @@ export const useMapState = (config: MapStateConfig = {}): MapStateReturn => {
   // 🎯 CORE MAP STATE
   // ========================================================================
 
+  const normalizedInitialViewState: ViewState = {
+    ...initialViewState,
+    bearing: initialViewState.bearing ?? 0,
+    pitch: initialViewState.pitch ?? 0
+  };
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [viewState, setViewState] = useState<ViewState>(initialViewState);
+  const [viewState, setViewState] = useState<ViewState>(normalizedInitialViewState);
   const [currentMapStyle, setCurrentMapStyle] = useState<MapStyleType>(initialStyle);
 
   // ========================================================================

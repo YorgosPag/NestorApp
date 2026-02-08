@@ -917,12 +917,32 @@
         "daysRemaining": "Ημέρες απομένουν"
       },
       "milestones": {
-        "title": "Λεπτομερή Milestones"
+        "title": "Λεπτομερή Milestones",
+        "projectStart": "Εκκίνηση Έργου",
+        "projectStartDesc": "Ξεκινά η κατασκευή και οι πρώτες εργασίες στο εργοτάξιο",
+        "foundation": "Θεμελίωση",
+        "foundationDesc": "Εκσκαφή, σκυροδέτηση θεμελίων και στεγανοποίηση",
+        "structure": "Φέρων Οργανισμός",
+        "structureDesc": "Κατασκευή σκελετού, πλάκες και κολώνες",
+        "walls": "Τοιχοποιία & Επιχρίσματα",
+        "wallsDesc": "Εξωτερική και εσωτερική τοιχοποιία, σοβάδες",
+        "systems": "Η/Μ Εγκαταστάσεις",
+        "systemsDesc": "Ηλεκτρολογικά, υδραυλικά, θέρμανση, κλιματισμός",
+        "finishing": "Τελειώματα",
+        "finishingDesc": "Δάπεδα, βαφές, κουφώματα, είδη υγιεινής",
+        "delivery": "Παράδοση",
+        "deliveryDesc": "Τελικός έλεγχος και παράδοση κτιρίου"
       },
       "milestone": {
         "progressLabel": "Πρόοδος milestone",
         "nextSteps": "Επόμενα βήματα:",
         "completedAt": "Ολοκληρώθηκε στις {date}"
+      },
+      "milestoneExport": {
+        "export": "Εξαγωγή",
+        "pdf": "PDF (Αναφορά)",
+        "excel": "Excel (Δεδομένα)",
+        "exporting": "Εξαγωγή..."
       },
       "status": {
         "completed": "Ολοκληρώθηκε",

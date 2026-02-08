@@ -194,8 +194,9 @@ const getMapButtonStyle = (variant: ButtonVariant): CSSProperties => {
 const mockTransformState = {
   controlPoints: [],
   isCalibrated: false,
-  transformMatrix: undefined,
-  accuracy: undefined
+  quality: null,
+  rmsError: null,
+  matrix: null
 };
 
 /**
@@ -293,10 +294,10 @@ const PolygonListItem: React.FC<{
 {polygon.type.charAt(0).toUpperCase() + polygon.type.slice(1).replace('_', ' ')}
       </div>
       <div style={mapComponents.polygonList.metadata}>
-        Points: {polygon.coordinates.length} | Area: {polygon.metadata?.area?.toFixed(2) || 'N/A'} m²
+        Points: {polygon.points.length} | Area: {polygon.metadata?.area?.toFixed(2) || 'N/A'} m²
       </div>
       <time style={mapComponents.polygonList.timestamp}>
-        Created: {new Date(polygon.timestamp).toLocaleString('el-GR')}
+        Created: {polygon.metadata?.createdAt ? new Date(polygon.metadata.createdAt).toLocaleString('el-GR') : 'N/A'}
       </time>
       <div style={mapComponents.polygonList.actions}>
         <button
@@ -364,9 +365,9 @@ const DebugInformation: React.FC<{
     polygons: polygons.map(p => ({
       id: p.id,
       type: p.type,
-      points: p.coordinates.length,
+      points: p.points.length,
       area: p.metadata?.area,
-      timestamp: p.timestamp
+      timestamp: p.metadata?.createdAt
     })),
     settings: {
       enableDrawing,

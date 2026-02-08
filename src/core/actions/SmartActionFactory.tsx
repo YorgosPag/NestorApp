@@ -133,6 +133,8 @@ export interface SmartActionConfig {
   sortDirection?: 'asc' | 'desc';
   /** Custom className */
   className?: string;
+  /** Optional icon */
+  icon?: React.ReactNode;
 }
 
 /**

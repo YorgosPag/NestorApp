@@ -16,7 +16,7 @@
 
 import React, { memo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
-import type { GeoControlPoint } from '../../types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types';
 import { mapControlPointTokens } from '@/styles/design-tokens';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -27,7 +27,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 export interface ControlPointLayerProps {
   /** Control points to render */
-  controlPoints: GeoControlPoint[];
+  controlPoints: FloorPlanControlPoint[];
   /** Whether to show control points */
   showControlPoints?: boolean;
   /** Whether map is loaded */

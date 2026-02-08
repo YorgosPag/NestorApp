@@ -70,6 +70,9 @@ export function getDefaultAWSEndpoints(region: string): CloudEndpoints {
  */
 export function getDefaultAWSFeatures(): CloudFeatures {
   return {
+    compute: true,
+    storage: true,
+    networking: true,
     autoScaling: true,
     loadBalancing: true,
     cdn: true,

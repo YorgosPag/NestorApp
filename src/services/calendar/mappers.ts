@@ -20,6 +20,25 @@ import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
 const DEFAULT_EVENT_DURATION_MS = 60 * 60 * 1000; // 1 hour
 
 /**
+ * Strip HTML tags and decode basic entities to produce plain text.
+ * Used for appointment descriptions that contain email HTML content.
+ */
+function stripHtmlToPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?(div|p|li|tr|td|th|h[1-6])[^>]*>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Normalize FirestoreishTimestamp to a Date object.
  * Returns null if the value cannot be converted.
  */
@@ -99,7 +118,7 @@ export function appointmentToCalendarEvent(appt: AppointmentDocument): CalendarE
 
   return {
     id: `appt_${apptId}`,
-    title: `${requesterName} — ${appt.appointment.description}`,
+    title: `${requesterName} — ${stripHtmlToPlainText(appt.appointment.description)}`,
     start,
     end: new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS),
     allDay: false,

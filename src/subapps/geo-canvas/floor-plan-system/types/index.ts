@@ -18,6 +18,8 @@ export type {
   GeoCoordinate
 } from './control-points';
 
+import type { GeoCoordinate } from './control-points';
+
 // ============================================================================
 // 🔄 TRANSFORMATION (STEP 2.3)
 // ============================================================================
@@ -38,15 +40,6 @@ export { TRANSFORMATION_QUALITY_THRESHOLDS, MIN_CONTROL_POINTS } from './transfo
 // ============================================================================
 // 🗺️ GEOGRAPHIC TYPES (Re-export από core)
 // ============================================================================
-
-/**
- * Geographic coordinate (WGS84)
- */
-export interface GeoCoordinate {
-  lng: number; // Longitude (-180 to 180)
-  lat: number; // Latitude (-90 to 90)
-  elevation?: number; // Elevation in meters
-}
 
 /**
  * DXF/CAD coordinate (local coordinate system)
@@ -285,6 +278,7 @@ export interface ParserResult {
 
   // Parsed data
   imageUrl?: string; // For raster formats
+  thumbnail?: string; // Optional preview thumbnail
   geoJSON?: GeoJSON.FeatureCollection; // For vector formats
 
   // Metadata
@@ -293,6 +287,12 @@ export interface ParserResult {
     minY: number;
     maxX: number;
     maxY: number;
+  };
+  metadata?: {
+    width: number;
+    height: number;
+    aspectRatio: number;
+    hasAlpha: boolean;
   };
   layers?: string[]; // DXF layer names
   entities?: number; // Number of entities parsed

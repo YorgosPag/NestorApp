@@ -8,7 +8,7 @@
  * Lists workers (individual contacts) linked to a project.
  * Uses existing contacts/relationships system — NO new collections.
  *
- * @enterprise ADR-089 — IKA/EFKA Labor Compliance System
+ * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -57,8 +57,9 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
 
     try {
       setIsRemoving(worker.contactId);
-      // Deactivate the contact link
-      await AssociationService.deactivateContactLink(worker.linkId);
+      // Deactivate the contact link by setting status to 'inactive'
+      const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, worker.linkId);
+      await updateDoc(linkRef, { status: 'inactive' });
       refetch();
     } catch (err) {
       console.error('[WorkersTabContent] Remove error:', err);

@@ -125,6 +125,78 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🔗 CONTACT_LINKS COLLECTION - ASSOCIATION SERVICE (ADR-090)
+    // =========================================================================
+    // Links contacts to entities (projects, companies, units) via AssociationService
+    // Used by: IKA Workers tab, contact association features
+    // Fields: sourceContactId, targetEntityType, targetEntityId, status, createdBy
+    // =========================================================================
+    match /contact_links/{linkId} {
+
+      // 📖 READ: Any authenticated user (links are internal metadata)
+      // 🔒 SECURITY: Entity-level access is enforced at the target (projects, contacts)
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Authenticated users with required fields
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll(['sourceContactId', 'status', 'createdBy'])
+                    && request.resource.data.sourceContactId is string
+                    && request.resource.data.status is string
+                    && request.resource.data.createdBy is string;
+
+      // 📝 UPDATE: Creator or super admin (e.g., status → 'inactive')
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isSuperAdminOnly()
+                       );
+
+      // 🗑️ DELETE: Creator or super admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isSuperAdminOnly()
+                       );
+    }
+
+    // =========================================================================
+    // 📋 ATTENDANCE_EVENTS COLLECTION - IMMUTABLE AUDIT TRAIL (ADR-090 Phase 2)
+    // =========================================================================
+    // Append-only attendance events: check_in, check_out, break_start, break_end,
+    // left_site, returned, exit_permission.
+    // IMMUTABLE: Once created, events CANNOT be updated or deleted.
+    // Legal compliance: Proof of worker presence for ΣΕΠΕ inspections & accidents.
+    // =========================================================================
+    match /attendance_events/{eventId} {
+
+      // 📖 READ: Any authenticated user
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE ONLY: Authenticated user with required fields + valid enums
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll([
+                         'projectId', 'contactId', 'eventType', 'method',
+                         'timestamp', 'recordedBy', 'createdAt'
+                       ])
+                    && request.resource.data.projectId is string
+                    && request.resource.data.contactId is string
+                    && request.resource.data.eventType in [
+                         'check_in', 'check_out', 'break_start', 'break_end',
+                         'left_site', 'returned', 'exit_permission'
+                       ]
+                    && request.resource.data.method in ['manual', 'qr', 'geofence', 'nfc']
+                    && request.resource.data.recordedBy is string;
+
+      // 🚫 UPDATE: FORBIDDEN — immutable events
+      allow update: if false;
+
+      // 🚫 DELETE: FORBIDDEN — immutable events
+      allow delete: if false;
+    }
+
+    // =========================================================================
     // 🎨 CAD_FILES COLLECTION - ENTERPRISE DXF STORAGE (Firebase Storage + Metadata)
     // =========================================================================
     // Internal storage for DXF scene metadata (actual scene data in Firebase Storage)
@@ -577,6 +649,36 @@ service cloud.firestore {
                          || isCompanyAdminOfCompany(resource.data.companyId)
                          || isSuperAdminOnly()
                        );
+    }
+
+    // =========================================================================
+    // 📅 APPOINTMENTS COLLECTION - ENTERPRISE TENANT ISOLATION (ADR-089)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Appointments from AI Pipeline (UC-001) with tenant isolation
+    // 📅 Added: 2026-02-08 (CRM Calendar MVP - ADR-089)
+    // 🔒 SECURITY: Documents created server-side via Admin SDK (bypasses rules)
+    //              Client-side READ only — tenant-scoped via companyId
+    //
+    // Security Model:
+    //   - READ: Tenant-scoped (companyId match or super admin)
+    //   - WRITE: Server-side only via Admin SDK (no client writes)
+    // =========================================================================
+    match /appointments/{appointmentId} {
+
+      // 📖 READ: Tenant-scoped via companyId
+      // 🔐 SECURITY: Only users from the appointment's company
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can read all appointments
+                       isSuperAdminOnly()
+                       // OR user belongs to the appointment's company
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // 🚫 WRITE: Server-side only (Admin SDK bypasses rules)
+      // Appointments are created by UC-001 pipeline via Admin SDK
+      allow write: if false;
     }
 
     // =========================================================================

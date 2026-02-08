@@ -16,7 +16,7 @@
 
 import React, { memo, useMemo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
-import type { GeoControlPoint } from '../../types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GEO_COLORS } from '../../config/color-config';
 import { interactiveMapStyles, getAccuracyLevelColor } from '../InteractiveMap.styles';
@@ -34,7 +34,7 @@ export interface AccuracyInfo {
 
 export interface AccuracyVisualizationLayerProps {
   /** Control points to visualize */
-  controlPoints: GeoControlPoint[];
+  controlPoints: FloorPlanControlPoint[];
   /** Whether to show accuracy visualization */
   showAccuracyCircles?: boolean;
   /** Visualization mode */

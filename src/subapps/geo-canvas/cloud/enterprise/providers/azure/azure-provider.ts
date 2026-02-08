@@ -175,6 +175,9 @@ export class AzureProvider {
    */
   public getAzureFeatures(): CloudFeatures {
     return {
+      compute: true,
+      storage: true,
+      networking: true,
       autoScaling: true,
       loadBalancing: true,
       cdn: true,

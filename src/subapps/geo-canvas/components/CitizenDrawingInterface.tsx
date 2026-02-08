@@ -4,30 +4,6 @@ import * as React from 'react';
 const { useState, useCallback, useEffect } = React;
 
 // ============================================================================
-// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
-// ============================================================================
-
-/** GeoJSON Geometry types */
-interface GeoJSONGeometry {
-  type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon' | 'GeometryCollection';
-  coordinates: number[] | number[][] | number[][][] | number[][][][];
-}
-
-/** GeoJSON Properties */
-type GeoJSONProperties = Record<string, string | number | boolean | null | undefined>;
-
-// ✅ ENTERPRISE FIX: Mock GeoJSON namespace for compilation
-declare namespace GeoJSON {
-  interface Feature {
-    type: 'Feature';
-    geometry: GeoJSONGeometry;
-    properties: GeoJSONProperties;
-  }
-  interface FeatureCollection {
-    type: 'FeatureCollection';
-    features: Feature[];
-  }
-}
 
 /** Mapbox Map interface (minimal for ref typing) */
 interface MapboxMapRef {

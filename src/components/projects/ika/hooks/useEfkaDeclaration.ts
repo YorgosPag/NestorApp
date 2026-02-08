@@ -9,7 +9,7 @@
  * No new collection — stored as sub-object on existing project.
  *
  * @module components/projects/ika/hooks/useEfkaDeclaration
- * @enterprise ADR-089 — IKA/EFKA Labor Compliance System
+ * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
 import { useState, useEffect, useCallback } from 'react';

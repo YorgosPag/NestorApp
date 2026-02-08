@@ -1943,8 +1943,8 @@ export const canvasUtilities = {
       margin: spacing.lg
     },
     positioning: {
-      center: { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' },
-      topRight: { position: 'absolute', top: spacing.md, right: spacing.md }
+      center: { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' } as const,
+      topRight: { position: 'absolute', top: spacing.md, right: spacing.md } as const
     },
     mobileSlideHeader: (): React.CSSProperties => ({
       display: 'flex',
@@ -1977,6 +1977,41 @@ export const canvasUtilities = {
       border: 'none',
       outline: 'none'
     }),
+    floorPlanCanvasLayer: {
+      container: (
+        disableInteractions: boolean,
+        hasClick: boolean,
+        layerZIndex?: number
+      ): React.CSSProperties => ({
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: layoutUtilities.dimensions.full,
+        height: layoutUtilities.dimensions.full,
+        pointerEvents: disableInteractions ? 'none' : (hasClick ? 'auto' : 'none'),
+        zIndex: layerZIndex ?? zIndex.base
+      }),
+      canvas: {
+        width: layoutUtilities.dimensions.full,
+        height: layoutUtilities.dimensions.full,
+        display: 'block',
+        backgroundColor: 'transparent',
+        border: 'none',
+        outline: 'none'
+      } as React.CSSProperties
+    },
+    floorPlanControls: {
+      container: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: spacing.sm,
+        padding: spacing.md,
+        borderRadius: spacing.sm,
+        border: `1px solid ${colors.border.secondary}`,
+        backgroundColor: colors.background.primary,
+        boxShadow: shadows.sm
+      } as React.CSSProperties
+    },
 
     /**
      * 🎯 DRAGGABLE PANEL CONTAINER UTILITY

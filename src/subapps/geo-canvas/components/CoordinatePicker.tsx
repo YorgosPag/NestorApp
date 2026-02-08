@@ -418,7 +418,7 @@ export function CoordinatePicker({
           action: 'reset',
           variant: 'warning',
           label: 'Reset',
-          icon: RefreshCw,
+          icon: <RefreshCw className="h-4 w-4" />,
           onClick: resetForm
         },
         {

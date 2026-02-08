@@ -7,7 +7,7 @@
  * Covers: Workers, EFKA Declaration, Attendance, Employment Records.
  *
  * @module components/projects/ika/contracts
- * @enterprise ADR-089 — IKA/EFKA Labor Compliance System
+ * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  *
  * Design principles:
  * - NO `any` types — all strictly typed
@@ -234,6 +234,123 @@ export interface AttendanceEvent {
   approvedBy: string | null;
   /** Immutable creation timestamp */
   createdAt: string;
+}
+
+// ============================================================================
+// ATTENDANCE COMPUTED TYPES (Phase 2 — UI view models)
+// ============================================================================
+
+/** View mode for attendance tab */
+export type AttendanceViewMode = 'daily' | 'weekly' | 'monthly';
+
+/** Worker attendance status at a point in time */
+export type WorkerAttendanceStatus =
+  | 'present'         // Στο εργοτάξιο (last event: check_in | returned | break_end)
+  | 'absent'          // Δεν ήρθε (no events today)
+  | 'off_site'        // Εκτός εργοταξίου (last event: left_site)
+  | 'on_break'        // Σε διάλειμμα (last event: break_start)
+  | 'checked_out';    // Αποχώρησε (last event: check_out)
+
+/** Attendance anomaly types for compliance tracking */
+export type AttendanceAnomalyType =
+  | 'missing_checkout'        // Check-in χωρίς check-out
+  | 'missing_checkin'         // Check-out χωρίς check-in
+  | 'unauthorized_absence'    // Αποχώρηση χωρίς άδεια > 30 λεπτά
+  | 'overtime_undeclared'     // Υπερωρία χωρίς δήλωση ΕΡΓΑΝΗ
+  | 'long_break'              // Διάλειμμα > 60 λεπτά
+  | 'late_arrival';           // Καθυστερημένη άφιξη
+
+/** Anomaly record — detected from event analysis */
+export interface AttendanceAnomaly {
+  /** Anomaly classification */
+  type: AttendanceAnomalyType;
+  /** Human-readable description */
+  description: string;
+  /** Severity level for UI display */
+  severity: 'low' | 'medium' | 'high' | 'critical';
+}
+
+/**
+ * Daily summary per worker — computed from AttendanceEvent[]
+ * Used by DailyTimeline component for table rows
+ */
+export interface WorkerDailySummary {
+  /** Worker contact ID */
+  contactId: string;
+  /** Worker display name */
+  workerName: string;
+  /** Company name (for crew grouping) */
+  companyName: string | null;
+  /** Company contact ID (for crew grouping) */
+  companyContactId: string | null;
+  /** Date in ISO format (YYYY-MM-DD) */
+  date: string;
+  /** Current real-time status */
+  currentStatus: WorkerAttendanceStatus;
+  /** First check-in timestamp (ISO) */
+  firstCheckIn: string | null;
+  /** Last check-out timestamp (ISO) */
+  lastCheckOut: string | null;
+  /** Total minutes on-site (check_in → check_out intervals) */
+  totalPresenceMinutes: number;
+  /** Total break minutes (break_start → break_end intervals) */
+  totalBreakMinutes: number;
+  /** Total off-site minutes (left_site → returned intervals) */
+  totalOffSiteMinutes: number;
+  /** Effective work = presence - breaks - offSite */
+  effectiveWorkMinutes: number;
+  /** All events for this worker on this day (ordered by timestamp) */
+  events: AttendanceEvent[];
+  /** Detected anomalies */
+  anomalies: AttendanceAnomaly[];
+  /** Primary recording method used */
+  method: AttendanceMethod;
+}
+
+/**
+ * Project-level daily summary — dashboard aggregate data
+ * Used by AttendanceDashboard for summary cards
+ */
+export interface ProjectDailySummary {
+  /** Date in ISO format (YYYY-MM-DD) */
+  date: string;
+  /** Project ID */
+  projectId: string;
+  /** Total workers linked to project */
+  totalWorkers: number;
+  /** Workers currently on-site */
+  presentCount: number;
+  /** Workers expected but absent */
+  absentCount: number;
+  /** Workers who left site */
+  offSiteCount: number;
+  /** Workers on break */
+  onBreakCount: number;
+  /** Workers who checked out */
+  checkedOutCount: number;
+  /** Sum of effective work hours (all workers) */
+  totalHoursToday: number;
+  /** Total anomalies detected */
+  anomalyCount: number;
+  /** Individual worker summaries */
+  workerSummaries: WorkerDailySummary[];
+}
+
+/**
+ * Crew grouping — workers grouped by company (συνεργείο)
+ * Used by CrewGroupFilter for filtering
+ */
+export interface CrewGroup {
+  /** Company contact ID (null for independent workers) */
+  companyContactId: string | null;
+  /** Company display name */
+  companyName: string;
+  /** Workers in this crew */
+  workers: ProjectWorker[];
+  /** Workers currently present */
+  presentCount: number;
+  /** Total workers in crew */
+  totalCount: number;
 }
 
 // ============================================================================

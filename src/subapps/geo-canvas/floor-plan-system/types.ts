@@ -19,19 +19,9 @@ export type FloorPlanFormat =
   | 'UNKNOWN';
 
 /**
- * Minimal GeoJSON FeatureCollection type (local, dependency-free)
+ * GeoJSON FeatureCollection type
  */
-export type GeoJSONFeatureCollection = {
-  type: 'FeatureCollection';
-  features: Array<{
-    type: 'Feature';
-    geometry: {
-      type: string;
-      coordinates: unknown;
-    };
-    properties?: Record<string, unknown> | null;
-  }>;
-};
+export type GeoJSONFeatureCollection = GeoJSON.FeatureCollection;
 
 /**
  * Parser result (base interface)

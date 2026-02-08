@@ -49,20 +49,14 @@ import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucid
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 import { generateLayerId } from '@/services/enterprise-id.service';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
 /** MapLibre GL JS map instance type */
-type MapLibreMapInstance = {
-  flyTo: (options: {
-    center: [number, number];
-    zoom: number;
-    duration?: number;
-    essential?: boolean;
-  }) => void;
-} | null;
+type MapLibreMapInstance = MaplibreMap | null;
 
 /** Boundary layer style type */
 interface BoundaryLayerStyle {
@@ -274,14 +268,15 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   }, []);
 
   // ✅ NEW: Handle administrative boundary selection (Enhanced for Layer Management)
-  const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: AdminBoundaryResult) => {
-    console.log('🏛️ Administrative boundary selected:', { boundary, result });
+  const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: Record<string, unknown>) => {
+    const boundaryResult = result as AdminBoundaryResult;
+    console.log('??? Administrative boundary selected:', { boundary, result: boundaryResult });
 
     // Determine boundary type και default style
     let type: 'region' | 'municipality' | 'municipal_unit' | 'community';
     let defaultStyle: BoundaryLayerStyle;
 
-    if (result.adminLevel === 4) { // Region
+    if (boundaryResult.adminLevel === 4) { // Region
       type = 'region';
       defaultStyle = {
         strokeColor: GEO_COLORS.POLYGON.ADMINISTRATIVE,
@@ -289,7 +284,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         fillColor: GEO_COLORS.POLYGON.ADMINISTRATIVE,
         fillOpacity: 0.15
       };
-    } else if (result.adminLevel === 8) { // Municipality
+    } else if (boundaryResult.adminLevel === 8) { // Municipality
       type = 'municipality';
       defaultStyle = {
         strokeColor: GEO_COLORS.POLYGON.DRAFT,
@@ -297,7 +292,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         fillColor: GEO_COLORS.POLYGON.DRAFT,
         fillOpacity: 0.1
       };
-    } else if (result.adminLevel === 9) { // Municipal Unit
+    } else if (boundaryResult.adminLevel === 9) { // Municipal Unit
       type = 'municipal_unit';
       defaultStyle = {
         strokeColor: GEO_COLORS.POLYGON.COMPLETED,
@@ -319,14 +314,14 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     const layerId = generateLayerId();
     const newLayer = {
       id: layerId,
-      name: result.name,
+      name: typeof boundaryResult.name === 'string' ? boundaryResult.name : 'Unknown',
       type,
       visible: true,
       opacity: 1.0,
       style: defaultStyle,
       boundary: {
         feature: boundary,
-        result
+        result: boundaryResult
       }
     };
 
@@ -360,7 +355,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               const avgLng = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
               const avgLat = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
               center = [avgLng, avgLat];
-              zoom = result.adminLevel === 4 ? 8 : 12; // Regions wider view, municipalities closer
+              zoom = boundaryResult.adminLevel === 4 ? 8 : 12; // Regions wider view, municipalities closer
             }
           }
         } else if (boundary.type === 'FeatureCollection' && boundary.features.length > 0) {
@@ -828,18 +823,14 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
                 {/* 🗺️ FLOOR PLAN CANVAS LAYER */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
-                  <FloorPlanCanvasLayer
-                    map={mapRef.current}
-                    floorPlan={floorPlanUpload.result}
-                    visible={floorPlanVisible}
-                    style={floorPlanOverlay(
-                      '100%',
-                      '100%',
-                      floorPlanOpacity
-                    )}
-                    zIndex={100}
-                    onClick={handleFloorPlanClick}
-                    disableInteractions={controlPoints.pickingState === 'picking-geo'}
+                    <FloorPlanCanvasLayer
+                      map={mapRef.current}
+        result: boundaryResult
+                      visible={floorPlanVisible}
+                      style={{ opacity: floorPlanOpacity }}
+                      zIndex={100}
+                      onClick={handleFloorPlanClick}
+                      disableInteractions={controlPoints.pickingState === 'picking-geo'}
                     transformMatrix={transformation.matrix}
                     snapEngine={controlPoints.pickingState === 'picking-floor' ? snapEngine : undefined}
                   />
@@ -848,7 +839,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🎛️ FLOOR PLAN CONTROLS */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
                   <div
-                    style={canvasUtilities.overlays.controls.topRight}
+                    style={canvasUtilities.geoInteractive.positioning.topRight}
                   >
                     <FloorPlanControls
                       visible={floorPlanVisible}
@@ -1083,7 +1074,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         isOpen={floorPlanUpload.isModalOpen}
         onClose={floorPlanUpload.closeModal}
         onFileSelect={handleFloorPlanFileSelect}
-        parserResult={floorPlanUpload.result}
+        result: boundaryResult
         selectedFile={floorPlanUpload.file}
         isParsing={floorPlanUpload.isParsing}
       />
@@ -1136,3 +1127,4 @@ const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
 
 // Export το wrapped component
 export default GeoCanvasContentWithErrorBoundary;
+

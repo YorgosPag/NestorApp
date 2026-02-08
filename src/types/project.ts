@@ -79,7 +79,7 @@ export interface Project {
   /** Has reported issues */
   hasIssues?: boolean;
 
-  // 👷 IKA/EFKA LABOR COMPLIANCE (ADR-089)
+  // 👷 IKA/EFKA LABOR COMPLIANCE (ADR-090)
   /** EFKA declaration data — αναγγελία έργου στο e-ΕΦΚΑ */
   efkaDeclaration?: import('@/components/projects/ika/contracts').EfkaDeclarationData;
 }

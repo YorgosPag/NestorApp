@@ -16,7 +16,7 @@
 
 import React, { memo, useMemo } from 'react';
 import { Source, Layer } from 'react-map-gl/maplibre';
-import type { GeoControlPoint } from '../../types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types';
 import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
@@ -25,7 +25,7 @@ import { GEO_COLORS } from '../../config/color-config';
 
 export interface PolygonLinesLayerProps {
   /** Control points to connect */
-  controlPoints: GeoControlPoint[];
+  controlPoints: FloorPlanControlPoint[];
   /** Whether to show polygon lines */
   showControlPoints?: boolean;
   /** Whether map is loaded */

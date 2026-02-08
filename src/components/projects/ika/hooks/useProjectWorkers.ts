@@ -9,7 +9,7 @@
  * NO new collections — reads from contact_links + contacts + contact_relationships.
  *
  * @module components/projects/ika/hooks/useProjectWorkers
- * @enterprise ADR-089 — IKA/EFKA Labor Compliance System
+ * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
  */
 
 import { useState, useEffect, useCallback } from 'react';

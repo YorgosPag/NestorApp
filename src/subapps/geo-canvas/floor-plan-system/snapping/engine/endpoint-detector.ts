@@ -13,7 +13,7 @@
  * - CIRCLE: (future) Quadrant points
  */
 
-import type { ParserResult } from '@/subapps/dxf-viewer/types/parser.types';
+import type { ParserResult } from '../../types';
 import { SnapMode, SnapPoint } from '../types';
 
 /**

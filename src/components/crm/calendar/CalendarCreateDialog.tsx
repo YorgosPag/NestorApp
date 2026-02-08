@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -146,6 +147,9 @@ export function CalendarCreateDialog({
             <Plus className={iconSizes.md} />
             {t('calendarPage.dialog.createTitle')}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t('calendarPage.dialog.createTitle')}
+          </DialogDescription>
         </DialogHeader>
 
         <form

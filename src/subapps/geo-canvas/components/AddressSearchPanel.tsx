@@ -260,9 +260,15 @@ export function AddressSearchPanel({
       let boundary: GeoJSON.Feature | GeoJSON.FeatureCollection | null = null;
 
       if (result.adminLevel === 8) { // Municipality
-        boundary = await getMunicipalityBoundary(result.name);
+        const municipality = await getMunicipalityBoundary(result.name);
+        if (municipality?.geometry) {
+          boundary = municipality as GeoJSON.Feature;
+        }
       } else if (result.adminLevel === 4) { // Region
-        boundary = await getRegionBoundary(result.name);
+        const region = await getRegionBoundary(result.name);
+        if (region?.geometry) {
+          boundary = region as GeoJSON.Feature;
+        }
       }
 
       if (boundary && onAdminBoundarySelected) {

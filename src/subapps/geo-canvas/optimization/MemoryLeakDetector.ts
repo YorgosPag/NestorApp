@@ -240,9 +240,10 @@ export class GeoAlertMemoryLeakDetector {
 
       // Observe memory-related performance entries
       // 🏢 ENTERPRISE: Type assertion for entryTypes (navigation is valid at runtime)
+      const entryTypes = ['measure', 'navigation', 'resource'] as const;
       this.performanceObserver.observe({
-        entryTypes: ['measure', 'navigation', 'resource']
-      } as PerformanceObserverInit);
+        entryTypes: [...entryTypes]
+      });
     } catch (error) {
       console.warn('PerformanceObserver not available:', error);
     }
@@ -1125,3 +1126,4 @@ export const takeMemorySnapshot = () => geoAlertMemoryLeakDetector.takeSnapshot(
  * Default export για convenience
  */
 export default geoAlertMemoryLeakDetector;
+

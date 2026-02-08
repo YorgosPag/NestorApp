@@ -419,6 +419,84 @@
       "saved": "Saved",
       "notes": "Notes",
       "notesPlaceholder": "Add notes about the declaration..."
+    },
+    "timesheetTab": {
+      "title": "Site Attendance Log",
+      "description": "Record & monitor worker attendance",
+      "noProjectId": "No project ID found",
+      "noWorkers": "No workers assigned to this project",
+      "noWorkersHint": "Add workers from the \"Workers\" tab",
+      "noEvents": "No records for this day",
+      "addEvent": "New Record",
+      "today": "Today",
+      "viewMode": {
+        "daily": "Day",
+        "weekly": "Week",
+        "monthly": "Month"
+      },
+      "dashboard": {
+        "present": "Present",
+        "absent": "Absent",
+        "offSite": "Off-Site",
+        "hoursToday": "Hours Today",
+        "of": "of"
+      },
+      "columns": {
+        "worker": "Worker",
+        "status": "Status",
+        "checkIn": "Check-In",
+        "checkOut": "Check-Out",
+        "hours": "Hours",
+        "gaps": "Gaps",
+        "anomalies": "Anomalies",
+        "actions": "Actions"
+      },
+      "status": {
+        "present": "Present",
+        "absent": "Absent",
+        "offSite": "Off-Site",
+        "onBreak": "On Break",
+        "checkedOut": "Checked Out"
+      },
+      "eventTypes": {
+        "check_in": "Check-In",
+        "check_out": "Check-Out",
+        "break_start": "Break Start",
+        "break_end": "Break End",
+        "left_site": "Left Site",
+        "returned": "Returned",
+        "exit_permission": "Exit Permission"
+      },
+      "methods": {
+        "manual": "Manual",
+        "qr": "QR Code",
+        "geofence": "Geofencing",
+        "nfc": "NFC"
+      },
+      "dialog": {
+        "title": "New Attendance Record",
+        "selectWorker": "Select Worker",
+        "selectEventType": "Record Type",
+        "notes": "Notes (optional)",
+        "notesPlaceholder": "e.g. Went to pharmacy",
+        "submit": "Record",
+        "submitting": "Recording...",
+        "success": "Record saved successfully",
+        "error": "Error saving record"
+      },
+      "crews": {
+        "allCrews": "All Crews",
+        "independent": "Independent Workers",
+        "presentOf": "{{present}} of {{total}}"
+      },
+      "anomalies": {
+        "missingCheckout": "Missing check-out",
+        "missingCheckin": "Missing check-in",
+        "unauthorizedAbsence": "Unauthorized absence",
+        "overtimeUndeclared": "Undeclared overtime",
+        "longBreak": "Extended break",
+        "lateArrival": "Late arrival"
+      }
     }
   },
   "parking": {

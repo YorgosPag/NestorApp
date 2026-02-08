@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import type { ParserResult } from '@/subapps/dxf-viewer/types/parser.types';
+import type { ParserResult } from '../../types';
 import { extractEndpoints, deduplicateSnapPoints } from '../engine';
 import type { SnapPoint } from '../types';
 

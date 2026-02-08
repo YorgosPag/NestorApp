@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ParserResult } from '@/subapps/dxf-viewer/types/parser.types';
+import type { ParserResult } from '../../types';
 import { SnapEngine, createSnapEngine } from '../engine';
 import type { SnapResult, SnapSettings } from '../types';
 

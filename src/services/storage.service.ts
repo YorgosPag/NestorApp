@@ -13,7 +13,7 @@ export async function getStorageUnitById(id: string): Promise<StorageUnit | null
   try {
     const docSnap: DocumentSnapshot = await db.collection(STORAGE_UNITS_COLLECTION).doc(id).get();
 
-    if (docSnap.exists()) {
+    if (docSnap.exists) {
       return { id: docSnap.id, ...docSnap.data() } as StorageUnit;
     } else {
       // Warning logging removed //(`No storage unit found with id: ${id}`);

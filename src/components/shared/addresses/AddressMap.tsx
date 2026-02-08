@@ -45,7 +45,7 @@ import {
   AddressResolver,
   type GeocodingResult
 } from '@/services/real-estate-monitor/AddressResolver';
-import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
+import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 
 // =============================================================================
@@ -62,8 +62,8 @@ export interface AddressMapProps {
   /** Show geocoding status badges */
   showGeocodingStatus?: boolean;
 
-  /** Map container height (pixels or CSS string) */
-  height?: string | number;
+  /** Map container height preset (centralized layout tokens) */
+  heightPreset?: AddressMapHeightPreset;
 
   /** Enable click-to-focus interaction */
   enableClickToFocus?: boolean;
@@ -90,7 +90,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   addresses,
   highlightPrimary = true,
   showGeocodingStatus = true,
-  height = ADDRESS_MAP_CONFIG.DEFAULT_HEIGHT,
+  heightPreset = ADDRESS_MAP_CONFIG.DEFAULT_HEIGHT_PRESET,
   enableClickToFocus = true,
   onMarkerClick,
   onGeocodingComplete,
@@ -338,12 +338,14 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // RENDERING
   // ===========================================================================
 
+  const heightClass = ADDRESS_MAP_CONFIG.HEIGHT_PRESETS[heightPreset]
+    ?? ADDRESS_MAP_CONFIG.HEIGHT_PRESETS.viewerStandard;
+
   // Loading state
   if (geocodingStatus === 'loading') {
     return (
       <div
-        className={`flex items-center justify-center bg-muted rounded-lg ${className}`}
-        style={{ height }}
+        className={`flex items-center justify-center bg-muted rounded-lg ${heightClass} ${className}`}
       >
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
@@ -377,16 +379,18 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   });
 
   return (
-    <div className={`relative ${className}`} style={{ height }}>
+    <div className={`relative ${heightClass} ${className}`}>
       <PolygonSystemProvider>
         <TooltipProvider>
           {/* 🗺️ Interactive Map (GeoCanvas) - Render ONLY after geocoding */}
           {shouldRenderMap && (
             <InteractiveMap
               transformState={{
-                scale: 1,
-                offsetX: 0,
-                offsetY: 0
+                controlPoints: [],
+                isCalibrated: false,
+                quality: null,
+                rmsError: null,
+                matrix: null
               }}
               onMapReady={handleMapReady}
               showStatusBar={false}

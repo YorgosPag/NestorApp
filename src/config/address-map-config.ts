@@ -16,16 +16,28 @@
  * @created 2026-02-02
  */
 
+import { layoutUtilities } from '@/styles/design-tokens';
+
 // =============================================================================
 // MAP DISPLAY SETTINGS
 // =============================================================================
 
 export const ADDRESS_MAP_CONFIG = {
   /**
-   * Default map height (pixels)
-   * Enterprise standard: 400px για card-style maps
+   * Default map height preset
+   * Uses centralized layout tokens (no hardcoded heights)
    */
-  DEFAULT_HEIGHT: 400,
+  DEFAULT_HEIGHT_PRESET: 'viewerStandard',
+
+  /**
+   * Height presets (Tailwind classes from centralized layout tokens)
+   */
+  HEIGHT_PRESETS: {
+    viewerCompact: layoutUtilities.contentAreas.tailwind.viewerCompact,
+    viewerStandard: layoutUtilities.contentAreas.tailwind.viewerStandard,
+    viewerExpanded: layoutUtilities.contentAreas.tailwind.viewerExpanded,
+    viewerFullscreen: layoutUtilities.contentAreas.tailwind.viewerFullscreen
+  },
 
   /**
    * Default zoom level
@@ -120,3 +132,9 @@ export const ADDRESS_MAP_CONFIG = {
  * Type-safe config access
  */
 export type AddressMapConfig = typeof ADDRESS_MAP_CONFIG;
+
+/**
+ * Height preset keys for AddressMap
+ */
+export type AddressMapHeightPreset = keyof typeof ADDRESS_MAP_CONFIG.HEIGHT_PRESETS;
+

@@ -106,6 +106,9 @@ interface UseAdministrativeBoundariesReturn {
 /** Cache statistics interface */
 interface CacheStats {
   totalEntries: number;
+  validEntries: number;
+  expiredEntries: number;
+  cacheExpiryHours: number;
   searchCacheEntries?: number;
   [key: string]: unknown;
 }

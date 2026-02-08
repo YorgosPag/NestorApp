@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1+2+3 Complete |
+| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.4 Export + 4.9 Context Menu) |
 | **Date** | 2026-02-07 |
 | **Category** | UI Components / Construction Management |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -524,6 +524,16 @@ tabs.timeline.gantt.dialog.endDate     → "Ημ. Λήξης"
 tabs.timeline.gantt.dialog.progress    → "Πρόοδος"
 tabs.timeline.gantt.dialog.description → "Περιγραφή"
 tabs.timeline.gantt.validation.*       → Validation messages
+
+// Export keys (Phase 4.4)
+tabs.timeline.gantt.export.export      → "Εξαγωγή" / "Export"
+tabs.timeline.gantt.export.pdf         → "PDF (Έγγραφο)" / "PDF (Document)"
+tabs.timeline.gantt.export.png         → "PNG (Εικόνα)" / "PNG (Image)"
+tabs.timeline.gantt.export.svg         → "SVG (Διάνυσμα)" / "SVG (Vector)"
+tabs.timeline.gantt.export.excel       → "Excel (Δεδομένα)" / "Excel (Data)"
+tabs.timeline.gantt.export.exporting   → "Εξαγωγή..." / "Exporting..."
+tabs.timeline.gantt.export.success     → "Η εξαγωγή ολοκληρώθηκε" / "Export completed"
+tabs.timeline.gantt.export.error       → "Σφάλμα εξαγωγής" / "Export error"
 ```
 
 ---
@@ -570,7 +580,7 @@ tabs.timeline.gantt.validation.*       → Validation messages
 | 3.7 | Cascade delete (phase → all tasks) | `route.ts DELETE` | **DONE** |
 | 3.8 | i18n: dialog/action/validation keys (EL/EN) | `building.json` | **DONE** |
 
-### Phase 4: Advanced Features — PLANNED (Future)
+### Phase 4: Advanced Features — PARTIAL (In Progress)
 
 **Στόχος**: Enterprise-grade features.
 
@@ -579,24 +589,83 @@ tabs.timeline.gantt.validation.*       → Validation messages
 | 4.1 | Critical path calculation & highlighting | PLANNED |
 | 4.2 | Actual vs Planned overlay (dual bars) | PLANNED |
 | 4.3 | Resource allocation (assignedTo, assignedRole) | PLANNED |
-| 4.4 | PDF/PNG export | PLANNED |
+| 4.4 | **Export: PDF, PNG, SVG, Excel** | **DONE** (2026-02-07) |
 | 4.5 | Alert Engine integration (deadline notifications) | PLANNED |
 | 4.6 | AI integration (UC-017: auto-suggest delays, forecasting) | PLANNED |
 | 4.7 | Baseline snapshots (save planned dates for comparison) | PLANNED |
 | 4.8 | Dependency arrows visualization | PLANNED |
-| 4.9 | Context menu (right-click actions) | PLANNED |
+| 4.9 | **Context menu (right-click actions)** | **DONE** (2026-02-07) |
+
+#### 4.4 Export Feature — Implementation Details (2026-02-07)
+
+**4 formats υποστηρίζονται:**
+
+| Format | Library | Περιγραφή |
+|--------|---------|-----------|
+| **PDF** | `jspdf` + `jspdf-autotable` (existing) | Landscape A4: Page 1 = chart screenshot, Page 2+ = data table |
+| **PNG** | `html-to-image` (νέο, MIT) | High-DPI raster capture (2x pixel ratio) |
+| **SVG** | `html-to-image` (νέο, MIT) | Vector format, scalable/editable |
+| **Excel** | `exceljs` (νέο, MIT) | 2 sheets: Timeline (styled data) + Summary (stats) |
+
+**Αρχιτεκτονική Export**:
+
+```
+GanttView (toolbar)
+├── DropdownMenu (Εξαγωγή button)
+│   ├── PDF → exportGanttToPDF()
+│   ├── PNG → exportGanttAsImage('png')
+│   ├── SVG → exportGanttAsImage('svg')
+│   └── Excel → exportGanttToExcel()
+│
+├── gantt-export-utils.ts (shared)
+│   ├── captureGanttAsDataUrl() — DOM capture with overflow expansion
+│   ├── flattenTaskGroupsToRows() — TaskGroup[] → flat data rows
+│   └── triggerDownload() / triggerBlobDownload()
+│
+├── gantt-pdf-exporter.ts
+│   ├── registerGreekFont() — Roboto + Identity-H encoding
+│   └── exportGanttToPDF() — chart image + autoTable
+│
+├── gantt-image-exporter.ts
+│   └── exportGanttAsImage() — PNG/SVG via html-to-image
+│
+├── gantt-excel-exporter.ts
+│   └── exportGanttToExcel() — ExcelJS workbook (2 sheets)
+│
+└── roboto-font-data.ts (lazy-loaded ~687KB base64)
+```
+
+**DOM Capture Strategy**: Η `react-modern-gantt` χρησιμοποιεί `overflow-x: auto` στον `.rmg-timeline-container`. Κατά το capture, γίνεται temporary expansion (`overflow: visible`, `width: auto`) ώστε να αποτυπωθεί ΟΛΟΚΛΗΡΟ το timeline, ακόμα και αν scrolls.
+
+**Greek Font Solution (PDF)**: Η default Helvetica του jsPDF υποστηρίζει μόνο Latin. Λύση:
+1. Embedded Roboto-Regular.ttf ως base64 (pre-computed, lazy dynamic import)
+2. `addFont()` με **Identity-H encoding** (κρίσιμο για Unicode/Greek)
+3. Καταχώρηση font και ως `normal` και ως `bold` (autoTable χρησιμοποιεί bold για headers)
+4. `didParseCell` hook forces Roboto σε κάθε κελί
+
+#### 4.9 Context Menu — Implementation Details (2026-02-07)
+
+Right-click σε task/phase bars εμφανίζει context menu με:
+- Επεξεργασία (edit dialog)
+- Αλλαγή κατάστασης (status submenu)
+- Αλλαγή χρώματος (color picker — 10 predefined + custom)
+- Διαγραφή (with confirmation)
+
+Custom color picker με ColorPicker component (inline, no external dependency).
 
 ### Implementation Summary
 
 | Metric | Value |
 |--------|-------|
 | **Ημερομηνία υλοποίησης** | 2026-02-07 |
-| **Νέα αρχεία** | 5 (types, API route, services, hook, dialog) |
+| **Νέα αρχεία** | 13 (types, API route, services, hook, dialog, 7 export files, font) |
 | **Τροποποιημένα αρχεία** | 4 (GanttView, firestore-collections, building.json el/en) |
 | **TypeScript errors** | 0 (verified with `npx tsc --noEmit`) |
 | **API Security** | withAuth + withStandardRateLimit + requireBuildingInTenant + logAuditEvent |
 | **Tenant Isolation** | companyId check on all operations |
 | **Cascade Delete** | Phase deletion removes all child tasks (batch) |
+| **Export Formats** | PDF, PNG, SVG, Excel (4 formats) |
+| **Greek Font Support** | Roboto + Identity-H encoding (embedded base64) |
 
 ---
 
@@ -729,15 +798,23 @@ const MOCK_PHASES: ConstructionPhase[] = [
 | `src/components/building-management/construction-services.ts` | Client CRUD services | ~201 |
 | `src/components/building-management/hooks/useConstructionGantt.ts` | Data hook + dialog state | ~350+ |
 | `src/components/building-management/dialogs/ConstructionPhaseDialog.tsx` | Phase/Task create/edit dialog | ~400+ |
+| `src/services/gantt-export/types.ts` | Export types & interfaces | ~30 |
+| `src/services/gantt-export/gantt-export-utils.ts` | DOM capture, data flattening, download helpers | ~100+ |
+| `src/services/gantt-export/gantt-pdf-exporter.ts` | PDF export (chart image + autoTable) | ~110 |
+| `src/services/gantt-export/gantt-image-exporter.ts` | PNG & SVG export | ~25 |
+| `src/services/gantt-export/gantt-excel-exporter.ts` | Excel export (2 sheets) | ~120+ |
+| `src/services/gantt-export/roboto-font-data.ts` | Pre-computed Roboto base64 (~687KB) | ~1 |
+| `src/services/gantt-export/index.ts` | Barrel export | ~10 |
+| `public/fonts/Roboto-Regular.ttf` | Roboto font file (Greek + Latin) | 515KB |
 
 ### Modified Files
 
 | Αρχείο | Αλλαγή |
 |--------|--------|
-| `src/components/building-management/tabs/TimelineTabContent/gantt/GanttView.tsx` | REWRITTEN (mock → Firestore, editing enabled) |
+| `src/components/building-management/tabs/TimelineTabContent/gantt/GanttView.tsx` | REWRITTEN (mock → Firestore, editing, export, context menu) |
 | `src/config/firestore-collections.ts` | +2 collections (CONSTRUCTION_PHASES, CONSTRUCTION_TASKS) |
-| `src/i18n/locales/el/building.json` | +dialog/action/validation keys |
-| `src/i18n/locales/en/building.json` | +dialog/action/validation keys |
+| `src/i18n/locales/el/building.json` | +dialog/action/validation/export keys |
+| `src/i18n/locales/en/building.json` | +dialog/action/validation/export keys |
 
 ### Existing Files (No Changes Needed)
 
@@ -749,8 +826,20 @@ const MOCK_PHASES: ConstructionPhase[] = [
 
 ## Appendix B: Technology Sources
 
+### Core Library
 - [react-modern-gantt (npm)](https://www.npmjs.com/package/react-modern-gantt) - MIT, React 17/18/19, TypeScript - **ΕΠΙΛΕΧΘΗΚΕ**
 - [react-modern-gantt (GitHub)](https://github.com/NillsvanLimworwortel/react-modern-gantt) - Source code
+
+### Export Dependencies (Phase 4.4)
+
+| Package | Version | License | Χρήση |
+|---------|---------|---------|-------|
+| `jspdf` | v3.0.3 | MIT | PDF generation (pre-existing) |
+| `jspdf-autotable` | v5.0.2 | MIT | PDF data tables (pre-existing) |
+| `html-to-image` | latest | MIT | DOM capture → PNG/SVG (**νέο**) |
+| `exceljs` | latest | MIT | Excel workbook generation (**νέο**) |
+
+### Rejected Libraries
 - [SVAR React Gantt](https://svar.dev/react/gantt/) - **ΑΠΟΚΛΕΙΣΤΗΚΕ** (GPLv3 αντί MIT)
 - [Best JavaScript Gantt Chart Libraries Guide](https://www.anychart.com/blog/2025/11/05/best-javascript-gantt-chart-libraries/)
 

@@ -33,7 +33,10 @@ import type {
   ResponseTimeMetrics,
   ThroughputMetrics,
   SecurityStatus,
-  CostStatus
+  CostStatus,
+  ActiveAlert,
+  RegionStatus,
+  ProviderStatus
 } from '../types/status';
 
 // ============================================================================
@@ -43,41 +46,7 @@ import type {
 /**
  * Mock alert structure for alert engine integration
  */
-interface MockAlert {
-  type: string;
-  title: string;
-  description: string;
-  severity: string;
-  source: string;
-  timestamp: Date;
-  metadata?: Record<string, unknown>;
-}
-
-/**
- * Region status structure for multi-region monitoring
- */
-interface RegionStatus {
-  name: string;
-  provider: string;
-  status: string;
-  latency: { average: number; min: number; max: number; p95: number; lastMeasured: Date };
-  availability: number;
-  components: number;
-  healthyComponents: number;
-  lastUpdated: Date;
-}
-
-/**
- * Provider status structure for multi-cloud monitoring
- */
-interface ProviderStatus {
-  name: string;
-  status: string;
-  services: string[];
-  overallHealth: number;
-  incidentCount: number;
-  lastUpdated: Date;
-}
+type MockAlert = ActiveAlert;
 
 // ============================================================================
 // CORE INFRASTRUCTURE MANAGER CLASS
@@ -100,7 +69,14 @@ export class InfrastructureManager {
   // 🏢 ENTERPRISE: Properly typed mock alert engine
   private alertEngine = {
     reportAlert: (alert: MockAlert) => console.warn('Alert Engine not connected:', alert),
-    createAlert: async (type: string, title: string, description: string, severity: string, source: string, metadata?: Record<string, unknown>) => {
+    createAlert: async (
+      type: ActiveAlert['type'],
+      title: string,
+      description: string,
+      severity: ActiveAlert['severity'],
+      source: string,
+      metadata?: Record<string, unknown>
+    ) => {
       console.warn('Alert Engine not connected - createAlert:', { type, title, description, severity, source, metadata });
     },
     generateQuickReport: async () => ({ alerts: { active: [] as MockAlert[] } })

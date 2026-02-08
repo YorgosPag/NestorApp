@@ -52,7 +52,9 @@ function toNotificationActions(value: unknown): NotificationAction[] | undefined
     const label = typeof action.label === 'string' ? action.label : undefined;
     if (!id || !label) return [];
     const url = typeof action.url === 'string' ? action.url : undefined;
-    const method = action.method === 'GET' || action.method === 'POST' ? action.method : undefined;
+    const method = action.method === 'GET' || action.method === 'POST'
+      ? (action.method as 'GET' | 'POST')
+      : undefined;
     const destructive = typeof action.destructive === 'boolean' ? action.destructive : undefined;
     return [{ id, label, url, method, destructive }];
   });
@@ -70,7 +72,7 @@ export class AlertNotificationBridge {
    * Converts alert engine alert to notification system notification
    */
   alertToNotification(alert: Alert): Notification {
-    const alertData = alert as Record<string, unknown>;
+    const alertData = alert as unknown as Record<string, unknown>;
     const nowIso = new Date().toISOString();
     const alertTimestamp = alertData.timestamp instanceof Date
       ? alertData.timestamp
