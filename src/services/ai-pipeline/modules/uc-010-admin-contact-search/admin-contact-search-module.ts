@@ -88,13 +88,27 @@ export class AdminContactSearchModule implements IUCModule {
   // ── Step 3: LOOKUP ──
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
-    const contactName = (ctx.understanding?.entities?.contactName as string) ?? '';
+    let contactName = (ctx.understanding?.entities?.contactName as string) ?? '';
     const contactType = (ctx.understanding?.entities?.contactType as string) ?? '';
     const messageText = ctx.intake.normalized.contentText ?? '';
 
     // Determine mode: if a specific name is given → search; otherwise → list
-    const hasSpecificName = contactName.length > 1
+    let hasSpecificName = contactName.length > 1
       && !['', 'all', 'όλες', 'όλους', 'όλα'].includes(contactName.toLowerCase().trim());
+
+    // ── Fallback: AI returned empty contactName but message has a name ──
+    // Parse raw message to extract search term when AI entity extraction fails
+    if (!hasSpecificName) {
+      const parsedName = extractSearchTermFromMessage(messageText);
+      if (parsedName) {
+        contactName = parsedName;
+        hasSpecificName = true;
+        logger.info('UC-010 LOOKUP: Fallback — extracted name from raw message', {
+          requestId: ctx.requestId,
+          parsedName,
+        });
+      }
+    }
 
     const mode: 'search' | 'list' = hasSpecificName ? 'search' : 'list';
 
@@ -272,4 +286,97 @@ export class AdminContactSearchModule implements IUCModule {
   async healthCheck(): Promise<boolean> {
     return true;
   }
+}
+
+// ============================================================================
+// HELPERS: Raw Message Parsing (Fallback for AI entity extraction)
+// ============================================================================
+
+/** Command keywords to strip when extracting the search term */
+const SEARCH_COMMAND_KEYWORDS = [
+  'βρες μου τα στοιχεια',
+  'βρες μου τα στοιχεία',
+  'βρες μου τον',
+  'βρες μου την',
+  'βρες μου το',
+  'βρες μου',
+  'βρες τον',
+  'βρες την',
+  'βρες το',
+  'βρες',
+  'ψαξε τον',
+  'ψάξε τον',
+  'ψαξε την',
+  'ψάξε την',
+  'ψαξε',
+  'ψάξε',
+  'αναζητησε',
+  'αναζήτησε',
+  'search',
+  'find',
+];
+
+/** List keywords — if the message is ONLY these, it's a list request */
+const LIST_ONLY_KEYWORDS = [
+  'δειξε μου τις επαφες',
+  'δείξε μου τις επαφές',
+  'δειξε μου τους πελατες',
+  'δείξε μου τους πελάτες',
+  'ποιες ειναι οι επαφες',
+  'ποιες είναι οι επαφές',
+  'λιστα επαφων',
+  'λίστα επαφών',
+  'λιστα εταιρειων',
+  'λίστα εταιρειών',
+  'ποσες επαφες',
+  'πόσες επαφές',
+];
+
+/**
+ * Extract a search term from the raw message when AI entity extraction fails.
+ *
+ * Strategy:
+ * 1. Check if the message is a list-only request → return null
+ * 2. Strip command keywords → remaining text is the search term
+ *
+ * @example extractSearchTermFromMessage("Βρες Test") → "Test"
+ * @example extractSearchTermFromMessage("Βρες μου τον Γιάννη") → "Γιάννη"
+ * @example extractSearchTermFromMessage("Δείξε μου τις επαφές") → null (list mode)
+ */
+function extractSearchTermFromMessage(message: string): string | null {
+  const normalized = message.toLowerCase().trim();
+
+  // If it's a list-only request, return null (stay in list mode)
+  if (LIST_ONLY_KEYWORDS.some(kw => normalized.includes(kw))) {
+    return null;
+  }
+
+  // Strip command keywords (longest first to avoid partial matches)
+  let cleaned = message;
+  const sortedKeywords = [...SEARCH_COMMAND_KEYWORDS].sort((a, b) => b.length - a.length);
+
+  for (const keyword of sortedKeywords) {
+    const regex = new RegExp(keyword, 'gi');
+    cleaned = cleaned.replace(regex, '');
+  }
+
+  // Clean up punctuation, extra whitespace
+  cleaned = cleaned
+    .replace(/[,;:\-–—"'«»]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // If we have a non-empty result and it's not just stop words, use it
+  if (cleaned.length > 0) {
+    // Filter out common stop words that aren't names
+    const stopWords = ['τα', 'στοιχεια', 'στοιχεία', 'του', 'της', 'τον', 'την', 'μου', 'σου'];
+    const words = cleaned.split(/\s+/).filter(w => !stopWords.includes(w.toLowerCase()));
+    const result = words.join(' ').trim();
+
+    if (result.length > 0) {
+      return result;
+    }
+  }
+
+  return null;
 }
