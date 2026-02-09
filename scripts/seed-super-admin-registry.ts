@@ -35,38 +35,21 @@ const db = admin.firestore();
 // ============================================================================
 
 /**
- * Initial super admin identities.
+ * Super admin identities — REAL production values.
  *
- * IMPORTANT: Update the Telegram userId/chatId values with the real IDs
- * from the Telegram API (use getMe or check webhook logs).
+ * Γιώργος Παγώνης: Telegram @SteFanoThess (ψευδώνυμο), userId 5618410820
  */
 const INITIAL_ADMINS = [
   {
-    firebaseUid: null, // Set after Firebase Auth setup
-    displayName: 'Giorgos Pagonis',
+    firebaseUid: null,
+    displayName: 'Γιώργος Παγώνης',
     channels: {
       telegram: {
-        userId: 'REPLACE_WITH_GIORGOS_TELEGRAM_USER_ID',
-        chatId: 'REPLACE_WITH_GIORGOS_TELEGRAM_CHAT_ID',
+        userId: '5618410820',
+        chatId: '5618410820',
       },
       email: {
-        addresses: ['REPLACE_WITH_GIORGOS_EMAIL'],
-      },
-    },
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    firebaseUid: null, // Set after Firebase Auth setup
-    displayName: 'Aderfos Pagonis',
-    channels: {
-      telegram: {
-        userId: 'REPLACE_WITH_ADERFOS_TELEGRAM_USER_ID',
-        chatId: 'REPLACE_WITH_ADERFOS_TELEGRAM_CHAT_ID',
-      },
-      email: {
-        addresses: ['REPLACE_WITH_ADERFOS_EMAIL'],
+        addresses: ['gpagonis@layera.gr'],
       },
     },
     isActive: true,

@@ -99,10 +99,10 @@ GENERAL RULES:
   ADMIN_COMMAND_SYSTEM: `You are an AI assistant for the OWNERS of a Greek real estate & construction management company (κτηματομεσιτικό/κατασκευαστικό γραφείο). The sender is a verified SUPER ADMIN (owner). Analyze their command and return JSON matching the schema.
 
 ADMIN INTENT TYPES (choose the most specific match):
-- admin_contact_search: Find contact information by name (βρες στοιχεία, βρες τηλέφωνο, ποιος είναι ο)
+- admin_contact_search: Search for a SPECIFIC contact by NAME — the admin gives a person's name and wants their details (βρες [ΟΝΟΜΑ], βρες στοιχεία [ΟΝΟΜΑ], ποιος είναι ο [ΟΝΟΜΑ], τηλέφωνο [ΟΝΟΜΑ]). REQUIRES a person name in the message.
 - admin_project_status: Check project status, progress, updates (τι γίνεται με το έργο, πρόοδος, κατάσταση)
 - admin_send_email: Send an email to someone (στείλε email, στείλε μήνυμα σε)
-- admin_unit_stats: Property/unit statistics — sold, available, reserved (πόσα ακίνητα, στατιστικά, πωλήσεις)
+- admin_unit_stats: Business statistics and counts — units, contacts, projects (πόσα ακίνητα, πόσες επαφές, πόσα έργα, στατιστικά, πωλήσεις, αριθμός). Use this for ANY "how many" / "πόσα/πόσες/πόσοι" questions.
 - general_inquiry: Command that doesn't fit the above categories
 
 ENTITY EXTRACTION RULES:
