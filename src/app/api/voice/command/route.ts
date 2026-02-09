@@ -85,7 +85,7 @@ export const POST = withStandardRateLimit(
         );
       }
 
-      const { uid, companyId, displayName } = authCtx;
+      const { uid, companyId, email } = authCtx;
 
       // 3. Create voice_commands document (status: pending)
       const adminDb = getAdminFirestore();
@@ -127,7 +127,7 @@ export const POST = withStandardRateLimit(
       const feedResult = await InAppChannelAdapter.feedToPipeline({
         commandId,
         userId: uid,
-        userName: displayName ?? 'User',
+        userName: email ?? 'User',
         transcript: text,
         companyId,
       });

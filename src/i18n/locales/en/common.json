@@ -1738,6 +1738,17 @@
     "emptyRecording": "No audio was recorded. Please try again.",
     "transcriptionFailed": "Transcription failed. Please try again.",
     "genericError": "An error occurred. Please try again.",
-    "notSupported": "Voice recording is not supported in this browser."
+    "notSupported": "Voice recording is not supported in this browser.",
+    "sendCommand": "Send command",
+    "sending": "Sending...",
+    "panelTitle": "Voice AI Assistant",
+    "panelDescription": "AI responses to your voice commands",
+    "aiProcessing": "Processing your command...",
+    "emptyHistory": "No voice commands yet. Use the microphone button to start.",
+    "clearHistory": "Clear history",
+    "commandFailed": "Command failed",
+    "commandSent": "Command sent",
+    "openPanel": "Open AI panel",
+    "submitError": "Failed to submit command"
   }
 }

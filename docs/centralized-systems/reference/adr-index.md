@@ -178,6 +178,7 @@
 | **ADR-159** | Measurement Text Colors Separation (ANGLE vs DISTANCE) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-159-measurement-text-colors-separation-angle-vs-distan.md) |
 | **ADR-160** | Internal Angle Arc Rendering (dot product logic) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-160-internal-angle-arc-rendering-dot-product-logic.md) |
 | **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ IMPLEMENTED | 2026-02-09 | Frontend / Backend | [📄](./adrs/ADR-161-global-voice-assistant.md) |
+| **ADR-164** | In-App Voice AI Pipeline (Right-Side Chat Panel) | ✅ IMPLEMENTED | 2026-02-09 | AI Pipeline / Voice / UX | [📄](./adrs/ADR-164-in-app-voice-ai-pipeline.md) |
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-165-entity-validation-centralization.md) |
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | 2026-02-02 | Entity Systems | [📄](./adrs/ADR-167-enterprise-project-address-system.md) |
@@ -385,6 +386,7 @@
 | **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ IMPLEMENTED | [View](./adrs/ADR-145-super-admin-ai-assistant.md) |
 | **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ IMPLEMENTED | [View](./adrs/ADR-156-voice-message-transcription-whisper.md) |
 | **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ IMPLEMENTED | [View](./adrs/ADR-161-global-voice-assistant.md) |
+| **ADR-164** | In-App Voice AI Pipeline (Right-Side Chat Panel) | ✅ IMPLEMENTED | [View](./adrs/ADR-164-in-app-voice-ai-pipeline.md) |
 
 ---
 

@@ -19,7 +19,7 @@
  */
 
 import * as React from 'react';
-import { Mic, MicOff, Loader2, Square, Copy, Check } from 'lucide-react';
+import { Mic, MicOff, Loader2, Square, Copy, Check, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -33,6 +33,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { useVoiceCommand } from '@/hooks/useVoiceCommand';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 
@@ -56,6 +57,8 @@ export function VoiceAssistantButton() {
     stopRecording,
     reset,
   } = useVoiceRecorder();
+
+  const { submitCommand, isSubmitting } = useVoiceCommand();
 
   // Reset state when dialog closes
   const handleDialogChange = React.useCallback(
@@ -83,6 +86,16 @@ export function VoiceAssistantButton() {
       await startRecording();
     }
   }, [status, startRecording, stopRecording]);
+
+  // Submit transcribed text to AI pipeline (ADR-164)
+  const handleSubmitCommand = React.useCallback(async () => {
+    if (!transcribedText) return;
+    await submitCommand(transcribedText);
+    // Close dialog — panel will open automatically via store
+    setDialogOpen(false);
+    reset();
+    setCopied(false);
+  }, [transcribedText, submitCommand, reset]);
 
   // Copy transcribed text to clipboard
   const handleCopy = React.useCallback(async () => {
@@ -263,23 +276,37 @@ export function VoiceAssistantButton() {
                 </Button>
               )}
               {status === 'done' && transcribedText && (
-                <Button
-                  onClick={handleCopy}
-                  variant={copied ? 'outline' : 'default'}
-                  suppressHydrationWarning
-                >
-                  {copied ? (
-                    <>
-                      <Check className={cn(iconSizes.sm, 'mr-1')} />
-                      {t('voiceAssistant.copied', 'Copied!')}
-                    </>
-                  ) : (
-                    <>
-                      <Copy className={cn(iconSizes.sm, 'mr-1')} />
-                      {t('voiceAssistant.copy', 'Copy text')}
-                    </>
-                  )}
-                </Button>
+                <>
+                  <Button
+                    onClick={handleCopy}
+                    variant="outline"
+                    suppressHydrationWarning
+                  >
+                    {copied ? (
+                      <>
+                        <Check className={cn(iconSizes.sm, 'mr-1')} />
+                        {t('voiceAssistant.copied', 'Copied!')}
+                      </>
+                    ) : (
+                      <>
+                        <Copy className={cn(iconSizes.sm, 'mr-1')} />
+                        {t('voiceAssistant.copy', 'Copy text')}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleSubmitCommand}
+                    disabled={isSubmitting}
+                    suppressHydrationWarning
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className={cn(iconSizes.sm, 'mr-1 animate-spin')} />
+                    ) : (
+                      <Send className={cn(iconSizes.sm, 'mr-1')} />
+                    )}
+                    {t('voiceAssistant.sendCommand', 'Send command')}
+                  </Button>
+                </>
               )}
             </div>
           </DialogFooter>
