@@ -22,7 +22,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { createAccountingServices } from '@/subapps/accounting/services';
+import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { FiscalQuarter } from '@/subapps/accounting/types';
 
 // =============================================================================

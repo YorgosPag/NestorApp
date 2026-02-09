@@ -19,8 +19,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { createAccountingServices, isoNow } from '@/subapps/accounting/services';
-import type { IDocumentAnalyzer } from '@/subapps/accounting/services';
+import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { isoNow } from '@/subapps/accounting/services/repository/firestore-helpers';
+import type { IDocumentAnalyzer } from '@/subapps/accounting/types/interfaces';
 import { createOpenAIDocumentAnalyzer } from '@/subapps/accounting/services/external/openai-document-analyzer';
 import { DocumentAnalyzerStub } from '@/subapps/accounting/services/external/document-analyzer.stub';
 import type {
