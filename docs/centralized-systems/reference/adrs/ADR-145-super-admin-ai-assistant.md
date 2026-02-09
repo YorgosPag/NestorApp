@@ -160,15 +160,17 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 
 ## 4. UC Modules
 
-### UC-010: Admin Contact Search & List
+### UC-010: Admin Contact Search, List & Missing Fields Analysis
 
 - **Intents**: `admin_contact_search`
-- **Two Modes**:
+- **Three Modes**:
   - **Search mode**: Specific name given → `findContactByName()` fuzzy match
   - **List mode**: No name, asks "ποιες επαφές" → `listContacts()` with type filter
+  - **Missing fields mode**: Asks about empty/incomplete fields → `getContactMissingFields()` analysis
+- **Missing Fields Detection**: `detectMissingFieldsMode()` αναγνωρίζει keywords (κενά, ελλιπή, λείπει, πεδία, συμπληρωθούν)
 - **Type Filter**: `detectTypeFilter()` αναγνωρίζει keywords (φυσικά πρόσωπα → individual, εταιρείες → company)
 - **Execute**: Read-only (καμία side effect)
-- **Acknowledge**: Format αποτελεσμάτων (name, email, phone, company, type) → send via channel
+- **Acknowledge**: Format αποτελεσμάτων — standard (name, email, phone) ή missing fields (filled/total, κενά πεδία list)
 - **autoApprovable**: `true`
 
 ### UC-011: Admin Project Status
@@ -498,6 +500,8 @@ interface AdminSession {
 | 2026-02-09 | Fix: Admin entity extraction — `AI_ADMIN_COMMAND_SCHEMA` with 14 fields (base+admin) replaces 5-field schema for admin commands. `ExtractedEntitiesSchema` gets `.passthrough()`. UC-012 fallback parsing from raw message. | Claude Code |
 | 2026-02-09 | ADR-164: In-App Voice AI Pipeline — third channel adapter (IN_APP), `isSuperAdminFirebaseUid()` + email fallback, `voice_commands` Firestore rules | Claude Code |
 | 2026-02-09 | Data fix: Set `firebaseUid: "ITjmw0syn7WiYuskqaGtzLPuN852"` in `settings/super_admin_registry` for in-app admin detection | Claude Code |
+| 2026-02-09 | Fix: AI prompt intent detection — "πόσα πεδία κενά στην επαφή X" λανθασμένα πήγαινε σε UC-013 (stats) αντί UC-010 (contact search). Διευκρίνιση ότι ερωτήσεις για πεδία ΣΥΓΚΕΚΡΙΜΕΝΗΣ επαφής → `admin_contact_search`, aggregate stats → `admin_unit_stats` | Claude Code |
+| 2026-02-09 | Feat: UC-010 missing fields mode — `detectMissingFieldsMode()` + `getContactMissingFields()` integration. Δείχνει filled/total πεδία + λίστα κενών πεδίων ανά επαφή | Claude Code |
 
 ---
 

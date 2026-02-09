@@ -93,10 +93,6 @@ export const GEO_DIALOG_STYLES = {
     padding: spacing.xs,
     borderRadius: borderRadius.sm,
     color: colors.text.secondary,
-    ':hover': {
-      backgroundColor: colors.background.hover,
-      color: GEO_COLORS.GRAY_700
-    },
     transition: 'all ' + animation.duration.fast + ' ' + animation.easing.easeOut
   })
 } as const;

@@ -22,7 +22,7 @@ import 'server-only';
 
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { findContactByName, listContacts } from '../../shared/contact-lookup';
+import { findContactByName, listContacts, getContactMissingFields } from '../../shared/contact-lookup';
 import type { ContactTypeFilter } from '../../shared/contact-lookup';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { PipelineIntentType } from '@/types/ai-pipeline';
@@ -43,10 +43,21 @@ const logger = createModuleLogger('UC_010_ADMIN_CONTACT_SEARCH');
 
 interface ContactSearchLookupData {
   mode: 'search' | 'list';
+  missingFieldsMode: boolean;
   searchTerm: string;
   typeFilter: ContactTypeFilter;
   results: ContactSearchResult[];
+  missingFieldsData: ContactMissingFieldsEntry[];
   companyId: string;
+}
+
+interface ContactMissingFieldsEntry {
+  contactId: string;
+  contactName: string;
+  contactType: 'individual' | 'company';
+  missingFields: string[];
+  totalFields: number;
+  filledFields: number;
 }
 
 interface ContactSearchResult {
@@ -71,6 +82,26 @@ export class AdminContactSearchModule implements IUCModule {
   readonly requiredRoles: readonly string[] = [];
 
   // ── Helpers ──
+
+  /**
+   * Detect if user is asking about missing/empty fields of a contact.
+   * Keywords: πεδία, κενά, ελλιπή, λείπει, συμπληρωθούν, missing, empty
+   */
+  private detectMissingFieldsMode(text: string): boolean {
+    const lower = text.toLowerCase();
+    const missingKeywords = ['κενά', 'κενό', 'ελλιπ', 'λείπ', 'πεδί', 'συμπληρω', 'missing', 'empty'];
+    return missingKeywords.some(kw => lower.includes(kw));
+  }
+
+  /**
+   * Resolve contact type string to typed literal.
+   */
+  private resolveContactType(type: string | null): 'individual' | 'company' {
+    if (!type) return 'individual';
+    const lower = type.toLowerCase();
+    if (lower === 'company' || lower === 'εταιρεία' || lower === 'εταιρία') return 'company';
+    return 'individual';
+  }
 
   /**
    * Detect contact type filter from message keywords.
@@ -141,17 +172,52 @@ export class AdminContactSearchModule implements IUCModule {
       });
     }
 
+    // ── Missing fields analysis (when user asks about empty/incomplete data) ──
+    const missingFieldsMode = this.detectMissingFieldsMode(messageText);
+    let missingFieldsData: ContactMissingFieldsEntry[] = [];
+
+    if (missingFieldsMode && results.length > 0) {
+      logger.info('UC-010 LOOKUP: Missing fields mode detected, analyzing contacts', {
+        requestId: ctx.requestId,
+        contactCount: results.length,
+      });
+
+      // Individual field count: Τηλέφωνο, Email, ΑΦΜ, Διεύθυνση, Επάγγελμα, Πατρώνυμο, Ημ. γέννησης, ΔΟΥ = 8
+      // Company field count: Τηλέφωνο, Email, ΑΦΜ, Διεύθυνση, Αρ. ΓΕΜΗ, Νομική μορφή, ΔΟΥ = 7
+      const INDIVIDUAL_FIELD_COUNT = 8;
+      const COMPANY_FIELD_COUNT = 7;
+
+      missingFieldsData = await Promise.all(
+        results.map(async (r) => {
+          const contactType = this.resolveContactType(r.type);
+          const missingFields = await getContactMissingFields(r.contactId, contactType);
+          const totalFields = contactType === 'individual' ? INDIVIDUAL_FIELD_COUNT : COMPANY_FIELD_COUNT;
+          return {
+            contactId: r.contactId,
+            contactName: r.name,
+            contactType,
+            missingFields,
+            totalFields,
+            filledFields: totalFields - missingFields.length,
+          };
+        })
+      );
+    }
+
     logger.info('UC-010 LOOKUP: Complete', {
       requestId: ctx.requestId,
       mode,
       resultsFound: results.length,
+      missingFieldsMode,
     });
 
     const lookupData: ContactSearchLookupData = {
       mode,
+      missingFieldsMode,
       searchTerm: hasSpecificName ? contactName : '',
       typeFilter,
       results,
+      missingFieldsData,
       companyId: ctx.companyId,
     };
 
@@ -166,15 +232,23 @@ export class AdminContactSearchModule implements IUCModule {
     const mode = lookup?.mode ?? 'search';
     const searchTerm = lookup?.searchTerm ?? '';
     const typeFilter = lookup?.typeFilter ?? 'all';
+    const missingFieldsMode = lookup?.missingFieldsMode ?? false;
+    const missingFieldsData = lookup?.missingFieldsData ?? [];
 
     const typeLabel = typeFilter === 'individual' ? 'φυσικά πρόσωπα'
       : typeFilter === 'company' ? 'εταιρείες' : 'επαφές';
 
-    const summary = mode === 'list'
-      ? `Λίστα: ${results.length} ${typeLabel}`
-      : results.length > 0
-        ? `Βρέθηκαν ${results.length} επαφές για "${searchTerm}"`
-        : `Δεν βρέθηκαν επαφές για "${searchTerm}"`;
+    let summary: string;
+    if (missingFieldsMode && missingFieldsData.length > 0) {
+      const entry = missingFieldsData[0];
+      summary = `Ελλιπή πεδία ${entry.contactName}: ${entry.missingFields.length}/${entry.totalFields}`;
+    } else if (mode === 'list') {
+      summary = `Λίστα: ${results.length} ${typeLabel}`;
+    } else if (results.length > 0) {
+      summary = `Βρέθηκαν ${results.length} επαφές για "${searchTerm}"`;
+    } else {
+      summary = `Δεν βρέθηκαν επαφές για "${searchTerm}"`;
+    }
 
     return {
       messageId: ctx.intake.id,
@@ -183,9 +257,11 @@ export class AdminContactSearchModule implements IUCModule {
           type: 'admin_contact_search_reply',
           params: {
             mode,
+            missingFieldsMode,
             searchTerm,
             typeFilter,
             results,
+            missingFieldsData,
             resultCount: results.length,
             channel: ctx.intake.channel,
             telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
@@ -219,13 +295,37 @@ export class AdminContactSearchModule implements IUCModule {
       const searchTerm = (params.searchTerm as string) ?? '';
       const mode = (params.mode as string) ?? 'search';
       const typeFilter = (params.typeFilter as string) ?? 'all';
+      const missingFieldsMode = (params.missingFieldsMode as boolean) ?? false;
+      const missingFieldsData = (params.missingFieldsData as ContactMissingFieldsEntry[]) ?? [];
 
       const typeLabel = typeFilter === 'individual' ? 'φυσικά πρόσωπα'
         : typeFilter === 'company' ? 'εταιρείες' : 'επαφές';
 
       // Format reply text
       let replyText: string;
-      if (results.length === 0) {
+
+      // ── Missing fields mode: detailed field analysis ──
+      if (missingFieldsMode && missingFieldsData.length > 0) {
+        const lines: string[] = [];
+        for (const entry of missingFieldsData) {
+          const typeGr = entry.contactType === 'individual' ? 'Φυσικό πρόσωπο' : 'Εταιρεία';
+          lines.push(`Επαφή: ${entry.contactName}`);
+          lines.push(`Τύπος: ${typeGr}`);
+          lines.push(`Συμπληρωμένα: ${entry.filledFields}/${entry.totalFields} πεδία`);
+
+          if (entry.missingFields.length === 0) {
+            lines.push('');
+            lines.push('Όλα τα πεδία είναι συμπληρωμένα!');
+          } else {
+            lines.push(`Κενά πεδία (${entry.missingFields.length}):`);
+            for (const field of entry.missingFields) {
+              lines.push(`  • ${field}`);
+            }
+          }
+          lines.push('');
+        }
+        replyText = lines.join('\n').trim();
+      } else if (results.length === 0) {
         replyText = mode === 'list'
           ? `Δεν βρέθηκαν ${typeLabel}.`
           : `Δεν βρέθηκαν επαφές για "${searchTerm}".`;

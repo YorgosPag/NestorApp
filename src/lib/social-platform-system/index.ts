@@ -54,6 +54,8 @@ export {
   TikTokIcon,
 } from './platform-config';
 
+export { SOCIAL_BRAND_COLORS, type SocialBrandKey } from './brand-colors';
+
 // ============================================================================
 // SHARING SERVICE EXPORTS
 // ============================================================================
@@ -185,6 +187,8 @@ import {
   isValidPlatform,
   detectPlatformFromUrl
 } from './platform-config';
+
+// NOTE: SOCIAL_BRAND_COLORS + SocialBrandKey already exported at line 57
 
 // ============================================================================
 // BACKWARDS COMPATIBILITY LAYER
@@ -360,3 +364,4 @@ export const SYSTEM_DOCUMENTATION = {
     ]
   }
 };
+

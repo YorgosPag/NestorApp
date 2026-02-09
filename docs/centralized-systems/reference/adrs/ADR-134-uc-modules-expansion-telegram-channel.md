@@ -161,7 +161,7 @@ Telegram webhook → processMessage() (existing bot flow)
 | `status_inquiry` | UC-005 | ✅ NEW |
 | `unknown` | UC-005 | ✅ NEW (catch-all) |
 | `document_request` | UC-006 | ✅ Implemented |
-| `admin_contact_search` | UC-010 | ✅ NEW (ADR-145) |
+| `admin_contact_search` | UC-010 | ✅ NEW (ADR-145) — search + list + missing fields analysis |
 | `admin_project_status` | UC-011 | ✅ NEW (ADR-145) |
 | `admin_send_email` | UC-012 | ✅ NEW (ADR-145) |
 | `admin_unit_stats` | UC-013 | ✅ NEW (ADR-145) |

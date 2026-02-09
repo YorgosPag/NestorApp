@@ -12,8 +12,8 @@
  */
 
 import React from 'react';
-import type { CSSProperties } from 'react';
 import { InteractiveMap } from '../../components/InteractiveMap';
+import { MAP_CORE_STYLES } from '../../config/map-core-config';
 import type { TransformState } from '../../hooks/map/useMapInteractions';
 
 // ============================================================================
