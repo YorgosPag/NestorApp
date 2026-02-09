@@ -15,6 +15,7 @@ const UI_COLORS_BASE = {
   DARK_BACKGROUND: '#333333',
   DARKER: '#222222', // ✅ ENTERPRISE: Even darker background for UI elements
   CANVAS_BACKGROUND: '#000000', // ✅ ENTERPRISE: Pure black like AutoCAD for maximum color contrast
+  CANVAS_BACKGROUND_AUTOCAD_DARK: '#1a1a1a', // ✅ ENTERPRISE: AutoCAD dark canvas background
   LIGHT_GRAY: '#cccccc',
   MEDIUM_GRAY: '#888888',
   LIGHT_GRAY_ALT: '#bbbbbb',

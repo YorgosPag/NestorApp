@@ -645,6 +645,8 @@ interface AIAccuracyMetrics {
 | 2026-02-09 | Next.js `after()` for immediate processing (ίδιο pattern email) | Claude Code |
 | 2026-02-09 | Firebase Storage for document retention (5+ χρόνια) | Claude Code |
 | 2026-02-09 | Telegram UC-017 for mobile expense capture | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/documents.ts: DocumentType (7 types), DocumentProcessingStatus, ExtractedLineItem, ExtractedDocumentData, ReceivedExpenseDocument, VendorCategoryLearning, ExpenseProcessingQueue, DocumentClassification. types/interfaces.ts: IDocumentAnalyzer (classifyDocument, extractData, categorizeExpense) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — services/external/document-analyzer.stub.ts: `DocumentAnalyzerStub implements IDocumentAnalyzer` — all 3 methods (classifyDocument, extractData, categorizeExpense) throw "not configured". Placeholder for OpenAI gpt-4o Vision integration (OCR+NLP for invoice images/PDFs) | Claude Code |
 
 ---
 

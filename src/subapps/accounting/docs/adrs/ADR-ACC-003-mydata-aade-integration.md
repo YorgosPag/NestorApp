@@ -749,6 +749,9 @@ interface MyDataConfig {
 | 2026-02-09 | Server-side only — API calls μέσω Next.js API routes | Claude Code |
 | 2026-02-09 | Audit trail: Πλήρη XML payloads, retention 5+ χρόνια | Claude Code |
 | 2026-02-09 | Auto income classification based on KAD + invoice type | Claude Code |
+| 2026-02-09 | **Phase 1 implemented** — types/common.ts: MyDataIncomeType (4 codes), MyDataExpenseType (9 codes), MyDataDocumentStatus (5 states) | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/mydata.ts: MyDataEnvironment, MyDataConfig, MyDataSubmissionAction, MyDataResponseStatus, MyDataError, MyDataSubmission, MyDataVatCategory (8 codes), ReceivedDocument. types/interfaces.ts: IMyDataService (submit, cancel, classify, fetch) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — services/external/mydata-service.stub.ts: `MyDataServiceStub implements IMyDataService` — all 5 methods throw "not configured" error. Awaiting ΑΑΔΕ production/test credentials from Γιώργος. Will be replaced with real REST API implementation | Claude Code |
 
 ---
 

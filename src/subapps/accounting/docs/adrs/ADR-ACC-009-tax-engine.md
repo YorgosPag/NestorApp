@@ -587,6 +587,8 @@ accounting/shared/
 | 2026-02-09 | Withholding reconciliation: track βεβαιώσεων ανά πελάτη | Claude Code |
 | 2026-02-09 | E1/E3 auto-fill κωδικών (export CSV) | Claude Code |
 | 2026-02-09 | Tax planning insights (AI tips — ενδεικτικά) | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/tax.ts: TaxBracket, TaxScaleConfig (brackets + prepayment + solidarity), TaxCalculationParams, TaxBracketResult, TaxResult (full breakdown), TaxEstimate (real-time projection), TaxInstallment (3 δόσεις), TaxPlanningInsight, WithholdingReconciliation. types/interfaces.ts: ITaxEngine (calculateAnnualTax, estimateTax, getTaxScale, calculateInstallments) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — services/config/tax-config.ts: `GREEK_TAX_SCALES` (ReadonlyMap 2024/2025/2026), 5 brackets (9%/22%/28%/36%/44%), prepaymentRate 55%, professionalTax 650€, `getTaxScaleForYear()` with fallback. services/engines/tax-engine.ts: `TaxEngine implements ITaxEngine` — `calculateAnnualTax(params)` progressive bracket calculation, `estimateTax(fiscalYear)` async projection, `getTaxScale(year)`, `calculateInstallments(amount, year)` with 3 due dates (July/September/November) | Claude Code |
 
 ---
 

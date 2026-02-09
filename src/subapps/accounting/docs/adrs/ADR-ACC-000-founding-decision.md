@@ -664,6 +664,17 @@ interface InvoiceSeries {
 | 2026-02-09 | ΚΑΔ imported: 71112000 (κύρια/αρχιτεκτονικές), 41202003 + 41201001 (δευτερ./κατασκευές) | Γιώργος (Taxisnet) |
 | 2026-02-09 | Β' Απλογραφικά, Κανονικό ΦΠΑ, ΟΧΙ ενδοκοινοτικές — επιβεβαιώθηκε από Taxisnet | Γιώργος (Taxisnet) |
 | 2026-02-09 | ΕΦΚΑ: 1η κατηγορία ΟΛΑ — 330,37€/μήνα (6 κλάδοι). Πραγματικά ποσά από ειδοποιητήριο 12/2025 | Γιώργος (ΕΦΚΑ PDF) |
+| 2026-02-09 | **Phase 1 implemented** — types/common.ts (shared), types/journal.ts (journal entries), types/invoice.ts (invoicing), types/index.ts (barrel), config/account-categories.ts (24 categories), firestore-collections.ts updated | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — 7 domain type files (vat, mydata, tax, efka, assets, bank, documents) + interfaces.ts (IAccountingRepository, IVATEngine, ITaxEngine, IDepreciationEngine, IDocumentAnalyzer, IMatchingEngine, IMyDataService, ICSVImportService, AccountingPermission) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — 20 service files (business logic layer). Sub-phases: 3A (4 configs + 3 engines), 3B (repository + orchestration + factory), 3C (5 CSV parsers + matching engine + import service), 3D (2 stubs for myDATA + AI) | Claude Code |
+| 2026-02-09 | Constructor injection pattern — all engines receive `IAccountingRepository` via constructor (same as `ProjectsService(repo)`) | Claude Code |
+| 2026-02-09 | Config separate from engines — vat-config, tax-config, efka-config, depreciation-config are independent files for easy legislation updates | Claude Code |
+| 2026-02-09 | `sanitizeForFirestore()` — mandatory on every Firestore write to prevent `undefined` rejection (per MEMORY.md) | Claude Code |
+| 2026-02-09 | Atomic invoice counter — Firestore transaction in `accounting_invoice_counters` collection | Claude Code |
+| 2026-02-09 | CSV strategy pattern — per-bank parser configs (NBG, Eurobank, Piraeus, Alpha) for bank statement import | Claude Code |
+| 2026-02-09 | Matching engine scoring — amount ±5% (+40/+25pts), date ±7 days (+30/+15pts), counterparty (+20pts), reference (+10pts). Auto-match threshold: 85 | Claude Code |
+| 2026-02-09 | Extended `firestore-collections.ts` (+9 accounting collections) and `enterprise-id.service.ts` (+8 prefixes & generators) | Claude Code |
+| 2026-02-09 | Stubs for myDATA + AI Document Processing — throw "not configured" until ΑΑΔΕ credentials / OpenAI Vision activation | Claude Code |
 
 ---
 

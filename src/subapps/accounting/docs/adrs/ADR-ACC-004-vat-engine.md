@@ -588,6 +588,8 @@ output -= creditNote.vatAmount
 | 2026-02-09 | Πιστωτικό υπόλοιπο: auto carry-forward μεταξύ τριμήνων | Claude Code |
 | 2026-02-09 | Reminders: 15d, 5d πριν + due day + overdue | Claude Code |
 | 2026-02-09 | Pro-rata: Δεν ισχύει (μόνο φορολογητέες δραστηριότητες) | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/vat.ts: VATRate, VATDeductibilityRule, VATCalculation, VATInputCalculation, VATRateBreakdown, VATInputRateBreakdown, VATQuarterStatus, VATQuarterSummary, VATAnnualSummary. types/interfaces.ts: IVATEngine (calculateOutputVat, calculateInputVat, getDeductibilityRule, calculateQuarterSummary, calculateAnnualSummary) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — services/config/vat-config.ts: `GREEK_VAT_RATES` (4 rates with validFrom/validTo), `getVatDeductibilityRules()` (builds Map from ACCOUNT_CATEGORIES), `getVatRateForDate()`, `getMyDataVatCategory()`. services/engines/vat-engine.ts: `VATEngine implements IVATEngine` — `calculateOutputVat()` (pure), `calculateInputVat()` (pure, deductibility-aware), `getDeductibilityRule()`, `calculateQuarterSummary()` (async, fetches journal entries), `calculateAnnualSummary()` (async, aggregates 4 quarters). Uses `roundToTwoDecimals()` for financial precision | Claude Code |
 
 ---
 

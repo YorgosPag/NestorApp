@@ -19,6 +19,7 @@ import type {
 
 import type { CanvasInstance } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 import type { CanvasRenderSettings } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasSettings';
+import { UI_COLORS } from '../../../subapps/dxf-viewer/config/color-config';
 // 🏢 ENTERPRISE: Import DXF-specific CanvasConfig for type casting
 import type { CanvasConfig as DxfCanvasConfig } from '../../../subapps/dxf-viewer/rendering/types/Types';
 
@@ -207,7 +208,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
       const dxfConfig: DxfCanvasConfig = {
         devicePixelRatio: (config.config as Record<string, unknown>).devicePixelRatio as number ?? window.devicePixelRatio,
         enableHiDPI: (config.config as Record<string, unknown>).enableHiDPI as boolean ?? true,
-        backgroundColor: (config.config as Record<string, unknown>).backgroundColor as string ?? '#1a1a1a',
+        backgroundColor: (config.config as Record<string, unknown>).backgroundColor as string ?? UI_COLORS.CANVAS_BACKGROUND_AUTOCAD_DARK,
         antialias: (config.config as Record<string, unknown>).antialias as boolean | undefined,
         imageSmoothingEnabled: (config.config as Record<string, unknown>).imageSmoothingEnabled as boolean | undefined
       };

@@ -564,6 +564,8 @@ Bot: "💻 Ποσό ≥1.500€ — πάγιο στοιχείο.
 | 2026-02-09 | Year-end workflow: auto-calculate → preview → book | Claude Code |
 | 2026-02-09 | AI: auto-detect πάγιο αν ≥1.500€ (ACC-005 integration) | Claude Code |
 | 2026-02-09 | Disposal: κέρδος → asset_sale_income, ζημία → other_expense | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/assets.ts: AssetCategory (7 types), AssetStatus (4 states), DepreciationRateConfig, FixedAsset (~25 fields), DepreciationRecord, DisposalResult (sale/write_off/donation), CreateFixedAssetInput, FixedAssetFilters. types/interfaces.ts: IDepreciationEngine (calculateAnnual, bookDepreciations, calculateDisposal, forecastDepreciations) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — services/config/depreciation-config.ts: `DEPRECIATION_RATES` (7 categories: buildings 4%, machinery 10%, vehicles 16%, furniture 10%, computers 20%, instruments 10%, other 10%), `getDepreciationRate()`, `calculateUsefulLife()`. services/engines/depreciation-engine.ts: `DepreciationEngine implements IDepreciationEngine` — `calculateAnnualDepreciation()` (pro-rata first year, capped at remaining value), `bookDepreciations(fiscalYear)` (fetches active assets, creates records, updates accumulatedDepreciation), `calculateDisposal()` (gain/loss + book value), `forecastDepreciations()` (multi-year projection). Straight-line only per N.4172/2013 | Claude Code |
 
 ---
 

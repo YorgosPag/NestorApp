@@ -55,6 +55,7 @@ import { canvasUtilities } from '@/styles/design-tokens';
 import { auth } from '@/lib/firebase';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FileRecord, DxfSceneData } from '@/types/file-record';
+import { getFloorplanImageZoomStyle } from './FloorplanGallery.styles';
 
 // ============================================================================
 // TYPES
@@ -756,7 +757,7 @@ export function FloorplanGallery({
             src={currentFile.downloadUrl}
             alt={currentFile.displayName}
             className="w-full h-full object-contain"
-            style={{ transform: `scale(${zoom})` }}
+            style={getFloorplanImageZoomStyle(zoom)}
           />
         )}
 

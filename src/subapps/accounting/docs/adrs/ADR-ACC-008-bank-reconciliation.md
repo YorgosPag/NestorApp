@@ -551,6 +551,8 @@ bank_transactions:
 | 2026-02-09 | CSV encoding: windows-1253 (configurable per bank) | Claude Code |
 | 2026-02-09 | Pending payments view: εισπρακτέα + πληρωτέα | Claude Code |
 | 2026-02-09 | 1 bank account Phase 1, modular for more | Γιώργος |
+| 2026-02-09 | **Phase 2 implemented** — types/bank.ts: TransactionDirection, MatchStatus (4 states), BankAccountConfig, BankTransaction (~20 fields), CSVParserConfig + CSVColumnMapping (per-bank parsing), MatchCandidate, MatchResult, ImportBatch, BankTransactionFilters. Imports CurrencyCode from contacts/banking. types/interfaces.ts: IMatchingEngine (findCandidates, matchTransaction, matchBatch, unmatchTransaction), ICSVImportService (getSupportedBanks, parseCSV, importTransactions) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — services/config/csv-parsers/: 4 bank configs (NBG tab/win1253, Eurobank ;/utf8, Piraeus ,/win1253, Alpha ;/utf8) + index.ts registry. services/external/csv-import-service.ts: `CSVImportService implements ICSVImportService` — `parseCSV()` + `importTransactions()` with batch tracking. services/engines/matching-engine.ts: `MatchingEngine implements IMatchingEngine` — scoring: exact amount +40pts, near ±5% +25pts, exact date +30pts, near ±7d +15pts, counterparty +20pts, EFKA keywords +20pts. Auto-match threshold 85. `findCandidates()`, `matchTransaction()`, `matchBatch()`, `unmatchTransaction()` | Claude Code |
 
 ---
 

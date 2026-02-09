@@ -897,6 +897,8 @@ Layer 3 (Διπλογραφικό): Λογαριασμοί ΕΓΛΣ → Γενι
 | 2026-02-09 | Custom categories μέσω parentCategory mapping | Claude Code |
 | 2026-02-09 | Layer 3+ extension: mapping σε ΕΓΛΣ αριθμημένους λογαριασμούς | Claude Code |
 | 2026-02-09 | **Phase 1 implemented** — types/common.ts, types/journal.ts, types/invoice.ts, types/index.ts, config/account-categories.ts (24 categories registry), firestore-collections.ts updated | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/vat.ts (VATDeductibilityRule uses ExpenseCategory), types/interfaces.ts (IVATEngine.getDeductibilityRule per category) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — services/repository/firestore-accounting-repository.ts: `FirestoreAccountingRepository` with 5 journal CRUD methods (create, get, update, list, delete) + `listJournalEntries` with pagination (`PaginatedResult<JournalEntry>`). services/accounting-service.ts: `createJournalEntryFromInvoice()` auto-creates income journal entry from invoice | Claude Code |
 
 ---
 

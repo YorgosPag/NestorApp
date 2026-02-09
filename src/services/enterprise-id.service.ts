@@ -95,6 +95,18 @@ export const ENTERPRISE_ID_PREFIXES = {
   OPERATION: 'op',
 
   // ==========================================================================
+  // ACCOUNTING (Subapp — ADR-ACC-001 through ADR-ACC-010)
+  // ==========================================================================
+  JOURNAL_ENTRY: 'je',
+  INVOICE_ACC: 'inv',
+  BANK_TRANSACTION: 'btxn',
+  FIXED_ASSET: 'fxa',
+  DEPRECIATION: 'depr',
+  EFKA_PAYMENT: 'efka',
+  IMPORT_BATCH: 'batch',
+  EXPENSE_DOC: 'exdoc',
+
+  // ==========================================================================
   // OPTIMISTIC & TEMPORARY
   // ==========================================================================
   OPTIMISTIC: 'opt',
@@ -549,6 +561,74 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.OPERATION).id;
   }
 
+  // ==========================================================================
+  // ACCOUNTING (Subapp — ADR-ACC-001 through ADR-ACC-010)
+  // ==========================================================================
+
+  /**
+   * 📊 Generate Journal Entry ID
+   * Format: je_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateJournalEntryId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.JOURNAL_ENTRY).id;
+  }
+
+  /**
+   * 🧾 Generate Accounting Invoice ID
+   * Format: inv_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateInvoiceAccId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.INVOICE_ACC).id;
+  }
+
+  /**
+   * 🏦 Generate Bank Transaction ID
+   * Format: btxn_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBankTransactionId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BANK_TRANSACTION).id;
+  }
+
+  /**
+   * 🏭 Generate Fixed Asset ID
+   * Format: fxa_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateFixedAssetId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.FIXED_ASSET).id;
+  }
+
+  /**
+   * 📉 Generate Depreciation Record ID
+   * Format: depr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateDepreciationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.DEPRECIATION).id;
+  }
+
+  /**
+   * 🏥 Generate EFKA Payment ID
+   * Format: efka_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateEfkaPaymentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.EFKA_PAYMENT).id;
+  }
+
+  /**
+   * 📦 Generate Import Batch ID
+   * Format: batch_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateImportBatchId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.IMPORT_BATCH).id;
+  }
+
+  /**
+   * 📄 Generate Expense Document ID
+   * Format: exdoc_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateExpenseDocId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.EXPENSE_DOC).id;
+  }
+
   /**
    * 🔮 Generate Optimistic ID (for optimistic updates)
    * Format: opt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
@@ -764,6 +844,18 @@ export const generateBackupId = () => enterpriseIdService.generateBackupId();
 export const generateMigrationId = () => enterpriseIdService.generateMigrationId();
 export const generateTemplateId = () => enterpriseIdService.generateTemplateId();
 export const generateOperationId = () => enterpriseIdService.generateOperationId();
+
+// =============================================================================
+// ACCOUNTING (Subapp — ADR-ACC-001 through ADR-ACC-010)
+// =============================================================================
+export const generateJournalEntryId = () => enterpriseIdService.generateJournalEntryId();
+export const generateInvoiceAccId = () => enterpriseIdService.generateInvoiceAccId();
+export const generateBankTransactionId = () => enterpriseIdService.generateBankTransactionId();
+export const generateFixedAssetId = () => enterpriseIdService.generateFixedAssetId();
+export const generateDepreciationId = () => enterpriseIdService.generateDepreciationId();
+export const generateEfkaPaymentId = () => enterpriseIdService.generateEfkaPaymentId();
+export const generateImportBatchId = () => enterpriseIdService.generateImportBatchId();
+export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
 
 // =============================================================================
 // OPTIMISTIC & TEMPORARY

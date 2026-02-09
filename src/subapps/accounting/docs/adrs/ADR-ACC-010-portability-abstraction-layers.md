@@ -1002,6 +1002,8 @@ class FirestoreAccountingRepository implements IAccountingRepository {
 | 2026-02-09 | 3-phase migration: Embedded → Loosely Coupled → Extractable | Claude Code |
 | 2026-02-09 | Import rules: ❌ direct Firebase, ✅ via interfaces only | Claude Code |
 | 2026-02-09 | Public API via index.ts: types + interfaces + config + provider | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/interfaces.ts: IAccountingRepository (CRUD for journal, invoices, bank, assets, EFKA, tax, documents), IVATEngine, ITaxEngine, IDepreciationEngine, IDocumentAnalyzer, IMatchingEngine, IMyDataService, ICSVImportService. AccountingPermission type (15 permissions). Pattern follows ITasksRepository (src/services/crm/tasks/contracts.ts). Imports PaginatedResult from @/lib/pagination. Zero runtime dependencies (pure TypeScript) | Claude Code |
+| 2026-02-09 | **Phase 3 implemented** — All 8 interfaces have concrete implementations: `FirestoreAccountingRepository` (26 methods), `VATEngine`, `TaxEngine`, `DepreciationEngine` (constructor injection), `MatchingEngine`, `CSVImportService`, `MyDataServiceStub`, `DocumentAnalyzerStub`. Factory: `createAccountingServices()` in services/index.ts. Helpers: `sanitizeForFirestore()` (recursive undefined→null). Extended host: `firestore-collections.ts` (+9), `enterprise-id.service.ts` (+8). Portability intact: swap `FirestoreAccountingRepository` → PostgreSQL adapter | Claude Code |
 
 ---
 

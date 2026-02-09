@@ -7,6 +7,7 @@ import { BarChart3, TrendingUp, DollarSign, Square } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { efficiencyProgressStyle, getEfficiencyColorClass } from './StorageStatsTab.styles';
 
 interface StorageStatsTabProps {
   storage: Storage;
@@ -93,11 +94,8 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
             </div>
             <div className="w-full bg-secondary rounded-full h-2">
               <div
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  efficiencyScore > 70 ? 'bg-green-500' :
-                  efficiencyScore > 40 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${efficiencyScore}%` }}
+                className={`h-2 rounded-full transition-all duration-300 ${getEfficiencyColorClass(efficiencyScore)}`}
+                style={efficiencyProgressStyle(efficiencyScore)}
               />
             </div>
           </div>

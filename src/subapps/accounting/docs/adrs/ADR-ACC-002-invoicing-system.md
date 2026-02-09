@@ -589,7 +589,15 @@ accounting/{companyId}/
 | 2026-02-09 | Γλώσσα: Μόνο ελληνικά (no dual language) | Γιώργος |
 | 2026-02-09 | Μετρητά >500€: Hard block (ΟΧΙ warning) | Γιώργος |
 | 2026-02-09 | Email αποστολή: Υβριδικό — manual trigger, όχι αυτόματο | Γιώργος |
+| 2026-02-09 | **Phase 1 implemented** — types/invoice.ts: Invoice, InvoiceType (7 τύποι), InvoiceLineItem, InvoicePayment, InvoiceIssuer, InvoiceCustomer, VatBreakdown, InvoiceMyDataMeta, InvoiceSeries, InvoiceFilters, Create/Update inputs. Imports CurrencyCode from contacts/banking | Claude Code |
+| 2026-02-09 | **Phase 2 implemented** — types/interfaces.ts: IAccountingRepository with createInvoice, getInvoice, updateInvoice, listInvoices, getNextInvoiceNumber, getInvoiceSeries methods | Claude Code |
 
 ---
+
+### Phase 3 (2026-02-09)
+
+| Date | Decision | Author |
+|------|----------|--------|
+| 2026-02-09 | **Phase 3 implemented** — services/repository/firestore-accounting-repository.ts: 6 invoice CRUD methods (create, get, update, list, delete, getNextNumber). Atomic invoice counter via `db.runTransaction()` on `accounting_invoice_counters` collection. `listInvoices()` with pagination + filters (series, type, paymentStatus, fiscalYear, quarter, dateRange). services/accounting-service.ts: `createJournalEntryFromInvoice()` auto-generates income journal entry | Claude Code |
 
 *ADR Format based on: Michael Nygard's Architecture Decision Records*
