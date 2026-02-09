@@ -498,6 +498,58 @@
         "lateArrival": "Καθυστερημένη άφιξη"
       }
     },
+    "attendance": {
+      "qr": {
+        "title": "QR Code Παρουσίας",
+        "description": "Ημερήσιο QR code για check-in/check-out εργαζομένων",
+        "generate": "Δημιουργία QR",
+        "regenerate": "Ανανέωση QR",
+        "active": "Ενεργό",
+        "expired": "Ληγμένο",
+        "revoked": "Ακυρωμένο",
+        "copyUrl": "Αντιγραφή URL",
+        "copied": "Αντιγράφηκε!",
+        "print": "Εκτύπωση",
+        "emptyState": "Πατήστε «Δημιουργία QR» για το ημερήσιο QR code",
+        "generateError": "Σφάλμα κατά τη δημιουργία QR code",
+        "networkError": "Σφάλμα σύνδεσης. Δοκιμάστε ξανά."
+      },
+      "geofence": {
+        "title": "Ζώνη Εργοταξίου (Geofence)",
+        "description": "Ρύθμιση γεωγραφικής ζώνης για επαλήθευση τοποθεσίας",
+        "latitude": "Γεωγραφικό Πλάτος",
+        "longitude": "Γεωγραφικό Μήκος",
+        "radius": "Ακτίνα Ζώνης",
+        "enabled": "Ενεργό",
+        "disabled": "Ανενεργό",
+        "save": "Αποθήκευση",
+        "saved": "Η ζώνη αποθηκεύτηκε!",
+        "reset": "Επαναφορά",
+        "saveError": "Σφάλμα κατά την αποθήκευση",
+        "networkError": "Σφάλμα σύνδεσης. Δοκιμάστε ξανά."
+      },
+      "checkIn": {
+        "title": "Παρουσία Εργαζομένου",
+        "gpsLabel": "Τοποθεσία GPS",
+        "gpsRequesting": "Αναζήτηση τοποθεσίας...",
+        "amkaLabel": "ΑΜΚΑ",
+        "amkaPlaceholder": "Εισάγετε 11ψήφιο ΑΜΚΑ",
+        "checkIn": "Προσέλευση",
+        "checkOut": "Αποχώρηση",
+        "submit": "Καταχώρηση",
+        "submitting": "Καταχώρηση...",
+        "success": "Καταχωρήθηκε!",
+        "error": "Αποτυχία Καταχώρησης",
+        "retry": "Δοκιμάστε ξανά",
+        "insideGeofence": "εντός ακτίνας",
+        "outsideGeofence": "εκτός ακτίνας",
+        "photoLabel": "Φωτογραφία",
+        "photoOptional": "προαιρετικά",
+        "takePhoto": "Λήψη Φωτογραφίας",
+        "removePhoto": "Αφαίρεση",
+        "privacyNotice": "Η τοποθεσία καταγράφεται μόνο κατά την προσέλευση/αποχώρηση."
+      }
+    },
     "stampsTab": {
       "title": "Υπολογισμός Ενσήμων",
       "description": "Μηνιαίος υπολογισμός ενσήμων & ασφαλιστικών εισφορών",

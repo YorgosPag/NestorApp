@@ -498,6 +498,58 @@
         "lateArrival": "Late arrival"
       }
     },
+    "attendance": {
+      "qr": {
+        "title": "Attendance QR Code",
+        "description": "Daily QR code for worker check-in/check-out",
+        "generate": "Generate QR",
+        "regenerate": "Regenerate QR",
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked",
+        "copyUrl": "Copy URL",
+        "copied": "Copied!",
+        "print": "Print",
+        "emptyState": "Click «Generate QR» to create the daily QR code",
+        "generateError": "Failed to generate QR code",
+        "networkError": "Connection error. Please try again."
+      },
+      "geofence": {
+        "title": "Site Geofence",
+        "description": "Configure geographic zone for worker location verification",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "radius": "Zone Radius",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "save": "Save",
+        "saved": "Geofence saved!",
+        "reset": "Reset",
+        "saveError": "Failed to save geofence",
+        "networkError": "Connection error. Please try again."
+      },
+      "checkIn": {
+        "title": "Worker Attendance",
+        "gpsLabel": "GPS Location",
+        "gpsRequesting": "Acquiring location...",
+        "amkaLabel": "AMKA",
+        "amkaPlaceholder": "Enter 11-digit AMKA",
+        "checkIn": "Check In",
+        "checkOut": "Check Out",
+        "submit": "Submit",
+        "submitting": "Submitting...",
+        "success": "Recorded!",
+        "error": "Check-in Failed",
+        "retry": "Try Again",
+        "insideGeofence": "inside zone",
+        "outsideGeofence": "outside zone",
+        "photoLabel": "Photo",
+        "photoOptional": "optional",
+        "takePhoto": "Take Photo",
+        "removePhoto": "Remove",
+        "privacyNotice": "Location is recorded only during check-in/check-out."
+      }
+    },
     "stampsTab": {
       "title": "Stamps Calculation",
       "description": "Monthly stamps & insurance contribution calculation",

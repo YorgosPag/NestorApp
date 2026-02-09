@@ -39,6 +39,8 @@ import { AttendanceDashboard } from './components/AttendanceDashboard';
 import { DailyTimeline } from './components/DailyTimeline';
 import { CrewGroupFilter } from './components/CrewGroupFilter';
 import { AttendanceRecordDialog } from './components/AttendanceRecordDialog';
+import { QrCodePanel } from './components/QrCodePanel';
+import { GeofenceConfigMap } from './components/GeofenceConfigMap';
 
 import type { AttendanceViewMode } from './contracts';
 
@@ -205,6 +207,12 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
           />
         </CardContent>
       </Card>
+
+      {/* QR Code + Geofence — ADR-170 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <QrCodePanel projectId={projectId} />
+        <GeofenceConfigMap projectId={projectId} />
+      </div>
 
       {/* Manual record dialog */}
       <AttendanceRecordDialog

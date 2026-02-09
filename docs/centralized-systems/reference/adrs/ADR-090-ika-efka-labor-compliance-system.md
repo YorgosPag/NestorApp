@@ -2,12 +2,12 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 Complete |
-| **Date** | 2026-02-08 |
+| **Status** | IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 + Phase 4A Complete |
+| **Date** | 2026-02-09 |
 | **Category** | Backend Systems / Labor Compliance |
 | **Canonical Location** | `src/components/projects/ika/` |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
-| **Related** | ADR-012 (Entity Linking Service), ADR-032 (Association Service), ADR-063 (Company Isolation) |
+| **Related** | ADR-012 (Entity Linking Service), ADR-032 (Association Service), ADR-063 (Company Isolation), ADR-170 (QR + GPS Geofencing) |
 | **Use Case** | UC-024 — Labor Compliance |
 
 ---
@@ -28,7 +28,8 @@ Greek labor law requires construction projects to maintain proper worker registr
 | EFKA Declaration (Αναγγελία Έργου) | EFKA Declaration | Phase 1 | IMPLEMENTED |
 | Attendance (Παρουσιολόγιο) | Timesheet | Phase 2 | IMPLEMENTED |
 | Stamps & APD (Ένσημα & ΑΠΔ) | Stamps Calculation + APD Payments | Phase 3 | IMPLEMENTED |
-| ERGANI II (Ψηφιακή Κάρτα) | — | Phase 4 | Planned |
+| QR + GPS + Photo Verification | Timesheet (enhanced) | Phase 4A | IMPLEMENTED (ADR-170) |
+| ERGANI II (Ψηφιακή Κάρτα) | — | Phase 4B | Planned |
 
 ### 2.2 Data Model — No New Worker Registry
 
@@ -159,8 +160,9 @@ export interface ProjectWorker {
 
 ### New (Phase 2+)
 - `attendance_events` — Immutable attendance records (Phase 2 — IMPLEMENTED)
+- `attendance_qr_tokens` — Daily HMAC-signed QR tokens (Phase 4A — ADR-170 — IMPLEMENTED)
 - `employment_records` — Monthly employment records per worker/project (Phase 3)
-- `digital_work_cards` — ERGANI II digital work cards (Phase 4)
+- `digital_work_cards` — ERGANI II digital work cards (Phase 4B)
 
 ## 7. Phase 2: Enterprise Attendance System (IMPLEMENTED)
 
@@ -354,10 +356,26 @@ All text from `useTranslation('projects')`:
 
 ## 10. Future Phases
 
-### Phase 4: ERGANI II
+### Phase 4A: QR Code + GPS Geofencing + Photo Verification (IMPLEMENTED — ADR-170)
+- Daily QR code generation with HMAC-SHA256 signing (anti-forgery)
+- GPS Geofencing — Haversine distance verification against project site radius
+- Optional photo capture for buddy-punching prevention
+- Public check-in page (`/attendance/check-in/[token]`) — no app installation required
+- 3 new services: `geofence-service`, `qr-token-service`, `attendance-server-service`
+- 4 API routes: generate, validate, check-in, geofence config
+- 2 admin components: `QrCodePanel`, `GeofenceConfigMap`
+- 2 client hooks: `useGeolocation`, `usePhotoCapture`
+- See: **[ADR-170](ADR-170-attendance-qr-gps-verification.md)**
+
+### Phase 4B: ERGANI II
 - Digital work card integration
 - Cross-checks: Attendance ↔ ERGANI ↔ APD
 - `digital_work_cards` collection
+
+### Phase 5: Native App (if needed)
+- Background geofencing (requires iOS/Android native)
+- Push notifications for clock reminders
+- Offline check-in with sync
 
 ## 11. Consequences
 
@@ -381,4 +399,4 @@ All text from `useTranslation('projects')`:
 
 ### Risks
 - Insurance class rates change annually — mitigated by config-driven approach (Phase 3 ✅)
-- Real-time geofence/QR integration requires mobile app (Phase 2 implements manual fallback)
+- Real-time geofence/QR integration requires mobile app — **MITIGATED** by ADR-170: web-based QR + GPS (Phase 4A ✅)

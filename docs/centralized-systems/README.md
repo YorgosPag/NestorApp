@@ -6,7 +6,7 @@
 
 **📊 Quick Stats**: 31 Enterprise Systems | 20,380+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-169 AI Architecture Suite - Document split (umbrella + 16 specs) (2026-02-07)
+> **🆕 Latest**: ADR-170 Construction Worker Attendance — QR Code + GPS Geofencing + Photo Verification (2026-02-09)
 
 ---
 
@@ -71,6 +71,7 @@
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
 - **[📧 Email/AI Ingestion](data-systems/email-ai-ingestion.md)** - Email webhooks & AI analysis
 - **[🇪🇺 ESCO Professional Classification](reference/adrs/ADR-132-esco-professional-classification.md)** - EU ESCO occupations + skills taxonomy (ADR-132)
+- **[👷 Attendance QR + GPS Verification](reference/adrs/ADR-170-attendance-qr-gps-verification.md)** - QR Code + GPS Geofencing + Photo Verification (ADR-170)
 
 ### 🤖 **AI ARCHITECTURE** ✨ **NEW**
 - **[📋 AI Suite Overview](ai/README.md)** - Enterprise AI automation platform (ADR-169)
@@ -159,9 +160,9 @@
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| **Total Systems** | 31 | ✅ **Complete** |
-| **Total ADRs** | 57 | ✅ **Documented** |
-| **Total Code Lines** | 20,380+ | ✅ **Enterprise** |
+| **Total Systems** | 32 | ✅ **Complete** |
+| **Total ADRs** | 148 | ✅ **Documented** |
+| **Total Code Lines** | 22,500+ | ✅ **Enterprise** |
 | **Documentation Files** | 20+ | ✅ **Modular** |
 | **Cross-Links** | 50+ | ✅ **Interconnected** |
 
@@ -169,6 +170,6 @@
 
 > **💡 Tip**: Bookmark this page για quick navigation στα centralized systems!
 >
-> **🔄 Last Updated**: 2026-01-29
+> **🔄 Last Updated**: 2026-02-09
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

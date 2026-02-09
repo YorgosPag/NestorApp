@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 147 ADRs | Last Updated: 2026-02-09
+**📊 Stats**: 148 ADRs | Last Updated: 2026-02-09
 
 ---
 
@@ -124,7 +124,7 @@
 | **ADR-087** | Snap Engine Configuration Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-087-snap-engine-configuration-centralization.md) |
 | **ADR-088** | Pixel-Perfect Rendering Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-088-pixel-perfect-rendering-centralization.md) |
 | **ADR-089** | CRM Calendar System | ✅ IMPLEMENTED | 2026-02-08 | UI Components / CRM | [📄](./adrs/ADR-089-crm-calendar-system.md) |
-| **ADR-090** | IKA/EFKA Labor Compliance System | ✅ IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 Complete | 2026-02-08 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-090-ika-efka-labor-compliance-system.md) |
+| **ADR-090** | IKA/EFKA Labor Compliance System | ✅ IMPLEMENTED - Phase 1-3 + Phase 4A (QR+GPS, ADR-170) | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-090-ika-efka-labor-compliance-system.md) |
 | **ADR-091** | Scattered Code Centralization (Fonts + Formatting) | ✅ APPROVED | 2026-01-01 | Design System | [📄](./adrs/ADR-091-scattered-code-centralization-fonts-formatting.md) |
 | **ADR-092** | Centralized localStorage Service | ✅ APPROVED | 2026-01-01 | Infrastructure | [📄](./adrs/ADR-092-centralized-localstorage-service.md) |
 | **ADR-093** | Text Label Offsets Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-093-text-label-offsets-centralization.md) |
@@ -184,6 +184,7 @@
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | 2026-02-02 | Entity Systems | [📄](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | 2026-02-05 | Infrastructure | [📄](./adrs/ADR-168-multi-agent-development-environment.md) |
 | **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | ✅ DRAFT - Requirements Gathering | 2026-02-07 | AI Architecture / Enterprise Automation | [📄](./adrs/ADR-169-modular-ai-architecture.md) |
+| **ADR-170** | Construction Worker Attendance — QR Code + GPS Geofencing + Photo | ✅ IMPLEMENTED | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-170-attendance-qr-gps-verification.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
