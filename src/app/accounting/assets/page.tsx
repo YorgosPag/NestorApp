@@ -1,7 +1,8 @@
+'use client';
+
 import { LazyRoutes } from '@/utils/lazyRoutes';
 
-const AccountingAssets = LazyRoutes.AccountingAssets;
-
 export default function AssetsPage() {
+  const AccountingAssets = LazyRoutes.AccountingAssets;
   return <AccountingAssets />;
 }

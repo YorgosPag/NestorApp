@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * @fileoverview Accounting Subapp — useCompanySetup Hook
  * @description Client-side hook για φόρτωση/αποθήκευση ρυθμίσεων επιχείρησης (M-001)
@@ -7,8 +9,6 @@
  * @see ADR-ACC-000 §2 Company Data
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles
  */
-
-'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';

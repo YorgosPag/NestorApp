@@ -1,7 +1,8 @@
+'use client';
+
 import { LazyRoutes } from '@/utils/lazyRoutes';
 
-const AccountingSetup = LazyRoutes.AccountingSetup;
-
 export default function SetupPage() {
+  const AccountingSetup = LazyRoutes.AccountingSetup;
   return <AccountingSetup />;
 }

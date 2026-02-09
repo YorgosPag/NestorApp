@@ -1,7 +1,8 @@
+'use client';
+
 import { LazyRoutes } from '@/utils/lazyRoutes';
 
-const AccountingEFKA = LazyRoutes.AccountingEFKA;
-
 export default function EFKAPage() {
+  const AccountingEFKA = LazyRoutes.AccountingEFKA;
   return <AccountingEFKA />;
 }

@@ -1,7 +1,8 @@
+'use client';
+
 import { LazyRoutes } from '@/utils/lazyRoutes';
 
-const AccountingInvoices = LazyRoutes.AccountingInvoices;
-
 export default function InvoicesPage() {
+  const AccountingInvoices = LazyRoutes.AccountingInvoices;
   return <AccountingInvoices />;
 }
