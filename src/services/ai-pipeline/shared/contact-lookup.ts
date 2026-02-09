@@ -15,6 +15,7 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
@@ -274,4 +275,124 @@ export async function listContacts(
   });
 
   return results;
+}
+
+// ============================================================================
+// CREATE CONTACT SERVER-SIDE (ADR-145: UC-015)
+// ============================================================================
+
+/** Parameters for creating a contact via Admin SDK */
+export interface CreateContactParams {
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  type: 'individual' | 'company';
+  companyId: string;
+  companyName?: string;
+  createdBy: string; // admin display name
+}
+
+/** Result of a successful contact creation */
+export interface CreateContactResult {
+  contactId: string;
+  displayName: string;
+}
+
+/**
+ * Server-side contact creation using Admin SDK.
+ *
+ * Steps:
+ * 1. Duplicate check by email (if provided)
+ * 2. Build Firestore document following contact schema (contracts.ts)
+ * 3. Write to Firestore contacts collection
+ *
+ * CRITICAL: Every optional field uses `?? null` — Firestore rejects undefined.
+ *
+ * @param params Contact creation parameters
+ * @returns Created contact ID and display name
+ * @throws Error if duplicate found or Firestore write fails
+ *
+ * @see ADR-145 (Super Admin AI Assistant — UC-015)
+ */
+export async function createContactServerSide(
+  params: CreateContactParams
+): Promise<CreateContactResult> {
+  const adminDb = getAdminFirestore();
+
+  // ── Step 1: Duplicate check by email ──
+  if (params.email) {
+    const existing = await findContactByEmail(params.email, params.companyId);
+    if (existing) {
+      throw new Error(
+        `DUPLICATE_CONTACT: Υπάρχει ήδη επαφή "${existing.name}" με email ${params.email} (ID: ${existing.contactId})`
+      );
+    }
+  }
+
+  // ── Step 2: Build display name ──
+  const displayName = params.type === 'company'
+    ? params.companyName ?? `${params.firstName} ${params.lastName}`.trim()
+    : `${params.firstName} ${params.lastName}`.trim();
+
+  // ── Step 3: Build Firestore document ──
+  const contactDoc: Record<string, unknown> = {
+    // Core identity
+    type: params.type,
+    status: 'active',
+    isFavorite: false,
+
+    // Name fields
+    displayName,
+    firstName: params.firstName ?? null,
+    lastName: params.lastName ?? null,
+    ...(params.type === 'company' && params.companyName
+      ? { companyName: params.companyName }
+      : {}),
+
+    // Contact arrays (enterprise pattern: arrays with typed entries)
+    emails: params.email
+      ? [{ email: params.email, type: 'work', isPrimary: true }]
+      : [],
+    phones: params.phone
+      ? [{ number: params.phone, type: 'mobile', isPrimary: true }]
+      : [],
+    addresses: [],
+
+    // Tenant isolation
+    companyId: params.companyId,
+
+    // Audit trail
+    createdBy: params.createdBy,
+    lastModifiedBy: params.createdBy,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+
+    // Optional fields — explicit null (NOT undefined)
+    tags: null,
+    notes: null,
+    customFields: null,
+    photoURL: null,
+    vatNumber: null,
+    taxOffice: null,
+    profession: null,
+  };
+
+  // ── Step 4: Write to Firestore ──
+  const docRef = await adminDb
+    .collection(COLLECTIONS.CONTACTS)
+    .add(contactDoc);
+
+  logger.info('Contact created via Admin SDK', {
+    contactId: docRef.id,
+    displayName,
+    type: params.type,
+    companyId: params.companyId,
+    createdBy: params.createdBy,
+  });
+
+  return {
+    contactId: docRef.id,
+    displayName,
+  };
 }

@@ -53,6 +53,7 @@ export const IntentType = z.enum([
   'admin_project_status',  // Admin: Κατάσταση έργου (UC-011)
   'admin_send_email',      // Admin: Αποστολή email (UC-012)
   'admin_unit_stats',      // Admin: Στατιστικά ακινήτων (UC-013)
+  'admin_create_contact',  // Admin: Δημιουργία νέας επαφής (UC-015)
 ]);
 
 export type IntentTypeValue = z.infer<typeof IntentType>;

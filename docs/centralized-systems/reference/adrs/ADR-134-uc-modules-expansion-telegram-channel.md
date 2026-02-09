@@ -165,8 +165,9 @@ Telegram webhook → processMessage() (existing bot flow)
 | `admin_project_status` | UC-011 | ✅ NEW (ADR-145) |
 | `admin_send_email` | UC-012 | ✅ NEW (ADR-145) |
 | `admin_unit_stats` | UC-013 | ✅ NEW (ADR-145) |
+| `admin_create_contact` | UC-015 | ✅ NEW (ADR-145) |
 
-**12 intents** με dedicated module + 1 admin fallback (UC-014).
+**13 intents** με dedicated module + 1 admin fallback (UC-014).
 
 **See also**: [ADR-145](./ADR-145-super-admin-ai-assistant.md) — Super Admin AI Assistant.
 

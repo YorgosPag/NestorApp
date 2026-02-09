@@ -126,6 +126,7 @@ interface AdminCommandMeta {
 | `admin_project_status` | UC-011 | Κατάσταση έργου + στατιστικά units |
 | `admin_send_email` | UC-012 | Αποστολή email σε επαφή |
 | `admin_unit_stats` | UC-013 | Στατιστικά ακινήτων (πωλημένα/διαθέσιμα/δεσμευμένα) |
+| `admin_create_contact` | UC-015 | Δημιουργία νέας επαφής |
 | _(no intent match)_ | UC-014 | Fallback — help text με διαθέσιμες εντολές |
 
 ### 3.5 Auto-Approve Logic
@@ -195,6 +196,17 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 - **Acknowledge**: Format stats per type → send via channel
 - **autoApprovable**: `true`
 
+### UC-015: Admin Create Contact
+
+- **Intents**: `admin_create_contact`
+- **Trigger**: "Δημιούργησε επαφή Νέστορας Παγώνης, nestoras@gmail.com"
+- **Lookup**: Parse name → firstName + lastName, duplicate check by email via `findContactByEmail()`
+- **Execute**: `createContactServerSide()` — Admin SDK → Firestore contacts collection
+- **Duplicate Detection**: If email already exists → notify admin, no new contact created
+- **Acknowledge**: "Η επαφή δημιουργήθηκε: {name} (ID: xxx)" via channel
+- **autoApprovable**: `true`
+- **Side Effects**: Firestore write (new contact document)
+
 ### UC-014: Admin Fallback
 
 - **Intents**: _(κανένα — invoked explicitly by orchestrator)_
@@ -223,6 +235,22 @@ export async function findContactByName(
 - Case-insensitive, accent-insensitive via `normalize('NFD')`
 - Returns: contactId, name, email, phone, company, type
 
+### createContactServerSide() — Contact Creation (UC-015)
+
+**Αρχείο**: `src/services/ai-pipeline/shared/contact-lookup.ts`
+
+```typescript
+export async function createContactServerSide(
+  params: CreateContactParams
+): Promise<CreateContactResult>
+```
+
+- Duplicate check by email (`findContactByEmail()`)
+- Builds Firestore document following enterprise contact schema
+- `emails[]` / `phones[]` arrays with typed entries (enterprise pattern)
+- All optional fields use `?? null` (Firestore rejects undefined)
+- Returns: contactId + displayName
+
 ---
 
 ## 6. Intent → Module Coverage (After ADR-145)
@@ -241,15 +269,16 @@ export async function findContactByName(
 | `admin_project_status` | UC-011 | ✅ **NEW** (ADR-145) |
 | `admin_send_email` | UC-012 | ✅ **NEW** (ADR-145) |
 | `admin_unit_stats` | UC-013 | ✅ **NEW** (ADR-145) |
+| `admin_create_contact` | UC-015 | ✅ **NEW** (ADR-145) |
 | _(admin fallback)_ | UC-014 | ✅ **NEW** (ADR-145) |
 
-**12 intents με module** + 1 admin fallback.
+**13 intents με module** + 1 admin fallback.
 
 ---
 
 ## 7. Files Changed
 
-### New Files (13)
+### New Files (15)
 
 | # | Αρχείο | Σκοπός |
 |---|--------|--------|
@@ -266,6 +295,8 @@ export async function findContactByName(
 | 11 | `src/services/ai-pipeline/modules/uc-013-admin-unit-stats/index.ts` | Barrel |
 | 12 | `src/services/ai-pipeline/modules/uc-014-admin-fallback/admin-fallback-module.ts` | UC-014 |
 | 13 | `src/services/ai-pipeline/modules/uc-014-admin-fallback/index.ts` | Barrel |
+| 14 | `src/services/ai-pipeline/modules/uc-015-admin-create-contact/admin-create-contact-module.ts` | UC-015 |
+| 15 | `src/services/ai-pipeline/modules/uc-015-admin-create-contact/index.ts` | Barrel |
 
 ### Modified Files (15)
 
@@ -365,7 +396,8 @@ export async function findContactByName(
 
 - [x] ~~Run seed script with real Telegram user IDs~~ — Done (Γιώργος Παγώνης = 5618410820)
 - [ ] End-to-end production testing (remaining commands)
-- [ ] UC-015+: More admin commands (appointment management, notification preferences)
+- [x] ~~UC-015: Admin Create Contact~~ — Done (2026-02-09)
+- [ ] UC-016+: More admin commands (appointment management, notification preferences)
 - [ ] Viber/WhatsApp channel support (when adapters are added)
 
 ---
@@ -382,6 +414,7 @@ export async function findContactByName(
 | 2026-02-09 | Fix: UC-013 broadened → business stats (contacts + projects + units) with detectStatsType() | Claude Code |
 | 2026-02-09 | Feat: UC-010 list mode — "ποιες επαφές" → listContacts() with type filter (individual/company) | Claude Code |
 | 2026-02-09 | AI prompt: admin_contact_search covers name search + list contacts; admin_unit_stats covers all "πόσα" questions | Claude Code |
+| 2026-02-09 | UC-015: Admin Create Contact — δημιουργία επαφών via admin command, duplicate detection by email, createContactServerSide() | Claude Code |
 
 ---
 
