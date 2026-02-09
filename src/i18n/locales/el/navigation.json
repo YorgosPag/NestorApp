@@ -232,6 +232,15 @@
     "login": "Login",
     "navigation": "Πλοήγηση"
   },
+  "accounting": {
+    "invoices": "Τιμολόγια",
+    "journal": "Έσοδα-Έξοδα",
+    "vat": "ΦΠΑ",
+    "bank": "Τράπεζα",
+    "efka": "ΕΦΚΑ",
+    "assets": "Πάγια",
+    "reports": "Αναφορές"
+  },
   "crm": {
     "dashboard": "Dashboard",
     "customers": "Διαχείριση Πελατών",

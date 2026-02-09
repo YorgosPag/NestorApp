@@ -12,64 +12,7 @@
  */
 
 import React from 'react';
-import type { CSSProperties } from 'react';
-
-// ============================================================================
-// 🎨 LOCAL PANEL STYLES - ENTERPRISE PATTERN
-// ============================================================================
-
-const draggablePanelContainer = (
-  position: { x: number; y: number },
-  isDragging: boolean,
-  width?: number
-): CSSProperties => ({
-  position: 'absolute',
-  left: position.x,
-  top: position.y,
-  width: width ?? 350,
-  backgroundColor: 'rgba(30, 41, 59, 0.95)',
-  borderRadius: '8px',
-  boxShadow: isDragging
-    ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-    : '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-  transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
-  cursor: isDragging ? 'grabbing' : 'default',
-  overflow: 'hidden',
-});
-
-const panelHeader = (isActive: boolean): CSSProperties => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '10px 14px',
-  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.2)' : 'rgba(51, 65, 85, 0.8)',
-  cursor: 'grab',
-  userSelect: 'none',
-  borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
-  color: '#f8fafc',
-  fontSize: '14px',
-  fontWeight: 500,
-});
-
-const panelContent = (): CSSProperties => ({
-  padding: '14px',
-  color: '#e2e8f0',
-  fontSize: '13px',
-  maxHeight: '400px',
-  overflowY: 'auto',
-});
-
-const panelCloseButton = (): CSSProperties => ({
-  background: 'transparent',
-  border: 'none',
-  color: '#94a3b8',
-  cursor: 'pointer',
-  padding: '4px 8px',
-  fontSize: '14px',
-  lineHeight: 1,
-  borderRadius: '4px',
-  transition: 'all 0.15s ease',
-});
+import { INFO_PANEL_DIMENSIONS, INFO_PANEL_POSITIONS, INFO_PANEL_STYLES } from '../../config/info-panels-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPES - INFO PANELS DOMAIN
@@ -129,29 +72,29 @@ export const DEFAULT_INFO_PANELS: InfoPanelData[] = [
   {
     id: 'coordinates',
     title: 'Coordinates',
-    position: { x: 16, y: 16 },
-    width: 350,
+    position: { x: INFO_PANEL_POSITIONS.offset, y: INFO_PANEL_POSITIONS.offset },
+    width: INFO_PANEL_DIMENSIONS.defaultWidth,
     content: 'Coordinate information panel'
   },
   {
     id: 'properties',
     title: 'Properties',
-    position: { x: 16, y: 200 },
-    width: 350,
+    position: { x: INFO_PANEL_POSITIONS.offset, y: INFO_PANEL_POSITIONS.offset + INFO_PANEL_POSITIONS.verticalSpacing },
+    width: INFO_PANEL_DIMENSIONS.defaultWidth,
     content: 'Properties information panel'
   },
   {
     id: 'layers',
     title: 'Layers',
-    position: { x: 16, y: 400 },
-    width: 350,
+    position: { x: INFO_PANEL_POSITIONS.offset, y: INFO_PANEL_POSITIONS.offset + (INFO_PANEL_POSITIONS.verticalSpacing * 2) },
+    width: INFO_PANEL_DIMENSIONS.defaultWidth,
     content: 'Layer management panel'
   },
   {
     id: 'tools',
     title: 'Tools',
-    position: { x: 16, y: 600 },
-    width: 350,
+    position: { x: INFO_PANEL_POSITIONS.offset, y: INFO_PANEL_POSITIONS.offset + (INFO_PANEL_POSITIONS.verticalSpacing * 3) },
+    width: INFO_PANEL_DIMENSIONS.defaultWidth,
     content: 'Tool selection panel'
   }
 ];
@@ -217,14 +160,14 @@ export const DraggableInfoPanels: React.FC<DraggableInfoPanelsProps> = ({
           const newX = Math.max(
             0,
             Math.min(
-              canvasBounds.width - (panel.width || 350),
+              canvasBounds.width - (panel.width || INFO_PANEL_DIMENSIONS.defaultWidth),
               event.clientX - dragState.offset.x
             )
           );
           const newY = Math.max(
             0,
             Math.min(
-              canvasBounds.height - 100, // Minimum visible header height
+              canvasBounds.height - INFO_PANEL_DIMENSIONS.minVisibleHeaderHeight, // Minimum visible header height
               event.clientY - dragState.offset.y
             )
           );
@@ -276,7 +219,7 @@ export const DraggableInfoPanels: React.FC<DraggableInfoPanelsProps> = ({
 
   const renderPanel = (panel: InfoPanelData) => {
     const dragState = state.dragStates.get(panel.id);
-    const zIndex = state.zIndexOrder.indexOf(panel.id) + 1000;
+    const zIndex = state.zIndexOrder.indexOf(panel.id) + INFO_PANEL_DIMENSIONS.zIndexBase;
     const isActive = state.activePanel === panel.id;
 
     return (
@@ -285,7 +228,7 @@ export const DraggableInfoPanels: React.FC<DraggableInfoPanelsProps> = ({
         role="dialog"
         aria-labelledby={`${panel.id}-title`}
         style={{
-          ...draggablePanelContainer(
+          ...INFO_PANEL_STYLES.container(
             panel.position,
             dragState?.isDragging || false,
             panel.width
@@ -296,7 +239,7 @@ export const DraggableInfoPanels: React.FC<DraggableInfoPanelsProps> = ({
       >
         {/* Panel Header με Drag Handle */}
         <header
-          style={panelHeader(isActive)}
+          style={INFO_PANEL_STYLES.header(isActive)}
           onMouseDown={(e) => handleMouseDown(panel.id, e)}
           role="button"
           tabIndex={0}
@@ -320,7 +263,7 @@ export const DraggableInfoPanels: React.FC<DraggableInfoPanelsProps> = ({
             {panel.isDismissible && (
               <button
                 type="button"
-                style={panelCloseButton()}
+                style={INFO_PANEL_STYLES.closeButton()}
                 aria-label={`Close ${panel.title} panel`}
                 onClick={() => onPanelClose?.(panel.id)}
               >
@@ -332,7 +275,7 @@ export const DraggableInfoPanels: React.FC<DraggableInfoPanelsProps> = ({
 
         {/* Panel Content */}
         {!panel.isMinimized && (
-          <main style={panelContent()}>
+          <main style={INFO_PANEL_STYLES.content()}>
             {panel.content}
           </main>
         )}

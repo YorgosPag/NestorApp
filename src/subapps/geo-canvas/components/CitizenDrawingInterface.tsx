@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
+import { GEO_COLORS } from '../config/color-config';
 // import type { RealEstatePolygon } from '@geo-alert/core';
 type RealEstatePolygon = {
   id: string;
@@ -109,20 +110,6 @@ const useCentralizedPolygonSystem = () => ({
   currentRole: 'citizen' as const,
   updatePolygonConfig: (_id: string, _config: PolygonConfig) => {}
 });
-
-// ✅ ENTERPRISE FIX: Mock color config για compilation
-const GEO_COLORS = {
-  withOpacity: (color: string, opacity: number) => color,
-  USER_INTERFACE: {
-    CITIZEN_STROKE: '#3B82F6',
-    CITIZEN_POLYGON_FILL: '#3B82F630',
-    CITIZEN_POLYGON_STROKE: '#3B82F6',
-    CITIZEN_AREA_FILL: '#10B98130',
-    CITIZEN_AREA_STROKE: '#10B981',
-    EMERGENCY_FILL: '#F9730630',
-    EMERGENCY_STROKE: '#F97316'
-  }
-};
 
 /** Address search panel props */
 interface AddressSearchPanelProps {
@@ -844,3 +831,4 @@ export function CitizenDrawingInterface({
     </div>
   );
 }
+

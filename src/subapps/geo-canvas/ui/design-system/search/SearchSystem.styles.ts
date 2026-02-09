@@ -23,6 +23,7 @@ import {
   animation,
   layoutUtilities
 } from '../../../../../styles/design-tokens';
+import { GEO_COLORS } from '../../../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -473,7 +474,7 @@ export const searchSystemStyles: SearchSystemStylesType = {
  * Generates dynamic styling for filter states (active/inactive)
  */
 export const getFilterStateStyle = (isActive: boolean): StyleObject => ({
-  backgroundColor: isActive ? colors.primary[500] : 'transparent',
+  backgroundColor: isActive ? colors.primary[500] : GEO_COLORS.TRANSPARENT,
   color: isActive ? colors.text.inverse : colors.text.primary,
   border: `1px solid ${isActive ? colors.primary[500] : colors.border.primary}`
 });
@@ -487,7 +488,7 @@ export const getSearchResultHoverHandlers = () => ({
     e.currentTarget.style.backgroundColor = colors.background.hover;
   },
   onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.backgroundColor = 'transparent';
+    e.currentTarget.style.backgroundColor = GEO_COLORS.TRANSPARENT;
   }
 });
 
@@ -496,7 +497,7 @@ export const getSearchResultHoverHandlers = () => ({
  * Generates highlighting για search suggestions
  */
 export const getSuggestionHighlightStyle = (isHighlighted: boolean): StyleObject => ({
-  backgroundColor: isHighlighted ? colors.primary[500] : 'transparent',
+  backgroundColor: isHighlighted ? colors.primary[500] : GEO_COLORS.TRANSPARENT,
   color: isHighlighted ? colors.text.inverse : colors.text.primary
 });
 
@@ -506,7 +507,7 @@ export const getSuggestionHighlightStyle = (isHighlighted: boolean): StyleObject
  */
 export const getDynamicSuggestionStyle = (isSelected: boolean): StyleObject => ({
   ...searchSystemStyles.searchInput.suggestion,
-  backgroundColor: isSelected ? colors.background.secondary : 'transparent'
+  backgroundColor: isSelected ? colors.background.secondary : GEO_COLORS.TRANSPARENT
 });
 
 /**
@@ -644,3 +645,4 @@ export type { SearchSystemStylesType, SearchInputStylesType, SearchFilterStylesT
  * SearchSystem component και establishes enterprise-grade
  * styling patterns για professional search interface development.
  */
+

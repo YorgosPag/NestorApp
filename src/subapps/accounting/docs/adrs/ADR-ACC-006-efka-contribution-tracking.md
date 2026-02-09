@@ -535,6 +535,7 @@ efka_payments:
 | 2026-02-09 | Telegram quick entry: "Πλήρωσα ΕΦΚΑ [μήνα]" | Claude Code |
 | 2026-02-09 | **Phase 2 implemented** — types/efka.ts: EFKACategoryRate, EFKAYearConfig (6+3+3 κατηγορίες), EFKAUserConfig, EFKAMonthlyBreakdown (6 κλάδοι), EFKAPaymentStatus (5 states incl. keao), EFKAPayment, EFKAAnnualSummary, EFKANotification. types/interfaces.ts: IAccountingRepository with getEFKAPayments, updateEFKAPayment, get/saveEFKAUserConfig | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/config/efka-config.ts: `EFKA_YEAR_CONFIGS` (ReadonlyMap 2025+2026), 6 main pension categories (185.09–703.69€/mo), 3 supplementary (46.57–68.62€/mo), 3 lump sum (31.05–45.33€/mo). Helpers: `getEfkaConfigForYear()`, `calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode)`, `calculateAnnualTotal()`. services/repository: `getEFKAPayments(year)`, `updateEFKAPayment()`, `getEFKAConfig()`, `saveEFKAConfig()`. services/accounting-service.ts: `getEfkaAnnualSummary()` | Claude Code |
+| 2026-02-09 | **Phase 4 implemented** — API: `GET /api/accounting/efka/summary`. Hook: `useEFKASummary(year)`. UI: `EFKAPageContent` (FiscalYearPicker + 3 summary cards: total paid/due/balance), `EFKAMonthlyBreakdown` (12 months table: pension/healthcare/supplementary/lumpSum/total), `EFKAPaymentsList` (payments table with 5 status badges: upcoming/due/paid/overdue/keao) | Claude Code |
 
 ---
 

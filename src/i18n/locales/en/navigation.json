@@ -232,6 +232,15 @@
     "login": "Login",
     "navigation": "Navigation"
   },
+  "accounting": {
+    "invoices": "Invoices",
+    "journal": "Income & Expenses",
+    "vat": "VAT",
+    "bank": "Bank",
+    "efka": "EFKA",
+    "assets": "Fixed Assets",
+    "reports": "Reports"
+  },
   "crm": {
     "dashboard": "Dashboard",
     "customers": "Customer Management",

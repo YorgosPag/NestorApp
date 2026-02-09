@@ -59,6 +59,13 @@ import {
   Shield,
   CalendarDays,
   UserCheck,
+  Calculator,
+  Receipt,
+  BookOpen,
+  Landmark,
+  PiggyBank,
+  HardDrive,
+  FileBarChart,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -114,6 +121,15 @@ const NAVIGATION_LABELS = {
   available_storage: 'sidebar.availableStorage',
   available_parking: 'sidebar.availableParking',
   sold_properties: 'sidebar.soldProperties',
+
+  // Accounting submenu
+  accounting_invoices: 'accounting.invoices',
+  accounting_journal: 'accounting.journal',
+  accounting_vat: 'accounting.vat',
+  accounting_bank: 'accounting.bank',
+  accounting_efka: 'accounting.efka',
+  accounting_assets: 'accounting.assets',
+  accounting_reports: 'accounting.reports',
 
   // CRM submenu
   dashboard: 'crm.dashboard',
@@ -456,6 +472,25 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               {  icon: Users2, href: '/crm/teams' },
               {  icon: Bell, href: '/crm/notifications' },
             ]
+          },
+          {
+            icon: Calculator,
+            href: "/accounting",
+            badge: null,
+            smartConfig: {
+              priority: 'medium',
+              displayOrder: 80,
+              analyticsKey: 'nav_accounting',
+            },
+            subItems: [
+              { icon: Receipt, href: '/accounting/invoices' },
+              { icon: BookOpen, href: '/accounting/journal' },
+              { icon: DollarSign, href: '/accounting/vat' },
+              { icon: Landmark, href: '/accounting/bank' },
+              { icon: PiggyBank, href: '/accounting/efka' },
+              { icon: HardDrive, href: '/accounting/assets' },
+              { icon: FileBarChart, href: '/accounting/reports' },
+            ]
           }
         ],
         defaultSmartConfig: {
@@ -619,6 +654,16 @@ function getLabelKeyForPath(path: string): string {
     'sales/available-storage': 'available_storage',
     'sales/available-parking': 'available_parking',
     'sales/sold': 'sold_properties',
+
+    // Accounting
+    'accounting': 'accounting',
+    'accounting/invoices': 'accounting_invoices',
+    'accounting/journal': 'accounting_journal',
+    'accounting/vat': 'accounting_vat',
+    'accounting/bank': 'accounting_bank',
+    'accounting/efka': 'accounting_efka',
+    'accounting/assets': 'accounting_assets',
+    'accounting/reports': 'accounting_reports',
 
     // CRM main
     'crm': 'crm',

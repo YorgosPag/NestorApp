@@ -5,6 +5,9 @@
  */
 
 import type { MapViewState, GeoServiceConfig } from '../types';
+export * from './info-panels-config';
+export * from './dialog-config';
+export * from './map-core-config';
 
 // ============================================================================
 // MAP CONFIGURATION
@@ -333,3 +336,5 @@ export const GEO_CANVAS_CONFIG = {
 } as const;
 
 export default GEO_CANVAS_CONFIG;
+
+

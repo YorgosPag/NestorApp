@@ -611,7 +611,7 @@ function renderPolygon(
   ctx.closePath();
 
   // Fill and stroke
-  if (ctx.fillStyle !== 'transparent' && ctx.globalAlpha > 0) {
+  if (ctx.fillStyle !== GEO_COLORS.TRANSPARENT && ctx.globalAlpha > 0) {
     ctx.fill();
   }
   ctx.stroke();
@@ -621,3 +621,4 @@ function renderPolygon(
  * Export for convenience
  */
 export default FloorPlanCanvasLayer;
+

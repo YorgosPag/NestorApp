@@ -17,41 +17,6 @@ import { InteractiveMap } from '../../components/InteractiveMap';
 import type { TransformState } from '../../hooks/map/useMapInteractions';
 
 // ============================================================================
-// 🎨 LOCAL MAP STYLES - ENTERPRISE PATTERN
-// ============================================================================
-
-const mapContainer = (): CSSProperties => ({
-  position: 'relative',
-  width: '100%',
-  height: '100%',
-  overflow: 'hidden',
-  backgroundColor: '#1e293b',
-});
-
-const mapOverlay = (): CSSProperties => ({
-  position: 'absolute',
-  inset: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: 'rgba(15, 23, 42, 0.9)',
-  color: '#f8fafc',
-  zIndex: 1000,
-});
-
-const mapLoadingIndicator = (): CSSProperties => ({
-  position: 'absolute',
-  inset: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: 'rgba(15, 23, 42, 0.75)',
-  color: '#94a3b8',
-  fontSize: '14px',
-  zIndex: 999,
-});
-
-// ============================================================================
 // 🎯 ENTERPRISE TYPES - MAP CORE DOMAIN
 // ============================================================================
 
@@ -156,8 +121,8 @@ export const InteractiveMapCore: React.FC<MapCoreProps> = ({
 
   if (state.error) {
     return (
-      <div style={mapContainer()}>
-        <div style={mapOverlay()}>
+      <div style={MAP_CORE_STYLES.container()}>
+        <div style={MAP_CORE_STYLES.overlay()}>
           <div role="alert" aria-live="polite">
             <h3>Map Loading Error</h3>
             <p>{state.error.message}</p>
@@ -174,9 +139,9 @@ export const InteractiveMapCore: React.FC<MapCoreProps> = ({
   }
 
   return (
-    <div style={mapContainer()}>
+    <div style={MAP_CORE_STYLES.container()}>
       {state.isLoading && (
-        <div style={mapLoadingIndicator()}>
+        <div style={MAP_CORE_STYLES.loadingIndicator()}>
           <div role="status" aria-live="polite">
             Loading interactive map...
           </div>
@@ -212,3 +177,4 @@ export default InteractiveMapCore;
  * ✅ Accessibility: ARIA roles και live regions
  * ✅ Error handling: Graceful degradation με retry capability
  */
+

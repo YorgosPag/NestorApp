@@ -216,6 +216,51 @@ export const LazyRoutes = {
     () => import('@/components/file-manager/FileManagerPageContent').then(mod => ({ default: mod.FileManagerPageContent })),
     { loadingType: 'list', ssr: false }
   ),
+  // 🏢 ENTERPRISE: Accounting Subapp (Phase 4)
+  AccountingDashboard: createLazyRoute(
+    () => import('@/subapps/accounting/components/dashboard/AccountingDashboard').then(mod => ({ default: mod.AccountingDashboard })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  AccountingInvoices: createLazyRoute(
+    () => import('@/subapps/accounting/components/invoices/InvoicesPageContent').then(mod => ({ default: mod.InvoicesPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  AccountingNewInvoice: createLazyRoute(
+    () => import('@/subapps/accounting/components/invoices/NewInvoicePageContent').then(mod => ({ default: mod.NewInvoicePageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
+  AccountingJournal: createLazyRoute(
+    () => import('@/subapps/accounting/components/journal/JournalPageContent').then(mod => ({ default: mod.JournalPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  AccountingVAT: createLazyRoute(
+    () => import('@/subapps/accounting/components/vat/VATPageContent').then(mod => ({ default: mod.VATPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  AccountingBank: createLazyRoute(
+    () => import('@/subapps/accounting/components/bank/BankPageContent').then(mod => ({ default: mod.BankPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  AccountingEFKA: createLazyRoute(
+    () => import('@/subapps/accounting/components/efka/EFKAPageContent').then(mod => ({ default: mod.EFKAPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  AccountingAssets: createLazyRoute(
+    () => import('@/subapps/accounting/components/assets/AssetsPageContent').then(mod => ({ default: mod.AssetsPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
+
+  AccountingReports: createLazyRoute(
+    () => import('@/subapps/accounting/components/reports/ReportsPageContent').then(mod => ({ default: mod.ReportsPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support

@@ -4,6 +4,7 @@
  */
 
 import type { Point2D, Viewport } from '../../types/Types';
+import { UI_COLORS } from '../../../config/color-config';
 import type {
   UIRenderer,
   UIRenderContext,
@@ -128,7 +129,7 @@ export class SnapRenderer implements UIRenderer {
     // Get type-specific color
     const color = this.getSnapColor(snap.type, settings);
     ctx.strokeStyle = color;
-    ctx.fillStyle = 'transparent';
+    ctx.fillStyle = UI_COLORS.TRANSPARENT;
     ctx.lineWidth = settings.lineWidth;
     ctx.globalAlpha = settings.opacity;
 

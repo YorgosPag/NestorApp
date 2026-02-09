@@ -109,7 +109,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
         enableHiDPI: true,
         devicePixelRatio: window.devicePixelRatio || 1,
         imageSmoothingEnabled: true,
-        backgroundColor: 'transparent',
+        backgroundColor: UI_COLORS.TRANSPARENT,
         enableBatching: true,
         enableCaching: true,
         enableMetrics: config.enablePerformanceMonitoring !== false,
@@ -575,3 +575,4 @@ export const createGeoCanvasProvider = (
 ): GeoCanvasAdapter => {
   return new GeoCanvasAdapter(providerId);
 };
+

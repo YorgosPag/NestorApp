@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | DRAFT |
+| **Status** | ACTIVE |
 | **Date** | 2026-02-09 |
 | **Category** | Accounting / Architecture |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -675,6 +675,11 @@ interface InvoiceSeries {
 | 2026-02-09 | Matching engine scoring — amount ±5% (+40/+25pts), date ±7 days (+30/+15pts), counterparty (+20pts), reference (+10pts). Auto-match threshold: 85 | Claude Code |
 | 2026-02-09 | Extended `firestore-collections.ts` (+9 accounting collections) and `enterprise-id.service.ts` (+8 prefixes & generators) | Claude Code |
 | 2026-02-09 | Stubs for myDATA + AI Document Processing — throw "not configured" until ΑΑΔΕ credentials / OpenAI Vision activation | Claude Code |
+| 2026-02-09 | **Phase 4 implemented** — UI Layer (78 αρχεία). Sub-phases: 4A (Foundation: 12 API routes, 8 hooks, 2 i18n files, navigation integration), 4B (Invoicing: dashboard, list+filters+table, forms with real-time VAT calc, invoice details), 4C (Journal Ε-Ε + VAT dashboard with quarter cards), 4D (Bank reconciliation + EFKA tracker + Fixed Assets + Depreciation), 4E (Reports: VAT, Tax estimate, Tax brackets, Installments) | Claude Code |
+| 2026-02-09 | API Routes pattern: `withAuth()` + `withStandardRateLimit()` + `createAccountingServices()` factory. All routes under `/api/accounting/` | Claude Code |
+| 2026-02-09 | i18n: `react-i18next` with `useTranslation('accounting')` namespace. Full translations en/el (~400 lines each) | Claude Code |
+| 2026-02-09 | Navigation: Calculator icon, 7 sub-items (invoices, journal, vat, bank, efka, assets, reports) via `smart-navigation-factory.ts` | Claude Code |
+| 2026-02-09 | Status updated: DRAFT → ACTIVE (Phase 1 types + Phase 2 interfaces + Phase 3 services + Phase 4 UI = complete for sole proprietor) | Claude Code |
 
 ---
 

@@ -5,6 +5,7 @@
  */
 
 import type { CanvasConfig, Point2D } from '../../types/Types';
+import { UI_COLORS } from '../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized bounds service για performance optimization
 import { canvasBoundsService } from '../../../services/CanvasBoundsService';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
@@ -72,7 +73,7 @@ export class CanvasUtils {
   static clearCanvas(
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
-    backgroundColor = 'transparent'
+    backgroundColor = UI_COLORS.TRANSPARENT
   ): void {
     // ✅ SAFETY: Check if canvas is valid before proceeding
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
@@ -84,7 +85,7 @@ export class CanvasUtils {
     const logicalWidth = rect.width;
     const logicalHeight = rect.height;
 
-    if (backgroundColor !== 'transparent') {
+    if (backgroundColor !== UI_COLORS.TRANSPARENT) {
       ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, logicalWidth, logicalHeight);
     } else {

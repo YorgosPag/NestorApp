@@ -11,185 +11,58 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import type { CSSProperties } from 'react';
 import { InteractiveMap } from '../components/InteractiveMap';
 import type { UniversalPolygon, PolygonType } from '@geo-alert/core';
 import type { GeoCoordinate } from '../types';
 import type { MapInstance } from '../hooks/map/useMapInteractions';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { useTypography } from '@/hooks/useTypography';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
-// ============================================================================
-// 🎨 LOCAL MAP COMPONENT STYLES - ENTERPRISE PATTERN
-// ============================================================================
+const usePolygonDrawingMapExampleStyles = () => {
+  const colors = useSemanticColors();
+  const { quick, radiusClass } = useBorderTokens();
+  const spacing = useSpacingTokens();
+  const layout = useLayoutClasses();
+  const typography = useTypography();
 
-const mapComponents = {
-  container: {
-    base: {
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      backgroundColor: '#0f172a',
-    } as CSSProperties,
-  },
-  header: {
-    base: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      padding: '16px 24px',
-      backgroundColor: 'rgba(30, 41, 59, 0.95)',
-      borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
-    } as CSSProperties,
-    title: {
-      fontSize: '18px',
-      fontWeight: 600,
-      color: '#f8fafc',
-      margin: 0,
-    } as CSSProperties,
-  },
-  controlSection: {
-    base: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-    } as CSSProperties,
-    label: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      color: '#e2e8f0',
-      fontSize: '13px',
-      cursor: 'pointer',
-    } as CSSProperties,
-    select: {
-      padding: '6px 10px',
-      backgroundColor: '#1e293b',
-      border: '1px solid rgba(100, 116, 139, 0.4)',
-      borderRadius: '6px',
-      color: '#f8fafc',
-      fontSize: '13px',
-    } as CSSProperties,
-  },
-  mapContainer: {
-    base: {
-      flex: 1,
-      display: 'flex',
-      position: 'relative',
-      overflow: 'hidden',
-    } as CSSProperties,
-    interactiveMap: {
-      flex: 1,
-    } as CSSProperties,
-  },
-  sidebar: {
-    base: {
-      width: '320px',
-      backgroundColor: 'rgba(30, 41, 59, 0.95)',
-      borderLeft: '1px solid rgba(100, 116, 139, 0.3)',
-      display: 'flex',
-      flexDirection: 'column',
-    } as CSSProperties,
-    header: {
-      padding: '16px',
-      borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
-    } as CSSProperties,
-    title: {
-      fontSize: '15px',
-      fontWeight: 600,
-      color: '#f8fafc',
-      margin: 0,
-    } as CSSProperties,
-    content: {
-      flex: 1,
-      overflowY: 'auto',
-      padding: '12px',
-    } as CSSProperties,
-    emptyState: {
-      color: '#94a3b8',
-      fontSize: '13px',
-      textAlign: 'center',
-      padding: '24px',
-    } as CSSProperties,
-  },
-  polygonList: {
-    item: {
-      padding: '12px',
-      backgroundColor: 'rgba(51, 65, 85, 0.5)',
-      borderRadius: '8px',
-      marginBottom: '8px',
-    } as CSSProperties,
-    title: {
-      fontSize: '14px',
-      fontWeight: 500,
-      color: '#f8fafc',
-      marginBottom: '4px',
-    } as CSSProperties,
-    metadata: {
-      fontSize: '12px',
-      color: '#94a3b8',
-      marginBottom: '4px',
-    } as CSSProperties,
-    timestamp: {
-      fontSize: '11px',
-      color: '#64748b',
-      display: 'block',
-      marginBottom: '8px',
-    } as CSSProperties,
-    actions: {
-      display: 'flex',
-      gap: '8px',
-    } as CSSProperties,
-  },
-  debugSection: {
-    container: {
-      padding: '16px 24px',
-      backgroundColor: 'rgba(30, 41, 59, 0.8)',
-      borderTop: '1px solid rgba(100, 116, 139, 0.3)',
-    } as CSSProperties,
-    summary: {
-      color: '#94a3b8',
-      fontSize: '13px',
-      cursor: 'pointer',
-    } as CSSProperties,
-    content: {
-      marginTop: '12px',
-      padding: '12px',
-      backgroundColor: '#0f172a',
-      borderRadius: '6px',
-      color: '#94a3b8',
-      fontSize: '11px',
-      fontFamily: 'monospace',
-      overflow: 'auto',
-      maxHeight: '200px',
-    } as CSSProperties,
-  },
+  const buttonBase = `inline-flex items-center justify-center ${spacing.gap.xs} ${typography.body.xs} font-medium ${radiusClass.md} ${layout.cursorPointer} ${TRANSITION_PRESETS.STANDARD_COLORS}`;
+  const buttonRegular = `${buttonBase} ${spacing.padding.x.sm} ${spacing.padding.y.xs}`;
+  const buttonSmall = `${buttonBase} ${spacing.padding.x.sm} ${spacing.padding.y.xs}`;
+
+  return {
+    container: `flex flex-col ${layout.minHeightScreen} ${colors.bg.primary}`,
+    header: `${layout.flexCenterGap4} ${spacing.padding.y.md} ${spacing.padding.x.lg} ${colors.bg.card} ${quick.borderB}`,
+    headerTitle: `${typography.heading.md} ${colors.text.foreground}`,
+    controlRow: layout.flexCenterGap2,
+    controlLabel: `${layout.flexCenterGap1} ${typography.body.sm} ${colors.text.muted} ${layout.cursorPointer}`,
+    controlText: `${typography.label.sm} ${colors.text.muted}`,
+    controlSelect: `${spacing.padding.x.sm} ${spacing.padding.y.xs} ${typography.body.sm} ${colors.bg.primary} ${colors.text.foreground} ${quick.input} ${TRANSITION_PRESETS.STANDARD_COLORS} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`,
+    mapContainer: `flex ${layout.flex1} relative overflow-hidden`,
+    sidebar: `w-80 ${colors.bg.card} ${quick.borderL} flex flex-col`,
+    sidebarHeader: `${spacing.padding.md} ${quick.borderB}`,
+    sidebarTitle: `${typography.heading.sm} ${colors.text.foreground}`,
+    sidebarContent: `flex-1 overflow-y-auto ${spacing.padding.sm}`,
+    sidebarEmpty: `${typography.body.sm} ${layout.textCenter} ${colors.text.muted} ${spacing.padding.lg}`,
+    listItem: `${spacing.padding.sm} ${radiusClass.md} ${spacing.margin.bottom.sm} ${colors.bg.tertiary} polygon-list-item-hover`,
+    listTitle: `${typography.body.sm} font-medium ${colors.text.foreground} ${spacing.margin.bottom.xs}`,
+    listMetadata: `${typography.body.xs} ${colors.text.tertiary} ${spacing.margin.bottom.xs}`,
+    listTimestamp: `${typography.body.xs} ${colors.text.muted} block ${spacing.margin.bottom.sm}`,
+    listActions: `flex ${spacing.gap.sm}`,
+    debugContainer: `${spacing.padding.y.md} ${spacing.padding.x.lg} ${colors.bg.secondary} ${quick.borderT}`,
+    debugSummary: `${typography.body.sm} ${colors.text.muted} ${layout.cursorPointer}`,
+    debugContent: `${spacing.margin.top.sm} ${spacing.padding.sm} ${radiusClass.default} ${colors.bg.primary} ${colors.text.muted} text-xs font-mono overflow-auto max-h-52`,
+    buttonDanger: `${buttonRegular} ${colors.bg.error} ${colors.text.inverse} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+    buttonDangerDisabled: `${buttonRegular} ${colors.bg.muted} ${colors.text.muted} cursor-not-allowed opacity-70`,
+    buttonSecondarySmall: `${buttonSmall} ${colors.bg.secondary} ${colors.text.foreground} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+    buttonDangerSmall: `${buttonSmall} ${colors.bg.error} ${colors.text.inverse} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+  } as const;
 };
 
-type ButtonVariant = 'danger' | 'dangerDisabled' | 'secondarySmall' | 'dangerSmall';
-
-const getMapButtonStyle = (variant: ButtonVariant): CSSProperties => {
-  const baseStyle: CSSProperties = {
-    padding: '6px 12px',
-    borderRadius: '6px',
-    border: 'none',
-    fontSize: '12px',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  };
-
-  switch (variant) {
-    case 'danger':
-      return { ...baseStyle, backgroundColor: '#dc2626', color: '#fff' };
-    case 'dangerDisabled':
-      return { ...baseStyle, backgroundColor: '#64748b', color: '#94a3b8', cursor: 'not-allowed' };
-    case 'secondarySmall':
-      return { ...baseStyle, backgroundColor: '#334155', color: '#e2e8f0', padding: '4px 8px' };
-    case 'dangerSmall':
-      return { ...baseStyle, backgroundColor: '#dc2626', color: '#fff', padding: '4px 8px' };
-    default:
-      return baseStyle;
-  }
-};
+type MapExampleStyles = ReturnType<typeof usePolygonDrawingMapExampleStyles>;
 
 // Mock transform state (για το παράδειγμα)
 const mockTransformState = {
@@ -212,6 +85,7 @@ const MapControlSection: React.FC<{
   onCoordinatePickToggle: (enabled: boolean) => void;
   onClearPolygons: () => void;
   polygonCount: number;
+  styles: MapExampleStyles;
 }> = ({
   enableDrawing,
   onDrawingToggle,
@@ -220,12 +94,13 @@ const MapControlSection: React.FC<{
   isPickingCoordinates,
   onCoordinatePickToggle,
   onClearPolygons,
-  polygonCount
+  polygonCount,
+  styles
 }) => {
   return (
     <>
       {/* Drawing Toggle */}
-      <label style={mapComponents.controlSection.label}>
+      <label className={styles.controlLabel}>
         <input
           type="checkbox"
           checked={enableDrawing}
@@ -236,14 +111,14 @@ const MapControlSection: React.FC<{
 
       {/* Mode Selection */}
       {enableDrawing && (
-        <div style={mapComponents.controlSection.base}>
-          <label style={layoutUtilities.dxf.labels.inverse}>
+        <div className={styles.controlRow}>
+          <label className={styles.controlText}>
             Mode:
           </label>
           <select
             value={currentMode}
             onChange={(e) => onModeChange(e.target.value as PolygonType)}
-            style={mapComponents.controlSection.select}
+            className={styles.controlSelect}
           >
             <option value="simple">Simple</option>
             <option value="complex">Complex</option>
@@ -253,8 +128,8 @@ const MapControlSection: React.FC<{
       )}
 
       {/* Coordinate Picker Toggle */}
-      <div style={mapComponents.controlSection.base}>
-        <label style={mapComponents.controlSection.label}>
+      <div className={styles.controlRow}>
+        <label className={styles.controlLabel}>
           <input
             type="checkbox"
             checked={isPickingCoordinates}
@@ -265,13 +140,13 @@ const MapControlSection: React.FC<{
       </div>
 
       {/* Clear Button */}
-      <div style={mapComponents.controlSection.base}>
+      <div className={styles.controlRow}>
         <button
           onClick={onClearPolygons}
           disabled={polygonCount === 0}
-          style={polygonCount === 0 ? getMapButtonStyle('dangerDisabled') : getMapButtonStyle('danger')}
+          className={polygonCount === 0 ? styles.buttonDangerDisabled : styles.buttonDanger}
         >
-Clear All ({polygonCount})
+          Clear All ({polygonCount})
         </button>
       </div>
     </>
@@ -285,33 +160,33 @@ const PolygonListItem: React.FC<{
   polygon: UniversalPolygon;
   onEdit: (polygon: UniversalPolygon) => void;
   onDelete: (polygonId: string) => void;
-}> = ({ polygon, onEdit, onDelete }) => {
+  styles: MapExampleStyles;
+}> = ({ polygon, onEdit, onDelete, styles }) => {
   return (
     <article
-      style={mapComponents.polygonList.item}
-      className="polygon-list-item-hover"
+      className={styles.listItem}
     >
-      <div style={mapComponents.polygonList.title}>
-{polygon.type.charAt(0).toUpperCase() + polygon.type.slice(1).replace('_', ' ')}
+      <div className={styles.listTitle}>
+        {polygon.type.charAt(0).toUpperCase() + polygon.type.slice(1).replace('_', ' ')}
       </div>
-      <div style={mapComponents.polygonList.metadata}>
+      <div className={styles.listMetadata}>
         Points: {polygon.points.length} | Area: {polygon.metadata?.area?.toFixed(2) || 'N/A'} m²
       </div>
-      <time style={mapComponents.polygonList.timestamp}>
+      <time className={styles.listTimestamp}>
         Created: {polygon.metadata?.createdAt ? new Date(polygon.metadata.createdAt).toLocaleString('el-GR') : 'N/A'}
       </time>
-      <div style={mapComponents.polygonList.actions}>
+      <div className={styles.listActions}>
         <button
           onClick={() => onEdit(polygon)}
-          style={getMapButtonStyle('secondarySmall')}
+          className={styles.buttonSecondarySmall}
         >
-Edit
+          Edit
         </button>
         <button
           onClick={() => onDelete(polygon.id)}
-          style={getMapButtonStyle('dangerSmall')}
+          className={styles.buttonDangerSmall}
         >
-Delete
+          Delete
         </button>
       </div>
     </article>
@@ -325,17 +200,18 @@ const MapSidebar: React.FC<{
   polygons: UniversalPolygon[];
   onPolygonEdit: (polygon: UniversalPolygon) => void;
   onPolygonDelete: (polygonId: string) => void;
-}> = ({ polygons, onPolygonEdit, onPolygonDelete }) => {
+  styles: MapExampleStyles;
+}> = ({ polygons, onPolygonEdit, onPolygonDelete, styles }) => {
   return (
-    <aside style={mapComponents.sidebar.base}>
-      <header style={mapComponents.sidebar.header}>
-        <h3 style={mapComponents.sidebar.title}>
-Polygons ({polygons.length})
+    <aside className={styles.sidebar}>
+      <header className={styles.sidebarHeader}>
+        <h3 className={styles.sidebarTitle}>
+          Polygons ({polygons.length})
         </h3>
       </header>
-      <section style={mapComponents.sidebar.content}>
+      <section className={styles.sidebarContent}>
         {polygons.length === 0 ? (
-          <p style={mapComponents.sidebar.emptyState}>
+          <p className={styles.sidebarEmpty}>
             No polygons created yet. Enable drawing to start.
           </p>
         ) : (
@@ -345,6 +221,7 @@ Polygons ({polygons.length})
               polygon={polygon}
               onEdit={onPolygonEdit}
               onDelete={onPolygonDelete}
+              styles={styles}
             />
           ))
         )}
@@ -361,7 +238,8 @@ const DebugInformation: React.FC<{
   enableDrawing: boolean;
   currentMode: PolygonType;
   isPickingCoordinates: boolean;
-}> = ({ polygons, enableDrawing, currentMode, isPickingCoordinates }) => {
+  styles: MapExampleStyles;
+}> = ({ polygons, enableDrawing, currentMode, isPickingCoordinates, styles }) => {
   const debugData = {
     polygons: polygons.map(p => ({
       id: p.id,
@@ -380,11 +258,11 @@ const DebugInformation: React.FC<{
   };
 
   return (
-    <details style={mapComponents.debugSection.container}>
-      <summary style={mapComponents.debugSection.summary}>
-Debug Information
+    <details className={styles.debugContainer}>
+      <summary className={styles.debugSummary}>
+        Debug Information
       </summary>
-      <pre style={mapComponents.debugSection.content}>
+      <pre className={styles.debugContent}>
         {JSON.stringify(debugData, null, 2)}
       </pre>
     </details>
@@ -399,6 +277,7 @@ export function PolygonDrawingMapExample(): JSX.Element {
   const [currentMode, setCurrentMode] = useState<PolygonType>('simple');
   const [polygons, setPolygons] = useState<UniversalPolygon[]>([]);
   const [isPickingCoordinates, setIsPickingCoordinates] = useState(false);
+  const styles = usePolygonDrawingMapExampleStyles();
 
   // Handle coordinate click (για control points)
   const handleCoordinateClick = useCallback((coordinate: GeoCoordinate) => {
@@ -436,11 +315,11 @@ export function PolygonDrawingMapExample(): JSX.Element {
   }, []);
 
   return (
-    <main style={mapComponents.container.base}>
+    <main className={styles.container}>
       {/* Header Controls */}
-      <header style={mapComponents.header.base}>
-        <h1 style={mapComponents.header.title}>
-Universal Polygon System - Map Integration
+      <header className={styles.header}>
+        <h1 className={styles.headerTitle}>
+          Universal Polygon System - Map Integration
         </h1>
 
         <MapControlSection
@@ -452,11 +331,12 @@ Universal Polygon System - Map Integration
           onCoordinatePickToggle={setIsPickingCoordinates}
           onClearPolygons={handleClearAllPolygons}
           polygonCount={polygons.length}
+          styles={styles}
         />
       </header>
 
       {/* Map Container */}
-      <section style={mapComponents.mapContainer.base}>
+      <section className={styles.mapContainer}>
         <InteractiveMap
           // Map Configuration
           enablePolygonDrawing={enableDrawing}
@@ -478,6 +358,7 @@ Universal Polygon System - Map Integration
           polygons={polygons}
           onPolygonEdit={handlePolygonModified}
           onPolygonDelete={handlePolygonDeleted}
+          styles={styles}
         />
       </section>
 
@@ -487,6 +368,7 @@ Universal Polygon System - Map Integration
         enableDrawing={enableDrawing}
         currentMode={currentMode}
         isPickingCoordinates={isPickingCoordinates}
+        styles={styles}
       />
     </main>
   );
@@ -511,7 +393,3 @@ export default PolygonDrawingMapExample;
  * Result: Enterprise-class, maintainable, accessible map interface
  * Compliance: 100% κανόνες CLAUDE.md + Corporate standards
  */
-
-
-
-

@@ -14,6 +14,8 @@
 import React from 'react';
 import type { CSSProperties } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { animation, borderRadius, borders, colors, shadows, spacing, typography, zIndex } from '@/styles/design-tokens';
+import { GEO_COLORS, withOpacity } from '../../config/color-config';
 
 // ============================================================================
 // 🎨 LOCAL TOOLBAR STYLES - ENTERPRISE PATTERN
@@ -27,13 +29,13 @@ interface ToolbarContainerOptions {
 const toolbarContainer = ({ orientation, position }: ToolbarContainerOptions): CSSProperties => ({
   display: 'flex',
   flexDirection: orientation === 'horizontal' ? 'row' : 'column',
-  gap: '4px',
-  padding: '8px',
-  backgroundColor: 'rgba(30, 41, 59, 0.95)',
-  borderRadius: '8px',
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+  gap: spacing.xs,
+  padding: spacing.sm,
+  backgroundColor: withOpacity(colors.text.primary, 0.95),
+  borderRadius: borderRadius.md,
+  boxShadow: shadows.md,
   position: position === 'floating' ? 'absolute' : 'relative',
-  ...(position === 'floating' && { top: '16px', right: '16px', zIndex: 1000 }),
+  ...(position === 'floating' && { top: spacing.md, right: spacing.md, zIndex: zIndex.dropdown }),
 });
 
 interface ToolbarButtonOptions {
@@ -42,26 +44,28 @@ interface ToolbarButtonOptions {
   orientation: 'horizontal' | 'vertical';
 }
 
+const toolbarGapTight = 'calc(' + spacing.xs + ' + ' + spacing.component.padding.xs + ')';
+
 const toolbarButton = ({ isActive, isDisabled }: ToolbarButtonOptions): CSSProperties => ({
   display: 'flex',
   alignItems: 'center',
-  gap: '6px',
-  padding: '8px 12px',
-  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.3)' : 'transparent',
+  gap: toolbarGapTight,
+  padding: spacing.sm + ' ' + spacing.component.padding.lg,
+  backgroundColor: isActive ? withOpacity(colors.primary[500], 0.3) : GEO_COLORS.TRANSPARENT,
   border: 'none',
-  borderRadius: '6px',
-  color: isDisabled ? '#64748b' : '#f8fafc',
+  borderRadius: borderRadius.default,
+  color: isDisabled ? colors.text.secondary : colors.background.secondary,
   cursor: isDisabled ? 'not-allowed' : 'pointer',
-  fontSize: '13px',
+  fontSize: typography.fontSize.sm,
   opacity: isDisabled ? 0.5 : 1,
-  transition: 'all 0.15s ease',
+  transition: 'all ' + animation.duration.fast + ' ' + animation.easing.easeOut,
 });
 
 const toolbarSeparator = (orientation: 'horizontal' | 'vertical'): CSSProperties => ({
-  width: orientation === 'horizontal' ? '1px' : '100%',
-  height: orientation === 'horizontal' ? '24px' : '1px',
-  backgroundColor: 'rgba(100, 116, 139, 0.4)',
-  margin: orientation === 'horizontal' ? '0 8px' : '8px 0',
+  width: orientation === 'horizontal' ? borders.width.default : '100%',
+  height: orientation === 'horizontal' ? spacing.lg : borders.width.default,
+  backgroundColor: withOpacity(colors.text.secondary, 0.4),
+  margin: orientation === 'horizontal' ? ('0 ' + spacing.sm) : (spacing.sm + ' 0'),
 });
 
 const toolbarButtonGroup = (): CSSProperties => ({
@@ -289,7 +293,7 @@ export const GeoToolbar: React.FC<GeoToolbarProps> = ({
               position: 'absolute',
               top: orientation === 'horizontal' ? '100%' : '0',
               left: orientation === 'vertical' ? '100%' : '0',
-              zIndex: 1000
+              zIndex: zIndex.dropdown
             }}
           >
             {action.children.map(childAction => renderAction(childAction))}

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | DRAFT |
+| **Status** | ACTIVE |
 | **Date** | 2026-02-09 |
 | **Category** | Accounting / Invoicing |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -599,5 +599,21 @@ accounting/{companyId}/
 | Date | Decision | Author |
 |------|----------|--------|
 | 2026-02-09 | **Phase 3 implemented** — services/repository/firestore-accounting-repository.ts: 6 invoice CRUD methods (create, get, update, list, delete, getNextNumber). Atomic invoice counter via `db.runTransaction()` on `accounting_invoice_counters` collection. `listInvoices()` with pagination + filters (series, type, paymentStatus, fiscalYear, quarter, dateRange). services/accounting-service.ts: `createJournalEntryFromInvoice()` auto-generates income journal entry | Claude Code |
+
+---
+
+### Phase 4 — UI Layer (2026-02-09)
+
+| Date | Decision | Author |
+|------|----------|--------|
+| 2026-02-09 | **Phase 4 implemented** — Full UI layer for invoicing. 78 files total across all accounting modules | Claude Code |
+| 2026-02-09 | **API Routes** (4 routes): `GET/POST /api/accounting/invoices`, `GET/PATCH/DELETE /api/accounting/invoices/[id]`, `GET /api/accounting/invoices/series`, `GET /api/accounting/invoices/next-number` | Claude Code |
+| 2026-02-09 | **Hooks** (2): `useInvoices` (list with filters, create), `useInvoice` (single with update) | Claude Code |
+| 2026-02-09 | **Invoice List**: `InvoicesPageContent` + `InvoicesTable` + `InvoiceRow` + `InvoiceFilters` (year, type, paymentStatus) | Claude Code |
+| 2026-02-09 | **Invoice Form**: `InvoiceForm` + `LineItemsEditor` (dynamic add/remove, real-time VAT calc) + `CustomerSelector` + `InvoicePreview` (live totals with VAT breakdown by rate) | Claude Code |
+| 2026-02-09 | **Invoice Details**: `InvoiceDetails` + `InvoiceSummaryCard` (customer, dates, status, totals) + `InvoiceActionsMenu` (print, download, email — UI stubs) | Claude Code |
+| 2026-02-09 | **Dashboard**: `AccountingDashboard` with 4 stat cards (income, expenses, VAT owed, pending invoices) + quick action buttons | Claude Code |
+| 2026-02-09 | **Shared UI**: `VATRateSelector` (24/13/6/0%), `PaymentMethodSelector`, `FiscalYearPicker`, `ExpenseCategoryPicker` (5 income + 19 expense categories) | Claude Code |
+| 2026-02-09 | **Page Routes**: 9 Next.js pages under `/accounting/` (dashboard, invoices, new, journal, vat, bank, efka, assets, reports) | Claude Code |
 
 *ADR Format based on: Michael Nygard's Architecture Decision Records*

@@ -523,7 +523,7 @@ export const draggablePanelTabButton = (isActive: boolean): CSSProperties => ({
   fontSize: typography.fontSize.sm,
   fontWeight: isActive ? 600 : 400,
   color: isActive ? colors.blue[500] : colors.gray[500],
-  backgroundColor: isActive ? colors.background.primary : 'transparent',
+  backgroundColor: isActive ? colors.background.primary : GEO_COLORS.TRANSPARENT,
   border: 'none',
   borderBottom: isActive ? `2px solid ${colors.blue[500]}` : '2px solid transparent',
   cursor: 'pointer',
@@ -581,3 +581,4 @@ export type {
  * InteractiveMap component και establishes enterprise-grade
  * styling patterns για geographic interface development.
  */
+

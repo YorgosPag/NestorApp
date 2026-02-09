@@ -29,6 +29,7 @@
  */
 
 import type { Point2D } from '../types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 // =============================================================================
 // Types
@@ -56,8 +57,8 @@ export interface DrawOptions {
  * Default draw options
  */
 const DEFAULT_OPTIONS: Required<DrawOptions> = {
-  strokeStyle: '#000000',
-  fillStyle: 'transparent',
+  strokeStyle: UI_COLORS.BLACK,
+  fillStyle: UI_COLORS.TRANSPARENT,
   lineWidth: 1,
   lineDash: [],
   stroke: true,
@@ -367,3 +368,4 @@ export function addXPath(
   ctx.moveTo(center.x + half, center.y - half);
   ctx.lineTo(center.x - half, center.y + half);
 }
+
