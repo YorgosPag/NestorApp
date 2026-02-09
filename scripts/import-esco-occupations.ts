@@ -1,22 +1,29 @@
 /**
  * ============================================================================
- * ESCO Occupations Import Script (ADR-034)
+ * ESCO Occupations Import Script (ADR-132)
  * ============================================================================
  *
  * Downloads ESCO occupations from the EU API and imports them into Firestore.
  *
+ * Strategy: Uses `isInScheme` parameter to browse ALL occupations in the
+ * concept scheme. Search results already contain `preferredLabel` in ALL
+ * languages, so only ~6 paginated requests are needed (500/page × 2942 total).
+ *
  * Usage:
- *   npx tsx scripts/import-esco-occupations.ts
+ *   tsx scripts/import-esco-occupations.ts
  *
  * What it does:
- * 1. Fetches all ESCO occupations via the REST API (EL + EN)
- * 2. Merges bilingual labels into unified documents
- * 3. Generates search tokens for prefix matching
+ * 1. Paginates through all ESCO occupations via concept-scheme browsing
+ * 2. Extracts bilingual labels (EL + EN) from search results directly
+ * 3. Generates search tokens for prefix matching (accent-normalized)
  * 4. Batch writes to Firestore: system/esco_cache/occupations
  *
  * Requirements:
  * - Firebase Admin SDK (already available in project)
  * - Internet access (ESCO API is public, no API key needed)
+ * - ADC or service account: `gcloud auth application-default login`
+ *
+ * Performance: ~6 API calls + ~8 Firestore batch writes = < 1 minute
  *
  * @see https://ec.europa.eu/esco/api/doc/esco_api_doc.html
  */
@@ -31,43 +38,41 @@ import * as fs from 'fs';
 // ============================================================================
 
 const ESCO_API_BASE = 'https://ec.europa.eu/esco/api';
+const ESCO_OCCUPATIONS_SCHEME = 'http://data.europa.eu/esco/concept-scheme/occupations';
 const FIRESTORE_COLLECTION = 'system/esco_cache/occupations';
 const BATCH_SIZE = 400; // Firestore max is 500, leave margin
-const API_PAGE_SIZE = 100; // ESCO API max per request
-const API_DELAY_MS = 200; // Polite delay between API requests
+const API_PAGE_SIZE = 500; // ESCO API supports up to 500
+const API_DELAY_MS = 500; // Polite delay between API requests
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface EscoApiSearchResult {
-  _embedded?: {
-    results?: Array<{
-      uri: string;
-      title: string;
-      className: string;
-    }>;
+interface EscoSearchResult {
+  uri: string;
+  title: string;
+  className: string;
+  classId: string;
+  code?: string;
+  preferredLabel: Record<string, string>;
+  broaderIscoGroup?: string[];
+  broaderOccupation?: string[];
+  isTopConceptInScheme?: string[];
+  _links: {
+    self: { href: string; uri: string; title: string };
   };
+}
+
+interface EscoSearchResponse {
   total: number;
   offset: number;
   limit: number;
-}
-
-interface EscoApiOccupation {
-  uri: string;
-  title: string;
-  preferredLabel?: Record<string, string>;
-  alternativeLabel?: Record<string, string[]>;
-  description?: Record<string, { literal: string }>;
-  hasTopConcept?: Array<{ uri: string; title: string }>;
-  broaderIscoGroup?: Array<{ uri: string; title: string }>;
-  _links?: {
-    iscoGroup?: { href: string; uri: string; title: string };
-    broaderIscoGroup?: Array<{ href: string; uri: string; title: string }>;
+  _embedded?: {
+    results?: EscoSearchResult[];
   };
 }
 
-interface MergedOccupation {
+interface OccupationDocument {
   uri: string;
   iscoCode: string;
   iscoGroup: string;
@@ -84,38 +89,32 @@ interface MergedOccupation {
 
 /**
  * Generate search tokens from a label for prefix matching.
- * Splits into words, lowercases, removes accents for Greek text.
+ * Splits into words, lowercases, removes accents/diacritics for Greek text.
  */
 function generateSearchTokens(label: string, altLabels: string[] = []): string[] {
   const allText = [label, ...altLabels].join(' ');
 
-  // Remove accents/diacritics (important for Greek)
+  // Remove accents/diacritics (critical for Greek: ά→α, έ→ε, etc.)
   const normalized = allText.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-  // Split into words, lowercase, filter short words
+  // Split into words, lowercase, filter very short words, deduplicate
   const tokens = normalized
     .toLowerCase()
     .split(/[\s,.\-/()]+/)
     .filter(token => token.length >= 2)
-    .filter((token, index, arr) => arr.indexOf(token) === index); // unique
+    .filter((token, index, arr) => arr.indexOf(token) === index);
 
   return tokens;
 }
 
 /**
- * Extract ISCO-08 code from ESCO URI or broaderIscoGroup.
+ * Extract ISCO-08 4-digit code from the ESCO `code` field.
+ * ESCO code format: "2142.1.9" → ISCO code: "2142"
  */
-function extractIscoCode(occupation: EscoApiOccupation): string {
-  // Try _links.iscoGroup or broaderIscoGroup
-  const iscoGroupUri =
-    occupation._links?.iscoGroup?.uri ??
-    occupation._links?.broaderIscoGroup?.[0]?.uri ??
-    occupation.broaderIscoGroup?.[0]?.uri ??
-    '';
-
-  // Extract code from URI like "http://data.europa.eu/esco/isco/C2142"
-  const match = iscoGroupUri.match(/C(\d{1,4})$/);
-  return match ? match[1] : '0000';
+function extractIscoCode(code: string | undefined): string {
+  if (!code) return '0000';
+  const parts = code.split('.');
+  return parts[0] || '0000';
 }
 
 /**
@@ -126,14 +125,15 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Create a safe document ID from a URI.
+ * Create a safe Firestore document ID from an ESCO URI.
+ * Extracts the UUID part from URIs like:
+ * "http://data.europa.eu/esco/occupation/fbceeac6-798b-4307-a825-626707a753ad"
  */
 function uriToDocId(uri: string): string {
-  // Extract the UUID part from the URI
   const match = uri.match(/\/([a-f0-9-]+)$/i);
   if (match) return match[1];
 
-  // Fallback: replace special chars
+  // Fallback: sanitize the full URI path
   return uri
     .replace('http://data.europa.eu/esco/occupation/', '')
     .replace(/[^a-zA-Z0-9-]/g, '_');
@@ -144,17 +144,23 @@ function uriToDocId(uri: string): string {
 // ============================================================================
 
 /**
- * Fetch all ESCO occupations in a specific language.
+ * Fetch ALL ESCO occupations by browsing the concept scheme.
+ *
+ * Uses `isInScheme` parameter to list all occupations without needing
+ * a search term. Each result already contains `preferredLabel` in ALL
+ * EU languages — no per-occupation detail requests needed.
  */
-async function fetchAllOccupations(language: 'el' | 'en'): Promise<Map<string, EscoApiOccupation>> {
-  const occupations = new Map<string, EscoApiOccupation>();
-  let offset = 0;
-  let total = 1; // Will be updated after first request
+async function fetchAllOccupations(): Promise<EscoSearchResult[]> {
+  const allResults: EscoSearchResult[] = [];
+  let page = 0;
+  let totalItems = 1; // Updated after first request
+  const totalPages = () => Math.ceil(totalItems / API_PAGE_SIZE);
 
-  console.log(`\n📥 Fetching ESCO occupations (${language.toUpperCase()})...`);
+  console.log('\n📥 Fetching ALL ESCO occupations via concept-scheme browsing...');
 
-  while (offset < total) {
-    const url = `${ESCO_API_BASE}/search?text=*&type=occupation&language=${language}&offset=${offset}&limit=${API_PAGE_SIZE}&selectedVersion=v1.2.0`;
+  while (page < totalPages()) {
+    // ESCO API uses page-based offset (0=first page, 1=second page, etc.)
+    const url = `${ESCO_API_BASE}/search?type=occupation&language=en&offset=${page}&limit=${API_PAGE_SIZE}&isInScheme=${encodeURIComponent(ESCO_OCCUPATIONS_SCHEME)}`;
 
     try {
       const response = await fetch(url);
@@ -162,90 +168,76 @@ async function fetchAllOccupations(language: 'el' | 'en'): Promise<Map<string, E
         throw new Error(`API error ${response.status}: ${response.statusText}`);
       }
 
-      const data: EscoApiSearchResult = await response.json();
-      total = data.total;
+      const data: EscoSearchResponse = await response.json();
+      totalItems = data.total;
 
       const results = data._embedded?.results ?? [];
-      for (const result of results) {
-        // Fetch full occupation details
-        const detailUrl = `${ESCO_API_BASE}/resource/occupation?uri=${encodeURIComponent(result.uri)}&language=${language}&selectedVersion=v1.2.0`;
-        const detailResponse = await fetch(detailUrl);
+      allResults.push(...results);
 
-        if (detailResponse.ok) {
-          const occupation: EscoApiOccupation = await detailResponse.json();
-          occupations.set(result.uri, occupation);
-        }
-
-        await delay(API_DELAY_MS);
-      }
-
-      offset += results.length;
-      console.log(`  📊 Progress: ${offset}/${total} occupations (${language.toUpperCase()})`);
+      page++;
+      const pct = Math.round((allResults.length / totalItems) * 100);
+      console.log(`  📊 Page ${page}/${totalPages()}: ${allResults.length}/${totalItems} occupations (${pct}%)`);
 
     } catch (error) {
-      console.error(`  ❌ Error at offset ${offset}:`, error);
-      // Continue with next batch
-      offset += API_PAGE_SIZE;
+      console.error(`  ❌ Error at page ${page}:`, error);
+      page++; // Skip to next page
     }
 
     await delay(API_DELAY_MS);
   }
 
-  console.log(`  ✅ Fetched ${occupations.size} occupations (${language.toUpperCase()})`);
-  return occupations;
+  console.log(`  ✅ Fetched ${allResults.length} occupations total`);
+  return allResults;
 }
 
 /**
- * Merge Greek and English occupation data into unified documents.
+ * Transform raw API results into Firestore-ready documents.
+ * Extracts EL + EN labels from the already-bilingual search results.
  */
-function mergeOccupations(
-  elOccupations: Map<string, EscoApiOccupation>,
-  enOccupations: Map<string, EscoApiOccupation>
-): MergedOccupation[] {
-  console.log('\n🔀 Merging bilingual occupation data...');
+function transformToDocuments(results: EscoSearchResult[]): OccupationDocument[] {
+  console.log('\n🔀 Transforming occupations to Firestore documents...');
 
-  const merged: MergedOccupation[] = [];
-  const allUris = new Set([...elOccupations.keys(), ...enOccupations.keys()]);
+  const documents: OccupationDocument[] = [];
+  let missingEl = 0;
+  let missingEn = 0;
 
-  for (const uri of allUris) {
-    const elOcc = elOccupations.get(uri);
-    const enOcc = enOccupations.get(uri);
+  for (const result of results) {
+    const elLabel = result.preferredLabel?.el ?? '';
+    const enLabel = result.preferredLabel?.en ?? '';
 
-    // Need at least one language
-    const baseOcc = elOcc ?? enOcc;
-    if (!baseOcc) continue;
+    if (!elLabel) missingEl++;
+    if (!enLabel) missingEn++;
 
-    const iscoCode = extractIscoCode(baseOcc);
+    // Skip occupations without ANY label
+    if (!elLabel && !enLabel) continue;
+
+    const iscoCode = extractIscoCode(result.code);
     const iscoGroup = iscoCode.length >= 3 ? iscoCode.substring(0, 3) : iscoCode;
 
-    const elLabel = elOcc?.preferredLabel?.el ?? elOcc?.title ?? '';
-    const enLabel = enOcc?.preferredLabel?.en ?? enOcc?.title ?? '';
-
-    const elAltLabels = elOcc?.alternativeLabel?.el ?? [];
-    const enAltLabels = enOcc?.alternativeLabel?.en ?? [];
-
-    const occupation: MergedOccupation = {
-      uri,
+    const doc: OccupationDocument = {
+      uri: result.uri,
       iscoCode,
       iscoGroup,
       preferredLabel: {
         el: elLabel,
         en: enLabel,
       },
-      alternativeLabels: {
-        el: elAltLabels,
-        en: enAltLabels,
-      },
-      searchTokensEl: generateSearchTokens(elLabel, elAltLabels),
-      searchTokensEn: generateSearchTokens(enLabel, enAltLabels),
+      // Search results don't include alternative labels — empty for now
+      // Can be enriched later with individual detail requests if needed
+      alternativeLabels: { el: [], en: [] },
+      searchTokensEl: generateSearchTokens(elLabel),
+      searchTokensEn: generateSearchTokens(enLabel),
       updatedAt: new Date(),
     };
 
-    merged.push(occupation);
+    documents.push(doc);
   }
 
-  console.log(`  ✅ Merged ${merged.length} occupations`);
-  return merged;
+  console.log(`  ✅ Transformed ${documents.length} occupations`);
+  if (missingEl > 0) console.log(`  ⚠️  ${missingEl} occupations missing Greek label`);
+  if (missingEn > 0) console.log(`  ⚠️  ${missingEn} occupations missing English label`);
+
+  return documents;
 }
 
 // ============================================================================
@@ -253,32 +245,32 @@ function mergeOccupations(
 // ============================================================================
 
 /**
- * Write merged occupations to Firestore in batches.
+ * Write occupation documents to Firestore in batches.
  */
 async function writeToFirestore(
   db: FirebaseFirestore.Firestore,
-  occupations: MergedOccupation[]
+  documents: OccupationDocument[]
 ): Promise<void> {
-  console.log(`\n📤 Writing ${occupations.length} occupations to Firestore...`);
+  console.log(`\n📤 Writing ${documents.length} occupations to Firestore...`);
   console.log(`  📍 Collection: ${FIRESTORE_COLLECTION}`);
 
   let written = 0;
   let batchCount = 0;
 
-  for (let i = 0; i < occupations.length; i += BATCH_SIZE) {
+  for (let i = 0; i < documents.length; i += BATCH_SIZE) {
     const batch: WriteBatch = db.batch();
-    const chunk = occupations.slice(i, i + BATCH_SIZE);
+    const chunk = documents.slice(i, i + BATCH_SIZE);
 
-    for (const occupation of chunk) {
-      const docId = uriToDocId(occupation.uri);
+    for (const doc of chunk) {
+      const docId = uriToDocId(doc.uri);
       const docRef = db.collection(FIRESTORE_COLLECTION).doc(docId);
-      batch.set(docRef, occupation, { merge: true });
+      batch.set(docRef, doc, { merge: true });
     }
 
     await batch.commit();
     written += chunk.length;
     batchCount++;
-    console.log(`  📦 Batch ${batchCount}: ${written}/${occupations.length} written`);
+    console.log(`  📦 Batch ${batchCount}: ${written}/${documents.length} written`);
   }
 
   console.log(`  ✅ All ${written} occupations written to Firestore`);
@@ -290,10 +282,11 @@ async function writeToFirestore(
 
 async function main(): Promise<void> {
   console.log('====================================================');
-  console.log('🇪🇺 ESCO Professional Classification Import');
+  console.log('🇪🇺 ESCO Professional Classification Import (ADR-132)');
   console.log('====================================================');
   console.log(`📅 Date: ${new Date().toISOString()}`);
   console.log(`📍 Target: ${FIRESTORE_COLLECTION}`);
+  console.log(`📡 Strategy: Concept-scheme browsing (fast, ~6 API calls)`);
 
   // Initialize Firebase Admin
   const serviceAccountPath = path.resolve(
@@ -308,32 +301,38 @@ async function main(): Promise<void> {
       });
       console.log(`\n🔑 Firebase Admin initialized with: ${serviceAccountPath}`);
     } else {
-      // Try default credentials (ADC)
+      // Try Application Default Credentials (gcloud auth application-default login)
       initializeApp();
-      console.log('\n🔑 Firebase Admin initialized with default credentials');
+      console.log('\n🔑 Firebase Admin initialized with default credentials (ADC)');
     }
   }
 
   const db = getFirestore();
 
-  // Step 1: Fetch occupations in both languages
-  const elOccupations = await fetchAllOccupations('el');
-  const enOccupations = await fetchAllOccupations('en');
+  // Step 1: Fetch all occupations (single paginated request series)
+  const startFetch = Date.now();
+  const rawResults = await fetchAllOccupations();
+  const fetchDuration = ((Date.now() - startFetch) / 1000).toFixed(1);
+  console.log(`  ⏱️  Fetch completed in ${fetchDuration}s`);
 
-  // Step 2: Merge bilingual data
-  const merged = mergeOccupations(elOccupations, enOccupations);
+  // Step 2: Transform to Firestore documents
+  const documents = transformToDocuments(rawResults);
 
   // Step 3: Write to Firestore
-  await writeToFirestore(db, merged);
+  const startWrite = Date.now();
+  await writeToFirestore(db, documents);
+  const writeDuration = ((Date.now() - startWrite) / 1000).toFixed(1);
+  console.log(`  ⏱️  Write completed in ${writeDuration}s`);
 
   // Step 4: Summary
+  const totalDuration = ((Date.now() - startFetch) / 1000).toFixed(1);
   console.log('\n====================================================');
   console.log('✅ IMPORT COMPLETE');
   console.log('====================================================');
-  console.log(`📊 Total occupations: ${merged.length}`);
+  console.log(`📊 Total occupations: ${documents.length}`);
   console.log(`📍 Collection: ${FIRESTORE_COLLECTION}`);
-  console.log(`🇬🇷 Greek labels: ${elOccupations.size}`);
-  console.log(`🇬🇧 English labels: ${enOccupations.size}`);
+  console.log(`⏱️  Total duration: ${totalDuration}s`);
+  console.log(`📡 API calls: ~${Math.ceil(rawResults.length / API_PAGE_SIZE)}`);
   console.log('');
   console.log('Next steps:');
   console.log('  1. Deploy Firestore indexes: firebase deploy --only firestore:indexes');
