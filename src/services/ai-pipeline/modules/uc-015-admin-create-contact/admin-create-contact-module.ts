@@ -62,29 +62,36 @@ export class AdminCreateContactModule implements IUCModule {
   // ── Step 3: LOOKUP ──
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
-    const entities = ctx.understanding?.entities ?? {};
+    // NOTE: OpenAI structured output schema (extractedEntities) only supports
+    // companyId/projectId/buildingId/unitId/contactId with additionalProperties: false.
+    // Admin-specific entities (contactName, email, phone) are NOT available via
+    // ctx.understanding.entities. We parse them from the raw message text instead.
+    const rawMessage = ctx.intake.normalized.contentText ?? '';
 
-    // Extract name — AI provides full name in contactName
-    const contactName = ((entities.contactName as string) ?? '').trim();
-    const { firstName, lastName } = parseName(contactName);
+    // Extract email from message (regex)
+    const email = extractEmail(rawMessage);
 
-    // Extract email & phone
-    const email = ((entities.email as string) ?? '').trim() || null;
-    const phone = ((entities.phone as string) ?? '').trim() || null;
+    // Extract phone from message (regex)
+    const phone = extractPhone(rawMessage);
+
+    // Extract name: strip command keywords, email, phone → remaining text is the name
+    const { firstName, lastName } = extractNameFromMessage(rawMessage, email, phone);
 
     // Extract contact type (default: individual)
-    const rawType = ((entities.contactType as string) ?? '').toLowerCase();
+    const lowerMsg = rawMessage.toLowerCase();
     const contactType: 'individual' | 'company' =
-      rawType === 'company' || rawType === 'εταιρεία' || rawType === 'εταιρία'
+      lowerMsg.includes('εταιρεία') || lowerMsg.includes('εταιρία') || lowerMsg.includes('company')
         ? 'company'
         : 'individual';
 
-    logger.info('UC-015 LOOKUP: Parsing contact data', {
+    logger.info('UC-015 LOOKUP: Parsed contact data from raw message', {
       requestId: ctx.requestId,
       firstName,
       lastName,
       email,
+      phone,
       contactType,
+      rawMessage,
     });
 
     // Duplicate check by email
@@ -278,8 +285,89 @@ export class AdminCreateContactModule implements IUCModule {
 }
 
 // ============================================================================
-// HELPER: Parse Name
+// HELPERS: Raw Message Parsing
 // ============================================================================
+
+/** Email regex — matches standard email addresses */
+const EMAIL_REGEX = /[\w.+-]+@[\w.-]+\.\w{2,}/;
+
+/** Greek phone regex — matches 69XXXXXXXX, +3069XXXXXXXX, 210XXXXXXX etc. */
+const PHONE_REGEX = /(?:\+30)?(?:\s?)(?:69\d{8}|2\d{9})/;
+
+/** Command keywords to strip when extracting the contact name */
+const COMMAND_KEYWORDS = [
+  'δημιούργησε επαφή',
+  'δημιουργησε επαφη',
+  'πρόσθεσε επαφή',
+  'προσθεσε επαφη',
+  'νέα επαφή',
+  'νεα επαφη',
+  'κάνε νέα επαφή',
+  'κανε νεα επαφη',
+  'φτιάξε επαφή',
+  'φτιαξε επαφη',
+  'create contact',
+  'add contact',
+  'new contact',
+];
+
+/**
+ * Extract email address from raw message text.
+ * @example extractEmail("Νέστορας nestoras@gmail.com") → "nestoras@gmail.com"
+ */
+function extractEmail(message: string): string | null {
+  const match = message.match(EMAIL_REGEX);
+  return match ? match[0].toLowerCase().trim() : null;
+}
+
+/**
+ * Extract phone number from raw message text.
+ * @example extractPhone("Νέστορας 6971234567") → "6971234567"
+ */
+function extractPhone(message: string): string | null {
+  const match = message.match(PHONE_REGEX);
+  return match ? match[0].replace(/\s/g, '').trim() : null;
+}
+
+/**
+ * Extract contact name from raw message by stripping command keywords, email, and phone.
+ *
+ * @example
+ * extractNameFromMessage("Δημιούργησε επαφή Νέστορας Παγώνης, nestoras@gmail.com", "nestoras@gmail.com", null)
+ * → { firstName: "Νέστορας", lastName: "Παγώνης" }
+ */
+function extractNameFromMessage(
+  message: string,
+  email: string | null,
+  phone: string | null
+): { firstName: string; lastName: string } {
+  let cleaned = message;
+
+  // Strip command keywords (case-insensitive)
+  for (const keyword of COMMAND_KEYWORDS) {
+    const regex = new RegExp(keyword, 'gi');
+    cleaned = cleaned.replace(regex, '');
+  }
+
+  // Strip email
+  if (email) {
+    cleaned = cleaned.replace(email, '');
+  }
+
+  // Strip phone
+  if (phone) {
+    cleaned = cleaned.replace(phone, '');
+  }
+
+  // Strip punctuation (commas, colons, dashes) and extra whitespace
+  cleaned = cleaned
+    .replace(/[,;:\-–—]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Parse remaining text as name
+  return parseName(cleaned);
+}
 
 /**
  * Parse a full name string into firstName and lastName.
