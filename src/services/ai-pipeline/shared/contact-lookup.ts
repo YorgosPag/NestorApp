@@ -187,3 +187,91 @@ export async function findContactByName(
 
   return results;
 }
+
+// ============================================================================
+// LIST CONTACTS BY TYPE (ADR-145: Super Admin AI Assistant)
+// ============================================================================
+
+export type ContactTypeFilter = 'individual' | 'company' | 'all';
+
+/**
+ * List all contacts for a company, optionally filtered by type.
+ *
+ * Used when admin asks "ποιες είναι οι επαφές φυσικών προσώπων" (no specific name).
+ *
+ * @param companyId - Tenant isolation
+ * @param typeFilter - 'individual' | 'company' | 'all'
+ * @param limit - Maximum results (default: 20)
+ */
+export async function listContacts(
+  companyId: string,
+  typeFilter: ContactTypeFilter = 'all',
+  limit: number = 20
+): Promise<ContactNameSearchResult[]> {
+  const adminDb = getAdminFirestore();
+
+  const snapshot = await adminDb
+    .collection(COLLECTIONS.CONTACTS)
+    .where('companyId', '==', companyId)
+    .limit(200)
+    .get();
+
+  if (snapshot.empty) return [];
+
+  const results: ContactNameSearchResult[] = [];
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const type = ((data.type ?? data.contactType ?? '') as string).toLowerCase();
+
+    // Apply type filter
+    if (typeFilter === 'individual') {
+      if (type === 'company' || type === 'εταιρεία' || type === 'εταιρία') continue;
+    } else if (typeFilter === 'company') {
+      if (type !== 'company' && type !== 'εταιρεία' && type !== 'εταιρία') continue;
+    }
+
+    const displayName = (data.displayName as string) ?? '';
+    const firstName = (data.firstName as string) ?? '';
+    const lastName = (data.lastName as string) ?? '';
+    const companyName = (data.companyName as string) ?? '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ');
+
+    // Extract primary email
+    let email: string | null = null;
+    const emails = data.emails as Array<{ email?: string }> | undefined;
+    if (emails && emails.length > 0) {
+      email = (emails[0].email as string) ?? null;
+    } else if (data.email) {
+      email = data.email as string;
+    }
+
+    // Extract primary phone
+    let phone: string | null = null;
+    const phones = data.phones as Array<{ phone?: string; number?: string }> | undefined;
+    if (phones && phones.length > 0) {
+      phone = (phones[0].phone ?? phones[0].number ?? null) as string | null;
+    } else if (data.phone) {
+      phone = data.phone as string;
+    }
+
+    results.push({
+      contactId: doc.id,
+      name: displayName || fullName || companyName || 'Χωρίς όνομα',
+      email,
+      phone,
+      company: companyName || null,
+      type: (data.type as string) ?? (data.contactType as string) ?? null,
+    });
+
+    if (results.length >= limit) break;
+  }
+
+  logger.debug('Contact list by type', {
+    companyId,
+    typeFilter,
+    resultsFound: results.length,
+  });
+
+  return results;
+}
