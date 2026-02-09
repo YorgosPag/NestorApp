@@ -40,8 +40,10 @@
 ### Admin Identity Detection
 
 ```
-Telegram: isSuperAdminTelegram(userId) → check settings/super_admin_registry
-Email:    isSuperAdminEmail(address)   → check settings/super_admin_registry
+Telegram: isSuperAdminTelegram(userId)    → check settings/super_admin_registry
+Email:    isSuperAdminEmail(address)      → check settings/super_admin_registry
+In-App:   isSuperAdminFirebaseUid(uid)    → check settings/super_admin_registry
+          ↳ fallback: isSuperAdminEmail() → if UID not in registry
 ```
 
 ### Pipeline Branching
@@ -107,7 +109,7 @@ interface SuperAdminIdentity {
 interface AdminCommandMeta {
   adminIdentity: { displayName: string; firebaseUid: string | null };
   isAdminCommand: boolean;
-  resolvedVia: 'telegram_user_id' | 'email_address' | 'viber_phone' | 'whatsapp_phone';
+  resolvedVia: 'telegram_user_id' | 'email_address' | 'firebase_uid' | 'viber_phone' | 'whatsapp_phone';
 }
 ```
 
@@ -396,6 +398,7 @@ interface AdminSession {
 | Telegram user_id spoofing | Webhook secret validation — μόνο Telegram servers μπορούν να στείλουν |
 | Email spoofing | Mailgun signing key validation |
 | Unknown device/channel | Δεν αναγνωρίζεται → normal customer flow |
+| In-app Firebase UID missing from registry | Fallback to email-based detection |
 | Admin registry access | Firestore Admin SDK only (server-side) |
 | Cache poisoning | 5-min TTL, reads from source of truth |
 | Graceful degradation | Admin detection failure → treat as customer (non-fatal try/catch) |
@@ -464,9 +467,11 @@ interface AdminSession {
 ## 12. Pending
 
 - [x] ~~Run seed script with real Telegram user IDs~~ — Done (Γιώργος Παγώνης = 5618410820)
+- [x] ~~Set firebaseUid in registry~~ — Done (ITjmw0syn7WiYuskqaGtzLPuN852) (2026-02-09)
 - [ ] End-to-end production testing (remaining commands)
 - [x] ~~UC-015: Admin Create Contact~~ — Done (2026-02-09)
 - [x] ~~UC-016: Admin Update Contact (Secretary Mode)~~ — Done (2026-02-09)
+- [x] ~~ADR-164: In-App Voice AI Pipeline~~ — Done (2026-02-09)
 - [ ] UC-017+: More admin commands (appointment management, notification preferences)
 - [ ] Viber/WhatsApp channel support (when adapters are added)
 
@@ -491,6 +496,8 @@ interface AdminSession {
 | 2026-02-09 | UC-010 Fix: Fallback σε raw message parsing όταν AI επιστρέφει κενό contactName — `extractSearchTermFromMessage()` | Claude Code |
 | 2026-02-09 | Real-time Contacts: `useContactsState` → Firestore `onSnapshot` αντί one-time fetch — server-side writes (UC-015/UC-016) εμφανίζονται αυτόματα στο UI | Claude Code |
 | 2026-02-09 | Fix: Admin entity extraction — `AI_ADMIN_COMMAND_SCHEMA` with 14 fields (base+admin) replaces 5-field schema for admin commands. `ExtractedEntitiesSchema` gets `.passthrough()`. UC-012 fallback parsing from raw message. | Claude Code |
+| 2026-02-09 | ADR-164: In-App Voice AI Pipeline — third channel adapter (IN_APP), `isSuperAdminFirebaseUid()` + email fallback, `voice_commands` Firestore rules | Claude Code |
+| 2026-02-09 | Data fix: Set `firebaseUid: "ITjmw0syn7WiYuskqaGtzLPuN852"` in `settings/super_admin_registry` for in-app admin detection | Claude Code |
 
 ---
 

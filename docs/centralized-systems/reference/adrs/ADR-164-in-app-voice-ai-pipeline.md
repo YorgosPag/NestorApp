@@ -82,9 +82,22 @@ Header Mic -> Record -> POST /api/voice/transcribe -> transcribed text
 }
 ```
 
+## Firestore Security Rules
+
+Added `voice_commands` collection rules to `firestore.rules`:
+- **READ**: User-scoped — `resource.data.userId == request.auth.uid`
+- **WRITE**: Server-only via Admin SDK (API route + dispatcher)
+- Deployed: 2026-02-09
+
 ## Admin Detection
 
-Super admin detection for in-app uses `isSuperAdminFirebaseUid(uid)` which matches on `admin.firebaseUid` in the super admin registry. This is different from Telegram (userId) and Email (address), but follows the same caching pattern.
+Super admin detection for in-app uses a **dual strategy**:
+1. **Primary**: `isSuperAdminFirebaseUid(uid)` — matches `admin.firebaseUid` in the super admin registry
+2. **Fallback**: `isSuperAdminEmail(email)` — if UID not in registry, checks by email address
+
+This ensures admin detection works even before `firebaseUid` is populated in the registry.
+
+**Registry data fix (2026-02-09)**: Set `firebaseUid: "ITjmw0syn7WiYuskqaGtzLPuN852"` for Γιώργος Παγώνης in `settings/super_admin_registry`.
 
 ## Cost
 
