@@ -128,6 +128,7 @@ export const POST = withStandardRateLimit(
         commandId,
         userId: uid,
         userName: email ?? 'User',
+        userEmail: email ?? undefined,
         transcript: text,
         companyId,
       });

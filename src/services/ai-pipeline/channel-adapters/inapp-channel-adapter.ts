@@ -20,7 +20,7 @@ import type { IntakeMessage, AdminCommandMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
-import { isSuperAdminFirebaseUid } from '../shared/super-admin-resolver';
+import { isSuperAdminFirebaseUid, isSuperAdminEmail } from '../shared/super-admin-resolver';
 
 // ============================================================================
 // TYPES
@@ -32,8 +32,10 @@ export interface InAppFeedParams {
   commandId: string;
   /** Firebase Auth UID */
   userId: string;
-  /** User display name */
+  /** User display name or email */
   userName: string;
+  /** User email (for admin fallback detection) */
+  userEmail?: string;
   /** Transcribed text from Whisper */
   transcript: string;
   /** Tenant company ID */
@@ -78,10 +80,17 @@ export class InAppChannelAdapter {
     try {
       const intakeMessage = InAppChannelAdapter.toIntakeMessage(params);
 
-      // ── ADR-145: Super Admin Detection via Firebase UID ──
+      // ── ADR-145: Super Admin Detection ──
+      // Try Firebase UID first, fall back to email if UID not in registry
       let adminCommandMeta: AdminCommandMeta | null = null;
       try {
-        const adminResolution = await isSuperAdminFirebaseUid(params.userId);
+        let adminResolution = await isSuperAdminFirebaseUid(params.userId);
+
+        // Fallback: check by email if UID didn't match (registry may lack firebaseUid)
+        if (!adminResolution && params.userEmail) {
+          adminResolution = await isSuperAdminEmail(params.userEmail);
+        }
+
         if (adminResolution) {
           adminCommandMeta = {
             adminIdentity: {
