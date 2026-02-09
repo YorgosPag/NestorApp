@@ -130,6 +130,14 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
   if (webhookData.message) {
     console.log('💬 Processing regular message');
     telegramResponse = await processMessage(webhookData.message);
+
+    // ── ADR-132: Feed to AI Pipeline (non-blocking) ──
+    // Skip bot commands — only feed actual user messages
+    const messageText = webhookData.message.text ?? '';
+    const isBotCommand = messageText.startsWith('/');
+    if (!isBotCommand && messageText.trim().length > 0 && isFirebaseAvailable()) {
+      feedTelegramToPipeline(webhookData.message);
+    }
   }
 
   if (webhookData.callback_query) {
@@ -165,6 +173,56 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
       }
     }
   }
+}
+
+/**
+ * Feed a Telegram message to the AI Pipeline (non-blocking).
+ *
+ * Fires and forgets — pipeline failure does NOT affect the Telegram bot response.
+ * Uses dynamic import to avoid circular dependency issues.
+ *
+ * @see ADR-132 (UC Modules Expansion + Telegram Channel)
+ */
+function feedTelegramToPipeline(message: TelegramMessage['message']): void {
+  if (!message) return;
+
+  const chatId = String(message.chat.id);
+  const userId = String(message.from?.id ?? 'unknown');
+  const firstName = message.from?.first_name ?? '';
+  const lastName = message.from?.last_name ?? '';
+  const userName = [firstName, lastName].filter(Boolean).join(' ') || 'Telegram User';
+  const messageText = message.text ?? '';
+  const messageId = String(message.message_id);
+
+  // Default company ID — same pattern as email pipeline
+  const companyId = process.env.DEFAULT_COMPANY_ID ?? 'default';
+
+  // Fire and forget — use void + catch to prevent unhandled rejection
+  void (async () => {
+    try {
+      const { TelegramChannelAdapter } = await import(
+        '@/services/ai-pipeline/channel-adapters/telegram-channel-adapter'
+      );
+
+      const result = await TelegramChannelAdapter.feedToPipeline({
+        chatId,
+        userId,
+        userName,
+        messageText,
+        messageId,
+        companyId,
+      });
+
+      if (result.enqueued) {
+        console.log(`🤖 [Telegram→Pipeline] Enqueued: ${result.requestId}`);
+      } else {
+        console.warn(`⚠️ [Telegram→Pipeline] Failed: ${result.error}`);
+      }
+    } catch (error) {
+      // Non-fatal: pipeline failure should never break the Telegram bot
+      console.warn('[Telegram→Pipeline] Non-fatal error:', error instanceof Error ? error.message : String(error));
+    }
+  })();
 }
 
 /**

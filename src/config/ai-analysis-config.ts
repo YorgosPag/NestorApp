@@ -45,6 +45,8 @@ INTENT TYPES (choose the most specific match):
 - document_request: Request for documents, certificates, plans (αίτημα εγγράφου, κάτοψη, πιστοποιητικό)
 - status_inquiry: Status check on order, construction, project (ερώτηση κατάστασης, πρόοδος)
 - report_request: Request for a report (αίτημα αναφοράς)
+- complaint: Customer complaint about service, quality, delays, defects (παράπονο, καταγγελία, δυσαρέσκεια)
+- general_inquiry: General question or request that doesn't fit specific categories (γενική ερώτηση, πληροφορία)
 - info_update: General information update
 - triage_needed: Cannot determine intent with confidence
 
@@ -71,6 +73,8 @@ INTENT TYPES (use these for both primaryIntent and secondaryIntents):
 - document_request: Request for documents, certificates, plans (αίτημα εγγράφου, κάτοψη, πιστοποιητικό)
 - status_inquiry: Status check on order, construction, project (ερώτηση κατάστασης, πρόοδος)
 - report_request: Request for a report (αίτημα αναφοράς)
+- complaint: Customer complaint about service, quality, delays, defects (παράπονο, καταγγελία, δυσαρέσκεια)
+- general_inquiry: General question or request that doesn't fit specific categories (γενική ερώτηση, πληροφορία)
 - info_update: General information update
 - triage_needed: Cannot determine intent with confidence
 

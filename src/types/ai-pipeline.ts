@@ -87,6 +87,8 @@ export const PipelineIntentType = {
   DEFECT_REPORT: 'defect_report',
   PROCUREMENT_REQUEST: 'procurement_request',
   PAYMENT_NOTIFICATION: 'payment_notification',
+  COMPLAINT: 'complaint',
+  GENERAL_INQUIRY: 'general_inquiry',
   UNKNOWN: 'unknown',
 } as const;
 

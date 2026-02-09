@@ -61,6 +61,10 @@ export interface ContactFormData {
   position: string;
   workAddress: string;
   workWebsite: string;
+  // 🇪🇺 ESCO Professional Classification (ADR-034)
+  escoUri: string;
+  escoLabel: string;
+  iscoCode: string;
   // Εταιρεία
   companyName: string;
   companyVatNumber: string;
@@ -285,6 +289,10 @@ export const initialFormData: ContactFormData = {
   position: '',
   workAddress: '',
   workWebsite: '',
+  // 🇪🇺 ESCO Professional Classification (ADR-034)
+  escoUri: '',
+  escoLabel: '',
+  iscoCode: '',
   // Εταιρεία
   companyName: '',
   companyVatNumber: '',

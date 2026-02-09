@@ -1535,7 +1535,10 @@ export const PROFESSIONAL_INFO_FIELD_LABELS = {
   PROFESSION: 'individual.fields.profession',
   SPECIALTY: 'individual.fields.specialty',
   EMPLOYER: 'individual.fields.employer',
-  POSITION: 'individual.fields.position'
+  POSITION: 'individual.fields.position',
+  // 🇪🇺 ESCO Professional Classification (ADR-034)
+  ESCO_URI: 'esco.escoLabel',
+  ISCO_CODE: 'esco.iscoCode'
 } as const;
 
 /**

@@ -24,6 +24,9 @@ import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector'
 import { getMergedIndividualSections, getPersonaFields } from '@/config/persona-config';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
+// 🇪🇺 ENTERPRISE: ESCO Professional Classification (ADR-034)
+import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
+import type { EscoPickerValue } from '@/types/contacts/esco-types';
 
 /** Custom renderer field interface */
 interface CustomRendererField {
@@ -495,7 +498,32 @@ export function UnifiedContactTabbedSection({
               additionalData={{ disabled: false }} // 🏢 ENTERPRISE: Always editable - subcollections save independently
             />
           );
-        }
+        },
+
+        // 🇪🇺 ENTERPRISE: ESCO Occupation Picker — field-level custom renderer for "profession" (ADR-034)
+        // Replaces free-text input with autocomplete backed by EU ESCO taxonomy
+        // Backward compatible: free-text fallback always available
+        ...(contactType === 'individual' ? {
+          profession: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+            <EscoOccupationPicker
+              value={formData.profession ?? ''}
+              escoUri={formData.escoUri ?? undefined}
+              iscoCode={formData.iscoCode ?? undefined}
+              disabled={fieldDisabled}
+              onChange={(escoValue: EscoPickerValue) => {
+                if (setFormData) {
+                  setFormData({
+                    ...formData,
+                    profession: escoValue.profession,
+                    escoUri: escoValue.escoUri ?? '',
+                    escoLabel: escoValue.escoLabel ?? '',
+                    iscoCode: escoValue.iscoCode ?? '',
+                  });
+                }
+              }}
+            />
+          ),
+        } : {})
       }
     };
 

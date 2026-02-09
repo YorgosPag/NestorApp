@@ -198,11 +198,15 @@
       "requestedTime": "Ώρα Ραντεβού",
       "description": "Περιγραφή",
       "notSpecified": "Δεν ορίστηκε",
-      "aiGenerated": "Δημιουργήθηκε με AI"
+      "aiGenerated": "Δημιουργήθηκε με AI",
+      "complaintDescription": "Περιγραφή Παραπόνου",
+      "followUpRequired": "Απαιτείται Παρακολούθηση"
     },
     "actions": {
       "replyPropertyList": "Απάντηση αναζήτησης ακινήτου",
-      "createAppointment": "Δημιουργία ραντεβού"
+      "createAppointment": "Δημιουργία ραντεβού",
+      "acknowledgeComplaint": "Αναγνώριση παραπόνου",
+      "acknowledgeInquiry": "Αναγνώριση αιτήματος"
     },
     "stats": {
       "total": "Σύνολο",

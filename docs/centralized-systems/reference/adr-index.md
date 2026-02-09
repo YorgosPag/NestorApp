@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 143 ADRs | Last Updated: 2026-02-09
+**📊 Stats**: 145 ADRs | Last Updated: 2026-02-09
 
 ---
 
@@ -155,7 +155,9 @@
 | **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems | [📄](./adrs/ADR-129-layer-entity-filtering-centralization.md) |
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems | [📄](./adrs/ADR-130-default-layer-name-centralization.md) |
 | **ADR-131** | Multi-Intent Pipeline — Πολλαπλά Intents σε Ένα Μήνυμα | ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-131-multi-intent-pipeline.md) |
+| **ADR-132** | ESCO Professional Classification Integration | ✅ IMPLEMENTED | 2026-02-09 | Contact Management / CRM | [📄](./adrs/ADR-132-esco-professional-classification.md) |
 | **ADR-133** | SVG Stroke Width Centralization | ✅ IMPLEMENTED | 2026-02-01 | Design System | [📄](./adrs/ADR-133-svg-stroke-width-centralization.md) |
+| **ADR-134** | UC Modules Expansion + Telegram Channel — Omnichannel AI Pipeline | ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-134-uc-modules-expansion-telegram-channel.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-136** | Canvas Opacity Constants Centralization (Extended) | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-136-canvas-opacity-constants-centralization-extended.md) |
 | **ADR-137** | Snap Icon Geometry Centralization | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-137-snap-icon-geometry-centralization.md) |
@@ -376,6 +378,7 @@
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | [View](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
 | **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
 | **ADR-131** | Multi-Intent Pipeline — Πολλαπλά Intents σε Ένα Μήνυμα | ✅ IMPLEMENTED | [View](./adrs/ADR-131-multi-intent-pipeline.md) |
+| **ADR-134** | UC Modules Expansion + Telegram Channel — Omnichannel AI Pipeline | ✅ IMPLEMENTED | [View](./adrs/ADR-134-uc-modules-expansion-telegram-channel.md) |
 
 ---
 
@@ -426,7 +429,7 @@
 ```
 034, 065, 066, 067, 068, 070, 071, 072, 073, 074,
 077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
-132, 134, 145, 156, 161, 164
+145, 156, 161, 164
 ```
 
 > **⚠️ ΣΗΜΑΝΤΙΚΟ**: Αυτά τα IDs ενοποιήθηκαν στο ADR-GEOMETRY. Χρησιμοποίησέ τα για νέα ADRs πριν συνεχίσεις από το 167+.

@@ -1,146 +1,69 @@
 {
-  "backupId": "backup-2026-02-08-safety-checkpoint-type-i18n-dxf",
-  "timestamp": "2026-02-08T22:31:00+02:00",
+  "backupId": "backup-2026-02-09-multi-intent-pipeline-adr131",
+  "timestamp": "2026-02-09T23:30:00+02:00",
   "category": "FEATURE",
-  "shortDescription": "Safety checkpoint: type safety, i18n expansion, DXF viewer improvements across 95 files",
-  "problem": "Multiple type safety issues across the codebase. New features needed: IKA/EFKA labor compliance, CRM calendar, AI pipeline modules, construction Gantt chart with export capabilities.",
-  "cause": "Incremental development required type safety hardening across 300+ files, plus new feature implementations for construction management, labor compliance, and AI-powered email processing.",
+  "shortDescription": "Multi-intent pipeline — one message, multiple intents, one unified reply (ADR-131)",
+  "problem": "Ένας πελάτης μπορεί να στείλει email με πολλαπλά αιτήματα (π.χ. ραντεβού ΚΑΙ αναζήτηση ακινήτου), αλλά η pipeline αναγνώριζε μόνο ένα intent και αγνοούσε τα υπόλοιπα.",
+  "cause": "Η αρχική αρχιτεκτονή υποστήριζε μόνο single-intent detection: ένα OpenAI schema, ένας router, ένα module ανά μήνυμα.",
   "filesChanged": [
-    "--- 12 commits total, 500+ files changed across full stack ---",
-    "src/app/api/** (API routes: contacts, projects, telegram, navigation)",
-    "src/components/building-management/** (Gantt, construction phases, timeline)",
-    "src/components/projects/ika/** (IKA/EFKA: workers, attendance, stamps, EFKA declarations)",
-    "src/components/crm/** (calendar, dashboard, tasks)",
-    "src/components/contacts/** (details, tabs, relationships)",
-    "src/services/ai-pipeline/** (orchestrator, modules, operator inbox)",
-    "src/services/calendar/** (CalendarEventService, mappers)",
-    "src/services/gantt-export/** (PDF, Excel, image exporters)",
-    "src/services/milestone-export/** (milestone PDF/Excel)",
-    "src/subapps/geo-canvas/** (floor-plan, components, cloud providers, services)",
-    "src/subapps/dxf-viewer/** (tests, debug tools, LayerRenderer)",
-    "packages/core/** (alert-engine, database-system, polygon-system)",
-    "docs/centralized-systems/** (ADR-080, ADR-089, ADR-090, adr-index)"
+    "src/config/ai-analysis-config.ts — AI_MULTI_INTENT_SCHEMA + MULTI_INTENT_SYSTEM prompt",
+    "src/schemas/ai-analysis.ts — MultiIntentAnalysisSchema + DetectedIntentSchema + isMultiIntentAnalysis()",
+    "src/types/ai-pipeline.ts — DetectedIntent, detectedIntents[], multiLookupData, contributingModules",
+    "src/services/ai-analysis/providers/OpenAIAnalysisProvider.ts — Uses AI_MULTI_INTENT_SCHEMA",
+    "src/services/ai-pipeline/pipeline-orchestrator.ts — Multi-module flow (6 new methods)",
+    "src/services/ai-pipeline/module-registry.ts — getModulesForIntents()",
+    "src/services/ai-pipeline/intent-router.ts — routeMultiple() + MultiRoutingResult",
+    "src/config/ai-pipeline-config.ts — SECONDARY_INTENT_THRESHOLD: 50",
+    "src/services/ai-pipeline/shared/ai-reply-generator.ts — generateCompositeReply()",
+    "src/components/admin/operator-inbox/ProposalReviewCard.tsx — Multi-intent UI badges",
+    "src/i18n/locales/el/admin.json — multiIntent.* keys",
+    "src/i18n/locales/en/admin.json — multiIntent.* keys",
+    "docs/centralized-systems/reference/adrs/ADR-131-multi-intent-pipeline.md (NEW)",
+    "docs/centralized-systems/reference/adr-index.md — Added ADR-131",
+    "CLAUDE.md — Updated available ADR IDs"
   ],
   "solution": {
-    "phase1_ai_pipeline": "AI Pipeline implementation (ADR-080): orchestrator, intent router, module registry, queue service, audit service, email channel adapter, UC-001 appointment module, UC-003 property search module",
-    "phase2_construction": "Construction management: Gantt chart major upgrade, construction phases API, ConstructionPhaseDialog, useConstructionGantt hook, construction templates, milestone & Gantt PDF/Excel export",
-    "phase3_ika_efka": "IKA/EFKA labor compliance system (ADR-090): workers, attendance dashboard, timesheet, stamps calculation, APD payments, EFKA declarations, employment records",
-    "phase4_crm_calendar": "CRM Calendar system (ADR-089): calendar page, event dialogs, CalendarEventService, event colors",
-    "phase5_type_safety": "Massive type safety sweep across 300+ files: API routes, services, components, hooks, tests, packages, geo-canvas, dxf-viewer"
+    "phase1_ai_schema": "New AI_MULTI_INTENT_SCHEMA with primaryIntent + secondaryIntents[]. Zod MultiIntentAnalysisSchema. DetectedIntent type. mapAIResultToUnderstanding handles both multi and legacy.",
+    "phase2_router": "IntentRouter.routeMultiple() returns MultiRoutingResult with primary + secondary routes. ModuleRegistry.getModulesForIntents() for deduplicated multi-lookup. SECONDARY_INTENT_THRESHOLD: 50.",
+    "phase3_orchestrator": "6 new methods: stepMultiLookup, stepMultiPropose, composeProposal, stepApproveMulti, stepMultiExecute, resolveModulesForExecution. Each module gets its own lookup data via multiLookupData[moduleId].",
+    "phase4_composite_reply": "generateCompositeReply() merges N partial replies into 1 unified email. Single-reply shortcut: zero overhead. Operator Inbox shows multi-intent badges with primary/secondary labels."
   },
   "testing": {
-    "typescript": "Pre-commit checks passed on all 12 commits",
-    "deployment": "All commits pushed to main, Vercel auto-deployment triggered for each"
+    "typescript": "npx tsc --noEmit → 0 errors (after each phase)",
+    "preCommit": "Pre-commit checks passed",
+    "deployment": "Pushed to main, Vercel auto-deployment triggered"
   },
   "notes": [
-    "12 commits pushed to main between 2026-02-07 and 2026-02-08",
-    "500+ files changed across the entire codebase",
-    "New systems: AI Pipeline, IKA/EFKA, CRM Calendar, Gantt Export, Milestone Export",
-    "3 new ADRs: ADR-080 (AI Pipeline), ADR-089 (CRM Calendar), ADR-090 (IKA/EFKA)",
-    "Another Claude agent was running in parallel causing continuous file modifications",
-    "Added .npm-cache/ to .gitignore to clean up source control view"
+    "15 files changed: 817 insertions, 113 deletions",
+    "1 new file: ADR-131-multi-intent-pipeline.md",
+    "Full backward compatibility: single-intent messages follow identical flow",
+    "Primary module failure = fatal, secondary module failure = logged and skipped",
+    "Thresholds: SECONDARY_INTENT 50, AUTO_APPROVE 90, MANUAL_TRIAGE 60, QUARANTINE 30",
+    "ADR-131 documents complete architecture in 9 subsections"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6 (Anthropic)",
-    "sessionDate": "2026-02-08"
+    "sessionDate": "2026-02-09"
   },
   "relatedBackups": [
-    "backup-2026-02-08-milestone-export-geocanvas-fix",
-    "backup-2026-02-07-gantt-edit-email-mappers"
+    "backup-2026-02-09-personas-ai-pipeline-property-search"
   ],
   "commits": [
     {
-      "hash": "a33a8c77",
-      "message": "feat: AI pipeline implementation (ADR-080), building management enhancements, address helpers & type refinements",
-      "files": 38,
-      "insertions": 3815,
-      "deletions": 196
-    },
-    {
-      "hash": "3b88b5d0",
-      "message": "feat: operator inbox, construction phases API, Gantt enhancements & core improvements",
-      "files": 35,
-      "insertions": 3875,
-      "deletions": 541
-    },
-    {
-      "hash": "7a00c160",
-      "message": "feat: UC-001 appointment module, stats cards refactor, geo-canvas design system & polygon improvements",
-      "files": 59,
-      "insertions": 2388,
-      "deletions": 1072
-    },
-    {
-      "hash": "5dcebb38",
-      "message": "feat: construction phase dialog enhancements, Gantt improvements, chart tooltip types & design tokens",
+      "hash": "038df8cc",
+      "message": "feat: multi-intent pipeline — one message, multiple intents, one unified reply (ADR-131)",
       "files": 15,
-      "insertions": 1189,
-      "deletions": 50
-    },
-    {
-      "hash": "8b00214e",
-      "message": "feat: Gantt chart major upgrade, type safety cleanup across features & database migrations",
-      "files": 40,
-      "insertions": 565,
-      "deletions": 258
-    },
-    {
-      "hash": "d3f12833",
-      "message": "feat: Gantt view refinements, hooks type safety, form validation upgrade & viewer improvements",
-      "files": 24,
-      "insertions": 429,
-      "deletions": 248
-    },
-    {
-      "hash": "0f7c5f7b",
-      "message": "feat: Gantt milestone view, communications service upgrade, API error handling & type safety sweep",
-      "files": 19,
-      "insertions": 296,
-      "deletions": 155
-    },
-    {
-      "hash": "7695d6eb",
-      "message": "feat: calendar events, Gantt export to PDF, massive services type safety sweep & geo-canvas improvements",
-      "files": 91,
-      "insertions": 2771,
-      "deletions": 576
-    },
-    {
-      "hash": "7198dc41",
-      "message": "feat: CRM calendar page, IKA/EFKA worker management system & service refinements",
-      "files": 34,
-      "insertions": 3066,
-      "deletions": 79
-    },
-    {
-      "hash": "55fb7111",
-      "message": "feat: IKA attendance system, CRM calendar upgrades, milestone export, geo-canvas floor-plan & cloud providers",
-      "files": 82,
-      "insertions": 4145,
-      "deletions": 451
-    },
-    {
-      "hash": "7e8e32fe",
-      "message": "feat: IKA stamps & employment records, APD payments, geo-canvas interactive map & CRM tasks",
-      "files": 39,
-      "insertions": 2631,
-      "deletions": 292
-    },
-    {
-      "hash": "f440fa85",
-      "message": "feat: massive type safety sweep — API routes, contacts, CRM dashboard, DXF viewer tests, services & config",
-      "files": 91,
-      "insertions": 1069,
-      "deletions": 744
+      "insertions": 817,
+      "deletions": 113
     }
   ],
   "statistics": {
-    "filesChanged": "500+",
-    "totalInsertions": 26239,
-    "totalDeletions": 4662,
-    "netLinesAdded": 21577,
-    "newFiles": "60+",
-    "commitsInBackup": 12
+    "filesChanged": 15,
+    "totalInsertions": 817,
+    "totalDeletions": 113,
+    "netLinesAdded": 704,
+    "newFiles": 1,
+    "commitsInBackup": 1
   }
 }

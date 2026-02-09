@@ -24,13 +24,12 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
-import { sendReplyViaMailgun, type MailgunSendResult } from '../../shared/mailgun-sender';
+import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { checkAvailability, type AvailabilityResult } from '../../shared/availability-check';
 import { generateAIReply } from '../../shared/ai-reply-generator';
 import { getSenderHistory, type SenderHistoryResult } from '../../shared/sender-history';
 import {
   PipelineIntentType,
-  PipelineChannel,
 } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -39,7 +38,6 @@ import type {
   ExecutionResult,
   AcknowledgmentResult,
   PipelineIntentTypeValue,
-  PipelineChannelValue,
 } from '@/types/ai-pipeline';
 import type { AppointmentDocument, AppointmentStatus } from '@/types/appointment';
 
@@ -408,59 +406,55 @@ export class AppointmentModule implements IUCModule {
         requesterEmail: params.senderEmail,
       });
 
-      // ── 2. Send confirmation email via Mailgun ──
+      // ── 2. Send confirmation reply via channel dispatcher (ADR-132) ──
       const senderEmail = (params.senderEmail as string) ?? '';
       const draftReply = (params.draftReply as string) ?? '';
       const originalSubject = ctx.intake.normalized.subject ?? 'Αίτημα Ραντεβού';
+      const channel = ctx.intake.channel;
+      const telegramChatId = (ctx.intake.rawPayload.chatId as string)
+        ?? (ctx.intake.normalized.sender.telegramId)
+        ?? undefined;
 
-      let mailgunResult: MailgunSendResult = { success: false, error: 'No recipient' };
+      const replyText = draftReply || buildAppointmentReply({
+        senderName: (params.senderName as string) ?? senderEmail,
+        requestedDate: (params.requestedDate as string) ?? null,
+        requestedTime: (params.requestedTime as string) ?? null,
+        description: (params.description as string) ?? '',
+      });
 
-      if (senderEmail && draftReply) {
-        mailgunResult = await sendReplyViaMailgun({
-          to: senderEmail,
-          subject: `Re: ${originalSubject}`,
-          textBody: draftReply,
-        });
-      } else if (senderEmail && !draftReply) {
-        // Fallback: build reply on-the-fly if draftReply is missing
-        const fallbackReply = buildAppointmentReply({
-          senderName: (params.senderName as string) ?? senderEmail,
-          requestedDate: (params.requestedDate as string) ?? null,
-          requestedTime: (params.requestedTime as string) ?? null,
-          description: (params.description as string) ?? '',
-        });
+      const replyResult = await sendChannelReply({
+        channel,
+        recipientEmail: senderEmail || undefined,
+        telegramChatId: telegramChatId || undefined,
+        subject: `Re: ${originalSubject}`,
+        textBody: replyText,
+        requestId: ctx.requestId,
+      });
 
-        mailgunResult = await sendReplyViaMailgun({
-          to: senderEmail,
-          subject: `Re: ${originalSubject}`,
-          textBody: fallbackReply,
-        });
-      }
-
-      // Log email result
-      if (mailgunResult.success) {
-        logger.info('UC-001 EXECUTE: Confirmation email sent', {
+      // Log reply result
+      if (replyResult.success) {
+        logger.info('UC-001 EXECUTE: Confirmation reply sent', {
           requestId: ctx.requestId,
           appointmentId: docRef.id,
-          messageId: mailgunResult.messageId,
-          to: senderEmail,
+          channel: replyResult.channel,
+          messageId: replyResult.messageId,
         });
       } else {
-        logger.warn('UC-001 EXECUTE: Email send failed (appointment still created)', {
+        logger.warn('UC-001 EXECUTE: Reply send failed (appointment still created)', {
           requestId: ctx.requestId,
           appointmentId: docRef.id,
-          error: mailgunResult.error,
-          to: senderEmail,
+          channel: replyResult.channel,
+          error: replyResult.error,
         });
       }
 
       // Build side effects list
       const sideEffects = [`appointment_created:${docRef.id}`];
 
-      if (mailgunResult.success) {
-        sideEffects.push(`email_sent:${mailgunResult.messageId ?? 'unknown'}`);
+      if (replyResult.success) {
+        sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);
       } else {
-        sideEffects.push(`email_failed:${mailgunResult.error ?? 'unknown'}`);
+        sideEffects.push(`reply_failed:${replyResult.error ?? 'unknown'}`);
       }
 
       // Appointment creation is the primary action — email failure is non-fatal
@@ -487,22 +481,21 @@ export class AppointmentModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ─────────────────────────────────────────────────
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const channel = (ctx.intake.channel ?? PipelineChannel.EMAIL) as PipelineChannelValue;
+    const channel = ctx.intake.channel;
 
-    // Check if confirmation email was sent in EXECUTE step
-    const emailSent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('email_sent:')
+    // Check if confirmation reply was sent in EXECUTE step
+    const replySent = ctx.executionResult?.sideEffects?.some(
+      (se: string) => se.startsWith('reply_sent:')
     ) ?? false;
 
     logger.info('UC-001 ACKNOWLEDGE: Confirmation delivery status', {
       requestId: ctx.requestId,
       channel,
-      emailSent,
-      senderEmail: ctx.intake.normalized.sender.email,
+      replySent,
     });
 
     return {
-      sent: emailSent,
+      sent: replySent,
       channel,
     };
   }

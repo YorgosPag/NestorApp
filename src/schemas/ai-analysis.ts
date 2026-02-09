@@ -45,6 +45,9 @@ export const IntentType = z.enum([
   'defect_report',         // Αναφορά βλάβης
   'procurement_request',   // Αίτημα προμήθειας
   'payment_notification',  // Ειδοποίηση πληρωμής
+  // ── ADR-132: UC Modules Expansion ──
+  'complaint',             // Παράπονο/καταγγελία (UC-004)
+  'general_inquiry',       // Γενικό αίτημα/ερώτηση (UC-005)
 ]);
 
 export type IntentTypeValue = z.infer<typeof IntentType>;

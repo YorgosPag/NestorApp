@@ -166,7 +166,12 @@ export const COLLECTIONS = {
   // 👷 IKA/EFKA LABOR COMPLIANCE (ADR-090)
   ATTENDANCE_EVENTS: process.env.NEXT_PUBLIC_ATTENDANCE_EVENTS_COLLECTION || 'attendance_events',
   EMPLOYMENT_RECORDS: process.env.NEXT_PUBLIC_EMPLOYMENT_RECORDS_COLLECTION || 'employment_records',
-  DIGITAL_WORK_CARDS: process.env.NEXT_PUBLIC_DIGITAL_WORK_CARDS_COLLECTION || 'digital_work_cards'
+  DIGITAL_WORK_CARDS: process.env.NEXT_PUBLIC_DIGITAL_WORK_CARDS_COLLECTION || 'digital_work_cards',
+
+  // 🇪🇺 ESCO PROFESSIONAL CLASSIFICATION (ADR-034)
+  // Cached subset of EU ESCO occupations taxonomy (~3.039 occupations, EL+EN)
+  // Subcollection path: system/esco_cache/occupations
+  ESCO_CACHE: process.env.NEXT_PUBLIC_ESCO_CACHE_COLLECTION || 'system/esco_cache/occupations'
 } as const;
 
 // ============================================================================

@@ -24,10 +24,9 @@ import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { extractSearchCriteria, type PropertySearchCriteria } from '@/services/property-search.service';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
-import { sendReplyViaMailgun, type MailgunSendResult } from '../../shared/mailgun-sender';
+import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import {
   PipelineIntentType,
-  PipelineChannel,
 } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -36,7 +35,6 @@ import type {
   ExecutionResult,
   AcknowledgmentResult,
   PipelineIntentTypeValue,
-  PipelineChannelValue,
 } from '@/types/ai-pipeline';
 
 // ============================================================================
@@ -453,23 +451,28 @@ export class PropertySearchModule implements IUCModule {
       const draftReply = (params.draftReply as string) ?? '';
       const originalSubject = ctx.intake.normalized.subject ?? 'Αναζήτηση Ακινήτου';
 
-      logger.info('UC-003 EXECUTE: Sending reply email via Mailgun', {
+      logger.info('UC-003 EXECUTE: Sending reply via channel dispatcher', {
         requestId: ctx.requestId,
         senderEmail,
+        channel: ctx.intake.channel,
         matchingUnits: params.matchingUnitsCount,
         approvedBy: ctx.approval?.approvedBy ?? null,
       });
 
-      // ── Send reply email via Mailgun ──
-      let mailgunResult: MailgunSendResult = { success: false, error: 'No recipient' };
+      // ── Send reply via channel dispatcher (ADR-132) ──
+      const channel = ctx.intake.channel;
+      const telegramChatId = (ctx.intake.rawPayload.chatId as string)
+        ?? (ctx.intake.normalized.sender.telegramId)
+        ?? undefined;
 
-      if (senderEmail && draftReply) {
-        mailgunResult = await sendReplyViaMailgun({
-          to: senderEmail,
-          subject: `Re: ${originalSubject}`,
-          textBody: draftReply,
-        });
-      }
+      const replyResult = await sendChannelReply({
+        channel,
+        recipientEmail: senderEmail || undefined,
+        telegramChatId: telegramChatId || undefined,
+        subject: `Re: ${originalSubject}`,
+        textBody: draftReply,
+        requestId: ctx.requestId,
+      });
 
       // ── Record in audit trail ──
       const adminDb = getAdminFirestore();
@@ -486,9 +489,10 @@ export class PropertySearchModule implements IUCModule {
         searchCriteria: (params.criteriaSummary as string) ?? null,
         matchingUnitsCount: (params.matchingUnitsCount as number) ?? 0,
         totalAvailable: (params.totalAvailable as number) ?? 0,
-        status: mailgunResult.success ? 'sent' : 'send_failed',
-        mailgunMessageId: mailgunResult.messageId ?? null,
-        mailgunError: mailgunResult.error ?? null,
+        channel,
+        status: replyResult.success ? 'sent' : 'send_failed',
+        replyMessageId: replyResult.messageId ?? null,
+        replyError: replyResult.error ?? null,
         approvedBy: ctx.approval?.approvedBy ?? null,
         approvedAt: ctx.approval?.decidedAt ?? null,
         createdAt: new Date().toISOString(),
@@ -498,29 +502,29 @@ export class PropertySearchModule implements IUCModule {
         .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
         .add(leadInquiry);
 
-      if (!mailgunResult.success) {
-        logger.error('UC-003 EXECUTE: Email send FAILED', {
+      if (!replyResult.success) {
+        logger.error('UC-003 EXECUTE: Reply send FAILED', {
           requestId: ctx.requestId,
           auditId: docRef.id,
-          error: mailgunResult.error,
-          to: senderEmail,
+          channel: replyResult.channel,
+          error: replyResult.error,
         });
 
         return {
           success: false,
           sideEffects: [
             `lead_inquiry_recorded:${docRef.id}`,
-            `email_failed:${mailgunResult.error ?? 'unknown'}`,
+            `reply_failed:${replyResult.error ?? 'unknown'}`,
           ],
-          error: `Αποτυχία αποστολής email: ${mailgunResult.error ?? 'Άγνωστο σφάλμα'}`,
+          error: `Αποτυχία αποστολής απάντησης: ${replyResult.error ?? 'Άγνωστο σφάλμα'}`,
         };
       }
 
-      logger.info('UC-003 EXECUTE: Email sent successfully', {
+      logger.info('UC-003 EXECUTE: Reply sent successfully', {
         requestId: ctx.requestId,
         auditId: docRef.id,
-        messageId: mailgunResult.messageId,
-        to: senderEmail,
+        channel: replyResult.channel,
+        messageId: replyResult.messageId,
       });
 
       return {
@@ -528,7 +532,7 @@ export class PropertySearchModule implements IUCModule {
         sideEffects: [
           `lead_inquiry_recorded:${docRef.id}`,
           `matching_units:${params.matchingUnitsCount ?? 0}`,
-          `email_sent:${mailgunResult.messageId ?? 'unknown'}`,
+          `reply_sent:${replyResult.messageId ?? 'unknown'}`,
         ],
       };
     } catch (error) {
@@ -550,22 +554,21 @@ export class PropertySearchModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ─────────────────────────────────────────────────
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const channel = (ctx.intake.channel ?? PipelineChannel.EMAIL) as PipelineChannelValue;
+    const channel = ctx.intake.channel;
 
-    // Check if email was sent successfully in EXECUTE step
-    const emailSent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('email_sent:')
+    // Check if reply was sent successfully in EXECUTE step
+    const replySent = ctx.executionResult?.sideEffects?.some(
+      (se: string) => se.startsWith('reply_sent:')
     ) ?? false;
 
     logger.info('UC-003 ACKNOWLEDGE: Reply delivery status', {
       requestId: ctx.requestId,
       channel,
-      emailSent,
-      senderEmail: ctx.intake.normalized.sender.email,
+      replySent,
     });
 
     return {
-      sent: emailSent,
+      sent: replySent,
       channel,
     };
   }

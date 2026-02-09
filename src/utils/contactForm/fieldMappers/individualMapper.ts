@@ -131,6 +131,10 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     position: getSafeFieldValue(individualContact, 'position'),
     workAddress: getSafeFieldValue(individualContact, 'workAddress'),
     workWebsite: getSafeFieldValue(individualContact, 'workWebsite'),
+    // 🇪🇺 ESCO Professional Classification (ADR-034)
+    escoUri: getSafeFieldValue(individualContact, 'escoUri'),
+    escoLabel: getSafeFieldValue(individualContact, 'escoLabel'),
+    iscoCode: getSafeFieldValue(individualContact, 'iscoCode'),
 
     // 📞 Επικοινωνία - ENTERPRISE Arrays Structure
     street: contact.addresses?.[0]?.street || '',

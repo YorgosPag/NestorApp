@@ -1081,6 +1081,34 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "occupations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "iscoGroup",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "preferredLabel.el",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "occupations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "iscoGroup",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "preferredLabel.en",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

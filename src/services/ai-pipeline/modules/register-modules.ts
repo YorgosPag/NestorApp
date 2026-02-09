@@ -18,6 +18,8 @@ import { getModuleRegistry } from '../module-registry';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { AppointmentModule } from './uc-001-appointment';
 import { PropertySearchModule } from './uc-003-property-search';
+import { ComplaintModule } from './uc-004-complaint';
+import { GeneralInquiryModule } from './uc-005-general-inquiry';
 
 const logger = createModuleLogger('PIPELINE_MODULE_REGISTRATION');
 
@@ -40,9 +42,11 @@ export function registerAllPipelineModules(): void {
   // UC-003: Property Search
   registry.register(new PropertySearchModule());
 
-  // Future modules:
-  // registry.register(new InvoiceModule());         // UC-002
-  // registry.register(new DefectReportModule());     // UC-004
+  // UC-004: Complaint / Defect Report (ADR-132)
+  registry.register(new ComplaintModule());
+
+  // UC-005: General Inquiry — Catch-All (ADR-132)
+  registry.register(new GeneralInquiryModule());
 
   initialized = true;
 

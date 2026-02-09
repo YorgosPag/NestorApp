@@ -837,7 +837,7 @@
       "documentExpiryDate": "Document expiry date",
       "vatNumber": "Tax Identification Number (9 digits)",
       "taxOffice": "Tax office",
-      "profession": "Contact's profession",
+      "profession": "Type to search the European ESCO occupations registry or enter free text",
       "specialty": "Professional specialty",
       "employer": "Employer",
       "position": "Work position",
@@ -857,6 +857,14 @@
       "streetNumber": "e.g. 123",
       "city": "e.g. Athens"
     }
+  },
+  "esco": {
+    "searchResults": "Search results",
+    "noResults": "No occupations found",
+    "useFreeText": "Use as free text",
+    "escoLabel": "Standardized Occupation (ESCO)",
+    "iscoCode": "ISCO-08 Code",
+    "selectedFromEsco": "Selected from ESCO"
   },
   "persona": {
     "selector": {

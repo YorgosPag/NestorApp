@@ -107,12 +107,18 @@ export interface IndividualContact extends BaseContact {
   socialSecurityNumber?: string; // Deprecated: use amka
 
   // 💼 Επαγγελματικά Στοιχεία
-  profession?: string;        // Επάγγελμα
+  profession?: string;        // Επάγγελμα (human-readable, always set)
   specialty?: string;         // Ειδικότητα
   employer?: string;          // Επιχείρηση/Εργοδότης
   position?: string;          // Θέση/Ρόλος
   workAddress?: string;       // Διεύθυνση Εργασίας
   workWebsite?: string;       // Ιστοσελίδα Επαγγελματικού Προφίλ
+
+  // 🇪🇺 ESCO Professional Classification (ADR-034)
+  // European standard occupation taxonomy — optional, backward compatible
+  escoUri?: string;           // ESCO occupation URI (link to EU taxonomy)
+  escoLabel?: string;         // Cached ESCO preferred label
+  iscoCode?: string;          // ISCO-08 4-digit code (for grouping/filtering)
 
   // Legacy professional fields (for backward compatibility)
   jobTitle?: string;         // Deprecated: use position

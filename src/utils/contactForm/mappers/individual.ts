@@ -42,6 +42,10 @@ interface MappedIndividualContactData {
   position?: string;
   workAddress?: string;
   workWebsite?: string;
+  // 🇪🇺 ESCO Professional Classification (ADR-034)
+  escoUri?: string | null;
+  escoLabel?: string | null;
+  iscoCode?: string | null;
   socialMedia?: SocialMediaInfo[];
   websites?: WebsiteInfo[];
   photoURL?: string;
@@ -139,6 +143,11 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     position: formData.position,
     workAddress: formData.workAddress,
     workWebsite: formData.workWebsite,
+    // 🇪🇺 ESCO Professional Classification (ADR-034)
+    // ΚΡΙΣΙΜΟ: Firestore rejects undefined — use null for empty ESCO fields
+    escoUri: formData.escoUri || null,
+    escoLabel: formData.escoLabel || null,
+    iscoCode: formData.iscoCode || null,
     socialMedia: enterpriseData.socialMedia,
     websites: enterpriseData.websites,
     photoURL,

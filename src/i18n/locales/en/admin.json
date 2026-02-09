@@ -198,11 +198,15 @@
       "requestedTime": "Appointment Time",
       "description": "Description",
       "notSpecified": "Not specified",
-      "aiGenerated": "AI Generated"
+      "aiGenerated": "AI Generated",
+      "complaintDescription": "Complaint Description",
+      "followUpRequired": "Follow-Up Required"
     },
     "actions": {
       "replyPropertyList": "Property search reply",
-      "createAppointment": "Create appointment"
+      "createAppointment": "Create appointment",
+      "acknowledgeComplaint": "Acknowledge complaint",
+      "acknowledgeInquiry": "Acknowledge inquiry"
     },
     "stats": {
       "total": "Total",
