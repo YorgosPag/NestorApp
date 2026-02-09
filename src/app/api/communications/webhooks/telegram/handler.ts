@@ -194,8 +194,10 @@ function feedTelegramToPipeline(message: TelegramMessage['message']): void {
   const messageText = message.text ?? '';
   const messageId = String(message.message_id);
 
-  // Default company ID — same pattern as email pipeline
-  const companyId = process.env.DEFAULT_COMPANY_ID ?? 'default';
+  // Default company ID — checks both server-only and NEXT_PUBLIC_ variants
+  const companyId = process.env.DEFAULT_COMPANY_ID
+    ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
+    ?? 'default';
 
   // Fire and forget — use void + catch to prevent unhandled rejection
   void (async () => {
