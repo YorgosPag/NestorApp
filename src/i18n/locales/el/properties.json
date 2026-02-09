@@ -568,7 +568,7 @@
   "detailsPanel": {
     "selectProperty": "Επιλέξτε ένα ακίνητο",
     "toViewDetails": "για να δείτε τα στοιχεία του",
-    "propertiesSelected": "{{count}} ακίνητα επιλέχθηκαν",
+    "propertiesSelected": "{count} ακίνητα επιλέχθηκαν",
     "selectSingleProperty": "Επιλέξτε ένα μόνο ακίνητο για να δείτε τις λεπτομέρειες.",
     "noDataFound": "Δεν βρέθηκαν στοιχεία",
     "forSelectedProperty": "για το επιλεγμένο ακίνητο"
@@ -577,7 +577,7 @@
     "accept": "Αποδοχή",
     "title": "Έξυπνες Προτάσεις",
     "analyze": "Ανάλυση",
-    "analysisComplete": "Ανάλυση Ολοκληρώθηκε: Βρέθηκαν {{count}} προτάσεις τοποθέτησης",
+    "analysisComplete": "Ανάλυση Ολοκληρώθηκε: Βρέθηκαν {count} προτάσεις τοποθέτησης",
     "clickAnalyze": "Πατήστε \"Ανάλυση\" για προτάσεις.",
     "clearSuggestions": "Καθαρισμός Προτάσεων"
   },
@@ -605,7 +605,7 @@
       },
       "cancelConnection": "Ακύρωση Σύνδεσης",
       "newConnection": "Νέα Σύνδεση",
-      "createGroup": "Δημιουργία Ομάδας ({{count}} επιλεγμένα)",
+      "createGroup": "Δημιουργία Ομάδας ({count} επιλεγμένα)",
       "clearConnections": "Καθαρισμός Συνδέσεων"
     },
     "connectionTypes": {
@@ -691,14 +691,14 @@
     }
   },
   "floorSelector": {
-    "propertiesCount": "{{count}} ακίνητα"
+    "propertiesCount": "{count} ακίνητα"
   },
   "contacts": {
     "owner": "Ιδιοκτήτης",
     "agent": "Μεσίτης"
   },
   "propertyCount": {
-    "propertiesOnFloor": "{{count}} ακίνητα στον όροφο"
+    "propertiesOnFloor": "{count} ακίνητα στον όροφο"
   },
   "multiLevel": {
     "title": "Επίπεδα Ακινήτου",
@@ -723,7 +723,7 @@
   },
   "creation": {
     "clickToStart": "Κλικ για να ξεκινήσετε",
-    "pointsContinue": "{{count}} σημεία - Κλικ για συνέχεια"
+    "pointsContinue": "{count} σημεία - Κλικ για συνέχεια"
   },
   "multiLevelIndicator": {
     "groundFloor": "Ισόγειο",

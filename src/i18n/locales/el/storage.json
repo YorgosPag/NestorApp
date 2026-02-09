@@ -12,7 +12,7 @@
       "ariaLabel": "Λίστα αποθηκών",
       "noResults": "Δεν βρέθηκαν αποθήκες",
       "noResultsHint": "Δοκιμάστε να αλλάξετε τα φίλτρα αναζήτησης",
-      "noResultsForTerm": "Δεν βρέθηκαν αποθήκες για «{{term}}»"
+      "noResultsForTerm": "Δεν βρέθηκαν αποθήκες για «{term}»"
     },
     "accessibility": {
       "toggleFilters": "Εμφάνιση/Απόκρυψη φίλτρων"
@@ -95,7 +95,7 @@
       "area": "Εμβαδόν",
       "price": "Τιμή"
     },
-    "ariaLabel": "Κάρτα αποθήκης {{name}}",
+    "ariaLabel": "Κάρτα αποθήκης {name}",
     "status": {
       "available": "Διαθέσιμο",
       "occupied": "Κατειλημμένο",

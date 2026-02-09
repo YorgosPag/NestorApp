@@ -5,7 +5,7 @@
       "area": "Εμβαδόν",
       "price": "Τιμή"
     },
-    "ariaLabel": "Κάρτα πάρκινγκ {{name}}"
+    "ariaLabel": "Κάρτα πάρκινγκ {name}"
   },
   "types": {
     "underground": "Υπόγειο",

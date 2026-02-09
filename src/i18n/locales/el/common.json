@@ -336,7 +336,7 @@
   },
   "notifications": {
     "title": "Ειδοποιήσεις",
-    "count": "{{count}} ειδοποιήσεις",
+    "count": "{count} ειδοποιήσεις",
     "markAllRead": "Ανάγνωση όλων",
     "markRead": "Προβλήθηκε",
     "empty": "Δεν υπάρχουν ειδοποιήσεις",
@@ -869,7 +869,7 @@
     "showAll": "Εμφάνιση Όλων",
     "hideAll": "Απόκρυψη Όλων",
     "noLayersFound": "Δεν βρέθηκαν layers",
-    "noResultsFor": "Δεν βρέθηκαν αποτελέσματα για \"{{query}}\"",
+    "noResultsFor": "Δεν βρέθηκαν αποτελέσματα για \"{query}\"",
     "tryChangingFilters": "Δοκιμάστε να αλλάξετε τα φίλτρα"
   },
   "sharing": {
@@ -1608,14 +1608,14 @@
     "noResults": "Δεν βρέθηκαν αποτελέσματα",
     "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση",
     "results": "Αποτελέσματα αναζήτησης",
-    "resultsCount": "{{count}} αποτελέσματα",
-    "resultsCount_one": "{{count}} αποτέλεσμα",
-    "resultsCount_other": "{{count}} αποτελέσματα",
+    "resultsCount": "{count} αποτελέσματα",
+    "resultsCount_one": "{count} αποτέλεσμα",
+    "resultsCount_other": "{count} αποτελέσματα",
     "navigate": "πλοήγηση",
     "select": "επιλογή",
     "hints": {
       "startTyping": "Πληκτρολογήστε για αναζήτηση...",
-      "minChars": "Τουλάχιστον {{count}} χαρακτήρες",
+      "minChars": "Τουλάχιστον {count} χαρακτήρες",
       "escKey": "ESC"
     },
     "entityTypes": {
@@ -1659,7 +1659,7 @@
     "skip": "Παράλειψη",
     "finish": "Τέλος",
     "dontShowAgain": "Να μην εμφανιστεί ξανά",
-    "stepIndicator": "Βήμα {{current}} από {{total}}",
+    "stepIndicator": "Βήμα {current} από {total}",
     "errorDialog": {
       "intro": {
         "title": "Καλωσήρθατε στη Διαχείριση Σφαλμάτων",

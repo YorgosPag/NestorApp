@@ -5,7 +5,7 @@
       "area": "Area",
       "price": "Price"
     },
-    "ariaLabel": "Parking card {{name}}"
+    "ariaLabel": "Parking card {name}"
   },
   "types": {
     "underground": "Underground",

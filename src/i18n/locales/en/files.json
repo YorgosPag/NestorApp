@@ -85,7 +85,7 @@
   },
   "header": {
     "title": "File Manager",
-    "titleWithCount": "File Manager ({{count}})",
+    "titleWithCount": "File Manager ({count})",
     "subtitle": "All company files",
     "newUpload": "Upload Files"
   },
@@ -252,7 +252,7 @@
     "folder": "Folder",
     "file": "File",
     "empty": "No files found",
-    "fileCount": "{{count}} files",
+    "fileCount": "{count} files",
     "expandAll": "Expand All",
     "collapseAll": "Collapse All",
     "ariaLabel": "File tree"

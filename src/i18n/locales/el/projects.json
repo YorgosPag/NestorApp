@@ -374,7 +374,7 @@
       "description": "Δήλωση στοιχείων για e-ΕΦΚΑ & έκδοση ΑΜΟΕ",
       "checklist": {
         "title": "Απαιτούμενα Στοιχεία",
-        "completion": "Συμπλήρωση {{completed}}/{{total}}",
+        "completion": "Συμπλήρωση {completed}/{total}",
         "allComplete": "Όλα τα στοιχεία συμπληρώθηκαν",
         "employerVatNumber": "ΑΦΜ Εργοδότη",
         "projectAddress": "Διεύθυνση Έργου",
@@ -397,7 +397,7 @@
         "label": "ΑΜΟΕ",
         "fullLabel": "Αριθμός Μητρώου Οικοδομοτεχνικού Έργου",
         "placeholder": "Θα αντιστοιχιστεί μετά την υποβολή",
-        "assigned": "ΑΜΟΕ: {{number}}"
+        "assigned": "ΑΜΟΕ: {number}"
       },
       "documents": {
         "title": "Έγγραφα ΕΦΚΑ",
@@ -487,7 +487,7 @@
       "crews": {
         "allCrews": "Όλα τα Συνεργεία",
         "independent": "Ανεξάρτητοι Εργάτες",
-        "presentOf": "{{present}} από {{total}}"
+        "presentOf": "{present} από {total}"
       },
       "anomalies": {
         "missingCheckout": "Λείπει αποχώρηση",
@@ -601,7 +601,7 @@
         "dailyWageOverride": "Τεκμαρτό Ημερομίσθιο (προαιρετικά)",
         "notes": "Σημειώσεις",
         "save": "Αποθήκευση",
-        "classLabel": "Κλάση {{number}} — €{{wage}}/ημέρα"
+        "classLabel": "Κλάση {number} — €{wage}/ημέρα"
       },
       "noInsuranceClass": "Χωρίς κλάση",
       "totalsRow": "ΣΥΝΟΛΑ"

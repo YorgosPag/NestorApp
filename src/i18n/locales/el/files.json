@@ -85,7 +85,7 @@
   },
   "header": {
     "title": "Διαχείριση Αρχείων",
-    "titleWithCount": "Διαχείριση Αρχείων ({{count}})",
+    "titleWithCount": "Διαχείριση Αρχείων ({count})",
     "subtitle": "Όλα τα αρχεία της εταιρείας",
     "newUpload": "Μεταφόρτωση Αρχείων"
   },
@@ -252,7 +252,7 @@
     "folder": "Φάκελος",
     "file": "Αρχείο",
     "empty": "Δεν βρέθηκαν αρχεία",
-    "fileCount": "{{count}} αρχεία",
+    "fileCount": "{count} αρχεία",
     "expandAll": "Ανάπτυξη Όλων",
     "collapseAll": "Σύμπτυξη Όλων",
     "ariaLabel": "Δέντρο αρχείων"

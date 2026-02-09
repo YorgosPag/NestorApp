@@ -574,7 +574,7 @@
   "detailsPanel": {
     "selectProperty": "Select a property",
     "toViewDetails": "to view its details",
-    "propertiesSelected": "{{count}} properties selected",
+    "propertiesSelected": "{count} properties selected",
     "selectSingleProperty": "Select a single property to view details.",
     "noDataFound": "No data found",
     "forSelectedProperty": "for the selected property"
@@ -583,7 +583,7 @@
     "accept": "Accept",
     "title": "Smart Suggestions",
     "analyze": "Analyze",
-    "analysisComplete": "Analysis Complete: Found {{count}} placement suggestions",
+    "analysisComplete": "Analysis Complete: Found {count} placement suggestions",
     "clickAnalyze": "Click \"Analyze\" for suggestions.",
     "clearSuggestions": "Clear Suggestions"
   },
@@ -611,7 +611,7 @@
       },
       "cancelConnection": "Cancel Connection",
       "newConnection": "New Connection",
-      "createGroup": "Create Group ({{count}} selected)",
+      "createGroup": "Create Group ({count} selected)",
       "clearConnections": "Clear Connections"
     },
     "connectionTypes": {
@@ -697,14 +697,14 @@
     }
   },
   "floorSelector": {
-    "propertiesCount": "{{count}} properties"
+    "propertiesCount": "{count} properties"
   },
   "contacts": {
     "owner": "Owner",
     "agent": "Agent"
   },
   "propertyCount": {
-    "propertiesOnFloor": "{{count}} properties on floor"
+    "propertiesOnFloor": "{count} properties on floor"
   },
   "multiLevel": {
     "title": "Property Levels",
@@ -729,7 +729,7 @@
   },
   "creation": {
     "clickToStart": "Click to start",
-    "pointsContinue": "{{count}} points - Click to continue"
+    "pointsContinue": "{count} points - Click to continue"
   },
   "multiLevelIndicator": {
     "groundFloor": "Ground Floor",

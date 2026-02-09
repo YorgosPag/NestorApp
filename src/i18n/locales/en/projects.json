@@ -374,7 +374,7 @@
       "description": "Declaration details for e-EFKA & AMOE issuance",
       "checklist": {
         "title": "Required Information",
-        "completion": "Completion {{completed}}/{{total}}",
+        "completion": "Completion {completed}/{total}",
         "allComplete": "All required information completed",
         "employerVatNumber": "Employer VAT Number",
         "projectAddress": "Project Address",
@@ -397,7 +397,7 @@
         "label": "AMOE",
         "fullLabel": "Construction Project Registry Number",
         "placeholder": "Will be assigned after submission",
-        "assigned": "AMOE: {{number}}"
+        "assigned": "AMOE: {number}"
       },
       "documents": {
         "title": "EFKA Documents",
@@ -487,7 +487,7 @@
       "crews": {
         "allCrews": "All Crews",
         "independent": "Independent Workers",
-        "presentOf": "{{present}} of {{total}}"
+        "presentOf": "{present} of {total}"
       },
       "anomalies": {
         "missingCheckout": "Missing check-out",
@@ -601,7 +601,7 @@
         "dailyWageOverride": "Imputed Daily Wage (optional)",
         "notes": "Notes",
         "save": "Save",
-        "classLabel": "Class {{number}} — €{{wage}}/day"
+        "classLabel": "Class {number} — €{wage}/day"
       },
       "noInsuranceClass": "No class",
       "totalsRow": "TOTALS"

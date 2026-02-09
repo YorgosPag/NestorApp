@@ -336,7 +336,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "count": "{{count}} notifications",
+    "count": "{count} notifications",
     "markAllRead": "Mark all read",
     "markRead": "Viewed",
     "empty": "No notifications",
@@ -870,7 +870,7 @@
     "showAll": "Show All",
     "hideAll": "Hide All",
     "noLayersFound": "No layers found",
-    "noResultsFor": "No results found for \"{{query}}\"",
+    "noResultsFor": "No results found for \"{query}\"",
     "tryChangingFilters": "Try changing the filters"
   },
   "sharing": {
@@ -1609,14 +1609,14 @@
     "noResults": "No results found",
     "tryDifferent": "Try a different search",
     "results": "Search results",
-    "resultsCount": "{{count}} results",
-    "resultsCount_one": "{{count}} result",
-    "resultsCount_other": "{{count}} results",
+    "resultsCount": "{count} results",
+    "resultsCount_one": "{count} result",
+    "resultsCount_other": "{count} results",
     "navigate": "navigate",
     "select": "select",
     "hints": {
       "startTyping": "Start typing to search...",
-      "minChars": "At least {{count}} characters",
+      "minChars": "At least {count} characters",
       "escKey": "ESC"
     },
     "entityTypes": {
@@ -1660,7 +1660,7 @@
     "skip": "Skip",
     "finish": "Finish",
     "dontShowAgain": "Don't show again",
-    "stepIndicator": "Step {{current}} of {{total}}",
+    "stepIndicator": "Step {current} of {total}",
     "errorDialog": {
       "intro": {
         "title": "Welcome to Error Management",

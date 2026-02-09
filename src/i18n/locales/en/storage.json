@@ -12,7 +12,7 @@
       "ariaLabel": "Storage list",
       "noResults": "No storage units found",
       "noResultsHint": "Try adjusting your search filters",
-      "noResultsForTerm": "No storage units found for \"{{term}}\""
+      "noResultsForTerm": "No storage units found for \"{term}\""
     },
     "accessibility": {
       "toggleFilters": "Toggle filters"
@@ -94,7 +94,7 @@
       "area": "Area",
       "price": "Price"
     },
-    "ariaLabel": "Storage card {{name}}",
+    "ariaLabel": "Storage card {name}",
     "status": {
       "available": "Available",
       "occupied": "Occupied",
