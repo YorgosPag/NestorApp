@@ -426,6 +426,7 @@ export class AppointmentModule implements IUCModule {
         channel,
         recipientEmail: senderEmail || undefined,
         telegramChatId: telegramChatId || undefined,
+        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
         subject: `Re: ${originalSubject}`,
         textBody: replyText,
         requestId: ctx.requestId,

@@ -151,6 +151,35 @@ export async function isSuperAdminEmail(
 }
 
 /**
+ * Check if a Firebase Auth user is a super admin.
+ *
+ * @param firebaseUid - Firebase Auth UID (from session/JWT)
+ * @returns SuperAdminResolution if admin, null otherwise
+ */
+export async function isSuperAdminFirebaseUid(
+  firebaseUid: string
+): Promise<SuperAdminResolution | null> {
+  const registry = await getRegistry();
+  if (!registry?.admins) return null;
+
+  for (const admin of registry.admins) {
+    if (!admin.isActive) continue;
+    if (admin.firebaseUid === firebaseUid) {
+      logger.info('Super admin identified via Firebase UID', {
+        displayName: admin.displayName,
+        firebaseUid,
+      });
+      return {
+        identity: admin,
+        resolvedVia: 'firebase_uid',
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Force-refresh the registry cache.
  * Useful after updating the registry document.
  */

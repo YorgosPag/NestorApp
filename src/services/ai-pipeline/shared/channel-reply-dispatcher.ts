@@ -19,6 +19,8 @@ import 'server-only';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import type { PipelineChannelValue } from '@/types/ai-pipeline';
 import { sendReplyViaMailgun } from './mailgun-sender';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('CHANNEL_REPLY_DISPATCHER');
@@ -35,6 +37,8 @@ export interface ChannelReplyParams {
   recipientEmail?: string;
   /** Telegram chat ID (required for telegram channel) */
   telegramChatId?: string;
+  /** In-app voice command document ID (required for in_app channel) */
+  inAppCommandId?: string;
   /** Email subject (email only) */
   subject?: string;
   /** Reply text body */
@@ -80,6 +84,7 @@ export async function sendChannelReply(
     channel,
     hasEmail: !!params.recipientEmail,
     hasTelegramChat: !!params.telegramChatId,
+    hasInAppCommand: !!params.inAppCommandId,
   });
 
   switch (channel) {
@@ -88,6 +93,9 @@ export async function sendChannelReply(
 
     case PipelineChannel.TELEGRAM:
       return dispatchTelegram(params);
+
+    case PipelineChannel.IN_APP:
+      return dispatchInApp(params);
 
     default:
       logger.warn('Unsupported channel for reply dispatch', {
@@ -193,6 +201,58 @@ async function dispatchTelegram(params: ChannelReplyParams): Promise<ChannelRepl
       success: false,
       error: `Telegram dispatch error: ${errorMessage}`,
       channel: PipelineChannel.TELEGRAM,
+    };
+  }
+}
+
+/**
+ * Dispatch reply via In-App voice command update (ADR-164)
+ * Updates the voice_commands Firestore document with the AI response.
+ */
+async function dispatchInApp(params: ChannelReplyParams): Promise<ChannelReplyResult> {
+  const { inAppCommandId, textBody, requestId } = params;
+
+  if (!inAppCommandId) {
+    logger.warn('In-app dispatch: no command ID', { requestId });
+    return {
+      success: false,
+      error: 'No in-app command ID for in_app channel',
+      channel: PipelineChannel.IN_APP,
+    };
+  }
+
+  try {
+    const adminDb = getAdminFirestore();
+    await adminDb
+      .collection(COLLECTIONS.VOICE_COMMANDS)
+      .doc(inAppCommandId)
+      .update({
+        status: 'completed',
+        aiResponse: textBody,
+        completedAt: new Date().toISOString(),
+      });
+
+    logger.info('In-app reply dispatched', {
+      requestId,
+      commandId: inAppCommandId,
+    });
+
+    return {
+      success: true,
+      messageId: inAppCommandId,
+      channel: PipelineChannel.IN_APP,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('In-app dispatch error', {
+      requestId,
+      commandId: inAppCommandId,
+      error: errorMessage,
+    });
+    return {
+      success: false,
+      error: `In-app dispatch error: ${errorMessage}`,
+      channel: PipelineChannel.IN_APP,
     };
   }
 }

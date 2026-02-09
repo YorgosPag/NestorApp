@@ -490,6 +490,7 @@ interface AdminSession {
 | 2026-02-09 | Admin Session: Lightweight conversational context (Firestore, 10-min TTL) — enables follow-up commands χωρίς explicit contact name | Claude Code |
 | 2026-02-09 | UC-010 Fix: Fallback σε raw message parsing όταν AI επιστρέφει κενό contactName — `extractSearchTermFromMessage()` | Claude Code |
 | 2026-02-09 | Real-time Contacts: `useContactsState` → Firestore `onSnapshot` αντί one-time fetch — server-side writes (UC-015/UC-016) εμφανίζονται αυτόματα στο UI | Claude Code |
+| 2026-02-09 | Fix: Admin entity extraction — `AI_ADMIN_COMMAND_SCHEMA` with 14 fields (base+admin) replaces 5-field schema for admin commands. `ExtractedEntitiesSchema` gets `.passthrough()`. UC-012 fallback parsing from raw message. | Claude Code |
 
 ---
 

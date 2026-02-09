@@ -362,7 +362,7 @@ export interface AdminCommandMeta {
   /** Whether this message should be treated as an admin command */
   isAdminCommand: boolean;
   /** How the admin was identified */
-  resolvedVia: 'telegram_user_id' | 'email_address' | 'viber_phone' | 'whatsapp_phone';
+  resolvedVia: 'telegram_user_id' | 'email_address' | 'firebase_uid' | 'viber_phone' | 'whatsapp_phone';
 }
 
 // ============================================================================

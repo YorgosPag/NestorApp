@@ -305,6 +305,7 @@ export class GeneralInquiryModule implements IUCModule {
         channel,
         recipientEmail: senderEmail || undefined,
         telegramChatId: telegramChatId || undefined,
+        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
         subject: `Re: ${originalSubject}`,
         textBody: draftReply || buildGeneralInquiryReply({
           senderName: (params.senderName as string) ?? senderEmail,

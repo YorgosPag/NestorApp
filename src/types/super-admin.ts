@@ -98,6 +98,7 @@ export interface SuperAdminRegistryDoc {
 export type AdminResolvedVia =
   | 'telegram_user_id'
   | 'email_address'
+  | 'firebase_uid'
   | 'viber_phone'
   | 'whatsapp_phone';
 

@@ -27,6 +27,7 @@ export interface FormErrorContext {
 // Enhanced error handler hook
 export function useFormErrorHandler() {
   const { t } = useTranslation('forms');
+  const getToastSeverityClass = (severity: ErrorSeverity) => `toast-status toast-${severity}`;
 
   // Handle single field error
   const handleFieldError = useCallback((
@@ -49,23 +50,25 @@ export function useFormErrorHandler() {
 
     if (showToast) {
       const displayMessage = title ? `${title}: ${errorMessage}` : errorMessage;
+      const toastOptions = {
+        duration: toastDuration,
+        className: getToastSeverityClass(severity),
+      };
       
       switch (severity) {
         case 'error':
-          toast.error(displayMessage, { duration: toastDuration });
+          toast.error(displayMessage, toastOptions);
           break;
         case 'warning':
           toast(displayMessage, { 
+            ...toastOptions,
             icon: '⚠️',
-            duration: toastDuration,
-            style: { background: '#FEF3C7', color: '#92400E' }
           });
           break;
         case 'info':
           toast(displayMessage, { 
+            ...toastOptions,
             icon: 'ℹ️',
-            duration: toastDuration,
-            style: { background: '#DBEAFE', color: '#1E40AF' }
           });
           break;
       }
@@ -124,22 +127,25 @@ export function useFormErrorHandler() {
         toastMessage = t('validation.fillAllRequired', { count: errorCount });
       }
 
+      const groupedToastOptions = {
+        duration: toastDuration,
+        className: getToastSeverityClass(severity),
+      };
+
       switch (severity) {
         case 'error':
-          toast.error(toastMessage, { duration: toastDuration });
+          toast.error(toastMessage, groupedToastOptions);
           break;
         case 'warning':
           toast(toastMessage, { 
+            ...groupedToastOptions,
             icon: '⚠️',
-            duration: toastDuration,
-            style: { background: '#FEF3C7', color: '#92400E' }
           });
           break;
         case 'info':
           toast(toastMessage, { 
+            ...groupedToastOptions,
             icon: 'ℹ️',
-            duration: toastDuration,
-            style: { background: '#DBEAFE', color: '#1E40AF' }
           });
           break;
       }
@@ -218,22 +224,25 @@ export function useFormErrorHandler() {
     }
 
     if (showToast) {
+      const serverToastOptions = {
+        duration: toastDuration,
+        className: getToastSeverityClass(severity),
+      };
+
       switch (severity) {
         case 'error':
-          toast.error(errorMessage, { duration: toastDuration });
+          toast.error(errorMessage, serverToastOptions);
           break;
         case 'warning':
           toast(errorMessage, { 
+            ...serverToastOptions,
             icon: '⚠️',
-            duration: toastDuration,
-            style: { background: '#FEF3C7', color: '#92400E' }
           });
           break;
         case 'info':
           toast(errorMessage, { 
+            ...serverToastOptions,
             icon: 'ℹ️',
-            duration: toastDuration,
-            style: { background: '#DBEAFE', color: '#1E40AF' }
           });
           break;
       }
@@ -259,7 +268,10 @@ export function useFormErrorHandler() {
     const { duration = 4000, title } = options || {};
     const displayMessage = title ? `${title}: ${message}` : message;
     
-    toast.success(displayMessage, { duration });
+    toast.success(displayMessage, { 
+      duration,
+      className: 'toast-status toast-success',
+    });
   }, []);
 
   // Clear all toasts

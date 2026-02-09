@@ -46,6 +46,7 @@ import { CacheProvider } from '@/contexts/CacheProvider';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
 // 🏢 ENTERPRISE: Global components that need NotificationProvider
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
+import { VoiceAIPanel } from '@/components/voice-ai/VoiceAIPanel';
 import { ToasterClient } from '@/components/ToasterClient';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 // 🚀 ENTERPRISE: Route prefetching system (SAP/Salesforce/Google pattern)
@@ -156,6 +157,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
                 {/* 🏢 ENTERPRISE: Global components that need providers */}
                 <NotificationDrawer />
+                <VoiceAIPanel />
                 <ToasterClient />
                 <GlobalErrorSetup />
               </SharedPropertiesProvider>

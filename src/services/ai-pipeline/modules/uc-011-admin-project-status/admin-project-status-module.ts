@@ -225,6 +225,7 @@ export class AdminProjectStatusModule implements IUCModule {
         channel: ctx.intake.channel,
         recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
         telegramChatId: telegramChatId ?? undefined,
+        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
         subject: `Κατάσταση: ${project?.name ?? searchTerm}`,
         textBody: replyText,
         requestId: ctx.requestId,

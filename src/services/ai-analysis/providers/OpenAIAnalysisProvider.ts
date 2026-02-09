@@ -11,6 +11,7 @@ import 'server-only';
 import {
   AI_ANALYSIS_DEFAULTS,
   AI_MULTI_INTENT_SCHEMA,
+  AI_ADMIN_COMMAND_SCHEMA,
   AI_DOCUMENT_CLASSIFY_SCHEMA,
   AI_ANALYSIS_PROMPTS,
 } from '@/config/ai-analysis-config';
@@ -246,9 +247,12 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     }
 
     // Select the correct schema based on analysis kind (no oneOf needed)
+    // ADR-145: Admin commands use expanded schema with admin-specific entity fields
     const jsonSchema = input.kind === 'document_classify'
       ? AI_DOCUMENT_CLASSIFY_SCHEMA
-      : AI_MULTI_INTENT_SCHEMA;
+      : isAdminCommand
+        ? AI_ADMIN_COMMAND_SCHEMA
+        : AI_MULTI_INTENT_SCHEMA;
 
     // Responses API: name/strict/schema go directly in format (NOT nested in json_schema)
     const request: OpenAIRequestBody = {

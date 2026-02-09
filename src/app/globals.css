@@ -261,6 +261,45 @@
     display: none;  /* Safari and Chrome */
   }
 
+  /* ?? ENTERPRISE: Toast severity classes tied to design tokens */
+  .toast-status {
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    min-width: 220px;
+    max-width: 420px;
+    font-weight: 600;
+    line-height: 1.4;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+  }
+
+  .toast-success {
+    background-color: hsl(var(--bg-success));
+    color: hsl(var(--text-success));
+    border-color: hsl(var(--text-success));
+  }
+
+  .toast-warning {
+    background-color: hsl(var(--bg-warning));
+    color: hsl(var(--text-warning));
+    border-color: hsl(var(--text-warning));
+  }
+
+  .toast-info {
+    background-color: hsl(var(--bg-info));
+    color: hsl(var(--text-info));
+    border-color: hsl(var(--text-info));
+  }
+
+  .toast-error {
+    background-color: hsl(var(--bg-error));
+    color: hsl(var(--text-error));
+    border-color: hsl(var(--text-error));
+  }
+
   /* Mobile slide-in animations */
   @keyframes slide-in-from-right {
     from {

@@ -110,6 +110,7 @@ export class AdminFallbackModule implements IUCModule {
         channel: ctx.intake.channel,
         recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
         telegramChatId: telegramChatId ?? undefined,
+        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
         subject: 'Admin Assistant',
         textBody: helpText,
         requestId: ctx.requestId,

@@ -58,6 +58,8 @@ secondaryIntents: [{ intentType, confidence, rationale }, ...]
 
 **Αρχείο**: `src/config/ai-analysis-config.ts`
 
+> **ADR-145 Extension (2026-02-09)**: Admin commands χρησιμοποιούν `AI_ADMIN_COMMAND_SCHEMA` — ίδια δομή με `AI_MULTI_INTENT_SCHEMA` αλλά με `EXTRACTED_ADMIN_ENTITIES_SCHEMA` (14 πεδία αντί 5) ώστε τα admin-specific entities (recipientName, emailContent, contactName κλπ.) να μη γίνονται stripped από το OpenAI strict mode.
+
 ### 3.2 Zod Validation — MultiIntentAnalysisSchema
 
 Νέο μέλος στο discriminated union `AIAnalysisResultSchema`:
@@ -69,6 +71,8 @@ kind: 'document_classify' → DocumentClassifyAnalysisSchema
 ```
 
 **Αρχείο**: `src/schemas/ai-analysis.ts`
+
+> **ADR-145 Extension (2026-02-09)**: `ExtractedEntitiesSchema` χρησιμοποιεί `.passthrough()` ώστε admin-specific πεδία (από `EXTRACTED_ADMIN_ENTITIES_SCHEMA`) να περνούν Zod validation χωρίς αφαίρεση.
 
 ### 3.3 Pipeline Types — DetectedIntent + UnderstandingResult
 

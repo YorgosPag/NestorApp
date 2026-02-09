@@ -55,13 +55,30 @@ export class AdminSendEmailModule implements IUCModule {
   // ── Step 3: LOOKUP ──
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
-    const recipientName = (ctx.understanding?.entities?.recipientName as string) ?? '';
-    const emailContent = (ctx.understanding?.entities?.emailContent as string)
+    let recipientName = (ctx.understanding?.entities?.recipientName as string) ?? '';
+    let emailContent = (ctx.understanding?.entities?.emailContent as string)
       ?? ctx.intake.normalized.contentText ?? '';
+
+    const rawMessage = ctx.intake.normalized.contentText ?? '';
+
+    // Fallback: if AI didn't extract entities (schema mismatch), parse from raw message
+    if (!recipientName && rawMessage) {
+      recipientName = extractRecipientFromMessage(rawMessage);
+    }
+    if (!emailContent && rawMessage) {
+      emailContent = extractEmailContentFromMessage(rawMessage);
+    }
+    // Last resort: use raw message as email content
+    if (!emailContent) {
+      emailContent = rawMessage;
+    }
+
+    const entitySource = (ctx.understanding?.entities?.recipientName) ? 'ai' : 'fallback';
 
     logger.info('UC-012 LOOKUP: Finding recipient contact', {
       requestId: ctx.requestId,
       recipientName,
+      entitySource,
     });
 
     let targetContact: ContactNameSearchResult | null = null;
@@ -150,6 +167,7 @@ export class AdminSendEmailModule implements IUCModule {
           channel: ctx.intake.channel,
           recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
           telegramChatId: telegramChatId ?? undefined,
+          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
           subject: `Αποτυχία αποστολής email`,
           textBody: noEmailMsg,
           requestId: ctx.requestId,
@@ -199,6 +217,7 @@ export class AdminSendEmailModule implements IUCModule {
         channel: ctx.intake.channel,
         recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
         telegramChatId: telegramChatId ?? undefined,
+        inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
         subject: 'Επιβεβαίωση αποστολής',
         textBody: confirmText,
         requestId: ctx.requestId,
@@ -228,4 +247,91 @@ export class AdminSendEmailModule implements IUCModule {
   async healthCheck(): Promise<boolean> {
     return true;
   }
+}
+
+// ============================================================================
+// FALLBACK PARSING — Extract entities from raw message when AI fails
+// ============================================================================
+
+/** Greek/English command keywords that indicate "send email to" */
+const SEND_EMAIL_KEYWORDS = [
+  'στείλε email στον', 'στείλε email στη', 'στείλε email στο',
+  'στείλε μήνυμα στον', 'στείλε μήνυμα στη', 'στείλε μήνυμα στο',
+  'στείλε mail στον', 'στείλε mail στη', 'στείλε mail στο',
+  'send email to', 'send mail to', 'send message to',
+  'στείλε στον', 'στείλε στη', 'στείλε στο',
+] as const;
+
+/** Content separators — text after these is the email body */
+const CONTENT_SEPARATORS = ['ότι', 'πως', 'oti', 'that', 'λέγοντας', 'με περιεχόμενο'] as const;
+
+/**
+ * Extract recipient name from raw admin message
+ * Pattern: "Στείλε email στον **Κώστα** ότι..."
+ */
+function extractRecipientFromMessage(message: string): string {
+  const lowerMsg = message.toLowerCase();
+
+  // Strategy 1: Strip known command keywords and find name between preposition and separator
+  for (const keyword of SEND_EMAIL_KEYWORDS) {
+    const idx = lowerMsg.indexOf(keyword);
+    if (idx === -1) continue;
+
+    const afterKeyword = message.substring(idx + keyword.length).trim();
+
+    // Find where content starts (separator word)
+    for (const sep of CONTENT_SEPARATORS) {
+      const sepIdx = afterKeyword.toLowerCase().indexOf(` ${sep} `);
+      if (sepIdx !== -1) {
+        return afterKeyword.substring(0, sepIdx).trim();
+      }
+    }
+
+    // No separator found — check for colon
+    const colonIdx = afterKeyword.indexOf(':');
+    if (colonIdx !== -1 && colonIdx < 50) {
+      return afterKeyword.substring(0, colonIdx).trim();
+    }
+
+    // Take first word(s) before a long text (up to 3 words)
+    const words = afterKeyword.split(/\s+/);
+    if (words.length >= 1) {
+      return words.slice(0, Math.min(words.length, 3)).join(' ').trim();
+    }
+  }
+
+  // Strategy 2: Regex — find text after preposition στον/στη/στο
+  const prepMatch = message.match(/(?:στον|στη|στο)\s+([\p{L}\s]{2,30}?)(?:\s+(?:ότι|πως|λέγοντας|:)|$)/u);
+  if (prepMatch?.[1]) {
+    return prepMatch[1].trim();
+  }
+
+  return '';
+}
+
+/**
+ * Extract email content from raw admin message
+ * Pattern: "...ότι **μετακινείται το ραντεβού**"
+ */
+function extractEmailContentFromMessage(message: string): string {
+  // Strategy 1: Content after separator word (ότι, πως, etc.)
+  for (const sep of CONTENT_SEPARATORS) {
+    const regex = new RegExp(`\\s${sep}\\s(.+)`, 'i');
+    const match = message.match(regex);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  // Strategy 2: Content after colon
+  const colonIdx = message.indexOf(':');
+  if (colonIdx !== -1 && colonIdx < message.length - 1) {
+    const afterColon = message.substring(colonIdx + 1).trim();
+    if (afterColon.length > 0) {
+      return afterColon;
+    }
+  }
+
+  // Fallback: return empty (caller uses rawMessage)
+  return '';
 }

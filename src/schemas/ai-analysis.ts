@@ -96,7 +96,7 @@ export const ExtractedEntitiesSchema = z.object({
   buildingId: z.string().optional(),
   unitId: z.string().optional(),
   contactId: z.string().optional(),
-});
+}).passthrough();
 
 export type ExtractedEntities = z.infer<typeof ExtractedEntitiesSchema>;
 
