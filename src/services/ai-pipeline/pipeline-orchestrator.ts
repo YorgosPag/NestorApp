@@ -151,6 +151,16 @@ export class PipelineOrchestrator {
       };
     }
 
+    // ── ADR-145: Admin Fallback Override ──
+    // If sender is admin and no admin module matched (unknown/general_inquiry),
+    // substitute with AdminFallbackModule for a helpful response instead of manual triage.
+    const isAdminWithUnknownIntent = ctx.adminCommandMeta?.isAdminCommand === true
+      && !ctx.understanding!.intent.startsWith('admin_');
+
+    if (isAdminWithUnknownIntent) {
+      return this.executeAdminFallback(ctx);
+    }
+
     // ── Multi-Intent Route ──
     const multiRoute = this.router.routeMultiple(ctx.understanding!);
 
@@ -250,20 +260,101 @@ export class PipelineOrchestrator {
   }
 
   // ==========================================================================
+  // ADR-145: ADMIN FALLBACK EXECUTION
+  // ==========================================================================
+
+  /**
+   * Execute admin fallback flow for unrecognized admin commands.
+   * Dynamically imports AdminFallbackModule to avoid coupling.
+   *
+   * @see ADR-145 (Super Admin AI Assistant)
+   */
+  private async executeAdminFallback(ctx: PipelineContext): Promise<PipelineExecutionResult> {
+    try {
+      const { AdminFallbackModule } = await import(
+        './modules/uc-014-admin-fallback'
+      );
+      const fallbackModule = new AdminFallbackModule();
+
+      // LOOKUP (no-op for fallback)
+      ctx.lookupData = await fallbackModule.lookup(ctx);
+
+      // PROPOSE
+      ctx.proposal = await fallbackModule.propose(ctx);
+      ctx = this.transitionState(ctx, PipelineState.PROPOSED);
+
+      // AUTO-APPROVE (admin is the operator)
+      ctx.approval = {
+        decision: 'approved',
+        approvedBy: `super_admin:${ctx.adminCommandMeta?.adminIdentity.displayName ?? 'admin'}`,
+        decidedAt: new Date().toISOString(),
+      };
+      ctx = this.transitionState(ctx, PipelineState.APPROVED);
+
+      // EXECUTE
+      ctx.executionResult = await fallbackModule.execute(ctx);
+      if (ctx.executionResult.success) {
+        ctx = this.transitionState(ctx, PipelineState.EXECUTED);
+      } else {
+        ctx = this.transitionState(ctx, PipelineState.FAILED);
+      }
+
+      // ACKNOWLEDGE
+      ctx.acknowledgment = await fallbackModule.acknowledge(ctx);
+
+      // AUDIT
+      ctx = this.transitionState(ctx, PipelineState.AUDITED);
+      const auditId = await this.auditService.record(ctx, 'auto_processed', 'UC-014');
+
+      return {
+        success: true,
+        requestId: ctx.requestId,
+        finalState: ctx.state,
+        context: ctx,
+        auditId,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      ctx.errors.push({
+        step: 'admin_fallback',
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+        retryable: false,
+      });
+      ctx = this.transitionState(ctx, PipelineState.FAILED);
+      const auditId = await this.auditService.record(ctx, 'failed', 'UC-014');
+
+      return {
+        success: false,
+        requestId: ctx.requestId,
+        finalState: ctx.state,
+        context: ctx,
+        auditId,
+        error: errorMessage,
+      };
+    }
+  }
+
+  // ==========================================================================
   // STEP IMPLEMENTATIONS
   // ==========================================================================
 
   /**
    * Step 2: UNDERSTAND — AI analyzes intent, entities, urgency
+   * ADR-145: Uses admin-specific prompt when sender is a super admin
    */
   private async stepUnderstand(ctx: PipelineContext): Promise<PipelineContext> {
     try {
+      const isAdminCommand = ctx.adminCommandMeta?.isAdminCommand === true;
+
       const aiResult = await this.aiProvider.analyze({
         kind: 'message_intent',
         messageText: ctx.intake.normalized.contentText || ctx.intake.normalized.subject || '',
         context: {
           senderName: ctx.intake.normalized.sender.name,
           channel: ctx.intake.channel,
+          // ADR-145: Signal admin mode to AI provider
+          ...(isAdminCommand ? { isAdminCommand: true } : {}),
         },
       });
 
@@ -437,12 +528,25 @@ export class PipelineOrchestrator {
 
   /**
    * Step 5 (Multi): Auto-approve using multi-routing aggregate decisions
+   * ADR-145: Super admin commands are always auto-approved
    */
   private stepApproveMulti(
     ctx: PipelineContext,
     multiRoute: MultiRoutingResult
   ): PipelineContext {
     if (!ctx.proposal) return ctx;
+
+    // ── ADR-145: Super admin auto-approve ──
+    // Admin IS the operator — force auto-approve
+    if (ctx.adminCommandMeta?.isAdminCommand) {
+      ctx.approval = {
+        decision: 'approved',
+        approvedBy: `super_admin:${ctx.adminCommandMeta.adminIdentity.displayName}`,
+        decidedAt: new Date().toISOString(),
+      };
+      ctx = this.transitionState(ctx, PipelineState.APPROVED);
+      return ctx;
+    }
 
     if (
       ctx.proposal.autoApprovable &&
@@ -822,6 +926,11 @@ function mapLegacyIntentToPipeline(legacyIntent: string): import('@/types/ai-pip
     'procurement_request': PipelineIntentType.PROCUREMENT_REQUEST,
     'payment_notification': PipelineIntentType.PAYMENT_NOTIFICATION,
     'unknown': PipelineIntentType.UNKNOWN,
+    // ── ADR-145: Super Admin Command Intents ──
+    'admin_contact_search': PipelineIntentType.ADMIN_CONTACT_SEARCH,
+    'admin_project_status': PipelineIntentType.ADMIN_PROJECT_STATUS,
+    'admin_send_email': PipelineIntentType.ADMIN_SEND_EMAIL,
+    'admin_unit_stats': PipelineIntentType.ADMIN_UNIT_STATS,
   };
 
   return mapping[legacyIntent] ?? PipelineIntentType.UNKNOWN;

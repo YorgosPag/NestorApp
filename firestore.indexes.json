@@ -1110,6 +1110,35 @@
         }
       ]
     }
+    ,
+    {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "searchTokensEl",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "preferredLabel.el",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "searchTokensEn",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "preferredLabel.en",
+          "order": "ASCENDING"
+        }
+      ]
+    }
   ],
   "fieldOverrides": []
 }

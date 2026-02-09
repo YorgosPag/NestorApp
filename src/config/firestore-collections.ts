@@ -171,7 +171,12 @@ export const COLLECTIONS = {
   // 🇪🇺 ESCO PROFESSIONAL CLASSIFICATION (ADR-034)
   // Cached subset of EU ESCO occupations taxonomy (~3.039 occupations, EL+EN)
   // Subcollection path: system/esco_cache/occupations
-  ESCO_CACHE: process.env.NEXT_PUBLIC_ESCO_CACHE_COLLECTION || 'system/esco_cache/occupations'
+  ESCO_CACHE: process.env.NEXT_PUBLIC_ESCO_CACHE_COLLECTION || 'system/esco_cache/occupations',
+
+  // 🇪🇺 ESCO SKILLS CLASSIFICATION (ADR-132)
+  // Cached subset of EU ESCO skills taxonomy (~13.485 skills, EL+EN)
+  // Subcollection path: system/esco_cache/skills
+  ESCO_SKILLS_CACHE: process.env.NEXT_PUBLIC_ESCO_SKILLS_CACHE_COLLECTION || 'system/esco_cache/skills'
 } as const;
 
 // ============================================================================
@@ -231,7 +236,11 @@ export const SYSTEM_DOCS = {
   FEATURE_FLAGS: process.env.NEXT_PUBLIC_FEATURE_FLAGS_DOC || 'feature_flags',
   MAINTENANCE_MODE: process.env.NEXT_PUBLIC_MAINTENANCE_MODE_DOC || 'maintenance',
   API_LIMITS: process.env.NEXT_PUBLIC_API_LIMITS_DOC || 'api_limits',
-  TENANT_CONFIG: process.env.NEXT_PUBLIC_TENANT_CONFIG_DOC || 'tenant'
+  TENANT_CONFIG: process.env.NEXT_PUBLIC_TENANT_CONFIG_DOC || 'tenant',
+
+  // 🛡️ SUPER ADMIN REGISTRY (ADR-145: Super Admin AI Assistant)
+  // Path: settings/super_admin_registry
+  SUPER_ADMIN_REGISTRY: process.env.NEXT_PUBLIC_SUPER_ADMIN_REGISTRY_DOC || 'super_admin_registry'
 } as const;
 
 // ============================================================================

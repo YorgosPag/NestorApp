@@ -160,11 +160,15 @@ Telegram webhook → processMessage() (existing bot flow)
 | `general_inquiry` | UC-005 | ✅ NEW |
 | `status_inquiry` | UC-005 | ✅ NEW |
 | `unknown` | UC-005 | ✅ NEW (catch-all) |
-| `invoice` | — | Μελλοντικό |
-| `document_request` | — | Μελλοντικό |
-| `report_request` | — | Μελλοντικό |
+| `document_request` | UC-006 | ✅ Implemented |
+| `admin_contact_search` | UC-010 | ✅ NEW (ADR-145) |
+| `admin_project_status` | UC-011 | ✅ NEW (ADR-145) |
+| `admin_send_email` | UC-012 | ✅ NEW (ADR-145) |
+| `admin_unit_stats` | UC-013 | ✅ NEW (ADR-145) |
 
-**7 από 12 intents** θα έχουν module (vs 2 πριν).
+**12 intents** με dedicated module + 1 admin fallback (UC-014).
+
+**See also**: [ADR-145](./ADR-145-super-admin-ai-assistant.md) — Super Admin AI Assistant.
 
 ---
 

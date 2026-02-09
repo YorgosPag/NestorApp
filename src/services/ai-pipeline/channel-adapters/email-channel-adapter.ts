@@ -16,10 +16,11 @@
  */
 
 import type { EmailIngestionQueueItem } from '@/types/email-ingestion-queue';
-import type { IntakeMessage, IntakeAttachment } from '@/types/ai-pipeline';
+import type { IntakeMessage, IntakeAttachment, AdminCommandMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
+import { isSuperAdminEmail } from '../shared/super-admin-resolver';
 
 // ============================================================================
 // EMAIL CHANNEL ADAPTER
@@ -74,11 +75,33 @@ export class EmailChannelAdapter {
         communicationId
       );
 
+      // ── ADR-145: Super Admin Detection ──
+      let adminCommandMeta: AdminCommandMeta | null = null;
+      const senderEmail = queueItem.sender.email;
+      if (senderEmail) {
+        try {
+          const adminResolution = await isSuperAdminEmail(senderEmail);
+          if (adminResolution) {
+            adminCommandMeta = {
+              adminIdentity: {
+                displayName: adminResolution.identity.displayName,
+                firebaseUid: adminResolution.identity.firebaseUid,
+              },
+              isAdminCommand: true,
+              resolvedVia: adminResolution.resolvedVia,
+            };
+          }
+        } catch {
+          // Non-fatal: if admin check fails, treat as normal customer message
+        }
+      }
+
       // Enqueue to ai_pipeline_queue
       const { queueId, requestId } = await enqueuePipelineItem({
         companyId,
         channel: PipelineChannel.EMAIL,
         intakeMessage,
+        ...(adminCommandMeta ? { adminCommandMeta } : {}),
       });
 
       return {

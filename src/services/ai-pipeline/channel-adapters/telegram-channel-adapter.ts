@@ -17,10 +17,11 @@
  *     → TelegramChannelAdapter.feedToPipeline() → ai_pipeline_queue
  */
 
-import type { IntakeMessage } from '@/types/ai-pipeline';
+import type { IntakeMessage, AdminCommandMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
+import { isSuperAdminTelegram } from '../shared/super-admin-resolver';
 
 // ============================================================================
 // TYPES
@@ -50,6 +51,8 @@ export interface TelegramFeedResult {
   pipelineQueueId?: string;
   /** Pipeline request/correlation ID (if enqueued) */
   requestId?: string;
+  /** Whether the sender was identified as a super admin (ADR-145) */
+  isAdmin?: boolean;
   /** Error message (if failed) */
   error?: string;
 }
@@ -77,16 +80,36 @@ export class TelegramChannelAdapter {
     try {
       const intakeMessage = TelegramChannelAdapter.toIntakeMessage(params);
 
+      // ── ADR-145: Super Admin Detection ──
+      let adminCommandMeta: AdminCommandMeta | null = null;
+      try {
+        const adminResolution = await isSuperAdminTelegram(params.userId);
+        if (adminResolution) {
+          adminCommandMeta = {
+            adminIdentity: {
+              displayName: adminResolution.identity.displayName,
+              firebaseUid: adminResolution.identity.firebaseUid,
+            },
+            isAdminCommand: true,
+            resolvedVia: adminResolution.resolvedVia,
+          };
+        }
+      } catch {
+        // Non-fatal: if admin check fails, treat as normal customer message
+      }
+
       const { queueId, requestId } = await enqueuePipelineItem({
         companyId: params.companyId,
         channel: PipelineChannel.TELEGRAM,
         intakeMessage,
+        ...(adminCommandMeta ? { adminCommandMeta } : {}),
       });
 
       return {
         enqueued: true,
         pipelineQueueId: queueId,
         requestId,
+        isAdmin: adminCommandMeta?.isAdminCommand ?? false,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

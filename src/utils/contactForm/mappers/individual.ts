@@ -46,6 +46,8 @@ interface MappedIndividualContactData {
   escoUri?: string | null;
   escoLabel?: string | null;
   iscoCode?: string | null;
+  // 🇪🇺 ESCO Skills (ADR-132)
+  escoSkills?: Array<{ uri: string; label: string }>;
   socialMedia?: SocialMediaInfo[];
   websites?: WebsiteInfo[];
   photoURL?: string;
@@ -148,6 +150,8 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     escoUri: formData.escoUri || null,
     escoLabel: formData.escoLabel || null,
     iscoCode: formData.iscoCode || null,
+    // 🇪🇺 ESCO Skills (ADR-132)
+    escoSkills: formData.escoSkills?.length ? formData.escoSkills : [],
     socialMedia: enterpriseData.socialMedia,
     websites: enterpriseData.websites,
     photoURL,

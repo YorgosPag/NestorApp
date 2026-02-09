@@ -218,9 +218,13 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       ? buildDocumentPrompt(input)
       : buildMessageIntentPrompt(input);
 
+    // ADR-145: Use admin-specific prompt when sender is a verified super admin
+    const isAdminCommand = input.kind === 'message_intent' && input.context?.isAdminCommand === true;
     const systemPrompt = input.kind === 'document_classify'
       ? AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM
-      : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
+      : isAdminCommand
+        ? AI_ANALYSIS_PROMPTS.ADMIN_COMMAND_SYSTEM
+        : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
 
     const content: OpenAIRequestContent[] = [
       { type: 'input_text', text: prompt },

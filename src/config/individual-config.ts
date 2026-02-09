@@ -320,6 +320,13 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         helpText: 'individual.helpTexts.position',
         icon: 'briefcase',
       },
+      {
+        // 🎯 DUMMY FIELD για custom renderer triggering (ADR-132)
+        // Actual UI rendered by EscoSkillPicker component
+        id: 'skills',
+        label: PROFESSIONAL_INFO_FIELD_LABELS.SKILLS,
+        type: 'input',
+      },
     ],
   },
 

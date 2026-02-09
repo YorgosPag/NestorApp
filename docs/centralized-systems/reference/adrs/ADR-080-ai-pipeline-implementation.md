@@ -145,8 +145,10 @@ processQueueItem → EmailChannelAdapter.feedToPipeline() → ai_pipeline_queue
 - [x] Implement UC-009 (Operator Inbox) for human approval UI
 - [x] Deploy Firestore indexes for pipelineState queries (operator inbox)
 - [x] Implement first UC module (UC-001 Appointment Request — MVP)
+- [x] Implement UC-006 Document Request module (ADR-134)
+- [x] Add Telegram channel adapter (ADR-134)
+- [x] Implement ADR-145 Super Admin AI Assistant (UC-010..014)
 - [ ] Implement UC-002 Invoices module (Phase 2)
-- [ ] Add Telegram channel adapter
 
 ---
 
@@ -312,3 +314,4 @@ Mailgun webhook ✅
 | 2026-02-08 | **Operator Inbox UX fixes**: `create_appointment` action — Greek labels (not raw English keys), `null` → "Δεν ορίστηκε", `draftReply` with `whitespace-pre-line` wrapping |
 | 2026-02-08 | **Availability Check & AI Operator Briefing** (ADR-103): Server-side `checkAvailability()` queries existing appointments for the requested date. PROPOSE includes `operatorBriefing` — internal AI briefing showing calendar conflicts. Operator Inbox shows dedicated Card with visual conflict indicator (blue=OK, red=conflict) |
 | 2026-02-09 | **AI-Generated Dynamic Replies**: UC-001 PROPOSE step now calls OpenAI (`gpt-4o-mini`) to generate natural, context-aware Greek email replies instead of static templates. Shared utility `ai-reply-generator.ts` — reusable by all UC modules. Non-fatal: falls back to static template on failure. Operator always previews before sending. AI badge indicator in Operator Inbox |
+| 2026-02-09 | **ADR-145: Super Admin AI Assistant**: Config-driven admin recognition (Firestore registry), admin auto-approve, ADMIN_COMMAND_SYSTEM AI prompt, 5 admin UC modules (UC-010 Contact Search, UC-011 Project Status, UC-012 Send Email, UC-013 Unit Stats, UC-014 Fallback). 13 new files + 15 modifications. Pipeline: admin detection in channel adapters → admin AI prompt → auto-approve → execute → reply via channel. Non-admin flow unchanged |

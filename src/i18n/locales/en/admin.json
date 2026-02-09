@@ -229,5 +229,37 @@
       "secondary": "Secondary"
     },
     "compositeReply": "Composite Reply"
+  },
+  "superAdmin": {
+    "processingCommand": "Processing your command...",
+    "contactSearch": {
+      "noResults": "No contacts found for \"{searchTerm}\".",
+      "resultsFound": "Found {count} results for \"{searchTerm}\":"
+    },
+    "projectStatus": {
+      "notFound": "No project found with name \"{searchTerm}\".",
+      "unitsLabel": "Units"
+    },
+    "sendEmail": {
+      "sent": "Email sent to {name} ({email}).",
+      "noEmail": "No email found for \"{name}\". Check the contact details.",
+      "failed": "Failed to send email to {name}."
+    },
+    "unitStats": {
+      "title": "Unit Statistics",
+      "allProjects": "all projects",
+      "total": "Total",
+      "sold": "Sold",
+      "available": "Available",
+      "reserved": "Reserved"
+    },
+    "fallback": {
+      "message": "I didn't understand the command.",
+      "helpTitle": "Try:",
+      "searchHint": "\"Find [name]\" — Search contact details",
+      "projectHint": "\"What's happening with [project]?\" — Project status",
+      "emailHint": "\"Send email to [name] that...\" — Send email",
+      "statsHint": "\"How many properties do we have?\" — Unit stats"
+    }
   }
 }

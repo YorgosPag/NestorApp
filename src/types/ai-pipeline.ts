@@ -90,6 +90,11 @@ export const PipelineIntentType = {
   COMPLAINT: 'complaint',
   GENERAL_INQUIRY: 'general_inquiry',
   UNKNOWN: 'unknown',
+  // ── ADR-145: Super Admin Command Intents ──
+  ADMIN_CONTACT_SEARCH: 'admin_contact_search',
+  ADMIN_PROJECT_STATUS: 'admin_project_status',
+  ADMIN_SEND_EMAIL: 'admin_send_email',
+  ADMIN_UNIT_STATS: 'admin_unit_stats',
 } as const;
 
 export type PipelineIntentTypeValue = typeof PipelineIntentType[keyof typeof PipelineIntentType];
@@ -337,6 +342,28 @@ export interface AcknowledgmentResult {
 }
 
 // ============================================================================
+// ADMIN COMMAND METADATA (ADR-145: Super Admin AI Assistant)
+// ============================================================================
+
+/**
+ * Metadata attached to pipeline context when the sender is a super admin.
+ * Enables admin-specific routing, auto-approve, and direct execution.
+ *
+ * @see ADR-145 (Super Admin AI Assistant)
+ */
+export interface AdminCommandMeta {
+  /** Admin identity information */
+  adminIdentity: {
+    displayName: string;
+    firebaseUid: string | null;
+  };
+  /** Whether this message should be treated as an admin command */
+  isAdminCommand: boolean;
+  /** How the admin was identified */
+  resolvedVia: 'telegram_user_id' | 'email_address' | 'viber_phone' | 'whatsapp_phone';
+}
+
+// ============================================================================
 // PIPELINE CONTEXT (carries data through all 7 steps)
 // ============================================================================
 
@@ -389,6 +416,11 @@ export interface PipelineContext {
   acknowledgment?: AcknowledgmentResult;
 
   // ── Multi-Module Support (ADR-131) ──
+
+  // ── ADR-145: Super Admin Command ──
+
+  /** Admin command metadata — present when sender is a super admin */
+  adminCommandMeta?: AdminCommandMeta | null;
 
   /** Lookup results per module (moduleId → data). Used when multiple modules contribute. */
   multiLookupData?: Record<string, Record<string, unknown>>;

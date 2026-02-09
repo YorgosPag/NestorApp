@@ -65,6 +65,8 @@ export interface ContactFormData {
   escoUri: string;
   escoLabel: string;
   iscoCode: string;
+  // 🇪🇺 ESCO Skills (ADR-132)
+  escoSkills: Array<{ uri: string; label: string }>;
   // Εταιρεία
   companyName: string;
   companyVatNumber: string;
@@ -293,6 +295,8 @@ export const initialFormData: ContactFormData = {
   escoUri: '',
   escoLabel: '',
   iscoCode: '',
+  // 🇪🇺 ESCO Skills (ADR-132)
+  escoSkills: [],
   // Εταιρεία
   companyName: '',
   companyVatNumber: '',

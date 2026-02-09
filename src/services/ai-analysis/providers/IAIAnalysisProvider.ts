@@ -40,6 +40,8 @@ export interface MessageIntentInput {
     channel?: string;
     /** Previous message in thread */
     previousMessage?: string;
+    /** ADR-145: Whether the sender is a verified super admin (uses admin-specific prompt) */
+    isAdminCommand?: boolean;
   };
 }
 

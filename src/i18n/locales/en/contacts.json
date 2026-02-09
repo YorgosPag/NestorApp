@@ -816,6 +816,7 @@
       "specialty": "Specialty",
       "employer": "Employer",
       "position": "Position",
+      "skills": "Skills",
       "street": "Street",
       "streetNumber": "Number",
       "city": "City",
@@ -864,7 +865,15 @@
     "useFreeText": "Use as free text",
     "escoLabel": "Standardized Occupation (ESCO)",
     "iscoCode": "ISCO-08 Code",
-    "selectedFromEsco": "Selected from ESCO"
+    "selectedFromEsco": "Selected from ESCO",
+    "skills": {
+      "searchPlaceholder": "Search ESCO skills...",
+      "noResults": "No skills found",
+      "useFreeText": "Add as free text",
+      "maxReached": "Maximum skills reached ({max})",
+      "removeSkill": "Remove skill",
+      "badge": "ESCO"
+    }
   },
   "persona": {
     "selector": {

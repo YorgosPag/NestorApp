@@ -24,9 +24,10 @@ import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector'
 import { getMergedIndividualSections, getPersonaFields } from '@/config/persona-config';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
-// 🇪🇺 ENTERPRISE: ESCO Professional Classification (ADR-034)
+// 🇪🇺 ENTERPRISE: ESCO Professional Classification (ADR-034) + Skills (ADR-132)
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
-import type { EscoPickerValue } from '@/types/contacts/esco-types';
+import { EscoSkillPicker } from '@/components/shared/EscoSkillPicker';
+import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-types';
 
 /** Custom renderer field interface */
 interface CustomRendererField {
@@ -522,6 +523,26 @@ export function UnifiedContactTabbedSection({
                 }
               }}
             />
+          ),
+
+          // 🇪🇺 ENTERPRISE: ESCO Skills Picker — field-level custom renderer for "skills" (ADR-132)
+          // Multi-select picker backed by EU ESCO skills taxonomy (13.485 skills)
+          skills: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+            <div>
+              <p>🔍 DIAGNOSTIC: Skills renderer IS active (customRenderers[&apos;skills&apos;] found)</p>
+              <EscoSkillPicker
+                value={formData.escoSkills ?? []}
+                disabled={fieldDisabled}
+                onChange={(skills: EscoSkillValue[]) => {
+                  if (setFormData) {
+                    setFormData({
+                      ...formData,
+                      escoSkills: skills,
+                    });
+                  }
+                }}
+              />
+            </div>
           ),
         } : {})
       }

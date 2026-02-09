@@ -120,6 +120,13 @@ export interface IndividualContact extends BaseContact {
   escoLabel?: string;         // Cached ESCO preferred label
   iscoCode?: string;          // ISCO-08 4-digit code (for grouping/filtering)
 
+  // 🇪🇺 ESCO Skills (ADR-132)
+  // Multi-select skills from EU ESCO taxonomy — optional, backward compatible
+  escoSkills?: Array<{
+    uri: string;     // ESCO skill URI (empty string for free-text skills)
+    label: string;   // Cached skill label
+  }>;
+
   // Legacy professional fields (for backward compatibility)
   jobTitle?: string;         // Deprecated: use position
   company?: string;          // Deprecated: use employer

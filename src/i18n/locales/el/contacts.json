@@ -816,6 +816,7 @@
       "specialty": "Ειδικότητα",
       "employer": "Εργοδότης",
       "position": "Θέση",
+      "skills": "Δεξιότητες",
       "street": "Οδός",
       "streetNumber": "Αριθμός",
       "city": "Πόλη",
@@ -864,7 +865,15 @@
     "useFreeText": "Χρήση ελεύθερου κειμένου",
     "escoLabel": "Τυποποιημένο Επάγγελμα (ESCO)",
     "iscoCode": "Κωδικός ISCO-08",
-    "selectedFromEsco": "Επιλεγμένο από ESCO"
+    "selectedFromEsco": "Επιλεγμένο από ESCO",
+    "skills": {
+      "searchPlaceholder": "Αναζήτηση δεξιοτήτων ESCO...",
+      "noResults": "Δεν βρέθηκαν δεξιότητες",
+      "useFreeText": "Προσθήκη ως ελεύθερο κείμενο",
+      "maxReached": "Μέγιστος αριθμός δεξιοτήτων ({max})",
+      "removeSkill": "Αφαίρεση δεξιότητας",
+      "badge": "ESCO"
+    }
   },
   "persona": {
     "selector": {

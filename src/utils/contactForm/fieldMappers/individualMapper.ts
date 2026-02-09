@@ -135,6 +135,8 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     escoUri: getSafeFieldValue(individualContact, 'escoUri'),
     escoLabel: getSafeFieldValue(individualContact, 'escoLabel'),
     iscoCode: getSafeFieldValue(individualContact, 'iscoCode'),
+    // 🇪🇺 ESCO Skills (ADR-132)
+    escoSkills: individualContact.escoSkills ?? [],
 
     // 📞 Επικοινωνία - ENTERPRISE Arrays Structure
     street: contact.addresses?.[0]?.street || '',

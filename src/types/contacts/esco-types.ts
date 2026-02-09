@@ -274,6 +274,141 @@ export interface EscoOccupationDocument extends EscoOccupation {
 }
 
 // ============================================================================
+// ESCO SKILL — Core Data Model (ADR-132)
+// ============================================================================
+
+/**
+ * ESCO Skill document stored in Firestore cache.
+ *
+ * Maps to: `system/esco_cache/skills/{documentId}`
+ * Source: ESCO REST API (skills dataset, 13.485 skills)
+ *
+ * Skills differ from occupations:
+ * - No ISCO code (skills are cross-occupational)
+ * - Categories: knowledge, skill/competence
+ * - Multi-select (a person can have many skills)
+ */
+export interface EscoSkill {
+  /** ESCO unique URI identifier (e.g., "http://data.europa.eu/esco/skill/{uuid}") */
+  uri: string;
+
+  /** Preferred label in supported languages */
+  preferredLabel: EscoBilingualText;
+
+  /** Alternative labels / synonyms in supported languages */
+  alternativeLabels?: EscoBilingualLabels;
+}
+
+/**
+ * ESCO skill document as stored in Firestore.
+ * Extends EscoSkill with search tokens and metadata.
+ *
+ * Collection: `system/esco_cache/skills`
+ */
+export interface EscoSkillDocument extends EscoSkill {
+  /** Firestore document ID (derived from URI UUID) */
+  id?: string;
+
+  /** Lowercase search tokens for prefix matching (Greek) */
+  searchTokensEl: string[];
+
+  /** Lowercase search tokens for prefix matching (English) */
+  searchTokensEn: string[];
+
+  /** Timestamp of last cache update */
+  updatedAt: Date;
+}
+
+// ============================================================================
+// ESCO SKILL SEARCH — Query & Results
+// ============================================================================
+
+/**
+ * ESCO skill search parameters.
+ * Used by `EscoService.searchSkills()`.
+ */
+export interface EscoSkillSearchParams {
+  /** Search query text (minimum 2 characters) */
+  query: string;
+
+  /** Language for search and results */
+  language: EscoLanguage;
+
+  /** Maximum number of results (default: 20) */
+  limit?: number;
+}
+
+/**
+ * ESCO skill search result item.
+ */
+export interface EscoSkillSearchResult {
+  /** The matched skill */
+  skill: EscoSkill;
+
+  /** Relevance score (0-1, higher = better match) */
+  score: number;
+
+  /** Which field matched */
+  matchedField: 'preferredLabel' | 'alternativeLabel';
+}
+
+/**
+ * ESCO skill search response.
+ */
+export interface EscoSkillSearchResponse {
+  /** Search results ordered by relevance */
+  results: EscoSkillSearchResult[];
+
+  /** Total number of matching skills */
+  total: number;
+
+  /** Search query used */
+  query: string;
+
+  /** Language used for search */
+  language: EscoLanguage;
+}
+
+// ============================================================================
+// ESCO SKILL PICKER — UI Component Types
+// ============================================================================
+
+/**
+ * Value for a single selected skill (stored on contact document).
+ */
+export interface EscoSkillValue {
+  /** ESCO skill URI (empty string for free-text skills) */
+  uri: string;
+
+  /** Human-readable skill label */
+  label: string;
+}
+
+/**
+ * Props for the EscoSkillPicker component.
+ * Multi-select variant (vs single-select EscoOccupationPicker).
+ */
+export interface EscoSkillPickerProps {
+  /** Currently selected skills */
+  value: EscoSkillValue[];
+
+  /** Callback when skills array changes */
+  onChange: (skills: EscoSkillValue[]) => void;
+
+  /** Disabled state */
+  disabled?: boolean;
+
+  /** Placeholder text for search input */
+  placeholder?: string;
+
+  /** Language for ESCO labels */
+  language?: EscoLanguage;
+
+  /** Maximum number of skills (default: 20) */
+  maxSkills?: number;
+}
+
+// ============================================================================
 // IMPORT SCRIPT — CSV Processing Types
 // ============================================================================
 

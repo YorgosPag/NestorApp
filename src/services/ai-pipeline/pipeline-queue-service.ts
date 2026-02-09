@@ -27,6 +27,7 @@ import type {
   PipelineChannelValue,
   PipelineStateValue,
   ApprovalDecision,
+  AdminCommandMeta,
 } from '@/types/ai-pipeline';
 import { PipelineState } from '@/types/ai-pipeline';
 
@@ -55,6 +56,8 @@ export interface EnqueuePipelineParams {
   companyId: string;
   channel: PipelineChannelValue;
   intakeMessage: IntakeMessage;
+  /** ADR-145: Admin command metadata (set by channel adapter when sender is super admin) */
+  adminCommandMeta?: AdminCommandMeta | null;
 }
 
 /**
@@ -75,6 +78,8 @@ export async function enqueuePipelineItem(
     companyId: params.companyId,
     state: PipelineState.RECEIVED,
     intake: params.intakeMessage,
+    // ADR-145: Attach admin command metadata if present
+    ...(params.adminCommandMeta ? { adminCommandMeta: params.adminCommandMeta } : {}),
     startedAt: now,
     stepDurations: {},
     errors: [],

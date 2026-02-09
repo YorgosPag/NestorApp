@@ -48,6 +48,11 @@ export const IntentType = z.enum([
   // ── ADR-132: UC Modules Expansion ──
   'complaint',             // Παράπονο/καταγγελία (UC-004)
   'general_inquiry',       // Γενικό αίτημα/ερώτηση (UC-005)
+  // ── ADR-145: Super Admin Command Intents ──
+  'admin_contact_search',  // Admin: Αναζήτηση στοιχείων επαφής (UC-010)
+  'admin_project_status',  // Admin: Κατάσταση έργου (UC-011)
+  'admin_send_email',      // Admin: Αποστολή email (UC-012)
+  'admin_unit_stats',      // Admin: Στατιστικά ακινήτων (UC-013)
 ]);
 
 export type IntentTypeValue = z.infer<typeof IntentType>;

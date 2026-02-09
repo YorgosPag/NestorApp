@@ -229,5 +229,37 @@
       "secondary": "Δευτερεύουσα"
     },
     "compositeReply": "Σύνθετη Απάντηση"
+  },
+  "superAdmin": {
+    "processingCommand": "Επεξεργάζομαι την εντολή σας...",
+    "contactSearch": {
+      "noResults": "Δεν βρέθηκαν επαφές για \"{searchTerm}\".",
+      "resultsFound": "Βρέθηκαν {count} αποτελέσματα για \"{searchTerm}\":"
+    },
+    "projectStatus": {
+      "notFound": "Δεν βρέθηκε έργο με όνομα \"{searchTerm}\".",
+      "unitsLabel": "Units"
+    },
+    "sendEmail": {
+      "sent": "Email στάλθηκε στον {name} ({email}).",
+      "noEmail": "Δεν βρέθηκε email για \"{name}\". Ελέγξτε τα στοιχεία της επαφής.",
+      "failed": "Αποτυχία αποστολής email στον {name}."
+    },
+    "unitStats": {
+      "title": "Στατιστικά ακινήτων",
+      "allProjects": "όλα τα έργα",
+      "total": "Σύνολο",
+      "sold": "Πωλημένα",
+      "available": "Διαθέσιμα",
+      "reserved": "Κρατημένα"
+    },
+    "fallback": {
+      "message": "Δεν κατάλαβα ακριβώς την εντολή.",
+      "helpTitle": "Δοκιμάστε:",
+      "searchHint": "\"Βρες [όνομα]\" — Αναζήτηση στοιχείων επαφής",
+      "projectHint": "\"Τι γίνεται με [έργο];\" — Κατάσταση έργου",
+      "emailHint": "\"Στείλε email στον [όνομα] ότι...\" — Αποστολή email",
+      "statsHint": "\"Πόσα ακίνητα έχουμε;\" — Στατιστικά units"
+    }
   }
 }

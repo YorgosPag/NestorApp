@@ -128,13 +128,42 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
   let telegramResponse: TelegramSendPayload | null = null;
 
   if (webhookData.message) {
-    console.log('💬 Processing regular message');
-    telegramResponse = await processMessage(webhookData.message);
+    const messageText = webhookData.message.text ?? '';
+    const isBotCommand = messageText.startsWith('/');
+
+    // ── ADR-145: Super Admin Detection ──
+    // Check if sender is a super admin BEFORE generic bot response
+    let isAdminSender = false;
+    if (!isBotCommand && messageText.trim().length > 0 && isFirebaseAvailable()) {
+      try {
+        const userId = String(webhookData.message.from?.id ?? '');
+        if (userId && userId !== 'unknown') {
+          const { isSuperAdminTelegram } = await import(
+            '@/services/ai-pipeline/shared/super-admin-resolver'
+          );
+          const adminResolution = await isSuperAdminTelegram(userId);
+          isAdminSender = adminResolution !== null;
+        }
+      } catch {
+        // Non-fatal: if admin check fails, proceed as normal customer
+      }
+    }
+
+    if (isAdminSender) {
+      // Admin message: Send immediate ack, skip generic bot response
+      // The pipeline will handle the response via UC modules
+      console.log('🛡️ Super admin detected — skipping bot response, pipeline will handle');
+      await sendTelegramMessage({
+        chat_id: webhookData.message.chat.id,
+        text: '⏳ Επεξεργάζομαι την εντολή σας...',
+      });
+    } else {
+      console.log('💬 Processing regular message');
+      telegramResponse = await processMessage(webhookData.message);
+    }
 
     // ── ADR-132: Feed to AI Pipeline (non-blocking) ──
     // Skip bot commands — only feed actual user messages
-    const messageText = webhookData.message.text ?? '';
-    const isBotCommand = messageText.startsWith('/');
     if (!isBotCommand && messageText.trim().length > 0 && isFirebaseAvailable()) {
       feedTelegramToPipeline(webhookData.message);
     }
