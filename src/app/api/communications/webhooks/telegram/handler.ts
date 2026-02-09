@@ -20,6 +20,7 @@ import { sendTelegramMessage } from './telegram/client';
 import { storeMessageInCRM } from './crm/store';
 import { BOT_IDENTITY } from '@/config/domain-constants';
 import type { TelegramMessage, TelegramSendPayload } from './telegram/types';
+import { transcribeVoiceMessage } from './telegram/whisper-transcription';
 
 // ============================================================================
 // SECURITY: SECRET TOKEN VALIDATION (B5 - Enterprise Policy Documentation)
@@ -129,12 +130,37 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
 
   if (webhookData.message) {
     const messageText = webhookData.message.text ?? '';
-    const isBotCommand = messageText.startsWith('/');
+
+    // ── ADR-156: Voice Transcription ──
+    let effectiveMessageText = messageText;
+    let isVoiceTranscription = false;
+
+    if (!effectiveMessageText && webhookData.message.voice) {
+      console.log('🎤 Voice message detected — attempting Whisper transcription...');
+      const transcription = await transcribeVoiceMessage(
+        webhookData.message.voice.file_id
+      );
+      if (transcription.success && transcription.text) {
+        effectiveMessageText = transcription.text;
+        isVoiceTranscription = true;
+        console.log(`🎤 Transcription OK: "${effectiveMessageText.substring(0, 80)}..."`);
+      } else {
+        effectiveMessageText = '[Voice message]';
+        console.warn(`🎤 Transcription failed: ${transcription.error}`);
+      }
+    }
+
+    // Caption fallback for photos/documents without text
+    if (!effectiveMessageText && webhookData.message.caption) {
+      effectiveMessageText = webhookData.message.caption;
+    }
+
+    const isBotCommand = effectiveMessageText.startsWith('/');
 
     // ── ADR-145: Super Admin Detection ──
     // Check if sender is a super admin BEFORE generic bot response
     let isAdminSender = false;
-    if (!isBotCommand && messageText.trim().length > 0 && isFirebaseAvailable()) {
+    if (!isBotCommand && effectiveMessageText.trim().length > 0 && isFirebaseAvailable()) {
       try {
         const userId = String(webhookData.message.from?.id ?? '');
         if (userId && userId !== 'unknown') {
@@ -159,14 +185,15 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
       });
     } else {
       console.log('💬 Processing regular message');
-      telegramResponse = await processMessage(webhookData.message);
+      telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
     }
 
     // ── ADR-132: Feed to AI Pipeline (non-blocking) ──
     // Skip bot commands — only feed actual user messages
-    if (!isBotCommand && messageText.trim().length > 0 && isFirebaseAvailable()) {
-      feedTelegramToPipeline(webhookData.message);
+    if (!isBotCommand && effectiveMessageText.trim().length > 0 && isFirebaseAvailable()) {
+      feedTelegramToPipeline(webhookData.message, effectiveMessageText);
     }
+
   }
 
   if (webhookData.callback_query) {
@@ -212,7 +239,7 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
  *
  * @see ADR-132 (UC Modules Expansion + Telegram Channel)
  */
-function feedTelegramToPipeline(message: TelegramMessage['message']): void {
+function feedTelegramToPipeline(message: TelegramMessage['message'], overrideText?: string): void {
   if (!message) return;
 
   const chatId = String(message.chat.id);
@@ -220,7 +247,7 @@ function feedTelegramToPipeline(message: TelegramMessage['message']): void {
   const firstName = message.from?.first_name ?? '';
   const lastName = message.from?.last_name ?? '';
   const userName = [firstName, lastName].filter(Boolean).join(' ') || 'Telegram User';
-  const messageText = message.text ?? '';
+  const messageText = overrideText ?? message.text ?? '';
   const messageId = String(message.message_id);
 
   // Default company ID — checks both server-only and NEXT_PUBLIC_ variants
@@ -289,9 +316,11 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     // ── ADR-134: Trigger AI pipeline worker after response ──
     // Same pattern as Mailgun webhook: "Respond Fast, Process After"
     // Runs processAIPipelineBatch() after the 200 response is sent to Telegram.
-    const messageText = webhookData.message?.text ?? '';
-    const isBotCommand = messageText.startsWith('/');
-    if (!isBotCommand && messageText.trim().length > 0 && isFirebaseAvailable()) {
+    // ADR-156: Also trigger for voice messages (no text but has voice)
+    const rawText = webhookData.message?.text ?? webhookData.message?.caption ?? '';
+    const hasVoice = !!webhookData.message?.voice;
+    const isBotCmd = rawText.startsWith('/');
+    if (!isBotCmd && (rawText.trim().length > 0 || hasVoice) && isFirebaseAvailable()) {
       after(async () => {
         try {
           const { processAIPipelineBatch } = await import(

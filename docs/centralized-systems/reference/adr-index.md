@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 146 ADRs | Last Updated: 2026-02-09
+**📊 Stats**: 147 ADRs | Last Updated: 2026-02-09
 
 ---
 
@@ -25,7 +25,7 @@
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 8 | [View](#security-auth) |
-| 🔧 **Backend Systems** | 6 | [View](#backend-systems) |
+| 🔧 **Backend Systems** | 7 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
 | 📄 **Uncategorized** | 12 | [View](#uncategorized) |
@@ -173,6 +173,7 @@
 | **ADR-152** | Simple Coordinate Transform Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-152-simple-coordinate-transform-centralization.md) |
 | **ADR-153** | Snap Tooltip Offset Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-153-snap-tooltip-offset-centralization.md) |
 | **ADR-154** | Grip Line Width Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-154-grip-line-width-centralization.md) |
+| **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ IMPLEMENTED | 2026-02-09 | Backend Systems | [📄](./adrs/ADR-156-voice-message-transcription-whisper.md) |
 | **ADR-158** | Origin Axis Label Offsets Centralization (X/Y axis labels) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-158-origin-axis-label-offsets-centralization-x-y-axis-.md) |
 | **ADR-159** | Measurement Text Colors Separation (ANGLE vs DISTANCE) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-159-measurement-text-colors-separation-angle-vs-distan.md) |
 | **ADR-160** | Internal Angle Arc Rendering (dot product logic) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-160-internal-angle-arc-rendering-dot-product-logic.md) |
@@ -381,6 +382,7 @@
 | **ADR-131** | Multi-Intent Pipeline — Πολλαπλά Intents σε Ένα Μήνυμα | ✅ IMPLEMENTED | [View](./adrs/ADR-131-multi-intent-pipeline.md) |
 | **ADR-134** | UC Modules Expansion + Telegram Channel — Omnichannel AI Pipeline | ✅ IMPLEMENTED | [View](./adrs/ADR-134-uc-modules-expansion-telegram-channel.md) |
 | **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ IMPLEMENTED | [View](./adrs/ADR-145-super-admin-ai-assistant.md) |
+| **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ IMPLEMENTED | [View](./adrs/ADR-156-voice-message-transcription-whisper.md) |
 
 ---
 

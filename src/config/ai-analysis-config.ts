@@ -28,6 +28,12 @@ export const AI_ANALYSIS_DEFAULTS = {
     VISION_MODEL: process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini',
     TIMEOUT_MS: Number.parseInt(process.env.OPENAI_TIMEOUT_MS || '30000', 10),
     MAX_RETRIES: Number.parseInt(process.env.OPENAI_MAX_RETRIES || '2', 10),
+    /** ADR-156: Whisper speech-to-text model */
+    WHISPER_MODEL: 'whisper-1',
+    /** ADR-156: Whisper API timeout (voice files can be larger) */
+    WHISPER_TIMEOUT_MS: 30_000,
+    /** ADR-156: Default language hint for Whisper (improves accuracy) */
+    WHISPER_DEFAULT_LANGUAGE: 'el',
   },
 } as const;
 

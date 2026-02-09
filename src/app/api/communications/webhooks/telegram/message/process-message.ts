@@ -12,9 +12,12 @@ import { isFirebaseAvailable } from '../firebase/availability';
 // 🏢 ADR-055: Media download for Telegram attachments
 import { hasMedia, processTelegramMedia } from '../telegram/media-download';
 
-export async function processMessage(message: TelegramMessageObject): Promise<TelegramSendPayload> {
-  const text = message.text?.toLowerCase() || '';
-  const originalText = message.text || '';
+export async function processMessage(
+  message: TelegramMessageObject,
+  overrideText?: string
+): Promise<TelegramSendPayload> {
+  const text = (overrideText ?? message.text)?.toLowerCase() || '';
+  const originalText = (overrideText ?? message.text) || '';
   const chatId = message.chat.id;
 
   // 🏢 ENTERPRISE: Safe access with undefined checks
@@ -42,6 +45,8 @@ export async function processMessage(message: TelegramMessageObject): Promise<Te
       }
 
       // 🏢 ENTERPRISE: Convert to CRMStoreMessage format
+      // ADR-156: Use overrideText (from voice transcription) if original text is empty
+      const isVoiceTranscription = !!overrideText && !message.text && !!message.voice;
       const crmMessage = {
         from: {
           id: message.from.id,
@@ -49,11 +54,13 @@ export async function processMessage(message: TelegramMessageObject): Promise<Te
           username: message.from.username
         },
         chat: { id: message.chat.id },
-        text: message.text,
+        text: overrideText ?? message.text,
         message_id: message.message_id,
         // 🏢 ADR-055: Include attachments and caption
         attachments,
         caption: message.caption,
+        // ADR-156: Voice transcription flag
+        ...(isVoiceTranscription ? { isVoiceTranscription: true } : {}),
       };
       await storeMessageInCRM(crmMessage, 'inbound');
       console.log('✅ Inbound message stored in CRM');

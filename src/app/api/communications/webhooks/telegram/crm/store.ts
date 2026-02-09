@@ -60,6 +60,8 @@ export interface CRMStoreMessage {
   attachments?: MessageAttachment[];
   /** Caption for media messages */
   caption?: string;
+  /** ADR-156: Flag when text comes from voice transcription (Whisper) */
+  isVoiceTranscription?: boolean;
 }
 
 /** Direction type (backward compatible) */
@@ -369,6 +371,7 @@ export async function storeMessageInCRM(
         platform: PLATFORMS.TELEGRAM,
         chatId,
         userName: senderName,
+        ...(message.isVoiceTranscription ? { isVoiceTranscription: true } : {}),
       },
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),

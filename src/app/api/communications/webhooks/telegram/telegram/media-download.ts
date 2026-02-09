@@ -311,7 +311,7 @@ async function createIngestionFileRecord(params: {
  * Get file info from Telegram using getFile API
  * @see https://core.telegram.org/bots/api#getfile
  */
-async function getTelegramFile(fileId: string): Promise<TelegramFile | null> {
+export async function getTelegramFile(fileId: string): Promise<TelegramFile | null> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
     console.error('❌ TELEGRAM_BOT_TOKEN not configured');
@@ -339,7 +339,7 @@ async function getTelegramFile(fileId: string): Promise<TelegramFile | null> {
 /**
  * Download file from Telegram servers
  */
-async function downloadTelegramFile(filePath: string): Promise<Buffer | null> {
+export async function downloadTelegramFile(filePath: string): Promise<Buffer | null> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
     console.error('❌ TELEGRAM_BOT_TOKEN not configured');
