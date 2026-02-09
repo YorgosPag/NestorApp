@@ -365,7 +365,7 @@ interface AdminSession {
 | 17 | `src/services/ai-pipeline/modules/uc-016-admin-update-contact/index.ts` | Barrel |
 | 18 | `src/services/ai-pipeline/shared/admin-session.ts` | Admin session (conversational context) |
 
-### Modified Files (15)
+### Modified Files (17)
 
 | # | Αρχείο | Αλλαγή |
 |---|--------|--------|
@@ -384,6 +384,8 @@ interface AdminSession {
 | 13 | `src/services/ai-pipeline/modules/register-modules.ts` | +UC-010..013 registration |
 | 14 | `src/i18n/locales/el/admin.json` | +`superAdmin` i18n keys |
 | 15 | `src/i18n/locales/en/admin.json` | +`superAdmin` i18n keys |
+| 16 | `src/hooks/useContactsState.ts` | Real-time onSnapshot αντί one-time fetch — server-side writes (UC-015/UC-016) εμφανίζονται αυτόματα |
+| 17 | `src/services/contacts.service.ts` | `subscribeToContacts()` +`limitCount` parameter |
 
 ---
 
@@ -486,6 +488,8 @@ interface AdminSession {
 | 2026-02-09 | UC-015 Enhancement: Smart Confirmation — ελλιπή στοιχεία checklist + suggested commands μετά δημιουργία | Claude Code |
 | 2026-02-09 | UC-016: Admin Update Contact (Secretary Mode) — keyword-to-field mapping, session context, updateContactField(), getContactMissingFields() | Claude Code |
 | 2026-02-09 | Admin Session: Lightweight conversational context (Firestore, 10-min TTL) — enables follow-up commands χωρίς explicit contact name | Claude Code |
+| 2026-02-09 | UC-010 Fix: Fallback σε raw message parsing όταν AI επιστρέφει κενό contactName — `extractSearchTermFromMessage()` | Claude Code |
+| 2026-02-09 | Real-time Contacts: `useContactsState` → Firestore `onSnapshot` αντί one-time fetch — server-side writes (UC-015/UC-016) εμφανίζονται αυτόματα στο UI | Claude Code |
 
 ---
 

@@ -653,14 +653,14 @@ export class ContactsService {
   // Realtime
   static async subscribeToContacts(
     callback: (contacts: Contact[]) => void,
-    options?: { type?: ContactType; onlyFavorites?: boolean }
+    options?: { type?: ContactType; onlyFavorites?: boolean; limitCount?: number }
   ): Promise<Unsubscribe> {
     const q = await buildContactsQuery({
       type: options?.type,
       onlyFavorites: options?.onlyFavorites,
       orderByField: 'updatedAt',
       orderDirection: 'desc',
-      limitCount: BATCH_SIZE,
+      limitCount: options?.limitCount ?? BATCH_SIZE,
     });
     return onSnapshot(q, (snapshot) => {
       // Type assertion: converter ensures data is Contact type

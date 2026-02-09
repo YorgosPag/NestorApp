@@ -78,8 +78,19 @@ A query with `where('companyId', '==', userCompanyId)` is accepted because Fires
 - Server Actions retained as fallback for super admin
 - Toast notifications for new emails (same UX as previous WebSocket design)
 
+## Pattern Adoption
+
+The Firestore `onSnapshot()` real-time pattern established here has been adopted by:
+
+| Page | Hook / Service | Date | Context |
+|------|---------------|------|---------|
+| AI Inbox | `useRealtimeTriageCommunications` | 2026-02-06 | This ADR |
+| Contacts | `useContactsState` → `ContactsService.subscribeToContacts()` | 2026-02-09 | ADR-145: Server-side Admin SDK writes (UC-015/UC-016) ανιχνεύονται real-time |
+
 ## References
 - `src/hooks/inbox/useRealtimeMessages.ts` - Proven pattern source
+- `src/hooks/useContactsState.ts` - Contacts real-time subscription (ADR-145)
 - ADR-070: Email AI Ingestion System
 - ADR-071: Enterprise Email Webhook Queue
+- ADR-145: Super Admin AI Assistant (UC-015/UC-016 server-side writes)
 - Firestore Security Rules: `messages` collection

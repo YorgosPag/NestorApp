@@ -56,26 +56,37 @@ export function useContactsState() {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  // Fetch initial data
+  // 🏢 ENTERPRISE: Real-time contacts subscription via Firestore onSnapshot
+  // Replaces one-time fetch — picks up server-side writes (Admin SDK / AI pipeline)
   useEffect(() => {
-    const fetchInitialData = async () => {
-      setIsLoading(true);
+    setIsLoading(true);
+    let unsubContacts: (() => void) | null = null;
+
+    const setup = async () => {
       try {
-        const [{ contacts }, units] = await Promise.all([
-          ContactsService.getAllContacts({ limitCount: 1000 }),
-          getUnits()
-        ]);
-        
-        setAllContacts(contacts);
+        // Units: one-time fetch (no real-time needed)
+        const units = await getUnits();
         setAllUnits(units);
 
+        // Contacts: real-time subscription via onSnapshot
+        unsubContacts = await ContactsService.subscribeToContacts(
+          (contacts) => {
+            setAllContacts(contacts);
+            setIsLoading(false);
+          },
+          { limitCount: 1000 }
+        );
       } catch (error) {
-        console.error("Failed to fetch contacts or units:", error);
-      } finally {
+        console.error("Failed to setup contacts subscription:", error);
         setIsLoading(false);
       }
     };
-    fetchInitialData();
+
+    setup();
+
+    return () => {
+      if (unsubContacts) unsubContacts();
+    };
   }, [refreshKey]);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
