@@ -20,6 +20,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices, isoNow } from '@/subapps/accounting/services';
+import type { IDocumentAnalyzer } from '@/subapps/accounting/services';
+import { createOpenAIDocumentAnalyzer } from '@/subapps/accounting/services/external/openai-document-analyzer';
+import { DocumentAnalyzerStub } from '@/subapps/accounting/services/external/document-analyzer.stub';
 import type {
   DocumentProcessingStatus,
   DocumentType,
@@ -100,7 +103,8 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { repository, documentAnalyzer } = createAccountingServices();
+        const { repository } = createAccountingServices();
+        const documentAnalyzer: IDocumentAnalyzer = createOpenAIDocumentAnalyzer() ?? new DocumentAnalyzerStub();
         const body = (await req.json()) as CreateDocumentBody;
 
         // Validation
@@ -184,7 +188,7 @@ async function processDocumentAsync(
   fileUrl: string,
   mimeType: string,
   repository: ReturnType<typeof createAccountingServices>['repository'],
-  documentAnalyzer: ReturnType<typeof createAccountingServices>['documentAnalyzer']
+  documentAnalyzer: IDocumentAnalyzer
 ): Promise<void> {
   try {
     // Step 1: Classify document
