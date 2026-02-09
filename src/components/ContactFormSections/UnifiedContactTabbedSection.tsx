@@ -528,21 +528,18 @@ export function UnifiedContactTabbedSection({
           // 🇪🇺 ENTERPRISE: ESCO Skills Picker — field-level custom renderer for "skills" (ADR-132)
           // Multi-select picker backed by EU ESCO skills taxonomy (13.485 skills)
           skills: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
-            <div>
-              <p>🔍 DIAGNOSTIC: Skills renderer IS active (customRenderers[&apos;skills&apos;] found)</p>
-              <EscoSkillPicker
-                value={formData.escoSkills ?? []}
-                disabled={fieldDisabled}
-                onChange={(skills: EscoSkillValue[]) => {
-                  if (setFormData) {
-                    setFormData({
-                      ...formData,
-                      escoSkills: skills,
-                    });
-                  }
-                }}
-              />
-            </div>
+            <EscoSkillPicker
+              value={formData.escoSkills ?? []}
+              disabled={fieldDisabled}
+              onChange={(skills: EscoSkillValue[]) => {
+                if (setFormData) {
+                  setFormData({
+                    ...formData,
+                    escoSkills: skills,
+                  });
+                }
+              }}
+            />
           ),
         } : {})
       }

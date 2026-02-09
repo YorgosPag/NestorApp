@@ -156,12 +156,15 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 
 ## 4. UC Modules
 
-### UC-010: Admin Contact Search
+### UC-010: Admin Contact Search & List
 
 - **Intents**: `admin_contact_search`
-- **Lookup**: `findContactByName()` — fuzzy match σε displayName, firstName, lastName, companyName
+- **Two Modes**:
+  - **Search mode**: Specific name given → `findContactByName()` fuzzy match
+  - **List mode**: No name, asks "ποιες επαφές" → `listContacts()` with type filter
+- **Type Filter**: `detectTypeFilter()` αναγνωρίζει keywords (φυσικά πρόσωπα → individual, εταιρείες → company)
 - **Execute**: Read-only (καμία side effect)
-- **Acknowledge**: Format αποτελεσμάτων (name, email, phone, company) → send via channel
+- **Acknowledge**: Format αποτελεσμάτων (name, email, phone, company, type) → send via channel
 - **autoApprovable**: `true`
 
 ### UC-011: Admin Project Status
@@ -180,12 +183,16 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 - **Acknowledge**: Confirm delivery: "Email στάλθηκε στον X"
 - **autoApprovable**: `true` (admin gave explicit order)
 
-### UC-013: Admin Unit Stats
+### UC-013: Admin Business Stats (Units + Contacts + Projects)
 
 - **Intents**: `admin_unit_stats`
-- **Lookup**: Aggregate units across all projects (total, sold, available, reserved)
+- **Smart Detection**: `detectStatsType()` αναλύει keywords στο μήνυμα:
+  - "πόσα ακίνητα" → query units (sold, available, reserved)
+  - "πόσες επαφές" → query contacts (φυσικά πρόσωπα + εταιρείες)
+  - "πόσα έργα" → query projects (list names)
+  - Mixed → all three
 - **Execute**: Read-only
-- **Acknowledge**: Format stats (total + per-project breakdown) → send via channel
+- **Acknowledge**: Format stats per type → send via channel
 - **autoApprovable**: `true`
 
 ### UC-014: Admin Fallback
@@ -322,11 +329,13 @@ export async function findContactByName(
 ## 10. Verification
 
 - [x] `npx tsc --noEmit` → 0 errors
-- [ ] Seed super admin registry (scripts/seed-super-admin-registry.ts)
+- [x] Seed super admin registry — Γιώργος Παγώνης, userId: 5618410820
+- [x] Telegram: "Πόσες επαφές φυσικών προσώπων έχουμε;" → 10 επαφές (4 φυσικά, 6 εταιρείες) ✅
 - [ ] Telegram: Admin στέλνει "Βρες Γιάννη" → λαμβάνει contact results
 - [ ] Telegram: Admin στέλνει "Τι γίνεται με Πανόραμα" → project status
 - [ ] Telegram: Admin στέλνει "Στείλε email στον X ότι..." → email sends + confirmation
 - [ ] Telegram: Admin στέλνει "Πόσα ακίνητα έχουμε;" → unit stats
+- [ ] Telegram: "Ποιες είναι οι επαφές φυσικών προσώπων;" → λίστα με πλήρη στοιχεία
 - [ ] Telegram: Non-admin στέλνει ίδιο μήνυμα → normal customer flow (unchanged)
 - [ ] Email: Admin στέλνει από registered email → same admin flow
 - [ ] Operator Inbox: Admin commands ΔΕΝ εμφανίζονται (auto-approved)
@@ -354,8 +363,8 @@ export async function findContactByName(
 
 ## 12. Pending
 
-- [ ] Run seed script with real Telegram user IDs (Γιώργος + Στέφανος)
-- [ ] End-to-end production testing
+- [x] ~~Run seed script with real Telegram user IDs~~ — Done (Γιώργος Παγώνης = 5618410820)
+- [ ] End-to-end production testing (remaining commands)
 - [ ] UC-015+: More admin commands (appointment management, notification preferences)
 - [ ] Viber/WhatsApp channel support (when adapters are added)
 
@@ -369,6 +378,10 @@ export async function findContactByName(
 | 2026-02-09 | Phase 1: Identity Registry (types, resolver, seed) | Claude Code |
 | 2026-02-09 | Phase 2: Pipeline Branching (admin detection, auto-approve, AI prompt) | Claude Code |
 | 2026-02-09 | Phase 3: UC-010..014 admin modules + i18n | Claude Code |
+| 2026-02-09 | Seed: Γιώργος Παγώνης = Telegram 5618410820 (@SteFanoThess) | Claude Code |
+| 2026-02-09 | Fix: UC-013 broadened → business stats (contacts + projects + units) with detectStatsType() | Claude Code |
+| 2026-02-09 | Feat: UC-010 list mode — "ποιες επαφές" → listContacts() with type filter (individual/company) | Claude Code |
+| 2026-02-09 | AI prompt: admin_contact_search covers name search + list contacts; admin_unit_stats covers all "πόσα" questions | Claude Code |
 
 ---
 

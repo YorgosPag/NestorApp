@@ -173,10 +173,6 @@ function renderField(
   t: TFunction, // 🏢 ENTERPRISE: i18n translation function
   customRenderers?: Record<string, CustomFieldRenderer>
 ): React.ReactNode {
-  // 🔍 DIAGNOSTIC: Temporary debug log — REMOVE after fixing skills renderer issue
-  if (field.id === 'skills' || field.id === 'profession') {
-    console.log(`[renderField] field.id="${field.id}" | customRenderers exists: ${!!customRenderers} | has key: ${customRenderers ? field.id in customRenderers : 'N/A'} | keys: ${customRenderers ? Object.keys(customRenderers).join(', ') : 'NONE'}`);
-  }
   // Check for custom renderer first
   if (customRenderers && customRenderers[field.id]) {
     return customRenderers[field.id](field, formData, onChange, onSelectChange, disabled);

@@ -70,6 +70,7 @@
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
 - **[📧 Email/AI Ingestion](data-systems/email-ai-ingestion.md)** - Email webhooks & AI analysis
+- **[🇪🇺 ESCO Professional Classification](reference/adrs/ADR-132-esco-professional-classification.md)** - EU ESCO occupations + skills taxonomy (ADR-132)
 
 ### 🤖 **AI ARCHITECTURE** ✨ **NEW**
 - **[📋 AI Suite Overview](ai/README.md)** - Enterprise AI automation platform (ADR-169)
@@ -125,6 +126,7 @@
 | **UI Styling** | [Design Tokens](design-system/tokens.md), [Hooks](design-system/hooks.md) |
 | **Dynamic Configuration** | [Smart Factories](smart-factories/index.md), [Guidelines](smart-factories/guidelines.md) |
 | **Data & State** | [Alert Engine](data-systems/alert-engine.md), [State Management](data-systems/state-management.md) |
+| **Contact / CRM** | [ESCO Classification](reference/adrs/ADR-132-esco-professional-classification.md), [Personas](reference/adrs/ADR-121-contact-persona-system.md) |
 | **Components** | [Photo System](ui-systems/photo-system.md), [Search](ui-systems/search-system.md) |
 
 ### 📖 **RECOMMENDED READING ORDER**

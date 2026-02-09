@@ -330,13 +330,44 @@ firebase deploy --only firestore:indexes --project pagonis-87766
 
 ---
 
-## 8. Decision Log
+## 8. Troubleshooting
+
+### Turbopack Caching Issue (2026-02-09)
+
+**Σύμπτωμα**: `EscoService.searchSkills is not a function` στο browser console, ενώ η μέθοδος υπάρχει στον source code.
+
+**Αιτία**: Turbopack (`next dev --turbopack`) μπορεί να κρατάει cached/stale version αρχείων με μεγάλες αλλαγές. Η `searchSkills` method δεν αναγνωρίζεται παρόλο που υπάρχει στο `esco.service.ts`.
+
+**Λύση**: Τρέξε τον dev server χωρίς Turbopack:
+```bash
+# Αντί: next dev --turbopack
+npx next dev
+```
+
+Αν αυτό λύσει το πρόβλημα, μπορείς μετά να επιστρέψεις σε Turbopack (`next dev --turbopack`) αφού κάνεις commit τις αλλαγές.
+
+### Skills Import Not Run Yet
+
+**Σύμπτωμα**: Η αναζήτηση skills δεν επιστρέφει αποτελέσματα.
+
+**Αιτία**: Το import script δεν έχει τρέξει — η collection `system/esco_cache/skills` είναι κενή.
+
+**Λύση**:
+```bash
+npx tsx scripts/import-esco-skills.ts
+```
+
+---
+
+## 9. Decision Log
 
 | Date | Decision | Author |
 |------|----------|--------|
 | 2026-02-09 | ADR Created — ESCO Professional Classification Integration (Occupations) | Georgios Pagonis + Claude Code |
 | 2026-02-09 | Status: IMPLEMENTED — Occupations: all phases complete, zero TypeScript errors | Claude Code |
 | 2026-02-09 | Extended — ESCO Skills Integration: 13.485 skills, multi-select picker, EscoSkillPicker component | Georgios Pagonis + Claude Code |
+| 2026-02-09 | Skills Import Complete — 13.485 skills imported to Firestore + composite indexes deployed | Claude Code |
+| 2026-02-09 | Turbopack Bug — `searchSkills is not a function` resolved by running `next dev` without `--turbopack` | Claude Code |
 
 ---
 
