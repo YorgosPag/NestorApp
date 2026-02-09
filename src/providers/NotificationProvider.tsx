@@ -195,7 +195,7 @@ export function NotificationProvider({
     });
 
     // ❌ REMOVED: Custom positioning code was creating duplicate toasts
-    // CSS handles all positioning and scrolling now (see <style> section below)
+    // CSS handles all positioning and scrolling now (see `src/app/globals.css`)
 
     return notificationId;
   }, [settings, canShowNotification, announceToScreenReader, getNotificationIcon, t]);
@@ -311,77 +311,12 @@ export function NotificationProvider({
         position="top-right"
         toastOptions={{
           className: 'notification-toast',
-          style: {
-            background: 'hsl(var(--background))',
-            border: '1px solid hsl(var(--border))',
-            color: 'hsl(var(--foreground))',
-          }
         }}
         closeButton
         richColors
         expand
         visibleToasts={settings.maxNotifications}
       />
-      <style jsx global>{`
-        /* 🎯 CAD-PRECISION POSITIONING - Όπως το Live Coordinates panel */
-        /* Πάνω δεξιά γωνία του notification: (1756px, 4px) */
-
-        [data-sonner-toaster][data-position="top-right"] {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: auto !important;
-          bottom: auto !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          width: auto !important;
-          height: auto !important;
-          pointer-events: none !important;
-          z-index: 2147483647 !important;
-        }
-
-        /* ΚΑΘΕ NOTIFICATION: MINIMAL positioning - let Sonner handle layout */
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] {
-          /* ❌ REMOVED: position, top, left, transform - Sonner handles these */
-          /* ❌ REMOVED: overflow rules - now handled in content wrapper */
-          margin: 0 !important;
-          padding: 16px !important;
-          pointer-events: auto !important;
-        }
-
-        /* ✅ SCROLLBAR STYLING: Όμορφο scrollbar για dark theme (στο content wrapper) */
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 4px;
-        }
-
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb {
-          background: hsl(var(--muted-foreground) / 0.3); /* ✅ ENTERPRISE: CSS variable (adapts to dark mode) */
-          border-radius: 4px;
-        }
-
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb:hover {
-          background: hsl(var(--muted-foreground) / 0.5); /* ✅ ENTERPRISE: CSS variable (adapts to dark mode) */
-        }
-
-        /* ✅ MESSAGE TEXT: Preserve formatting για ΟΛΑ τα text elements */
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast],
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] *,
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] div {
-          white-space: pre-wrap !important; /* Διατήρηση line breaks και wrapping */
-          word-wrap: break-word !important; /* Break long words */
-          word-break: break-word !important;
-        }
-
-        /* ✅ BUTTONS: Don't inherit white-space */
-        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] button {
-          white-space: nowrap !important; /* Buttons should NOT wrap */
-        }
-      `}</style>
     </NotificationContext.Provider>
   );
 }

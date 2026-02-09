@@ -82,7 +82,8 @@ export function CalendarEventDialog({ event, open, onOpenChange }: CalendarEvent
             <h3 className={`${typo.heading.md} leading-tight`}>{event.title}</h3>
             <Badge
               variant="outline"
-              style={{ borderColor: colorScheme.border, color: colorScheme.text }}
+              className="calendar-event-badge"
+              data-event-type={event.eventType}
             >
               {t(`calendarPage.eventTypes.${event.eventType}`)}
             </Badge>

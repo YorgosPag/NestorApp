@@ -38,6 +38,7 @@ import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effec
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation';
+import { formatDateTime } from '@/lib/intl-utils';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { ConfirmDialog, DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FileRecordService } from '@/services/file-record.service';
@@ -80,24 +81,13 @@ function formatFileSize(bytes: number | undefined): string {
   return formatFileSizeUtil(bytes);
 }
 
-/**
- * Format date
- */
-function formatDate(dateString: string | Date | undefined): string {
-  if (!dateString) return 'N/A';
-  try {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return new Intl.DateTimeFormat('el-GR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return 'N/A';
-  }
-}
+const formatTrashDate = (dateInput: string | Date | undefined): string => {
+  const formatted = formatDateTime(dateInput ?? '', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return formatted === '-' ? 'N/A' : formatted;
+};
 
 /**
  * Calculate days until purge
@@ -408,7 +398,7 @@ export function TrashView({
                     {/* Trashed date */}
                     <span className="flex items-center gap-1">
                       <Calendar className={iconSizes.xs} aria-hidden="true" />
-                      {t('trash.trashedAt')}: {formatDate(file.trashedAt)}
+                      {t('trash.trashedAt')}: {formatTrashDate(file.trashedAt)}
                     </span>
 
                     {/* Days until purge */}

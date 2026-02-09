@@ -12,10 +12,7 @@ export function ToasterClient() {
       position="top-right"
       toastOptions={{
         duration: 3000,
-        style: {
-          background: 'hsl(var(--popover))',
-          color: 'hsl(var(--popover-foreground))',
-        },
+        className: 'toast-popover',
       }}
     />
   );

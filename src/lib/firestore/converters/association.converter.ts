@@ -44,22 +44,22 @@ export const contactLinkConverter: FirestoreDataConverter<ContactLink> = {
       ? typeof contactLink.updatedAt === 'string'
         ? new Date(contactLink.updatedAt)
         : contactLink.updatedAt
-      : undefined;
+      : null;
 
     return {
       id: contactLink.id,
       sourceWorkspaceId: contactLink.sourceWorkspaceId,
       sourceContactId: contactLink.sourceContactId,
-      targetWorkspaceId: contactLink.targetWorkspaceId,
-      targetEntityType: contactLink.targetEntityType,
-      targetEntityId: contactLink.targetEntityId,
-      reason: contactLink.reason,
+      targetWorkspaceId: contactLink.targetWorkspaceId ?? null,
+      targetEntityType: contactLink.targetEntityType ?? null,
+      targetEntityId: contactLink.targetEntityId ?? null,
+      reason: contactLink.reason ?? null,
       status: contactLink.status,
       createdAt,
       createdBy: contactLink.createdBy,
       updatedAt,
-      updatedBy: contactLink.updatedBy,
-      metadata: contactLink.metadata,
+      updatedBy: contactLink.updatedBy ?? null,
+      metadata: contactLink.metadata ?? null,
     } as ContactLinkFirestoreDoc;
   },
 
@@ -116,7 +116,7 @@ export const fileLinkConverter: FirestoreDataConverter<FileLink> = {
       ? typeof fileLink.updatedAt === 'string'
         ? new Date(fileLink.updatedAt)
         : fileLink.updatedAt
-      : undefined;
+      : null;
 
     return {
       id: fileLink.id,
@@ -124,14 +124,14 @@ export const fileLinkConverter: FirestoreDataConverter<FileLink> = {
       sourceWorkspaceId: fileLink.sourceWorkspaceId,
       targetEntityType: fileLink.targetEntityType,
       targetEntityId: fileLink.targetEntityId,
-      targetWorkspaceId: fileLink.targetWorkspaceId,
-      reason: fileLink.reason,
+      targetWorkspaceId: fileLink.targetWorkspaceId ?? null,
+      reason: fileLink.reason ?? null,
       status: fileLink.status,
       createdAt,
       createdBy: fileLink.createdBy,
       updatedAt,
-      updatedBy: fileLink.updatedBy,
-      metadata: fileLink.metadata,
+      updatedBy: fileLink.updatedBy ?? null,
+      metadata: fileLink.metadata ?? null,
     } as FileLinkFirestoreDoc;
   },
 

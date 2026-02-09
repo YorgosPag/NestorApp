@@ -130,9 +130,6 @@ export const useRTL = (props?: RTLProps) => {
     direction,
     className: isRTL ? props?.rtlClasses : props?.ltrClasses,
     dir: direction,
-    style: {
-      direction: direction as 'rtl' | 'ltr'
-    }
   };
 };
 

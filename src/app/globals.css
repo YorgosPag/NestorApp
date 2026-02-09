@@ -294,10 +294,125 @@
     border-color: hsl(var(--text-info));
   }
 
+  /* ?? ENTERPRISE: Notification provider skin */
+  .notification-toast {
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    border-radius: var(--radius);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+  }
+
+  [data-sonner-toaster][data-position="top-right"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    pointer-events: none !important;
+    z-index: var(--z-index-toast) !important;
+  }
+
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] {
+    margin: 0 !important;
+    padding: 16px !important;
+    pointer-events: auto !important;
+  }
+
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast],
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] *,
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] div {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+
+  [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] button {
+    white-space: nowrap !important;
+  }
+
+  /* ?? ENTERPRISE: Calendar event badges (use CSS vars instead of inline styles) */
+  .calendar-event-badge {
+    border-color: var(--calendar-event-border);
+    color: var(--calendar-event-text);
+    background-color: var(--calendar-event-bg);
+  }
+
+  [data-event-type="appointment"] {
+    --calendar-event-border: hsl(var(--status-info));
+    --calendar-event-text: hsl(var(--status-info));
+    --calendar-event-bg: hsl(var(--status-info) / 0.15);
+  }
+  [data-event-type="call"] {
+    --calendar-event-border: hsl(var(--status-success));
+    --calendar-event-text: hsl(var(--status-success));
+    --calendar-event-bg: hsl(var(--status-success) / 0.15);
+  }
+  [data-event-type="meeting"] {
+    --calendar-event-border: hsl(var(--chart-4));
+    --calendar-event-text: hsl(var(--chart-4));
+    --calendar-event-bg: hsl(var(--chart-4) / 0.15);
+  }
+  [data-event-type="viewing"] {
+    --calendar-event-border: hsl(var(--status-warning));
+    --calendar-event-text: hsl(var(--status-warning));
+    --calendar-event-bg: hsl(var(--status-warning) / 0.15);
+  }
+  [data-event-type="follow_up"] {
+    --calendar-event-border: hsl(var(--status-error));
+    --calendar-event-text: hsl(var(--status-error));
+    --calendar-event-bg: hsl(var(--status-error) / 0.15);
+  }
+  [data-event-type="email"] {
+    --calendar-event-border: hsl(var(--muted-foreground));
+    --calendar-event-text: hsl(var(--muted-foreground));
+    --calendar-event-bg: hsl(var(--muted) / 0.5);
+  }
+  [data-event-type="document"] {
+    --calendar-event-border: hsl(var(--chart-3));
+    --calendar-event-text: hsl(var(--chart-3));
+    --calendar-event-bg: hsl(var(--chart-3) / 0.15);
+  }
+  [data-event-type="other"] {
+    --calendar-event-border: hsl(var(--foreground) / 0.5);
+    --calendar-event-text: hsl(var(--foreground));
+    --calendar-event-bg: hsl(var(--muted) / 0.3);
+  }
+
   .toast-error {
     background-color: hsl(var(--bg-error));
     color: hsl(var(--text-error));
     border-color: hsl(var(--text-error));
+  }
+
+  .toast-popover {
+    background: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border-radius: var(--radius);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+    border: 1px solid hsl(var(--border));
   }
 
   /* Mobile slide-in animations */

@@ -28,6 +28,10 @@ export interface FormErrorContext {
 export function useFormErrorHandler() {
   const { t } = useTranslation('forms');
   const getToastSeverityClass = (severity: ErrorSeverity) => `toast-status toast-${severity}`;
+  const buildToastOptions = (severity: ErrorSeverity, duration: number) => ({
+    duration,
+    className: getToastSeverityClass(severity),
+  });
 
   // Handle single field error
   const handleFieldError = useCallback((
@@ -50,10 +54,7 @@ export function useFormErrorHandler() {
 
     if (showToast) {
       const displayMessage = title ? `${title}: ${errorMessage}` : errorMessage;
-      const toastOptions = {
-        duration: toastDuration,
-        className: getToastSeverityClass(severity),
-      };
+      const toastOptions = buildToastOptions(severity, toastDuration);
       
       switch (severity) {
         case 'error':
@@ -127,10 +128,7 @@ export function useFormErrorHandler() {
         toastMessage = t('validation.fillAllRequired', { count: errorCount });
       }
 
-      const groupedToastOptions = {
-        duration: toastDuration,
-        className: getToastSeverityClass(severity),
-      };
+      const groupedToastOptions = buildToastOptions(severity, toastDuration);
 
       switch (severity) {
         case 'error':
@@ -224,10 +222,7 @@ export function useFormErrorHandler() {
     }
 
     if (showToast) {
-      const serverToastOptions = {
-        duration: toastDuration,
-        className: getToastSeverityClass(severity),
-      };
+      const serverToastOptions = buildToastOptions(severity, toastDuration);
 
       switch (severity) {
         case 'error':

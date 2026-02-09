@@ -36,6 +36,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
+import { videoPlayerProgressStyles } from './VideoPlayer.styles';
 
 // ============================================================================
 // TYPES
@@ -445,12 +446,12 @@ export function VideoPlayer({
             {/* Buffered */}
             <div
               className="absolute inset-y-0 left-0 bg-white/50 rounded-full"
-              style={{ width: `${state.buffered}%` }}
+              style={videoPlayerProgressStyles.buffered(state.buffered)}
             />
             {/* Progress */}
             <div
               className="absolute inset-y-0 left-0 bg-primary rounded-full"
-              style={{ width: `${progressPercent}%` }}
+              style={videoPlayerProgressStyles.played(progressPercent)}
             />
             {/* Thumb */}
             <div
@@ -458,7 +459,7 @@ export function VideoPlayer({
                 'absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full',
                 'opacity-0 group-hover:opacity-100 transition-opacity'
               )}
-              style={{ left: `calc(${progressPercent}% - 6px)` }}
+              style={videoPlayerProgressStyles.thumb(progressPercent)}
             />
           </div>
 
