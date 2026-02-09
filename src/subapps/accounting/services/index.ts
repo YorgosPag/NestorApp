@@ -1,63 +1,29 @@
 /**
  * @fileoverview Accounting Services — Barrel Exports
- * @description Pure re-exports only — NO local import bindings
+ * @description Minimal barrel: factory + helpers + types only.
+ *
+ * ARCHITECTURE NOTE — TDZ PREVENTION:
+ * The factory (create-accounting-services.ts) imports the same sub-modules
+ * (AccountingService, VATEngine, etc.) that were previously re-exported here.
+ * This creates a diamond dependency in Webpack: barrel → sub-module AND
+ * barrel → factory → sub-module. During minification, the binding is not
+ * yet initialized when the factory tries to read it → TDZ error:
+ * "Cannot access 'f' before initialization".
+ *
+ * SOLUTION: Only re-export the factory, helpers, and type interfaces.
+ * All class/engine/config exports are consumed ONLY by the factory internally.
+ * If external code needs them, import directly from the sub-module path.
+ *
  * @author Claude Code (Anthropic AI) + Giorgos Pagonis
  * @created 2026-02-09
- * @version 2.0.0
+ * @version 3.0.0
  * @see ADR-ACC-010 Portability & Abstraction Layers
- * @compliance CLAUDE.md Enterprise Standards — zero `any`
- *
- * ARCHITECTURE NOTE:
- * The factory function lives in a SEPARATE module (create-accounting-services.ts)
- * to avoid duplicate import/re-export bindings that cause TDZ errors
- * ("Cannot access 'f' before initialization") during Webpack minification.
  */
 
 // ── Factory ─────────────────────────────────────────────────────────────────
 export { createAccountingServices } from './create-accounting-services';
 
-// ── Services ────────────────────────────────────────────────────────────────
-export { AccountingService } from './accounting-service';
-
-// ── Repository ──────────────────────────────────────────────────────────────
-export { FirestoreAccountingRepository } from './repository/firestore-accounting-repository';
-
-// ── Engines ─────────────────────────────────────────────────────────────────
-export { VATEngine } from './engines/vat-engine';
-export { TaxEngine } from './engines/tax-engine';
-export { DepreciationEngine } from './engines/depreciation-engine';
-
-// ── External Services ───────────────────────────────────────────────────────
-// NOTE: OpenAIDocumentAnalyzer + DocumentAnalyzerStub are NOT re-exported here.
-// They are only consumed by create-accounting-services.ts internally.
-// Re-exporting them while the factory also imports them creates a diamond
-// dependency → TDZ error in Webpack ("Cannot access 'f' before initialization").
-
-// ── Config ──────────────────────────────────────────────────────────────────
-export {
-  GREEK_VAT_RATES,
-  getVatRateForDate,
-  getVatDeductibilityRules,
-  getMyDataVatCategory,
-} from './config/vat-config';
-export {
-  GREEK_TAX_SCALES,
-  getTaxScaleForYear,
-  getAvailableTaxYears,
-} from './config/tax-config';
-export {
-  DEPRECIATION_RATES,
-  getDepreciationRate,
-  calculateUsefulLife,
-} from './config/depreciation-config';
-export {
-  EFKA_YEAR_CONFIGS,
-  getEfkaConfigForYear,
-  calculateMonthlyBreakdown,
-  calculateAnnualTotal,
-} from './config/efka-config';
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Helpers (used by API routes: isoNow, isoToday, getQuarterFromDate) ────
 export {
   sanitizeForFirestore,
   isoNow,
@@ -66,7 +32,7 @@ export {
   getFiscalYearFromDate,
 } from './repository/firestore-helpers';
 
-// ── Types (re-export from types for convenience) ────────────────────────────
+// ── Types (type-only re-exports — erased at runtime, no TDZ risk) ─────────
 export type {
   IAccountingRepository,
   IVATEngine,
