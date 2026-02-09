@@ -300,6 +300,14 @@ export const DEFAULT_LAYER_STYLES: Record<LayerElementType, LayerStyle> = {
     opacity: 0.2
   }
 };
+/**
+ * 🏢 ENTERPRISE: System layer color defaults (centralized)
+ */
+export const SYSTEM_LAYER_COLORS = {
+  properties: DEFAULT_LAYER_STYLES.property.strokeColor,
+  grid: DEFAULT_LAYER_STYLES.line.strokeColor,
+} as const;
+
 
 /**
  * 🚀 ENTERPRISE LAYER CATEGORIES
@@ -430,3 +438,4 @@ export interface LayerExportData {
     totalElements: number;
   };
 }
+

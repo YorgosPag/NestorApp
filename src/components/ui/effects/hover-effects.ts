@@ -758,10 +758,10 @@ export const createEnterpriseComplexEffects = (borderTokens: ReturnType<typeof u
   NEUTRAL_BUTTON: `bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold rounded-lg hover:from-gray-700 hover:to-slate-800`,
 
   /** Toolbar hover με centralized borders */
-  TOOLBAR_DEFAULT: `hover:bg-[#262626] hover:${borderTokens.getStatusBorder('muted')}`,
-  TOOLBAR_PRIMARY: `hover:bg-[#364157] hover:${borderTokens.getStatusBorder('info')}`,
-  TOOLBAR_SUCCESS: `hover:bg-[#255233] hover:${borderTokens.getStatusBorder('success')}`,
-  TOOLBAR_DANGER: `hover:bg-[#352626] hover:${borderTokens.getStatusBorder('error')}`,
+  TOOLBAR_DEFAULT: `hover: hover:${borderTokens.getStatusBorder('muted')}`,
+  TOOLBAR_PRIMARY: `hover: hover:${borderTokens.getStatusBorder('info')}`,
+  TOOLBAR_SUCCESS: `hover: hover:${borderTokens.getStatusBorder('success')}`,
+  TOOLBAR_DANGER: `hover: hover:${borderTokens.getStatusBorder('error')}`,
 });
 
 /**
@@ -779,3 +779,4 @@ export const UI_HOVER_EFFECTS = {
 } as const;
 
 export default UI_HOVER_EFFECTS;
+

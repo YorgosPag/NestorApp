@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { createAccountingServices, isoNow, isoToday, getQuarterFromDate } from '@/subapps/accounting/services';
+import { createAccountingServices, isoToday, getQuarterFromDate } from '@/subapps/accounting/services';
 import type { ExpenseCategory, CreateJournalEntryInput } from '@/subapps/accounting/types';
 
 // =============================================================================
@@ -28,9 +28,9 @@ import type { ExpenseCategory, CreateJournalEntryInput } from '@/subapps/account
 
 async function handleGet(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  segmentData?: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const { id } = await params;
+  const { id } = await segmentData!.params;
 
   const handler = withAuth(
     async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
@@ -77,9 +77,9 @@ interface PatchDocumentBody {
 
 async function handlePatch(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  segmentData?: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const { id } = await params;
+  const { id } = await segmentData!.params;
 
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
@@ -106,7 +106,6 @@ async function handlePatch(
           await repository.updateExpenseDocument(id, {
             status: 'rejected',
             notes: body.notes ?? document.notes,
-            updatedAt: isoNow(),
           });
 
           return NextResponse.json({ success: true, data: { documentId: id, status: 'rejected' } });
@@ -159,7 +158,6 @@ async function handlePatch(
           confirmedIssuerName: confirmedIssuerName ?? null,
           journalEntryId,
           notes: body.notes ?? document.notes,
-          updatedAt: isoNow(),
         });
 
         return NextResponse.json({

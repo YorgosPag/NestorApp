@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | DRAFT |
+| **Status** | ✅ IMPLEMENTED |
 | **Date** | 2026-02-09 |
 | **Category** | Accounting / AI / Expenses |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -647,6 +647,55 @@ interface AIAccuracyMetrics {
 | 2026-02-09 | Telegram UC-017 for mobile expense capture | Claude Code |
 | 2026-02-09 | **Phase 2 implemented** — types/documents.ts: DocumentType (7 types), DocumentProcessingStatus, ExtractedLineItem, ExtractedDocumentData, ReceivedExpenseDocument, VendorCategoryLearning, ExpenseProcessingQueue, DocumentClassification. types/interfaces.ts: IDocumentAnalyzer (classifyDocument, extractData, categorizeExpense) | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/external/document-analyzer.stub.ts: `DocumentAnalyzerStub implements IDocumentAnalyzer` — all 3 methods (classifyDocument, extractData, categorizeExpense) throw "not configured". Placeholder for OpenAI gpt-4o Vision integration (OCR+NLP for invoice images/PDFs) | Claude Code |
+| 2026-02-10 | **Phase 5B — FULL IMPLEMENTATION** — `DocumentAnalyzerStub` replaced with real `OpenAIDocumentAnalyzer` | Claude Code |
+| 2026-02-10 | `OpenAIDocumentAnalyzer` implements `IDocumentAnalyzer` with OpenAI Responses API (gpt-4o-mini vision). Two strict JSON schemas: `EXPENSE_CLASSIFY_SCHEMA` (documentType + suggestedCategory + confidence) and `EXPENSE_EXTRACT_SCHEMA` (issuerName, vatNumber, amounts, date, lineItems, paymentMethod, confidence). System prompts in Greek. Graceful fallback: on API failure returns low-confidence results (no throw). Factory: `createOpenAIDocumentAnalyzer()` returns null if no OPENAI_API_KEY → falls back to stub | Claude Code |
+| 2026-02-10 | API Routes: `GET/POST /api/accounting/documents` (list + create with async AI trigger), `GET/PATCH /api/accounting/documents/[id]` (single doc + confirm/reject). Confirm creates full `CreateJournalEntryInput` with myDATA/E3 codes. Pattern: `withAuth()` + `withStandardRateLimit()` + `segmentData?` for dynamic segments | Claude Code |
+| 2026-02-10 | Hooks: `useExpenseDocuments` (list by year + status filter), `useExpenseDocument` (single doc + confirmDocument/rejectDocument actions). Pattern matches `useVATSummary` | Claude Code |
+| 2026-02-10 | UI Components: `DocumentsPageContent` (fiscal year picker + status filter tabs + document list + expandable review cards), `UploadDocumentDialog` (file URL + type selector + auto-guess fileName/mimeType), `DocumentReviewCard` (AI data display + editable confirmed fields + Radix Select for 19 categories + confirm/reject buttons), `ExtractedDataDisplay` (readonly AI data + confidence badges: green ≥80%, yellow 50-80%, red <50%) | Claude Code |
+| 2026-02-10 | Page + routing: `/accounting/documents` page with `LazyRoutes.AccountingDocuments`, navigation sidebar entry (FileText icon, between assets and reports). i18n: full translations EL + EN (~25 keys each in accounting.json documents section) | Claude Code |
+| 2026-02-10 | Status updated: DRAFT → ✅ IMPLEMENTED. Zero TypeScript errors. Full document flow operational: Create → AI classifies + extracts (async) → Review → Confirm (journal entry) or Reject | Claude Code |
+
+---
+
+## 18. Implementation Files (2026-02-10)
+
+### Services
+| File | Description |
+|------|-------------|
+| `services/external/openai-document-analyzer.ts` | Real OpenAI Vision analyzer (replaces stub) |
+| `services/index.ts` | Factory wires analyzer: `createOpenAIDocumentAnalyzer() ?? new DocumentAnalyzerStub()` |
+
+### API Routes
+| File | Methods | Description |
+|------|---------|-------------|
+| `app/api/accounting/documents/route.ts` | GET, POST | List + create with async AI processing |
+| `app/api/accounting/documents/[id]/route.ts` | GET, PATCH | Single doc + confirm/reject with journal entry |
+
+### Hooks
+| File | Description |
+|------|-------------|
+| `hooks/useExpenseDocuments.ts` | List documents by year + optional status |
+| `hooks/useExpenseDocument.ts` | Single doc + confirm/reject actions |
+| `hooks/useTaxEstimate.ts` | Tax estimate fetch (Phase 5D fix) |
+
+### UI Components
+| File | Description |
+|------|-------------|
+| `components/documents/DocumentsPageContent.tsx` | Main page: year picker + status tabs + list |
+| `components/documents/UploadDocumentDialog.tsx` | Upload dialog: URL + type + submit |
+| `components/documents/DocumentReviewCard.tsx` | Review card: AI data + editable fields + actions |
+| `components/documents/ExtractedDataDisplay.tsx` | Readonly AI data + confidence badges |
+
+### Page + Navigation
+| File | Description |
+|------|-------------|
+| `app/accounting/documents/page.tsx` | Next.js page (LazyRoute) |
+| `utils/lazyRoutes.tsx` | Added AccountingDocuments lazy route |
+| `config/smart-navigation-factory.ts` | Added documents sub-item (FileText icon) |
+| `i18n/locales/el/accounting.json` | Greek translations (documents section) |
+| `i18n/locales/en/accounting.json` | English translations (documents section) |
+| `i18n/locales/el/navigation.json` | Greek nav label |
+| `i18n/locales/en/navigation.json` | English nav label |
 
 ---
 

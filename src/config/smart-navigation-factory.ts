@@ -130,6 +130,7 @@ const NAVIGATION_LABELS = {
   accounting_bank: 'accounting.bank',
   accounting_efka: 'accounting.efka',
   accounting_assets: 'accounting.assets',
+  accounting_documents: 'accounting.documents',
   accounting_reports: 'accounting.reports',
 
   // CRM submenu
@@ -491,6 +492,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               { icon: Landmark, href: '/accounting/bank' },
               { icon: PiggyBank, href: '/accounting/efka' },
               { icon: HardDrive, href: '/accounting/assets' },
+              { icon: FileText, href: '/accounting/documents' },
               { icon: FileBarChart, href: '/accounting/reports' },
             ]
           }
@@ -666,6 +668,7 @@ function getLabelKeyForPath(path: string): string {
     'accounting/bank': 'accounting_bank',
     'accounting/efka': 'accounting_efka',
     'accounting/assets': 'accounting_assets',
+    'accounting/documents': 'accounting_documents',
     'accounting/reports': 'accounting_reports',
 
     // CRM main

@@ -267,6 +267,12 @@ export const LazyRoutes = {
     () => import('@/subapps/accounting/components/reports/ReportsPageContent').then(mod => ({ default: mod.ReportsPageContent })),
     { loadingType: 'dashboard', ssr: false }
   ),
+
+  // 🏢 ENTERPRISE: Accounting Subapp (Phase 5B — AI Document Processing)
+  AccountingDocuments: createLazyRoute(
+    () => import('@/subapps/accounting/components/documents/DocumentsPageContent').then(mod => ({ default: mod.DocumentsPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 148 ADRs | Last Updated: 2026-02-09
+**📊 Stats**: 148 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-10
 
 ---
 
@@ -29,6 +29,7 @@
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
 | 📄 **Uncategorized** | 12 | [View](#uncategorized) |
+| 🧮 **Accounting Subapp** | 11 | [View](#accounting-subapp-adrs-separate-numbering--acc-xxx) |
 
 ---
 
@@ -466,6 +467,30 @@ Based on these ADRs, the following are **PROHIBITED**:
 - ❌ Duplicate grip rendering - Use UnifiedGripRenderer (ADR-048)
 - ❌ Debug endpoints in production (ADR-062)
 - ❌ Inline styles - Use centralized design system
+
+---
+
+---
+
+## 🧮 **ACCOUNTING SUBAPP ADRs** (Separate Numbering — ACC-xxx)
+
+> **📍 Location**: `src/subapps/accounting/docs/adrs/` — Portable subapp with independent ADR numbering
+>
+> **Status**: Phase 1 COMPLETE (2026-02-10) — Sole Proprietor (Ατομική Επιχείρηση)
+
+| ADR | Decision | Status | Date | Link |
+|-----|----------|--------|------|------|
+| **ADR-ACC-000** | Founding Decision — Enterprise Accounting Subapp | ✅ ACTIVE | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-000-founding-decision.md) |
+| **ADR-ACC-001** | Chart of Accounts — Λογιστικό Σχέδιο ΕΛΠ (24 categories) | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-001-chart-of-accounts.md) |
+| **ADR-ACC-002** | Invoicing System — Σύστημα Τιμολόγησης (7 types) | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-002-invoicing-system.md) |
+| **ADR-ACC-003** | myDATA / ΑΑΔΕ Integration | ⏳ DRAFT | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-003-mydata-aade-integration.md) |
+| **ADR-ACC-004** | VAT Engine — Μηχανή ΦΠΑ | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-004-vat-engine.md) |
+| **ADR-ACC-005** | AI Document Processing — Expense Tracker (OpenAI Vision) | ✅ IMPLEMENTED | 2026-02-10 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-005-ai-document-processing.md) |
+| **ADR-ACC-006** | EFKA Contribution Tracking | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-006-efka-contribution-tracking.md) |
+| **ADR-ACC-007** | Fixed Assets & Depreciation | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-007-fixed-assets-depreciation.md) |
+| **ADR-ACC-008** | Bank Reconciliation | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-008-bank-reconciliation.md) |
+| **ADR-ACC-009** | Tax Engine | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-009-tax-engine.md) |
+| **ADR-ACC-010** | Portability & Abstraction Layers | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-010-portability-abstraction-layers.md) |
 
 ---
 

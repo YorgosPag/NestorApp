@@ -8,6 +8,7 @@
     "bank": "Συμφωνία Τράπεζας",
     "efka": "Εισφορές ΕΦΚΑ",
     "assets": "Πάγια Στοιχεία",
+    "documents": "Παραστατικά AI",
     "reports": "Αναφορές & Φόρος"
   },
   "invoices": {
@@ -176,6 +177,34 @@
       "furniture": "Έπιπλα",
       "tools": "Εργαλεία",
       "other": "Λοιπά"
+    }
+  },
+  "documents": {
+    "title": "Παραστατικά AI",
+    "description": "AI επεξεργασία εισερχόμενων παραστατικών εξόδων",
+    "newDocument": "Νέο Παραστατικό",
+    "noDocuments": "Δεν βρέθηκαν παραστατικά",
+    "uploadTitle": "Υποβολή Παραστατικού για Ανάλυση",
+    "fileUrl": "URL Αρχείου",
+    "fileUrlHint": "URL εικόνας ή PDF παραστατικού (Firebase Storage, κ.λπ.)",
+    "documentType": "Τύπος Παραστατικού",
+    "submitForAnalysis": "Υποβολή για AI Ανάλυση",
+    "aiExtractedData": "Δεδομένα AI Εξαγωγής",
+    "confidence": "Εμπιστοσύνη",
+    "issuerName": "Εκδότης",
+    "issuerVat": "ΑΦΜ Εκδότη",
+    "documentNumber": "Αρ. Παραστατικού",
+    "issueDate": "Ημ/νία Έκδοσης",
+    "lineItems": "Γραμμές Παραστατικού",
+    "confirmedFields": "Πεδία Επιβεβαίωσης",
+    "confirm": "Επιβεβαίωση",
+    "reject": "Απόρριψη",
+    "unknownIssuer": "Άγνωστος Εκδότης",
+    "statuses": {
+      "processing": "Επεξεργασία",
+      "review": "Αναμονή Ελέγχου",
+      "confirmed": "Επιβεβαιωμένο",
+      "rejected": "Απορρίφθηκε"
     }
   },
   "reports": {

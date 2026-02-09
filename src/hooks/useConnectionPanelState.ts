@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Connection, ConnectionType, PropertyGroup } from '@/types/connections';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { CONNECTION_DEFAULTS } from '@/config/connection-config';
 
 interface UseConnectionPanelStateProps {
     selectedPropertyIds: string[];
@@ -44,7 +45,7 @@ export function useConnectionPanelState({
             id: `group_${Date.now()}`,
             name: groupName,
             propertyIds: selectedPropertyIds,
-            color: '#3B82F6',
+            color: CONNECTION_DEFAULTS.propertyGroupColor,
         };
 
         setGroups(prev => [...prev, newGroup]);

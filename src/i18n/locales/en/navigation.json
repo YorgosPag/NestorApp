@@ -240,6 +240,7 @@
     "bank": "Bank",
     "efka": "EFKA",
     "assets": "Fixed Assets",
+    "documents": "Documents",
     "reports": "Reports"
   },
   "crm": {

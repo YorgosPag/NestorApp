@@ -99,6 +99,12 @@ export const hardcodedColorValues = {
       '600': 'bg-gray-600',  '700': 'bg-gray-700',  '800': 'bg-gray-800',
       '900': 'bg-gray-900',
     },
+    toolbar: {
+      default: 'bg-[#262626]',
+      primary: 'bg-[#364157]',
+      success: 'bg-[#255233]',
+      danger: 'bg-[#352626]',
+    },
 
     // Status colors
     red: {

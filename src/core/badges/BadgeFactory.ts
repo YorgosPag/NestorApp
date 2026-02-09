@@ -6,6 +6,7 @@
  */
 
 import { cn } from '../../lib/utils';
+import { designTokens } from '@/styles/design-tokens';
 import type {
   DomainType,
   ProjectStatus,
@@ -169,8 +170,8 @@ export class BadgeFactory {
       label: this.resolveLabel(options, status),
       variant: options.variant || 'outline',
       size: options.size || 'default',
-      color: '#6B7280',
-      backgroundColor: '#F9FAFB',
+      color: designTokens.colors.text.secondary,
+      backgroundColor: designTokens.colors.background.secondary,
       className: cn('badge-fallback', options.className)
     };
   }
@@ -336,3 +337,4 @@ export const createNavigationBadge = (
   colors: UseSemanticColorsReturn,
   options?: BadgeFactoryOptions
 ): BadgeDefinition => BadgeFactory.createNavigationBadge(status, colors, options);
+

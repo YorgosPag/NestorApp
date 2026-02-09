@@ -4,9 +4,9 @@
 >
 > Complete documentation για όλα τα κεντρικοποιημένα συστήματα της εφαρμογής
 
-**📊 Quick Stats**: 31 Enterprise Systems | 20,380+ Lines | Fortune 500 Quality
+**📊 Quick Stats**: 32 Enterprise Systems + Accounting Subapp (11 ADRs) | 22,500+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-170 Construction Worker Attendance — QR Code + GPS Geofencing + Photo Verification (2026-02-09)
+> **🆕 Latest**: Accounting Subapp Phase 1 COMPLETE — 10 modules for sole proprietor (AI Document Processing, Tax Engine, VAT, EFKA, Invoicing, Bank Reconciliation, Fixed Assets, Reports) (2026-02-10)
 
 ---
 
@@ -73,7 +73,22 @@
 - **[🇪🇺 ESCO Professional Classification](reference/adrs/ADR-132-esco-professional-classification.md)** - EU ESCO occupations + skills taxonomy (ADR-132)
 - **[👷 Attendance QR + GPS Verification](reference/adrs/ADR-170-attendance-qr-gps-verification.md)** - QR Code + GPS Geofencing + Photo Verification (ADR-170)
 
-### 🤖 **AI ARCHITECTURE** ✨ **NEW**
+### 🧮 **ACCOUNTING SUBAPP** ✨ **NEW — Phase 1 Complete**
+- **[📋 Founding Decision (ADR-ACC-000)](../../src/subapps/accounting/docs/adrs/ADR-ACC-000-founding-decision.md)** - Enterprise Accounting Subapp architecture
+- **[📊 Chart of Accounts (ADR-ACC-001)](../../src/subapps/accounting/docs/adrs/ADR-ACC-001-chart-of-accounts.md)** - 24 expense/income categories + myDATA/E3 codes
+- **[🧾 Invoicing System (ADR-ACC-002)](../../src/subapps/accounting/docs/adrs/ADR-ACC-002-invoicing-system.md)** - 7 document types + withholding tax
+- **[🏛️ myDATA/ΑΑΔΕ (ADR-ACC-003)](../../src/subapps/accounting/docs/adrs/ADR-ACC-003-mydata-aade-integration.md)** - Electronic document transmission
+- **[💰 VAT Engine (ADR-ACC-004)](../../src/subapps/accounting/docs/adrs/ADR-ACC-004-vat-engine.md)** - Quarterly returns + deductibility
+- **[🤖 AI Document Processing (ADR-ACC-005)](../../src/subapps/accounting/docs/adrs/ADR-ACC-005-ai-document-processing.md)** - OpenAI Vision expense tracker (IMPLEMENTED)
+- **[🏥 EFKA Tracking (ADR-ACC-006)](../../src/subapps/accounting/docs/adrs/ADR-ACC-006-efka-contribution-tracking.md)** - Social security contributions
+- **[🏗️ Fixed Assets (ADR-ACC-007)](../../src/subapps/accounting/docs/adrs/ADR-ACC-007-fixed-assets-depreciation.md)** - Depreciation engine
+- **[🏦 Bank Reconciliation (ADR-ACC-008)](../../src/subapps/accounting/docs/adrs/ADR-ACC-008-bank-reconciliation.md)** - CSV import + smart matching
+- **[📊 Tax Engine (ADR-ACC-009)](../../src/subapps/accounting/docs/adrs/ADR-ACC-009-tax-engine.md)** - Income tax + prepayment + brackets
+- **[🔌 Portability (ADR-ACC-010)](../../src/subapps/accounting/docs/adrs/ADR-ACC-010-portability-abstraction-layers.md)** - Abstract interfaces for standalone deployment
+
+> **📍 Location**: `src/subapps/accounting/` — Portable subapp with independent ADR numbering (ACC-xxx)
+
+### 🤖 **AI ARCHITECTURE**
 - **[📋 AI Suite Overview](ai/README.md)** - Enterprise AI automation platform (ADR-169)
 - **[🔄 Universal Pipeline](ai/pipeline.md)** - 7-step pipeline + cross-cutting patterns
 - **[📁 Use Cases](ai/use-cases/)** - UC-001~UC-008 (ραντεβού, τιμολόγια, έγγραφα, ακίνητα, reports, dashboards)
@@ -160,16 +175,16 @@
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| **Total Systems** | 32 | ✅ **Complete** |
-| **Total ADRs** | 148 | ✅ **Documented** |
-| **Total Code Lines** | 22,500+ | ✅ **Enterprise** |
-| **Documentation Files** | 20+ | ✅ **Modular** |
-| **Cross-Links** | 50+ | ✅ **Interconnected** |
+| **Total Systems** | 32 + Accounting (11 ADRs) | ✅ **Complete** |
+| **Total ADRs** | 148 + 11 ACC | ✅ **Documented** |
+| **Total Code Lines** | 25,000+ | ✅ **Enterprise** |
+| **Documentation Files** | 30+ | ✅ **Modular** |
+| **Cross-Links** | 60+ | ✅ **Interconnected** |
 
 ---
 
 > **💡 Tip**: Bookmark this page για quick navigation στα centralized systems!
 >
-> **🔄 Last Updated**: 2026-02-09
+> **🔄 Last Updated**: 2026-02-10
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

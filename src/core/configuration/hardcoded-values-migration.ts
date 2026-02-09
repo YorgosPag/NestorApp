@@ -35,6 +35,7 @@ import {
   FirestoreError
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { designTokens, borderColors } from '@/styles/design-tokens';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateMigrationId, generateBackupId } from '@/services/enterprise-id.service';
 import {
@@ -418,9 +419,9 @@ export class HardcodedValuesMigrationEngine {
         },
         branding: {
           logoUrl: '',
-          primaryColor: '#1e40af',
-          secondaryColor: '#64748b',
-          accentColor: '#059669'
+          primaryColor: borderColors.info.dark,
+          secondaryColor: designTokens.colors.text.secondary,
+          accentColor: designTokens.colors.green['600']
         },
         tax: {
           ...DETECTED_COMPANY_DATA.tax,
@@ -772,3 +773,4 @@ export const MigrationAPI = {
 } as const;
 
 export default HardcodedValuesMigrationEngine;
+

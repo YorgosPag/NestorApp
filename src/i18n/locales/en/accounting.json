@@ -8,6 +8,7 @@
     "bank": "Bank Reconciliation",
     "efka": "EFKA Contributions",
     "assets": "Fixed Assets",
+    "documents": "AI Documents",
     "reports": "Reports & Tax"
   },
   "invoices": {
@@ -176,6 +177,34 @@
       "furniture": "Furniture",
       "tools": "Tools",
       "other": "Other"
+    }
+  },
+  "documents": {
+    "title": "AI Documents",
+    "description": "AI processing of incoming expense documents",
+    "newDocument": "New Document",
+    "noDocuments": "No documents found",
+    "uploadTitle": "Submit Document for Analysis",
+    "fileUrl": "File URL",
+    "fileUrlHint": "URL of image or PDF document (Firebase Storage, etc.)",
+    "documentType": "Document Type",
+    "submitForAnalysis": "Submit for AI Analysis",
+    "aiExtractedData": "AI Extracted Data",
+    "confidence": "Confidence",
+    "issuerName": "Issuer",
+    "issuerVat": "Issuer VAT",
+    "documentNumber": "Document Number",
+    "issueDate": "Issue Date",
+    "lineItems": "Line Items",
+    "confirmedFields": "Confirmed Fields",
+    "confirm": "Confirm",
+    "reject": "Reject",
+    "unknownIssuer": "Unknown Issuer",
+    "statuses": {
+      "processing": "Processing",
+      "review": "Pending Review",
+      "confirmed": "Confirmed",
+      "rejected": "Rejected"
     }
   },
   "reports": {

@@ -16,7 +16,7 @@ import {
   onSnapshot,
   Timestamp
 } from 'firebase/firestore';
-import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES } from '@/types/layers';
+import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES, SYSTEM_LAYER_COLORS } from '@/types/layers';
 import { generateHistoryId, generateLayerId, generateElementId } from '@/services/enterprise-id.service';
 import type {
   Layer,
@@ -267,7 +267,7 @@ export function useLayerManagement({
         isSystem: true,
         opacity: 1,
         zIndex: 100,
-        color: { primary: '#3b82f6', opacity: 0.3 },
+        color: { primary: SYSTEM_LAYER_COLORS.properties, opacity: 0.3 },
         defaultStyle: DEFAULT_LAYER_STYLES.property,
         elements: [],
         floorId,
@@ -290,7 +290,7 @@ export function useLayerManagement({
         isSystem: true,
         opacity: 0.2,
         zIndex: 1,
-        color: { primary: '#6b7280', opacity: 0.2 },
+        color: { primary: SYSTEM_LAYER_COLORS.grid, opacity: 0.2 },
         defaultStyle: DEFAULT_LAYER_STYLES.line,
         elements: [],
         floorId,

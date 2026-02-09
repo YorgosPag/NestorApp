@@ -38,6 +38,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { designTokens, borderColors } from '@/styles/design-tokens';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
@@ -220,9 +221,9 @@ export const DEFAULT_COMPANY_CONFIG: CompanyConfiguration = {
   },
   branding: {
     logoUrl: '',
-    primaryColor: '#1e40af',
-    secondaryColor: '#64748b',
-    accentColor: '#059669'
+    primaryColor: borderColors.info.dark,
+    secondaryColor: designTokens.colors.text.secondary,
+    accentColor: designTokens.colors.green['600']
   },
   tax: {
     vatNumber: '123456789',
@@ -972,3 +973,4 @@ export const CONFIGURATION_DOCUMENTS = {
 } as const;
 
 export default EnterpriseConfigurationManager;
+

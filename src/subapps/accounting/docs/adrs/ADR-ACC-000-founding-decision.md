@@ -549,6 +549,7 @@ interface InvoiceSeries {
 /accounting/invoices/[id]            ← M-003: Προβολή/επεξεργασία
 /accounting/expenses                 ← M-006: Δαπάνες
 /accounting/expenses/scan            ← M-006: AI scan
+/accounting/documents                ← M-006: Παραστατικά AI (OpenAI Vision)
 /accounting/vat                      ← M-005: ΦΠΑ τρίμηνα
 /accounting/efka                     ← M-007: ΕΦΚΑ
 /accounting/assets                   ← M-008: Πάγια
@@ -582,20 +583,20 @@ interface InvoiceSeries {
 
 ## 12. Phase Plan
 
-### Phase 1: Core Ατομική (CURRENT)
+### Phase 1: Core Ατομική (✅ COMPLETE — 2026-02-10)
 
-| # | Module | Προτεραιότητα | Depends On |
-|---|--------|---------------|------------|
-| 1 | M-001: Company Setup | CRITICAL | — |
-| 2 | M-003: Invoicing | CRITICAL | M-001 |
-| 3 | M-004: myDATA | CRITICAL | M-003 |
-| 4 | M-002: Income/Expense Book | HIGH | M-001 |
-| 5 | M-005: VAT Engine | HIGH | M-002 |
-| 6 | M-006: Expense Tracker (AI) | HIGH | M-002 |
-| 7 | M-009: Bank Reconciliation | MEDIUM | M-002 |
-| 8 | M-007: EFKA Tracker | MEDIUM | M-001 |
-| 9 | M-008: Fixed Assets | MEDIUM | M-002 |
-| 10 | M-010: Reports | MEDIUM | M-002, M-005 |
+| # | Module | Status | Implementation |
+|---|--------|--------|----------------|
+| 1 | M-001: Company Setup | ✅ DONE | Services + API + UI (4 sections) |
+| 2 | M-003: Invoicing | ✅ DONE | Full CRUD + line items + VAT calc |
+| 3 | M-004: myDATA | ⏳ STUB | Types + interface ready, ΑΑΔΕ API credentials pending |
+| 4 | M-002: Income/Expense Book | ✅ DONE | Journal entries + filters + summary |
+| 5 | M-005: VAT Engine | ✅ DONE | Quarterly + annual + deductibility |
+| 6 | M-006: Expense Tracker (AI) | ✅ DONE | OpenAI Vision + review UI + auto-journal |
+| 7 | M-009: Bank Reconciliation | ✅ DONE | CSV import (4 banks) + matching engine |
+| 8 | M-007: EFKA Tracker | ✅ DONE | Monthly breakdown + payment status |
+| 9 | M-008: Fixed Assets | ✅ DONE | Depreciation engine + asset management |
+| 10 | M-010: Reports | ✅ DONE | VAT report + tax estimate + brackets + installments |
 
 ### Phase 2: ΟΕ Extension
 
@@ -680,6 +681,11 @@ interface InvoiceSeries {
 | 2026-02-09 | i18n: `react-i18next` with `useTranslation('accounting')` namespace. Full translations en/el (~400 lines each) | Claude Code |
 | 2026-02-09 | Navigation: Calculator icon, 7 sub-items (invoices, journal, vat, bank, efka, assets, reports) via `smart-navigation-factory.ts` | Claude Code |
 | 2026-02-09 | Status updated: DRAFT → ACTIVE (Phase 1 types + Phase 2 interfaces + Phase 3 services + Phase 4 UI = complete for sole proprietor) | Claude Code |
+| 2026-02-10 | **Phase 5A implemented** — Company Setup full UI (CompanySetupPage with 4 sections: BasicInfo, FiscalInfo, KAD, InvoiceSeries). Brand colors cleanup, social effects cleanup | Claude Code |
+| 2026-02-10 | **Phase 5B implemented** — AI Document Processing FULL STACK: `OpenAIDocumentAnalyzer` (OpenAI Vision, gpt-4o-mini, 2 strict JSON schemas: EXPENSE_CLASSIFY + EXPENSE_EXTRACT), replaces `DocumentAnalyzerStub`. API routes: `GET/POST /api/accounting/documents` + `GET/PATCH /api/accounting/documents/[id]`. Hooks: `useExpenseDocuments` + `useExpenseDocument`. UI: `DocumentsPageContent` + `UploadDocumentDialog` + `DocumentReviewCard` + `ExtractedDataDisplay`. Page `/accounting/documents` with LazyRoute + navigation (FileText icon). i18n EL+EN. Async AI processing via POST trigger | Claude Code |
+| 2026-02-10 | **Phase 5D implemented** — Tax fixes: TaxEstimateCard API response mismatch (`data.estimate` → `data.data`), new `useTaxEstimate` hook | Claude Code |
+| 2026-02-10 | Navigation updated: 8 sub-items (invoices, journal, vat, bank, efka, assets, **documents**, reports) via `smart-navigation-factory.ts` | Claude Code |
+| 2026-02-10 | **Phase 1 COMPLETE** — All 10 modules implemented for sole proprietor (services + API + hooks + UI + AI + i18n). 0 TypeScript errors | Claude Code |
 
 ---
 
