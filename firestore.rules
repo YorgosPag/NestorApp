@@ -2325,6 +2325,29 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🎤 VOICE_COMMANDS COLLECTION - IN-APP AI PIPELINE (ADR-164)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Voice commands submitted via in-app mic → AI pipeline
+    // 🔒 SECURITY: User-scoped read only (userId == auth.uid)
+    // 📅 Added: 2026-02-09
+    //
+    // Security Model:
+    //   - READ: Only the user who created the command (userId match)
+    //   - WRITE: Server-only via Admin SDK (API route creates/updates)
+    // =========================================================================
+    match /voice_commands/{commandId} {
+
+      // 📖 READ: User can only read their own voice commands
+      // 🔒 SECURITY: Prevents cross-user access to AI responses
+      allow read: if isAuthenticated()
+                  && resource.data.userId == request.auth.uid;
+
+      // 🚫 WRITE: Server-side only (Admin SDK via /api/voice/command)
+      // Voice command lifecycle managed by API route and pipeline dispatcher
+      allow create, update, delete: if false;
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
