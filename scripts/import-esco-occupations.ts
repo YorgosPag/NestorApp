@@ -88,8 +88,13 @@ interface OccupationDocument {
 // ============================================================================
 
 /**
- * Generate search tokens from a label for prefix matching.
- * Splits into words, lowercases, removes accents/diacritics for Greek text.
+ * Generate PREFIX search tokens from a label for Firestore array-contains matching.
+ *
+ * Firestore `array-contains` requires EXACT element match, so we generate
+ * all prefixes of each word (min 2 chars) to enable autocomplete.
+ *
+ * Example: "φαρμακοποιός" → ["φα", "φαρ", "φαρμ", "φαρμα", "φαρμακ", "φαρμακο",
+ *   "φαρμακοπ", "φαρμακοπο", "φαρμακοποι", "φαρμακοποιο", "φαρμακοποιος"]
  */
 function generateSearchTokens(label: string, altLabels: string[] = []): string[] {
   const allText = [label, ...altLabels].join(' ');
@@ -97,14 +102,21 @@ function generateSearchTokens(label: string, altLabels: string[] = []): string[]
   // Remove accents/diacritics (critical for Greek: ά→α, έ→ε, etc.)
   const normalized = allText.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-  // Split into words, lowercase, filter very short words, deduplicate
-  const tokens = normalized
+  // Split into words, lowercase, filter very short words
+  const words = normalized
     .toLowerCase()
     .split(/[\s,.\-/()]+/)
-    .filter(token => token.length >= 2)
-    .filter((token, index, arr) => arr.indexOf(token) === index);
+    .filter(word => word.length >= 2);
 
-  return tokens;
+  // Generate prefix tokens for each word (min 2 chars)
+  const prefixSet = new Set<string>();
+  for (const word of words) {
+    for (let i = 2; i <= word.length; i++) {
+      prefixSet.add(word.substring(0, i));
+    }
+  }
+
+  return Array.from(prefixSet);
 }
 
 /**
