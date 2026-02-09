@@ -931,6 +931,7 @@ function mapLegacyIntentToPipeline(legacyIntent: string): import('@/types/ai-pip
     'admin_project_status': PipelineIntentType.ADMIN_PROJECT_STATUS,
     'admin_send_email': PipelineIntentType.ADMIN_SEND_EMAIL,
     'admin_unit_stats': PipelineIntentType.ADMIN_UNIT_STATS,
+    'admin_create_contact': PipelineIntentType.ADMIN_CREATE_CONTACT,
   };
 
   return mapping[legacyIntent] ?? PipelineIntentType.UNKNOWN;
