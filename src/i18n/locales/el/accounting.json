@@ -1,6 +1,7 @@
 {
   "pages": {
     "dashboard": "Λογιστικό & Οικονομικά",
+    "setup": "Ρύθμιση Επιχείρησης",
     "invoices": "Τιμολόγια",
     "journal": "Βιβλίο Εσόδων-Εξόδων",
     "vat": "Διαχείριση ΦΠΑ",
@@ -271,6 +272,60 @@
       "10": "Οκτώβριος",
       "11": "Νοέμβριος",
       "12": "Δεκέμβριος"
+    }
+  },
+  "setup": {
+    "title": "Ρύθμιση Επιχείρησης",
+    "description": "Βασικά στοιχεία, φορολογικές ρυθμίσεις και σειρές τιμολογίων",
+    "basicInfo": "Βασικά Στοιχεία",
+    "businessName": "Επωνυμία",
+    "profession": "Επάγγελμα",
+    "vatNumber": "ΑΦΜ",
+    "taxOffice": "ΔΟΥ",
+    "address": "Διεύθυνση",
+    "city": "Πόλη",
+    "postalCode": "Ταχ. Κώδικας",
+    "phone": "Τηλέφωνο",
+    "email": "Email",
+    "fiscalInfo": "Φορολογικά Στοιχεία",
+    "bookCategory": "Κατηγορία Βιβλίων",
+    "bookCategories": {
+      "simplified": "Β' — Απλογραφικά",
+      "double_entry": "Γ' — Διπλογραφικά"
+    },
+    "vatRegime": "Καθεστώς ΦΠΑ",
+    "vatRegimes": {
+      "normal": "Κανονικό",
+      "exempt": "Απαλλαγμένο"
+    },
+    "fiscalYearEnd": "Λήξη Φορολογικού Έτους",
+    "efkaCategory": "Κατηγορία ΕΦΚΑ",
+    "efkaCategoryLabel": "{{number}}η Κατηγορία",
+    "kadSection": "Κωδικοί Δραστηριότητας (ΚΑΔ)",
+    "mainKad": "Κύρια Δραστηριότητα",
+    "secondaryKads": "Δευτερεύουσες Δραστηριότητες",
+    "noSecondaryKads": "Δεν έχουν προστεθεί δευτερεύουσες δραστηριότητες",
+    "kadCode": "Κωδικός ΚΑΔ",
+    "kadDescription": "Περιγραφή",
+    "addKad": "Προσθήκη ΚΑΔ",
+    "removeKad": "Αφαίρεση",
+    "invoiceSeriesSection": "Σειρές Τιμολογίων",
+    "seriesCode": "Κωδικός",
+    "seriesPrefix": "Πρόθεμα",
+    "seriesDescription": "Περιγραφή",
+    "seriesActive": "Ενεργή",
+    "nextNumber": "Επόμενος αριθμός",
+    "noSeries": "Δεν υπάρχουν σειρές τιμολογίων",
+    "addSeries": "Νέα Σειρά",
+    "save": "Αποθήκευση Ρυθμίσεων",
+    "saveSuccess": "Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς",
+    "saveError": "Σφάλμα αποθήκευσης",
+    "validation": {
+      "vatNumberRequired": "Το ΑΦΜ είναι υποχρεωτικό",
+      "vatNumberInvalid": "Μη έγκυρο ΑΦΜ (9 ψηφία)",
+      "businessNameRequired": "Η επωνυμία είναι υποχρεωτική",
+      "taxOfficeRequired": "Η ΔΟΥ είναι υποχρεωτική",
+      "mainKadRequired": "Η κύρια δραστηριότητα είναι υποχρεωτική"
     }
   },
   "dashboard": {

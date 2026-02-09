@@ -1,6 +1,7 @@
 {
   "pages": {
     "dashboard": "Accounting & Finance",
+    "setup": "Company Setup",
     "invoices": "Invoices",
     "journal": "Income & Expenses Book",
     "vat": "VAT Management",
@@ -271,6 +272,60 @@
       "10": "October",
       "11": "November",
       "12": "December"
+    }
+  },
+  "setup": {
+    "title": "Company Setup",
+    "description": "Business details, tax settings, and invoice series",
+    "basicInfo": "Basic Information",
+    "businessName": "Business Name",
+    "profession": "Profession",
+    "vatNumber": "VAT Number",
+    "taxOffice": "Tax Office",
+    "address": "Address",
+    "city": "City",
+    "postalCode": "Postal Code",
+    "phone": "Phone",
+    "email": "Email",
+    "fiscalInfo": "Fiscal Information",
+    "bookCategory": "Book Category",
+    "bookCategories": {
+      "simplified": "B' — Simplified",
+      "double_entry": "C' — Double Entry"
+    },
+    "vatRegime": "VAT Regime",
+    "vatRegimes": {
+      "normal": "Normal",
+      "exempt": "Exempt"
+    },
+    "fiscalYearEnd": "Fiscal Year End",
+    "efkaCategory": "EFKA Category",
+    "efkaCategoryLabel": "Category {{number}}",
+    "kadSection": "Activity Codes (KAD)",
+    "mainKad": "Main Activity",
+    "secondaryKads": "Secondary Activities",
+    "noSecondaryKads": "No secondary activities added",
+    "kadCode": "KAD Code",
+    "kadDescription": "Description",
+    "addKad": "Add KAD",
+    "removeKad": "Remove",
+    "invoiceSeriesSection": "Invoice Series",
+    "seriesCode": "Code",
+    "seriesPrefix": "Prefix",
+    "seriesDescription": "Description",
+    "seriesActive": "Active",
+    "nextNumber": "Next number",
+    "noSeries": "No invoice series configured",
+    "addSeries": "New Series",
+    "save": "Save Settings",
+    "saveSuccess": "Settings saved successfully",
+    "saveError": "Save error",
+    "validation": {
+      "vatNumberRequired": "VAT number is required",
+      "vatNumberInvalid": "Invalid VAT number (9 digits)",
+      "businessNameRequired": "Business name is required",
+      "taxOfficeRequired": "Tax office is required",
+      "mainKadRequired": "Main activity code is required"
     }
   },
   "dashboard": {

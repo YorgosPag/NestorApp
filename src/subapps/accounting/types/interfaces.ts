@@ -11,6 +11,9 @@
 
 import type { PaginatedResult } from '@/lib/pagination';
 
+// ── Company Profile Types ────────────────────────────────────────────────────
+import type { CompanyProfile, CompanySetupInput } from './company';
+
 // ── Phase 1 Types ───────────────────────────────────────────────────────────
 import type {
   JournalEntry,
@@ -83,6 +86,10 @@ import type {
  * Οι implementations θα δημιουργηθούν στη Φάση 3 (Firestore adapters).
  */
 export interface IAccountingRepository {
+  // ── Company Setup (M-001) ─────────────────────────────────────────────
+  getCompanySetup(): Promise<CompanyProfile | null>;
+  saveCompanySetup(data: CompanySetupInput): Promise<void>;
+
   // ── Journal Entries ─────────────────────────────────────────────────────
   createJournalEntry(data: CreateJournalEntryInput): Promise<{ id: string }>;
   getJournalEntry(entryId: string): Promise<JournalEntry | null>;

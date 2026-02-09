@@ -6,6 +6,13 @@
  * @version 1.0.0
  */
 
+// ── Company Profile Types (M-001 Company Setup) ────────────────────────────
+export type {
+  KadEntry,
+  CompanyProfile,
+  CompanySetupInput,
+} from './company';
+
 // ── Common Types ────────────────────────────────────────────────────────────
 export type {
   FiscalQuarter,

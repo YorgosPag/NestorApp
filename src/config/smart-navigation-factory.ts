@@ -123,6 +123,7 @@ const NAVIGATION_LABELS = {
   sold_properties: 'sidebar.soldProperties',
 
   // Accounting submenu
+  accounting_setup: 'accounting.setup',
   accounting_invoices: 'accounting.invoices',
   accounting_journal: 'accounting.journal',
   accounting_vat: 'accounting.vat',
@@ -483,6 +484,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               analyticsKey: 'nav_accounting',
             },
             subItems: [
+              { icon: Settings, href: '/accounting/setup' },
               { icon: Receipt, href: '/accounting/invoices' },
               { icon: BookOpen, href: '/accounting/journal' },
               { icon: DollarSign, href: '/accounting/vat' },
@@ -657,6 +659,7 @@ function getLabelKeyForPath(path: string): string {
 
     // Accounting
     'accounting': 'accounting',
+    'accounting/setup': 'accounting_setup',
     'accounting/invoices': 'accounting_invoices',
     'accounting/journal': 'accounting_journal',
     'accounting/vat': 'accounting_vat',

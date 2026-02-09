@@ -6,6 +6,9 @@
  * @version 1.0.0
  */
 
+// ── Company Setup Hooks ──────────────────────────────────────────────────────
+export { useCompanySetup } from './useCompanySetup';
+
 // ── Invoice Hooks ────────────────────────────────────────────────────────────
 export { useInvoices } from './useInvoices';
 export { useInvoice } from './useInvoice';

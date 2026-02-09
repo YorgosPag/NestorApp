@@ -55,6 +55,7 @@ import type {
 } from '../../types/efka';
 import type { TaxInstallment } from '../../types/tax';
 import type { ReceivedExpenseDocument } from '../../types/documents';
+import type { CompanyProfile, CompanySetupInput } from '../../types/company';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
@@ -69,6 +70,34 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
  * Pattern: Same as existing repository pattern in src/services/
  */
 export class FirestoreAccountingRepository implements IAccountingRepository {
+
+  // ── Company Setup (M-001) ─────────────────────────────────────────────
+
+  async getCompanySetup(): Promise<CompanyProfile | null> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('company_profile').get();
+      if (!snap.exists) return null;
+      return snap.data() as CompanyProfile;
+    }, null);
+  }
+
+  async saveCompanySetup(data: CompanySetupInput): Promise<void> {
+    const now = isoNow();
+    await safeFirestoreOperation(async (db) => {
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('company_profile');
+      const existing = await docRef.get();
+
+      const doc = sanitizeForFirestore({
+        ...data,
+        updatedAt: now,
+        createdAt: existing.exists
+          ? (existing.data() as CompanyProfile).createdAt
+          : now,
+      } as unknown as Record<string, unknown>);
+
+      await docRef.set(doc);
+    }, undefined);
+  }
 
   // ── Journal Entries ─────────────────────────────────────────────────────
 

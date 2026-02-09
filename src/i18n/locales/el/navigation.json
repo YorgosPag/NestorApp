@@ -233,6 +233,7 @@
     "navigation": "Πλοήγηση"
   },
   "accounting": {
+    "setup": "Ρύθμιση",
     "invoices": "Τιμολόγια",
     "journal": "Έσοδα-Έξοδα",
     "vat": "ΦΠΑ",

@@ -233,6 +233,7 @@
     "navigation": "Navigation"
   },
   "accounting": {
+    "setup": "Setup",
     "invoices": "Invoices",
     "journal": "Income & Expenses",
     "vat": "VAT",

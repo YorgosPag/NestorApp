@@ -216,6 +216,12 @@ export const LazyRoutes = {
     () => import('@/components/file-manager/FileManagerPageContent').then(mod => ({ default: mod.FileManagerPageContent })),
     { loadingType: 'list', ssr: false }
   ),
+  // 🏢 ENTERPRISE: Accounting Subapp (Phase 5A — Company Setup)
+  AccountingSetup: createLazyRoute(
+    () => import('@/subapps/accounting/components/setup/SetupPageContent').then(mod => ({ default: mod.SetupPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
   // 🏢 ENTERPRISE: Accounting Subapp (Phase 4)
   AccountingDashboard: createLazyRoute(
     () => import('@/subapps/accounting/components/dashboard/AccountingDashboard').then(mod => ({ default: mod.AccountingDashboard })),
