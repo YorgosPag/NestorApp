@@ -19,6 +19,9 @@ export { useJournalEntries } from './useJournalEntries';
 // ── VAT Hooks ────────────────────────────────────────────────────────────────
 export { useVATSummary } from './useVATSummary';
 
+// ── Tax Hooks ────────────────────────────────────────────────────────────────
+export { useTaxEstimate } from './useTaxEstimate';
+
 // ── Bank Reconciliation Hooks ────────────────────────────────────────────────
 export { useBankTransactions } from './useBankTransactions';
 
@@ -27,3 +30,7 @@ export { useFixedAssets } from './useFixedAssets';
 
 // ── EFKA Hooks ───────────────────────────────────────────────────────────────
 export { useEFKASummary } from './useEFKASummary';
+
+// ── Document Hooks ───────────────────────────────────────────────────────────
+export { useExpenseDocuments } from './useExpenseDocuments';
+export { useExpenseDocument } from './useExpenseDocument';

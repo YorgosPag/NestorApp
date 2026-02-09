@@ -3,21 +3,36 @@
  * @description Factory function to instantiate the full accounting service stack
  * @author Claude Code (Anthropic AI) + Giorgos Pagonis
  * @created 2026-02-09
- * @version 1.0.0
+ * @version 1.1.0
  * @see ADR-ACC-010 Portability & Abstraction Layers
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
+ *
+ * NOTE: All imports are at the top to avoid duplicate import/re-export bindings
+ * that cause TDZ errors ("Cannot access 'f' before initialization") during
+ * Webpack minification in Vercel production builds.
  */
 
-// ── Services ────────────────────────────────────────────────────────────────
-export { AccountingService } from './accounting-service';
+// ── Single import point for each module (used both by factory and re-exports)
+import { AccountingService } from './accounting-service';
+import { FirestoreAccountingRepository } from './repository/firestore-accounting-repository';
+import { VATEngine } from './engines/vat-engine';
+import { TaxEngine } from './engines/tax-engine';
+import { DepreciationEngine } from './engines/depreciation-engine';
+import { OpenAIDocumentAnalyzer, createOpenAIDocumentAnalyzer } from './external/openai-document-analyzer';
+import { DocumentAnalyzerStub } from './external/document-analyzer.stub';
+import type { IDocumentAnalyzer } from '../types/interfaces';
 
-// ── Repository ──────────────────────────────────────────────────────────────
-export { FirestoreAccountingRepository } from './repository/firestore-accounting-repository';
-
-// ── Engines ─────────────────────────────────────────────────────────────────
-export { VATEngine } from './engines/vat-engine';
-export { TaxEngine } from './engines/tax-engine';
-export { DepreciationEngine } from './engines/depreciation-engine';
+// ── Re-export Services, Repository, Engines ─────────────────────────────────
+export {
+  AccountingService,
+  FirestoreAccountingRepository,
+  VATEngine,
+  TaxEngine,
+  DepreciationEngine,
+  OpenAIDocumentAnalyzer,
+  createOpenAIDocumentAnalyzer,
+  DocumentAnalyzerStub,
+};
 
 // ── Config ──────────────────────────────────────────────────────────────────
 export {
@@ -68,12 +83,6 @@ export type {
 // FACTORY — Instantiate Full Accounting Service Stack
 // ============================================================================
 
-import { FirestoreAccountingRepository } from './repository/firestore-accounting-repository';
-import { VATEngine } from './engines/vat-engine';
-import { TaxEngine } from './engines/tax-engine';
-import { DepreciationEngine } from './engines/depreciation-engine';
-import { AccountingService } from './accounting-service';
-
 /**
  * Δημιουργία πλήρους stack λογιστικών services
  *
@@ -97,11 +106,15 @@ export function createAccountingServices() {
   const depreciationEngine = new DepreciationEngine(repository);
   const service = new AccountingService(repository, vatEngine, taxEngine, depreciationEngine);
 
+  // AI Document Analyzer: use OpenAI if API key is configured, otherwise stub
+  const documentAnalyzer: IDocumentAnalyzer = createOpenAIDocumentAnalyzer() ?? new DocumentAnalyzerStub();
+
   return {
     service,
     repository,
     vatEngine,
     taxEngine,
     depreciationEngine,
+    documentAnalyzer,
   };
 }

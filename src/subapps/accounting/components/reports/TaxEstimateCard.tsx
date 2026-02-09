@@ -74,8 +74,8 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
         throw new Error(errorData.error ?? `HTTP ${response.status}`);
       }
 
-      const data: { estimate: TaxEstimate } = await response.json();
-      setEstimate(data.estimate);
+      const data: { success: boolean; data: TaxEstimate } = await response.json();
+      setEstimate(data.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.taxEstimateLoadFailed';
       setError(message);
