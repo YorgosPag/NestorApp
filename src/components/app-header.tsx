@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/header/theme-toggle"
 import { UserMenu } from "@/components/header/user-menu"
 import { LanguageSwitcher } from "@/components/header/language-switcher"
 import { HelpButton } from "@/components/header/help-button"
+import { VoiceAssistantButton } from "@/components/header/voice-assistant-button"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
 import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
@@ -95,6 +96,8 @@ export function AppHeader() {
           <LanguageSwitcher />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <NotificationBell />
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
+          <VoiceAssistantButton />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <ThemeToggle />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />

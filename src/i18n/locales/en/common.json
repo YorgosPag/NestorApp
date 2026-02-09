@@ -1718,5 +1718,26 @@
       "permissionsCount": "Permissions Count",
       "missing": "MISSING"
     }
+  },
+  "voiceAssistant": {
+    "tooltip": "Voice command",
+    "title": "Voice Command",
+    "description": "Press the button to start recording",
+    "recording": "Listening...",
+    "transcribing": "Transcribing...",
+    "processing": "Processing audio...",
+    "done": "Transcription complete",
+    "start": "Start recording",
+    "stop": "Stop recording",
+    "cancel": "Cancel",
+    "close": "Close",
+    "copy": "Copy text",
+    "copied": "Copied!",
+    "retry": "Retry",
+    "permissionDenied": "Microphone access denied. Please allow microphone access in your browser settings.",
+    "emptyRecording": "No audio was recorded. Please try again.",
+    "transcriptionFailed": "Transcription failed. Please try again.",
+    "genericError": "An error occurred. Please try again.",
+    "notSupported": "Voice recording is not supported in this browser."
   }
 }
