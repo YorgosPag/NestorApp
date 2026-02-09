@@ -15,6 +15,9 @@
  */
 
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('RATE_LIMIT_CONFIG');
 
 // =============================================================================
 // ENVIRONMENT VARIABLES (SSoT)
@@ -133,9 +136,12 @@ export type RateLimitStoreType = 'upstash' | 'memory';
 export function getRateLimitStoreType(): RateLimitStoreType {
   const env = getCurrentRuntimeEnvironment();
 
-  // Production MUST use Upstash
+  // Production: use Upstash if available, fall back to memory
   if (env === 'production') {
-    return 'upstash';
+    const hasUpstash = Boolean(
+      process.env[UPSTASH_ENV_KEYS.URL] && process.env[UPSTASH_ENV_KEYS.TOKEN]
+    );
+    return hasUpstash ? 'upstash' : 'memory';
   }
 
   // Staging should use Upstash if available
@@ -167,11 +173,12 @@ export function getUpstashConfig(): { url: string; token: string } | null {
   if (!url || !token) {
     const env = getCurrentRuntimeEnvironment();
 
-    // Fail-fast in production
+    // Warn in production — fall back to in-memory instead of crashing
+    // Previous behavior (throw) was blocking the entire Telegram webhook handler
     if (env === 'production') {
-      throw new Error(
-        `[RATE_LIMIT] CRITICAL: Upstash Redis not configured in production. ` +
-          `Set ${UPSTASH_ENV_KEYS.URL} and ${UPSTASH_ENV_KEYS.TOKEN} environment variables.`
+      logger.warn(
+        `Upstash Redis not configured in production. Falling back to in-memory rate limiting. ` +
+          `Set ${UPSTASH_ENV_KEYS.URL} and ${UPSTASH_ENV_KEYS.TOKEN} for production-grade limiting.`
       );
     }
 
