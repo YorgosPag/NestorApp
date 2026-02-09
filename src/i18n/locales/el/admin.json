@@ -200,13 +200,16 @@
       "notSpecified": "Δεν ορίστηκε",
       "aiGenerated": "Δημιουργήθηκε με AI",
       "complaintDescription": "Περιγραφή Παραπόνου",
-      "followUpRequired": "Απαιτείται Παρακολούθηση"
+      "followUpRequired": "Απαιτείται Παρακολούθηση",
+      "requestType": "Τύπος Αιτήματος",
+      "documentDescription": "Περιγραφή Εγγράφου"
     },
     "actions": {
       "replyPropertyList": "Απάντηση αναζήτησης ακινήτου",
       "createAppointment": "Δημιουργία ραντεβού",
       "acknowledgeComplaint": "Αναγνώριση παραπόνου",
-      "acknowledgeInquiry": "Αναγνώριση αιτήματος"
+      "acknowledgeInquiry": "Αναγνώριση αιτήματος",
+      "acknowledgeDocumentRequest": "Αναγνώριση αιτήματος εγγράφου/τιμολογίου"
     },
     "stats": {
       "total": "Σύνολο",

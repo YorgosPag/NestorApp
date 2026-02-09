@@ -200,13 +200,16 @@
       "notSpecified": "Not specified",
       "aiGenerated": "AI Generated",
       "complaintDescription": "Complaint Description",
-      "followUpRequired": "Follow-Up Required"
+      "followUpRequired": "Follow-Up Required",
+      "requestType": "Request Type",
+      "documentDescription": "Document Description"
     },
     "actions": {
       "replyPropertyList": "Property search reply",
       "createAppointment": "Create appointment",
       "acknowledgeComplaint": "Acknowledge complaint",
-      "acknowledgeInquiry": "Acknowledge inquiry"
+      "acknowledgeInquiry": "Acknowledge inquiry",
+      "acknowledgeDocumentRequest": "Acknowledge document/invoice request"
     },
     "stats": {
       "total": "Total",

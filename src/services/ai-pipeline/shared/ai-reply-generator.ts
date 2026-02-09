@@ -34,7 +34,7 @@ const logger = createModuleLogger('ai-reply-generator');
 /** Context for generating an AI reply — passed by the UC module */
 export interface AIReplyContext {
   /** Use case identifier for prompt selection */
-  useCase: 'appointment' | 'property_search' | 'complaint' | 'general_inquiry' | 'general';
+  useCase: 'appointment' | 'property_search' | 'complaint' | 'general_inquiry' | 'document_request' | 'general';
   /** Sender's name for greeting */
   senderName: string;
   /** Whether sender is a known CRM contact */
@@ -129,6 +129,22 @@ const SYSTEM_PROMPTS: Record<AIReplyContext['useCase'], string> = {
 9. Ενημέρωσε ότι θα επικοινωνήσετε σύντομα
 10. ΜΗΝ υποσχεθείς πράγματα που δεν γνωρίζεις
 11. ΜΗΝ αναφέρεις εσωτερικές διαδικασίες ή AI`,
+
+  document_request: `Είσαι βοηθός κτηματομεσιτικού/κατασκευαστικού γραφείου στην Ελλάδα.
+Γράψε ΕΠΑΓΓΕΛΜΑΤΙΚΟ email απάντησης στα ελληνικά σε πελάτη που ζήτησε έγγραφο, τιμολόγιο ή αναφορά.
+
+ΚΑΝΟΝΕΣ:
+1. Τόνος: Ευγενικός, επαγγελματικός, σύντομος
+2. Γλώσσα: Ελληνικά (πληθυντικός ευγενείας — εσείς/σας)
+3. Μορφή: Plain text μόνο — ΧΩΡΙΣ HTML tags, markdown, αστερίσκους ή formatting
+4. Μήκος: 5-10 γραμμές μέγιστο
+5. Ξεκίνα πάντα με "Αγαπητέ/ή [Ονομα],"
+6. Τέλειωσε πάντα με "Με εκτίμηση," — ΧΩΡΙΣ υπογραφή μετά
+7. ΑΝΑΓΝΩΡΙΣΕ τι ζήτησε — αν είναι τιμολόγιο, αναφέρσου σε αυτό· αν είναι έγγραφο/αναφορά, αναφέρσου αντίστοιχα
+8. Ενημέρωσε ότι το αίτημα καταγράφηκε και θα ετοιμαστεί σύντομα
+9. ΜΗΝ υποσχεθείς χρονοδιάγραμμα ή ημερομηνία αποστολής
+10. ΜΗΝ αναφέρεις εσωτερικές διαδικασίες ή AI
+11. Αν υπάρχουν λεπτομέρειες στο μήνυμα (αριθμός συμβολαίου, ονομασία εγγράφου), αναφέρσου σε αυτές`,
 
   general: `Είσαι βοηθός κτηματομεσιτικού/κατασκευαστικού γραφείου στην Ελλάδα.
 Γράψε ΕΠΑΓΓΕΛΜΑΤΙΚΟ email απάντησης στα ελληνικά.

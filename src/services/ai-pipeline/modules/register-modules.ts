@@ -20,6 +20,7 @@ import { AppointmentModule } from './uc-001-appointment';
 import { PropertySearchModule } from './uc-003-property-search';
 import { ComplaintModule } from './uc-004-complaint';
 import { GeneralInquiryModule } from './uc-005-general-inquiry';
+import { DocumentRequestModule } from './uc-006-document-request';
 
 const logger = createModuleLogger('PIPELINE_MODULE_REGISTRATION');
 
@@ -47,6 +48,9 @@ export function registerAllPipelineModules(): void {
 
   // UC-005: General Inquiry — Catch-All (ADR-132)
   registry.register(new GeneralInquiryModule());
+
+  // UC-006: Document & Financial Requests (ADR-145)
+  registry.register(new DocumentRequestModule());
 
   initialized = true;
 

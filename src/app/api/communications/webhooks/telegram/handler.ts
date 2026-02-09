@@ -12,7 +12,7 @@
  * @enterprise ADR-029 - Omnichannel Conversation Model
  */
 
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse, after } from 'next/server';
 import { isFirebaseAvailable } from './firebase/availability';
 import { processMessage } from './message/process-message';
 import { handleCallbackQuery } from './message/callback-query';
@@ -254,6 +254,27 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     console.log('📦 Processing webhook data...');
 
     await processTelegramUpdate(webhookData);
+
+    // ── ADR-134: Trigger AI pipeline worker after response ──
+    // Same pattern as Mailgun webhook: "Respond Fast, Process After"
+    // Runs processAIPipelineBatch() after the 200 response is sent to Telegram.
+    const messageText = webhookData.message?.text ?? '';
+    const isBotCommand = messageText.startsWith('/');
+    if (!isBotCommand && messageText.trim().length > 0 && isFirebaseAvailable()) {
+      after(async () => {
+        try {
+          const { processAIPipelineBatch } = await import(
+            '@/server/ai/workers/ai-pipeline-worker'
+          );
+          const result = await processAIPipelineBatch();
+          console.log(`🤖 [Telegram→Pipeline] after(): batch processed=${result.processed}, failed=${result.failed}`);
+        } catch (error) {
+          // Non-fatal: daily cron will retry pipeline items
+          console.warn('[Telegram→Pipeline] after(): pipeline batch failed (cron will retry)',
+            error instanceof Error ? error.message : String(error));
+        }
+      });
+    }
 
     return NextResponse.json({ ok: true });
 
