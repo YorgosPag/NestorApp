@@ -278,6 +278,181 @@ export async function listContacts(
 }
 
 // ============================================================================
+// GET CONTACT BY ID (ADR-145: UC-016)
+// ============================================================================
+
+/**
+ * Fetch a single contact by Firestore document ID.
+ *
+ * @param contactId - Firestore document ID
+ * @returns ContactNameSearchResult or null if not found
+ */
+export async function getContactById(
+  contactId: string
+): Promise<ContactNameSearchResult | null> {
+  const adminDb = getAdminFirestore();
+
+  try {
+    const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
+    const snap = await docRef.get();
+
+    if (!snap.exists) return null;
+
+    const data = snap.data()!;
+
+    const displayName = (data.displayName as string) ?? '';
+    const firstName = (data.firstName as string) ?? '';
+    const lastName = (data.lastName as string) ?? '';
+    const companyName = (data.companyName as string) ?? '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ');
+
+    // Extract primary email
+    let email: string | null = null;
+    const emails = data.emails as Array<{ email?: string }> | undefined;
+    if (emails && emails.length > 0) {
+      email = (emails[0].email as string) ?? null;
+    } else if (data.email) {
+      email = data.email as string;
+    }
+
+    // Extract primary phone
+    let phone: string | null = null;
+    const phones = data.phones as Array<{ phone?: string; number?: string }> | undefined;
+    if (phones && phones.length > 0) {
+      phone = (phones[0].phone ?? phones[0].number ?? null) as string | null;
+    } else if (data.phone) {
+      phone = data.phone as string;
+    }
+
+    return {
+      contactId: snap.id,
+      name: displayName || fullName || companyName || 'Χωρίς όνομα',
+      email,
+      phone,
+      company: companyName || null,
+      type: (data.type as string) ?? (data.contactType as string) ?? null,
+    };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.warn('getContactById failed', { contactId, error: msg });
+    return null;
+  }
+}
+
+// ============================================================================
+// UPDATE CONTACT FIELD (ADR-145: UC-016)
+// ============================================================================
+
+/** Fields that are stored as arrays in Firestore (support arrayUnion) */
+const ARRAY_FIELDS: ReadonlySet<string> = new Set(['phone', 'email']);
+
+/**
+ * Update a single field on a contact document.
+ *
+ * - Array fields (phone, email): uses `FieldValue.arrayUnion()` — adds without overwrite
+ * - Scalar fields (vatNumber, profession, etc.): direct `.update({ [field]: value })`
+ *
+ * Always updates `updatedAt` and `lastModifiedBy`.
+ *
+ * @param contactId - Firestore document ID
+ * @param field - Canonical field name (e.g., 'phone', 'vatNumber', 'profession')
+ * @param value - The value to set/add
+ * @param updatedBy - Admin display name for audit trail
+ */
+export async function updateContactField(
+  contactId: string,
+  field: string,
+  value: string,
+  updatedBy: string
+): Promise<void> {
+  const adminDb = getAdminFirestore();
+  const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
+
+  const isArray = ARRAY_FIELDS.has(field);
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+    lastModifiedBy: updatedBy,
+  };
+
+  if (isArray) {
+    if (field === 'phone') {
+      updateData['phones'] = FieldValue.arrayUnion({
+        number: value,
+        type: 'mobile',
+        isPrimary: false,
+      });
+    } else if (field === 'email') {
+      updateData['emails'] = FieldValue.arrayUnion({
+        email: value.toLowerCase().trim(),
+        type: 'work',
+        isPrimary: false,
+      });
+    }
+  } else {
+    // Scalar field — direct set
+    updateData[field] = value;
+  }
+
+  await docRef.update(updateData);
+
+  logger.info('Contact field updated', {
+    contactId,
+    field,
+    isArray,
+    updatedBy,
+  });
+}
+
+/**
+ * Get a contact's missing fields for the smart confirmation checklist.
+ *
+ * @param contactId - Firestore document ID
+ * @param contactType - 'individual' | 'company'
+ * @returns Array of field labels that are missing/empty
+ */
+export async function getContactMissingFields(
+  contactId: string,
+  contactType: 'individual' | 'company'
+): Promise<string[]> {
+  const adminDb = getAdminFirestore();
+  const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
+  const snap = await docRef.get();
+
+  if (!snap.exists) return [];
+
+  const data = snap.data()!;
+  const missing: string[] = [];
+
+  // Common fields
+  const phones = data.phones as Array<Record<string, unknown>> | undefined;
+  if (!phones || phones.length === 0) missing.push('Τηλέφωνο');
+
+  const emails = data.emails as Array<Record<string, unknown>> | undefined;
+  if (!emails || emails.length === 0) missing.push('Email');
+
+  if (!data.vatNumber) missing.push('ΑΦΜ');
+
+  if (!data.address && (!data.addresses || (data.addresses as Array<unknown>).length === 0)) {
+    missing.push('Διεύθυνση');
+  }
+
+  if (contactType === 'individual') {
+    if (!data.profession) missing.push('Επάγγελμα');
+    if (!data.fatherName) missing.push('Πατρώνυμο');
+    if (!data.birthDate) missing.push('Ημερομηνία γέννησης');
+    if (!data.taxOffice) missing.push('ΔΟΥ');
+  } else {
+    // Company-specific fields
+    if (!data.registrationNumber) missing.push('Αριθμός ΓΕΜΗ');
+    if (!data.legalForm) missing.push('Νομική μορφή');
+    if (!data.taxOffice) missing.push('ΔΟΥ');
+  }
+
+  return missing;
+}
+
+// ============================================================================
 // CREATE CONTACT SERVER-SIDE (ADR-145: UC-015)
 // ============================================================================
 

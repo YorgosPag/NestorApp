@@ -110,6 +110,7 @@ ADMIN INTENT TYPES (choose the most specific match):
 - admin_send_email: Send an email to someone (στείλε email, στείλε μήνυμα σε)
 - admin_unit_stats: Business statistics and counts — units, contacts, projects (πόσα ακίνητα, πόσες επαφές, πόσα έργα, στατιστικά, πωλήσεις, αριθμός). Use this for ANY "how many" / "πόσα/πόσες/πόσοι" questions.
 - admin_create_contact: Create a new contact (δημιούργησε επαφή, πρόσθεσε επαφή, νέα επαφή, κάνε νέα επαφή, φτιάξε επαφή). Extract: contactName (full name), email, phone, contactType (individual/company).
+- admin_update_contact: Update/add a field to an existing contact (πρόσθεσε τηλέφωνο, βάλε ΑΦΜ, άλλαξε email, επάγγελμα, πατρώνυμο, ΔΟΥ, διεύθυνση, ΓΕΜΗ, νομική μορφή, εργοδότης, θέση). Keywords: πρόσθεσε, βάλε, άλλαξε, ενημέρωσε, update, set. Extract: contactName (may be empty if context), fieldName, fieldValue.
 - general_inquiry: Command that doesn't fit the above categories
 
 ENTITY EXTRACTION RULES:
@@ -117,6 +118,7 @@ ENTITY EXTRACTION RULES:
 - For admin_project_status: Extract the project name in the "projectName" entity field
 - For admin_send_email: Extract recipient name in "recipientName", email content in "emailContent" entity fields
 - For admin_create_contact: Extract full name in "contactName", email address in "email", phone number in "phone". If the contact is a company, set "contactType" to "company", otherwise "individual". If no type is specified, default to "individual".
+- For admin_update_contact: Extract contact name in "contactName" (may be empty if user relies on context), the field keyword in "fieldName" (e.g., "τηλέφωνο", "ΑΦΜ", "email"), and the value in "fieldValue".
 - For admin_unit_stats: Extract project name in "projectName" if specified (otherwise means all projects)
 
 RULES:

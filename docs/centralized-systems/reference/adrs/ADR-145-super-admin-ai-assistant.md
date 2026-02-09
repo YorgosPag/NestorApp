@@ -126,7 +126,8 @@ interface AdminCommandMeta {
 | `admin_project_status` | UC-011 | Κατάσταση έργου + στατιστικά units |
 | `admin_send_email` | UC-012 | Αποστολή email σε επαφή |
 | `admin_unit_stats` | UC-013 | Στατιστικά ακινήτων (πωλημένα/διαθέσιμα/δεσμευμένα) |
-| `admin_create_contact` | UC-015 | Δημιουργία νέας επαφής |
+| `admin_create_contact` | UC-015 | Δημιουργία νέας επαφής (+ smart confirmation) |
+| `admin_update_contact` | UC-016 | Ενημέρωση στοιχείων επαφής (Secretary Mode) |
 | _(no intent match)_ | UC-014 | Fallback — help text με διαθέσιμες εντολές |
 
 ### 3.5 Auto-Approve Logic
@@ -196,16 +197,37 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 - **Acknowledge**: Format stats per type → send via channel
 - **autoApprovable**: `true`
 
-### UC-015: Admin Create Contact
+### UC-015: Admin Create Contact (+ Smart Confirmation)
 
 - **Intents**: `admin_create_contact`
 - **Trigger**: "Δημιούργησε επαφή Νέστορας Παγώνης, nestoras@gmail.com"
 - **Lookup**: Parse name → firstName + lastName, duplicate check by email via `findContactByEmail()`
 - **Execute**: `createContactServerSide()` — Admin SDK → Firestore contacts collection
 - **Duplicate Detection**: If email already exists → notify admin, no new contact created
-- **Acknowledge**: "Η επαφή δημιουργήθηκε: {name} (ID: xxx)" via channel
+- **Smart Confirmation**: Μετά τη δημιουργία, εμφανίζει:
+  - Ποια στοιχεία λείπουν (τηλέφωνο, ΑΦΜ, επάγγελμα, κλπ.)
+  - Προτεινόμενες εντολές: `"Πρόσθεσε τηλέφωνο 69... στον Νέστορα"`
+- **Session Write**: Γράφει `AdminSession` → ώστε follow-up χωρίς όνομα να ξέρει ποια επαφή
 - **autoApprovable**: `true`
-- **Side Effects**: Firestore write (new contact document)
+- **Side Effects**: Firestore write (contact + admin session)
+
+### UC-016: Admin Update Contact (Secretary Mode)
+
+- **Intents**: `admin_update_contact`
+- **Trigger**: "Πρόσθεσε τηλέφωνο 6971234567 στον Νέστορα", "Βάλε ΑΦΜ 123456789", "Επάγγελμα: Μηχανικός"
+- **Field Detection**: Keyword-to-field mapping (12 πεδία: phone, email, vatNumber, profession, birthDate, fatherName, taxOffice, address, registrationNumber, legalForm, employer, position)
+- **Contact Resolution**:
+  1. Parse name → `findContactByName()` (1 result → proceed, 2+ → disambiguation)
+  2. No name → `getAdminSession()` → χρησιμοποιεί τελευταία δημιουργημένη/ενημερωμένη επαφή
+  3. Session expired/missing → ζητάει όνομα
+- **Firestore Update**:
+  - Array fields (phone, email): `FieldValue.arrayUnion()` — προσθέτει χωρίς overwrite
+  - Scalar fields: direct `.update({ [field]: value })`
+  - Πάντα: `updatedAt`, `lastModifiedBy`
+- **Smart Acknowledgment**: Εμφανίζει υπόλοιπα ελλιπή στοιχεία μετά την ενημέρωση
+- **Session Update**: Ανανεώνει session μετά το update
+- **autoApprovable**: `true`
+- **Side Effects**: Firestore write (contact update + admin session)
 
 ### UC-014: Admin Fallback
 
@@ -251,6 +273,47 @@ export async function createContactServerSide(
 - All optional fields use `?? null` (Firestore rejects undefined)
 - Returns: contactId + displayName
 
+### updateContactField() — Contact Field Update (UC-016)
+
+**Αρχείο**: `src/services/ai-pipeline/shared/contact-lookup.ts`
+
+```typescript
+export async function updateContactField(
+  contactId: string, field: string, value: string, updatedBy: string
+): Promise<void>
+```
+
+- Array fields (phone, email): `FieldValue.arrayUnion()` — adds without overwrite
+- Scalar fields (vatNumber, profession, etc.): direct `.update()`
+- Always: `updatedAt`, `lastModifiedBy` audit trail
+
+### getContactMissingFields() — Missing Fields Checklist
+
+```typescript
+export async function getContactMissingFields(
+  contactId: string, contactType: 'individual' | 'company'
+): Promise<string[]>
+```
+
+- Returns Greek labels of empty/missing fields
+- Used by UC-015 (smart confirmation) and UC-016 (remaining fields after update)
+
+### Admin Session (Conversational Context)
+
+**Αρχείο**: `src/services/ai-pipeline/shared/admin-session.ts`
+**Firestore path**: `settings/admin_sessions/sessions/{adminIdentifier}`
+
+```typescript
+interface AdminSession {
+  lastAction: { type: 'create_contact' | 'update_contact'; contactId: string; contactName: string; timestamp: string } | null;
+  expiresAt: string; // TTL 10 λεπτά
+}
+```
+
+- `getAdminSession()` — read, return null if expired
+- `setAdminSession()` — write/update
+- `buildAdminIdentifier()` — builds key from channel + sender info
+
 ---
 
 ## 6. Intent → Module Coverage (After ADR-145)
@@ -270,15 +333,16 @@ export async function createContactServerSide(
 | `admin_send_email` | UC-012 | ✅ **NEW** (ADR-145) |
 | `admin_unit_stats` | UC-013 | ✅ **NEW** (ADR-145) |
 | `admin_create_contact` | UC-015 | ✅ **NEW** (ADR-145) |
+| `admin_update_contact` | UC-016 | ✅ **NEW** (ADR-145 — Secretary Mode) |
 | _(admin fallback)_ | UC-014 | ✅ **NEW** (ADR-145) |
 
-**13 intents με module** + 1 admin fallback.
+**14 intents με module** + 1 admin fallback.
 
 ---
 
 ## 7. Files Changed
 
-### New Files (15)
+### New Files (18)
 
 | # | Αρχείο | Σκοπός |
 |---|--------|--------|
@@ -297,6 +361,9 @@ export async function createContactServerSide(
 | 13 | `src/services/ai-pipeline/modules/uc-014-admin-fallback/index.ts` | Barrel |
 | 14 | `src/services/ai-pipeline/modules/uc-015-admin-create-contact/admin-create-contact-module.ts` | UC-015 |
 | 15 | `src/services/ai-pipeline/modules/uc-015-admin-create-contact/index.ts` | Barrel |
+| 16 | `src/services/ai-pipeline/modules/uc-016-admin-update-contact/admin-update-contact-module.ts` | UC-016 (Secretary Mode) |
+| 17 | `src/services/ai-pipeline/modules/uc-016-admin-update-contact/index.ts` | Barrel |
+| 18 | `src/services/ai-pipeline/shared/admin-session.ts` | Admin session (conversational context) |
 
 ### Modified Files (15)
 
@@ -397,7 +464,8 @@ export async function createContactServerSide(
 - [x] ~~Run seed script with real Telegram user IDs~~ — Done (Γιώργος Παγώνης = 5618410820)
 - [ ] End-to-end production testing (remaining commands)
 - [x] ~~UC-015: Admin Create Contact~~ — Done (2026-02-09)
-- [ ] UC-016+: More admin commands (appointment management, notification preferences)
+- [x] ~~UC-016: Admin Update Contact (Secretary Mode)~~ — Done (2026-02-09)
+- [ ] UC-017+: More admin commands (appointment management, notification preferences)
 - [ ] Viber/WhatsApp channel support (when adapters are added)
 
 ---
@@ -415,6 +483,9 @@ export async function createContactServerSide(
 | 2026-02-09 | Feat: UC-010 list mode — "ποιες επαφές" → listContacts() with type filter (individual/company) | Claude Code |
 | 2026-02-09 | AI prompt: admin_contact_search covers name search + list contacts; admin_unit_stats covers all "πόσα" questions | Claude Code |
 | 2026-02-09 | UC-015: Admin Create Contact — δημιουργία επαφών via admin command, duplicate detection by email, createContactServerSide() | Claude Code |
+| 2026-02-09 | UC-015 Enhancement: Smart Confirmation — ελλιπή στοιχεία checklist + suggested commands μετά δημιουργία | Claude Code |
+| 2026-02-09 | UC-016: Admin Update Contact (Secretary Mode) — keyword-to-field mapping, session context, updateContactField(), getContactMissingFields() | Claude Code |
+| 2026-02-09 | Admin Session: Lightweight conversational context (Firestore, 10-min TTL) — enables follow-up commands χωρίς explicit contact name | Claude Code |
 
 ---
 

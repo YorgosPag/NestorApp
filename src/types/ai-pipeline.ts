@@ -96,6 +96,7 @@ export const PipelineIntentType = {
   ADMIN_SEND_EMAIL: 'admin_send_email',
   ADMIN_UNIT_STATS: 'admin_unit_stats',
   ADMIN_CREATE_CONTACT: 'admin_create_contact',
+  ADMIN_UPDATE_CONTACT: 'admin_update_contact',
 } as const;
 
 export type PipelineIntentTypeValue = typeof PipelineIntentType[keyof typeof PipelineIntentType];

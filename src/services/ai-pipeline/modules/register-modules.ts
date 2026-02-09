@@ -27,6 +27,7 @@ import { AdminProjectStatusModule } from './uc-011-admin-project-status';
 import { AdminSendEmailModule } from './uc-012-admin-send-email';
 import { AdminUnitStatsModule } from './uc-013-admin-unit-stats';
 import { AdminCreateContactModule } from './uc-015-admin-create-contact';
+import { AdminUpdateContactModule } from './uc-016-admin-update-contact';
 
 const logger = createModuleLogger('PIPELINE_MODULE_REGISTRATION');
 
@@ -74,6 +75,9 @@ export function registerAllPipelineModules(): void {
 
   // UC-015: Admin Create Contact
   registry.register(new AdminCreateContactModule());
+
+  // UC-016: Admin Update Contact (Secretary Mode)
+  registry.register(new AdminUpdateContactModule());
 
   // UC-014: Admin Fallback — NOT registered here (no global intent mapping)
   // It is invoked explicitly by the pipeline worker for admin messages

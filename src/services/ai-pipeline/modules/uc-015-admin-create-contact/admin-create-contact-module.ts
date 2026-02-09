@@ -17,10 +17,12 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
   findContactByEmail,
   createContactServerSide,
+  getContactMissingFields,
   type ContactMatch,
   type CreateContactParams,
 } from '../../shared/contact-lookup';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { setAdminSession, buildAdminIdentifier } from '../../shared/admin-session';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -227,8 +229,41 @@ export class AdminCreateContactModule implements IUCModule {
         displayName: result.displayName,
       });
 
-      // Confirm to admin via their channel
-      const confirmText = `Η επαφή δημιουργήθηκε: ${result.displayName}${email ? ` (${email})` : ''} — ID: ${result.contactId}`;
+      // ── Smart Confirmation: Show missing fields + suggested commands ──
+      const missingFields = await getContactMissingFields(
+        result.contactId,
+        contactType === 'company' ? 'company' : 'individual'
+      );
+
+      const confirmLines: string[] = [
+        `✅ Η επαφή δημιουργήθηκε: ${result.displayName}${email ? ` (${email})` : ''} — ID: ${result.contactId}`,
+      ];
+
+      if (missingFields.length > 0) {
+        confirmLines.push('');
+        confirmLines.push('📋 Ελλιπή στοιχεία:');
+        for (const field of missingFields) {
+          confirmLines.push(`  • ${field}`);
+        }
+        confirmLines.push('');
+        confirmLines.push('Μπορείτε να συμπληρώσετε:');
+        // Show contextual examples based on missing fields
+        const firstName = createParams.firstName || result.displayName.split(' ')[0];
+        if (missingFields.includes('Τηλέφωνο')) {
+          confirmLines.push(`  "Πρόσθεσε τηλέφωνο 69... στον ${firstName}"`);
+        }
+        if (missingFields.includes('ΑΦΜ')) {
+          confirmLines.push(`  "Βάλε ΑΦΜ 123456789 στον ${firstName}"`);
+        }
+        if (missingFields.includes('Επάγγελμα')) {
+          confirmLines.push(`  "Επάγγελμα ${firstName}: Μηχανικός"`);
+        }
+        if (missingFields.includes('Διεύθυνση')) {
+          confirmLines.push(`  "Διεύθυνση ${firstName}: Ερμού 10, Αθήνα"`);
+        }
+      }
+
+      const confirmText = confirmLines.join('\n');
 
       const confirmResult = await sendChannelReply({
         channel: ctx.intake.channel,
@@ -242,6 +277,18 @@ export class AdminCreateContactModule implements IUCModule {
       if (confirmResult.success) {
         sideEffects.push(`confirm_sent:${confirmResult.messageId ?? 'unknown'}`);
       }
+
+      // ── Write admin session for conversational context ──
+      const adminIdentifier = buildAdminIdentifier(
+        ctx.intake.channel,
+        ctx.intake.normalized.sender
+      );
+      await setAdminSession(adminIdentifier, {
+        type: 'create_contact',
+        contactId: result.contactId,
+        contactName: result.displayName,
+        timestamp: new Date().toISOString(),
+      });
 
       return { success: true, sideEffects };
     } catch (error) {
