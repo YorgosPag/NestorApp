@@ -157,8 +157,10 @@ const nextConfig = {
       );
     }
 
-    // Performance optimizations για production
-    if (!dev) {
+    // Performance optimizations για production — CLIENT-SIDE ONLY
+    // CRITICAL: Custom splitChunks must NOT apply to server bundles (API routes)
+    // because Webpack reorders modules → TDZ errors ("Cannot access 'f' before initialization")
+    if (!dev && !isServer) {
       config.optimization = {
         ...config.optimization,
         splitChunks: {
@@ -192,8 +194,10 @@ const nextConfig = {
         usedExports: true,
         sideEffects: false,
       };
+    }
 
-      // Minification optimizations
+    // Minification optimizations — applies to both client and server
+    if (!dev) {
       config.optimization.minimizer = config.optimization.minimizer.map(minimizer => {
         if (minimizer.constructor.name === 'TerserPlugin') {
           minimizer.options.terserOptions = {
