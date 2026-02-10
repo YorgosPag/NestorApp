@@ -172,12 +172,12 @@ export const getDynamicTopClass = (top?: string): string => {
   if (!top) return '';
 
   if (!isValidDimension(top)) {
-    console.warn(Invalid top provided to getDynamicTopClass: );
+    console.warn(`Invalid top provided to getDynamicTopClass: ${top}`);
     return '';
   }
 
   const topId = generateDimensionId(top);
-  const className = dynamic-top-;
+  const className = `dynamic-top-${topId}`;
 
   injectDynamicStyle(className, 'top', top);
 
@@ -194,12 +194,12 @@ export const getDynamicOpacityClass = (opacity?: number): string => {
   if (opacity === undefined || opacity === null) return '';
 
   if (opacity < 0 || opacity > 1) {
-    console.warn(Invalid opacity provided to getDynamicOpacityClass: );
+    console.warn(`Invalid opacity provided to getDynamicOpacityClass: ${opacity}`);
     return '';
   }
 
   const opacityId = Math.round(opacity * 100);
-  const className = dynamic-opacity-;
+  const className = `dynamic-opacity-${opacityId}`;
 
   injectDynamicStyle(className, 'opacity', opacity.toString());
 

@@ -13,12 +13,6 @@ import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-ente
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/subapps/accounting/utils/format';
 
-    } else if (amount >= 1000) {
-      return `€${(amount / 1000).toFixed(0)}K`;
-    }
-    return `€${amount.toLocaleString('el-GR')}`;
-};
-
 interface PropertyDashboardProps {
   stats: PropertyStats;
 }

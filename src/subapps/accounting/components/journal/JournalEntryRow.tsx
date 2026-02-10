@@ -14,8 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { JournalEntry } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -33,17 +32,6 @@ const TYPE_BADGE_VARIANTS = {
   income: 'default',
   expense: 'destructive',
 } as const satisfies Record<string, 'default' | 'destructive'>;
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-const formatDate = (iso: string): string =>
-  new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
 
 // ============================================================================
 // COMPONENT

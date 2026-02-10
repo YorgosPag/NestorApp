@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { EFKAPayment, EFKAPaymentStatus } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -45,18 +45,6 @@ const PAYMENT_STATUS_VARIANTS: Record<
   overdue: 'destructive',
   keao: 'destructive',
 };
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
-}
 
 // ============================================================================
 // COMPONENT

@@ -22,7 +22,6 @@ import type { JournalEntry } from '@/subapps/accounting/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { JournalEntryRow } from './JournalEntryRow';
 import { formatCurrency } from '../../utils/format';
-import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
