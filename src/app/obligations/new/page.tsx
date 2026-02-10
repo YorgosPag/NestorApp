@@ -87,7 +87,7 @@ export default function NewObligationPage() {
   const [formData, setFormData] = useState<ObligationFormData>({
     title: "",
     projectName: "",
-    contractorCompany: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.", // 🔧 ΔΙΟΡΘΩΣΗ: Σωστή εταιρική ονομασία
+    contractorCompany: "",
     owners: [{ id: "1", name: "", share: 100 }],
     projectDetails: {
       location: "",

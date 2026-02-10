@@ -5,7 +5,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { FieldUpdate } from '../types';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BasicInfoFieldsProps {
   isEditing: boolean;

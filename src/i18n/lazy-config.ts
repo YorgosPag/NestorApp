@@ -32,6 +32,7 @@ export const SUPPORTED_NAMESPACES = [
   'auth',
   'dashboard',
   'projects',
+  'obligations', // ?? Obligations module (obligations/new, live preview, PDF export)
   'toolbars',
   'compositions',
   'tasks',
@@ -113,6 +114,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'projects':
           translations = await import('./locales/el/projects.json');
+          break;
+        case 'obligations':
+          translations = await import('./locales/el/obligations.json');
           break;
         case 'toolbars':
           translations = await import('./locales/el/toolbars.json');
@@ -210,6 +214,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'projects':
           translations = await import('./locales/en/projects.json');
+          break;
+        case 'obligations':
+          translations = await import('./locales/en/obligations.json');
           break;
         case 'toolbars':
           translations = await import('./locales/en/toolbars.json');

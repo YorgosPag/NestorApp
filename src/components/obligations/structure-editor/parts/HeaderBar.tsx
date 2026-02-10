@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Plus } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface HeaderBarProps {
   sectionsCount: number;

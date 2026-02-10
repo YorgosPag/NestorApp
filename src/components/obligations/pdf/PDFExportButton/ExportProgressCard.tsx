@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ExportProgressCardProps {
   progress: number;

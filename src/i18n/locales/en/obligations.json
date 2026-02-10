@@ -54,7 +54,9 @@
     "sections": "sections"
   },
   "structure": {
-    "title": "Structure & Content"
+    "title": "Structure & Content",
+    "sectionCount": "{count, plural, =0 {No sections} one {# section} other {# sections}}",
+    "newSection": "New section"
   },
   "preview": {
     "title": "Preview",

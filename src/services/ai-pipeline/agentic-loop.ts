@@ -458,22 +458,57 @@ export async function executeAgenticLoop(
 /**
  * Phase 6B: Extract [SUGGESTIONS] block from AI response.
  * Returns clean answer (without the block) and parsed suggestion strings.
- * Graceful: if no block found, returns original text with empty suggestions.
+ *
+ * Handles two cases:
+ *   1. With closing tag: [SUGGESTIONS]...[/SUGGESTIONS]
+ *   2. Without closing tag: [SUGGESTIONS]... (to end of string)
+ *
+ * Also strips generic filler phrases ("Αν χρειάζεσαι...", "Μη διστάσεις..." etc.)
  */
 function extractSuggestions(rawAnswer: string): { cleanAnswer: string; suggestions: string[] } {
-  const regex = /\[SUGGESTIONS\]\n?([\s\S]*?)\[\/SUGGESTIONS\]/;
-  const match = rawAnswer.match(regex);
+  // Try with closing tag first, then without (AI often omits [/SUGGESTIONS])
+  const regexClosed = /\[SUGGESTIONS\]\n?([\s\S]*?)\[\/SUGGESTIONS\]/;
+  const regexOpen = /\[SUGGESTIONS\]\n?([\s\S]*)$/;
 
-  if (!match) return { cleanAnswer: rawAnswer, suggestions: [] };
+  const match = rawAnswer.match(regexClosed) ?? rawAnswer.match(regexOpen);
 
-  const cleanAnswer = rawAnswer.replace(regex, '').trim();
-  const suggestions = match[1]
-    .split('\n')
-    .map(s => s.trim())
-    .filter(s => s.length > 0 && s.length <= 40)
-    .slice(0, 3); // Max 3 suggestions
+  let cleanAnswer: string;
+  let suggestions: string[] = [];
+
+  if (match) {
+    cleanAnswer = rawAnswer.replace(match[0], '').trim();
+    suggestions = match[1]
+      .split('\n')
+      .map(s => s.trim())
+      .filter(s => s.length > 0 && s.length <= 40)
+      .slice(0, 3);
+  } else {
+    cleanAnswer = rawAnswer;
+  }
+
+  // Strip generic filler phrases the AI might still produce
+  cleanAnswer = stripGenericClosingPhrases(cleanAnswer);
 
   return { cleanAnswer, suggestions };
+}
+
+/** Remove filler phrases like "Αν χρειάζεσαι...", "Μη διστάσεις...", "Ενημέρωσέ με" */
+function stripGenericClosingPhrases(text: string): string {
+  const fillerPatterns = [
+    /\n*Αν χρειάζεσαι[^\n]*/gi,
+    /\n*Μη διστάσεις[^\n]*/gi,
+    /\n*Ενημέρωσέ με[^\n]*/gi,
+    /\n*Αν θέλεις περισσότερ[^\n]*/gi,
+    /\n*Μην διστάσεις[^\n]*/gi,
+    /\n*Είμαι εδώ για[^\n]*/gi,
+  ];
+
+  let cleaned = text;
+  for (const pattern of fillerPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  return cleaned.trim();
 }
 
 /**

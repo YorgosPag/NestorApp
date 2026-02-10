@@ -1,76 +1,50 @@
 {
-  "backupId": "backup-2026-02-10-adr172-console-logger-migration-complete",
-  "timestamp": "2026-02-10T23:59:00+02:00",
-  "category": "REFACTOR",
-  "shortDescription": "ADR-172: Complete console.log to enterprise Logger migration across all 13 scoped directories + TS error fixes",
-  "problem": "Hundreds of console.log/warn/error calls scattered across src/lib, src/config, src/core, src/auth, src/contexts, src/providers, src/i18n, src/adapters, src/schemas, src/constants, src/types, src/utils, src/api. Unstructured logging with no metadata, inconsistent formats, emoji-prefixed messages.",
-  "cause": "Legacy development logging pattern. ADR-172 mandates migration to enterprise Logger (createModuleLogger from @/lib/telemetry) for structured, configurable, production-grade logging.",
+  "category": "FEATURE",
+  "shortDescription": "ADR-173 Phase 6: Context-Aware Suggested Action Buttons",
+  "problem": "Κάθε AI απάντηση τελείωνε με γενική φράση 'Αν χρειάζεσαι περισσότερες πληροφορίες, ενημέρωσέ με!' - κακό UX, μονότονο, μη actionable",
+  "cause": "Δεν υπήρχε μηχανισμός context-aware suggested follow-ups στο AI pipeline",
   "filesChanged": [
-    "src/lib/ (20 files migrated)",
-    "src/config/ (15 files migrated)",
-    "src/core/ (11 files migrated)",
-    "src/auth/ (5 files migrated)",
-    "src/contexts/ (5 files migrated)",
-    "src/providers/ (2 files migrated)",
-    "src/i18n/ (4 files migrated)",
-    "src/adapters/ (2 files migrated)",
-    "src/utils/ (14 files migrated)",
-    "src/api/ (2 files migrated)",
-    "src/types/ (3 files migrated)",
-    "src/features/ (24 files migrated)",
-    "src/components/ (19 files migrated)",
-    "src/services/ (5 files migrated)",
-    "src/hooks/ (2 files migrated)",
-    "src/app/api/ (6 files migrated)"
+    "src/services/ai-pipeline/agentic-loop.ts",
+    "src/services/ai-pipeline/feedback-keyboard.ts",
+    "src/services/ai-pipeline/feedback-service.ts",
+    "src/services/ai-pipeline/pipeline-orchestrator.ts",
+    "src/services/ai-pipeline/index.ts",
+    "src/app/api/communications/webhooks/telegram/message/callback-query.ts",
+    "src/app/api/communications/webhooks/telegram/handler.ts",
+    "docs/centralized-systems/reference/adrs/ADR-173-ai-self-improvement-system.md"
   ],
   "solution": {
-    "phase1_lib_config_core": "Migrated 46 files across src/lib, src/config, src/core — all console calls to logger.info/warn/error with structured metadata",
-    "phase2_auth_types_api_adapters": "Migrated 12 files across src/auth, src/types, src/api, src/adapters",
-    "phase3_contexts_providers_i18n": "Migrated 11 files across src/contexts, src/providers, src/i18n",
-    "phase4_utils": "Migrated 14 files across src/utils — including complex formDataMapper, photo-urls, data-cleaning",
-    "phase5_ts_error_fixes": "Fixed all TypeScript TS2345/TS2554 errors — wrapped string/array/interface metadata in Record<string, unknown> objects"
+    "phase6A": "System prompt update - 2 νέοι κανόνες: ban γενικές φράσεις + [SUGGESTIONS] block format",
+    "phase6B": "extractSuggestions() parser + AgenticResult.suggestions field",
+    "phase6C": "createSuggestedActionsKeyboard() + isSuggestionCallback/parseSuggestionCallback",
+    "phase6D": "suggestedActions field in FeedbackSnapshot + getSuggestedActions() method",
+    "phase6E": "Pipeline orchestrator sends suggestions keyboard between AI answer and feedback",
+    "phase6F": "Suggestion callback handler + pipeline re-feed via feedSuggestionToPipeline()"
   },
   "testing": {
     "typescript": "npx tsc --noEmit: 0 new errors (3 pre-existing in obligations/design-system/geo-canvas)",
     "preCommit": "Pre-commit checks passed",
-    "deployment": "Pushed to main for Vercel auto-deployment",
-    "grepVerification": "Final grep across all 13 directories confirmed 0 remaining console.log/warn/error calls (except Logger.ts itself and documentation files)"
+    "deployment": "Pushed to main for Vercel auto-deployment"
   },
   "notes": [
-    "148 files changed, 1214 insertions, 964 deletions",
-    "All 13 scoped directories fully migrated to enterprise Logger",
-    "Skipped files: Logger.ts (is the logger), JSDoc examples, markdown docs, commented-out code",
-    "console.debug calls left as-is (not in migration scope)",
-    "TypeScript compilation errors fixed by wrapping non-object metadata in {key: value} objects",
-    "Logger signature: info/warn/error(message: string, metadata?: Record<string, unknown>)",
-    "Zero use of 'any' type — all enterprise TypeScript"
+    "Message order: [1] AI Answer (clean), [2] Suggested Actions buttons, [3] Feedback (👍/👎)",
+    "Clicking suggestion re-feeds as new message through full pipeline with chat history context",
+    "Callback format: sa:{index}:{feedbackDocId} (fits 64-byte Telegram limit)",
+    "Graceful fallback: if AI doesn't include [SUGGESTIONS] block, no crash - empty suggestions",
+    "8 files changed, +309 insertions, -15 deletions"
   ],
   "contributors": {
-    "user": "Georgios Pagonis",
-    "assistant": "Claude Opus 4.6 (Anthropic)",
+    "user": "Γιώργος Παγώνης",
+    "assistant": "Claude Opus 4.6",
     "sessionDate": "2026-02-10"
   },
   "relatedBackups": [
-    "backup-2026-02-10-adr173-ai-self-improvement-hardening",
-    "backup-2026-02-10-adr172-phase2-massive-remediation"
+    "backup-2026-02-10-adr173-ai-self-improvement-hardening"
   ],
   "commits": [
     {
-      "hash": "f49e5ed1",
-      "message": "refactor(ADR-172): complete console.log to Logger migration across all 13 scoped directories",
-      "files": 148,
-      "insertions": 1214,
-      "deletions": 964
+      "hash": "9ec8b595",
+      "message": "feat(ADR-173): Phase 6 — context-aware suggested action buttons for AI responses"
     }
-  ],
-  "statistics": {
-    "filesChanged": 148,
-    "totalInsertions": 1214,
-    "totalDeletions": 964,
-    "directoriesMigrated": 13,
-    "commitsInBackup": 1,
-    "phases": 5,
-    "tsErrorsFixed": 8,
-    "preExistingErrors": 3
-  }
+  ]
 }

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { cn } from "@/lib/utils";

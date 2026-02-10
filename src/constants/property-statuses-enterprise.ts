@@ -313,9 +313,9 @@ export type OperationalStatusValue = keyof typeof OPERATIONAL_STATUS_LABELS;
 // Obligation status labels (migrated from StatusConstants.ts - labels only)
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const OBLIGATION_STATUS_LABELS = {
-  draft: 'common.documentStatus.draft',
-  completed: 'common.documentStatus.completed',
-  approved: 'common.documentStatus.approved'
+  draft: 'common:documentStatus.draft',
+  completed: 'common:documentStatus.completed',
+  approved: 'common:documentStatus.approved'
 } as const;
 
 // Obligation status label getter function (migrated)

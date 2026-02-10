@@ -54,7 +54,9 @@
     "sections": "ενότητες"
   },
   "structure": {
-    "title": "Δομή & Περιεχόμενο"
+    "title": "Δομή & Περιεχόμενο",
+    "sectionCount": "{count, plural, =0 {Καμία ενότητα} one {# ενότητα} other {# ενότητες}}",
+    "newSection": "Νέα ενότητα"
   },
   "preview": {
     "title": "Προεπισκόπηση",

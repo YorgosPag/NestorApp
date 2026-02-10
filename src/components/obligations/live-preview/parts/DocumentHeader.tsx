@@ -20,6 +20,8 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('obligations');
+  const statusKeyOrValue = getObligationStatusLabel(doc.status || "draft");
+  const statusLabel = statusKeyOrValue.includes(':') ? t(statusKeyOrValue) : statusKeyOrValue;
 
   return (
     <div className="text-center space-y-4 p-8 border-b bg-muted/30">
@@ -101,7 +103,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         <div>
           {t('documentHeader.fields.status')}{" "}
           <Badge variant="outline">
-            {getObligationStatusLabel(doc.status || "draft")}
+            {statusLabel}
           </Badge>
         </div>
         <div>{formatDate(doc.updatedAt || new Date())}</div>
