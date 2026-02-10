@@ -496,11 +496,15 @@ function extractSuggestions(rawAnswer: string): { cleanAnswer: string; suggestio
 function stripGenericClosingPhrases(text: string): string {
   const fillerPatterns = [
     /\n*Αν χρειάζεσαι[^\n]*/gi,
+    /\n*Εάν χρειάζεσαι[^\n]*/gi,
     /\n*Μη διστάσεις[^\n]*/gi,
+    /\n*Μην διστάσεις[^\n]*/gi,
     /\n*Ενημέρωσέ με[^\n]*/gi,
     /\n*Αν θέλεις περισσότερ[^\n]*/gi,
-    /\n*Μην διστάσεις[^\n]*/gi,
+    /\n*Εάν θέλεις περισσότερ[^\n]*/gi,
     /\n*Είμαι εδώ για[^\n]*/gi,
+    /\n*Πώς μπορώ να σε εξυπηρετήσω[^\n]*/gi,
+    /\n*Θα μπορούσες να ελέγξεις[^\n]*/gi,
   ];
 
   let cleaned = text;
