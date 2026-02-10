@@ -108,7 +108,7 @@ ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents o
 
 - admin_contact_search: Any request to FIND, VIEW, LIST, or CHECK contacts/people/companies in the system. Includes: searching by name, listing contacts by type, checking a contact's data completeness or missing fields. Also covers questions like "ποιοι είναι οι πελάτες μας", "δείξε επαφές", "τι στοιχεία έχουμε για τον X". If a specific name is given, extract it in contactName. If listing all, set contactName to empty string. IMPORTANT: Questions about a SPECIFIC contact's data/fields → this intent, NOT admin_unit_stats.
 
-- admin_project_status: Any question about a CONSTRUCTION PROJECT — its progress, status, timeline, updates, problems, what's happening. Covers: "τι γίνεται με το έργο", "πώς πάει η κατασκευή", "πρόοδος", "καθυστερήσεις".
+- admin_project_status: Any question about CONSTRUCTION PROJECTS — single project status, listing all projects, or searching by criteria. Covers BOTH: single-project queries ("τι γίνεται με το έργο Πανόραμα") AND multi-project queries ("ποια έργα έχουν gantt", "πόσα έργα σε εξέλιξη", "δείξε μου τα ολοκληρωμένα", "σε ποια έργα υπάρχει gantt/χρονοδιάγραμμα"). Use this for ANY question about projects, progress, timelines, Gantt charts, or construction status.
 
 - admin_send_email: Any request to SEND a message/email to someone. Covers: "στείλε email", "στείλε μήνυμα", "γράψε στον X ότι...".
 
@@ -132,7 +132,7 @@ ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents o
 
 ENTITY EXTRACTION RULES:
 - For admin_contact_search: Extract person name in "contactName" (empty string if listing all). Extract "contactType" as "individual" or "company" if specified.
-- For admin_project_status: Extract the project name in "projectName"
+- For admin_project_status: Extract "projectName" if asking about ONE specific project (null if asking about many/all). Extract "searchCriteria" if filtering by feature/status (e.g., "gantt", "completed", "σε εξέλιξη").
 - For admin_send_email: Extract "recipientName" and "emailContent"
 - For admin_create_contact: Extract "contactName", "email", "phone", "contactType" (default: "individual")
 - For admin_update_contact: Extract "contactName", "fieldName" (e.g., "phone", "email", "vatNumber", "idNumber", "profession"), "fieldValue" (empty if removing)
@@ -188,7 +188,7 @@ const EXTRACTED_ADMIN_ENTITIES_SCHEMA = {
     // Base fields (same as EXTRACTED_ENTITIES_SCHEMA)
     'companyId', 'projectId', 'buildingId', 'unitId', 'contactId',
     // Admin-specific fields
-    'contactName', 'contactType', 'projectName',
+    'contactName', 'contactType', 'projectName', 'searchCriteria',
     'recipientName', 'emailContent', 'email', 'phone',
     'fieldName', 'fieldValue',
   ],
@@ -204,6 +204,7 @@ const EXTRACTED_ADMIN_ENTITIES_SCHEMA = {
     contactName: { type: ['string', 'null'] as const },
     contactType: { type: ['string', 'null'] as const },
     projectName: { type: ['string', 'null'] as const },
+    searchCriteria: { type: ['string', 'null'] as const },
     recipientName: { type: ['string', 'null'] as const },
     emailContent: { type: ['string', 'null'] as const },
     email: { type: ['string', 'null'] as const },

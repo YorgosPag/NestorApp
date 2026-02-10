@@ -3,8 +3,12 @@
  * UC-011: ADMIN PROJECT STATUS MODULE — ADR-145
  * =============================================================================
  *
- * Super admin command: "Τι γίνεται με το έργο Πανόραμα;"
- * Queries project by name and returns status, unit stats, latest updates.
+ * Super admin command: Dual mode
+ *   Mode 1: "Τι γίνεται με το έργο Πανόραμα;" → single project lookup
+ *   Mode 2: "Ποια έργα έχουν gantt;" → multi-project search with criteria
+ *   Mode 3: "Δείξε μου τα έργα" → list all projects
+ *
+ * Queries projects, units, buildings, and construction phases from Firestore.
  *
  * @module services/ai-pipeline/modules/uc-011-admin-project-status
  * @see ADR-145 (Super Admin AI Assistant)
@@ -30,22 +34,32 @@ import type {
 const logger = createModuleLogger('UC_011_ADMIN_PROJECT_STATUS');
 
 // ============================================================================
+// STATUS LABELS
+// ============================================================================
+
+const STATUS_LABELS: Record<string, string> = {
+  planning: 'Σχεδιασμός',
+  in_progress: 'Σε εξέλιξη',
+  completed: 'Ολοκληρωμένο',
+  on_hold: 'Σε αναμονή',
+  cancelled: 'Ακυρωμένο',
+};
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
-interface ProjectStatusLookupData {
-  searchTerm: string;
-  project: ProjectInfo | null;
-  unitStats: UnitStats | null;
-  companyId: string;
-}
+/** Lookup mode: single project vs multi-project search */
+type LookupMode = 'single' | 'list' | 'search';
 
 interface ProjectInfo {
   projectId: string;
   name: string;
   status: string | null;
+  statusLabel: string | null;
   address: string | null;
   description: string | null;
+  progress: number;
   updatedAt: string | null;
 }
 
@@ -55,6 +69,24 @@ interface UnitStats {
   available: number;
   reserved: number;
   other: number;
+}
+
+interface ProjectWithDetails {
+  project: ProjectInfo;
+  unitStats: UnitStats;
+  hasGantt: boolean;
+  buildingCount: number;
+}
+
+interface ProjectLookupData {
+  mode: LookupMode;
+  searchTerm: string;
+  searchCriteria: string | null;
+  companyId: string;
+  /** Single mode: one project */
+  singleProject: ProjectWithDetails | null;
+  /** List/search mode: all matching projects */
+  projects: ProjectWithDetails[];
 }
 
 // ============================================================================
@@ -72,93 +104,249 @@ export class AdminProjectStatusModule implements IUCModule {
   // ── Step 3: LOOKUP ──
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
-    const searchTerm = (ctx.understanding?.entities?.projectName as string)
-      ?? ctx.intake.normalized.contentText?.replace(/τι γίνεται|με|το|έργο|πρόοδος|κατάσταση/gi, '').trim()
-      ?? '';
+    const projectName = (ctx.understanding?.entities?.projectName as string) ?? null;
+    const searchCriteria = (ctx.understanding?.entities?.searchCriteria as string) ?? null;
 
-    logger.info('UC-011 LOOKUP: Searching project by name', {
+    // Determine mode
+    const mode: LookupMode = projectName
+      ? 'single'
+      : searchCriteria
+        ? 'search'
+        : 'list';
+
+    logger.info('UC-011 LOOKUP: Project query', {
       requestId: ctx.requestId,
-      searchTerm,
+      mode,
+      projectName: projectName ?? '(all)',
+      searchCriteria: searchCriteria ?? '(none)',
     });
 
-    let project: ProjectInfo | null = null;
-    let unitStats: UnitStats | null = null;
+    const lookupData: ProjectLookupData = {
+      mode,
+      searchTerm: projectName ?? '',
+      searchCriteria,
+      companyId: ctx.companyId,
+      singleProject: null,
+      projects: [],
+    };
 
-    if (searchTerm.length > 0) {
-      try {
-        const adminDb = getAdminFirestore();
-        const normalizedSearch = searchTerm.toLowerCase().trim();
+    try {
+      const adminDb = getAdminFirestore();
 
-        // Search projects by name
-        const projectsSnapshot = await adminDb
-          .collection(COLLECTIONS.PROJECTS)
-          .where('companyId', '==', ctx.companyId)
-          .limit(50)
-          .get();
+      // Fetch all company projects
+      const projectsSnapshot = await adminDb
+        .collection(COLLECTIONS.PROJECTS)
+        .where('companyId', '==', ctx.companyId)
+        .limit(50)
+        .get();
 
-        for (const doc of projectsSnapshot.docs) {
-          const data = doc.data();
-          const projectName = ((data.name ?? data.title ?? '') as string).toLowerCase();
-          if (projectName.includes(normalizedSearch)) {
-            project = {
-              projectId: doc.id,
-              name: (data.name ?? data.title ?? 'Χωρίς όνομα') as string,
-              status: (data.status as string) ?? null,
-              address: (data.address as string) ?? null,
-              description: (data.description as string) ?? null,
-              updatedAt: (data.updatedAt as string) ?? (data.lastModified as string) ?? null,
-            };
-            break;
-          }
-        }
+      if (projectsSnapshot.empty) {
+        return lookupData as unknown as Record<string, unknown>;
+      }
 
-        // Get unit stats if project found
-        if (project) {
-          const unitsSnapshot = await adminDb
-            .collection(COLLECTIONS.UNITS)
-            .where('projectId', '==', project.projectId)
-            .get();
-
-          const stats: UnitStats = { total: 0, sold: 0, available: 0, reserved: 0, other: 0 };
-          for (const unitDoc of unitsSnapshot.docs) {
-            const unitData = unitDoc.data();
-            stats.total++;
-            const unitStatus = ((unitData.status ?? '') as string).toLowerCase();
-            if (unitStatus === 'sold' || unitStatus === 'πωλημένο') stats.sold++;
-            else if (unitStatus === 'available' || unitStatus === 'διαθέσιμο') stats.available++;
-            else if (unitStatus === 'reserved' || unitStatus === 'κρατημένο') stats.reserved++;
-            else stats.other++;
-          }
-          unitStats = stats;
-        }
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logger.warn('UC-011 LOOKUP: Project search failed', {
-          requestId: ctx.requestId,
-          error: msg,
+      // Build project list
+      const allProjects: Array<{ id: string; info: ProjectInfo }> = [];
+      for (const doc of projectsSnapshot.docs) {
+        const data = doc.data();
+        const status = (data.status as string) ?? null;
+        allProjects.push({
+          id: doc.id,
+          info: {
+            projectId: doc.id,
+            name: (data.name ?? data.title ?? 'Χωρίς όνομα') as string,
+            status,
+            statusLabel: status ? (STATUS_LABELS[status] ?? status) : null,
+            address: (data.address as string) ?? null,
+            description: (data.description as string) ?? null,
+            progress: typeof data.progress === 'number' ? data.progress : 0,
+            updatedAt: (data.updatedAt as string) ?? (data.lastModified as string) ?? null,
+          },
         });
+      }
+
+      // ── Single mode: find matching project ──
+      if (mode === 'single' && projectName) {
+        const normalizedSearch = projectName.toLowerCase().trim();
+        const match = allProjects.find(
+          (p) => p.info.name.toLowerCase().includes(normalizedSearch)
+        );
+
+        if (match) {
+          const details = await this.enrichProjectDetails(adminDb, [match], ctx.companyId);
+          lookupData.singleProject = details[0] ?? null;
+        }
+        return lookupData as unknown as Record<string, unknown>;
+      }
+
+      // ── List/Search mode: enrich all projects ──
+      const enriched = await this.enrichProjectDetails(adminDb, allProjects, ctx.companyId);
+
+      // ── Apply search criteria filter ──
+      if (mode === 'search' && searchCriteria) {
+        const criteria = searchCriteria.toLowerCase().trim();
+        lookupData.projects = enriched.filter(
+          (p) => this.matchesCriteria(p, criteria)
+        );
+      } else {
+        lookupData.projects = enriched;
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.warn('UC-011 LOOKUP: Project query failed', {
+        requestId: ctx.requestId,
+        error: msg,
+      });
+    }
+
+    return lookupData as unknown as Record<string, unknown>;
+  }
+
+  /**
+   * Enrich projects with unit stats, building count, and Gantt availability.
+   * Uses batch queries to minimize Firestore reads.
+   */
+  private async enrichProjectDetails(
+    adminDb: FirebaseFirestore.Firestore,
+    projects: Array<{ id: string; info: ProjectInfo }>,
+    companyId: string,
+  ): Promise<ProjectWithDetails[]> {
+    const projectIds = projects.map((p) => p.id);
+
+    // Batch: get all units for these projects
+    const unitsSnapshot = await adminDb
+      .collection(COLLECTIONS.UNITS)
+      .where('companyId', '==', companyId)
+      .get();
+
+    // Batch: get all buildings for these projects
+    const buildingsSnapshot = await adminDb
+      .collection(COLLECTIONS.BUILDINGS)
+      .where('companyId', '==', companyId)
+      .get();
+
+    // Batch: get all construction phases (Gantt data) for the company
+    const phasesSnapshot = await adminDb
+      .collection(COLLECTIONS.CONSTRUCTION_PHASES)
+      .where('companyId', '==', companyId)
+      .limit(500)
+      .get();
+
+    // Index units by projectId
+    const unitsByProject = new Map<string, UnitStats>();
+    for (const unitDoc of unitsSnapshot.docs) {
+      const data = unitDoc.data();
+      const projId = data.projectId as string;
+      if (!projectIds.includes(projId)) continue;
+
+      if (!unitsByProject.has(projId)) {
+        unitsByProject.set(projId, { total: 0, sold: 0, available: 0, reserved: 0, other: 0 });
+      }
+      const stats = unitsByProject.get(projId)!;
+      stats.total++;
+      const unitStatus = ((data.status ?? '') as string).toLowerCase();
+      if (unitStatus === 'sold' || unitStatus === 'πωλημένο') stats.sold++;
+      else if (unitStatus === 'available' || unitStatus === 'διαθέσιμο') stats.available++;
+      else if (unitStatus === 'reserved' || unitStatus === 'κρατημένο') stats.reserved++;
+      else stats.other++;
+    }
+
+    // Index buildings by projectId, track buildingIds
+    const buildingsByProject = new Map<string, string[]>();
+    for (const buildDoc of buildingsSnapshot.docs) {
+      const data = buildDoc.data();
+      const projId = data.projectId as string;
+      if (!projectIds.includes(projId)) continue;
+
+      if (!buildingsByProject.has(projId)) {
+        buildingsByProject.set(projId, []);
+      }
+      buildingsByProject.get(projId)!.push(buildDoc.id);
+    }
+
+    // Index construction phases by buildingId → check which buildings have Gantt
+    const buildingsWithGantt = new Set<string>();
+    for (const phaseDoc of phasesSnapshot.docs) {
+      const data = phaseDoc.data();
+      buildingsWithGantt.add(data.buildingId as string);
+    }
+
+    // Build enriched results
+    return projects.map(({ id, info }) => {
+      const unitStats = unitsByProject.get(id) ?? { total: 0, sold: 0, available: 0, reserved: 0, other: 0 };
+      const buildingIds = buildingsByProject.get(id) ?? [];
+      const hasGantt = buildingIds.some((bid) => buildingsWithGantt.has(bid));
+
+      return {
+        project: info,
+        unitStats,
+        hasGantt,
+        buildingCount: buildingIds.length,
+      };
+    });
+  }
+
+  /**
+   * Check if a project matches the search criteria.
+   * Supports: gantt, status keywords, feature keywords.
+   */
+  private matchesCriteria(project: ProjectWithDetails, criteria: string): boolean {
+    // Gantt/timeline criteria
+    if (
+      criteria.includes('gantt') ||
+      criteria.includes('χρονοδιάγραμμα') ||
+      criteria.includes('timeline') ||
+      criteria.includes('φάσεις') ||
+      criteria.includes('κατασκευ')
+    ) {
+      return project.hasGantt;
+    }
+
+    // Status criteria
+    const statusMap: Record<string, string[]> = {
+      planning: ['σχεδιασμ', 'planning', 'σχέδιο'],
+      in_progress: ['εξέλιξη', 'progress', 'ενεργ', 'τρέχ'],
+      completed: ['ολοκληρ', 'completed', 'τελειωμ', 'finished'],
+      on_hold: ['αναμονή', 'hold', 'παύση'],
+      cancelled: ['ακυρ', 'cancelled'],
+    };
+
+    for (const [status, keywords] of Object.entries(statusMap)) {
+      if (keywords.some((kw) => criteria.includes(kw))) {
+        return project.project.status === status;
       }
     }
 
-    const lookupData: ProjectStatusLookupData = {
-      searchTerm,
-      project,
-      unitStats,
-      companyId: ctx.companyId,
-    };
+    // Building count criteria
+    if (criteria.includes('κτήρι') || criteria.includes('κτίρι') || criteria.includes('building')) {
+      return project.buildingCount > 0;
+    }
 
-    return lookupData as unknown as Record<string, unknown>;
+    // Units criteria
+    if (criteria.includes('unit') || criteria.includes('ακίνητ') || criteria.includes('μονάδ')) {
+      return project.unitStats.total > 0;
+    }
+
+    // Default: include all (no matching filter found)
+    return true;
   }
 
   // ── Step 4: PROPOSE ──
 
   async propose(ctx: PipelineContext): Promise<Proposal> {
-    const lookup = ctx.lookupData as unknown as ProjectStatusLookupData | undefined;
-    const project = lookup?.project;
+    const lookup = ctx.lookupData as unknown as ProjectLookupData | undefined;
+    const mode = lookup?.mode ?? 'single';
 
-    const summary = project
-      ? `Κατάσταση έργου: ${project.name}`
-      : `Δεν βρέθηκε έργο για "${lookup?.searchTerm ?? ''}"`;
+    let summary: string;
+    if (mode === 'single') {
+      summary = lookup?.singleProject
+        ? `Κατάσταση έργου: ${lookup.singleProject.project.name}`
+        : `Δεν βρέθηκε έργο για "${lookup?.searchTerm ?? ''}"`;
+    } else {
+      const count = lookup?.projects.length ?? 0;
+      summary = mode === 'search'
+        ? `Αποτελέσματα αναζήτησης: ${count} έργα (κριτήριο: ${lookup?.searchCriteria ?? ''})`
+        : `Λίστα έργων: ${count} σύνολο`;
+    }
 
     return {
       messageId: ctx.intake.id,
@@ -166,9 +354,11 @@ export class AdminProjectStatusModule implements IUCModule {
         {
           type: 'admin_project_status_reply',
           params: {
+            mode,
             searchTerm: lookup?.searchTerm ?? null,
-            project: project ?? null,
-            unitStats: lookup?.unitStats ?? null,
+            searchCriteria: lookup?.searchCriteria ?? null,
+            singleProject: lookup?.singleProject ?? null,
+            projects: lookup?.projects ?? [],
             channel: ctx.intake.channel,
             telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
           },
@@ -193,28 +383,11 @@ export class AdminProjectStatusModule implements IUCModule {
       }
 
       const params = action.params;
-      const project = params.project as ProjectInfo | null;
-      const unitStats = params.unitStats as UnitStats | null;
-      const searchTerm = (params.searchTerm as string) ?? '';
+      const mode = (params.mode as LookupMode) ?? 'single';
 
-      let replyText: string;
-      if (!project) {
-        replyText = `Δεν βρέθηκε έργο με όνομα "${searchTerm}".`;
-      } else {
-        const lines = [`Έργο: ${project.name}`];
-        if (project.status) lines.push(`Κατάσταση: ${project.status}`);
-        if (project.address) lines.push(`Διεύθυνση: ${project.address}`);
-        if (unitStats) {
-          lines.push('');
-          lines.push(`Units: ${unitStats.total} σύνολο`);
-          lines.push(`  Πωλημένα: ${unitStats.sold}`);
-          lines.push(`  Διαθέσιμα: ${unitStats.available}`);
-          if (unitStats.reserved > 0) lines.push(`  Κρατημένα: ${unitStats.reserved}`);
-          if (unitStats.other > 0) lines.push(`  Λοιπά: ${unitStats.other}`);
-        }
-        if (project.updatedAt) lines.push(`\nΤελευταία ενημέρωση: ${project.updatedAt}`);
-        replyText = lines.join('\n');
-      }
+      const replyText = mode === 'single'
+        ? this.formatSingleProjectReply(params)
+        : this.formatMultiProjectReply(params);
 
       const telegramChatId = (params.telegramChatId as string)
         ?? (ctx.intake.rawPayload.chatId as string)
@@ -226,7 +399,9 @@ export class AdminProjectStatusModule implements IUCModule {
         recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
         telegramChatId: telegramChatId ?? undefined,
         inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
-        subject: `Κατάσταση: ${project?.name ?? searchTerm}`,
+        subject: mode === 'single'
+          ? `Κατάσταση: ${(params.singleProject as ProjectWithDetails | null)?.project.name ?? params.searchTerm}`
+          : 'Έργα',
         textBody: replyText,
         requestId: ctx.requestId,
       });
@@ -242,6 +417,75 @@ export class AdminProjectStatusModule implements IUCModule {
       logger.error('UC-011 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
       return { success: false, sideEffects: [], error: errorMessage };
     }
+  }
+
+  // ── FORMAT HELPERS ──
+
+  private formatSingleProjectReply(params: Record<string, unknown>): string {
+    const details = params.singleProject as ProjectWithDetails | null;
+
+    if (!details) {
+      return `Δεν βρέθηκε έργο με όνομα "${(params.searchTerm as string) ?? ''}".`;
+    }
+
+    const { project, unitStats, hasGantt, buildingCount } = details;
+    const lines: string[] = [`Έργο: ${project.name}`];
+
+    if (project.statusLabel) lines.push(`Κατάσταση: ${project.statusLabel}`);
+    if (project.address) lines.push(`Διεύθυνση: ${project.address}`);
+    if (project.progress > 0) lines.push(`Πρόοδος: ${project.progress}%`);
+    if (buildingCount > 0) lines.push(`Κτήρια: ${buildingCount}`);
+    lines.push(`Gantt: ${hasGantt ? 'Ναι' : 'Όχι'}`);
+
+    if (unitStats.total > 0) {
+      lines.push('');
+      lines.push(`Units: ${unitStats.total} σύνολο`);
+      lines.push(`  Πωλημένα: ${unitStats.sold}`);
+      lines.push(`  Διαθέσιμα: ${unitStats.available}`);
+      if (unitStats.reserved > 0) lines.push(`  Κρατημένα: ${unitStats.reserved}`);
+      if (unitStats.other > 0) lines.push(`  Λοιπά: ${unitStats.other}`);
+    }
+
+    if (project.updatedAt) lines.push(`\nΤελευταία ενημέρωση: ${project.updatedAt}`);
+    return lines.join('\n');
+  }
+
+  private formatMultiProjectReply(params: Record<string, unknown>): string {
+    const projects = (params.projects as ProjectWithDetails[]) ?? [];
+    const searchCriteria = (params.searchCriteria as string) ?? null;
+    const mode = params.mode as LookupMode;
+
+    if (projects.length === 0) {
+      if (searchCriteria) {
+        return `Δεν βρέθηκαν έργα με κριτήριο "${searchCriteria}".`;
+      }
+      return 'Δεν βρέθηκαν έργα.';
+    }
+
+    const lines: string[] = [];
+
+    // Header
+    if (mode === 'search' && searchCriteria) {
+      lines.push(`Έργα με κριτήριο "${searchCriteria}" (${projects.length}):`);
+    } else {
+      lines.push(`Όλα τα έργα (${projects.length}):`);
+    }
+    lines.push('');
+
+    // Project entries
+    for (const { project, unitStats, hasGantt, buildingCount } of projects) {
+      const statusPart = project.statusLabel ? ` [${project.statusLabel}]` : '';
+      const progressPart = project.progress > 0 ? ` ${project.progress}%` : '';
+      const ganttPart = hasGantt ? ' | Gantt' : '';
+      const unitsPart = unitStats.total > 0
+        ? ` | ${unitStats.total} units (${unitStats.sold} πωλ./${unitStats.available} διαθ.)`
+        : '';
+      const buildingsPart = buildingCount > 0 ? ` | ${buildingCount} κτήρια` : '';
+
+      lines.push(`- ${project.name}${statusPart}${progressPart}${buildingsPart}${unitsPart}${ganttPart}`);
+    }
+
+    return lines.join('\n');
   }
 
   // ── Step 7: ACKNOWLEDGE ──

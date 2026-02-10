@@ -79,6 +79,11 @@ export const ADMIN_TOOL_SYSTEM_PROMPT = `Είσαι ο AI βοηθός του ι
 3. Γενική ερώτηση (μετάφραση, συμβουλή, γνώση, casual, ραντεβού, αγορά) → απάντησε σε plain text ελληνικά (2-5 γραμμές, ΜΗΝ καλέσεις tool)
 4. Δεν καταλαβαίνεις → ρώτα για διευκρίνιση σε plain text
 
+ΓΙΑ get_project_status:
+- Ερώτηση για ΕΝΟΣ έργου κατάσταση → projectName="Πανόραμα", searchCriteria=null
+- Ερώτηση για ΠΟΛΛΑ/ΟΛΑ τα έργα → projectName=null, searchCriteria=null
+- Ερώτηση με ΚΡΙΤΗΡΙΑ (gantt, ολοκληρωμένα, σε εξέλιξη, κλπ.) → projectName=null, searchCriteria="gantt"
+
 ΚΡΙΣΙΜΟ ΓΙΑ TEXT ΑΠΑΝΤΗΣΕΙΣ (κανόνες 3 & 4):
 - Γράψε ΜΟΝΟ ελληνικό κείμενο, σαν μήνυμα σε φίλο
 - ΑΠΑΓΟΡΕΥΕΤΑΙ JSON, code blocks, backticks, structured format
@@ -126,16 +131,20 @@ export const ADMIN_TOOL_DEFINITIONS: ToolFunctionDefinition[] = [
   {
     type: 'function',
     name: 'get_project_status',
-    description: 'Κατάσταση, πρόοδος ή πληροφορίες για κατασκευαστικό έργο/project.',
+    description: 'Κατάσταση, πρόοδος ή πληροφορίες για κατασκευαστικό έργο/project. Μπορεί να δώσει: ένα συγκεκριμένο έργο, λίστα όλων, ή αναζήτηση με κριτήρια (gantt, status, κλπ.).',
     parameters: {
       type: 'object',
       properties: {
         projectName: {
-          type: 'string',
-          description: 'Όνομα ή περιγραφή του έργου (π.χ. "Θέρμη", "Κατασκευή Πανοράματος").',
+          type: ['string', 'null'] as const,
+          description: 'Όνομα έργου αν ζητείται ΕΝΑ συγκεκριμένο (π.χ. "Θέρμη"). Null αν ζητούνται πολλά/όλα τα έργα.',
+        },
+        searchCriteria: {
+          type: ['string', 'null'] as const,
+          description: 'Κριτήριο αναζήτησης/φίλτρου (π.χ. "gantt", "completed", "σε εξέλιξη", "delayed"). Null αν δεν υπάρχει φίλτρο.',
         },
       },
-      required: ['projectName'],
+      required: ['projectName', 'searchCriteria'],
       additionalProperties: false as const,
     },
     strict: true,

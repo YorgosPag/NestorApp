@@ -128,7 +128,7 @@ interface AdminCommandMeta {
 | Intent | Module | Περιγραφή |
 |--------|--------|-----------|
 | `admin_contact_search` | UC-010 | Αναζήτηση στοιχείων επαφής |
-| `admin_project_status` | UC-011 | Κατάσταση έργου + στατιστικά units |
+| `admin_project_status` | UC-011 | Κατάσταση έργου, λίστα, αναζήτηση (Gantt, status, κλπ.) |
 | `admin_send_email` | UC-012 | Αποστολή email σε επαφή |
 | `admin_unit_stats` | UC-013 | Στατιστικά ακινήτων (πωλημένα/διαθέσιμα/δεσμευμένα) |
 | `admin_create_contact` | UC-015 | Δημιουργία νέας επαφής (+ smart confirmation) |
@@ -176,12 +176,17 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 - **Acknowledge**: Format αποτελεσμάτων — standard (name, email, phone) ή missing fields (filled/total, κενά πεδία list)
 - **autoApprovable**: `true`
 
-### UC-011: Admin Project Status
+### UC-011: Admin Project Status, List & Search
 
 - **Intents**: `admin_project_status`
-- **Lookup**: Query projects by name, aggregate unit stats (sold/available/reserved)
+- **Three Modes** (2026-02-10):
+  - **Single mode**: "Τι γίνεται με το έργο Πανόραμα;" → `projectName: "Πανόραμα"` → single project details
+  - **List mode**: "Δείξε μου τα έργα" → `projectName: null, searchCriteria: null` → all projects
+  - **Search mode**: "Ποια έργα έχουν gantt;" → `projectName: null, searchCriteria: "gantt"` → filtered projects
+- **Enrichment**: Batch queries for units, buildings, construction_phases → unit stats + building count + Gantt detection
+- **Search Criteria**: gantt/χρονοδιάγραμμα, status keywords (σε εξέλιξη, ολοκληρωμένο), κτήρια, units
 - **Execute**: Read-only
-- **Acknowledge**: Format project status → send via channel
+- **Acknowledge**: Format single project detail or multi-project list → send via channel
 - **autoApprovable**: `true`
 
 ### UC-012: Admin Send Email
@@ -521,6 +526,7 @@ interface AdminSession {
 | 2026-02-10 | Fix: UC-012 compound "find+send" commands — `COMPOUND_FIND_SEND_PATTERN` detects "Βρες επαφή X και στείλε", `EXPLICIT_EMAIL_PATTERN` extracts email from command, `overrideRecipientEmail` overrides contact's email. Fixes bug where raw command was sent as email body instead of contact card | Claude Code |
 | 2026-02-10 | Critical fix: Telegram function timeout — `maxDuration=60` στο webhook route.ts (default 10s δεν αρκεί για 2 OpenAI calls). Fix: `admin_general_question` mapping στον orchestrator. Fix: race condition — `feedTelegramToPipeline` γίνεται awaitable αντί fire-and-forget ώστε η `after()` να βρίσκει πάντα το item στο queue | Claude Code |
 | 2026-02-10 | **ARCH: OpenAI Function Calling (Tool Use)** — Αντικατάσταση structured output (JSON schema) με tool calling για admin commands. 7 tool definitions (`search_contacts`, `get_project_status`, `send_email`, `get_business_stats`, `create_contact`, `update_contact_field`, `remove_contact_field`) αντικαθιστούν `AI_ADMIN_COMMAND_SCHEMA`. Η AI εξάγει ΟΛΑ τα params σημασιολογικά — μηδέν regex parsing. Conversational replies μέσω text fallback (0 extra API calls). UC modules λαμβάνουν pre-parsed entities. Νέο αρχείο: `src/config/admin-tool-definitions.ts`. Customer pipeline δεν αλλάζει. | Claude Code |
+| 2026-02-10 | **UC-011 Expansion: Multi-Project Search + Gantt Detection** — `get_project_status` tool: `projectName` γίνεται nullable + νέο `searchCriteria` param. UC-011 τρία modes: single (ένα έργο), list (όλα), search (με κριτήρια). Batch enrichment: units + buildings + construction_phases → unit stats + building count + `hasGantt`. Κριτήρια: gantt/χρονοδιάγραμμα, status (σε εξέλιξη/ολοκληρωμένο), κτήρια, units. Fixes: "Ποια έργα έχουν gantt;" τώρα δουλεύει. | Claude Code |
 
 ---
 
