@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building2, Users } from 'lucide-react';
@@ -26,6 +27,8 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 // 🪝 Import contact name hook
 import { useContactName } from './hooks/useContactName';
 
+const logger = createModuleLogger('OrganizationTree');
+
 // 🏢 ENTERPRISE: Helper component for contact badge
 interface ContactBadgeProps {
   contactId: string;
@@ -34,11 +37,11 @@ interface ContactBadgeProps {
 }
 
 const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relationshipType }) => {
-  console.log('🎫 CONTACT BADGE: Rendering for contactId:', contactId, 'position:', position, 'type:', relationshipType);
+  logger.info('ContactBadge rendering', { contactId, position, relationshipType });
   const { contactName, loading } = useContactName(contactId);
   const { getStatusBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
-  console.log('🎫 CONTACT BADGE: Hook result - name:', contactName, 'loading:', loading);
+  logger.info('ContactBadge hook result', { contactName, loading });
 
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('contacts');
@@ -283,15 +286,14 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
    * 👥 Render recent additions
    */
   const renderRecentAdditions = () => {
-    console.log('🌳 ORG TREE: renderRecentAdditions called with tree:', tree);
-    console.log('🌳 ORG TREE: tree.children:', tree?.children);
+    logger.info('renderRecentAdditions called', { hasTree: !!tree, childrenCount: tree?.children?.length || 0 });
 
     if (!tree?.children || tree.children.length === 0) {
-      console.log('🌳 ORG TREE: No children found, returning null');
+      logger.info('No children found, returning null');
       return null;
     }
 
-    console.log('🌳 ORG TREE: About to render', tree.children.length, 'children');
+    logger.info('About to render children', { count: tree.children.length });
     return (
       <div>
         <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>{t('relationships.organizationTree.recentAdditions')}</h4>

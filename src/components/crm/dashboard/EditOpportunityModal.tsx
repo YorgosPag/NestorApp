@@ -20,6 +20,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Opportunity } from '@/types/crm';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EditOpportunityModal');
 
 interface EditOpportunityModalProps {
   opportunity: Opportunity | null;
@@ -78,7 +81,7 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
       handleClose();
     } catch (error) {
       notifications.error(t('opportunities.editModal.messages.error'));
-      console.error('Error updating opportunity:', error);
+      logger.error('Error updating opportunity', { error });
     } finally {
       setLoading(false);
     }

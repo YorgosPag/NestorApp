@@ -10,6 +10,9 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectCustomer } from "@/types/project";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingCustomersTab');
 
 interface BuildingCustomersTabProps {
   buildingId: string;
@@ -40,7 +43,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
           setCustomers(data?.customers || []);
         }
       } catch (e) {
-        console.error("Failed to fetch building customers:", e);
+        logger.error("Failed to fetch building customers", { error: e });
         if (mounted) {
           setError(e instanceof Error ? e.message : t('customers.error.unknown'));
         }

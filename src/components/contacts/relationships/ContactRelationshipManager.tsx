@@ -16,6 +16,7 @@
 'use client';
 
 import React from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,8 @@ import type { ContactRelationshipManagerProps } from './types/relationship-manag
  * @param readonly - Whether the component should be in read-only mode
  */
 
+const logger = createModuleLogger('ContactRelationshipManager');
+
 export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProps> = ({
   contactId,
   contactType,
@@ -99,7 +102,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // 🔄 Global refresh callback that updates both relationships and organization tree
   const handleGlobalRefresh = React.useCallback(async () => {
     try {
-      console.log('🔄 GLOBAL REFRESH: Refreshing relationships and organization tree after relationship creation...');
+      logger.info('Refreshing relationships and organization tree after relationship creation');
 
       // Add retry mechanism for Firestore consistency
       const maxRetries = 3;
@@ -108,7 +111,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
       while (retryCount < maxRetries) {
         // Force clear relationship cache first
-        console.log('🗑️ GLOBAL REFRESH: Clearing all caches before refresh...');
+        logger.info('Clearing all caches before refresh');
 
         // Clear organization tree cache if it exists
         if (shouldShowTree && window.localStorage) {
@@ -116,7 +119,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
             key.includes('organization:') && key.includes(contactId)
           );
           orgCacheKeys.forEach(key => {
-            console.log(`🗑️ GLOBAL REFRESH: Clearing organization cache key: ${key}`);
+            logger.info('Clearing organization cache key', { key });
             window.localStorage.removeItem(key);
           });
         }
@@ -129,7 +132,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
         // Check if relationships were updated by looking at current count
         const currentRelationshipsCount = relationships?.length || 0;
-        console.log(`🔄 GLOBAL REFRESH: Retry ${retryCount + 1}/${maxRetries}, relationships count: ${currentRelationshipsCount}`);
+        logger.info('Global refresh retry', { retryCount: retryCount + 1, maxRetries, currentRelationshipsCount });
 
         // If we have relationships or this isn't the first attempt, we're done
         if (currentRelationshipsCount > lastRelationshipsCount || retryCount === maxRetries - 1) {
@@ -139,16 +142,16 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         // Wait before retrying
         retryCount++;
         if (retryCount < maxRetries) {
-          console.log(`⏱️ GLOBAL REFRESH: Waiting 1500ms before retry ${retryCount + 1}...`);
+          logger.info('Waiting before retry', { retryCount: retryCount + 1 });
           await new Promise(resolve => setTimeout(resolve, 1500));
         }
 
         lastRelationshipsCount = currentRelationshipsCount;
       }
 
-      console.log('✅ GLOBAL REFRESH: Successfully refreshed all relationship data');
+      logger.info('Successfully refreshed all relationship data');
     } catch (err) {
-      console.error('❌ GLOBAL REFRESH: Error refreshing relationship data:', err);
+      logger.error('Error refreshing relationship data', { error: err });
     }
   }, [refreshRelationships, refreshTree, shouldShowTree, relationships]);
 

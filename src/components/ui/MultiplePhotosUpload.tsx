@@ -10,6 +10,9 @@ import { MultiplePhotosCompact } from './MultiplePhotosCompact';
 import { MultiplePhotosFull } from './MultiplePhotosFull';
 import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MultiplePhotosUpload');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -115,10 +118,10 @@ export function MultiplePhotosUpload({
       }
     }
 
-    console.log('📸 MultiplePhotosUpload: FORCED slots to exactly', maxPhotos, {
+    logger.info('FORCED slots to exactly maxPhotos', {
+      maxPhotos,
       originalLength: photos?.length || 0,
       resultLength: result.length,
-      maxPhotos,
       overflow: (photos?.length || 0) > maxPhotos
     });
 

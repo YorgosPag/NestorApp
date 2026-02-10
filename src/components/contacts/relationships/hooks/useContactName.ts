@@ -8,7 +8,10 @@
 // ============================================================================
 
 import { useState, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { ContactsService } from '@/services/contacts.service';
+
+const logger = createModuleLogger('useContactName');
 
 /**
  * 🪝 useContactName Hook
@@ -31,7 +34,7 @@ export const useContactName = (contactId: string | undefined) => {
 
       try {
         setLoading(true);
-        console.log(`🔍 CONTACT NAME HOOK: Fetching contact name for ID:`, contactId);
+        logger.info('Fetching contact name', { contactId });
 
         const contact = await ContactsService.getContact(contactId);
 
@@ -58,11 +61,11 @@ export const useContactName = (contactId: string | undefined) => {
 
           setContactName(contactName);
         } else {
-          console.warn(`⚠️ CONTACT NAME HOOK: Contact not found for ID:`, contactId);
+          logger.warn('Contact not found', { contactId });
           setContactName('Όνομα μη διαθέσιμο');
         }
       } catch (error) {
-        console.error(`❌ CONTACT NAME HOOK: Error fetching contact name:`, error);
+        logger.error('Error fetching contact name', { error });
         setContactName('Σφάλμα φόρτωσης ονόματος');
       } finally {
         setLoading(false);

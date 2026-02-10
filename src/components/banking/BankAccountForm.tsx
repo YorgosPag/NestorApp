@@ -40,6 +40,10 @@ import { IBANInput } from './IBANInput';
 import { BankSelector } from './BankSelector';
 import { Loader2, Save, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BankAccountForm');
 
 // ============================================================================
 // TYPES
@@ -89,6 +93,7 @@ export function BankAccountForm({
   loading = false,
   className
 }: BankAccountFormProps) {
+  const { t } = useTranslation('banking');
   const iconSizes = useIconSizes();
   const isEditing = !!account;
 
@@ -171,14 +176,14 @@ export function BankAccountForm({
 
     // IBAN validation
     if (!formData.iban) {
-      newErrors.iban = 'Το IBAN είναι υποχρεωτικό';
+      newErrors.iban = t('form.validation.ibanRequired');
     } else if (!ibanValid) {
-      newErrors.iban = 'Μη έγκυρο IBAN';
+      newErrors.iban = t('form.validation.ibanInvalid');
     }
 
     // Bank name validation
     if (!formData.bankName.trim()) {
-      newErrors.bankName = 'Το όνομα τράπεζας είναι υποχρεωτικό';
+      newErrors.bankName = t('form.validation.bankNameRequired');
     }
 
     setErrors(newErrors);
@@ -189,24 +194,20 @@ export function BankAccountForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log('[BankAccountForm] Submit clicked', {
-      ibanValid,
-      iban: formData.iban,
-      bankName: formData.bankName
-    });
+    logger.info('Submit clicked', { ibanValid, iban: formData.iban, bankName: formData.bankName });
 
     if (!validateForm()) {
-      console.log('[BankAccountForm] Validation failed', errors);
+      logger.warn('Validation failed', { errors });
       return;
     }
 
-    console.log('[BankAccountForm] Validation passed, submitting...');
+    logger.info('Validation passed, submitting');
 
     try {
       await onSubmit(formData);
-      console.log('[BankAccountForm] Submit successful');
+      logger.info('Submit successful');
     } catch (error) {
-      console.error('[BankAccountForm] Submit error:', error);
+      logger.error('Submit error', { error });
       if (error instanceof Error) {
         setErrors({ submit: error.message });
       }
@@ -239,7 +240,7 @@ export function BankAccountForm({
       {(!formData.bankCode || formData.bankCode === '') && (
         <div className="space-y-2">
           <Label htmlFor="bankName">
-            Όνομα Τράπεζας
+            {t('form.bankName')}
             <span className="text-destructive ml-1">*</span>
           </Label>
           <Input
@@ -247,7 +248,7 @@ export function BankAccountForm({
             value={formData.bankName}
             onChange={(e) => handleFieldChange('bankName', e.target.value)}
             disabled={loading}
-            placeholder="π.χ. Deutsche Bank"
+            placeholder={t('form.bankNamePlaceholder')}
           />
           {errors.bankName && (
             <p className="text-sm text-destructive">{errors.bankName}</p>
@@ -259,7 +260,7 @@ export function BankAccountForm({
       <div className="grid grid-cols-2 gap-4">
         {/* Account Type */}
         <div className="space-y-2">
-          <Label>Τύπος Λογαριασμού</Label>
+          <Label>{t('account.type')}</Label>
           <Select
             value={formData.accountType}
             onValueChange={(value) => handleFieldChange('accountType', value as AccountType)}
@@ -282,7 +283,7 @@ export function BankAccountForm({
 
         {/* Currency */}
         <div className="space-y-2">
-          <Label>Νόμισμα</Label>
+          <Label>{t('account.currency')}</Label>
           <Select
             value={formData.currency}
             onValueChange={(value) => handleFieldChange('currency', value as CurrencyCode)}
@@ -307,28 +308,28 @@ export function BankAccountForm({
       {/* Holder Name (optional) */}
       <div className="space-y-2">
         <Label htmlFor="holderName">
-          Δικαιούχος <span className="text-muted-foreground">(προαιρετικό)</span>
+          {t('form.holderName')} <span className="text-muted-foreground">{t('form.optional')}</span>
         </Label>
         <Input
           id="holderName"
           value={formData.holderName || ''}
           onChange={(e) => handleFieldChange('holderName', e.target.value)}
           disabled={loading}
-          placeholder="Για κοινούς λογαριασμούς ή διαφορετικό δικαιούχο"
+          placeholder={t('form.holderPlaceholder')}
         />
       </div>
 
       {/* Notes (optional) */}
       <div className="space-y-2">
         <Label htmlFor="notes">
-          Σημειώσεις <span className="text-muted-foreground">(προαιρετικό)</span>
+          {t('form.notes')} <span className="text-muted-foreground">{t('form.optional')}</span>
         </Label>
         <Textarea
           id="notes"
           value={formData.notes || ''}
           onChange={(e) => handleFieldChange('notes', e.target.value)}
           disabled={loading}
-          placeholder="Επιπλέον πληροφορίες..."
+          placeholder={t('form.notesPlaceholder')}
           rows={3}
         />
       </div>
@@ -338,7 +339,7 @@ export function BankAccountForm({
         {/* Primary Account */}
         <div className="flex items-center justify-between">
           <Label htmlFor="isPrimary" className="cursor-pointer">
-            Κύριος λογαριασμός
+            {t('account.primaryAccount')}
           </Label>
           <Switch
             id="isPrimary"
@@ -352,7 +353,7 @@ export function BankAccountForm({
         {/* Active Account */}
         <div className="flex items-center justify-between">
           <Label htmlFor="isActive" className="cursor-pointer">
-            Ενεργός λογαριασμός
+            {t('account.activeAccount')}
           </Label>
           <Switch
             id="isActive"
@@ -380,7 +381,7 @@ export function BankAccountForm({
           disabled={loading}
         >
           <X size={iconSizes.numeric.sm} className="mr-2" />
-          Ακύρωση
+          {t('form.cancel')}
         </Button>
         <Button type="submit" disabled={loading}>
           {loading ? (
@@ -388,7 +389,7 @@ export function BankAccountForm({
           ) : (
             <Save size={iconSizes.numeric.sm} className="mr-2" />
           )}
-          {isEditing ? 'Αποθήκευση' : 'Προσθήκη'}
+          {isEditing ? t('form.submit') : t('form.add')}
         </Button>
       </div>
     </form>

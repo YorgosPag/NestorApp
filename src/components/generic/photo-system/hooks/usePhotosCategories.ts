@@ -16,12 +16,15 @@
 // ============================================================================
 
 import { useState, useMemo, useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import type {
   Photo,
   PhotoCategory,
   CategoryStats,
   UsePhotosCategoriesReturn,
 } from '../config/photos-tab-types';
+
+const logger = createModuleLogger('usePhotosCategories');
 
 // =============================================================================
 // HOOK PROPS
@@ -100,7 +103,7 @@ export function usePhotosCategories({
       if (categoryExists) {
         setActiveCategoryState(categoryId);
       } else {
-        console.warn(`[usePhotosCategories] Category "${categoryId}" not found`);
+        logger.warn('Category not found', { categoryId });
         setActiveCategoryState(DEFAULT_CATEGORY);
       }
     },

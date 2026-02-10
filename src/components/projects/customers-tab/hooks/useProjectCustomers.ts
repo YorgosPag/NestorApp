@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectCustomer } from "@/types/project";
 import type { UseProjectCustomersState } from "../types";
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useProjectCustomers');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Hook Options για Lazy Loading
@@ -57,7 +60,7 @@ export function useProjectCustomers(
     setError(null);
 
     try {
-      console.log(`🔄 [LazyLoad] Fetching project customers for projectId: ${projectId}`);
+      logger.info('Fetching project customers', { projectId });
 
       // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
       interface ProjectCustomersApiResponse {
@@ -71,7 +74,7 @@ export function useProjectCustomers(
         ? result
         : (result as ProjectCustomersApiResponse)?.customers || [];
 
-      console.log(`✅ [LazyLoad] Project customers loaded: ${customersData.length} customers`);
+      logger.info('Project customers loaded', { count: customersData.length });
 
       if (mountedRef.current) {
         setCustomers(customersData);
@@ -80,7 +83,7 @@ export function useProjectCustomers(
       }
 
     } catch (e) {
-      console.error("❌ [LazyLoad] Failed to fetch project customers:", e);
+      logger.error('Failed to fetch project customers', { error: e });
       // 🌐 i18n: Error message converted to i18n key - 2026-01-18
       const errorMessage = e instanceof Error ? e.message : "projects.customers.errors.loadFailed";
       if (mountedRef.current) {

@@ -19,6 +19,9 @@ import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingsHeader');
 
 // [ENTERPRISE] Type for Buildings view modes (avoids `as any`)
 type BuildingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -68,7 +71,7 @@ export function BuildingsHeader({
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
           label: t('header.newBuilding'),
-          onClick: () => onNewBuilding?.() || console.log('Add building')
+          onClick: () => onNewBuilding?.() || logger.info('Add building')
         },
         // Mobile-only filter button
         customActions: setShowFilters ? [

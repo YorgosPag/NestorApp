@@ -30,6 +30,9 @@ import {
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EnterprisePhotoUpload');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -146,7 +149,7 @@ export function EnterprisePhotoUpload({
 
   // 🔥 DEBUG: Log photoFile value to identify undefined issues
   useEffect(() => {
-    console.log('🎯 ENTERPRISE: PhotoFile value changed:', {
+    logger.info('PhotoFile value changed', {
       hasPhotoFile: !!photoFile,
       isFileInstance: photoFile instanceof File,
       fileName: photoFile?.name,
@@ -228,7 +231,7 @@ export function EnterprisePhotoUpload({
 
   // 🔍 DEBUG: Log photo display values
   React.useEffect(() => {
-    console.log(`🔍 DEBUG EnterprisePhotoUpload [${purpose}]:`, {
+    logger.info(`Photo display values [${purpose}]`, {
       photoPreview,
       uploadPreviewUrl: upload.previewUrl,
       rawCurrentPreview,
@@ -284,7 +287,7 @@ export function EnterprisePhotoUpload({
               purpose={purpose}
               onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
               onPreviewClick={disabled && onPreviewClick ? () => {
-                console.log('🔍 DEBUG EnterprisePhotoUpload: Preview click triggered (disabled mode)', { onPreviewClickExists: !!onPreviewClick });
+                logger.info('Preview click triggered (disabled mode)', { onPreviewClickExists: !!onPreviewClick });
                 onPreviewClick();
               } : handleClickWithValidation}
               disabled={disabled}
@@ -366,7 +369,7 @@ export function EnterprisePhotoUpload({
             purpose={purpose}
             onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
             onPreviewClick={disabled && onPreviewClick ? () => {
-              console.log('🔍 DEBUG EnterprisePhotoUpload: Preview click triggered (full/disabled mode)', { onPreviewClickExists: !!onPreviewClick });
+              logger.info('Preview click triggered (full/disabled mode)', { onPreviewClickExists: !!onPreviewClick });
               onPreviewClick();
             } : handleClickWithValidation}
             disabled={disabled}

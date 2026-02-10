@@ -17,6 +17,9 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ToolbarMainActions');
 
 interface ToolbarMainActionsProps {
   selectedItemsCount: number;
@@ -27,15 +30,15 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
   const iconSizes = useIconSizes();
   
   const handleNewBuilding = () => {
-    console.log('Creating new building...');
+    logger.info('Creating new building');
   };
 
   const handleEditBuilding = () => {
-    console.log('Editing building...');
+    logger.info('Editing building');
   };
 
   const handleDeleteBuilding = () => {
-    console.log('Deleting building...');
+    logger.info('Deleting building');
   };
 
   return (

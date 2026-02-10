@@ -23,6 +23,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Card, CardContent } from '../ui/card';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SendMessageModal');
 import communicationsService from '../../lib/communications';
 import { MESSAGE_TYPES, MESSAGE_TEMPLATES } from '../../lib/config/communications.config';
 import { toast } from 'sonner';
@@ -144,7 +147,7 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
       const serviceStatus = communicationsService.getServiceStatus();
       setAvailableChannels(serviceStatus.availableChannels || []);
     } catch (error) {
-      console.error('Error checking available channels:', error);
+      logger.error('Error checking available channels', { error });
     }
   };
 
@@ -348,7 +351,7 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
       }
 
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message', { error });
       toast.error(t('sendMessage.toasts.genericError'));
     } finally {
       setSending(false);

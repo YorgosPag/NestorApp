@@ -49,6 +49,9 @@ import {
   NotificationCategory,
   EmailFrequency,
 } from '@/services/user-notification-settings';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationSettings');
 
 // ============================================================================
 // TYPES
@@ -161,7 +164,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
         setSettings(userSettings);
         onSettingsChange?.(userSettings);
       } catch (err) {
-        console.error('Failed to load notification settings:', err);
+        logger.error('Failed to load notification settings', { error: err });
         setError(t('account.notificationSettings.loadError'));
       } finally {
         setIsLoading(false);
@@ -178,7 +181,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
         onSettingsChange?.(updatedSettings);
       },
       (err) => {
-        console.error('Subscription error:', err);
+        logger.error('Subscription error', { error: err });
       }
     );
 
@@ -198,7 +201,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
       try {
         await userNotificationSettingsService.toggleGlobal(userId, enabled);
       } catch (err) {
-        console.error('Failed to toggle global:', err);
+        logger.error('Failed to toggle global', { error: err });
       } finally {
         setIsSaving(false);
       }
@@ -212,7 +215,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
       try {
         await userNotificationSettingsService.toggleInApp(userId, enabled);
       } catch (err) {
-        console.error('Failed to toggle in-app:', err);
+        logger.error('Failed to toggle in-app', { error: err });
       } finally {
         setIsSaving(false);
       }
@@ -226,7 +229,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
       try {
         await userNotificationSettingsService.toggleEmail(userId, enabled);
       } catch (err) {
-        console.error('Failed to toggle email:', err);
+        logger.error('Failed to toggle email', { error: err });
       } finally {
         setIsSaving(false);
       }
@@ -240,7 +243,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
       try {
         await userNotificationSettingsService.setEmailFrequency(userId, frequency);
       } catch (err) {
-        console.error('Failed to set email frequency:', err);
+        logger.error('Failed to set email frequency', { error: err });
       } finally {
         setIsSaving(false);
       }
@@ -258,7 +261,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
           enabled,
         });
       } catch (err) {
-        console.error('Failed to toggle category setting:', err);
+        logger.error('Failed to toggle category setting', { error: err });
       } finally {
         setIsSaving(false);
       }

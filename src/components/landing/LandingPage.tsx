@@ -11,6 +11,9 @@ import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { generatePriceRanges } from '@/constants/property-statuses-enterprise';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('LandingPage');
 
 export function LandingPage() {
   const iconSizes = useIconSizes();
@@ -31,7 +34,7 @@ export function LandingPage() {
         return JSON.parse(envPriceRanges);
       }
     } catch (error) {
-      console.warn('Failed to parse price ranges, using defaults');
+      logger.warn('Failed to parse price ranges, using defaults');
     }
 
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '€';

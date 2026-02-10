@@ -96,6 +96,11 @@ export { useCustomerInfo as useCustomer } from './hooks/useCustomerInfo';
 // DEFAULT EXPORT - BUILDER PATTERN (Optional)
 // ============================================================================
 
+import { createModuleLogger } from '@/lib/telemetry';
+
+// Module logger
+const logger = createModuleLogger('CustomerInfoBuilder');
+
 // Import types for Builder class
 import type {
   UnifiedCustomerCardProps,
@@ -157,7 +162,7 @@ export class CustomerInfoBuilder {
           default: return require('lucide-react').ArrowRight;
         }
       })(),
-      onClick: () => console.log(`Action: ${type}`)
+      onClick: () => logger.info('Builder action triggered', { type })
     }));
     return this;
   }

@@ -4,6 +4,9 @@ import toast from "react-hot-toast";
 import { emailTemplates, getTemplateContent } from "../utils/emailTemplates";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useSendEmailModal');
 
 // 🏢 ENTERPRISE: Lead type with optional fields to match Opportunity type
 type Lead = { id?: string; fullName?: string; email?: string };
@@ -54,11 +57,11 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
       }
 
       const result = await apiClient.post<EmailApiResponse>('/api/communications/email', emailPayload);
-      console.log('✅ Email queued successfully:', result);
+      logger.info('Email queued successfully', { result });
       return { success: true, data: result };
 
     } catch (error) {
-      console.error('❌ Email API error:', error);
+      logger.error('Email API error', { error });
       throw error;
     }
   }, []);
@@ -117,7 +120,7 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
       // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
       const errorMessage = error instanceof Error ? error.message : "email.errors.unknown";
       toast.error(`email.errors.sendFailed`);
-      console.error("Email send error:", error);
+      logger.error('Email send error', { error });
     } finally {
       setLoading(false);
     }

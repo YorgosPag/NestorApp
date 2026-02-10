@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useShortcuts');
 
 interface ShortcutActions {
   onBold: () => void;
@@ -16,19 +19,19 @@ export function useShortcuts(actions: ShortcutActions) {
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
         case 'b':
-          console.log('Ctrl+B detected in useShortcuts'); // DEBUG
+          logger.info('Ctrl+B detected'); // DEBUG
           e.preventDefault();
           e.stopPropagation();
           actions.onBold();
           break;
         case 'i':
-          console.log('Ctrl+I detected in useShortcuts'); // DEBUG
+          logger.info('Ctrl+I detected'); // DEBUG
           e.preventDefault();
           e.stopPropagation();
           actions.onItalic();
           break;
         case 'u':
-          console.log('Ctrl+U detected in useShortcuts'); // DEBUG
+          logger.info('Ctrl+U detected'); // DEBUG
           e.preventDefault();
           e.stopPropagation();
           actions.onUnderline();

@@ -9,6 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Map, FileText, Camera, Video, User } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from 'react-i18next';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('GenericUnitsTabsRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -169,7 +172,7 @@ export function GenericUnitsTabsRenderer({
     }
 
     // Fallback για unknown components
-    console.warn(`Unknown component: ${componentName}`);
+    logger.warn('Unknown component', { componentName });
     return ({ children }: { children?: React.ReactNode }) => (
       <div className="p-4 text-center text-muted-foreground">
         <p>Component "{componentName}" not found</p>

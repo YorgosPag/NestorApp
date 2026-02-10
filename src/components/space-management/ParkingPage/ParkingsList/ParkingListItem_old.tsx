@@ -17,6 +17,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { Star, Edit2, Car, MapPin, Ruler, Euro, Accessibility, Bike, Zap, User } from 'lucide-react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ParkingListItem');
 
 interface ParkingListItemProps {
   parking: ParkingSpot;
@@ -92,7 +95,7 @@ export function ParkingListItem({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={(e) => { e.stopPropagation(); console.log('Edit parking'); }}
+                onClick={(e) => { e.stopPropagation(); logger.info('Edit parking'); }}
                 className="p-1 rounded-md text-muted-foreground hover:text-primary transition-colors"
               >
                 <Edit2 className={iconSizes.sm} />

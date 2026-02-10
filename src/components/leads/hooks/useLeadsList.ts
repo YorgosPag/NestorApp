@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { getOpportunities, deleteOpportunity } from "@/services/opportunities.service";
 import toast from "react-hot-toast";
 import type { Opportunity } from "@/types/crm";
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useLeadsList');
 
 export function useLeadsList(refreshTrigger?: number | string | boolean | null) {
   const router = useRouter();
@@ -25,7 +28,7 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
       setError(null);
     } catch (err) {
       setError("leads.errors.loadFailed");
-      console.error("Error fetching leads:", err);
+      logger.error('Error fetching leads', { error: err });
     } finally {
       setLoading(false);
     }
@@ -54,7 +57,7 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
       setLeads(prev => prev.filter(l => l.id !== leadId));
     } catch (error) {
       toast.error("leads.errors.deleteFailed");
-      console.error("Error deleting lead:", error);
+      logger.error('Error deleting lead', { error });
     }
   };
 

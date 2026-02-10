@@ -10,6 +10,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './utils/IconMapping';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ServiceFormRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -104,7 +107,7 @@ function translateFieldValue(value: string | undefined, t: (key: string) => stri
 
     // Translation not found - log warning in dev mode
     if (process.env.NODE_ENV === 'development') {
-      console.warn(`[ServiceFormRenderer] Translation missing for key: ${key} (original: ${value})`);
+      logger.warn('Translation missing for key', { key, original: value });
     }
 
     // Return the key without the 'contacts.' prefix as fallback
@@ -131,7 +134,7 @@ function renderInputField(
 
   // 🎯 DEBUG: Log για contact fields
   if (['phone', 'email', 'website'].includes(field.id)) {
-    console.log('🔍 CONTACT FIELD DEBUG:', { fieldId: field.id, fieldType: field.type, value, disabled });
+    logger.info('Contact field debug', { fieldId: field.id, fieldType: field.type, value, disabled });
   }
 
   // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
@@ -308,7 +311,7 @@ export function ServiceFormRenderer({
 
                 // 🔍 DEBUG: Log translation for legalStatus field
                 if (field.id === 'legalStatus') {
-                  console.log('🔍 DEBUG legalStatus field:', {
+                  logger.info('legalStatus field debug', {
                     fieldId: field.id,
                     originalLabel: field.label,
                     translatedLabel,

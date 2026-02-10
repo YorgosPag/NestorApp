@@ -19,6 +19,9 @@ import {
 import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectsTabContent');
 
 interface TabContentProps {
   selectedItems?: string[];
@@ -105,7 +108,7 @@ export function ImportExportTabContent({ onExport }: TabContentProps) {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => console.log('Import projects...')}
+        onClick={() => logger.info('Import projects')}
       >
         <Upload className={`${iconSizes.sm} mr-1`} />
         {t('toolbar.import')}
@@ -132,7 +135,7 @@ export function ManagementTabContent({
       <Button
         variant="outline"
         size="sm"
-        onClick={() => console.log('Archive selected projects...')}
+        onClick={() => logger.info('Archive selected projects')}
         disabled={selectedItems.length === 0}
       >
         <Archive className={`${iconSizes.sm} mr-1`} />
@@ -142,7 +145,7 @@ export function ManagementTabContent({
       <Button
         variant="outline"
         size="sm"
-        onClick={() => console.log('Add to favorites...')}
+        onClick={() => logger.info('Add to favorites')}
         disabled={selectedItems.length === 0}
       >
         <Star className={`${iconSizes.sm} mr-1`} />
@@ -152,7 +155,7 @@ export function ManagementTabContent({
       <Button
         variant="outline"
         size="sm"
-        onClick={() => console.log('Share projects...')}
+        onClick={() => logger.info('Share projects')}
         disabled={selectedItems.length === 0}
       >
         <Share className={`${iconSizes.sm} mr-1`} />
@@ -172,7 +175,7 @@ export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => console.log('View on map...')}
+        onClick={() => logger.info('View on map')}
         disabled={selectedItems.length === 0}
       >
         <MapPin className={`${iconSizes.sm} mr-1`} />
@@ -182,7 +185,7 @@ export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => console.log('Show help...')}
+        onClick={() => logger.info('Show help')}
       >
         <HelpCircle className={`${iconSizes.sm} mr-1`} />
         {t('toolbar.help')}
@@ -269,13 +272,13 @@ export function SearchFiltersTabContent({
             {t('toolbar.filters.sort.descending')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => console.log('Sort by date...')}>
+          <DropdownMenuItem onClick={() => logger.info('Sort by date')}>
             {t('toolbar.filters.sort.byDate')}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => console.log('Sort by completion...')}>
+          <DropdownMenuItem onClick={() => logger.info('Sort by completion')}>
             {t('toolbar.filters.sort.byCompletion')}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => console.log('Sort by priority...')}>
+          <DropdownMenuItem onClick={() => logger.info('Sort by priority')}>
             {t('toolbar.filters.sort.byPriority')}
           </DropdownMenuItem>
         </DropdownMenuContent>

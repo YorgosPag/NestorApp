@@ -14,6 +14,9 @@ import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectAttachmentsTab');
 
 interface ProjectAttachmentsTabProps {
     data: Pick<ProjectFormData, 'mapPath' | 'floorPlanPath' | 'percentagesPath'>;
@@ -29,7 +32,7 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
     const spacing = useSpacingTokens();
     const handleFileSelect = (field: string) => {
         // This would open a file dialog in a real application
-        console.log(`Selecting file for ${field}`);
+        logger.info('Selecting file', { field });
     };
 
     return (

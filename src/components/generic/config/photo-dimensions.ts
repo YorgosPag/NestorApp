@@ -42,6 +42,10 @@ import { buildPhotoClass } from './photo-config/utils';
 // BACKWARD COMPATIBILITY EXPORTS
 // ============================================================================
 
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('PhotoDimensions');
+
 // All exports from the new modular structure
 export * from './photo-config';
 
@@ -49,25 +53,7 @@ export * from './photo-config';
 // DEPRECATION WARNING
 // ============================================================================
 
-console.warn(`
-🚨 DEPRECATION WARNING: Direct import from 'photo-dimensions.ts'
-
-This file has been refactored into Enterprise modular architecture:
-
-📁 NEW STRUCTURE:
-├── photo-config/
-│   ├── dimensions/     - Sizes, layouts & responsive configs
-│   ├── styling/        - Colors, typography & effects
-│   └── utils/          - Helper functions & contexts
-
-✅ BENEFITS:
-- Better tree-shaking & performance
-- Enhanced maintainability
-- Focused modules with clear responsibilities
-- Improved developer experience
-
-📖 See migration guide above for import examples.
-`);
+logger.warn('DEPRECATION WARNING: Direct import from photo-dimensions.ts — refactored into Enterprise modular architecture under photo-config/');
 
 // Note: This file provides full backward compatibility while encouraging migration to the new modular structure
 
@@ -90,14 +76,14 @@ type PhotoLayoutKey = keyof typeof PHOTO_LAYOUTS;
 
 // Legacy function exports for backward compatibility
 export function getPhotoDimensions(viewportWidth: number = 1024): string {
-  console.warn('⚠️ getPhotoDimensions is deprecated. Use calculatePhotoDimensions from photo-config instead.');
+  logger.warn('getPhotoDimensions is deprecated. Use calculatePhotoDimensions from photo-config instead.');
   // Default to 'individual' type for backward compatibility
   const dimensions = calculatePhotoDimensions(viewportWidth, 'individual');
   return `w-[${dimensions.width}px] h-[${dimensions.height}px]`;
 }
 
 export function getPhotoLayout(layout: string) {
-  console.warn('⚠️ getPhotoLayout is deprecated. Use PHOTO_LAYOUTS from photo-config directly.');
+  logger.warn('getPhotoLayout is deprecated. Use PHOTO_LAYOUTS from photo-config directly.');
   // Return layout key from PHOTO_LAYOUTS based on string key
   const layoutKey = layout as PhotoLayoutKey;
   return PHOTO_LAYOUTS[layoutKey] || PHOTO_LAYOUTS.PHOTO_GRID;
@@ -108,7 +94,7 @@ export function buildResponsivePhotoClass(
   tablet?: string,
   desktop?: string
 ): string {
-  console.warn('⚠️ buildResponsivePhotoClass is deprecated. Use buildResponsiveGrid from photo-config/utils.');
+  logger.warn('buildResponsivePhotoClass is deprecated. Use buildResponsiveGrid from photo-config/utils.');
   // Fallback implementation for backward compatibility
   const classes: string[] = [];
   if (mobile) classes.push(mobile);
@@ -144,7 +130,7 @@ const size = PHOTO_SIZES.STANDARD_PREVIEW;
 
 // Legacy function for color scheme mapping
 export function getPhotoColorScheme(context: 'container' | 'empty' | 'placeholder' | 'overlay' | 'label' | 'thumbnail') {
-  console.warn('⚠️ getPhotoColorScheme is deprecated. Use getContextColorScheme from photo-config/utils.');
+  logger.warn('getPhotoColorScheme is deprecated. Use getContextColorScheme from photo-config/utils.');
 
   // Fallback implementation για backward compatibility
   const { PHOTO_STYLES } = require('./photo-config');

@@ -140,6 +140,7 @@ export const CONTACT_COMPONENT_MAPPING = {
 // PARKING COMPONENT MAPPING
 // ============================================================================
 
+import { createModuleLogger } from '@/lib/telemetry';
 import { ParkingGeneralTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
 
 export const PARKING_COMPONENT_MAPPING = {
@@ -202,7 +203,7 @@ export function getComponentMapping(type: 'project' | 'building' | 'storage' | '
     case 'master':
       return MASTER_COMPONENT_MAPPING;
     default:
-      console.warn(`Unknown component mapping type: ${type}. Falling back to master mapping.`);
+      createModuleLogger('ComponentMappings').warn('Unknown component mapping type, falling back to master', { type });
       return MASTER_COMPONENT_MAPPING;
   }
 }

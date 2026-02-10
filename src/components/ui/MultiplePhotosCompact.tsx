@@ -10,6 +10,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MultiplePhotosCompact');
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -249,11 +252,11 @@ export function MultiplePhotosCompact({
                   // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
                   const currentFile = normalizedPhotos[index]?.file;
                   if (currentFile === file) {
-                    console.log('📸 MultiplePhotosCompact: SKIPPING - File unchanged for slot', index);
+                    logger.info('SKIPPING - File unchanged for slot', { index });
                     return;
                   }
 
-                  console.log('📸 MultiplePhotosCompact: File changed for slot', index, file?.name);
+                  logger.info('File changed for slot', { index, fileName: file?.name });
                   const newPhotos = [...normalizedPhotos];
                   newPhotos[index] = {
                     ...newPhotos[index],
@@ -279,7 +282,7 @@ export function MultiplePhotosCompact({
                 onPreviewClick={() => {
                   // 🏢 ENTERPRISE: Photo click handler για gallery modal
                   if (photoPreviewWithCacheBuster && onPhotoClick) {
-                    console.log('🖱️ MultiplePhotosCompact: Photo clicked at index', index);
+                    logger.info('Photo clicked', { index });
                     onPhotoClick(index);
                   }
                 }}

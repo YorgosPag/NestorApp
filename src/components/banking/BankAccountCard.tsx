@@ -29,6 +29,10 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { colors } from '@/styles/design-tokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BankAccountCard');
 
 // ============================================================================
 // TYPES
@@ -82,6 +86,7 @@ export function BankAccountCard({
   onSetPrimary,
   className
 }: BankAccountCardProps) {
+  const { t } = useTranslation('banking');
   const iconSizes = useIconSizes();
   const [copied, setCopied] = React.useState(false);
 
@@ -99,7 +104,7 @@ export function BankAccountCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy IBAN:', err);
+      logger.error('Failed to copy IBAN', { error: err });
     }
   };
 
@@ -136,12 +141,12 @@ export function BankAccountCard({
               {account.isPrimary && (
                 <Badge variant="default" className="shrink-0">
                   <Star size={iconSizes.numeric.xs} className="mr-1" />
-                  Κύριος
+                  {t('account.primary')}
                 </Badge>
               )}
               {!account.isActive && (
                 <Badge variant="secondary" className="shrink-0">
-                  Ανενεργός
+                  {t('account.inactive')}
                 </Badge>
               )}
             </div>
@@ -161,7 +166,7 @@ export function BankAccountCard({
                 size="icon"
                 className="h-7 w-7 shrink-0"
                 onClick={handleCopyIban}
-                title="Αντιγραφή IBAN"
+                title={t('account.copyIban')}
               >
                 {copied ? (
                   <Check size={iconSizes.numeric.sm} className="text-green-500" />
@@ -181,7 +186,7 @@ export function BankAccountCard({
               </Badge>
               {account.holderName && (
                 <span className="text-sm text-muted-foreground">
-                  Δικαιούχος: {account.holderName}
+                  {t('account.holder')}: {account.holderName}
                 </span>
               )}
             </div>
@@ -204,7 +209,7 @@ export function BankAccountCard({
                   size="icon"
                   className="h-8 w-8"
                   onClick={() => onSetPrimary(account)}
-                  title="Ορισμός ως κύριος"
+                  title={t('account.setPrimary')}
                 >
                   <StarOff size={iconSizes.numeric.sm} />
                 </Button>
@@ -217,7 +222,7 @@ export function BankAccountCard({
                   size="icon"
                   className="h-8 w-8"
                   onClick={() => onEdit(account)}
-                  title="Επεξεργασία"
+                  title={t('account.edit')}
                 >
                   <Pencil size={iconSizes.numeric.sm} />
                 </Button>
@@ -230,7 +235,7 @@ export function BankAccountCard({
                   size="icon"
                   className="h-8 w-8 text-destructive hover:text-destructive"
                   onClick={() => onDelete(account)}
-                  title="Διαγραφή"
+                  title={t('account.delete')}
                 >
                   <Trash2 size={iconSizes.numeric.sm} />
                 </Button>

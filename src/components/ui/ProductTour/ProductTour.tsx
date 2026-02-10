@@ -67,6 +67,7 @@ import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized design tokens
 import { zIndex, componentSizes } from '@/styles/design-tokens';
 
+import { createModuleLogger } from '@/lib/telemetry';
 import { useTourContext, TourProvider } from './ProductTour.context';
 import type {
   TourStep,
@@ -537,7 +538,7 @@ const TourRenderer: FC = () => {
 
       // 🏢 DEBUG: Log target finding
       if (process.env.NODE_ENV === 'development') {
-        console.log('[ProductTour] Finding target:', {
+        createModuleLogger('ProductTour').info('Finding target', {
           stepId: currentStep.id,
           targetType: currentStep.target.type,
           targetValue: currentStep.target.type === 'ref' ? 'ref' : currentStep.target.value,
@@ -589,7 +590,7 @@ const TourRenderer: FC = () => {
 
   // 🏢 DEBUG: Log when rendering tour
   if (process.env.NODE_ENV === 'development' && !targetElement) {
-    console.log('[ProductTour] Rendering tour step without target (centered):', currentStep.id);
+    createModuleLogger('ProductTour').info('Rendering tour step without target (centered)', { stepId: currentStep.id });
   }
 
   return (

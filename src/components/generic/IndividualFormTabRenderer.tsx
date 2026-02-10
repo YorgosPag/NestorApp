@@ -14,6 +14,9 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('IndividualFormTabRenderer');
 
 // ============================================================================
 // INTERFACES
@@ -112,7 +115,7 @@ function createIndividualFormTabsFromConfig(
           showPhotosWhenDisabled
           // 🖼️ Photo click handler για gallery preview
           onPhotoClick={(index) => {
-            console.log('🔍 DEBUG IndividualFormTabRenderer: Photo click received', { index, onPhotoClickExists: !!onPhotoClick });
+            logger.info('Photo click received', { index, onPhotoClickExists: !!onPhotoClick });
             onPhotoClick?.(index);
           }}
         />

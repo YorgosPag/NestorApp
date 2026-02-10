@@ -14,6 +14,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useOptimizedCustomerInfo');
 
 // ============================================================================
 // INTERFACES
@@ -109,7 +112,7 @@ export function useOptimizedCustomerInfo(
 
   const fetchCustomerInfo = useCallback(async (id: string, _signal?: AbortSignal) => {
     try {
-      console.log(`🔄 Fetching customer info for: ${id}`);
+      logger.info('Fetching customer info', { contactId: id });
 
       // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
       interface ContactApiResponse {
@@ -135,7 +138,7 @@ export function useOptimizedCustomerInfo(
 
       // Cache immediately
       ultraCache.set(id, optimizedInfo);
-      console.log(`✅ Cached customer info for: ${id}`);
+      logger.info('Cached customer info', { contactId: id });
 
       return optimizedInfo;
 
@@ -171,7 +174,7 @@ export function useOptimizedCustomerInfo(
         }
       })
       .catch((err) => {
-        console.error(`❌ Error fetching customer ${contactId}:`, err);
+        logger.error('Error fetching customer', { contactId, error: err });
         setError(err.message || 'Unknown error');
       })
       .finally(() => {
@@ -195,7 +198,7 @@ export function useOptimizedCustomerInfo(
     const cached = ultraCache.get(contactId);
 
     if (cached) {
-      console.log(`⚡ INSTANT cache hit for: ${contactId}`);
+      logger.info('INSTANT cache hit', { contactId });
       setCustomerInfo(cached);
       setLoading(false);
       setError(null);
@@ -205,7 +208,7 @@ export function useOptimizedCustomerInfo(
       const shouldRefresh = age > 5 * 60 * 1000; // 5 minutes
 
       if (shouldRefresh) {
-        console.log(`🔄 Background refresh for: ${contactId}`);
+        logger.info('Background refresh', { contactId });
         // Background fetch without setting loading to true
         fetchCustomerInfo(contactId)
           .then((result) => {
@@ -214,7 +217,7 @@ export function useOptimizedCustomerInfo(
             }
           })
           .catch((err) => {
-            console.warn(`⚠️ Background refresh failed for ${contactId}:`, err);
+            logger.warn('Background refresh failed', { contactId, error: err });
             // Don't set error for background refresh failures
           });
       }
@@ -223,7 +226,7 @@ export function useOptimizedCustomerInfo(
     }
 
     // STEP 3: No cache, fetch with loading state
-    console.log(`💾 No cache, fetching: ${contactId}`);
+    logger.info('No cache, fetching', { contactId });
     refetch();
 
   }, [contactId, enabled, fetchCustomerInfo, refetch]);

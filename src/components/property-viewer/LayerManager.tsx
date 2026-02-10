@@ -13,6 +13,9 @@ import ZoomWindowOverlay from '@/subapps/dxf-viewer/canvas-v2/overlays/ZoomWindo
 import SelectionMarqueeOverlay from '@/subapps/dxf-viewer/canvas-v2/overlays/SelectionMarqueeOverlay';
 import CoordinateCalibrationOverlay from '@/subapps/dxf-viewer/ui/CoordinateCalibrationOverlay';
 import CursorSettingsPanel from '@/subapps/dxf-viewer/ui/CursorSettingsPanel';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('LayerManager');
 
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 
@@ -131,7 +134,7 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
         try {
           renderer.setScene(currentScene);
           renderer.fitToView(currentScene);
-        } catch (e) { console.warn('fitToView failed:', e); }
+        } catch (e) { logger.warn('fitToView failed', { error: e }); }
       });
     }
   };
@@ -145,7 +148,7 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
         if (scene.entities.length > 0) {
             rendererRef.current.fitToView(scene);
         }
-      } catch (e) { console.warn('fitToView on scene change failed:', e); }
+      } catch (e) { logger.warn('fitToView on scene change failed', { error: e }); }
     }
   }, [scene]);
 

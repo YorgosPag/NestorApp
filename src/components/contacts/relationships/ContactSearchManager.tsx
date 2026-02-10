@@ -11,6 +11,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { EnterpriseContactDropdown, type ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
@@ -57,6 +58,12 @@ export interface ContactSearchManagerProps {
     autoLoadContacts?: boolean;
   };
 }
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('ContactSearchManager');
 
 // ============================================================================
 // ENTERPRISE CONTACT SEARCH MANAGER
@@ -174,7 +181,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
       setSearchResults(filteredContacts);
 
     } catch (error) {
-      console.error('🚨 ContactSearchManager Error:', error);
+      logger.error('ContactSearchManager search error', { error });
       setSearchError(t('relationships.manager.errors.searchError', 'Search error'));
       setSearchResults([]);
     } finally {
@@ -297,7 +304,7 @@ export const useContactSearch = (config: {
 
       setSearchResults(filteredContacts);
     } catch (err) {
-      console.error('Contact search error:', err);
+      logger.error('Contact search error', { error: err });
       setError('Search error'); // Note: Hardcoded fallback since hooks cannot use i18n
       setSearchResults([]);
     } finally {

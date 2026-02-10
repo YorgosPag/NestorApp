@@ -10,6 +10,9 @@
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ConstructionServices');
 import type {
   ConstructionPhase,
   ConstructionTask,
@@ -62,7 +65,7 @@ export async function getConstructionData(
       tasks: result?.tasks ?? [],
     };
   } catch (error) {
-    console.error('❌ [getConstructionData] Error:', error);
+    logger.error('getConstructionData failed', { error });
     return { phases: [], tasks: [] };
   }
 }
@@ -81,7 +84,7 @@ export async function createConstructionPhase(
 
     return { success: true, phaseId: result?.id };
   } catch (error) {
-    console.error('❌ [createConstructionPhase] Error:', error);
+    logger.error('createConstructionPhase failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -104,7 +107,7 @@ export async function updateConstructionPhase(
 
     return { success: true };
   } catch (error) {
-    console.error('❌ [updateConstructionPhase] Error:', error);
+    logger.error('updateConstructionPhase failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -125,7 +128,7 @@ export async function deleteConstructionPhase(
 
     return { success: true, cascadedTasks: result?.cascadedTasks };
   } catch (error) {
-    console.error('❌ [deleteConstructionPhase] Error:', error);
+    logger.error('deleteConstructionPhase failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -147,7 +150,7 @@ export async function createConstructionTask(
 
     return { success: true, taskId: result?.id };
   } catch (error) {
-    console.error('❌ [createConstructionTask] Error:', error);
+    logger.error('createConstructionTask failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -170,7 +173,7 @@ export async function updateConstructionTask(
 
     return { success: true };
   } catch (error) {
-    console.error('❌ [updateConstructionTask] Error:', error);
+    logger.error('updateConstructionTask failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -191,7 +194,7 @@ export async function deleteConstructionTask(
 
     return { success: true };
   } catch (error) {
-    console.error('❌ [deleteConstructionTask] Error:', error);
+    logger.error('deleteConstructionTask failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

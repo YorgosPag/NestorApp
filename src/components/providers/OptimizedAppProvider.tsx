@@ -14,6 +14,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('OptimizedAppProvider');
 
 // 🏢 ENTERPRISE: Extend Window interface for type-safe global debug access
 interface AppOptimizations {
@@ -221,7 +224,7 @@ export function OptimizedAppProvider({
         clearCache: () => {
           localStorage.clear();
           sessionStorage.clear();
-          console.log('🧹 Cache cleared');
+          logger.info('Cache cleared');
         }
       };
     }

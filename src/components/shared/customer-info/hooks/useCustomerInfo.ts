@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
@@ -86,6 +87,9 @@ class CustomerInfoCache {
 // Singleton cache instance
 const customerCache = new CustomerInfoCache();
 
+// Module logger
+const logger = createModuleLogger('useCustomerInfo');
+
 // ============================================================================
 // FETCH FUNCTIONS
 // ============================================================================
@@ -122,7 +126,7 @@ async function fetchCustomerBasicInfo(contactId: string): Promise<CustomerBasicI
     };
 
   } catch (error) {
-    console.error(`❌ Failed to fetch customer basic info for ${contactId}:`, error);
+    logger.error('Failed to fetch customer basic info', { contactId, error });
     // 🌐 i18n: Error message converted to i18n key - 2026-01-18
     throw new Error(
       error instanceof Error
@@ -171,7 +175,7 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
     };
 
   } catch (error) {
-    console.error(`❌ Failed to fetch customer extended info for ${contactId}:`, error);
+    logger.error('Failed to fetch customer extended info', { contactId, error });
     // 🌐 i18n: Error message converted to i18n key - 2026-01-18
     throw new Error(
       error instanceof Error

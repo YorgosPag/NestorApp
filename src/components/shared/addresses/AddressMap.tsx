@@ -47,7 +47,7 @@ import {
 } from '@/services/real-estate-monitor/AddressResolver';
 import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
 import { colors } from '@/styles/design-tokens';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /** Map pin SVG colors — SSoT: design-tokens */
 const PIN_COLORS = {
@@ -123,7 +123,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // STATE MANAGEMENT
   // ===========================================================================
 
-  const { t } = useTranslationLazy('projects');
+  const { t } = useTranslation('addresses');
 
   const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingResult>>(new Map());
   const [geocodingStatus, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'partial' | 'error'>('idle');
@@ -274,7 +274,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         if (!geocoded) return null;
 
         // Translate address type (billing -> Τιμολόγηση, site -> Εργοτάξιο, etc.)
-        const translatedLabel = address.label || t(`address.types.${address.type}`);
+        const translatedLabel = address.label || t(`types.${address.type}`);
 
         return {
           type: 'Feature' as const,
@@ -368,7 +368,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
           <p className="text-sm text-muted-foreground">
-            {t('address.map.loading')}
+            {t('map.loading')}
           </p>
         </div>
       </div>
@@ -381,7 +381,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       <Alert variant="destructive" className={className}>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          {t('address.map.error')}
+          {t('map.error')}
         </AlertDescription>
       </Alert>
     );
@@ -453,7 +453,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
             <div className="absolute top-4 right-4">
               <Badge variant="secondary" className="shadow-md">
                 <AlertTriangle className="w-3 h-3 mr-1" />
-                {t('address.map.partialStatus', {
+                {t('map.partialStatus', {
                   count: geocodedAddresses.size,
                   total: getGeocodableAddresses(addresses).length
                 })}

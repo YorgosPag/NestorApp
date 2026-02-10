@@ -9,6 +9,9 @@ import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/in
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('IndividualFormRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -189,7 +192,7 @@ function renderField(
     case 'select':
       return renderSelectField(field, formData, onSelectChange, disabled, t);
     default:
-      console.warn(`Unknown field type: ${field.type} for field ${field.id}`);
+      logger.warn('Unknown field type', { fieldType: field.type, fieldId: field.id });
       return renderInputField(field, formData, onChange, disabled, t);
   }
 }
@@ -216,7 +219,7 @@ export function IndividualFormRenderer({
   const { t } = useTranslation('contacts');
 
   if (!sections || sections.length === 0) {
-    console.warn('IndividualFormRenderer: No sections provided');
+    logger.warn('No sections provided');
     return null;
   }
 

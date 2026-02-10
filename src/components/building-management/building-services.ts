@@ -17,6 +17,9 @@ import { RealtimeService } from '@/services/realtime';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from '@/types/project/addresses';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingServices');
 
 /**
  * 🏢 ENTERPRISE: Building update payload type
@@ -54,13 +57,13 @@ export async function updateBuilding(
   updates: BuildingUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🏗️ [updateBuilding] Updating building ${buildingId} via API...`);
+    logger.info('Updating building via API', { buildingId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
     await apiClient.patch('/api/buildings', { buildingId, ...updates });
 
-    console.log(`✅ [updateBuilding] Building ${buildingId} updated successfully`);
+    logger.info('Building updated successfully', { buildingId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to update their local state
@@ -80,7 +83,7 @@ export async function updateBuilding(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [updateBuilding] Error:', error);
+    logger.error('updateBuilding failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -123,7 +126,7 @@ export async function createBuilding(
   data: BuildingCreatePayload
 ): Promise<{ success: boolean; buildingId?: string; error?: string }> {
   try {
-    console.log(`🏗️ [createBuilding] Creating new building via API...`);
+    logger.info('Creating new building via API');
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
@@ -133,7 +136,7 @@ export async function createBuilding(
     const result = await apiClient.post<BuildingCreateResult>('/api/buildings', data);
 
     const buildingId = result?.buildingId;
-    console.log(`✅ [createBuilding] Building created with ID: ${buildingId}`);
+    logger.info('Building created', { buildingId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchBuildingCreated({
@@ -150,7 +153,7 @@ export async function createBuilding(
     return { success: true, buildingId };
 
   } catch (error) {
-    console.error('❌ [createBuilding] Error:', error);
+    logger.error('createBuilding failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -166,12 +169,12 @@ export async function deleteBuilding(
   buildingId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🏗️ [deleteBuilding] Deleting building ${buildingId}...`);
+    logger.info('Deleting building', { buildingId });
 
     const buildingRef = doc(db, COLLECTIONS.BUILDINGS, buildingId);
     await deleteDoc(buildingRef);
 
-    console.log(`✅ [deleteBuilding] Building ${buildingId} deleted successfully`);
+    logger.info('Building deleted successfully', { buildingId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchBuildingDeleted({
@@ -182,7 +185,7 @@ export async function deleteBuilding(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [deleteBuilding] Error:', error);
+    logger.error('deleteBuilding failed', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -228,7 +231,7 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
     const result = await apiClient.get<ProjectListResponse>('/api/projects/list');
 
     if (!result || !result.projects) {
-      console.warn('⚠️ [getProjectsList] Invalid response from API');
+      logger.warn('Invalid response from projects API');
       return [];
     }
 
@@ -239,11 +242,11 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
       companyName: project.company || '',
     }));
 
-    console.log(`✅ Loaded ${projects.length} projects via Enterprise API`);
+    logger.info('Loaded projects via Enterprise API', { count: projects.length });
     return projects;
 
   } catch (error) {
-    console.error('❌ [getProjectsList] Error fetching projects from API:', error);
+    logger.error('getProjectsList failed', { error });
     return [];
   }
 }
@@ -272,7 +275,7 @@ export async function getProjectAddresses(
     const result = await apiClient.get<ProjectGetResult>(`/api/projects/${projectId}`);
 
     if (!result?.project) {
-      console.warn(`⚠️ [getProjectAddresses] No project data for ${projectId}`);
+      logger.warn('No project data found', { projectId });
       return { addresses: [] };
     }
 
@@ -282,7 +285,7 @@ export async function getProjectAddresses(
       legacyCity: result.project.city,
     };
   } catch (error) {
-    console.error('❌ [getProjectAddresses] Error:', error);
+    logger.error('getProjectAddresses failed', { error });
     return { addresses: [] };
   }
 }

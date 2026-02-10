@@ -17,6 +17,9 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CalendarCreateDialog');
 
 import {
   Dialog,
@@ -132,7 +135,7 @@ export function CalendarCreateDialog({
       onOpenChange(false);
       onCreated?.();
     } catch (err) {
-      console.error('[CalendarCreateDialog] Error creating event:', err);
+      logger.error('Error creating event', { error: err });
       toast.error(err instanceof Error ? err.message : 'Error creating event');
     } finally {
       setSubmitting(false);

@@ -14,6 +14,9 @@ import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ParkingDetailsHeader');
 
 interface ParkingDetailsHeaderProps {
   parking: ParkingSpot;
@@ -38,19 +41,19 @@ export function ParkingDetailsHeader({ parking }: ParkingDetailsHeaderProps) {
           actions={[
             {
               label: t('header.viewParking'),
-              onClick: () => console.log('Show parking details'),
+              onClick: () => logger.info('Show parking details'),
               icon: Eye,
               className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
             },
             {
               label: t('header.edit'),
-              onClick: () => console.log('Edit parking'),
+              onClick: () => logger.info('Edit parking'),
               icon: Edit,
               variant: 'outline'
             },
             {
               label: t('header.print'),
-              onClick: () => console.log('Print parking details'),
+              onClick: () => logger.info('Print parking details'),
               icon: FileText,
               variant: 'outline'
             }

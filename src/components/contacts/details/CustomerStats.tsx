@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Ruler, Euro } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { getUnitsByOwner } from '@/services/units.service';
@@ -22,6 +23,8 @@ interface Stats {
   totalArea: number;
   totalValue: number;
 }
+
+const logger = createModuleLogger('CustomerStats');
 
 export function CustomerStats({ contactId }: CustomerStatsProps) {
   const { t } = useTranslation('contacts');
@@ -46,7 +49,7 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
             setStats(null);
         }
       } catch (error) {
-        console.error("Failed to fetch customer stats:", error);
+        logger.error('Failed to fetch customer stats', { error });
         setStats(null);
       } finally {
         setLoading(false);

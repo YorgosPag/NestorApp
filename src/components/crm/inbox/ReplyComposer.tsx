@@ -45,6 +45,9 @@ import {
   ATTACHMENT_UPLOAD_STATUS,
   detectAttachmentType,
 } from '@/types/conversations';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ReplyComposer');
 
 // ============================================================================
 // CONSTANTS
@@ -246,39 +249,39 @@ export function ReplyComposer({
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
-      console.log('📎 [ReplyComposer] handleFileSelect called, files:', files?.length);
+      logger.info('handleFileSelect called', { filesCount: files?.length });
 
       if (!files || files.length === 0) {
-        console.log('📎 [ReplyComposer] No files selected');
+        logger.info('No files selected');
         return;
       }
 
       // 🐛 FIX: Copy files to array BEFORE resetting input (resetting clears FileList!)
       const filesArray = Array.from(files);
-      console.log('📎 [ReplyComposer] Files array length:', filesArray.length);
+      logger.info('Files array prepared', { length: filesArray.length });
 
       // Reset input to allow re-selecting same file (AFTER copying!)
       event.target.value = '';
 
       // Check max attachments limit
       if (attachments.length + filesArray.length > MAX_ATTACHMENTS) {
-        console.warn(`📎 [ReplyComposer] Maximum ${MAX_ATTACHMENTS} attachments allowed`);
+        logger.warn('Maximum attachments limit reached', { maxAttachments: MAX_ATTACHMENTS });
         return;
       }
 
       const newAttachments: PendingAttachment[] = [];
 
       for (const file of filesArray) {
-        console.log('📎 [ReplyComposer] Processing file:', file.name, 'size:', file.size, 'type:', file.type, 'MAX:', MAX_ATTACHMENT_SIZE);
+        logger.info('Processing file', { name: file.name, size: file.size, type: file.type, maxSize: MAX_ATTACHMENT_SIZE });
 
         // Validate file size
         if (file.size > MAX_ATTACHMENT_SIZE) {
-          console.warn(`📎 [ReplyComposer] File ${file.name} exceeds maximum size (${file.size} > ${MAX_ATTACHMENT_SIZE})`);
+          logger.warn('File exceeds maximum size', { fileName: file.name, fileSize: file.size, maxSize: MAX_ATTACHMENT_SIZE });
           continue;
         }
 
         const type = detectAttachmentType(file.type);
-        console.log('📎 [ReplyComposer] Detected type:', type);
+        logger.info('Detected attachment type', { type });
 
         const attachment: PendingAttachment = {
           id: generateAttachmentId(),
@@ -296,22 +299,22 @@ export function ReplyComposer({
         newAttachments.push(attachment);
       }
 
-      console.log('📎 [ReplyComposer] New attachments created:', newAttachments.length);
+      logger.info('New attachments created', { count: newAttachments.length });
 
       if (newAttachments.length === 0) {
-        console.log('📎 [ReplyComposer] No valid attachments, returning');
+        logger.info('No valid attachments, returning');
         return;
       }
 
       // Add to state
-      console.log('📎 [ReplyComposer] Adding attachments to state');
+      logger.info('Adding attachments to state');
       setAttachments((prev) => [...prev, ...newAttachments]);
 
       // Auto-upload if handler provided
-      console.log('📎 [ReplyComposer] onUploadAttachment handler:', !!onUploadAttachment);
+      logger.info('Upload attachment handler available', { hasHandler: !!onUploadAttachment });
       if (onUploadAttachment) {
         setIsUploadingAttachment(true);
-        console.log('📎 [ReplyComposer] Starting upload...');
+        logger.info('Starting upload');
 
         for (const attachment of newAttachments) {
           try {

@@ -18,6 +18,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ADR-054: Centralized upload components
 import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FilesCard');
 
 export function FilesCard() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -33,7 +36,7 @@ export function FilesCard() {
    */
   const handleFileUpload = async (files: File[]) => {
     if (files.length === 0) return;
-    console.log('Files selected:', files.map(f => f.name));
+    logger.info('Files selected', { fileNames: files.map(f => f.name) });
     // TODO: Implement actual file upload to FileRecordService
   };
 

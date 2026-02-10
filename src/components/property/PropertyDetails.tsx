@@ -24,6 +24,9 @@ import type { Property } from '@/types/property';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { PropertyInfoItem } from '@/components/property-management/details/PropertyInfoItem';
 import { shareProperty, trackShareEvent, type PropertyShareData } from '@/lib/share-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('PropertyDetails');
 
 interface PropertyDetailsProps {
   property: Property;
@@ -64,7 +67,7 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
         toast.error(`❌ ${t('details.shareError')}`);
       }
     } catch (error) {
-      console.error('Share error:', error);
+      logger.error('Share error', { error });
       toast.error(`❌ ${t('details.shareError')}`);
     }
   };

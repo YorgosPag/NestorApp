@@ -7,6 +7,9 @@ import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
 
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UniversalTabsRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Lazy Tab Content Wrapper
@@ -192,8 +195,7 @@ export function UniversalTabsRenderer<TData = unknown>({
                               componentMapping[tabConfig.component];
 
     if (!ComponentToRender) {
-      console.warn(`Component "${tabConfig.component}" not found in mapping for tab "${tabConfig.id}"`);
-      console.log('Available components:', Object.keys(componentMapping));
+      logger.warn('Component not found in mapping for tab', { component: tabConfig.component, tabId: tabConfig.id, availableComponents: Object.keys(componentMapping) });
 
       // Fallback to PlaceholderTab
       return {
@@ -246,10 +248,10 @@ export function UniversalTabsRenderer<TData = unknown>({
             // 🏢 ENTERPRISE: Pass FULL FloorplanData object (not just .scene)
             floorplanData: floorplanAdditionalData.projectFloorplan,
             onAddFloorplan: floorplanAdditionalData.onAddProjectFloorplan ?? (() => {
-              console.log('Add project floorplan for project:', (data as { id?: string })?.id);
+              logger.info('Add project floorplan for project', { projectId: (data as { id?: string })?.id });
             }),
             onEditFloorplan: floorplanAdditionalData.onEditProjectFloorplan ?? (() => {
-              console.log('Edit project floorplan for project:', (data as { id?: string })?.id);
+              logger.info('Edit project floorplan for project', { projectId: (data as { id?: string })?.id });
             }),
           };
         } else if (tabConfig.value === 'parking-floorplan') {
@@ -257,10 +259,10 @@ export function UniversalTabsRenderer<TData = unknown>({
             // 🏢 ENTERPRISE: Pass FULL FloorplanData object (not just .scene)
             floorplanData: floorplanAdditionalData.parkingFloorplan,
             onAddFloorplan: floorplanAdditionalData.onAddParkingFloorplan ?? (() => {
-              console.log('Add parking floorplan for project:', (data as { id?: string })?.id);
+              logger.info('Add parking floorplan for project', { projectId: (data as { id?: string })?.id });
             }),
             onEditFloorplan: floorplanAdditionalData.onEditParkingFloorplan ?? (() => {
-              console.log('Edit parking floorplan for project:', (data as { id?: string })?.id);
+              logger.info('Edit parking floorplan for project', { projectId: (data as { id?: string })?.id });
             }),
           };
         }
@@ -297,7 +299,7 @@ export function UniversalTabsRenderer<TData = unknown>({
   // 🏢 ENTERPRISE: Handle tab change for controlled mode
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTab(tabId);
-    console.log(`📑 [UniversalTabsRenderer] Tab changed to: ${tabId}`);
+    logger.info('Tab changed', { tabId });
   }, []);
 
   return (

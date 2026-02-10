@@ -6,6 +6,9 @@ import { exportObligationToPDF, downloadPDF } from "@/services/pdf-export.servic
 import { generateFileName } from "@/lib/obligations-utils";
 import type { ObligationDocument } from "@/types/obligations";
 import type { ExportOptions, ExportBuildOptions } from "../types";
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('usePdfExport');
 
 export function usePdfExport(document: ObligationDocument) {
   const [isExporting, setIsExporting] = useState(false);
@@ -52,7 +55,7 @@ export function usePdfExport(document: ObligationDocument) {
           downloadPDF(pdfData, filename);
         }
       } catch (err) {
-        console.error("Error exporting PDF:", err);
+        logger.error('Error exporting PDF', { error: err });
         if (typeof window !== "undefined") {
           window.alert("Σφάλμα κατά την εξαγωγή PDF. Παρακαλώ δοκιμάστε ξανά.");
         }

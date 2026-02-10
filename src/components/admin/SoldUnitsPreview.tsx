@@ -16,6 +16,9 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SoldUnitsPreview');
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -86,7 +89,7 @@ export function SoldUnitsPreview() {
 
       if (contactIds.length === 0) return;
 
-      console.log('🔍 Loading contact names for IDs:', contactIds);
+      logger.info('Loading contact names for IDs', { contactIds });
 
       // Create lookup map
       const lookup: ContactLookup = {};
@@ -106,22 +109,22 @@ export function SoldUnitsPreview() {
             }
 
             lookup[contactId] = displayName || 'Unknown Contact';
-            console.log(`✅ Contact loaded: ${contactId} → ${displayName}`);
+            logger.info('Contact loaded', { contactId, displayName });
           } else {
             lookup[contactId] = 'Contact Not Found';
-            console.warn(`❌ Contact not found: ${contactId}`);
+            logger.warn('Contact not found', { contactId });
           }
         } catch (error) {
           lookup[contactId] = 'Error Loading';
-          console.error(`❌ Error loading contact ${contactId}:`, error);
+          logger.error('Error loading contact', { contactId, error });
         }
       }
 
       setContactLookup(lookup);
-      console.log('✅ Contact lookup completed:', lookup);
+      logger.info('Contact lookup completed', { count: Object.keys(lookup).length });
 
     } catch (error) {
-      console.error('❌ Error loading contact names:', error);
+      logger.error('Error loading contact names', { error });
     }
   };
 

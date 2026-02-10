@@ -45,6 +45,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingAddressesCard');
 
 // =============================================================================
 // TYPES
@@ -119,7 +122,7 @@ export function BuildingAddressesCard({
         const result = await getProjectAddresses(projectId);
         setProjectAddresses(result.addresses);
       } catch (error) {
-        console.error('Failed to fetch project addresses:', error);
+        logger.error('Failed to fetch project addresses', { error });
       } finally {
         setLoadingProject(false);
       }

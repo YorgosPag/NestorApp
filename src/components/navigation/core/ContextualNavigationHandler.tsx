@@ -19,6 +19,9 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useNavigation } from './NavigationContext';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ContextualNavigationHandler');
 
 /**
  * Enterprise handler for contextual navigation
@@ -41,7 +44,7 @@ export function ContextualNavigationHandler() {
     // 🏢 ENTERPRISE: Wait until navigation data is loaded
     // This prevents race conditions where we try to select before data exists
     if (navigation.companies.length === 0 || navigation.projects.length === 0) {
-      console.log('⏳ [ContextualNavigation] Waiting for navigation data to load...');
+      logger.info('Waiting for navigation data to load...');
       return;
     }
 
@@ -61,7 +64,7 @@ export function ContextualNavigationHandler() {
 
     // Handle Project Selection
     if (params.projectId && params.projectId !== previousSelections.current.projectId) {
-      console.log('🎯 [ContextualNavigation] Auto-selecting project:', params.projectId);
+      logger.info('Auto-selecting project', { projectId: params.projectId });
       previousSelections.current.projectId = params.projectId;
 
       // Find and select the project
@@ -70,7 +73,7 @@ export function ContextualNavigationHandler() {
         // First select the company that owns this project
         const company = navigation.companies.find(c => c.id === project.companyId);
         if (company && navigation.selectedCompany?.id !== company.id) {
-          console.log('🏢 [ContextualNavigation] Auto-selecting parent company:', company.companyName);
+          logger.info('Auto-selecting parent company', { companyName: company.companyName });
           navigation.selectCompany(company.id);
         }
 
@@ -83,7 +86,7 @@ export function ContextualNavigationHandler() {
 
     // Handle Building Selection
     else if (params.buildingId && params.buildingId !== previousSelections.current.buildingId) {
-      console.log('🏗️ [ContextualNavigation] Auto-selecting building:', params.buildingId);
+      logger.info('Auto-selecting building', { buildingId: params.buildingId });
       previousSelections.current.buildingId = params.buildingId;
 
       // For buildings, we need to know which project they belong to
@@ -103,7 +106,7 @@ export function ContextualNavigationHandler() {
         : previousSelections.current.parkingId;
 
       if (spaceId && spaceId !== previousSpaceId) {
-        console.log('🏠 [ContextualNavigation] Auto-selecting space:', spaceType, spaceId);
+        logger.info('Auto-selecting space', { spaceType, spaceId });
 
         // Update previous selection
         if (params.unitId) previousSelections.current.unitId = params.unitId;

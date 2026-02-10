@@ -53,6 +53,9 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ENTERPRISE: Form state management hook
 import { useBuildingForm, type BuildingStatus, type BuildingCategory } from '../hooks/useBuildingForm';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AddBuildingDialog');
 // ENTERPRISE: Projects service for dropdown (with company info)
 import { getProjectsList, type ProjectListItem } from '../building-services';
 // ENTERPRISE: Companies service for dropdown (same pattern as AddProjectDialog)
@@ -189,12 +192,12 @@ export function AddBuildingDialog({
 
       getProjectsList()
         .then(setAllProjects)
-        .catch(console.error)
+        .catch((error: unknown) => logger.error('Failed to load projects', { error }))
         .finally(() => setProjectsLoading(false));
 
       getAllActiveCompanies()
         .then(setCompanies)
-        .catch(console.error)
+        .catch((error: unknown) => logger.error('Failed to load companies', { error }))
         .finally(() => setCompaniesLoading(false));
     }
   }, [open]);

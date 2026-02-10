@@ -8,7 +8,10 @@
 // ============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import type { ContactType } from '@/types/contacts';
+
+const logger = createModuleLogger('useOrganizationTree');
 import type { OrganizationTree } from '@/types/contacts/relationships';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import type { UseOrganizationTreeReturn } from '../types/relationship-manager.types';
@@ -46,19 +49,18 @@ export const useOrganizationTree = (
       setLoading(true);
       setError(null);
 
-      console.log('🌳 Loading organization tree for:', contactId);
+      logger.info('Loading organization tree', { contactId });
       const tree = await ContactRelationshipService.buildOrganizationHierarchy(contactId);
 
       setOrganizationTree(tree);
-      console.log('✅ Organization tree loaded successfully');
+      logger.info('Organization tree loaded successfully');
 
     } catch (err) {
       const errorMessage = 'Σφάλμα φόρτωσης οργανωτικού διαγράμματος';
       setError(errorMessage);
-      console.error('❌ DETAILED Error loading organization tree:', {
+      logger.error('Error loading organization tree', {
         error: err,
         message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined,
         contactId
       });
       setOrganizationTree(null);

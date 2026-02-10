@@ -18,6 +18,9 @@
  */
 
 import { useMemo } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('DynamicStyles');
 
 // ============================================================================
 // 🎨 DYNAMIC STYLE GENERATORS - NO INLINE STYLES
@@ -61,7 +64,7 @@ export const getDynamicTextClass = (color?: string): string => {
   if (!color) return '';
 
   if (!isValidColor(color)) {
-    console.warn(`Invalid color provided to getDynamicTextClass: ${color}`);
+    logger.warn('Invalid color provided to getDynamicTextClass', { color });
     return '';
   }
 
@@ -84,7 +87,7 @@ export const getDynamicBorderClass = (color?: string, width: string = '1px'): st
   if (!color) return '';
 
   if (!isValidColor(color)) {
-    console.warn(`Invalid color provided to getDynamicBorderClass: ${color}`);
+    logger.warn('Invalid color provided to getDynamicBorderClass', { color });
     return '';
   }
 
@@ -106,7 +109,7 @@ export const getDynamicWidthClass = (width?: string): string => {
   if (!width) return '';
 
   if (!isValidDimension(width)) {
-    console.warn(`Invalid width provided to getDynamicWidthClass: ${width}`);
+    logger.warn('Invalid width provided to getDynamicWidthClass', { width });
     return '';
   }
 
@@ -128,7 +131,7 @@ export const getDynamicTransformClass = (transform?: string): string => {
   if (!transform) return '';
 
   if (!isValidTransform(transform)) {
-    console.warn(`Invalid transform provided to getDynamicTransformClass: ${transform}`);
+    logger.warn('Invalid transform provided to getDynamicTransformClass', { transform });
     return '';
   }
 
@@ -150,7 +153,7 @@ export const getDynamicHeightClass = (height?: string): string => {
   if (!height) return '';
 
   if (!isValidDimension(height)) {
-    console.warn(`Invalid height provided to getDynamicHeightClass: ${height}`);
+    logger.warn('Invalid height provided to getDynamicHeightClass', { height });
     return '';
   }
 
@@ -172,7 +175,7 @@ export const getDynamicTopClass = (top?: string): string => {
   if (!top) return '';
 
   if (!isValidDimension(top)) {
-    console.warn(`Invalid top provided to getDynamicTopClass: ${top}`);
+    logger.warn('Invalid top provided to getDynamicTopClass', { top });
     return '';
   }
 
@@ -194,7 +197,7 @@ export const getDynamicOpacityClass = (opacity?: number): string => {
   if (opacity === undefined || opacity === null) return '';
 
   if (opacity < 0 || opacity > 1) {
-    console.warn(`Invalid opacity provided to getDynamicOpacityClass: ${opacity}`);
+    logger.warn('Invalid opacity provided to getDynamicOpacityClass', { opacity });
     return '';
   }
 
@@ -217,7 +220,7 @@ export const getDynamicBackgroundImageClass = (backgroundImage?: string): string
   if (!backgroundImage) return '';
 
   if (!isValidBackgroundImage(backgroundImage)) {
-    console.warn(`Invalid backgroundImage provided to getDynamicBackgroundImageClass: ${backgroundImage}`);
+    logger.warn('Invalid backgroundImage provided to getDynamicBackgroundImageClass', { backgroundImage });
     return '';
   }
 

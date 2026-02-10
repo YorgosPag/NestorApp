@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   ProjectAddress,
   ProjectAddressType,
@@ -63,32 +64,16 @@ interface AddressFormData {
 }
 
 // =============================================================================
-// LABELS & OPTIONS
+// TYPE/BLOCK SIDE KEYS (for iteration — labels come from i18n)
 // =============================================================================
 
-const ADDRESS_TYPE_LABELS: Record<ProjectAddressType, string> = {
-  site: 'Εργοτάξιο',
-  entrance: 'Είσοδος',
-  delivery: 'Παράδοση',
-  legal: 'Νομική Έδρα',
-  postal: 'Ταχυδρομείο',
-  billing: 'Τιμολόγηση',
-  correspondence: 'Αλληλογραφία',
-  other: 'Άλλο'
-};
+const ADDRESS_TYPE_KEYS: readonly ProjectAddressType[] = [
+  'site', 'entrance', 'delivery', 'legal', 'postal', 'billing', 'correspondence', 'other'
+] as const;
 
-const BLOCK_SIDE_LABELS: Record<BlockSideDirection, string> = {
-  north: 'Βόρεια',
-  south: 'Νότια',
-  east: 'Ανατολική',
-  west: 'Δυτική',
-  northeast: 'Βορειοανατολική',
-  northwest: 'Βορειοδυτική',
-  southeast: 'Νοτιοανατολική',
-  southwest: 'Νοτιοδυτική',
-  corner: 'Γωνία',
-  internal: 'Εσωτερική'
-};
+const BLOCK_SIDE_KEYS: readonly BlockSideDirection[] = [
+  'north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest', 'corner', 'internal'
+] as const;
 
 // =============================================================================
 // COMPONENT
@@ -99,6 +84,8 @@ export function AddressFormSection({
   onChange,
   showErrors = false
 }: AddressFormSectionProps) {
+  const { t } = useTranslation('addresses');
+
   // Form state
   const [formData, setFormData] = useState<AddressFormData>({
     street: initialValues?.street || '',
@@ -150,7 +137,7 @@ export function AddressFormSection({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2">
           <Label htmlFor="street" className="text-sm font-medium">
-            Οδός *
+            {t('form.street')} *
           </Label>
           <Input
             id="street"
@@ -160,13 +147,13 @@ export function AddressFormSection({
             className={errors.street ? 'border-red-500' : ''}
           />
           {errors.street && (
-            <p className="text-xs text-red-500 mt-1">Η οδός είναι υποχρεωτική</p>
+            <p className="text-xs text-red-500 mt-1">{t('form.validation.streetRequired')}</p>
           )}
         </div>
 
         <div>
           <Label htmlFor="number" className="text-sm font-medium">
-            Αριθμός
+            {t('form.number')}
           </Label>
           <Input
             id="number"
@@ -181,7 +168,7 @@ export function AddressFormSection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="city" className="text-sm font-medium">
-            Πόλη *
+            {t('form.city')} *
           </Label>
           <Input
             id="city"
@@ -191,13 +178,13 @@ export function AddressFormSection({
             className={errors.city ? 'border-red-500' : ''}
           />
           {errors.city && (
-            <p className="text-xs text-red-500 mt-1">Η πόλη είναι υποχρεωτική</p>
+            <p className="text-xs text-red-500 mt-1">{t('form.validation.cityRequired')}</p>
           )}
         </div>
 
         <div>
           <Label htmlFor="postalCode" className="text-sm font-medium">
-            Τ.Κ. *
+            {t('form.postalCode')} *
           </Label>
           <Input
             id="postalCode"
@@ -207,7 +194,7 @@ export function AddressFormSection({
             className={errors.postalCode ? 'border-red-500' : ''}
           />
           {errors.postalCode && (
-            <p className="text-xs text-red-500 mt-1">Ο Τ.Κ. είναι υποχρεωτικός</p>
+            <p className="text-xs text-red-500 mt-1">{t('form.validation.postalCodeRequired')}</p>
           )}
         </div>
       </div>
@@ -216,7 +203,7 @@ export function AddressFormSection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="type" className="text-sm font-medium">
-            Τύπος Διεύθυνσης
+            {t('form.type')}
           </Label>
           <Select
             value={formData.type}
@@ -226,9 +213,9 @@ export function AddressFormSection({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(ADDRESS_TYPE_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
+              {ADDRESS_TYPE_KEYS.map((typeKey) => (
+                <SelectItem key={typeKey} value={typeKey}>
+                  {t(`types.${typeKey}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -237,20 +224,20 @@ export function AddressFormSection({
 
         <div>
           <Label htmlFor="blockSide" className="text-sm font-medium">
-            Πλευρά Οικοδομικού Τετραγώνου
+            {t('form.blockSide')}
           </Label>
           <Select
             value={formData.blockSide}
             onValueChange={(value) => handleChange('blockSide', value)}
           >
             <SelectTrigger id="blockSide">
-              <SelectValue placeholder="Επιλέξτε πλευρά..." />
+              <SelectValue placeholder={t('form.blockSidePlaceholder')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={SELECT_CLEAR_VALUE}>Καμία</SelectItem>
-              {Object.entries(BLOCK_SIDE_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
+              <SelectItem value={SELECT_CLEAR_VALUE}>{t('form.blockSideNone')}</SelectItem>
+              {BLOCK_SIDE_KEYS.map((sideKey) => (
+                <SelectItem key={sideKey} value={sideKey}>
+                  {t(`blockSides.${sideKey}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -261,7 +248,7 @@ export function AddressFormSection({
       {/* Label (Optional) */}
       <div>
         <Label htmlFor="label" className="text-sm font-medium">
-          Ετικέτα (Προαιρετική)
+          {t('form.label')}
         </Label>
         <Input
           id="label"
@@ -282,14 +269,14 @@ export function AddressFormSection({
           htmlFor="isPrimary"
           className="text-sm font-medium cursor-pointer"
         >
-          Κύρια Διεύθυνση
+          {t('form.isPrimary')}
         </Label>
       </div>
 
       {/* Help text */}
       <div className="pt-2 border-t border-border">
         <p className="text-xs text-muted-foreground">
-          * Υποχρεωτικά πεδία
+          {t('form.requiredFields')}
         </p>
       </div>
     </div>

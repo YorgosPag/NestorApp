@@ -13,6 +13,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { designSystem } from '@/lib/design-system';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SharePlatformGrid');
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
@@ -135,7 +138,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
     // Analytics tracking
     if (finalAnalyticsConfig.trackClicks) {
       // Track analytics event here if needed
-      console.log(`📊 Analytics: ${finalAnalyticsConfig.category}.${platform.id}.click`);
+      logger.info('Analytics event', { category: finalAnalyticsConfig.category, platformId: platform.id, action: 'click' });
     }
 
     onPlatformSelect(platform.id);

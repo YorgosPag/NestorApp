@@ -42,6 +42,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
 import { ACCOUNT_ROUTES, AUTH_ROUTES } from '@/lib/routes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UserMenu');
 
 export function UserMenu() {
   // 🏢 ENTERPRISE: i18n hook
@@ -67,7 +70,7 @@ export function UserMenu() {
     if (isLoggingOut) return;
 
     setIsLoggingOut(true);
-    console.log('🔐 [UserMenu] Starting optimistic logout');
+    logger.info('Starting optimistic logout');
 
     // 🚀 OPTIMISTIC: Redirect immediately for instant feedback
     router.push(AUTH_ROUTES.login);
@@ -75,9 +78,9 @@ export function UserMenu() {
     // 🔥 FIRE & FORGET: SignOut in background
     try {
       await signOut();
-      console.log('✅ [UserMenu] Logout completed');
+      logger.info('Logout completed');
     } catch (error) {
-      console.error('🔴 [UserMenu] Logout error (user already redirected):', error);
+      logger.error('Logout error (user already redirected)', { error });
       // User is already on login page, so this error is acceptable
     }
   };

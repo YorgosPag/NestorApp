@@ -46,6 +46,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { db } from '@/lib/firebase';
 import { sessionService } from '@/services/session';
 import type { SessionDisplayItem, DeviceType, BrowserType } from '@/services/session';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SessionsList');
 
 // ============================================================================
 // COMPONENT PROPS
@@ -132,7 +135,7 @@ export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
       const sessionsList = await sessionService.getSessionsForDisplay(userId);
       setSessions(sessionsList);
     } catch (err) {
-      console.error('Failed to fetch sessions:', err);
+      logger.error('Failed to fetch sessions', { error: err });
       setError(t('account.security.sessionsLoadError') || 'Failed to load sessions');
     } finally {
       setIsLoading(false);
@@ -157,7 +160,7 @@ export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
         setError(result.error || 'Failed to revoke session');
       }
     } catch (err) {
-      console.error('Failed to revoke session:', err);
+      logger.error('Failed to revoke session', { error: err });
       setError('Failed to revoke session');
     } finally {
       setRevokingSessionId(null);
@@ -178,7 +181,7 @@ export function SessionsList({ userId, onSessionsChange }: SessionsListProps) {
         setError(result.error || 'Failed to revoke sessions');
       }
     } catch (err) {
-      console.error('Failed to revoke all sessions:', err);
+      logger.error('Failed to revoke all sessions', { error: err });
       setError('Failed to revoke sessions');
     } finally {
       setIsRevokingAll(false);

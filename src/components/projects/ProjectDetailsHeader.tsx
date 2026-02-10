@@ -7,6 +7,9 @@ import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import type { Project } from '@/types/project';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectDetailsHeader');
 
 // Removed hardcoded getStatusColor function - using centralized ProjectBadge instead
 
@@ -25,7 +28,7 @@ export function ProjectDetailsHeader({ project, onEdit }: ProjectDetailsHeaderPr
     const actions = [
         {
             label: t('detailsHeader.showProject'),
-            onClick: () => console.log('Show project details'),
+            onClick: () => logger.info('Show project details'),
             icon: Eye,
             className: `bg-gradient-to-r from-blue-500 to-purple-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
         }

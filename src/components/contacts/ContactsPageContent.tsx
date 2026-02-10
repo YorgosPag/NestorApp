@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -75,6 +76,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🔐 ENTERPRISE: Defense-in-depth auth guard
 import { useAuth } from '@/auth/hooks/useAuth';
+
+const logger = createModuleLogger('ContactsPageContent');
 
 export function ContactsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -151,8 +154,7 @@ export function ContactsPageContent() {
         includeArchived: filters.showArchived
       });
 
-      // 🔄 CACHE INVALIDATION: Log fresh contact data
-      console.log('🔄 CONTACTS PAGE: Loaded fresh contacts from database', {
+      logger.info('Loaded fresh contacts from database', {
         count: contactsResult.contacts.length,
         contactsWithPhotos: contactsResult.contacts.filter(c => hasMultiplePhotoURLs(c) && c.multiplePhotoURLs.length > 0).length
       });
@@ -172,12 +174,12 @@ export function ContactsPageContent() {
   // 🚀 ENTERPRISE PERFORMANCE: Direct contact fetch για instant loading
   const loadSpecificContact = useCallback(async (contactId: string) => {
     try {
-      console.log('🚀 PERFORMANCE: Direct fetching specific contact:', contactId);
+      logger.info('Direct fetching specific contact', { contactId });
 
       const contact = await ContactsService.getContact(contactId);
 
       if (contact) {
-        console.log('⚡ INSTANT: Contact loaded directly:', getContactDisplayName(contact));
+        logger.info('Contact loaded directly', { name: getContactDisplayName(contact) });
 
         // Set the specific contact immediately
         setSelectedContact(contact);
@@ -191,11 +193,11 @@ export function ContactsPageContent() {
 
         return contact;
       } else {
-        console.warn('⚠️ CONTACT NOT FOUND:', contactId);
+        logger.warn('Contact not found', { contactId });
         return null;
       }
     } catch (err) {
-      console.error('❌ Error loading specific contact:', err);
+      logger.error('Error loading specific contact', { error: err });
       return null;
     }
   }, []);
@@ -244,7 +246,7 @@ export function ContactsPageContent() {
 
     // Only handle filter param if no contactId (contactId has priority)
     if (filterParam && !contactIdParam) {
-      console.log('🔍 FILTERING: Applying URL filter:', filterParam);
+      logger.info('Applying URL filter', { filterParam });
       setFilters(prev => ({ ...prev, searchTerm: decodeURIComponent(filterParam) }));
       setActiveCardFilter(null);
     }
@@ -252,7 +254,7 @@ export function ContactsPageContent() {
 
   // 🧹 CLEAR FILTER: Function για καθάρισμα του URL filter και contactId
   const handleClearURLFilter = () => {
-    console.log('🧹 FILTERING: Clearing URL filter and contactId');
+    logger.info('Clearing URL filter and contactId');
     setFilters(prev => ({ ...prev, searchTerm: '' }));
     setSelectedContact(null);
     // Navigate back to contacts without any parameters
@@ -262,14 +264,14 @@ export function ContactsPageContent() {
   // 🔥 ENTERPRISE CACHE INVALIDATION: Global event listener
   useEffect(() => {
     const handleContactsUpdate = (event: CustomEvent) => {
-      console.log('🔄 CONTACTS PAGE: Received cache invalidation event', event.detail);
+      logger.info('Received cache invalidation event', { detail: event.detail });
       // Force immediate refresh of all contact data
       refreshContacts();
 
       // 🔥 CRITICAL: Update selectedContact if it was the one modified
       const { contactId } = event.detail;
       if (selectedContact?.id === contactId) {
-        console.log('🔄 CONTACTS PAGE: Selected contact was modified, will update after refresh');
+        logger.info('Selected contact was modified, will update after refresh');
         // The selectedContact will be updated by the useEffect below after contacts reload
       }
     };
@@ -286,7 +288,7 @@ export function ContactsPageContent() {
   // Subscribe to contact updates for cross-page sync (optimized - no full refresh)
   useEffect(() => {
     const handleContactUpdate = (payload: ContactUpdatedPayload) => {
-      console.log('🔄 [ContactsPageContent] Applying real-time update for contact:', payload.contactId);
+      logger.info('Applying real-time update for contact', { contactId: payload.contactId });
 
       // 🏢 ENTERPRISE: Type-safe partial update helper
       const applyContactUpdates = <T extends Contact>(contact: T): T => {
@@ -333,7 +335,7 @@ export function ContactsPageContent() {
       if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
         const oldPhotoCount = hasMultiplePhotoURLs(selectedContact) ? selectedContact.multiplePhotoURLs.length : 0;
         const newPhotoCount = hasMultiplePhotoURLs(updatedContact) ? updatedContact.multiplePhotoURLs.length : 0;
-        console.log('🔄 CONTACTS PAGE: Updating selectedContact with fresh data', {
+        logger.info('Updating selectedContact with fresh data', {
           contactId: selectedContact.id,
           oldPhotos: oldPhotoCount,
           newPhotos: newPhotoCount
@@ -349,7 +351,7 @@ export function ContactsPageContent() {
             timestamp: Date.now()
           }
         }));
-        console.log('🔄 CONTACTS PAGE: Dispatched force avatar re-render event');
+        logger.info('Dispatched force avatar re-render event');
       }
     }
   }, [contacts, selectedContact?.id]);
@@ -599,10 +601,10 @@ export function ContactsPageContent() {
     // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
     if (activeCardFilter === cardTitle) {
       setActiveCardFilter(null);
-      console.log('🔄 FILTER: Removing card filter');
+      logger.info('Removing card filter');
     } else {
       setActiveCardFilter(cardTitle);
-      console.log('🔽 FILTER: Applying card filter:', cardTitle);
+      logger.info('Applying card filter', { cardTitle });
 
       // Clear selected contact when filtering changes
       setSelectedContact(null);

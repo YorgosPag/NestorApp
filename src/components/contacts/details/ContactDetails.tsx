@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Users, Edit, Check, X } from 'lucide-react';
 import { useActionMessages } from '@/hooks/useEnterpriseMessages';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -26,6 +27,8 @@ import { DetailsContainer } from '@/core/containers';
 import { ContactsService } from '@/services/contacts.service';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
+
+const logger = createModuleLogger('ContactDetails');
 
 interface ContactDetailsProps {
   contact: Contact | null;
@@ -67,7 +70,8 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
 
     // Use the enterprise mapper system instead of manual conversion
     const mappingResult = mapContactToFormData(contact);
-    console.log('🔧 ContactDetails: Using mapper for contact type:', contact.type, {
+    logger.info('Using mapper for contact type', {
+      contactType: contact.type,
       contactId: contact.id,
       mappingWarnings: mappingResult.warnings,
       email: mappingResult.formData.email,
@@ -122,13 +126,13 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       setEditedData({});
 
       // 🔄 TRIGGER REFRESH: Notify parent component to refresh data
-      console.log('✅ Contact updated successfully with enterprise structure');
+      logger.info('Contact updated successfully with enterprise structure');
       if (onContactUpdated) {
-        console.log('🔄 CONTACT DETAILS: Triggering parent refresh after save');
+        logger.info('Triggering parent refresh after save');
         onContactUpdated();
       }
     } catch (error) {
-      console.error('❌ Failed to update contact:', error);
+      logger.error('Failed to update contact', { error });
       // TODO: Show error toast
     }
   }, [contact?.id, editedData, onContactUpdated]);
@@ -144,7 +148,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
 
   // 🖼️ Photo click handler για gallery preview
   const handlePhotoClick = React.useCallback((index: number) => {
-    console.log('🔍 DEBUG ContactDetails: Photo click triggered', {
+    logger.info('Photo click triggered', {
       index,
       contactExists: !!contact,
       photoModalExists: !!photoModal,
@@ -153,7 +157,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     });
 
     if (contact) {
-      console.log('🖼️ ContactDetails: Opening photo gallery at index:', index);
+      logger.info('Opening photo gallery', { index });
       openGalleryPhotoModal(photoModal, contact, index);
     }
   }, [contact, photoModal]);

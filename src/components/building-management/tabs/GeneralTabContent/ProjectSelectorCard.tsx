@@ -15,6 +15,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectSelectorCard');
 
 // 🏢 ENTERPRISE: Type definitions (ZERO any)
 interface ProjectOption {
@@ -68,9 +71,9 @@ export function ProjectSelectorCard({
       try {
         const projectsData = await getProjectsList();
         setProjects(projectsData);
-        console.log(`✅ [ProjectSelectorCard] Loaded ${projectsData.length} projects`);
+        logger.info('Loaded projects', { count: projectsData.length });
       } catch (error) {
-        console.error('❌ [ProjectSelectorCard] Error loading projects:', error);
+        logger.error('Error loading projects', { error });
       } finally {
         setLoading(false);
       }
@@ -91,7 +94,7 @@ export function ProjectSelectorCard({
   // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
   useEffect(() => {
     const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
-      console.log('🔄 [ProjectSelectorCard] Applying update for project:', payload.projectId);
+      logger.info('Applying update for project', { projectId: payload.projectId });
 
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId
@@ -118,7 +121,7 @@ export function ProjectSelectorCard({
   // FIX (2026-02-06): Replaced direct Firestore write (doc/updateDoc) with Enterprise API
   const handleSave = useCallback(async () => {
     if (!buildingId) {
-      console.error('❌ [ProjectSelectorCard] No buildingId provided');
+      logger.error('No buildingId provided');
       return;
     }
 
@@ -133,7 +136,7 @@ export function ProjectSelectorCard({
       });
 
       if (result.success) {
-        console.log(`✅ [ProjectSelectorCard] Building ${buildingId} linked to project ${projectIdToSave}`);
+        logger.info('Building linked to project', { buildingId, projectId: projectIdToSave });
         setSaveStatus('success');
 
         // 🏢 ENTERPRISE: Dispatch real-time event for Navigation updates
@@ -150,11 +153,11 @@ export function ProjectSelectorCard({
 
         setTimeout(() => setSaveStatus('idle'), 3000);
       } else {
-        console.error('❌ [ProjectSelectorCard] Error:', result.error);
+        logger.error('Error saving project link', { error: result.error });
         setSaveStatus('error');
       }
     } catch (error) {
-      console.error('❌ [ProjectSelectorCard] Error saving:', error);
+      logger.error('Error saving project link', { error });
       setSaveStatus('error');
     } finally {
       setSaving(false);

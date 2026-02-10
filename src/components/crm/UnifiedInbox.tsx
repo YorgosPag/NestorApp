@@ -34,6 +34,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Spinner } from '@/components/ui/spinner';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnifiedInbox');
 
 // 🏢 ENTERPRISE: API hooks instead of Firestore direct
 import {
@@ -252,34 +255,34 @@ export function UnifiedInbox({
 
   // 🏢 ENTERPRISE: Reply handler
   const handleReply = useCallback((message: MessageListItem) => {
-    console.log('[UnifiedInbox] handleReply called:', message.id);
+    logger.info('handleReply called', { messageId: message.id });
     startReply(message);
-    console.log('[UnifiedInbox] startReply completed');
+    logger.info('startReply completed');
   }, [startReply]);
 
   // 🏢 ENTERPRISE: Forward handler
   const handleForward = useCallback((message: MessageListItem) => {
-    console.log('[UnifiedInbox] handleForward called:', message.id);
+    logger.info('handleForward called', { messageId: message.id });
     startForward(message);
-    console.log('[UnifiedInbox] startForward completed');
+    logger.info('startForward completed');
   }, [startForward]);
 
   // 🏢 ENTERPRISE: Edit handler - puts text in composer for editing
   const handleEdit = useCallback((message: MessageListItem) => {
-    console.log('[UnifiedInbox] handleEdit called:', message.id);
+    logger.info('handleEdit called', { messageId: message.id });
     startEdit(message);
-    console.log('[UnifiedInbox] startEdit completed');
+    logger.info('startEdit completed');
   }, [startEdit]);
 
   // 🏢 ENTERPRISE: Pin handler
   const handleTogglePin = useCallback(async (messageId: string, shouldPin: boolean) => {
-    console.log('[UnifiedInbox] handleTogglePin called:', messageId, 'shouldPin:', shouldPin);
+    logger.info('handleTogglePin called', { messageId, shouldPin });
     const message = messages.find(m => m.id === messageId);
     if (message) {
       await togglePin(messageId, message.content.text || '', message.senderName);
-      console.log('[UnifiedInbox] togglePin completed');
+      logger.info('togglePin completed');
     } else {
-      console.log('[UnifiedInbox] Message not found for id:', messageId);
+      logger.warn('Message not found for id', { messageId });
     }
   }, [messages, togglePin]);
 
@@ -289,7 +292,7 @@ export function UnifiedInbox({
     onProgress: (progress: number) => void
   ): Promise<{ url: string; thumbnailUrl?: string } | null> => {
     try {
-      console.log('📎 [UnifiedInbox] Uploading attachment:', file.name, file.type);
+      logger.info('Uploading attachment', { fileName: file.name, fileType: file.type });
 
       // Use legacy path that's allowed by Storage Rules
       const folderPath = file.type.startsWith('image/')
@@ -307,13 +310,13 @@ export function UnifiedInbox({
         compressionUsage: 'document-scan',
       });
 
-      console.log('✅ [UnifiedInbox] Attachment uploaded:', result.url);
+      logger.info('Attachment uploaded', { url: result.url });
 
       return {
         url: result.url,
       };
     } catch (error) {
-      console.error('❌ [UnifiedInbox] Attachment upload failed:', error);
+      logger.error('Attachment upload failed', { error });
       return null;
     }
   }, []);

@@ -10,6 +10,9 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingStats');
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -31,7 +34,7 @@ export function BuildingStats({ buildingId }: BuildingStatsProps) {
         const buildingStats = await getBuildingStats(buildingId);
         setStats(buildingStats);
       } catch (error) {
-        console.error("Failed to fetch building stats:", error);
+        logger.error('Failed to fetch building stats', { error });
         setStats(null);
       } finally {
         setLoading(false);

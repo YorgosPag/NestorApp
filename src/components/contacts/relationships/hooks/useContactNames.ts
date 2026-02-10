@@ -8,8 +8,11 @@
 // ============================================================================
 
 import { useState, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { ContactsService } from '@/services/contacts.service';
 import type { ContactRelationship } from '@/types/contacts/relationships';
+
+const logger = createModuleLogger('useContactNames');
 
 /**
  * 🪝 useContactNames Hook
@@ -33,8 +36,8 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
 
       try {
         setLoading(true);
-        console.log('🔍 CONTACT NAMES HOOK: Fetching contact names for relationships:', relationships.length);
-        console.log('🔍 CONTACT NAMES HOOK: Current contactId:', currentContactId);
+        logger.info('Fetching contact names for relationships', { count: relationships.length });
+        logger.info('Current contactId', { currentContactId });
 
         const names: Record<string, string> = {};
 
@@ -45,7 +48,7 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
             ? relationship.sourceContactId  // Αν είμαι target, φέρνω το source
             : relationship.targetContactId; // Αν είμαι source, φέρνω το target
 
-          console.log('🔍 CONTACT NAMES HOOK: Processing relationship:', {
+          logger.info('Processing relationship', {
             id: relationship.id,
             sourceId: relationship.sourceContactId,
             targetId: relationship.targetContactId,
@@ -55,11 +58,11 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
 
           if (!names[targetContactId]) {
             try {
-              console.log('🔍 CONTACT NAMES HOOK: Fetching contact for ID:', targetContactId);
+              logger.info('Fetching contact', { targetContactId });
               const contact = await ContactsService.getContact(targetContactId);
 
               if (contact) {
-                console.log('🔍 CONTACT NAMES HOOK: Contact object structure:', contact);
+                logger.info('Contact object loaded', { contactId: targetContactId });
 
                 // Try different name fields με προτεραιότητα στο πλήρες όνομα (improved from RelationshipsSummary)
                 let contactName = 'Άγνωστη Επαφή';
@@ -82,22 +85,22 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
                 }
 
                 names[targetContactId] = contactName;
-                console.log('✅ CONTACT NAMES HOOK: Contact found:', { targetContactId, name: contactName });
+                logger.info('Contact found', { targetContactId, name: contactName });
               } else {
                 names[targetContactId] = 'Όνομα μη διαθέσιμο';
-                console.warn('⚠️ CONTACT NAMES HOOK: Contact not found:', targetContactId);
+                logger.warn('Contact not found', { targetContactId });
               }
             } catch (error) {
               names[targetContactId] = 'Σφάλμα φόρτωσης ονόματος';
-              console.error('❌ CONTACT NAMES HOOK: Error fetching contact:', targetContactId, error);
+              logger.error('Error fetching contact', { targetContactId, error });
             }
           }
         }
 
         setContactNames(names);
-        console.log('✅ CONTACT NAMES HOOK: All contact names fetched:', Object.keys(names).length);
+        logger.info('All contact names fetched', { count: Object.keys(names).length });
       } catch (error) {
-        console.error('❌ CONTACT NAMES HOOK: Error in bulk fetch:', error);
+        logger.error('Error in bulk fetch', { error });
         setContactNames({});
       } finally {
         setLoading(false);

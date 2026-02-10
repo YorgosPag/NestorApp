@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ObligationDocument } from "@/types/obligations";
 import { exportObligationToPDF } from "@/services/pdf-export.service";
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('PrintButton');
 
 interface PrintButtonProps {
     document: ObligationDocument;
@@ -39,7 +42,7 @@ export function PrintButton({ document, className }: PrintButtonProps) {
 
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
-      console.error("Error printing PDF:", error);
+      logger.error('Error printing PDF', { error });
       if (typeof window !== "undefined") {
         window.alert(t('print.error'));
       }

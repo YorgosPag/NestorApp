@@ -27,6 +27,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation'; // 🏢 ENTERPRISE
 import { cn } from '@/lib/utils';
 import type { Workspace, WorkspaceType } from '@/types/workspace';
 import { WORKSPACE_TYPE_LABELS } from '@/types/workspace'; // 🏢 ENTERPRISE: i18n keys
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('WorkspaceSwitcher');
 
 // ============================================================================
 // COMPONENT
@@ -68,7 +71,7 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
       await switchWorkspace(workspace.id);
       setIsOpen(false);
     } catch (error) {
-      console.error('[WorkspaceSwitcher] Failed to switch workspace:', error);
+      logger.error('Failed to switch workspace', { error });
       alert('Αποτυχία εναλλαγής workspace. Δοκιμάστε ξανά.');
     } finally {
       setSwitching(false);
@@ -79,7 +82,7 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
     try {
       await refreshWorkspaces();
     } catch (error) {
-      console.error('[WorkspaceSwitcher] Failed to refresh workspaces:', error);
+      logger.error('Failed to refresh workspaces', { error });
     }
   };
 

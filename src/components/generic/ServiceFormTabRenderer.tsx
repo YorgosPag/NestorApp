@@ -10,6 +10,9 @@ import type { ServiceSectionConfig } from '@/config/service-config';
 // 🏢 ENTERPRISE: i18n support for tab labels
 import { useTranslation } from 'react-i18next';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ServiceFormTabRenderer');
 
 // ============================================================================
 // INTERFACES
@@ -114,18 +117,18 @@ function createServiceFormTabsFromConfig(
       icon: getIconComponent(section.icon),
     content: (() => {
       // 🔍 DEBUG: Log which section we're rendering
-      console.log('🔍 ServiceFormTabRenderer: Rendering section:', section.id, 'Title:', section.title);
+      logger.info('Rendering section', { sectionId: section.id, title: section.title });
 
       // Check for custom renderer FIRST (but exclude logo and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'logo' && section.id !== 'relationships') {
-        console.log('🔧 DEBUG: Using service custom renderer for section:', section.id);
+        logger.info('Using service custom renderer for section', { sectionId: section.id });
         const renderer = customRenderers[section.id] as (() => React.ReactNode);
         return renderer();
       }
 
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
       if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
-        console.log('🏢 DEBUG: Using relationships custom renderer');
+        logger.info('Using relationships custom renderer');
         const renderer = customRenderers.relationships as (() => React.ReactNode);
         return renderer();
       }
@@ -133,9 +136,9 @@ function createServiceFormTabsFromConfig(
       if (section.id === 'logo') {
         // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
         const multiplePhotos = (formData.multiplePhotos as PhotoSlot[] | undefined) || [];
-        console.log('🖼️ DEBUG: Rendering LOGO section with MultiplePhotosUpload', {
-          photos: multiplePhotos,
-          onPhotosChange: !!onPhotosChange,
+        logger.info('Rendering LOGO section with MultiplePhotosUpload', {
+          photosCount: multiplePhotos.length,
+          hasOnPhotosChange: !!onPhotosChange,
           disabled
         });
         return (
@@ -218,7 +221,7 @@ export function ServiceFormTabRenderer({
   const { t } = useTranslation('contacts');
 
   if (!sections || sections.length === 0) {
-    console.warn('ServiceFormTabRenderer: No sections provided');
+    logger.warn('No sections provided');
     return null;
   }
 

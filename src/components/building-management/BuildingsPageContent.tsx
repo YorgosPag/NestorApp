@@ -37,6 +37,9 @@ import { ListContainer, PageContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // [ENTERPRISE] Add Building Dialog
 import { AddBuildingDialog } from './dialogs/AddBuildingDialog';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingsPageContent');
 
 // Re-export Building type for backward compatibility
 export type { Building } from '@/types/building/contracts';
@@ -76,7 +79,7 @@ export function BuildingsPageContent() {
   // 🏢 ENTERPRISE: Handler για επεξεργασία κτιρίου (ADR-087)
   const handleEditBuilding = React.useCallback(() => {
     if (!selectedBuilding) return;
-    console.log('🎯 [EditBuilding] Opening edit dialog for:', selectedBuilding.name);
+    logger.info('Opening edit dialog for building', { buildingName: selectedBuilding.name });
     setEditingBuilding(selectedBuilding);
     setIsAddDialogOpen(true);
   }, [selectedBuilding]);

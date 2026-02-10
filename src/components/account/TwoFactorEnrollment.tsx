@@ -56,6 +56,9 @@ import { auth, db } from '@/lib/firebase';
 import { twoFactorService } from '@/services/two-factor';
 import type { UserTwoFactorState, TotpSecretInfo } from '@/services/two-factor';
 import { AUTH_EVENTS } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TwoFactorEnrollment');
 
 // =============================================================================
 // TYPES
@@ -117,7 +120,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
         setStep('complete');
       }
     } catch (err) {
-      console.error('Failed to load 2FA state:', err);
+      logger.error('Failed to load 2FA state', { error: err });
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +159,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
 
         setClaimsSynced(true);
       } catch (err) {
-        console.error('Failed to sync MFA claims:', err);
+        logger.error('Failed to sync MFA claims', { error: err });
       } finally {
         setClaimsSyncing(false);
       }
@@ -239,7 +242,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
       setCopiedSecret(true);
       setTimeout(() => setCopiedSecret(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logger.error('Failed to copy', { error: err });
     }
   };
 
@@ -250,7 +253,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
       setCopiedCodes(true);
       setTimeout(() => setCopiedCodes(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logger.error('Failed to copy', { error: err });
     }
   };
 

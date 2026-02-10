@@ -25,6 +25,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { LucideIcon } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ViewerTools');
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 type ToolId = 'select' | 'create' | 'measure' | 'move' | 'connect' | 'rectangle' | 'circle' | 'polygon' | 'delete';
@@ -106,7 +109,7 @@ export function ViewerTools({
   // Handle tool change
   const handleToolChange = (toolId: ToolId) => {
     if (isReadOnly) {
-      console.warn('Cannot change tool in read-only mode');
+      logger.warn('Cannot change tool in read-only mode');
       return;
     }
 
@@ -139,7 +142,7 @@ export function ViewerTools({
         onViewModeChange('view');
     }
 
-    console.log('🛠️ Tool changed:', toolId, '→ Mode:', viewMode);
+    logger.info('Tool changed', { toolId, viewMode });
   };
 
   // Handle property actions
@@ -149,7 +152,7 @@ export function ViewerTools({
     if (confirm(t('viewer.confirm.deleteProperty'))) {
       onPropertySelect?.(null);
       // TODO: Implement actual deletion
-      console.log('🗑️ Delete property:', selectedPropertyId);
+      logger.info('Delete property', { selectedPropertyId });
     }
   };
 
@@ -157,7 +160,7 @@ export function ViewerTools({
     if (!selectedPropertyId || isReadOnly) return;
     
     // TODO: Implement property copying
-    console.log('📋 Copy property:', selectedPropertyId);
+    logger.info('Copy property', { selectedPropertyId });
   };
 
   const handleResetView = () => {

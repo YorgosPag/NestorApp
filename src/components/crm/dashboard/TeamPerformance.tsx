@@ -7,6 +7,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TeamPerformance');
 
 interface TeamMember {
     name: string;
@@ -27,7 +30,7 @@ export function TeamPerformance() {
                 return JSON.parse(envTeamData);
             }
         } catch (error) {
-            console.warn('Failed to parse team performance data, using defaults');
+            logger.warn('Failed to parse team performance data, using defaults');
         }
 
         // Default team data with configurable currency

@@ -10,6 +10,9 @@ import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
 import { getIconComponent } from './utils/IconMapping';
 // 🏢 ENTERPRISE: i18n support - Direct useTranslation for reliability
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('GenericFormRenderer');
 
 // ============================================================================
 // INTERFACES
@@ -127,7 +130,7 @@ function renderSelectField(
   t: (key: string) => string
 ): React.ReactNode {
   if (!field.options || field.options.length === 0) {
-    console.warn(`Select field ${field.id} has no options defined`);
+    logger.warn('Select field has no options defined', { fieldId: field.id });
     return renderInputField(field, formData, () => {}, disabled);
   }
 
@@ -295,7 +298,7 @@ function renderField(
     case 'tel':
       return renderTelField(field, formData, onChange, disabled);
     default:
-      console.warn(`Unknown field type: ${field.type} for field ${field.id}`);
+      logger.warn('Unknown field type', { fieldType: field.type, fieldId: field.id });
       return renderInputField(field, formData, onChange, disabled);
   }
 }
@@ -364,7 +367,7 @@ export function GenericFormRenderer({
       if (translated === text) {
         // Log warning for debugging (only in development)
         if (process.env.NODE_ENV === 'development') {
-          console.warn(`[i18n] Key not found in forms namespace: ${text}`);
+          logger.warn('i18n key not found in forms namespace', { key: text });
         }
         // Return the key's last part as fallback (e.g., 'basicInfoGemi' from 'sections.basicInfoGemi')
         const parts = text.split('.');
@@ -378,7 +381,7 @@ export function GenericFormRenderer({
   };
 
   if (!sections || sections.length === 0) {
-    console.warn('GenericFormRenderer: No sections provided');
+    logger.warn('No sections provided');
     return null;
   }
 

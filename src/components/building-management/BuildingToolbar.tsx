@@ -32,6 +32,9 @@ import {
 import { UNIFIED_STATUS_FILTER_LABELS, PROPERTY_BUILDING_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingToolbar');
 
 interface BuildingToolbarProps {
   selectedItems?: string[];
@@ -124,7 +127,7 @@ export function BuildingToolbar({
       id: 'import',
       label: t('toolbar.actions.import'),
       icon: Upload,
-      onClick: () => console.log('Import data...'),
+      onClick: () => logger.info('Import data'),
       variant: 'ghost',
       tooltip: t('toolbar.tooltips.import')
     },
@@ -141,7 +144,7 @@ export function BuildingToolbar({
       id: 'archive',
       label: t('toolbar.actions.archive'),
       icon: Archive,
-      onClick: () => console.log('Archive selected...'),
+      onClick: () => logger.info('Archive selected'),
       variant: 'ghost',
       disabled: selectedItems.length === 0,
       tooltip: t('toolbar.tooltips.archive')
@@ -150,7 +153,7 @@ export function BuildingToolbar({
       id: 'favorite',
       label: t('toolbar.actions.favorite'),
       icon: Star,
-      onClick: () => console.log('Add to favorites...'),
+      onClick: () => logger.info('Add to favorites'),
       variant: 'ghost',
       disabled: selectedItems.length === 0,
       tooltip: t('toolbar.tooltips.favorite')
@@ -159,7 +162,7 @@ export function BuildingToolbar({
       id: 'help',
       label: t('toolbar.actions.help'),
       icon: HelpCircle,
-      onClick: () => console.log('Show help...'),
+      onClick: () => logger.info('Show help'),
       variant: 'ghost',
       tooltip: t('toolbar.tooltips.help'),
       shortcut: 'F1'
@@ -244,10 +247,10 @@ export function BuildingToolbar({
             {t('toolbar.sort.descending')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => console.log('Sort by date...')}>
+          <DropdownMenuItem onClick={() => logger.info('Sort by date')}>
             {t('toolbar.sort.byDate')}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => console.log('Sort by size...')}>
+          <DropdownMenuItem onClick={() => logger.info('Sort by size')}>
             {t('toolbar.sort.bySize')}
           </DropdownMenuItem>
         </>

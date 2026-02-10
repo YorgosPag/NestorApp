@@ -20,6 +20,9 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES } from '../config';
 import { useTranslation } from 'react-i18next';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SelectCompanyContactModal');
 
 interface SelectCompanyContactModalProps {
   open: boolean;
@@ -94,9 +97,9 @@ export function SelectCompanyContactModal({
       );
 
       if (companyContacts.length === 0 && existingCompanyIds.length > 0) {
-        console.log(`🔍 ENTERPRISE FILTER: All ${result.contacts.filter(c => c.type === 'company' && c.status === 'active').length} companies already in navigation. Available companies: 0`);
+        logger.info('All companies already in navigation', { total: result.contacts.filter(c => c.type === 'company' && c.status === 'active').length, available: 0 });
       } else {
-        console.log(`🔍 ENTERPRISE FILTER: ${companyContacts.length} available companies (${existingCompanyIds.length} already in navigation)`);
+        logger.info('Enterprise filter applied', { available: companyContacts.length, alreadyInNav: existingCompanyIds.length });
       }
 
       setContacts(companyContacts);

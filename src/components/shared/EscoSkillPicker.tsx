@@ -25,6 +25,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,12 @@ const MAX_RESULTS = 10;
 
 /** Default maximum skills allowed */
 const DEFAULT_MAX_SKILLS = 20;
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('EscoSkillPicker');
 
 // ============================================================================
 // COMPONENT
@@ -111,7 +118,7 @@ export function EscoSkillPicker({
       setResults(filtered);
       setHighlightedIndex(-1);
     } catch (error) {
-      console.error('[EscoSkillPicker] Search error:', error);
+      logger.error('Search error', { error });
       setResults([]);
     } finally {
       setIsLoading(false);

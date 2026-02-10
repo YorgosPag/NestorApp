@@ -7,6 +7,9 @@ import {
   ContactsToolbar
 } from '@/components/compositions';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ToolbarShowcase');
 
 export function ToolbarShowcase() {
   const colors = useSemanticColors();
@@ -52,11 +55,11 @@ export function ToolbarShowcase() {
             onSearchChange={(term) => setBuildingState(prev => ({ ...prev, searchTerm: term }))}
             activeFilters={buildingState.activeFilters}
             onFiltersChange={(filters) => setBuildingState(prev => ({ ...prev, activeFilters: filters }))}
-            onNewBuilding={() => console.log('New building')}
-            onEditBuilding={() => console.log('Edit building')}
-            onDeleteBuilding={(ids) => console.log('Delete buildings:', ids)}
-            onExport={() => console.log('Export buildings')}
-            onRefresh={() => console.log('Refresh buildings')}
+            onNewBuilding={() => logger.info('New building')}
+            onEditBuilding={() => logger.info('Edit building')}
+            onDeleteBuilding={(ids) => logger.info('Delete buildings', { ids })}
+            onExport={() => logger.info('Export buildings')}
+            onRefresh={() => logger.info('Refresh buildings')}
           />
           <div className="p-4 bg-muted/20">
             <h3 className="font-medium mb-2">Demo State:</h3>
@@ -86,11 +89,11 @@ export function ToolbarShowcase() {
             onSelectionChange={(items) => setProjectState(prev => ({ ...prev, selectedItems: items }))}
             activeFilters={projectState.activeFilters}
             onFiltersChange={(filters) => setProjectState(prev => ({ ...prev, activeFilters: filters }))}
-            onNewProject={() => console.log('New project')}
-            onEditProject={(id) => console.log('Edit project:', id)}
-            onDeleteProject={(ids) => console.log('Delete projects:', ids)}
-            onExport={() => console.log('Export projects')}
-            onRefresh={() => console.log('Refresh projects')}
+            onNewProject={() => logger.info('New project')}
+            onEditProject={(id) => logger.info('Edit project', { id })}
+            onDeleteProject={(ids) => logger.info('Delete projects', { ids })}
+            onExport={() => logger.info('Export projects')}
+            onRefresh={() => logger.info('Refresh projects')}
           />
           <div className="p-4 bg-muted/20">
             <h3 className="font-medium mb-2">Demo State:</h3>
@@ -122,11 +125,11 @@ export function ToolbarShowcase() {
             onSearchChange={(term) => setContactState(prev => ({ ...prev, searchTerm: term }))}
             activeFilters={contactState.activeFilters}
             onFiltersChange={(filters) => setContactState(prev => ({ ...prev, activeFilters: filters }))}
-            onNewContact={() => console.log('New contact')}
-            onEditContact={() => console.log('Edit contact')}
-            onDeleteContact={(ids) => console.log('Delete contacts:', ids)}
-            onExport={() => console.log('Export contacts')}
-            onRefresh={() => console.log('Refresh contacts')}
+            onNewContact={() => logger.info('New contact')}
+            onEditContact={() => logger.info('Edit contact')}
+            onDeleteContact={(ids) => logger.info('Delete contacts', { ids })}
+            onExport={() => logger.info('Export contacts')}
+            onRefresh={() => logger.info('Refresh contacts')}
           />
           <div className="p-4 bg-muted/20">
             <h3 className="font-medium mb-2">Demo State:</h3>

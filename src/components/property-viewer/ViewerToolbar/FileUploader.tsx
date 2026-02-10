@@ -27,6 +27,9 @@
 
 import React from 'react';
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FileUploader');
 
 /**
  * @deprecated Use FileUploadButton from @/components/shared/files instead
@@ -43,8 +46,8 @@ export interface FileUploaderProps {
 export function FileUploader({ onFileUpload }: FileUploaderProps) {
   // Log deprecation warning in development
   if (process.env.NODE_ENV === 'development') {
-    console.warn(
-      '⚠️ [ADR-054] FileUploader is deprecated. Use FileUploadButton from @/components/shared/files instead.'
+    logger.warn(
+      'FileUploader is deprecated. Use FileUploadButton from @/components/shared/files instead.'
     );
   }
 

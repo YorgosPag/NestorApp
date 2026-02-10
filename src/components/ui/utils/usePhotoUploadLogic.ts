@@ -7,6 +7,9 @@ import { useAutoUploadEffect } from '@/hooks/upload/useAutoUploadEffect';
 import { useFileSelectionHandlers } from '@/hooks/upload/useFileSelectionHandlers';
 import { createUploadHandlerFromPreset } from '@/services/upload-handlers';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('usePhotoUploadLogic');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -122,10 +125,10 @@ export function usePhotoUploadLogic({
   const fileSelectionHandlers = useFileSelectionHandlers({
     onFileSelect: (file) => {
       if (!file) {
-        console.log('📤 LOGIC: File cleared, no upload action needed');
+        logger.info('File cleared, no upload action needed');
         return;
       }
-      console.log('🔍 LOGIC: File selection started:', {
+      logger.info('File selection started', {
         fileName: file.name,
         fileSize: file.size,
         purpose,
@@ -155,7 +158,7 @@ export function usePhotoUploadLogic({
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('🗑️ LOGIC: Photo removal initiated');
+    logger.info('Photo removal initiated');
 
     if (onUploadComplete) {
       onUploadComplete({
@@ -168,7 +171,7 @@ export function usePhotoUploadLogic({
       });
     }
 
-    console.log('✅ LOGIC: Photo removal completed');
+    logger.info('Photo removal completed');
   }, [onUploadComplete]);
 
   // ========================================================================

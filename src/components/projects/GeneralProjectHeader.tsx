@@ -20,6 +20,9 @@ import {
 } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('GeneralProjectHeader');
 
 interface GeneralProjectHeaderProps {
     isEditing: boolean;
@@ -69,7 +72,7 @@ export function GeneralProjectHeader({
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
-            console.error('Failed to copy:', err);
+            logger.error('Failed to copy', { error: err });
         }
     };
 

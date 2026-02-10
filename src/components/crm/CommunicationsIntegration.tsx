@@ -35,6 +35,9 @@ import { MESSAGE_TYPES } from '../../lib/config/communications.config';
 import { toast } from 'sonner';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CommunicationsIntegration');
 
 /**
  * 🏢 ENTERPRISE: Communications Stats Interface
@@ -97,7 +100,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
       }
 
     } catch (error) {
-      console.error('Error initializing communications:', error);
+      logger.error('Error initializing communications', { error });
       toast.error(t('center.initErrorGeneric'));
     } finally {
       setLoading(false);
@@ -118,7 +121,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
       setStats(statistics);
 
     } catch (error) {
-      console.error('Error loading communications data:', error);
+      logger.error('Error loading communications data', { error });
     }
   };
 
@@ -151,7 +154,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
       await loadData();
 
     } catch (error) {
-      console.error('Error testing channels:', error);
+      logger.error('Error testing channels', { error });
       toast.error(t('center.channelsTestError'));
     } finally {
       setTesting(false);

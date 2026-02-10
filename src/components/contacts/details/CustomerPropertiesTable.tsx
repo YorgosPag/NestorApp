@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -23,6 +24,8 @@ interface CustomerPropertiesTableProps {
     onAddUnit: () => void;
 }
 
+const logger = createModuleLogger('CustomerPropertiesTable');
+
 export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerPropertiesTableProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('contacts');
@@ -43,7 +46,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                 const ownedProperties = await getUnitsByOwner(contactId);
                 setProperties(ownedProperties);
             } catch (error) {
-                console.error("Failed to fetch customer properties:", error);
+                logger.error('Failed to fetch customer properties', { error });
                 setProperties([]);
             } finally {
                 setLoading(false);

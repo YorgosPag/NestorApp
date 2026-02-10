@@ -24,6 +24,9 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import type { Building } from '@/types/building/contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingVideosTab');
 
 // =============================================================================
 // PROPS
@@ -92,7 +95,7 @@ export function BuildingVideosTab({
           setCompanyDisplayName(companyId);
         }
       } catch (error) {
-        console.error('[BuildingVideosTab] Failed to fetch company name:', error);
+        logger.error('Failed to fetch company name', { error });
         setCompanyDisplayName(companyId);
       }
     };

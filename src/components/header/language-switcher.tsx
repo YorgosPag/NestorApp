@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
 import { changeLanguage, preloadCriticalNamespaces } from '@/i18n/lazy-config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('LanguageSwitcher');
 
 const languages = [
   { code: 'el', name: 'Ελληνικά', flag: '🇬🇷' },
@@ -44,7 +47,7 @@ export function LanguageSwitcher() {
       try {
         await preloadCriticalNamespaces(nextLanguage);
       } catch (error) {
-        console.warn('⚠️ Failed to preload critical namespaces:', error);
+        logger.warn('Failed to preload critical namespaces', { error });
       }
 
       // Preload route-specific namespaces to avoid fallback-to-el
@@ -63,7 +66,7 @@ export function LanguageSwitcher() {
       localStorage.setItem('preferred-language', nextLanguage);
       
     } catch (error) {
-      console.error('❌ Failed to change language:', error);
+      logger.error('Failed to change language', { error });
     } finally {
       setIsChanging(false);
     }

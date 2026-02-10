@@ -15,6 +15,9 @@ import {
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('PhotoPreview');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -92,7 +95,7 @@ export function PhotoPreview({
   };
 
   const handlePreviewClick = () => {
-    console.log('🔍 DEBUG PhotoPreview: Click triggered', {
+    logger.info('Click triggered', {
       disabled,
       onPreviewClickExists: !!onPreviewClick,
       allowClick: !disabled || !!onPreviewClick
@@ -100,7 +103,7 @@ export function PhotoPreview({
 
     // ✅ CRITICAL FIX: Allow preview click even in disabled mode if onPreviewClick exists
     if (onPreviewClick && (!disabled || !!onPreviewClick)) {
-      console.log('🖼️ PhotoPreview: Executing onPreviewClick');
+      logger.info('Executing onPreviewClick');
       onPreviewClick();
     }
   };

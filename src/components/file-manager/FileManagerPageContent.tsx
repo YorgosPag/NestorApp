@@ -87,6 +87,9 @@ import { FilesList } from '@/components/shared/files/FilesList';
 import { TrashView } from '@/components/shared/files/TrashView';
 import { InboxView } from '@/components/shared/files/InboxView';
 import { formatFileSize } from '@/utils/file-validation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
 
 // ============================================================================
@@ -700,7 +703,7 @@ export function FileManagerPageContent() {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() => console.log('Upload files - TODO')}
+                              onClick={() => logger.info('Upload files - TODO')}
                               aria-label={t('manager.addFiles')}
                             >
                               <Upload className={`${iconSizes.sm} mr-2`} />

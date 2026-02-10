@@ -15,6 +15,9 @@ import type {
   DropdownPosition,
   EnterprisePortalConfig
 } from './EnterprisePortalSystem';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MigrationUtilities');
 
 // ============================================================================
 // MIGRATION UTILITIES
@@ -246,21 +249,17 @@ export const debugPortalPosition = (
 ) => {
   if (process.env.NODE_ENV !== 'development') return;
 
-  console.group('🔍 Portal Debug Info');
-  console.log('Config:', config);
-  console.log('Calculated Position:', calculatedPosition);
-
-  if (config.triggerElement) {
-    const rect = config.triggerElement.getBoundingClientRect();
-    console.log('Trigger Element Rect:', rect);
-  }
-
-  const viewport = {
-    width: window.innerWidth,
-    height: window.innerHeight
-  };
-  console.log('Viewport:', viewport);
-  console.groupEnd();
+  logger.info('Portal Debug Info', {
+    config,
+    calculatedPosition,
+    triggerElementRect: config.triggerElement
+      ? config.triggerElement.getBoundingClientRect()
+      : null,
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight
+    }
+  });
 };
 
 /**

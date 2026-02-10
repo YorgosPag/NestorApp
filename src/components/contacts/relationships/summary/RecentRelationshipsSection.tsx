@@ -10,6 +10,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ============================================================================
 // TYPES
 // ============================================================================
+
+const logger = createModuleLogger('RecentRelationshipsSection');
 
 interface RecentRelationshipsSectionProps {
   /** Array of contact relationships */
@@ -118,7 +121,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
         day: '2-digit'
       });
     } catch (error) {
-      console.warn('Error formatting date:', error, createdAt);
+      logger.warn('Error formatting date', { error, createdAt });
       return t('relationships.card.recently');
     }
   };

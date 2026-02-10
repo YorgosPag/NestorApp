@@ -33,6 +33,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CompanySelectorCard');
 
 // =============================================================================
 // TYPES
@@ -79,9 +82,9 @@ export function CompanySelectorCard({
       try {
         const companiesData = await getAllActiveCompanies();
         setCompanies(companiesData);
-        console.log(`✅ [CompanySelectorCard] Loaded ${companiesData.length} companies`);
+        logger.info('Loaded companies', { count: companiesData.length });
       } catch (error) {
-        console.error('❌ [CompanySelectorCard] Error loading companies:', error);
+        logger.error('Error loading companies', { error });
       } finally {
         setLoading(false);
       }
@@ -106,7 +109,7 @@ export function CompanySelectorCard({
   // Save via Enterprise API (Admin SDK)
   const handleSave = useCallback(async () => {
     if (!buildingId) {
-      console.error('❌ [CompanySelectorCard] No buildingId provided');
+      logger.error('No buildingId provided');
       return;
     }
 
@@ -124,7 +127,7 @@ export function CompanySelectorCard({
       });
 
       if (result.success) {
-        console.log(`✅ [CompanySelectorCard] Building ${buildingId} linked to company ${companyIdToSave}`);
+        logger.info('Building linked to company', { buildingId, companyId: companyIdToSave });
         setSaveStatus('success');
 
         if (onCompanyChanged && companyIdToSave) {
@@ -133,11 +136,11 @@ export function CompanySelectorCard({
 
         setTimeout(() => setSaveStatus('idle'), 3000);
       } else {
-        console.error('❌ [CompanySelectorCard] Error:', result.error);
+        logger.error('Error saving company link', { error: result.error });
         setSaveStatus('error');
       }
     } catch (error) {
-      console.error('❌ [CompanySelectorCard] Error saving:', error);
+      logger.error('Error saving company link', { error });
       setSaveStatus('error');
     } finally {
       setSaving(false);

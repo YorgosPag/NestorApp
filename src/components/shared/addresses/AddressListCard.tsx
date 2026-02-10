@@ -18,6 +18,7 @@ import React from 'react';
 import { Plus, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AddressCard } from './AddressCard';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -67,6 +68,7 @@ export function AddressListCard({
   onEditAddress,
   className
 }: AddressListCardProps) {
+  const { t } = useTranslation('addresses');
   const iconSizes = useIconSizes();
   const sortedAddresses = sortAddresses(addresses);
 
@@ -75,7 +77,7 @@ export function AddressListCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">
-            Διευθύνσεις Έργου
+            {t('list.title')}
           </CardTitle>
           {onAddAddress && (
             <Button
@@ -85,7 +87,7 @@ export function AddressListCard({
               className="flex items-center gap-2"
             >
               <Plus className={iconSizes.sm} />
-              Προσθήκη
+              {t('list.addButton')}
             </Button>
           )}
         </div>
@@ -97,7 +99,7 @@ export function AddressListCard({
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <MapPin className={`${iconSizes.lg} text-muted-foreground mb-3`} />
             <p className="text-sm text-muted-foreground mb-1">
-              Δεν υπάρχουν καταχωρημένες διευθύνσεις
+              {t('list.empty')}
             </p>
             {onAddAddress && (
               <Button
@@ -106,7 +108,7 @@ export function AddressListCard({
                 onClick={onAddAddress}
                 className="text-xs"
               >
-                Προσθέστε την πρώτη διεύθυνση
+                {t('list.addFirst')}
               </Button>
             )}
           </div>
@@ -125,7 +127,7 @@ export function AddressListCard({
         {sortedAddresses.length > 0 && (
           <div className="pt-2 border-t border-border">
             <p className="text-xs text-muted-foreground text-center">
-              Σύνολο: {sortedAddresses.length} {sortedAddresses.length === 1 ? 'διεύθυνση' : 'διευθύνσεις'}
+              {t('list.total', { count: sortedAddresses.length })}
             </p>
           </div>
         )}

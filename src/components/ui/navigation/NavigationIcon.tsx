@@ -17,6 +17,9 @@ import { ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationIcon');
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -156,7 +159,7 @@ export function NavigationIcon({
     // Analytics tracking (if configured)
     if (analyticsLabel && typeof window !== 'undefined') {
       // Track navigation event
-      console.log(`[Analytics] Navigation: ${analyticsLabel} → ${href}`);
+      logger.info('Navigation event', { analyticsLabel, href });
     }
 
     // Handle navigation

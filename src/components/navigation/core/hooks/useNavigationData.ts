@@ -14,6 +14,9 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { NavigationApiService } from '../services/navigationApi';
 import type { NavigationCompany, NavigationProject } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useNavigationData');
 
 // ============================================================================
 // TYPES - Bootstrap Response
@@ -108,18 +111,18 @@ export function useNavigationData(): UseNavigationDataReturn {
     // ENTERPRISE FIX: Removed polling loop (closure bug - authLoading never updates inside Promise)
     // The caller (NavigationContext) is responsible for waiting until auth is ready
     if (authLoading) {
-      console.log('⏳ [Navigation] Auth still loading - caller should retry when ready');
+      logger.info('Auth still loading - caller should retry when ready');
       throw new Error('AUTH_LOADING');
     }
 
     if (!user) {
-      console.log('⏳ [Navigation] User not authenticated - caller should retry when ready');
+      logger.info('User not authenticated - caller should retry when ready');
       throw new Error('USER_NOT_AUTHENTICATED');
     }
 
     // 1. Check cache first (instant return)
     if (bootstrapCache && (Date.now() - bootstrapCache.timestamp) < BOOTSTRAP_CACHE_TTL) {
-      console.log('⚡ [Navigation] Bootstrap CACHE HIT');
+      logger.info('Bootstrap CACHE HIT');
       return {
         companies: bootstrapCache.companies,
         projects: bootstrapCache.projects
@@ -129,7 +132,7 @@ export function useNavigationData(): UseNavigationDataReturn {
     // 2. 🏢 ENTERPRISE: Return in-flight promise if request already running
     // This ensures ALL concurrent callers wait for the SAME request
     if (inFlightBootstrapPromise) {
-      console.log('⏳ [Navigation] Bootstrap in-flight - attaching to existing request...');
+      logger.info('Bootstrap in-flight - attaching to existing request...');
       return inFlightBootstrapPromise;
     }
 
@@ -140,12 +143,12 @@ export function useNavigationData(): UseNavigationDataReturn {
     // Create the actual fetch promise
     const fetchPromise = (async (): Promise<{ companies: NavigationCompany[]; projects: NavigationProject[] }> => {
       try {
-        console.log('🚀 [Navigation] Starting bootstrap request...');
+        logger.info('Starting bootstrap request...');
 
         // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + error handling)
         // apiClient automatically handles errors (401/403/500) and unwraps response
         const bootstrapData = await apiClient.get<BootstrapResponse>('/api/audit/bootstrap');
-        console.log(`✅ [Navigation] Bootstrap loaded: ${bootstrapData.companies.length} companies, ${bootstrapData.projects.length} projects`);
+        logger.info('Bootstrap loaded', { companiesCount: bootstrapData.companies.length, projectsCount: bootstrapData.projects.length });
 
         // Transform to NavigationCompany format
         const companies: NavigationCompany[] = bootstrapData.companies.map(c => ({
@@ -181,9 +184,9 @@ export function useNavigationData(): UseNavigationDataReturn {
         return { companies, projects };
 
       } catch (error) {
-        console.error('❌ [Navigation] Bootstrap failed:', error);
+        logger.error('Bootstrap failed', { error });
         // Fallback to legacy loading if bootstrap fails
-        console.log('⚠️ [Navigation] Falling back to legacy loading...');
+        logger.warn('Falling back to legacy loading...');
         return loadLegacy();
       }
     })();
@@ -233,7 +236,7 @@ export function useNavigationData(): UseNavigationDataReturn {
   const loadAllProjects = async (companies: NavigationCompany[]): Promise<NavigationProject[]> => {
     // If we already have projects from bootstrap, return them
     if (projectsDataRef.current.length > 0) {
-      console.log('⚡ [Navigation] Using cached projects from bootstrap');
+      logger.info('Using cached projects from bootstrap');
       return projectsDataRef.current;
     }
 
@@ -251,7 +254,7 @@ export function useNavigationData(): UseNavigationDataReturn {
     try {
       await NavigationApiService.loadProjectsForCompany(companyId);
     } catch (error) {
-      console.error(`NavigationData: Error loading projects for company ${companyId}:`, error);
+      logger.error('Error loading projects for company', { companyId, error });
       throw error;
     }
   };

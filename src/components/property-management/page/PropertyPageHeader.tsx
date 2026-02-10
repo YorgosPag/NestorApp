@@ -7,6 +7,9 @@ import { CommonBadge } from '@/core/badges';
 import type { ViewMode } from '@/core/headers';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('PropertyPageHeader');
 
 interface PropertyPageHeaderProps {
   showDashboard: boolean;
@@ -47,7 +50,7 @@ export function PropertyPageHeader({
         onViewModeChange: (mode) => setViewMode(mode as 'list' | 'grid'),
         addButton: {
           label: t('header.newProperty'),
-          onClick: () => console.log('Add property')
+          onClick: () => logger.info('Add property')
         }
       }}
     />

@@ -7,6 +7,9 @@ import type { Storage } from '@/types/storage/contracts';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('StorageDetailsHeader');
 
 interface StorageDetailsHeaderProps {
   storage: Storage;
@@ -31,19 +34,19 @@ export function StorageDetailsHeader({ storage }: StorageDetailsHeaderProps) {
           actions={[
             {
               label: t('header.viewStorage'),
-              onClick: () => console.log('Show storage details'),
+              onClick: () => logger.info('Show storage details'),
               icon: Eye,
               className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
             },
             {
               label: t('header.edit'),
-              onClick: () => console.log('Edit storage'),
+              onClick: () => logger.info('Edit storage'),
               icon: Edit,
               variant: 'outline'
             },
             {
               label: t('header.print'),
-              onClick: () => console.log('Print storage details'),
+              onClick: () => logger.info('Print storage details'),
               icon: FileText,
               variant: 'outline'
             }

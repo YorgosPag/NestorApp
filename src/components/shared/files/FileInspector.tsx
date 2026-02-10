@@ -30,6 +30,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Copy, File as FileIcon, Calendar, HardDrive, Tag, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -48,6 +49,12 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'; // 🏢 ENTERPRISE: shadcn Sheet components
 import { ScrollArea } from '@/components/ui/scroll-area'; // 🏢 ENTERPRISE: shadcn ScrollArea
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('FileInspector');
 
 // ============================================================================
 // TYPES
@@ -101,7 +108,7 @@ export function FileInspector({
         error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
       }
     } catch (err) {
-      console.error('[FileInspector] Failed to copy path:', err);
+      logger.error('Failed to copy path', { error: err });
       error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
     }
   }, [file.storagePath, success, error, t]);

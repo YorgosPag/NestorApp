@@ -41,6 +41,9 @@ import {
 } from 'lucide-react';
 import type { MessageListItem, ConversationListItem } from '@/hooks/inbox/useInboxApi';
 import { Spinner } from '@/components/ui/spinner';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ThreadView');
 // 🏢 ENTERPRISE: Centralized message actions (selection + delete)
 import { useMessageActions } from '@/hooks/inbox/useMessageActions';
 import { MessageContextMenu } from './MessageContextMenu';
@@ -224,70 +227,70 @@ export function ThreadView({
 
   // 🏢 ENTERPRISE: Handle reply from context menu
   const handleReply = useCallback((messageId: string) => {
-    console.log('[ThreadView] handleReply called with messageId:', messageId);
+    logger.info('handleReply called', { messageId });
     const message = messages.find(m => m.id === messageId);
     if (message) {
-      console.log('[ThreadView] Message found, onReply exists:', !!onReply);
+      logger.info('Message found for reply', { hasOnReply: !!onReply });
       if (onReply) {
         onReply(message);
-        console.log('[ThreadView] onReply called successfully');
+        logger.info('onReply called successfully');
       } else {
-        console.log('[ThreadView] Reply clicked but no onReply handler');
+        logger.info('Reply clicked but no onReply handler');
       }
     } else {
-      console.log('[ThreadView] Message NOT found for id:', messageId);
+      logger.warn('Message NOT found', { messageId });
     }
   }, [messages, onReply]);
 
   // 🏢 ENTERPRISE: Handle forward from context menu
   const handleForward = useCallback((messageId: string) => {
-    console.log('[ThreadView] handleForward called with messageId:', messageId);
+    logger.info('handleForward called', { messageId });
     const message = messages.find(m => m.id === messageId);
     if (message) {
-      console.log('[ThreadView] Message found, onForward exists:', !!onForward);
+      logger.info('Message found for forward', { hasOnForward: !!onForward });
       if (onForward) {
         onForward(message);
-        console.log('[ThreadView] onForward called successfully');
+        logger.info('onForward called successfully');
       } else {
-        console.log('[ThreadView] Forward clicked but no onForward handler');
+        logger.info('Forward clicked but no onForward handler');
       }
     }
   }, [messages, onForward]);
 
   // 🏢 ENTERPRISE: Handle edit from context menu (delegates to parent)
   const handleEdit = useCallback((messageId: string) => {
-    console.log('[ThreadView] handleEdit called with messageId:', messageId);
+    logger.info('handleEdit called', { messageId });
     const message = messages.find(m => m.id === messageId);
     if (message) {
-      console.log('[ThreadView] Message found, onEdit exists:', !!onEdit);
+      logger.info('Message found for edit', { hasOnEdit: !!onEdit });
       if (onEdit) {
         onEdit(message);
-        console.log('[ThreadView] onEdit called successfully');
+        logger.info('onEdit called successfully');
       } else {
-        console.log('[ThreadView] Edit clicked but no onEdit handler');
+        logger.info('Edit clicked but no onEdit handler');
       }
     }
   }, [messages, onEdit]);
 
   // 🏢 ENTERPRISE: Handle pin/unpin from context menu (delegates to parent)
   const handleTogglePin = useCallback(async (messageId: string, shouldPin: boolean) => {
-    console.log('[ThreadView] handleTogglePin called:', messageId, 'shouldPin:', shouldPin);
+    logger.info('handleTogglePin called', { messageId, shouldPin });
     if (onTogglePin) {
       await onTogglePin(messageId, shouldPin);
-      console.log('[ThreadView] onTogglePin called successfully');
+      logger.info('onTogglePin called successfully');
     } else {
-      console.log('[ThreadView] Pin clicked but no onTogglePin handler');
+      logger.info('Pin clicked but no onTogglePin handler');
     }
   }, [onTogglePin]);
 
   // 🏢 ENTERPRISE: Handle reaction from context menu (delegates to parent)
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
-    console.log('[ThreadView] handleReaction called:', messageId, 'emoji:', emoji);
+    logger.info('handleReaction called', { messageId, emoji });
     if (onToggleReaction) {
       await onToggleReaction(messageId, emoji);
-      console.log('[ThreadView] onToggleReaction called successfully');
+      logger.info('onToggleReaction called successfully');
     } else {
-      console.log('[ThreadView] Reaction clicked but no onToggleReaction handler');
+      logger.info('Reaction clicked but no onToggleReaction handler');
     }
   }, [onToggleReaction]);
 

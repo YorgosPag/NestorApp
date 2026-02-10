@@ -2,6 +2,9 @@
 
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('Preview');
 
 interface PreviewProps {
   html: string;
@@ -13,7 +16,7 @@ interface PreviewProps {
 export function Preview({ html, placeholder, minHeight, maxHeight }: PreviewProps) {
   const colors = useSemanticColors();
   // DEBUG: Log what HTML we receive
-  console.log('Preview component received HTML:', html);
+  logger.info('Preview component received HTML', { htmlLength: html?.length ?? 0 });
 
   // SSR Guard
   if (typeof window === 'undefined') {

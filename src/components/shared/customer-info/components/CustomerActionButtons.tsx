@@ -12,6 +12,7 @@
  */
 
 import React, { useMemo } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import Link from 'next/link';
 import {
   Eye,
@@ -38,6 +39,12 @@ import type {
   CustomerActionType,
   CustomerInfoContext
 } from '../types/CustomerInfoTypes';
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('CustomerActionButtons');
 
 // ============================================================================
 // ACTION DEFINITIONS (moved inside component for i18n access)
@@ -169,7 +176,7 @@ export function CustomerActionButtons({
         icon: RefreshCw,
         variant: 'outline' as const,
         onClick: () => {
-          console.log(`Reassign action for customer ${contactId}`);
+          logger.info('Reassign action triggered', { contactId });
           // TODO: Implement reassignment logic
         },
         tooltip: t('customerActions.tooltips.reassignFor', { name: displayName })

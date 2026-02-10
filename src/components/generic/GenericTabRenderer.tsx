@@ -5,6 +5,9 @@ import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
 import { getIconComponent } from './utils/IconMapping';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/intl-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('GenericTabRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -276,7 +279,7 @@ export function GenericTabRenderer({
   valueFormatters
 }: GenericTabRendererProps) {
   if (!section) {
-    console.warn('GenericTabRenderer: No section provided');
+    logger.warn('No section provided');
     return <div className="text-center text-muted-foreground">Δεν υπάρχουν διαθέσιμα δεδομένα</div>;
   }
 

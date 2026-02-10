@@ -16,6 +16,9 @@ import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ParkingsList');
 
 import { ParkingsListHeader } from './ParkingsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -150,11 +153,11 @@ export function ParkingsList({
             setSortBy(newSortBy);
             setSortOrder(newSortOrder);
           }}
-          onNewItem={() => console.log('New parking')}
-          onEditItem={(id) => console.log('Edit parking:', id)}
-          onDeleteItems={(ids) => console.log('Delete parking:', ids)}
-          onExport={() => console.log('Export parking')}
-          onRefresh={() => console.log('Refresh parking')}
+          onNewItem={() => logger.info('New parking')}
+          onEditItem={(id) => logger.info('Edit parking', { id })}
+          onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
+          onExport={() => logger.info('Export parking')}
+          onRefresh={() => logger.info('Refresh parking')}
         />
       </div>
 

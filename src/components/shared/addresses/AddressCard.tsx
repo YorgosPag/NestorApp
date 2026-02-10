@@ -18,6 +18,7 @@ import React from 'react';
 import { MapPin, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
@@ -52,51 +53,14 @@ function formatAddressLine(address: ProjectAddress): string {
   return parts.join(', ');
 }
 
-/**
- * Get Greek label for address type
- */
-function getAddressTypeLabel(type: ProjectAddress['type']): string {
-  const labels: Record<ProjectAddress['type'], string> = {
-    site: 'Εργοτάξιο',
-    entrance: 'Είσοδος',
-    delivery: 'Παράδοση',
-    legal: 'Νομική Έδρα',
-    postal: 'Ταχυδρομείο',
-    billing: 'Τιμολόγηση',
-    correspondence: 'Αλληλογραφία',
-    other: 'Άλλο'
-  };
-
-  return labels[type];
-}
-
-/**
- * Get Greek label for block side
- */
-function getBlockSideLabel(side: ProjectAddress['blockSide']): string | null {
-  if (!side) return null;
-
-  const labels: Record<NonNullable<ProjectAddress['blockSide']>, string> = {
-    north: 'Βόρεια',
-    south: 'Νότια',
-    east: 'Ανατολική',
-    west: 'Δυτική',
-    northeast: 'Βορειοανατολική',
-    northwest: 'Βορειοδυτική',
-    southeast: 'Νοτιοανατολική',
-    southwest: 'Νοτιοδυτική',
-    corner: 'Γωνία',
-    internal: 'Εσωτερική'
-  };
-
-  return labels[side];
-}
+// Labels are now provided by i18n namespace 'addresses' (types.*, blockSides.*)
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
 export function AddressCard({ address, onEdit, className }: AddressCardProps) {
+  const { t } = useTranslation('addresses');
   const iconSizes = useIconSizes();
 
   return (
@@ -108,11 +72,11 @@ export function AddressCard({ address, onEdit, className }: AddressCardProps) {
             {address.isPrimary && (
               <Badge variant="default" className="flex items-center gap-1">
                 <Star className={iconSizes.xs} />
-                Κύρια
+                {t('card.primary')}
               </Badge>
             )}
             <Badge variant="outline">
-              {getAddressTypeLabel(address.type)}
+              {t(`types.${address.type}`)}
             </Badge>
           </div>
         </div>
@@ -136,7 +100,7 @@ export function AddressCard({ address, onEdit, className }: AddressCardProps) {
         {address.blockSide && (
           <div className="mt-2 pt-2 border-t border-border">
             <p className="text-xs text-muted-foreground">
-              Πλευρά: <span className="font-medium text-foreground">{getBlockSideLabel(address.blockSide)}</span>
+              {t('card.side')}: <span className="font-medium text-foreground">{t(`blockSides.${address.blockSide}`)}</span>
             </p>
           </div>
         )}
@@ -148,7 +112,7 @@ export function AddressCard({ address, onEdit, className }: AddressCardProps) {
               onClick={() => onEdit(address)}
               className="text-xs text-primary hover:underline"
             >
-              Επεξεργασία
+              {t('card.edit')}
             </button>
           </div>
         )}

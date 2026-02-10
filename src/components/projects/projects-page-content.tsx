@@ -30,6 +30,9 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: AddProjectDialog for creating new projects (ADR-087)
 import { AddProjectDialog } from './dialogs/AddProjectDialog';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectsPageContent');
 
 export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -96,7 +99,7 @@ export function ProjectsPageContent() {
 
   // 🏢 ENTERPRISE: Handler για επεξεργασία έργου (ADR-087)
   const handleEditProject = React.useCallback((project: typeof selectedProject) => {
-    console.log('🎯 [EditProject] Opening edit dialog for:', project?.name);
+    logger.info('Opening edit dialog for project', { projectName: project?.name });
     setEditingProject(project);
     setIsAddProjectDialogOpen(true);
   }, []);
@@ -210,7 +213,7 @@ export function ProjectsPageContent() {
             showDashboard={showDashboard}
             setShowDashboard={setShowDashboard}
             onNewProject={() => {
-              console.log('🎯 [AddProjectDialog] Button clicked - Opening dialog...');
+              logger.info('Opening add project dialog');
               setIsAddProjectDialogOpen(true);
             }}
             showFilters={showFilters}

@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Building2 } from 'lucide-react';
@@ -69,6 +70,8 @@ interface RelationshipsSummaryProps {
  * - Clean separation between UI και data logic
  * - Reusable sub-components
  */
+const logger = createModuleLogger('RelationshipsSummary');
+
 export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   contactId,
   contactType,
@@ -143,11 +146,11 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
    */
   const handleRefresh = async () => {
     try {
-      console.log('🔄 SUMMARY: Manual refresh triggered by user');
+      logger.info('Manual refresh triggered by user');
       await refreshRelationships();
-      console.log('✅ SUMMARY: Manual refresh completed successfully');
+      logger.info('Manual refresh completed successfully');
     } catch (error) {
-      console.error('❌ SUMMARY: Manual refresh failed:', error);
+      logger.error('Manual refresh failed', { error });
     }
   };
 

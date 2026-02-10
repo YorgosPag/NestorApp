@@ -17,6 +17,9 @@ import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
 import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
 import { BUILDING_COMPONENT_MAPPING } from '@/components/generic/mappings/buildingMappings';
 import { getSortedBuildingTabs } from '../../../config/building-tabs-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingTabs');
 
 interface BuildingTabsProps {
     building: Building;
@@ -36,39 +39,41 @@ export function BuildingTabs({ building }: BuildingTabsProps) {
     // Get building tabs from centralized config
     const buildingTabs = getSortedBuildingTabs();
 
-    // 🚨 FORCE DEBUG: Log immediately
-    console.log('🏠 BuildingTabs RENDERING!', { buildingId: building?.id, tabsCount: buildingTabs.length });
-    console.log('📋 BACKUP CONFIG TABS:', buildingTabs.map(tab => ({
-        id: tab.id,
-        label: tab.label,
-        component: tab.component
-    })));
+    // Debug: Log rendering info
+    logger.info('BuildingTabs rendering', { buildingId: building?.id, tabsCount: buildingTabs.length });
+    logger.info('Config tabs', { tabs: buildingTabs.map(tab => ({ id: tab.id, label: tab.label, component: tab.component })) });
 
-    // 🔍 DEBUG: Log tabs for debugging
+    // Debug: Log tabs information
     React.useEffect(() => {
-        console.group('🔍 BUILDING TABS DEBUG');
-        console.log(`🏠 Building ID: ${building?.id}`);
-        console.log(`📋 Total tabs: ${buildingTabs.length}`);
-        buildingTabs.forEach((tab, index) => {
-            console.log(`${index + 1}. ID: ${tab.id} | Value: ${tab.value} | Label: ${tab.label} | Order: ${tab.order} | Enabled: ${tab.enabled} | Component: ${tab.component}`);
+        logger.info('Building tabs debug', {
+            buildingId: building?.id,
+            totalTabs: buildingTabs.length,
+            tabs: buildingTabs.map((tab, index) => ({
+                index: index + 1,
+                id: tab.id,
+                value: tab.value,
+                label: tab.label,
+                order: tab.order,
+                enabled: tab.enabled,
+                component: tab.component,
+            })),
         });
 
         // Check for duplicates
         const ids = buildingTabs.map(tab => tab.id);
         const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
         if (duplicateIds.length > 0) {
-            console.error('🚨 DUPLICATE IDs FOUND:', duplicateIds);
+            logger.error('Duplicate tab IDs found', { duplicateIds });
         } else {
-            console.log('✅ No duplicate IDs found');
+            logger.info('No duplicate tab IDs found');
         }
 
-        // 📍 EXPOSE TO WINDOW για debugging
+        // Expose to window for debugging
         window.getSortedBuildingTabs = () => buildingTabs;
         window.BUILDING_TABS = buildingTabs;
         window.currentBuilding = building;
 
-        console.log('🎯 Functions exposed to window: getSortedBuildingTabs, BUILDING_TABS, currentBuilding');
-        console.groupEnd();
+        logger.info('Debug functions exposed to window');
     }, [buildingTabs, building]);
 
     return (

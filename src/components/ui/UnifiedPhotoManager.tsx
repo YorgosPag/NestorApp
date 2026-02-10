@@ -15,6 +15,9 @@ import type { PhotoSlot } from './MultiplePhotosUpload';
 import { openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { asDate } from '@/lib/firestore/utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnifiedPhotoManager');
 
 const normalizeContactTimestamp = (value?: Date | string | { toDate: () => Date }): Date => {
   const date = asDate(value);
@@ -83,7 +86,7 @@ function IndividualPhotoManager({
 
   // 🎯 Photo click handler για το gallery modal
   const handlePhotoClick = React.useCallback((photoIndex: number) => {
-    console.log('🖱️ IndividualPhotoManager: Photo clicked at index', photoIndex);
+    logger.info('IndividualPhotoManager: Photo clicked', { photoIndex });
 
     // Δημιουργούμε το gallery photos array από τα multiplePhotos
     const galleryPhotos = (formData.multiplePhotos || []).map(photo =>
@@ -102,7 +105,7 @@ function IndividualPhotoManager({
       multiplePhotoURLs: galleryPhotos.filter((url): url is string => url !== null)
     };
 
-    console.log('🖼️ IndividualPhotoManager: Opening gallery modal with:', {
+    logger.info('IndividualPhotoManager: Opening gallery modal', {
       photoIndex,
       totalPhotos: galleryPhotos.length,
       photoUrl: galleryPhotos[photoIndex],
@@ -170,7 +173,7 @@ function CompanyPhotoManager({
 
   // 🔍 DEBUG: Log formData photo fields
   React.useEffect(() => {
-    console.log('🔍 DEBUG CompanyPhotoManager formData:', {
+    logger.info('CompanyPhotoManager formData', {
       logoFile: formData.logoFile,
       logoPreview: formData.logoPreview,
       logoURL: formData.logoURL,
@@ -201,7 +204,7 @@ function CompanyPhotoManager({
               onFileChange={handleLogoChange}
               uploadHandler={uploadHandlers.logoUploadHandler}
               onUploadComplete={(result) => {
-                console.log('🔍 DEBUG: Logo upload completed!', { url: result.url, hasHandler: !!handlers.handleUploadedLogoURL });
+                logger.info('Logo upload completed', { url: result.url, hasHandler: !!handlers.handleUploadedLogoURL });
                 handlers.handleUploadedLogoURL?.(result.url);
               }}
               disabled={disabled}
@@ -234,29 +237,24 @@ function CompanyPhotoManager({
               photoFile={formData.photoFile}
               photoPreview={formData.photoPreview}
               onFileChange={(file) => {
-                console.log('🔍 DEBUG REPRESENTATIVE: onFileChange called with file:', !!file, file?.name);
+                logger.info('REPRESENTATIVE: onFileChange called', { hasFile: !!file, fileName: file?.name });
                 handlers.handleFileChange?.(file);
               }}
               uploadHandler={uploadHandlers.photoUploadHandler}
               onUploadComplete={(result) => {
-                console.log('🎯 UNIFIED PHOTO MANAGER: Representative photo onUploadComplete called!', {
+                logger.info('Representative photo onUploadComplete called', {
                   hasResult: !!result,
-                  result: result,
-                  url: result?.url?.substring(0, 80) + '...',
+                  url: result?.url?.substring(0, 80),
                   hasUrl: !!result?.url,
                   hasHandler: !!handlers.handleUploadedPhotoURL,
-                  handlerName: handlers.handleUploadedPhotoURL?.name || 'anonymous',
-                  fullURL: result?.url
                 });
 
                 if (result?.url) {
-                  console.log('✅ UNIFIED PHOTO MANAGER: Representative photo URL found, calling handleUploadedPhotoURL');
-                  console.log('📤 UNIFIED PHOTO MANAGER: Calling handleUploadedPhotoURL with URL:', result.url);
+                  logger.info('Representative photo URL found, calling handleUploadedPhotoURL', { url: result.url });
                   handlers.handleUploadedPhotoURL?.(result.url);
-                  console.log('✅ UNIFIED PHOTO MANAGER: handleUploadedPhotoURL call completed');
+                  logger.info('handleUploadedPhotoURL call completed');
                 } else {
-                  console.error('❌ UNIFIED PHOTO MANAGER: No URL in representative photo upload result!', {
-                    result,
+                  logger.error('No URL in representative photo upload result', {
                     resultKeys: Object.keys(result || {}),
                     resultType: typeof result
                   });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { createPortal } from 'react-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -82,21 +83,23 @@ interface EmployeeSelectorProps {
 
 import { ContactsService } from '@/services/contacts.service';
 
+const logger = createModuleLogger('EmployeeSelector');
+
 const realContactSearch = async (query: string, filters: {
   allowedTypes?: ContactType[];
   excludeIds?: string[];
   maxResults?: number;
 }): Promise<ContactSummary[]> => {
   try {
-    console.log('🔍 EMPLOYEE SELECTOR: Searching contacts with query:', query, 'filters:', filters);
+    logger.info('Searching contacts', { query, filters });
 
     // Get all contacts from database
     const result = await ContactsService.getAllContacts();
     const allContacts = result?.contacts || [];
-    console.log('🔍 EMPLOYEE SELECTOR: Found', allContacts.length, 'total contacts in database');
+    logger.info('Found contacts in database', { count: allContacts.length });
 
     if (!Array.isArray(allContacts)) {
-      console.error('❌ EMPLOYEE SELECTOR: ContactsService.getAllContacts() returned invalid contacts array:', result);
+      logger.error('ContactsService.getAllContacts() returned invalid contacts array', { result });
       return [];
     }
 
@@ -148,7 +151,7 @@ const realContactSearch = async (query: string, filters: {
       return summary;
     }).filter(contact => contact.name.length > 0); // Only contacts with names
 
-    console.log('🔍 EMPLOYEE SELECTOR: After mapping, have', filtered.length, 'valid contacts');
+    logger.info('After mapping, valid contacts', { count: filtered.length });
 
     // Filter by query (name, email, company)
     if (query.trim()) {
@@ -159,7 +162,7 @@ const realContactSearch = async (query: string, filters: {
         contact.company?.toLowerCase().includes(searchTerm) ||
         contact.department?.toLowerCase().includes(searchTerm)
       );
-      console.log('🔍 EMPLOYEE SELECTOR: After text filter, have', filtered.length, 'matching contacts');
+      logger.info('After text filter', { count: filtered.length });
     }
 
     // Filter by contact type
@@ -167,7 +170,7 @@ const realContactSearch = async (query: string, filters: {
       filtered = filtered.filter(contact =>
         filters.allowedTypes!.includes(contact.type)
       );
-      console.log('🔍 EMPLOYEE SELECTOR: After type filter, have', filtered.length, 'contacts');
+      logger.info('After type filter', { count: filtered.length });
     }
 
     // Exclude specific IDs
@@ -175,18 +178,18 @@ const realContactSearch = async (query: string, filters: {
       filtered = filtered.filter(contact =>
         !filters.excludeIds!.includes(contact.id)
       );
-      console.log('🔍 EMPLOYEE SELECTOR: After excluding IDs, have', filtered.length, 'contacts');
+      logger.info('After excluding IDs', { count: filtered.length });
     }
 
     // Limit results
     if (filters.maxResults) {
       filtered = filtered.slice(0, filters.maxResults);
-      console.log('🔍 EMPLOYEE SELECTOR: After limit, returning', filtered.length, 'contacts');
+      logger.info('After limit, returning contacts', { count: filtered.length });
     }
 
     return filtered;
   } catch (error) {
-    console.error('❌ EMPLOYEE SELECTOR: Failed to search contacts:', error);
+    logger.error('Failed to search contacts', { error });
     return [];
   }
 };
@@ -341,14 +344,14 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
       const contact = await getContactById(contactId);
       setSelectedContact(contact);
     } catch (error) {
-      console.error('Error loading selected contact:', error);
+      logger.error('Error loading selected contact', { error });
     }
   };
 
   const performSearch = async (query: string) => {
     try {
-      console.log('🔍 EMPLOYEE SELECTOR: performSearch called with query:', query);
-      console.log('🔍 EMPLOYEE SELECTOR: Search filters:', {
+      logger.info('performSearch called', {
+        query,
         allowedTypes: allowedContactTypes,
         excludeIds: excludeContactIds,
         maxResults
@@ -361,13 +364,12 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         maxResults
       });
 
-      console.log('🔍 EMPLOYEE SELECTOR: Search completed, got', results.length, 'results');
-      console.log('🔍 EMPLOYEE SELECTOR: Results:', results);
+      logger.info('Search completed', { resultCount: results.length });
 
       setSearchResults(results);
       setHighlightedIndex(-1);
     } catch (error) {
-      console.error('❌ EMPLOYEE SELECTOR: Search failed:', error);
+      logger.error('Search failed', { error });
       setSearchResults([]);
     } finally {
       setIsSearching(false);

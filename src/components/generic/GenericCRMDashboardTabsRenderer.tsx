@@ -6,6 +6,9 @@ import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation
 import type { CRMDashboardTabConfig } from '@/config/crm-dashboard-tabs-config';
 import { TrendingUp, Target, Users, MessageSquare, Clock, Calendar } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('GenericCRMDashboardTabsRenderer');
 
 // ============================================================================
 // ICON MAPPING
@@ -131,7 +134,7 @@ export function GenericCRMDashboardTabsRenderer({
     }
 
     // Fallback για unknown components
-    console.warn(`Unknown component: ${componentName}`);
+    logger.warn('Unknown component', { componentName });
     return ({ children }: { children?: React.ReactNode }) => (
       <div className="p-4 text-center text-muted-foreground">
         <p>Component "{componentName}" not found</p>

@@ -46,6 +46,9 @@ import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
 import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitCustomerTab');
 
 /** Additional data passed from parent component */
 interface AdditionalTabData {
@@ -579,7 +582,7 @@ export function UnitCustomerTab({
               variant="outline"
               onClick={() => {
                 // Add to calendar or task management
-                console.log('Schedule follow-up for customer:', selectedUnit.soldTo);
+                logger.info('Schedule follow-up for customer', { soldTo: selectedUnit.soldTo });
               }}
             >
               <Calendar className={`${iconSizes.sm} mr-2`} />
@@ -590,7 +593,7 @@ export function UnitCustomerTab({
               variant="outline"
               onClick={() => {
                 // Generate report
-                console.log('Generate customer report for:', selectedUnit.soldTo);
+                logger.info('Generate customer report', { soldTo: selectedUnit.soldTo });
               }}
             >
               <FileText className={`${iconSizes.sm} mr-2`} />

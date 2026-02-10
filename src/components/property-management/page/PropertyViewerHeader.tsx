@@ -14,6 +14,9 @@ import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('PropertyViewerHeader');
 
 interface PropertyViewerHeaderProps {
   showDashboard: boolean;
@@ -54,7 +57,7 @@ export function PropertyViewerHeader({
           viewModes: ['list', 'grid'] as CoreViewMode[],
           addButton: {
             label: t('propertyViewer.newProperty'),
-            onClick: () => console.log('Add property')
+            onClick: () => logger.info('Add property')
           }
         }}
       />

@@ -33,6 +33,9 @@ import type {
   TourAnalyticsEvent,
   TourAnalyticsData,
 } from './ProductTour.types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProductTourContext');
 
 // =============================================================================
 // CONSTANTS
@@ -248,7 +251,8 @@ export function TourProvider({ children }: TourProviderProps) {
   const startTour = useCallback((config: TourConfig) => {
     // 🏢 DEBUG: Log tour start
     if (process.env.NODE_ENV === 'development') {
-      console.log('[ProductTour] Starting tour:', config.tourId, {
+      logger.info('Starting tour', {
+        tourId: config.tourId,
         steps: config.steps.length,
         persistenceKey: config.persistenceKey,
       });
@@ -259,7 +263,7 @@ export function TourProvider({ children }: TourProviderProps) {
       const isDismissed = checkDismissalFromStorage(config.persistenceKey);
       if (isDismissed) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('[ProductTour] Tour dismissed by user, not starting:', config.tourId);
+          logger.info('Tour dismissed by user, not starting', { tourId: config.tourId });
         }
         return; // User has dismissed this tour before
       }

@@ -17,6 +17,7 @@ import { validateIBAN, formatIBAN, cleanIBAN } from '@/types/contacts/banking';
 import { getBankByIBAN } from '@/constants/greek-banks';
 import { AlertCircle, CheckCircle2, Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -69,13 +70,15 @@ export function IBANInput({
   value,
   onChange,
   disabled = false,
-  label = 'IBAN',
+  label,
   required = false,
   placeholder = 'GR16 0110 1250 0000 0001 2300 695',
   className,
   showBankName = true,
   error: externalError
 }: IBANInputProps) {
+  const { t } = useTranslation('banking');
+  const resolvedLabel = label ?? t('iban.label');
   const iconSizes = useIconSizes();
   const [localValue, setLocalValue] = useState(formatIBAN(value));
   const [validationState, setValidationState] = useState<{
@@ -136,7 +139,7 @@ export function IBANInput({
     <div className={cn('space-y-2', className)}>
       {/* Label */}
       <Label htmlFor="iban-input" className="text-sm font-medium">
-        {label}
+        {resolvedLabel}
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
 
@@ -164,14 +167,14 @@ export function IBANInput({
             <CheckCircle2
               size={iconSizes.numeric.md}
               className="text-green-500"
-              aria-label="Valid IBAN"
+              aria-label={t('iban.valid')}
             />
           )}
           {showError && (
             <AlertCircle
               size={iconSizes.numeric.md}
               className="text-destructive"
-              aria-label="Invalid IBAN"
+              aria-label={t('iban.invalid')}
             />
           )}
         </div>

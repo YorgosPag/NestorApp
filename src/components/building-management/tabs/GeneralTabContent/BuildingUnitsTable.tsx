@@ -17,6 +17,9 @@ import type { Property } from '@/types/property-viewer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type UnitUpdatedPayload, type UnitCreatedPayload, type UnitDeletedPayload } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingUnitsTable');
 
 function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -38,14 +41,14 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
         try {
             setLoading(true);
             // 🏢 ENTERPRISE: Loading units μέσω centralized Building Relationship Engine
-            console.log(`🏗️ ENTERPRISE BuildingUnitsTable: Loading units for building building-${buildingId}`);
+            logger.info('Loading units for building', { buildingId: `building-${buildingId}` });
             const buildingUnits = await buildingRelationships.getUnits();
             // 🏢 ENTERPRISE: Type assertion for relationship engine results
             setUnits(buildingUnits as Property[]);
-            console.log(`✅ ENTERPRISE BuildingUnitsTable: Loaded ${buildingUnits.length} units for building building-${buildingId}`);
+            logger.info('Loaded units for building', { count: buildingUnits.length, buildingId: `building-${buildingId}` });
 
         } catch (error) {
-            console.error("Failed to fetch units for building:", error);
+            logger.error('Failed to fetch units for building', { error });
             setUnits([]);
         } finally {
             setLoading(false);
@@ -59,7 +62,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   // Subscribe to unit updates for cross-page sync
   useEffect(() => {
     const handleUnitUpdate = (payload: UnitUpdatedPayload) => {
-      console.log('🔄 [BuildingUnitsTable] Applying update for unit:', payload.unitId);
+      logger.info('Applying update for unit', { unitId: payload.unitId });
 
       setUnits(prev => prev.map(unit => {
         if (unit.id !== payload.unitId) return unit;
@@ -95,7 +98,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
       // Only care about units belonging to this building
       if (payload.unit.buildingId !== `building-${buildingId}`) return;
 
-      console.log('➕ [BuildingUnitsTable] New unit created for this building:', payload.unitId);
+      logger.info('New unit created for this building', { unitId: payload.unitId });
       // Refetch units for this building
       const refetchUnits = async () => {
         const buildingUnits = await buildingRelationships.getUnits();
@@ -114,7 +117,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   // 🏢 ENTERPRISE: Subscribe to unit DELETED events for cross-page sync
   useEffect(() => {
     const handleUnitDeleted = (payload: UnitDeletedPayload) => {
-      console.log('🗑️ [BuildingUnitsTable] Unit deleted:', payload.unitId);
+      logger.info('Unit deleted', { unitId: payload.unitId });
       // Remove the deleted unit from the list
       setUnits(prev => prev.filter(unit => unit.id !== payload.unitId));
     };

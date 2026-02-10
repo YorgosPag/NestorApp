@@ -15,6 +15,9 @@ import { NotificationItem } from "@/components/header/notification-item"
 import type { Notification } from "@/types/header"
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation'
+import { createModuleLogger } from '@/lib/telemetry'
+
+const logger = createModuleLogger('NotificationsPopover')
 
 export function NotificationsPopover() {
   const iconSizes = useIconSizes();
@@ -28,7 +31,7 @@ export function NotificationsPopover() {
         const data = await getNotifications()
         setNotifications(data)
       } catch (error) {
-        console.error('Error loading notifications:', error)
+        logger.error('Error loading notifications', { error })
         setNotifications([])
       }
     }

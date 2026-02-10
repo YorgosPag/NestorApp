@@ -13,6 +13,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { FileText, Download, Eye, Trash2, Calendar, HardDrive } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,12 @@ import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation'; 
 import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Toast notifications
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('FilesList');
 
 // ============================================================================
 // TYPES
@@ -137,7 +144,7 @@ export function FilesList({
       setFileToDelete(null);
     } catch (err) {
       error(t('list.deleteError'));
-      console.error('[FilesList] Delete failed:', err);
+      logger.error('Delete failed', { error: err });
     } finally {
       setDeleteLoading(false);
     }

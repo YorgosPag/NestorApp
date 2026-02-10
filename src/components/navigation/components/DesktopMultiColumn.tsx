@@ -38,6 +38,9 @@ import {
 } from "@/components/ui/alert-dialog";
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('DesktopMultiColumn');
 
 interface DesktopMultiColumnProps {
   onCompanySelect: (companyId: string) => void;
@@ -193,13 +196,13 @@ export function DesktopMultiColumn({
           }));
 
         setAvailableBuildings(filteredBuildings);
-        console.log(`✅ [Navigation] Loaded ${filteredBuildings.length} available buildings via EntityLinkingService`);
+        logger.info('Loaded available buildings via EntityLinkingService', { count: filteredBuildings.length });
       } else {
-        console.error('❌ [Navigation] EntityLinkingService error:', result.error);
+        logger.error('EntityLinkingService error', { error: result.error });
         setAvailableBuildings([]);
       }
     } catch (error) {
-      console.error('❌ [Navigation] Error loading available buildings:', error);
+      logger.error('Error loading available buildings', { error });
       setAvailableBuildings([]);
     } finally {
       setLoadingBuildings(false);
@@ -320,7 +323,7 @@ export function DesktopMultiColumn({
       });
 
     } catch (error) {
-      console.error('❌ Enterprise company deletion failed:', error);
+      logger.error('Enterprise company deletion failed', { error });
 
       // 🚨 STEP 6: Error Handling με ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ TOAST
       warning(`❌ ${t('dialogs.company.errorMessage')}`, {
@@ -381,7 +384,7 @@ export function DesktopMultiColumn({
         warning(`❌ ${t('dialogs.project.errorMessage')}: ${result.error}`, { duration: 5000 });
       }
     } catch (error) {
-      console.error('❌ [DesktopMultiColumn] Project unlink failed:', error);
+      logger.error('Project unlink failed', { error });
       warning(`❌ ${t('dialogs.project.errorMessage')}`, { duration: 5000 });
     } finally {
       setProjectDialogOpen(false);
@@ -437,7 +440,7 @@ export function DesktopMultiColumn({
         warning(`❌ ${t('dialogs.building.errorMessage')}: ${result.error}`, { duration: 5000 });
       }
     } catch (error) {
-      console.error('❌ [DesktopMultiColumn] Building unlink failed:', error);
+      logger.error('Building unlink failed', { error });
       warning(`❌ ${t('dialogs.building.errorMessage')}`, { duration: 5000 });
     } finally {
       setBuildingDialogOpen(false);
@@ -484,7 +487,7 @@ export function DesktopMultiColumn({
         warning(`❌ ${t('dialogs.unit.errorMessage')}: ${result.error}`, { duration: 5000 });
       }
     } catch (error) {
-      console.error('❌ [DesktopMultiColumn] Unit unlink failed:', error);
+      logger.error('Unit unlink failed', { error });
       warning(`❌ ${t('dialogs.unit.errorMessage')}`, { duration: 5000 });
     } finally {
       setUnitDialogOpen(false);

@@ -12,6 +12,9 @@ import type { Building } from '../../BuildingsPageContent';
 import { validateForm } from './utils';
 import { BuildingStats } from '../BuildingStats';
 import { BuildingUnitsTable } from './BuildingUnitsTable';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('GeneralTabContentIndex');
 
 export function GeneralTabContent({ building }: { building: Building }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -40,7 +43,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
       const saveId = setTimeout(() => {
         setAutoSaving(false);
         setLastSaved(new Date());
-        console.log('Auto-saved:', formData);
+        logger.info('Auto-saved', { formData });
       }, 1000);
       
       // Cleanup for the inner timeout
@@ -56,7 +59,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
     if (validateForm(formData, setErrors)) {
       setIsEditing(false);
       setLastSaved(new Date());
-      console.log('Manual save:', formData);
+      logger.info('Manual save', { formData });
     }
   };
 

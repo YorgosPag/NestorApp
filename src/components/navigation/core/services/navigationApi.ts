@@ -13,6 +13,9 @@ import type {
   NavigationFloor,
   NavigationUnit
 } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationApiService');
 
 export class NavigationApiService {
   // 🏢 ENTERPRISE CACHING: Companies cache με memory optimization
@@ -86,7 +89,7 @@ export class NavigationApiService {
     try {
       // 🏢 ENTERPRISE: Dynamic validation instead of hardcoded IDs
       if (!companyId || companyId.length < 10) {
-        console.warn(`⚠️ Invalid companyId format: ${companyId}`);
+        logger.warn('Invalid companyId format', { companyId });
         return [];
       }
 
@@ -124,7 +127,7 @@ export class NavigationApiService {
       return projects;
 
     } catch (error) {
-      console.error(`🚨 Failed to load projects for company ${companyId}:`, error);
+      logger.error('Failed to load projects for company', { companyId, error });
       return [];
     }
   }
@@ -153,7 +156,7 @@ export class NavigationApiService {
       }));
 
     } catch (error) {
-      console.error(`🚨 Failed to load buildings for project ${projectId}:`, error);
+      logger.error('Failed to load buildings for project', { projectId, error });
       return [];
     }
   }
@@ -192,7 +195,7 @@ export class NavigationApiService {
       }));
 
     } catch (error) {
-      console.error(`🚨 Failed to load floors for building ${buildingId}:`, error);
+      logger.error('Failed to load floors for building', { buildingId, error });
       return [];
     }
   }
@@ -228,7 +231,7 @@ export class NavigationApiService {
       }));
 
     } catch (error) {
-      console.error(`🚨 Failed to load units for floor ${floorId}:`, error);
+      logger.error('Failed to load units for floor', { floorId, error });
       return [];
     }
   }
@@ -263,7 +266,7 @@ export class NavigationApiService {
       }));
 
     } catch (error) {
-      console.error(`🚨 Failed to load units for building ${buildingId}:`, error);
+      logger.error('Failed to load units for building', { buildingId, error });
       return [];
     }
   }

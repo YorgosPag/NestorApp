@@ -4,6 +4,9 @@ import React from 'react';
 import { useBuildingData } from '@/hooks/useBuildingData';
 import { BuildingEditToolbar } from './BuildingEditToolbar';
 import { BuildingDataTabs } from './BuildingDataTabs';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingDataTab');
 
 export function BuildingDataTab() {
   const {
@@ -22,7 +25,7 @@ export function BuildingDataTab() {
 
   const handleSave = () => {
     // Here you would typically call an API to save the data
-    console.log('Saving data...', { plotData, allowedDataInput, actualData });
+    logger.info('Saving data', { plotData, allowedDataInput, actualData });
     setIsEditing(false);
   };
 

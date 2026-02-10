@@ -19,6 +19,9 @@ import type { ViewMode } from '@/core/headers';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectsHeader');
 
 // 🏢 ENTERPRISE: Added 'grid' view mode for card grid layout (PR: Projects Grid View)
 type ProjectsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -79,7 +82,7 @@ export function ProjectsHeader({
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
           label: t('header.newProject'),
-          onClick: () => onNewProject?.() || console.log('Add project')
+          onClick: () => onNewProject?.() || logger.info('Add project')
         },
         // Mobile-only filter button
         customActions: setShowFilters ? [

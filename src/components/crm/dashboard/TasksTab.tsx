@@ -27,6 +27,9 @@ import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TasksTab');
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
@@ -121,7 +124,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   const fetchData = useCallback(async () => {
     // 🏢 ENTERPRISE: Skip fetch if not authenticated (race condition prevention)
     if (!isAuthenticated) {
-      console.log('⏳ [TasksTab] Waiting for authentication...');
+      logger.info('Waiting for authentication');
       setLoading(false);
       return;
     }
@@ -140,7 +143,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
     } catch (err) {
       if(isMounted) {
         setError(t('tasks.messages.loadError'));
-        console.error('Error fetching tasks:', err);
+        logger.error('Error fetching tasks', { error: err });
       }
     } finally {
       if(isMounted) {

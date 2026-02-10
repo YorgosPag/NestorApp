@@ -8,6 +8,9 @@ import {
     deleteOpportunity as apiDeleteOpportunity 
 } from '@/services/opportunities.service';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useOpportunities');
 
 export function useOpportunities() {
     const notifications = useNotifications();
@@ -48,7 +51,7 @@ export function useOpportunities() {
 
           fetchOpportunities();
         } catch (error) {
-          console.error(error);
+          logger.error('Error adding opportunity', { error });
           notifications.error("opportunities.errors.addFailed");
           throw error;
         }
@@ -61,7 +64,7 @@ export function useOpportunities() {
             fetchOpportunities();
         } catch (error) {
             notifications.error("opportunities.errors.deleteFailed");
-            console.error("Error deleting opportunity:", error);
+            logger.error('Error deleting opportunity', { error });
             throw error;
         }
     };

@@ -19,6 +19,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationDrawer');
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -70,7 +73,7 @@ export function NotificationDrawer() {
       try {
         await markNotificationsAsRead(targetIds);
       } catch (error) {
-        console.error('[NotificationDrawer] Failed to persist mark as read:', error);
+        logger.error('Failed to persist mark as read', { error });
         // Note: The real-time subscription will sync the correct state
       }
     }
@@ -85,7 +88,7 @@ export function NotificationDrawer() {
     try {
       await dismissNotification(id);
     } catch (error) {
-      console.error('[NotificationDrawer] Failed to persist dismiss:', error);
+      logger.error('Failed to persist dismiss', { error });
       // Real-time subscription will sync the correct state
     }
   }, [dismissLocal]);
@@ -109,7 +112,7 @@ export function NotificationDrawer() {
   useEffect(() => {
     // 🔐 AUTH-READY GATING - Wait for authentication
     if (authLoading) {
-      console.log('⏳ [NotificationDrawer] Waiting for auth state...');
+      logger.info('Waiting for auth state');
       return;
     }
 
@@ -121,7 +124,7 @@ export function NotificationDrawer() {
     // Fetch user preferences on mount
     const loadPreferences = async () => {
       try {
-        console.log('🔔 [NotificationDrawer] Loading user preferences...');
+        logger.info('Loading user preferences');
 
         // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
         // apiClient.get() returns unwrapped data: { preferences: {...} }
@@ -133,9 +136,9 @@ export function NotificationDrawer() {
 
         setUserPreferences(data.preferences);
 
-        console.log('✅ [NotificationDrawer] User preferences loaded');
+        logger.info('User preferences loaded');
       } catch (error) {
-        console.error('❌ [NotificationDrawer] Failed to load user preferences:', error);
+        logger.error('Failed to load user preferences', { error });
       }
     };
 
@@ -165,7 +168,7 @@ export function NotificationDrawer() {
       ingest(newItems as Notification[]);
       setCursor(nextCursor);
     } catch (error) {
-      console.error('Load more failed:', error);
+      logger.error('Load more failed', { error });
     }
   };
 
@@ -196,7 +199,7 @@ export function NotificationDrawer() {
         ingest([updated]);
       }
     } catch (error) {
-      console.error('Action failed:', error);
+      logger.error('Action failed', { error });
     }
   };
 

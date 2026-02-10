@@ -13,6 +13,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Task, TaskGroup } from 'react-modern-gantt';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useConstructionGantt');
 import type {
   ConstructionPhase,
   ConstructionTask,
@@ -179,7 +182,7 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
       setPhases(data.phases);
       setTasks(data.tasks);
     } catch (err) {
-      console.error('❌ [useConstructionGantt] Error loading data:', err);
+      logger.error('Error loading data', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to load construction data');
     } finally {
       setLoading(false);

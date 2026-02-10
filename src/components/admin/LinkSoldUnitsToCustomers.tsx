@@ -10,6 +10,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('LinkSoldUnitsToCustomers');
 
 interface LinkingResult {
   success: boolean;
@@ -37,20 +40,20 @@ export function LinkSoldUnitsToCustomers() {
     setResult(null);
 
     try {
-      console.log('🔗 Starting sold units linking process...');
+      logger.info('Starting sold units linking process');
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const data = await apiClient.post<LinkingResult>('/api/units/admin-link', {});
 
       if (data?.success) {
         setResult(data);
-        console.log('✅ Units linked successfully:', data);
+        logger.info('Units linked successfully', { linkedUnits: data.linkedUnits });
       } else {
         throw new Error('Failed to link units');
       }
 
     } catch (err) {
-      console.error('❌ Error linking units:', err);
+      logger.error('Error linking units', { error: err });
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);

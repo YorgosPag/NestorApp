@@ -14,9 +14,13 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { 
-  Layers, 
-  Eye, 
+import { createModuleLogger } from '@/lib/telemetry';
+
+const adminLayerLogger = createModuleLogger('AdminLayerManager');
+
+import {
+  Layers,
+  Eye,
   EyeOff, 
   Lock, 
   Unlock, 
@@ -588,7 +592,7 @@ export function AdminLayerManager({
         });
       }
     } catch (error) {
-      console.error('Error creating layer:', error);
+      adminLayerLogger.error('Error creating layer', { error });
     }
   };
 
@@ -605,7 +609,7 @@ export function AdminLayerManager({
         });
       }
     } catch (error) {
-      console.error('Error renaming layer:', error);
+      adminLayerLogger.error('Error renaming layer', { error });
     }
   };
 

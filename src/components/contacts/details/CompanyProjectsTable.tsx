@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProjectBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
@@ -15,6 +16,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 
+
+const logger = createModuleLogger('CompanyProjectsTable');
 
 function CompanyProjectsTable({ companyId }: { companyId: string }) {
     // 🏢 ENTERPRISE: i18n hook for translations
@@ -33,14 +36,14 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
         const fetchProjects = async () => {
             try {
                 // 🏗️ ENTERPRISE: Loading projects μέσω centralized Relationship Engine
-                console.log(`🏗️ ENTERPRISE CompanyProjectsTable: Loading projects for company ${companyId}`);
+                logger.info('Loading projects for company', { companyId });
                 const companyProjects = await companyRelationships.getProjects();
                 if (isMounted) {
                     setProjects([...companyProjects] as Project[]);
-                    console.log(`✅ ENTERPRISE CompanyProjectsTable: Loaded ${companyProjects.length} projects for company ${companyId}`);
+                    logger.info('Loaded projects for company', { count: companyProjects.length, companyId });
                 }
             } catch (error) {
-                console.error("Failed to fetch projects for company:", error);
+                logger.error('Failed to fetch projects for company', { error });
             }
         };
 
@@ -55,7 +58,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
     // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
     useEffect(() => {
         const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
-            console.log('🔄 [CompanyProjectsTable] Applying update for project:', payload.projectId);
+            logger.info('Applying update for project', { projectId: payload.projectId });
 
             setProjects(prev => prev.map(project => {
                 if (project.id !== payload.projectId) {

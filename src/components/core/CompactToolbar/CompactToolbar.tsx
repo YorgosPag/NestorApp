@@ -44,6 +44,9 @@ import { getIconColor } from './icon-colors';
 
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CompactToolbar');
 
 export function CompactToolbar({
   config,
@@ -126,7 +129,7 @@ export function CompactToolbar({
     // 🏢 ENTERPRISE: If translation failed, return undefined (no tooltip)
     // This prevents showing raw i18n keys to users
     if (process.env.NODE_ENV === 'development') {
-      console.warn(`[i18n] Translation missing for key: ${tooltipKey}`);
+      logger.warn('Translation missing for key', { tooltipKey });
     }
 
     return undefined;
@@ -285,7 +288,7 @@ export function CompactToolbar({
                   variant="ghost"
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
-                  onClick={() => console.log('Add to favorites...')}
+                  onClick={() => logger.info('Add to favorites')}
                   disabled={selectedItems.length === 0}
                 >
                   <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('favorites')}`} />
@@ -306,7 +309,7 @@ export function CompactToolbar({
                   variant="ghost"
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
-                  onClick={() => console.log('Archive selected...')}
+                  onClick={() => logger.info('Archive selected')}
                   disabled={selectedItems.length === 0}
                 >
                   <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('archive')}`} />

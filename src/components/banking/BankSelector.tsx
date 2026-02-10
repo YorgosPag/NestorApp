@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   GREEK_BANKS,
   getSystemicBanks,
@@ -89,13 +90,16 @@ export function BankSelector({
   value,
   onChange,
   disabled = false,
-  label = 'Τράπεζα',
+  label,
   required = false,
-  placeholder = 'Επιλέξτε τράπεζα...',
+  placeholder,
   className,
   grouped = true,
   allowOther = true
 }: BankSelectorProps) {
+  const { t } = useTranslation('banking');
+  const resolvedLabel = label ?? t('bank.label');
+  const resolvedPlaceholder = placeholder ?? t('bank.placeholder');
   const systemicBanks = getSystemicBanks();
   const allBanks = getAllBanksSorted();
   const otherBanks = allBanks.filter(
@@ -130,7 +134,7 @@ export function BankSelector({
     <div className={cn('space-y-2', className)}>
       {/* Label */}
       <Label className="text-sm font-medium">
-        {label}
+        {resolvedLabel}
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
 
@@ -141,14 +145,14 @@ export function BankSelector({
         disabled={disabled}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={resolvedPlaceholder} />
         </SelectTrigger>
         <SelectContent>
           {grouped ? (
             <>
               {/* Systemic Banks Group */}
               <SelectGroup>
-                <SelectLabel>Συστημικές Τράπεζες</SelectLabel>
+                <SelectLabel>{t('bank.groups.systemic')}</SelectLabel>
                 {systemicBanks.map(renderBankItem)}
               </SelectGroup>
 
@@ -156,7 +160,7 @@ export function BankSelector({
 
               {/* Other Greek Banks Group */}
               <SelectGroup>
-                <SelectLabel>Άλλες Τράπεζες</SelectLabel>
+                <SelectLabel>{t('bank.groups.other')}</SelectLabel>
                 {otherBanks.map(renderBankItem)}
               </SelectGroup>
 
@@ -165,7 +169,7 @@ export function BankSelector({
                 <>
                   <SelectSeparator />
                   <SelectItem value={OTHER_BANK_VALUE}>
-                    Άλλη τράπεζα (εξωτερικού)
+                    {t('bank.otherForeign')}
                   </SelectItem>
                 </>
               )}
@@ -179,7 +183,7 @@ export function BankSelector({
                 <>
                   <SelectSeparator />
                   <SelectItem value={OTHER_BANK_VALUE}>
-                    Άλλη τράπεζα (εξωτερικού)
+                    {t('bank.otherForeign')}
                   </SelectItem>
                 </>
               )}

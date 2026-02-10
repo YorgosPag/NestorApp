@@ -28,6 +28,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Copy, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -46,6 +47,12 @@ import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Ce
 import { copyToClipboard } from '@/lib/share-utils'; // 🏢 ENTERPRISE: Centralized clipboard utility
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notification system
 import { FileInspector } from './FileInspector'; // 🏢 ENTERPRISE: On-demand metadata inspector (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2)
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('FilePathTree');
 
 // ============================================================================
 // CONSTANTS
@@ -266,7 +273,7 @@ export function FilePathTree({
           error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
         }
       } catch (err) {
-        console.error('[FilePathTree] Failed to copy path:', err);
+        logger.error('Failed to copy path', { error: err });
         error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
       }
     },

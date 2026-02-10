@@ -24,6 +24,9 @@ import type {
   RealtimeBuildingRef,
   NavigationSelectedUnit
 } from './types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationContext');
 
 interface NavigationContextType extends NavigationState, NavigationActions {}
 
@@ -40,7 +43,7 @@ let navigationInitialized = false;
  * Call this on logout to ensure fresh bootstrap on next login
  */
 export function resetNavigationState(): void {
-  console.log('🔄 [NavigationContext] Resetting navigation state (logout/cleanup)');
+  logger.info('Resetting navigation state (logout/cleanup)');
   navigationInitialized = false;
 }
 
@@ -93,12 +96,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     // 🔐 STEP 1: Wait for auth to be ready before attempting bootstrap
     if (authLoading) {
-      console.log('⏳ [NavigationContext] Waiting for auth state...');
+      logger.info('Waiting for auth state...');
       return; // Will re-run when authLoading becomes false
     }
 
     if (!user) {
-      console.log('⏳ [NavigationContext] No authenticated user - skipping bootstrap');
+      logger.info('No authenticated user - skipping bootstrap');
       updateState({ loading: false, projectsLoading: false });
       return; // Will re-run when user becomes available
     }
@@ -107,18 +110,18 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     // This works with React Strict Mode because the flag persists across component remounts
     // ALSO check if we already have data (handles Fast Refresh in development)
     if (navigationInitialized && state.companies.length > 0) {
-      console.log('⚡ [NavigationContext] Already initialized with data (module-level guard)');
+      logger.info('Already initialized with data (module-level guard)');
       return;
     }
 
     // If flag is true but no data, reset and try again (Fast Refresh recovery)
     if (navigationInitialized && state.companies.length === 0) {
-      console.log('🔄 [NavigationContext] Flag was set but no data - resetting for retry...');
+      logger.info('Flag was set but no data - resetting for retry...');
       navigationInitialized = false;
     }
 
     navigationInitialized = true;
-    console.log('🚀 [NavigationContext] Initializing navigation (user authenticated)...');
+    logger.info('Initializing navigation (user authenticated)...');
 
     const initializeNavigation = async () => {
       try {
@@ -128,7 +131,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         // Combined with promise de-duplication in useNavigationData
         const { companies, projects } = await dataHook.loadViaBootstrap();
 
-        console.log(`✅ [NavigationContext] Bootstrap complete: ${companies.length} companies, ${projects.length} projects`);
+        logger.info('Bootstrap complete', { companiesCount: companies.length, projectsCount: projects.length });
 
         updateState({
           companies,
@@ -139,7 +142,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         });
 
       } catch (error) {
-        console.error('❌ [NavigationContext] Bootstrap failed:', error);
+        logger.error('Bootstrap failed', { error });
         // Reset flag on error so retry is possible
         navigationInitialized = false;
         updateState({
@@ -174,7 +177,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   // 🏢 ENTERPRISE: Full navigation refresh (clears cache and reloads)
   const refreshNavigation = useCallback(async () => {
-    console.log('🔄 [NavigationContext] Refreshing navigation data...');
+    logger.info('Refreshing navigation data...');
 
     try {
       // Clear the companies cache to force fresh data
@@ -194,9 +197,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         updateState({ projectsLoading: false });
       }
 
-      console.log('✅ [NavigationContext] Navigation data refreshed');
+      logger.info('Navigation data refreshed');
     } catch (error) {
-      console.error('❌ [NavigationContext] Failed to refresh:', error);
+      logger.error('Failed to refresh', { error });
       updateState({
         error: error instanceof Error ? error.message : 'Failed to refresh navigation',
         loading: false,
@@ -208,7 +211,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // 🏢 ENTERPRISE: Listen for NAVIGATION_REFRESH events
   useEffect(() => {
     const handleNavigationRefresh = () => {
-      console.log('📡 [NavigationContext] Received NAVIGATION_REFRESH event');
+      logger.info('Received NAVIGATION_REFRESH event');
       refreshNavigation();
     };
 
@@ -223,7 +226,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
   useEffect(() => {
     const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
-      console.log('🔄 [NavigationContext] Applying update for project:', payload.projectId);
+      logger.info('Applying update for project', { projectId: payload.projectId });
 
       setState(prev => ({
         ...prev,
@@ -251,7 +254,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // 🏢 ENTERPRISE: Listen for auth:logout event to reset navigation state
   useEffect(() => {
     const handleLogout = () => {
-      console.log('📡 [NavigationContext] Received auth:logout event - resetting state');
+      logger.info('Received auth:logout event - resetting state');
       resetNavigationState();
       // Also reset local state
       setState({
@@ -313,7 +316,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const selectProject = (projectId: string) => {
     actions.selectProject(projectId, state, updateState).catch(error => {
-      console.error('Failed to select project:', error);
+      logger.error('Failed to select project', { error });
       updateState({
         error: `Failed to load project details: ${error.message}`,
         projectsLoading: false
@@ -330,7 +333,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
    */
   const selectBuilding = (buildingId: string) => {
     if (!state.selectedProject) {
-      console.warn('⚠️ [selectBuilding] No project selected');
+      logger.warn('selectBuilding called with no project selected');
       return;
     }
 
@@ -339,7 +342,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     const realtimeBuildingRef = realtimeBuildings.find(b => b.id === buildingId);
 
     if (!realtimeBuildingRef) {
-      console.warn(`⚠️ [selectBuilding] Building ${buildingId} not found in realtime data`);
+      logger.warn('Building not found in realtime data', { buildingId });
       updateState({
         selectedBuilding: null,
         selectedFloor: null,
@@ -358,7 +361,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       units: []   // Loaded on-demand via useRealtimeUnits
     };
 
-    console.log(`📍 [selectBuilding] Selected: ${building.name} (${buildingId})`);
+    logger.info('Building selected', { name: building.name, buildingId });
 
     updateState({
       selectedBuilding: building,

@@ -24,6 +24,9 @@
 
 import { useCallback } from 'react';
 import type { UseTourReturn, TourConfig } from './ProductTour.types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useTourSafe');
 
 /**
  * Safe wrapper για useTour() hook
@@ -44,8 +47,8 @@ export function useTourSafe(): UseTourReturn {
   } catch (error) {
     // TourProvider not available - return no-op implementation
     // This is intentional - error boundaries should work without tours
-    console.warn(
-      '🏢 [useTourSafe] TourProvider not available - using no-op implementation. ' +
+    logger.warn(
+      'TourProvider not available - using no-op implementation. ' +
       'This is expected for global-error.tsx and standalone components.'
     );
 
@@ -56,7 +59,7 @@ export function useTourSafe(): UseTourReturn {
       totalSteps: 0,
       startTour: useCallback((config: TourConfig) => {
         // No-op - tours not available
-        console.debug('[useTourSafe] startTour called but TourProvider not available:', config.tourId);
+        logger.info('startTour called but TourProvider not available', { tourId: config.tourId });
       }, []),
       shouldShowTour: useCallback((_tourId: string, _persistenceKey?: string) => {
         // Always return false - tours not available
@@ -64,7 +67,7 @@ export function useTourSafe(): UseTourReturn {
       }, []),
       resetTour: useCallback((persistenceKey: string) => {
         // No-op - nothing to reset
-        console.debug('[useTourSafe] resetTour called but TourProvider not available:', persistenceKey);
+        logger.info('resetTour called but TourProvider not available', { persistenceKey });
       }, [])
     };
   }

@@ -7,6 +7,9 @@ import {
 } from '@/components/compositions';
 import type { CrmTask } from '@/types/crm';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ComponentShowcase');
 
 // Mock data για demonstration
 const mockTask: CrmTask = {
@@ -69,9 +72,9 @@ export function ComponentShowcase() {
             task={mockTask}
             isSelected={selectedCard === 'task1'}
             onSelectionChange={() => setSelectedCard(selectedCard === 'task1' ? null : 'task1')}
-            onComplete={(id) => console.log('Complete task:', id)}
-            onEdit={(id) => console.log('Edit task:', id)}
-            onView={(id) => console.log('View task:', id)}
+            onComplete={(id) => logger.info('Complete task', { id })}
+            onEdit={(id) => logger.info('Edit task', { id })}
+            onView={(id) => logger.info('View task', { id })}
           />
           
           <TaskCard 
@@ -117,9 +120,9 @@ export function ComponentShowcase() {
             user={mockUser}
             isSelected={selectedCard === 'user1'}
             onSelectionChange={() => setSelectedCard(selectedCard === 'user1' ? null : 'user1')}
-            onEdit={(id) => console.log('Edit user:', id)}
-            onMessage={(id) => console.log('Message user:', id)}
-            onView={(id) => console.log('View user:', id)}
+            onEdit={(id) => logger.info('Edit user', { id })}
+            onMessage={(id) => logger.info('Message user', { id })}
+            onView={(id) => logger.info('View user', { id })}
           />
           
           <UserCard 

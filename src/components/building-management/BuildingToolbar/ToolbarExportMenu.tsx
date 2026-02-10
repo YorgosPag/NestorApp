@@ -14,6 +14,9 @@ import { Upload, Download, FileText, BarChart3, Calendar } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ToolbarExportMenu');
 
 interface ToolbarExportMenuProps {
   onExport: () => void;
@@ -57,7 +60,7 @@ export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
 
       <ToolbarButton
         tooltip={t('toolbar.export.import')}
-        onClick={() => console.log('Importing...')}
+        onClick={() => logger.info('Importing')}
       >
         <Upload className={iconSizes.sm} />
       </ToolbarButton>

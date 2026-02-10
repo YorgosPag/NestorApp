@@ -19,6 +19,9 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Product Tour System (ADR-037) - Safe wrapper for graceful degradation
 import { useTourSafe } from '@/components/ui/ProductTour';
 import { ERROR_DIALOG_BUTTON_IDS, createErrorDialogTourConfig } from './errorDialogTour';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ErrorBoundary');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Universal Email Compose Helper
@@ -78,7 +81,7 @@ export function openEmailCompose(provider: EmailProvider, options: EmailComposeO
       break;
   }
 
-  console.log(`[Email] Opened ${provider} compose for:`, to);
+  logger.info('Opened email compose', { provider, to });
 }
 
 /**
@@ -247,12 +250,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
-      console.group('🚨 Error Boundary Caught Error');
-      console.error('Error:', error);
-      console.error('Component Stack:', customErrorInfo.componentStack);
-      console.error('Error Stack:', error.stack);
-      console.error('ErrorTracker ID:', trackerErrorId);
-      console.groupEnd();
+      logger.error('Error Boundary Caught Error', {
+        message: error.message,
+        componentStack: customErrorInfo.componentStack,
+        errorStack: error.stack,
+        trackerErrorId,
+      });
     }
 
     // Call custom error handler με ErrorTracker ID
@@ -328,11 +331,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       };
 
       // In a real app, send to error reporting service
-      console.log('Error report sent:', errorReport);
+      logger.info('Error report sent', { errorId: errorReport.errorId });
       
       this.setState({ reportSent: true });
     } catch (reportingError) {
-      console.error('Failed to report error:', reportingError);
+      logger.error('Failed to report error', { error: reportingError });
     } finally {
       this.setState({ isReporting: false });
     }
@@ -359,22 +362,22 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       this.setState({ copySuccess: true });
       setTimeout(() => this.setState({ copySuccess: false }), 2000);
     } catch (error) {
-      console.error('Failed to copy error details:', error);
+      logger.error('Failed to copy error details', { error });
     }
   };
 
   private sendToAdmin = async () => {
     const { error, errorInfo, errorId } = this.state;
 
-    console.log('🔔 [sendToAdmin] Starting...', { hasError: !!error, errorId });
+    logger.info('sendToAdmin starting', { hasError: !!error, errorId });
 
     if (!error || !errorId) {
-      console.log('🔔 [sendToAdmin] Aborted - no error or errorId');
+      logger.info('sendToAdmin aborted - no error or errorId');
       return;
     }
 
     this.setState({ isSendingToAdmin: true });
-    console.log('🔔 [sendToAdmin] State set to isSendingToAdmin: true');
+    logger.info('sendToAdmin state set to isSendingToAdmin: true');
 
     // Define errorDetails outside try block so it's accessible in catch
     const errorDetails = {
@@ -415,11 +418,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         error?: string;
       }
 
-      console.log('🔔 [sendToAdmin] Calling API...', { errorId, component: notificationPayload.component });
+      logger.info('sendToAdmin calling API', { errorId, component: notificationPayload.component });
 
       const response = await apiClient.post('/api/notifications/error-report', notificationPayload) as ErrorReportApiResponse;
 
-      console.log('🔔 [sendToAdmin] API response:', response);
+      logger.info('sendToAdmin API response', { success: response.success });
 
       if (response.success) {
         this.setState({ emailSent: true });
@@ -431,13 +434,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           { errorId, notificationId: response.notificationId ?? 'unknown' }
         );
 
-        console.log('✅ Error report sent successfully:', response.notificationId);
+        logger.info('Error report sent successfully', { notificationId: response.notificationId });
       } else {
         throw new Error(response.error ?? 'Failed to create notification');
       }
 
     } catch (sendError) {
-      console.error('Failed to send error via direct notification, falling back to email:', sendError);
+      logger.error('Failed to send error via direct notification, falling back to email', { error: sendError });
 
       // 🏢 ENTERPRISE FALLBACK: Show email provider options
       // If direct notification fails, allow user to send email manually
@@ -919,7 +922,7 @@ export function useErrorReporting() {
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR'
       };
 
-      console.error('Manual error report:', errorReport);
+      logger.error('Manual error report', { errorId: errorReport.errorId, message: errorReport.message });
       return errorId; // Return ErrorTracker ID για reference
     },
 
@@ -1115,7 +1118,7 @@ export function RouteErrorFallback({
       url: typeof window !== 'undefined' ? window.location.href : ''
     });
 
-    console.error(`🚨 Route Error in ${componentName}:`, error);
+    logger.error('Route Error', { componentName, message: error.message });
   }, [error, componentName, reportError]);
 
   // 🏢 ENTERPRISE: Auto-start tour when error dialog appears (ADR-037)
@@ -1226,7 +1229,7 @@ ${errorDetails.stack || 'Stack trace not available'}
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (copyError) {
-      console.error('Failed to copy error details:', copyError);
+      logger.error('Failed to copy error details', { error: copyError });
     }
   };
 
@@ -1275,13 +1278,13 @@ ${errorDetails.stack || 'Stack trace not available'}
           'sendToAdmin',
           { errorId, notificationId: response.notificationId ?? 'unknown' }
         );
-        console.log('✅ Error report sent successfully:', response.notificationId);
+        logger.info('Error report sent successfully (route)', { notificationId: response.notificationId });
       } else {
         throw new Error(response.error ?? 'Failed to create notification');
       }
 
     } catch (sendError) {
-      console.error('Failed to send error via API, falling back to email:', sendError);
+      logger.error('Failed to send error via API, falling back to email', { error: sendError });
 
       // 🏢 ENTERPRISE FALLBACK: Show email provider options
       const adminEmail = notificationConfig.channels.adminEmail;
@@ -1348,10 +1351,10 @@ ${errorDetails.stack || 'Stack trace not available'}
         userId: getUserId(),
       };
 
-      console.log('Error report sent:', errorReport);
+      logger.info('Error report sent (route)', { errorId: errorReport.errorId });
       setReportSent(true);
     } catch (reportingError) {
-      console.error('Failed to report error:', reportingError);
+      logger.error('Failed to report error (route)', { error: reportingError });
     } finally {
       setIsReporting(false);
     }

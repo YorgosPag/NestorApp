@@ -17,6 +17,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ViewerToolbar');
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -66,13 +69,13 @@ export function ViewerToolbar({
 
   // 🏢 ADR-054: Centralized file upload handler
   const handleFileSelect = async (file: File) => {
-    console.log('📄 PDF selected:', file.name);
+    logger.info('PDF selected', { fileName: file.name });
 
     setIsUploading(true);
 
     try {
       const pdfUrl = URL.createObjectURL(file);
-      console.log('✅ PDF URL created');
+      logger.info('PDF URL created');
 
       if (onPdfUpload) {
         onPdfUpload(file);
@@ -91,7 +94,7 @@ export function ViewerToolbar({
       }
 
     } catch (error) {
-      console.error('PDF upload error:', error);
+      logger.error('PDF upload error', { error });
     } finally {
       setIsUploading(false);
     }

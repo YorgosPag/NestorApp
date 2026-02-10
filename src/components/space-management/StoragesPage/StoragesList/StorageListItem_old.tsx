@@ -7,6 +7,9 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import type { Storage } from '@/types/storage/contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('StorageListItem');
 
 import { StorageListItemHeader } from './ListItem/StorageListItemHeader_old';
 import { StorageListItemStats } from './ListItem/StorageListItemStats_old';
@@ -46,7 +49,7 @@ export function StorageListItem({
                 <StorageListItemActions
                     isFavorite={isFavorite}
                     onToggleFavorite={onToggleFavorite}
-                    onEdit={() => console.log('Edit clicked')}
+                    onEdit={() => logger.info('Edit clicked')}
                 />
 
                 <StorageListItemHeader storage={storage} />

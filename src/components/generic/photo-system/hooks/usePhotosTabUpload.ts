@@ -25,6 +25,9 @@ import type {
 } from '../config/photos-tab-types';
 import { validatePhotoFile } from '../config/photos-tab-config';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('usePhotosTabUpload');
 
 // =============================================================================
 // HOOK PROPS
@@ -111,14 +114,14 @@ export function usePhotosTabUpload({
       // PhotosTab-specific: Check max photos limit
       if (photos.length >= config.maxPhotos) {
         // Use enterprise hook's error handling
-        console.warn(`[usePhotosTabUpload] Max photos limit reached (${config.maxPhotos})`);
+        logger.warn('Max photos limit reached', { maxPhotos: config.maxPhotos });
         return;
       }
 
       // PhotosTab-specific: Validate with config
       const validation = validatePhotoFile(file, config);
       if (!validation.valid) {
-        console.warn(`[usePhotosTabUpload] Validation failed: ${validation.error}`);
+        logger.warn('Validation failed', { error: validation.error });
         return;
       }
 
@@ -133,7 +136,7 @@ export function usePhotosTabUpload({
   const handleUploadComplete = useCallback(
     (result: FileUploadResult) => {
       if (!currentFile) {
-        console.warn('[usePhotosTabUpload] handleUploadComplete called without currentFile');
+        logger.warn('handleUploadComplete called without currentFile');
         return;
       }
 
@@ -166,7 +169,7 @@ export function usePhotosTabUpload({
   const triggerUpload = useCallback(() => {
     // Check max photos limit first
     if (photos.length >= config.maxPhotos) {
-      console.warn(`[usePhotosTabUpload] Max photos limit reached (${config.maxPhotos})`);
+      logger.warn('Max photos limit reached', { maxPhotos: config.maxPhotos });
       return;
     }
 

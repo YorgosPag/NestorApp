@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FirestoreTestData');
 
 const TEST_PROPERTIES = [
   {
@@ -86,25 +89,25 @@ export default function FirestoreTestData() {
         const unitsCollection = collection(db, COLLECTIONS.UNITS);
         const snapshot = await getDocs(unitsCollection);
 
-        console.log('📋 Current Firestore units count:', snapshot.size);
+        logger.info('Current Firestore units count', { count: snapshot.size });
 
         if (snapshot.size === 0) {
-          console.log('➕ Creating test properties for mobile overflow debugging...');
+          logger.info('Creating test properties for mobile overflow debugging');
           setStatus('creating');
 
           // Add test properties
           for (const property of TEST_PROPERTIES) {
             const { id, ...propertyData } = property;
             await setDoc(doc(db, COLLECTIONS.UNITS, id), propertyData);
-            console.log('✅ Created:', property.name);
+            logger.info('Created test property', { name: property.name });
           }
 
-          console.log('🎉 Test data created successfully!');
+          logger.info('Test data created successfully');
         }
 
         setStatus('done');
       } catch (error) {
-        console.error('❌ Error setting up test data:', error);
+        logger.error('Error setting up test data', { error });
         setStatus('done');
       }
     };

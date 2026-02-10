@@ -12,6 +12,9 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('IconMapping');
 
 // ============================================================================
 // 🔥 CENTRALIZED ICON MAPPING - SINGLE SOURCE OF TRUTH
@@ -197,7 +200,7 @@ export function getIconComponent(iconName: string): LucideIcon | React.Component
   }
 
   // Fallback για unrecognized icons
-  console.warn(`⚠️ ICON MAPPING: Unknown icon "${iconName}", using Info fallback`);
+  logger.warn('Unknown icon, using Info fallback', { iconName });
   return Info;
 }
 

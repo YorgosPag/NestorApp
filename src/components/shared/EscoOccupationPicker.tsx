@@ -23,6 +23,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,12 @@ const MIN_CHARS = 2;
 
 /** Maximum results to display */
 const MAX_RESULTS = 10;
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('EscoOccupationPicker');
 
 // ============================================================================
 // COMPONENT
@@ -106,7 +113,7 @@ export function EscoOccupationPicker({
       setResults(response.results);
       setHighlightedIndex(-1);
     } catch (error) {
-      console.error('[EscoOccupationPicker] Search error:', error);
+      logger.error('Search error', { error });
       setResults([]);
     } finally {
       setIsLoading(false);

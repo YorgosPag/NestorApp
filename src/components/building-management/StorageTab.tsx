@@ -8,6 +8,9 @@ import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('StorageTab');
 
 import { StorageList } from './StorageList';
 import { StorageForm } from './StorageForm/index';
@@ -72,10 +75,10 @@ export function StorageTab({ building }: StorageTabProps) {
         })) as StorageUnit[];
 
         setUnits(storageUnits);
-        console.log(`✅ Loaded ${storageUnits.length} storage units for building: ${building.name}`);
+        logger.info('Loaded storage units', { count: storageUnits.length, buildingName: building.name });
 
       } catch (error) {
-        console.error('❌ Error fetching storage units from Firebase:', error);
+        logger.error('Error fetching storage units from Firebase', { error });
         setUnits([]); // Κενό array αντί για mock data
       } finally {
         setLoading(false);

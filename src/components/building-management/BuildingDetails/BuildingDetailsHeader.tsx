@@ -10,6 +10,9 @@ import type { Building } from '../BuildingsPageContent';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingDetailsHeader');
 
 
 interface BuildingDetailsHeaderProps {
@@ -27,7 +30,7 @@ export function BuildingDetailsHeader({ building, onEdit }: BuildingDetailsHeade
         {
             // 🏢 ENTERPRISE: Fallback when namespace not ready
             label: isNamespaceReady ? t('details.viewBuilding') : 'View Building',
-            onClick: () => console.log('Show building details'),
+            onClick: () => logger.info('Show building details'),
             icon: Eye,
             className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
         }

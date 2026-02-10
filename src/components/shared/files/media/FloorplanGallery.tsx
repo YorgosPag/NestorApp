@@ -32,6 +32,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import {
   ChevronLeft,
   ChevronRight,
@@ -120,6 +121,12 @@ function getFileIcon(ext: string): React.ReactNode {
       return <ImageIcon className={iconClass} aria-hidden="true" />;
   }
 }
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('FloorplanGallery');
 
 // ============================================================================
 // COMPONENT
@@ -225,7 +232,7 @@ export function FloorplanGallery({
     if (!auth.currentUser) return; // Need auth
 
     const triggerProcessing = async () => {
-      console.log('🏭 [FloorplanGallery] Triggering DXF processing for:', currentFile.displayName);
+      logger.info('Triggering DXF processing', { displayName: currentFile.displayName });
       setIsLoading(true);
 
       try {
@@ -250,18 +257,18 @@ export function FloorplanGallery({
         }
 
         const result = await response.json();
-        console.log('✅ [FloorplanGallery] DXF processing completed:', result);
+        logger.info('DXF processing completed', { result });
 
         // 🏢 ENTERPRISE: Trigger refetch to get updated FileRecord with processedData
         if (onRefresh) {
-          console.log('🔄 [FloorplanGallery] Triggering refetch after processing...');
+          logger.info('Triggering refetch after processing');
           // Small delay to ensure Firestore has propagated the update
           setTimeout(() => {
             onRefresh();
           }, 500);
         }
       } catch (err) {
-        console.error('❌ [FloorplanGallery] DXF processing failed:', err);
+        logger.error('DXF processing failed', { error: err });
         setSceneError(err instanceof Error ? err.message : 'Processing failed');
       } finally {
         setIsLoading(false);
@@ -276,8 +283,7 @@ export function FloorplanGallery({
   // =========================================================================
 
   useEffect(() => {
-    // 🔍 DEBUG: Log what we're receiving
-    console.log('🖼️ [FloorplanGallery] Scene loading effect:', {
+    logger.info('Scene loading effect', {
       hasCurrentFile: !!currentFile,
       fileId: currentFile?.id,
       hasProcessedData: !!currentFile?.processedData,
@@ -328,7 +334,7 @@ export function FloorplanGallery({
           setLoadedScene(sceneData);
           setIsLoading(false);
         } catch (err) {
-          console.error('[FloorplanGallery] Failed to load scene:', err);
+          logger.error('Failed to load scene', { error: err });
           setSceneError(err instanceof Error ? err.message : 'Unknown error');
           setIsLoading(false);
         }
@@ -353,8 +359,7 @@ export function FloorplanGallery({
   // =========================================================================
 
   useEffect(() => {
-    // 🔍 DEBUG: Log rendering conditions
-    console.log('🎨 [FloorplanGallery] Canvas render effect:', {
+    logger.info('Canvas render effect', {
       hasLoadedScene: !!loadedScene,
       hasCanvasRef: !!canvasRef.current,
       isDxf,
@@ -398,8 +403,7 @@ export function FloorplanGallery({
     const offsetX = (canvas.width - drawingWidth * scale) / 2;
     const offsetY = (canvas.height - drawingHeight * scale) / 2;
 
-    // 🔍 DEBUG: Log rendering parameters
-    console.log('🎨 [FloorplanGallery] Rendering:', {
+    logger.info('Rendering DXF canvas', {
       canvasSize: { width: canvas.width, height: canvas.height },
       bounds,
       drawingSize: { width: drawingWidth, height: drawingHeight },

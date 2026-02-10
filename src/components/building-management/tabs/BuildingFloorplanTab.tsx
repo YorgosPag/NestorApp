@@ -25,6 +25,9 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import type { Building } from '@/types/building/contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingFloorplanTab');
 
 // =============================================================================
 // PROPS
@@ -94,7 +97,7 @@ export function BuildingFloorplanTab({
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[BuildingFloorplanTab] Failed to fetch company name:', error);
+        logger.error('Failed to fetch company name', { error });
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };

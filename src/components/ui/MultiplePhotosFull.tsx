@@ -8,6 +8,9 @@ import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MultiplePhotosFull');
 import {
   PHOTO_TEXT_COLORS,
   PHOTO_COLORS,
@@ -192,7 +195,7 @@ export function MultiplePhotosFull({
   // RENDER
   // ========================================================================
 
-  console.log('📸 MultiplePhotosFull: Rendering with', normalizedPhotos.length, 'slots');
+  logger.info('Rendering', { slotCount: normalizedPhotos.length });
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -259,11 +262,11 @@ export function MultiplePhotosFull({
                   // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
                   const currentFile = normalizedPhotos[index]?.file;
                   if (currentFile === file) {
-                    console.log('📸 MultiplePhotosFull: SKIPPING - File unchanged for slot', index);
+                    logger.info('SKIPPING - File unchanged for slot', { index });
                     return;
                   }
 
-                  console.log('📸 MultiplePhotosFull: File changed for slot', index, file?.name);
+                  logger.info('File changed for slot', { index, fileName: file?.name });
                   const newPhotos = [...normalizedPhotos];
                   newPhotos[index] = {
                     ...newPhotos[index],
@@ -272,14 +275,14 @@ export function MultiplePhotosFull({
                     uploadProgress: 0,
                     error: undefined
                   };
-                  console.log('📸 MultiplePhotosFull: Calling onPhotosChange with', newPhotos.length, 'photos');
+                  logger.info('Calling onPhotosChange', { photoCount: newPhotos.length });
                   if (onPhotosChange) {
                     onPhotosChange(newPhotos);
                   }
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
-                  console.log('📸 MultiplePhotosFull: Upload completed for slot', index, result.success);
+                  logger.info('Upload completed for slot', { index, success: result.success });
                   if (handleUploadComplete) {
                     handleUploadComplete(index, result);
                   }
@@ -294,7 +297,7 @@ export function MultiplePhotosFull({
                 onPreviewClick={() => {
                   // 🏢 ENTERPRISE: Photo click handler για gallery modal
                   if (photoPreviewWithCacheBuster && onPhotoClick) {
-                    console.log('🖱️ MultiplePhotosFull: Photo clicked at index', index);
+                    logger.info('Photo clicked', { index });
                     onPhotoClick(index);
                   }
                 }}

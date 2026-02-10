@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
@@ -22,6 +23,8 @@ const getTypeInfo = (type: ContactType) => ({
   icon: getContactIcon(type),
   name: getContactLabel(type, 'singular')
 });
+
+const logger = createModuleLogger('ContactDetailsHeader');
 
 interface ContactDetailsHeaderProps {
   contact: Contact;
@@ -61,7 +64,7 @@ export function ContactDetailsHeader({
     const handleForceRerender = (event: CustomEvent) => {
       const { contactId } = event.detail;
       if (contactId === contact.id) {
-        console.log('🔄 CONTACT HEADER: Force re-rendering avatar for contact', contactId);
+        logger.info('Force re-rendering avatar for contact', { contactId });
         setAvatarKey(prev => prev + 1); // Force re-render με νέο key
       }
     };
@@ -190,9 +193,9 @@ export function ContactDetailsHeader({
       // Optional: notify parent component
       onContactUpdate?.(updates);
 
-      console.log(`✅ ${updateField} updated successfully:`, newName.trim());
+      logger.info('Contact name updated successfully', { updateField, newName: newName.trim() });
     } catch (error) {
-      console.error('❌ Failed to update contact name:', error);
+      logger.error('Failed to update contact name', { error });
       // TODO: Show error toast/notification
     }
   };

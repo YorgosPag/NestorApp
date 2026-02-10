@@ -14,6 +14,9 @@ import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolba
 import type { SortField } from '@/components/core/CompactToolbar/types';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingsList');
 
 
 interface BuildingsListProps {
@@ -130,8 +133,8 @@ export function BuildingsList({
           onNewItem={() => {}}
           onEditItem={(id) => {}}
           onDeleteItems={(ids) => {}}
-          onExport={() => console.log('Export buildings')}
-          onRefresh={() => console.log('Refresh buildings')}
+          onExport={() => logger.info('Export buildings')}
+          onRefresh={() => logger.info('Refresh buildings')}
         />
       </div>
 

@@ -22,6 +22,7 @@
 'use client';
 
 import React, { useCallback, useRef, useState } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 import {
   Upload,
   Camera,
@@ -60,6 +61,12 @@ import {
   getCaptureSourcesForCategory,
   createCaptureMetadata,
 } from '@/config/upload-entry-points';
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('AddCaptureMenu');
 
 // ============================================================================
 // TYPES
@@ -273,7 +280,7 @@ export function AddCaptureMenu({
           setRecordingTime((prev) => prev + 1);
         }, 1000);
       } catch (error) {
-        console.error('[AddCaptureMenu] Audio recording failed:', error);
+        logger.error('Audio recording failed', { error });
         // Fallback to file input
         audioInputRef.current?.click();
       }

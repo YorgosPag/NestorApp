@@ -12,6 +12,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('StoragesHeader');
 
 // 🏢 ENTERPRISE: Type for Storages view modes (avoids `as any`)
 type StoragesViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -70,7 +73,7 @@ export function StoragesHeader({
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
           label: t('storages.header.newStorage'),
-          onClick: () => onNewStorage?.() || console.log('Add storage')
+          onClick: () => onNewStorage?.() || logger.info('Add storage')
         },
         // Mobile-only filter button
         customActions: setShowFilters ? [

@@ -11,6 +11,9 @@ import type { SectionConfig } from '@/config/company-gemi';
 // 🏢 ENTERPRISE: i18n support for tab labels
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('GenericFormTabRenderer');
 
 // ============================================================================
 // INTERFACES
@@ -114,21 +117,21 @@ function createFormTabsFromConfig(
     content: (() => {
       // Check for custom renderer FIRST (but exclude companyPhotos and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'companyPhotos' && section.id !== 'relationships') {
-        console.log('🔧 DEBUG: Using generic custom renderer for section:', section.id);
+        logger.info('Using generic custom renderer for section', { sectionId: section.id });
         const renderer = customRenderers[section.id] as LocalCustomRendererFn;
         return renderer();
       }
 
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
       if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
-        console.log('🏢 DEBUG: Using relationships custom renderer');
+        logger.info('Using relationships custom renderer');
         const renderer = customRenderers.relationships as LocalCustomRendererFn;
         return renderer();
       }
 
       if (section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos) {
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager)
-        console.log('🏢 DEBUG: Using companyPhotos custom renderer');
+        logger.info('Using companyPhotos custom renderer');
         const renderer = customRenderers.companyPhotos as LocalCustomRendererFn;
         return renderer();
       }
@@ -212,7 +215,7 @@ export function GenericFormTabRenderer({
   const { t } = useTranslation('forms');
 
   if (!sections || sections.length === 0) {
-    console.warn('GenericFormTabRenderer: No sections provided');
+    logger.warn('No sections provided');
     return null;
   }
 

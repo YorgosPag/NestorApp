@@ -20,6 +20,9 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { getOpportunitiesClient } from '@/services/opportunities-client.service';
 import type { Opportunity } from '@/types/crm';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CRMDashboardPageContent');
 
 export function CRMDashboardPageContent() {
   const layout = useLayoutClasses();
@@ -38,7 +41,7 @@ export function CRMDashboardPageContent() {
       const data = await getOpportunitiesClient();
       setOpportunities(data);
     } catch (error) {
-      console.error('Error fetching CRM stats:', error);
+      logger.error('Error fetching CRM stats', { error });
     } finally {
       setLoadingStats(false);
     }

@@ -9,6 +9,9 @@ import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('StoragesList');
 
 import { StoragesListHeader } from './StoragesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -144,11 +147,11 @@ export function StoragesList({
             setSortBy(newSortBy);
             setSortOrder(newSortOrder);
           }}
-          onNewItem={() => console.log('New storage')}
-          onEditItem={(id) => console.log('Edit storage:', id)}
-          onDeleteItems={(ids) => console.log('Delete storages:', ids)}
-          onExport={() => console.log('Export storages')}
-          onRefresh={() => console.log('Refresh storages')}
+          onNewItem={() => logger.info('New storage')}
+          onEditItem={(id) => logger.info('Edit storage', { id })}
+          onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
+          onExport={() => logger.info('Export storages')}
+          onRefresh={() => logger.info('Refresh storages')}
         />
       </div>
 

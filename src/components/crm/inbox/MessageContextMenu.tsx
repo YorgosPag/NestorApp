@@ -16,6 +16,10 @@
  */
 
 import React, { useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MessageContextMenu');
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -156,35 +160,35 @@ export function MessageContextMenu({
   }, [messageId, isSelectionMode, onToggleSelect, onEnterSelectionMode]);
 
   const handleReply = useCallback(() => {
-    console.log('[MessageContextMenu] Reply clicked for:', messageId);
+    logger.info('Reply clicked', { messageId });
     if (onReply) {
       onReply(messageId);
     }
   }, [messageId, onReply]);
 
   const handleForward = useCallback(() => {
-    console.log('[MessageContextMenu] Forward clicked for:', messageId);
+    logger.info('Forward clicked', { messageId });
     if (onForward) {
       onForward(messageId);
     }
   }, [messageId, onForward]);
 
   const handleEdit = useCallback(() => {
-    console.log('[MessageContextMenu] Edit clicked for:', messageId);
+    logger.info('Edit clicked', { messageId });
     if (onEdit) {
       onEdit(messageId);
     }
   }, [messageId, onEdit]);
 
   const handleTogglePin = useCallback(() => {
-    console.log('[MessageContextMenu] Pin/Unpin clicked for:', messageId, 'current isPinned:', isPinned);
+    logger.info('Pin/Unpin clicked', { messageId, isPinned });
     if (onTogglePin) {
       onTogglePin(messageId, !isPinned);
     }
   }, [messageId, isPinned, onTogglePin]);
 
   const handleReaction = useCallback((emoji: string) => {
-    console.log('[MessageContextMenu] Reaction clicked:', emoji, 'for:', messageId);
+    logger.info('Reaction clicked', { emoji, messageId });
     if (onReaction) {
       onReaction(messageId, emoji);
     }

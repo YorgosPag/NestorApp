@@ -16,6 +16,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ReadOnlyLayerViewer');
 import { 
   Layers, 
   Eye, 
@@ -325,7 +328,7 @@ export function ReadOnlyLayerViewer({
         setVisibilityState(newVisibilityState);
       },
       (error) => {
-        console.error('Error syncing layers:', error);
+        logger.error('Error syncing layers', { error });
         setLayerState(prev => ({
           ...prev,
           isLoading: false,

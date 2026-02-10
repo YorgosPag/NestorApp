@@ -17,7 +17,9 @@ import { BuildingStats } from './BuildingStats';
 import { BuildingUnitsTable } from './GeneralTabContent/BuildingUnitsTable';
 // 🏢 ENTERPRISE: Firestore persistence for building updates
 import { updateBuilding } from '../building-services';
+import { createModuleLogger } from '@/lib/telemetry';
 
+const logger = createModuleLogger('GeneralTabContent');
 
 export function GeneralTabContent({ building }: { building: Building }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -48,7 +50,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
       const saveId = setTimeout(() => {
         setAutoSaving(false);
         setLastSaved(new Date());
-        console.log('Auto-saved:', formData);
+        logger.info('Auto-saved', { formData });
       }, 1000);
 
       // Cleanup for the inner timeout
@@ -75,7 +77,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
     try {
       setIsSaving(true);
       setSaveError(null);
-      console.log('🏗️ Saving building to Firestore...', formData);
+      logger.info('Saving building to Firestore', { formData });
 
       // 🏢 ENTERPRISE: Call Firestore update function
       const result = await updateBuilding(String(building.id), {
@@ -96,12 +98,12 @@ export function GeneralTabContent({ building }: { building: Building }) {
         throw new Error(result.error || 'Failed to save building');
       }
 
-      console.log('✅ Building saved successfully to Firestore');
+      logger.info('Building saved successfully to Firestore');
       setIsEditing(false);
       setLastSaved(new Date());
 
     } catch (error) {
-      console.error('❌ Error saving building:', error);
+      logger.error('Error saving building', { error });
       setSaveError(error instanceof Error ? error.message : 'Failed to save building');
     } finally {
       setIsSaving(false);
@@ -154,7 +156,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
         currentCompanyId={building.companyId}
         isEditing={isEditing}
         onCompanyChanged={(newCompanyId, companyName) => {
-          console.log(`✅ Building ${building.id} linked to company ${companyName} (${newCompanyId})`);
+          logger.info('Building linked to company', { buildingId: building.id, companyName, newCompanyId });
         }}
       />
       {/* 🏢 ENTERPRISE: Project Selector για σύνδεση Κτιρίου→Έργου */}
@@ -163,7 +165,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
         currentProjectId={building.projectId}
         isEditing={isEditing}
         onProjectChanged={(newProjectId) => {
-          console.log(`✅ Building ${building.id} linked to project ${newProjectId}`);
+          logger.info('Building linked to project', { buildingId: building.id, newProjectId });
         }}
       />
       {/* 🏢 ENTERPRISE: Multi-address management (ADR-167) */}

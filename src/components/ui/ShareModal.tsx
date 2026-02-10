@@ -25,6 +25,9 @@ import { SharePlatformGrid } from '@/components/ui/social-sharing/SharePlatformG
 import { EmailShareForm } from '@/components/ui/email-sharing/EmailShareForm';
 import { CopyActionsSection } from '@/components/ui/social-sharing/CopyActionsSection';
 import type { ShareData, EmailShareData } from '@/components/ui/email-sharing/EmailShareForm';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ShareModal');
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -113,7 +116,7 @@ export function ShareModal({
             const directUrl = data.url.replace(/\?alt=media&token=.*$/, '?alt=media');
             url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(directUrl)}&quote=${encodeURIComponent(shareData.title + '\n' + shareData.text)}`;
           } catch (e) {
-            console.error('Error parsing data for Facebook:', e);
+            logger.error('Error parsing data for Facebook', { error: e });
             url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
           }
         } else {
@@ -203,7 +206,7 @@ export function ShareModal({
    * 🚨 Handle Copy Error
    */
   const handleCopyError = (type: 'url' | 'text', error: string) => {
-    console.error(`Failed to copy ${type}:`, error);
+    logger.error(`Failed to copy ${type}`, { error });
   };
 
   // ============================================================================

@@ -70,6 +70,9 @@ import type {
 import type { ProjectAddress } from '@/types/project/addresses';
 import { AddressFormSection, AddressCard } from '@/components/shared/addresses';
 import { migrateLegacyAddress } from '@/types/project/address-helpers';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AddProjectDialog');
 
 // =============================================================================
 // TYPES
@@ -168,7 +171,7 @@ export function AddProjectDialog({
       setCompaniesLoading(true);
       getAllActiveCompanies()
         .then(setCompanies)
-        .catch(console.error)
+        .catch((error: unknown) => logger.error('Failed to load companies', { error }))
         .finally(() => setCompaniesLoading(false));
     }
   }, [open]);

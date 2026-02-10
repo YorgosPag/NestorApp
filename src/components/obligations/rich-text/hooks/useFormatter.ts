@@ -2,6 +2,9 @@
 
 import { useCallback } from 'react';
 import { getSelection, restoreCaret } from '../utils/selection';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFormatter');
 
 interface UseFormatterProps {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -87,17 +90,17 @@ export function useFormatter({ textareaRef, value, onChange }: UseFormatterProps
 
   // 🌐 i18n: Format placeholders converted to i18n keys - 2026-01-18
   const formatBold = useCallback(() => {
-    console.log('formatBold called in useFormatter'); // DEBUG
+    logger.info('formatBold called'); // DEBUG
     applyFormatting('**', '**', 'richText.placeholders.boldText');
   }, [applyFormatting]);
 
   const formatItalic = useCallback(() => {
-    console.log('formatItalic called in useFormatter'); // DEBUG
+    logger.info('formatItalic called'); // DEBUG
     applyFormatting('*', '*', 'richText.placeholders.italicText');
   }, [applyFormatting]);
 
   const formatUnderline = useCallback(() => {
-    console.log('formatUnderline called in useFormatter'); // DEBUG
+    logger.info('formatUnderline called'); // DEBUG
     applyFormatting('<u>', '</u>', 'richText.placeholders.underlineText');
   }, [applyFormatting]);
   const insertBulletList = useCallback(() => insertList('-'), [insertList]);

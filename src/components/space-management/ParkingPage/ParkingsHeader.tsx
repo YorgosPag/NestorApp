@@ -24,6 +24,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ParkingsHeader');
 
 // 🏢 ENTERPRISE: Type for Parkings view modes (avoids `as any`)
 type ParkingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -81,7 +84,7 @@ export function ParkingsHeader({
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
           label: t('parkings.header.newParking'),
-          onClick: () => onNewParking?.() || console.log('Add parking')
+          onClick: () => onNewParking?.() || logger.info('Add parking')
         },
         customActions: setShowFilters ? [
           <button

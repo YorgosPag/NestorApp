@@ -5,6 +5,9 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { UseProjectStructureState } from "../types";
 // 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
 import type { ProjectStructure } from "@/services/projects/contracts";
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useProjectStructure');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Hook Options για Lazy Loading
@@ -58,7 +61,7 @@ export function useProjectStructure(
     setError(null);
 
     try {
-      console.log(`🔄 [LazyLoad] Fetching project structure for projectId: ${projectId}`);
+      logger.info('Fetching project structure', { projectId });
 
       // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
       interface ProjectStructureApiResponse {

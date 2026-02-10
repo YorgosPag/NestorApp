@@ -6,6 +6,9 @@
 import { useRouter } from 'next/navigation';
 import { buildNavigationUrl } from '../utils/navigationHelpers';
 import type { NavigationState, NavigationLevel } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useNavigationActions');
 
 /** Navigation filter options */
 interface NavigationFilters {
@@ -64,11 +67,11 @@ export function useNavigationActions(): UseNavigationActionsReturn {
     // Find the project in state (already loaded via bootstrap)
     const project = state.projects.find(p => p.id === projectId);
     if (!project) {
-      console.warn(`⚠️ [selectProject] Project ${projectId} not found in state`);
+      logger.warn('Project not found in state', { projectId });
       return;
     }
 
-    console.log(`📍 [selectProject] Selected: ${project.name} (${projectId})`);
+    logger.info('Project selected', { name: project.name, projectId });
 
     // 🏢 ENTERPRISE: Simple state update - NO extra API call
     // Buildings/floors/units will be loaded on-demand when user expands them
@@ -121,7 +124,7 @@ export function useNavigationActions(): UseNavigationActionsReturn {
     const updates = { currentLevel: level };
     setState(updates);
 
-    console.log(`🧭 NavigationActions: Navigate to level ${level}`);
+    logger.info('Navigate to level', { level });
   };
 
   const reset = (setState: (updates: Partial<NavigationState>) => void) => {
@@ -135,7 +138,7 @@ export function useNavigationActions(): UseNavigationActionsReturn {
 
     setState(resetUpdates);
 
-    console.log('🔄 NavigationActions: Reset navigation state');
+    logger.info('Reset navigation state');
   };
 
   const navigateToExistingPages = (
@@ -146,7 +149,7 @@ export function useNavigationActions(): UseNavigationActionsReturn {
     const url = buildNavigationUrl(type, state, filters);
     router.push(url);
 
-    console.log(`🔗 NavigationActions: Navigate to ${url}`);
+    logger.info('Navigate to URL', { url });
   };
 
   return {
