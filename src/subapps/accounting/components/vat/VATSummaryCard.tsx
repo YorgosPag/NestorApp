@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
+import { formatCurrency } from '@/subapps/accounting/utils/format';
 
 // ============================================================================
 // TYPES
@@ -23,13 +24,6 @@ import type { VATAnnualSummary } from '@/subapps/accounting/types';
 interface VATSummaryCardProps {
   summary: VATAnnualSummary;
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
 // ============================================================================
 // COMPONENT

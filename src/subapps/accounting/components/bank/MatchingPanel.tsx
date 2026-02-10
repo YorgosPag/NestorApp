@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BankTransaction, MatchCandidate } from '@/subapps/accounting/types';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -40,18 +41,6 @@ interface MatchingPanelProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
-}
 
 function getConfidenceBadgeVariant(
   confidence: number,
@@ -214,4 +203,3 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
     </section>
   );
 }
-

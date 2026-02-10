@@ -7,6 +7,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Invoice } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
 
 interface InvoiceRowProps {
   invoice: Invoice;
@@ -30,9 +31,6 @@ const MYDATA_STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destruct
 export function InvoiceRow({ invoice }: InvoiceRowProps) {
   const { t } = useTranslation('accounting');
   const router = useRouter();
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
   const formatDate = (iso: string) =>
     new Intl.DateTimeFormat('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(

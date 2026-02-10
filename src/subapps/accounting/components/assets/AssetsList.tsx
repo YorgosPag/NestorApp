@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { FixedAsset, AssetStatus } from '@/subapps/accounting/types';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -44,22 +45,6 @@ const ASSET_STATUS_VARIANTS: Record<
   disposed: 'destructive',
   inactive: 'outline',
 };
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
-}
 
 // ============================================================================
 // COMPONENT

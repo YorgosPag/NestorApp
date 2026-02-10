@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { EFKAPayment, EFKAPaymentStatus } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -48,10 +49,6 @@ const PAYMENT_STATUS_VARIANTS: Record<
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('el-GR', {

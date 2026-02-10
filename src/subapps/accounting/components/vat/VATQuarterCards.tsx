@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Badge } from '@/components/ui/badge';
 import type { VATQuarterSummary, VATQuarterStatus, FiscalQuarter } from '@/subapps/accounting/types';
+import { formatCurrency } from '@/subapps/accounting/utils/format';
 
 // ============================================================================
 // TYPES
@@ -42,13 +43,6 @@ const QUARTER_PERIOD_LABELS: Record<FiscalQuarter, string> = {
   3: 'Ιουλ - Σεπ',
   4: 'Οκτ - Δεκ',
 };
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
 // ============================================================================
 // SINGLE QUARTER CARD

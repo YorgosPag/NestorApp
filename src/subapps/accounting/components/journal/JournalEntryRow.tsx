@@ -14,6 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { JournalEntry } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -35,9 +37,6 @@ const TYPE_BADGE_VARIANTS = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
 const formatDate = (iso: string): string =>
   new Intl.DateTimeFormat('el-GR', {

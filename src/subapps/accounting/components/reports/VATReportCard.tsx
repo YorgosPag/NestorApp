@@ -17,6 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useVATSummary } from '../../hooks/useVATSummary';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -29,10 +30,6 @@ interface VATReportCardProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 function isAnnualSummary(data: unknown): data is VATAnnualSummary {
   return (
@@ -140,4 +137,3 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
     </Card>
   );
 }
-

@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { EFKAMonthlyBreakdown as EFKAMonthlyBreakdownType } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -32,10 +33,6 @@ interface EFKAMonthlyBreakdownProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 // ============================================================================
 // COMPONENT

@@ -20,6 +20,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxResult, TaxInstallment } from '@/subapps/accounting/types';
 import { TaxBracketsVisual } from './TaxBracketsVisual';
 import { InstallmentsCard } from './InstallmentsCard';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -37,10 +38,6 @@ interface TaxDashboardData {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 // ============================================================================
 // COMPONENT
@@ -172,4 +169,3 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
     </section>
   );
 }
-

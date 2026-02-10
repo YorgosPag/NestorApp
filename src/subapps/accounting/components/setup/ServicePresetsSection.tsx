@@ -22,6 +22,7 @@ import { Plus, Trash2, Download, Pencil, Check, X } from 'lucide-react';
 import { VATRateSelector } from '../shared/VATRateSelector';
 import { useServicePresets } from '../../hooks';
 import type { ServicePreset, MyDataIncomeType } from '../../types';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // DEFAULT PRESETS — 10 τυπικές υπηρεσίες μηχανικού
@@ -165,11 +166,6 @@ export function ServicePresetsSection() {
     setLocalPresets(defaults);
     handleSave(defaults);
   }, [handleSave, t]);
-
-  const formatCurrency = (amount: number) =>
-    amount > 0
-      ? new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount)
-      : t('servicePresets.variablePrice');
 
   if (loading) {
     return (

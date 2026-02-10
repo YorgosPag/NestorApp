@@ -22,6 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { DepreciationRecord } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -35,10 +36,6 @@ interface DepreciationScheduleProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 // ============================================================================
 // COMPONENT
@@ -112,5 +109,3 @@ export function DepreciationSchedule({ assetDescription, records }: Depreciation
     </Card>
   );
 }
-
-

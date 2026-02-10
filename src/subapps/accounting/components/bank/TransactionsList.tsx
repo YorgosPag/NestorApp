@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BankTransaction, MatchStatus } from '@/subapps/accounting/types';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -42,22 +43,6 @@ const MATCH_STATUS_VARIANTS: Record<MatchStatus, 'default' | 'secondary' | 'dest
   manual_matched: 'secondary',
   excluded: 'outline',
 };
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
-}
 
 // ============================================================================
 // COMPONENT
@@ -122,4 +107,3 @@ export function TransactionsList({ transactions }: TransactionsListProps) {
     </div>
   );
 }
-

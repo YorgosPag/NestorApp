@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { Invoice } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../../utils/format';
 
 interface InvoiceSummaryCardProps {
   invoice: Invoice;
@@ -12,9 +13,6 @@ interface InvoiceSummaryCardProps {
 
 export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
   const { t } = useTranslation('accounting');
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
   const formatDate = (iso: string) =>
     new Intl.DateTimeFormat('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(

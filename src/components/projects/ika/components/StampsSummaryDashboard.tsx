@@ -22,6 +22,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { StampsMonthSummary } from '../contracts';
+import { formatCurrency } from '@/subapps/accounting/utils/format';
 
 interface StampsSummaryDashboardProps {
   /** Monthly stamps summary */
@@ -31,13 +32,6 @@ interface StampsSummaryDashboardProps {
 /**
  * Formats a number as Euro currency (e.g., "€1.234,56").
  */
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
 
 export function StampsSummaryDashboard({ summary }: StampsSummaryDashboardProps) {
   const { t } = useTranslation('projects');

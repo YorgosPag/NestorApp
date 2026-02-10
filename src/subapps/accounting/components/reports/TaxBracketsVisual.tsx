@@ -13,6 +13,7 @@
 import { useTranslation } from 'react-i18next';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type { TaxBracketResult } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -82,10 +83,6 @@ const GREEK_TAX_BRACKETS: StaticBracketDisplay[] = [
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 /**
  * Calculate the fill percentage for a bracket based on taxable income
@@ -182,4 +179,3 @@ export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracke
     </section>
   );
 }
-

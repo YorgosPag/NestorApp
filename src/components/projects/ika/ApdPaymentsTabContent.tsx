@@ -33,6 +33,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useEmploymentRecords } from './hooks/useEmploymentRecords';
 import type { EmploymentRecord, ApdStatus } from './contracts';
+import { formatCurrency } from '@/subapps/accounting/utils/format';
 
 interface ApdPaymentsTabContentProps {
   /** Project ID from parent IKA tab */
@@ -55,13 +56,6 @@ function getStatusVariant(status: ApdStatus): 'warning' | 'info' | 'success' | '
 /**
  * Formats a number as Euro currency.
  */
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
 
 /**
  * Groups employment records by month/year and aggregates totals.

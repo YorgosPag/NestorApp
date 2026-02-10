@@ -21,6 +21,8 @@ import {
 import type { JournalEntry } from '@/subapps/accounting/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { JournalEntryRow } from './JournalEntryRow';
+import { formatCurrency } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -33,9 +35,6 @@ interface JournalEntriesTableProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
 // ============================================================================
 // COMPONENT
@@ -99,5 +98,3 @@ export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
     </section>
   );
 }
-
-

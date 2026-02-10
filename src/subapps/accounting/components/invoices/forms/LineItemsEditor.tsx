@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { VATRateSelector } from '../../shared/VATRateSelector';
 import { ServicePresetCombobox } from '../../shared/ServicePresetCombobox';
 import type { InvoiceLineItem, MyDataIncomeType, ServicePreset } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../../utils/format';
 
 interface LineItemsEditorProps {
   lineItems: InvoiceLineItem[];
@@ -79,9 +80,6 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
     },
     [lineItems, onLineItemsChange]
   );
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
   return (
     <div className="space-y-4">

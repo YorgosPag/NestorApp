@@ -11,10 +11,8 @@ import { DetailsCard } from './dashboard/DetailsCard';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrency } from '@/subapps/accounting/utils/format';
 
-const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `€${(amount / 1000000).toFixed(1)}M`;
     } else if (amount >= 1000) {
       return `€${(amount / 1000).toFixed(0)}K`;
     }

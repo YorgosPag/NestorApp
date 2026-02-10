@@ -32,6 +32,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { InsuranceClassBadge } from './InsuranceClassBadge';
 import type { StampsMonthSummary, WorkerStampsSummary } from '../contracts';
+import { formatCurrency } from '@/subapps/accounting/utils/format';
 
 interface WorkerStampsTableProps {
   /** Monthly stamps summary */
@@ -43,13 +44,6 @@ interface WorkerStampsTableProps {
 /**
  * Formats a number as Euro currency (Greek locale).
  */
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
 
 export function WorkerStampsTable({ summary, onEditWorker }: WorkerStampsTableProps) {
   const { t } = useTranslation('projects');

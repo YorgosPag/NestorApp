@@ -162,6 +162,73 @@ export const getDynamicHeightClass = (height?: string): string => {
   return className;
 };
 
+/**
+ * Generate dynamic top class
+ *
+ * @param top - CSS top value (e.g. '12px', '50%')
+ * @returns CSS class name with dynamic top
+ */
+export const getDynamicTopClass = (top?: string): string => {
+  if (!top) return '';
+
+  if (!isValidDimension(top)) {
+    console.warn(Invalid top provided to getDynamicTopClass: );
+    return '';
+  }
+
+  const topId = generateDimensionId(top);
+  const className = dynamic-top-;
+
+  injectDynamicStyle(className, 'top', top);
+
+  return className;
+};
+
+/**
+ * Generate dynamic opacity class
+ *
+ * @param opacity - Opacity value (0-1)
+ * @returns CSS class name with dynamic opacity
+ */
+export const getDynamicOpacityClass = (opacity?: number): string => {
+  if (opacity === undefined || opacity === null) return '';
+
+  if (opacity < 0 || opacity > 1) {
+    console.warn(Invalid opacity provided to getDynamicOpacityClass: );
+    return '';
+  }
+
+  const opacityId = Math.round(opacity * 100);
+  const className = dynamic-opacity-;
+
+  injectDynamicStyle(className, 'opacity', opacity.toString());
+
+  return className;
+};
+
+
+/**
+ * Generate dynamic background image class
+ *
+ * @param backgroundImage - CSS background-image value (e.g. 'url(...)', 'linear-gradient(...)', 'var(--x)')
+ * @returns CSS class name with dynamic background image
+ */
+export const getDynamicBackgroundImageClass = (backgroundImage?: string): string => {
+  if (!backgroundImage) return '';
+
+  if (!isValidBackgroundImage(backgroundImage)) {
+    console.warn(`Invalid backgroundImage provided to getDynamicBackgroundImageClass: ${backgroundImage}`);
+    return '';
+  }
+
+  const imageId = generateDimensionId(backgroundImage);
+  const className = `dynamic-bg-image-${imageId}`;
+
+  injectDynamicStyle(className, 'background-image', backgroundImage);
+
+  return className;
+};
+
 // ============================================================================
 // 🔧 UTILITY FUNCTIONS
 // ============================================================================
@@ -207,6 +274,16 @@ function isValidDimension(value: string): boolean {
 function isValidTransform(value: string): boolean {
   if (value.startsWith('var(') || value.startsWith('calc(')) return true;
   if (/^(translate|rotate|scale|skew|matrix|perspective)/.test(value)) return true;
+  return false;
+}
+/**
+ * Validate if background-image value is valid
+ */
+function isValidBackgroundImage(value: string): boolean {
+  if (value.startsWith('var(') || value.startsWith('calc(')) return true;
+  if (value.startsWith('url(')) return true;
+  if (/^(linear-gradient|radial-gradient|conic-gradient)/.test(value)) return true;
+
   return false;
 }
 
@@ -352,6 +429,32 @@ export const useDynamicHeightClass = (height?: string): string => {
   }, [height]);
 };
 
+/**
+ * React hook for memoized dynamic top class
+ */
+export const useDynamicTopClass = (top?: string): string => {
+  return useMemo(() => {
+    return getDynamicTopClass(top);
+  }, [top]);
+};
+
+/**
+ * React hook for memoized dynamic opacity class
+ */
+export const useDynamicOpacityClass = (opacity?: number): string => {
+  return useMemo(() => {
+    return getDynamicOpacityClass(opacity);
+  }, [opacity]);
+};
+/**
+ * React hook for memoized dynamic background image class
+ */
+export const useDynamicBackgroundImageClass = (backgroundImage?: string): string => {
+  return useMemo(() => {
+    return getDynamicBackgroundImageClass(backgroundImage);
+  }, [backgroundImage]);
+};
+
 // ============================================================================
 // 🎯 COMPOSITE DYNAMIC CLASSES
 // ============================================================================
@@ -430,5 +533,8 @@ export const getDynamicStylesCount = (): number => {
 
   return (styleContainer.textContent?.split('\n').filter(line => line.trim()).length) || 0;
 };
+
+
+
 
 

@@ -38,6 +38,8 @@ import type {
   CreateJournalEntryInput,
 } from '@/subapps/accounting/types';
 import { getCategoryByCode } from '../../config/account-categories';
+import { formatCurrency } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -71,9 +73,6 @@ function getQuarterFromDate(dateStr: string): FiscalQuarter {
   if (month <= 9) return 3;
   return 4;
 }
-
-const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
 // ============================================================================
 // COMPONENT

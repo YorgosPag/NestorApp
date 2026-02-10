@@ -15,6 +15,17 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Format an ISO date string as DD/MM/YYYY using Greek locale.
+ */
+export function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat('el-GR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(iso));
+}
+
+/**
  * Format a nullable currency amount, returning '—' for null values.
  * Used by Documents page for extracted data that may be null.
  */

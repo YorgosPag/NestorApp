@@ -18,6 +18,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxEstimate } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -30,10 +31,6 @@ interface TaxEstimateCardProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 function formatPercent(rate: number): string {
   return new Intl.NumberFormat('el-GR', {
@@ -180,4 +177,3 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
     </Card>
   );
 }
-

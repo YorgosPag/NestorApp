@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { InvoiceLineItem } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../../utils/format';
 
 interface InvoicePreviewProps {
   totals: {
@@ -16,9 +17,6 @@ interface InvoicePreviewProps {
 
 export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
   const { t } = useTranslation('accounting');
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
   // Group VAT by rate
   const vatByRate = new Map<number, number>();
