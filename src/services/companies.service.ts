@@ -6,6 +6,8 @@ import { getNavigationCompanyIds } from './navigation-companies.service';
 // 🏢 ENTERPRISE: Removed server action import - use direct Firestore queries instead
 // Server actions cannot be imported into client-side services
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CompaniesService');
 
 // 🎯 PRODUCTION: DEBUG FLAG enabled temporarily for navigation investigation
 const DEBUG_COMPANIES_SERVICE = true;
@@ -39,7 +41,7 @@ export class CompaniesService {
       const snapshot = await getDocs(companiesQuery);
 
       if (DEBUG_COMPANIES_SERVICE) {
-        console.log(`🔍 Total companies in Firestore (type=company, status=active): ${snapshot.docs.length}`);
+        logger.info(`🔍 Total companies in Firestore (type=company, status=active): ${snapshot.docs.length}`);
 
         // DEBUGGING: Ελέγχουμε αν υπάρχουν εταιρείες χωρίς φίλτρα status
         const allCompaniesQuery = query(
@@ -47,12 +49,12 @@ export class CompaniesService {
           where('type', '==', 'company')
         );
         const allSnapshot = await getDocs(allCompaniesQuery);
-        console.log(`🔍 Total companies without status filter: ${allSnapshot.docs.length}`);
+        logger.info(`🔍 Total companies without status filter: ${allSnapshot.docs.length}`);
 
         allSnapshot.docs.slice(0, 3).forEach(doc => {
           const data = doc.data();
           const companyName = isCompanyContact(data) ? data.companyName : 'Unknown Company';
-          console.log(`🏢 Sample company: ${companyName} (status: ${data.status || 'UNDEFINED'})`);
+          logger.info(`🏢 Sample company: ${companyName} (status: ${data.status || 'UNDEFINED'})`);
         });
       }
 
@@ -67,7 +69,7 @@ export class CompaniesService {
       });
 
       if (DEBUG_COMPANIES_SERVICE) {
-        console.log(`🔍 BATCH MODE: Checking ${snapshot.docs.length} companies for projects using single query...`);
+        logger.info(`🔍 BATCH MODE: Checking ${snapshot.docs.length} companies for projects using single query...`);
       }
 
       try {
@@ -80,7 +82,7 @@ export class CompaniesService {
         const projectsSnapshot = await getDocs(projectsQuery);
 
         if (DEBUG_COMPANIES_SERVICE) {
-          console.log(`🏗️ BATCH RESULT: Found ${projectsSnapshot.docs.length} total projects in database`);
+          logger.info(`🏗️ BATCH RESULT: Found ${projectsSnapshot.docs.length} total projects in database`);
         }
 
         // Group projects by companyId
@@ -111,7 +113,7 @@ export class CompaniesService {
 
           if (DEBUG_COMPANIES_SERVICE) {
             const companyName = isCompanyContact(companyData) ? companyData.companyName : 'Unknown Company';
-            console.log(`🏗️ Company ${companyId} (${companyName}) has ${companyProjects.length} projects:`, companyProjects.map(p => p.name || 'Unnamed') || []);
+            logger.info(`🏗️ Company ${companyId} (${companyName}) has ${companyProjects.length} projects:`, companyProjects.map(p => p.name || 'Unnamed') || []);
           }
 
           if (companyProjects.length > 0) {
@@ -120,13 +122,13 @@ export class CompaniesService {
         });
 
         if (DEBUG_COMPANIES_SERVICE) {
-          console.log(`🎯 BATCH COMPLETE: ${companyIds.length} companies with projects found`);
+          logger.info(`🎯 BATCH COMPLETE: ${companyIds.length} companies with projects found`);
         }
 
       } catch (error) {
         // 🏢 ENTERPRISE: Batch mode is the only supported strategy
         // Server actions cannot be called from client-side services
-        console.error('❌ Batch project query failed:', error);
+        logger.error('❌ Batch project query failed:', error);
         // Return empty array - batch mode failure means no companies can be determined
       }
 
@@ -152,13 +154,13 @@ export class CompaniesService {
       // Παίρνουμε τα IDs εταιρειών που είναι στην πλοήγηση (χειροκίνητα)
       const navigationCompanyIds = await getNavigationCompanyIds();
       if (DEBUG_COMPANIES_SERVICE) {
-        console.log(`📍 Navigation Company IDs: ${navigationCompanyIds.length}`, navigationCompanyIds);
+        logger.info(`📍 Navigation Company IDs: ${navigationCompanyIds.length}`, navigationCompanyIds);
       }
 
       // Παίρνουμε τα IDs εταιρειών που έχουν έργα
       const companiesWithProjectIds = await this.getCompaniesWithProjects();
       if (DEBUG_COMPANIES_SERVICE) {
-        console.log(`🏗️ Companies with Projects: ${companiesWithProjectIds.length}`, companiesWithProjectIds);
+        logger.info(`🏗️ Companies with Projects: ${companiesWithProjectIds.length}`, companiesWithProjectIds);
       }
 
       // Συνδυάζουμε και τα δύο (unique values)
@@ -169,14 +171,14 @@ export class CompaniesService {
       ]));
 
       if (DEBUG_COMPANIES_SERVICE) {
-        console.log(`🎯 Total Relevant Company IDs: ${allRelevantCompanyIds.length}`, allRelevantCompanyIds);
+        logger.info(`🎯 Total Relevant Company IDs: ${allRelevantCompanyIds.length}`, allRelevantCompanyIds);
       }
 
       // ΝΕΟ: Ακόμα κι αν δεν υπάρχουν companies με έργα,
       // θέλουμε να εμφανίσουμε τις navigation companies
       if (allRelevantCompanyIds.length === 0 && navigationCompanyIds.length === 0) {
         if (DEBUG_COMPANIES_SERVICE) {
-          console.log(`⚠️ No relevant companies found - returning empty array`);
+          logger.info(`⚠️ No relevant companies found - returning empty array`);
         }
         return [];
       }
@@ -194,7 +196,7 @@ export class CompaniesService {
           const data = doc.data();
           if (DEBUG_COMPANIES_SERVICE) {
             const companyName = isCompanyContact(data) ? (data as CompanyContact).companyName : 'Unknown Company';
-            console.log(`🏢 Company found in Firestore: ${data.id} - ${companyName} (status: ${data.status})`);
+            logger.info(`🏢 Company found in Firestore: ${data.id} - ${companyName} (status: ${data.status})`);
           }
           return data;
         })
@@ -204,7 +206,7 @@ export class CompaniesService {
       const relevantCompanies = allCompanies.filter(company => {
         const isRelevant = allRelevantCompanyIds.includes(company.id!);
         if (DEBUG_COMPANIES_SERVICE && company.id === 'pzNUy8ksddGCtcQMqumR') {
-          console.log(`🔍 ΠΑΓΩΝΗΣ filtering check:`, {
+          logger.info(`🔍 ΠΑΓΩΝΗΣ filtering check:`, {
             companyId: company.id,
             companyName: isCompanyContact(company) ? company.companyName : 'Unknown Company',
             isInRelevantIds: isRelevant,
@@ -216,11 +218,11 @@ export class CompaniesService {
       });
 
       if (DEBUG_COMPANIES_SERVICE) {
-        console.log(`🏢 Total companies from Firestore: ${allCompanies.length}`);
-        console.log(`🎯 Relevant companies: ${relevantCompanies.length}`);
-        console.log(`🔍 All company IDs from Firestore:`, allCompanies.map(c => c.id));
-        console.log(`🔍 Relevant company IDs array:`, allRelevantCompanyIds);
-        console.log(`🔍 Filtered relevant companies:`, relevantCompanies.map(c => {
+        logger.info(`🏢 Total companies from Firestore: ${allCompanies.length}`);
+        logger.info(`🎯 Relevant companies: ${relevantCompanies.length}`);
+        logger.info(`🔍 All company IDs from Firestore:`, allCompanies.map(c => c.id));
+        logger.info(`🔍 Relevant company IDs array:`, allRelevantCompanyIds);
+        logger.info(`🔍 Filtered relevant companies:`, relevantCompanies.map(c => {
           const companyName = isCompanyContact(c) ? c.companyName : 'Unknown Company';
           return `${c.id} - ${companyName}`;
         }));
@@ -281,19 +283,19 @@ export class CompaniesService {
 
       if (!doc) {
         if (DEBUG_COMPANIES_SERVICE) {
-          console.log(`🔍 Company not found by name: "${companyName}"`);
+          logger.info(`🔍 Company not found by name: "${companyName}"`);
         }
         return null;
       }
 
       const contact = doc.data();
       if (DEBUG_COMPANIES_SERVICE) {
-        console.log(`✅ Company found by name: "${companyName}" → ID: ${doc.id}`);
+        logger.info(`✅ Company found by name: "${companyName}" → ID: ${doc.id}`);
       }
 
       return contact.type === 'company' ? contact : null;
     } catch (error) {
-      console.error(`🚨 Error fetching company by name "${companyName}":`, error);
+      logger.error(`🚨 Error fetching company by name "${companyName}":`, error);
       return null;
     }
   }

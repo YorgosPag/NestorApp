@@ -325,6 +325,8 @@ interface EnterpriseSecurityCache {
  */
 // 🏢 ENTERPRISE: Import Firestore type for proper typing
 import type { Firestore } from 'firebase/firestore';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseSecurityService');
 
 export class EnterpriseSecurityService {
   private static instance: EnterpriseSecurityService;
@@ -446,7 +448,7 @@ export class EnterpriseSecurityService {
     this.cache.permissions.clear();
     this.cache.emailPolicies.clear();
     this.cache.countryPolicies.clear();
-    console.log('🔒 Security cache cleared');
+    logger.info('🔒 Security cache cleared');
   }
 
   // ============================================================================
@@ -467,7 +469,7 @@ export class EnterpriseSecurityService {
     // Check cache first
     const cached = this.getSecurityCacheEntry(this.cache.roles, cacheKey);
     if (cached) {
-      console.log(`🔒 Security roles loaded from cache: ${cacheKey}`);
+      logger.info(`🔒 Security roles loaded from cache: ${cacheKey}`);
       return cached;
     }
 
@@ -497,10 +499,10 @@ export class EnterpriseSecurityService {
       // Cache the roles (high security level)
       this.setSecurityCacheEntry(this.cache.roles, cacheKey, roles, 'high', 120);
 
-      console.log(`🔒 Loaded ${roles.length} security roles from database`);
+      logger.info(`🔒 Loaded ${roles.length} security roles from database`);
       return roles;
     } catch (error) {
-      console.error('❌ Failed to load security roles:', error);
+      logger.error('❌ Failed to load security roles:', error);
       // Return fallback roles
       return this.getDefaultSecurityRoles(tenantId, environment);
     }
@@ -573,7 +575,7 @@ export class EnterpriseSecurityService {
           .filter(Boolean);
 
         if (adminEmails.includes(email.toLowerCase())) {
-          console.log(`🔐 Admin access granted for: ${email}`);
+          logger.info(`🔐 Admin access granted for: ${email}`);
           return 'admin';
         }
       }
@@ -582,17 +584,17 @@ export class EnterpriseSecurityService {
       if (process.env.NODE_ENV === 'development') {
         const devAdminEmails = ['admin@company.local', 'developer@company.local'];
         if (devAdminEmails.includes(email.toLowerCase())) {
-          console.warn(`⚠️ Development admin access granted for: ${email}`);
+          logger.warn(`⚠️ Development admin access granted for: ${email}`);
           return 'admin';
         }
       }
 
       // Default to authenticated user
-      console.log(`🔐 Authenticated access granted for: ${email}`);
+      logger.info(`🔐 Authenticated access granted for: ${email}`);
       return 'authenticated';
 
     } catch (error) {
-      console.error('❌ Failed to check user role:', error);
+      logger.error('❌ Failed to check user role:', error);
 
       // Secure fallback - never grant admin on error
       return email ? 'authenticated' : 'public';
@@ -629,7 +631,7 @@ export class EnterpriseSecurityService {
     // Check cache first
     const cached = this.getSecurityCacheEntry(this.cache.emailPolicies, cacheKey);
     if (cached) {
-      console.log(`🔒 Email policies loaded from cache: ${cacheKey}`);
+      logger.info(`🔒 Email policies loaded from cache: ${cacheKey}`);
       return cached;
     }
 
@@ -659,10 +661,10 @@ export class EnterpriseSecurityService {
       // Cache the policies (high security level)
       this.setSecurityCacheEntry(this.cache.emailPolicies, cacheKey, policies, 'high', 180);
 
-      console.log(`🔒 Loaded ${policies.length} email domain policies from database`);
+      logger.info(`🔒 Loaded ${policies.length} email domain policies from database`);
       return policies;
     } catch (error) {
-      console.error('❌ Failed to load email domain policies:', error);
+      logger.error('❌ Failed to load email domain policies:', error);
       // Return fallback policies
       return this.getDefaultEmailDomainPolicies();
     }
@@ -743,7 +745,7 @@ export class EnterpriseSecurityService {
     // Check cache first
     const cached = this.getSecurityCacheEntry(this.cache.countryPolicies, cacheKey);
     if (cached) {
-      console.log(`🔒 Country policies loaded from cache: ${cacheKey}`);
+      logger.info(`🔒 Country policies loaded from cache: ${cacheKey}`);
       return cached;
     }
 
@@ -772,10 +774,10 @@ export class EnterpriseSecurityService {
       // Cache the policies
       this.setSecurityCacheEntry(this.cache.countryPolicies, cacheKey, policies, 'medium', 300);
 
-      console.log(`🔒 Loaded ${policies.length} country security policies from database`);
+      logger.info(`🔒 Loaded ${policies.length} country security policies from database`);
       return policies;
     } catch (error) {
-      console.error('❌ Failed to load country security policies:', error);
+      logger.error('❌ Failed to load country security policies:', error);
       // Return fallback policies
       return this.getDefaultCountryPolicies();
     }

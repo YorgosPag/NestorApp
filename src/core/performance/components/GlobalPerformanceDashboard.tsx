@@ -21,6 +21,8 @@ import { useEnterprisePerformance } from '../hooks/useEnterprisePerformance';
 import { PerformanceCategory } from '../types/performance.types';
 import { FloatingPanel } from '@/components/ui/floating';
 import { FloatingStyleUtils } from '@/styles/design-tokens';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('GlobalPerformanceDashboard');
 
 // 🏢 GOOGLE-STYLE MODULAR IMPORTS
 import { PerformanceGradeBadge, PerformanceChart } from './shared';
@@ -103,8 +105,8 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
 
   // 🎯 CONTROLS
   const controls = {
-    measurePerformance: () => console.log('Measuring performance...'),
-    applyAllOptimizations: () => console.log('Applying optimizations...'),
+    measurePerformance: () => logger.info('Measuring performance...'),
+    applyAllOptimizations: () => logger.info('Applying optimizations...'),
     clearAlerts: () => setDismissedAlerts(new Set())
   };
 

@@ -9,6 +9,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('TestUploadPage');
 
 export default function TestUploadPage() {
   const { getStatusBorder } = useBorderTokens();
@@ -42,7 +44,7 @@ export default function TestUploadPage() {
       const storagePath = fileName; // Root level upload
       const storageRef = ref(storage, storagePath);
 
-      console.log('🧪 TEST: Starting direct upload...', {
+      logger.info('TEST: Starting direct upload...', {
         fileName: file.name,
         fileSize: file.size,
         storagePath
@@ -55,21 +57,21 @@ export default function TestUploadPage() {
         (snapshot) => {
           const progressPercent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           setProgress(Math.round(progressPercent));
-          console.log(`🧪 TEST: Upload progress: ${Math.round(progressPercent)}%`);
+          logger.info(`TEST: Upload progress: ${Math.round(progressPercent)}%`);
         },
         (error) => {
-          console.error('🧪 TEST: Upload error:', error);
+          logger.error('TEST: Upload error', { error });
           setError(`Upload failed: ${error.message}`);
           setUploading(false);
         },
         async () => {
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log('🧪 TEST: Upload successful!', downloadURL);
+            logger.info('TEST: Upload successful!', { downloadURL });
             setResult(`✅ Success! URL: ${downloadURL}`);
             setUploading(false);
           } catch (error) {
-            console.error('🧪 TEST: Failed to get download URL:', error);
+            logger.error('TEST: Failed to get download URL', { error });
             setError('Failed to get download URL');
             setUploading(false);
           }
@@ -77,7 +79,7 @@ export default function TestUploadPage() {
       );
 
     } catch (error) {
-      console.error('🧪 TEST: Upload initialization failed:', error);
+      logger.error('TEST: Upload initialization failed', { error });
       setError(`Upload failed: ${error}`);
       setUploading(false);
     }

@@ -23,6 +23,8 @@ import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } fro
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseUserPreferencesService');
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -221,7 +223,7 @@ class EnterpriseUserPreferencesService {
     this.preferencesCache.clear();
     this.companyDefaultsCache.clear();
     this.cacheTimestamps.clear();
-    console.log('🗑️ User preferences caches invalidated');
+    logger.info('🗑️ User preferences caches invalidated');
   }
 
   /**
@@ -244,7 +246,7 @@ class EnterpriseUserPreferencesService {
       this.cacheTimestamps.delete(key);
     });
 
-    console.log(`🗑️ Cleared user preferences cache for user: ${userId}`);
+    logger.info(`🗑️ Cleared user preferences cache for user: ${userId}`);
   }
 
   // ========================================================================
@@ -264,13 +266,13 @@ class EnterpriseUserPreferencesService {
     if (this.isCacheValid(cacheKey)) {
       const cached = this.preferencesCache.get(cacheKey);
       if (cached) {
-        console.log('✅ User preferences loaded from cache:', cacheKey);
+        logger.info('✅ User preferences loaded from cache:', cacheKey);
         return cached;
       }
     }
 
     try {
-      console.log('🔄 Loading user preferences from Firebase:', { userId, tenantId });
+      logger.info('🔄 Loading user preferences from Firebase:', { userId, tenantId });
 
       // Try to load user-specific preferences
       const userDoc = await getDoc(doc(db, this.USER_PREFERENCES_COLLECTION, `${userId}_${tenantId || 'default'}`));
@@ -291,7 +293,7 @@ class EnterpriseUserPreferencesService {
       // Cache the results
       this.setCache(this.preferencesCache, cacheKey, completePreferences);
 
-      console.log('✅ User preferences loaded successfully:', {
+      logger.info('✅ User preferences loaded successfully:', {
         userId,
         tenantId,
         hasUserPrefs: !!userPrefs,
@@ -301,10 +303,10 @@ class EnterpriseUserPreferencesService {
       return completePreferences;
 
     } catch (error) {
-      console.error('❌ Error loading user preferences:', error);
+      logger.error('❌ Error loading user preferences:', error);
 
       // Return fallback preferences
-      console.log('🔄 Using fallback user preferences for user:', userId);
+      logger.info('🔄 Using fallback user preferences for user:', userId);
       return this.getFallbackPreferences();
     }
   }
@@ -359,9 +361,9 @@ class EnterpriseUserPreferencesService {
         timestamp: Date.now(),
       });
 
-      console.log('✅ User preferences saved successfully:', docId);
+      logger.info('✅ User preferences saved successfully:', docId);
     } catch (error) {
-      console.error('❌ Error saving user preferences:', error);
+      logger.error('❌ Error saving user preferences:', error);
       throw error;
     }
   }
@@ -402,9 +404,9 @@ class EnterpriseUserPreferencesService {
         timestamp: Date.now(),
       });
 
-      console.log('✅ User preferences updated successfully:', { userId, category });
+      logger.info('✅ User preferences updated successfully:', { userId, category });
     } catch (error) {
-      console.error('❌ Error updating user preferences:', error);
+      logger.error('❌ Error updating user preferences:', error);
       throw error;
     }
   }
@@ -423,13 +425,13 @@ class EnterpriseUserPreferencesService {
     if (this.isCacheValid(cacheKey)) {
       const cached = this.companyDefaultsCache.get(cacheKey);
       if (cached) {
-        console.log('✅ Company defaults loaded from cache:', cacheKey);
+        logger.info('✅ Company defaults loaded from cache:', cacheKey);
         return cached;
       }
     }
 
     try {
-      console.log('🔄 Loading company defaults from Firebase:', { tenantId });
+      logger.info('🔄 Loading company defaults from Firebase:', { tenantId });
 
       // Build query constraints
       const constraints = [
@@ -457,7 +459,7 @@ class EnterpriseUserPreferencesService {
       // Cache the results
       this.setCache(this.companyDefaultsCache, cacheKey, defaults);
 
-      console.log('✅ Company defaults loaded successfully:', {
+      logger.info('✅ Company defaults loaded successfully:', {
         tenantId,
         categoriesCount: Object.keys(defaults).length
       });
@@ -465,7 +467,7 @@ class EnterpriseUserPreferencesService {
       return defaults;
 
     } catch (error) {
-      console.error('❌ Error loading company defaults:', error);
+      logger.error('❌ Error loading company defaults:', error);
       return {};
     }
   }

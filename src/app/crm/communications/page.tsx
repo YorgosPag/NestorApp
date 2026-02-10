@@ -290,7 +290,7 @@ export default function CrmCommunicationsPage() {
       logger.info('Attachment uploaded', { url: result.url });
       return { url: result.url };
     } catch (error) {
-      console.error('❌ [Communications] Attachment upload failed:', error);
+      logger.error('[Communications] Attachment upload failed', { error });
       return null;
     }
   }, []);

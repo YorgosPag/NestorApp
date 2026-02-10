@@ -28,7 +28,7 @@
  * });
  *
  * if (result.success) {
- *   console.log('Building linked successfully!');
+ *   logger.info('Building linked successfully!');
  * }
  * ```
  */
@@ -60,6 +60,8 @@ import type {
 import { withFirestoreRetry } from './utils/retry';
 import { EntityLinkingCache } from './utils/cache';
 import { AuditLogger } from './utils/audit';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EntityLinkingService');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Entity Linking Service Class
@@ -207,7 +209,7 @@ export class EntityLinkingService {
     );
 
     // 📋 STEP 7: Return success result
-    console.log(
+    logger.info(
       `✅ [EntityLinkingService] ${entityType} ${entityId} linked to ${parentType} ${parentId} (${durationMs}ms, ${retryResult.attempts} attempts)`
     );
 
@@ -336,7 +338,7 @@ export class EntityLinkingService {
     // Log audit entry
     AuditLogger.logUnlink(entityType, entityId, previousParentId, true, durationMs);
 
-    console.log(
+    logger.info(
       `✅ [EntityLinkingService] ${entityType} ${entityId} unlinked (${durationMs}ms, ${retryResult.attempts} attempts)`
     );
 
@@ -479,7 +481,7 @@ export class EntityLinkingService {
       durationMs,
     });
 
-    console.log(
+    logger.info(
       `✅ [EntityLinkingService] Found ${filteredEntities.length} available ${entityType}s (${durationMs}ms)`
     );
 
@@ -622,7 +624,7 @@ export class EntityLinkingService {
           },
         })
       );
-      console.log(`📡 [EntityLinkingService] Dispatched legacy event: ${eventName}`);
+      logger.info(`📡 [EntityLinkingService] Dispatched legacy event: ${eventName}`);
     }
   }
 }

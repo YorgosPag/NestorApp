@@ -30,6 +30,8 @@ import {
   type PhoneInfo,
   type EmailInfo,
 } from '@/types/contacts';
+import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
+import type { EscoPickerValue } from '@/types/contacts/esco-types';
 import type { CompanySetupInput } from '../../types';
 
 // ============================================================================
@@ -130,6 +132,13 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
   );
 
   /**
+   * Handle ESCO profession picker change → update profession field
+   */
+  const handleProfessionChange = useCallback((escoValue: EscoPickerValue) => {
+    onChange({ profession: escoValue.profession });
+  }, [onChange]);
+
+  /**
    * Handle contact selection → fetch full details → auto-fill fields
    */
   const handleContactAutoFill = useCallback(async (contact: ContactSummary | null) => {
@@ -195,11 +204,10 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profession">{t('setup.profession')} *</Label>
-              <Input
-                id="profession"
+              <Label>{t('setup.profession')} *</Label>
+              <EscoOccupationPicker
                 value={data.profession}
-                onChange={(e) => onChange({ profession: e.target.value })}
+                onChange={handleProfessionChange}
                 placeholder={t('setup.profession')}
               />
             </div>

@@ -31,6 +31,8 @@ import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FirestoreRelationshipAdapter');
 
 // ============================================================================
 // CONFIGURATION
@@ -64,7 +66,7 @@ export class FirestoreRelationshipAdapter {
    * 💾 Save Relationship to Firestore
    */
   static async saveRelationship(relationship: ContactRelationship): Promise<void> {
-    console.log('💾 FIRESTORE: Saving relationship', relationship.id);
+    logger.info('💾 FIRESTORE: Saving relationship', relationship.id);
     try {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
@@ -84,7 +86,7 @@ export class FirestoreRelationshipAdapter {
       const docRef = doc(colRef, relationship.id);
       await setDoc(docRef, firestoreData);
 
-      console.log('✅ FIRESTORE: Relationship saved successfully:', relationship.id);
+      logger.info('✅ FIRESTORE: Relationship saved successfully:', relationship.id);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchRelationshipCreated({
@@ -97,7 +99,7 @@ export class FirestoreRelationshipAdapter {
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error('❌ FIRESTORE: Error saving relationship:', error);
+      logger.error('❌ FIRESTORE: Error saving relationship:', error);
       throw error;
     }
   }
@@ -119,7 +121,7 @@ export class FirestoreRelationshipAdapter {
         ...docSnapshot.data()
       } as ContactRelationship;
     } catch (error) {
-      console.error('❌ FIRESTORE: Error getting relationship by ID:', error);
+      logger.error('❌ FIRESTORE: Error getting relationship by ID:', error);
       return null;
     }
   }
@@ -138,7 +140,7 @@ export class FirestoreRelationshipAdapter {
       };
 
       await updateDoc(docRef, updatesWithTimestamp);
-      console.log('✅ FIRESTORE: Relationship updated successfully:', relationshipId);
+      logger.info('✅ FIRESTORE: Relationship updated successfully:', relationshipId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchRelationshipUpdated({
@@ -150,7 +152,7 @@ export class FirestoreRelationshipAdapter {
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error('❌ FIRESTORE: Error updating relationship:', error);
+      logger.error('❌ FIRESTORE: Error updating relationship:', error);
       throw error;
     }
   }
@@ -162,7 +164,7 @@ export class FirestoreRelationshipAdapter {
     try {
       const docRef = doc(db, RELATIONSHIPS_COLLECTION, relationshipId);
       await deleteDoc(docRef);
-      console.log('✅ FIRESTORE: Relationship deleted successfully:', relationshipId);
+      logger.info('✅ FIRESTORE: Relationship deleted successfully:', relationshipId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchRelationshipDeleted({
@@ -170,7 +172,7 @@ export class FirestoreRelationshipAdapter {
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error('❌ FIRESTORE: Error deleting relationship:', error);
+      logger.error('❌ FIRESTORE: Error deleting relationship:', error);
       throw error;
     }
   }
@@ -186,7 +188,7 @@ export class FirestoreRelationshipAdapter {
     try {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
-      console.log('🔥 FIRESTORE: Fetching relationships for contact:', contactId);
+      logger.info('🔥 FIRESTORE: Fetching relationships for contact:', contactId);
 
       // Query 1: Where this contact is the source
       const sourceQuery = query(
@@ -250,10 +252,10 @@ export class FirestoreRelationshipAdapter {
         return bTime - aTime; // Descending
       });
 
-      console.log('✅ FIRESTORE: Query returned', relationships.length, 'relationships');
+      logger.info('✅ FIRESTORE: Query returned', relationships.length, 'relationships');
       return relationships;
     } catch (error) {
-      console.error('❌ FIRESTORE: Error querying contact relationships:', error);
+      logger.error('❌ FIRESTORE: Error querying contact relationships:', error);
       return [];
     }
   }
@@ -268,7 +270,7 @@ export class FirestoreRelationshipAdapter {
     try {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
-      console.log('🏢 FIRESTORE: Querying employees for organization:', organizationId);
+      logger.info('🏢 FIRESTORE: Querying employees for organization:', organizationId);
 
       // Simplified query: Get all relationships for this organization
       const q = query(
@@ -301,10 +303,10 @@ export class FirestoreRelationshipAdapter {
         return (a.position || '').localeCompare(b.position || '');
       });
 
-      console.log('✅ FIRESTORE: Organization employees query returned', relationships.length, 'relationships');
+      logger.info('✅ FIRESTORE: Organization employees query returned', relationships.length, 'relationships');
       return relationships;
     } catch (error) {
-      console.error('❌ FIRESTORE: Error querying organization employees:', error);
+      logger.error('❌ FIRESTORE: Error querying organization employees:', error);
       return [];
     }
   }
@@ -317,7 +319,7 @@ export class FirestoreRelationshipAdapter {
     targetId: string,
     relationshipType: RelationshipType
   ): Promise<ContactRelationship | null> {
-    console.log('🔍 FIRESTORE: Getting specific relationship:', {
+    logger.info('🔍 FIRESTORE: Getting specific relationship:', {
       sourceId,
       targetId,
       relationshipType
@@ -338,7 +340,7 @@ export class FirestoreRelationshipAdapter {
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
-        console.log('✅ FIRESTORE: No existing relationship found');
+        logger.info('✅ FIRESTORE: No existing relationship found');
         return null;
       }
 
@@ -347,11 +349,11 @@ export class FirestoreRelationshipAdapter {
         ...snapshot.docs[0].data()
       } as ContactRelationship;
 
-      console.log('🔍 FIRESTORE: Found existing relationship:', relationship.id);
+      logger.info('🔍 FIRESTORE: Found existing relationship:', relationship.id);
       return relationship;
 
     } catch (error) {
-      console.error('❌ FIRESTORE: Error getting specific relationship:', error);
+      logger.error('❌ FIRESTORE: Error getting specific relationship:', error);
       return null;
     }
   }

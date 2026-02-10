@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle2, XCircle, Shield, Bell, Mail } from 'lucide-react';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AdminSetupPage');
 
 // =============================================================================
 // TYPES
@@ -83,7 +85,7 @@ export default function AdminSetupPage() {
         setCurrentConfig(null);
       }
     } catch (err) {
-      console.error('Failed to check config:', err);
+      logger.error('Failed to check config', { error: err });
       setError('Αποτυχία ελέγχου ρυθμίσεων');
     } finally {
       setCheckingConfig(false);
@@ -133,7 +135,7 @@ export default function AdminSetupPage() {
         setError(data.error || data.message || 'Αποτυχία αποθήκευσης');
       }
     } catch (err) {
-      console.error('Failed to setup admin:', err);
+      logger.error('Failed to setup admin', { error: err });
       setError('Αποτυχία σύνδεσης με τον server');
     } finally {
       setSaving(false);

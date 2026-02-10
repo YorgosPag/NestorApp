@@ -57,6 +57,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { contactLinkConverter, fileLinkConverter } from '@/lib/firestore/converters/association.converter';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AssociationService');
 import type {
   ContactLink,
   FileLink,
@@ -102,7 +104,7 @@ export class AssociationService {
       // Check if link already exists
       const existing = await this.getContactLinkById(linkId);
       if (existing) {
-        console.log(`✅ [AssociationService] Contact link already exists: ${linkId}`);
+        logger.info(`✅ [AssociationService] Contact link already exists: ${linkId}`);
         return {
           success: true,
           linkId,
@@ -129,7 +131,7 @@ export class AssociationService {
       const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, linkId).withConverter(contactLinkConverter);
       await setDoc(linkRef, contactLink);
 
-      console.log(`✅ [AssociationService] Created contact link: ${linkId}`);
+      logger.info(`✅ [AssociationService] Created contact link: ${linkId}`);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchContactLinkCreated({
@@ -150,7 +152,7 @@ export class AssociationService {
         message: 'Contact linked successfully',
       };
     } catch (error) {
-      console.error('[AssociationService] Failed to link contact:', error);
+      logger.error('[AssociationService] Failed to link contact:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -277,7 +279,7 @@ export class AssociationService {
       // Check if link already exists
       const existing = await this.getFileLinkById(linkId);
       if (existing) {
-        console.log(`✅ [AssociationService] File link already exists: ${linkId}`);
+        logger.info(`✅ [AssociationService] File link already exists: ${linkId}`);
         return {
           success: true,
           linkId,
@@ -304,7 +306,7 @@ export class AssociationService {
       const linkRef = doc(db, COLLECTIONS.FILE_LINKS, linkId).withConverter(fileLinkConverter);
       await setDoc(linkRef, fileLink);
 
-      console.log(`✅ [AssociationService] Created file link: ${linkId}`);
+      logger.info(`✅ [AssociationService] Created file link: ${linkId}`);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchFileLinkCreated({
@@ -325,7 +327,7 @@ export class AssociationService {
         message: 'File linked successfully',
       };
     } catch (error) {
-      console.error('[AssociationService] Failed to link file:', error);
+      logger.error('[AssociationService] Failed to link file:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

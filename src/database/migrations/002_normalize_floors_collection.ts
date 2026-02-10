@@ -20,6 +20,8 @@ import { Migration, MigrationStep } from './types';
 import { collection, getDocs, doc, updateDoc, getDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('Migration002');
 
 interface BuildingRecord {
   id: string;
@@ -85,7 +87,7 @@ class FloorsNormalizationMigrationSteps {
       stepId: 'analyze_buildings_with_floors',
       description: 'Analyze buildings with embedded buildingFloors arrays',
       execute: async () => {
-        console.log('🏗️ Analyzing buildings with embedded floors...');
+        logger.info('Analyzing buildings with embedded floors...');
 
         // Fetch all buildings
         const buildingsSnapshot = await getDocs(collection(db, COLLECTIONS.BUILDINGS));
@@ -94,7 +96,7 @@ class FloorsNormalizationMigrationSteps {
           ...doc.data()
         })) as BuildingRecord[];
 
-        console.log(`   Found ${this.migrationData.buildings.length} buildings total`);
+        logger.info('Found buildings total', { count: this.migrationData.buildings.length });
 
         // Analyze which buildings have buildingFloors
         for (const building of this.migrationData.buildings) {
@@ -102,16 +104,17 @@ class FloorsNormalizationMigrationSteps {
             this.migrationData.stats.buildingsWithFloors++;
             this.migrationData.stats.totalFloorsToExtract += building.buildingFloors.length;
 
-            console.log(`   📋 Building "${building.name}" has ${building.buildingFloors.length} embedded floors`);
+            logger.info('Building has embedded floors', { buildingName: building.name, floorCount: building.buildingFloors.length });
           } else {
             this.migrationData.stats.buildingsWithoutFloors++;
           }
         }
 
-        console.log('📊 Analysis Results:');
-        console.log(`   - Buildings with embedded floors: ${this.migrationData.stats.buildingsWithFloors}`);
-        console.log(`   - Buildings without embedded floors: ${this.migrationData.stats.buildingsWithoutFloors}`);
-        console.log(`   - Total floors to extract: ${this.migrationData.stats.totalFloorsToExtract}`);
+        logger.info('Analysis Results', {
+          buildingsWithFloors: this.migrationData.stats.buildingsWithFloors,
+          buildingsWithoutFloors: this.migrationData.stats.buildingsWithoutFloors,
+          totalFloorsToExtract: this.migrationData.stats.totalFloorsToExtract
+        });
 
         return {
           affectedRecords: this.migrationData.stats.totalFloorsToExtract,
@@ -132,7 +135,7 @@ class FloorsNormalizationMigrationSteps {
       stepId: 'create_normalized_floor_records',
       description: 'Create normalized floor records with proper foreign key relationships',
       execute: async () => {
-        console.log('🔧 Creating normalized floor records...');
+        logger.info('Creating normalized floor records...');
 
         this.migrationData.floorsToCreate = [];
 
@@ -141,7 +144,7 @@ class FloorsNormalizationMigrationSteps {
             continue;
           }
 
-          console.log(`   🏢 Processing building: ${building.name}`);
+          logger.info('Processing building', { buildingName: building.name });
 
           for (const embeddedFloor of building.buildingFloors) {
             // Create normalized floor record with enterprise structure
@@ -174,11 +177,11 @@ class FloorsNormalizationMigrationSteps {
             };
 
             this.migrationData.floorsToCreate.push(normalizedFloor);
-            console.log(`     📝 Created floor record: ${normalizedFloor.name} (Building: ${building.name})`);
+            logger.info('Created floor record', { floorName: normalizedFloor.name, buildingName: building.name });
           }
         }
 
-        console.log(`✅ Created ${this.migrationData.floorsToCreate.length} normalized floor records`);
+        logger.info('Created normalized floor records', { count: this.migrationData.floorsToCreate.length });
 
         return {
           affectedRecords: this.migrationData.floorsToCreate.length,
@@ -199,7 +202,7 @@ class FloorsNormalizationMigrationSteps {
       stepId: 'insert_normalized_floors',
       description: 'Insert normalized floors into floors collection using enterprise batch operations',
       execute: async () => {
-        console.log('🚀 Inserting normalized floors into floors collection...');
+        logger.info('Inserting normalized floors into floors collection...');
 
         const insertResults = {
           successfulInserts: 0,
@@ -215,7 +218,7 @@ class FloorsNormalizationMigrationSteps {
           const batch = writeBatch(db);
           const batchFloors = this.migrationData.floorsToCreate.slice(i, i + BATCH_SIZE);
 
-          console.log(`   📦 Processing batch ${Math.floor(i / BATCH_SIZE) + 1} with ${batchFloors.length} floors`);
+          logger.info('Processing batch', { batchNumber: Math.floor(i / BATCH_SIZE) + 1, floorCount: batchFloors.length });
 
           for (const floor of batchFloors) {
             try {
@@ -223,12 +226,12 @@ class FloorsNormalizationMigrationSteps {
               const floorRef = doc(collection(db, COLLECTIONS.FLOORS), floor.id);
               batch.set(floorRef, floor);
 
-              console.log(`     ✅ Queued floor: ${floor.name} (${floor.buildingName})`);
+              logger.info('Queued floor', { floorName: floor.name, buildingName: floor.buildingName });
 
             } catch (error) {
               const errorMessage = `Failed to queue floor ${floor.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
               insertResults.errors.push(errorMessage);
-              console.error(`     ❌ ${errorMessage}`);
+              logger.error(errorMessage);
             }
           }
 
@@ -236,27 +239,25 @@ class FloorsNormalizationMigrationSteps {
         }
 
         // Execute all batches (Enterprise atomic operations)
-        console.log(`🔄 Executing ${batches.length} batches...`);
+        logger.info('Executing batches', { count: batches.length });
 
         for (let i = 0; i < batches.length; i++) {
           try {
             await batches[i].commit();
             const batchSize = Math.min(BATCH_SIZE, this.migrationData.floorsToCreate.length - (i * BATCH_SIZE));
             insertResults.successfulInserts += batchSize;
-            console.log(`   ✅ Batch ${i + 1}/${batches.length} committed successfully (${batchSize} floors)`);
+            logger.info('Batch committed successfully', { batchNumber: i + 1, totalBatches: batches.length, floorCount: batchSize });
 
           } catch (error) {
             const batchSize = Math.min(BATCH_SIZE, this.migrationData.floorsToCreate.length - (i * BATCH_SIZE));
             insertResults.failedInserts += batchSize;
             const errorMessage = `Batch ${i + 1} failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
             insertResults.errors.push(errorMessage);
-            console.error(`   ❌ ${errorMessage}`);
+            logger.error(errorMessage);
           }
         }
 
-        console.log(`📊 Insert Results:`);
-        console.log(`   - Successful inserts: ${insertResults.successfulInserts}`);
-        console.log(`   - Failed inserts: ${insertResults.failedInserts}`);
+        logger.info('Insert Results', { successful: insertResults.successfulInserts, failed: insertResults.failedInserts });
 
         if (insertResults.failedInserts > 0) {
           throw new Error(`${insertResults.failedInserts} floor inserts failed. See errors above.`);
@@ -268,16 +269,16 @@ class FloorsNormalizationMigrationSteps {
         };
       },
       rollback: async () => {
-        console.log('🔄 Rolling back floor inserts...');
+        logger.info('Rolling back floor inserts...');
 
         // Delete all created floors
         for (const floor of this.migrationData.floorsToCreate) {
           try {
             const floorRef = doc(db, COLLECTIONS.FLOORS, floor.id);
             await updateDoc(floorRef, { deleted: true, deletedAt: new Date().toISOString() });
-            console.log(`   ↩️ Marked floor as deleted: ${floor.name}`);
+            logger.info('Marked floor as deleted', { floorName: floor.name });
           } catch (error) {
-            console.error(`   ❌ Failed to rollback floor ${floor.name}: ${error}`);
+            logger.error('Failed to rollback floor', { floorName: floor.name, error });
           }
         }
       },
@@ -302,7 +303,7 @@ class FloorsNormalizationMigrationSteps {
       stepId: 'verify_normalization_integrity',
       description: 'Verify foreign key relationships and data integrity after normalization',
       execute: async () => {
-        console.log('✅ Verifying normalization integrity...');
+        logger.info('Verifying normalization integrity...');
 
         // Re-fetch floors to verify
         const floorsSnapshot = await getDocs(collection(db, COLLECTIONS.FLOORS));
@@ -331,7 +332,7 @@ class FloorsNormalizationMigrationSteps {
             integrityResults.floorsWithValidBuildingIds++;
           } else {
             integrityResults.orphanFloors++;
-            console.log(`   ⚠️ Orphan floor: ${floor.name} (buildingId: "${floor.buildingId}")`);
+            logger.warn('Orphan floor found', { floorName: floor.name, buildingId: floor.buildingId });
           }
 
           // Verify project relationships
@@ -343,15 +344,15 @@ class FloorsNormalizationMigrationSteps {
           }
         }
 
-        console.log(`📊 Normalization Integrity Results:`);
-        console.log(`   - Total floors in collection: ${integrityResults.totalFloors}`);
-        console.log(`   - Floors from this migration: ${integrityResults.floorsFromMigration}`);
-        console.log(`   - Floors with valid buildingIds: ${integrityResults.floorsWithValidBuildingIds}`);
-        console.log(`   - Floors with valid projectIds: ${integrityResults.floorsWithValidProjectIds}`);
-        console.log(`   - Orphan floors: ${integrityResults.orphanFloors}`);
-
         const integrityScore = (integrityResults.floorsWithValidBuildingIds / integrityResults.totalFloors) * 100;
-        console.log(`   - Referential integrity: ${integrityScore.toFixed(1)}%`);
+        logger.info('Normalization Integrity Results', {
+          totalFloors: integrityResults.totalFloors,
+          floorsFromMigration: integrityResults.floorsFromMigration,
+          validBuildingIds: integrityResults.floorsWithValidBuildingIds,
+          validProjectIds: integrityResults.floorsWithValidProjectIds,
+          orphanFloors: integrityResults.orphanFloors,
+          referentialIntegrity: `${integrityScore.toFixed(1)}%`
+        });
 
         return {
           affectedRecords: integrityResults.floorsFromMigration,

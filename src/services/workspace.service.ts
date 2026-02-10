@@ -53,6 +53,8 @@ import type {
 } from '@/types/workspace';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('WorkspaceService');
 
 // ============================================================================
 // WORKSPACE SERVICE
@@ -100,7 +102,7 @@ export class WorkspaceService {
     );
     await setDoc(workspaceRef, workspace);
 
-    console.log(`✅ [WorkspaceService] Created workspace: ${workspaceId} (${type})`);
+    logger.info(`✅ [WorkspaceService] Created workspace: ${workspaceId} (${type})`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchWorkspaceCreated({
@@ -127,7 +129,7 @@ export class WorkspaceService {
     // Check if already exists
     const existing = await this.getWorkspaceById(SPECIAL_WORKSPACE_IDS.OFFICE_DIRECTORY);
     if (existing) {
-      console.log(`✅ [WorkspaceService] Office Directory already exists`);
+      logger.info(`✅ [WorkspaceService] Office Directory already exists`);
       return existing;
     }
 
@@ -266,7 +268,7 @@ export class WorkspaceService {
     const workspaceRef = doc(db, COLLECTIONS.WORKSPACES, workspaceId);
     await updateDoc(workspaceRef, updates);
 
-    console.log(`✅ [WorkspaceService] Updated workspace: ${workspaceId}`);
+    logger.info(`✅ [WorkspaceService] Updated workspace: ${workspaceId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchWorkspaceUpdated({
@@ -290,7 +292,7 @@ export class WorkspaceService {
       updatedBy,
     });
 
-    console.log(`✅ [WorkspaceService] Archived workspace: ${workspaceId}`);
+    logger.info(`✅ [WorkspaceService] Archived workspace: ${workspaceId}`);
   }
 
   // ==========================================================================

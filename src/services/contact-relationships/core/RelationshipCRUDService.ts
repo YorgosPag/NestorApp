@@ -21,6 +21,8 @@ import { ContactsService } from '@/services/contacts.service';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RelationshipValidationService } from './RelationshipValidationService';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('RelationshipCRUDService');
 
 // ============================================================================
 // CRUD SERVICE CLASS
@@ -51,7 +53,7 @@ export class RelationshipCRUDService {
    * Creates a new relationship με full validation και business rules
    */
   static async createRelationship(data: Partial<ContactRelationship>): Promise<ContactRelationship> {
-    console.log('🔗 CRUD: Creating relationship', {
+    logger.info('🔗 CRUD: Creating relationship', {
       sourceId: data.sourceContactId,
       targetId: data.targetContactId,
       type: data.relationshipType
@@ -93,17 +95,17 @@ export class RelationshipCRUDService {
                           errorMessage.includes('index');
 
       if (isIndexError) {
-        console.warn('⚠️ Firebase index missing for duplicate check - proceeding with relationship creation');
-        console.warn('📋 Create the composite index at Firebase Console for better performance');
-        console.warn('🔗 Index URL:', errorMessage.match(/https:\/\/[^\s]+/)?.[0] || 'Check Firebase Console');
-        console.log('✅ Skipping duplicate check due to missing index - relationship creation will continue');
+        logger.warn('⚠️ Firebase index missing for duplicate check - proceeding with relationship creation');
+        logger.warn('📋 Create the composite index at Firebase Console for better performance');
+        logger.warn('🔗 Index URL:', errorMessage.match(/https:\/\/[^\s]+/)?.[0] || 'Check Firebase Console');
+        logger.info('✅ Skipping duplicate check due to missing index - relationship creation will continue');
         // DO NOT re-throw this error - just continue with relationship creation
       } else if (errorMessage.includes('already exists')) {
         // This is an actual duplicate relationship error
         throw error;
       } else {
         // For any other error, also log but continue (don't block relationship creation)
-        console.warn('⚠️ Duplicate check failed with unexpected error - continuing with creation:', errorMessage);
+        logger.warn('⚠️ Duplicate check failed with unexpected error - continuing with creation:', errorMessage);
       }
     }
 
@@ -173,41 +175,41 @@ export class RelationshipCRUDService {
     await this.saveRelationship(relationship);
 
     // Create reciprocal relationship if needed
-    console.log('🔄 CRUD: Creating reciprocal relationship...');
+    logger.info('🔄 CRUD: Creating reciprocal relationship...');
     try {
       await this.createReciprocalRelationship(relationship, sourceContact, targetContact);
-      console.log('✅ CRUD: Reciprocal relationship created successfully');
+      logger.info('✅ CRUD: Reciprocal relationship created successfully');
     } catch (reciprocalError) {
-      console.error('❌ CRUD: Reciprocal relationship creation failed:', reciprocalError);
+      logger.error('❌ CRUD: Reciprocal relationship creation failed:', reciprocalError);
       // Don't fail the main operation - reciprocal relationships are optional
     }
 
     // Update organizational hierarchy if employment relationship
-    console.log('🔄 CRUD: Checking if organizational hierarchy update needed...');
+    logger.info('🔄 CRUD: Checking if organizational hierarchy update needed...');
 
     try {
-      console.log('🔍 CRUD: Checking isEmploymentRelationship for type:', relationship.relationshipType);
+      logger.info('🔍 CRUD: Checking isEmploymentRelationship for type:', relationship.relationshipType);
       const isEmployment = isEmploymentRelationship(relationship);
-      console.log('🔍 CRUD: isEmploymentRelationship result:', isEmployment);
+      logger.info('🔍 CRUD: isEmploymentRelationship result:', isEmployment);
 
       if (isEmployment) {
-        console.log('🔄 CRUD: Updating organizational hierarchy...');
+        logger.info('🔄 CRUD: Updating organizational hierarchy...');
         try {
           await this.updateOrganizationalHierarchy(relationship);
-          console.log('✅ CRUD: Organizational hierarchy updated successfully');
+          logger.info('✅ CRUD: Organizational hierarchy updated successfully');
         } catch (hierarchyError) {
-          console.error('❌ CRUD: Organizational hierarchy update failed:', hierarchyError);
+          logger.error('❌ CRUD: Organizational hierarchy update failed:', hierarchyError);
           // Don't fail the main operation - hierarchy updates are optional
         }
       } else {
-        console.log('ℹ️ CRUD: No organizational hierarchy update needed');
+        logger.info('ℹ️ CRUD: No organizational hierarchy update needed');
       }
     } catch (checkError) {
-      console.error('❌ CRUD: Error checking employment relationship:', checkError);
+      logger.error('❌ CRUD: Error checking employment relationship:', checkError);
       // Continue without failing - this is optional logic
     }
 
-    console.log('✅ CRUD: Relationship created successfully', relationship.id);
+    logger.info('✅ CRUD: Relationship created successfully', relationship.id);
     return relationship;
   }
 
@@ -222,7 +224,7 @@ export class RelationshipCRUDService {
     try {
       return await FirestoreRelationshipAdapter.getRelationshipById(relationshipId);
     } catch (error) {
-      console.error('❌ CRUD: Error getting relationship by ID:', error);
+      logger.error('❌ CRUD: Error getting relationship by ID:', error);
       return null;
     }
   }
@@ -238,7 +240,7 @@ export class RelationshipCRUDService {
     try {
       return await FirestoreRelationshipAdapter.getSpecificRelationship(sourceId, targetId, relationshipType);
     } catch (error) {
-      console.error('❌ CRUD: Error getting specific relationship:', error);
+      logger.error('❌ CRUD: Error getting specific relationship:', error);
       return null;
     }
   }
@@ -259,7 +261,7 @@ export class RelationshipCRUDService {
 
       return relationships;
     } catch (error) {
-      console.error('❌ CRUD: Error getting contact relationships:', error);
+      logger.error('❌ CRUD: Error getting contact relationships:', error);
       return [];
     }
   }
@@ -308,11 +310,11 @@ export class RelationshipCRUDService {
       // Update in database
       await FirestoreRelationshipAdapter.updateRelationship(relationshipId, updated);
 
-      console.log('✅ CRUD: Relationship updated successfully:', relationshipId);
+      logger.info('✅ CRUD: Relationship updated successfully:', relationshipId);
       return updated;
 
     } catch (error) {
-      console.error('❌ CRUD: Error updating relationship:', error);
+      logger.error('❌ CRUD: Error updating relationship:', error);
       throw error;
     }
   }
@@ -328,7 +330,7 @@ export class RelationshipCRUDService {
     try {
       const relationship = await this.getRelationshipById(relationshipId);
       if (!relationship) {
-        console.warn('⚠️ CRUD: Relationship not found για deletion:', relationshipId);
+        logger.warn('⚠️ CRUD: Relationship not found για deletion:', relationshipId);
         return false;
       }
 
@@ -340,11 +342,11 @@ export class RelationshipCRUDService {
         relationshipNotes: `${relationship.relationshipNotes || ''}\n[DELETED: ${new Date().toISOString()}]`
       });
 
-      console.log('✅ CRUD: Relationship soft-deleted successfully:', relationshipId);
+      logger.info('✅ CRUD: Relationship soft-deleted successfully:', relationshipId);
       return true;
 
     } catch (error) {
-      console.error('❌ CRUD: Error deleting relationship:', error);
+      logger.error('❌ CRUD: Error deleting relationship:', error);
       return false;
     }
   }
@@ -355,10 +357,10 @@ export class RelationshipCRUDService {
   static async hardDeleteRelationship(relationshipId: string): Promise<boolean> {
     try {
       await FirestoreRelationshipAdapter.deleteRelationship(relationshipId);
-      console.log('✅ CRUD: Relationship hard-deleted successfully:', relationshipId);
+      logger.info('✅ CRUD: Relationship hard-deleted successfully:', relationshipId);
       return true;
     } catch (error) {
-      console.error('❌ CRUD: Error hard-deleting relationship:', error);
+      logger.error('❌ CRUD: Error hard-deleting relationship:', error);
       return false;
     }
   }
@@ -375,7 +377,7 @@ export class RelationshipCRUDService {
     try {
       return await ContactsService.getContact(contactId);
     } catch (error) {
-      console.error('❌ CRUD: Error fetching contact:', error);
+      logger.error('❌ CRUD: Error fetching contact:', error);
       return null;
     }
   }
@@ -445,7 +447,7 @@ export class RelationshipCRUDService {
           });
         }
       } catch (error) {
-        console.warn('⚠️ CRUD: Error creating reciprocal relationship:', error);
+        logger.warn('⚠️ CRUD: Error creating reciprocal relationship:', error);
         // Don't fail the main operation αν reciprocal creation fails
       }
     }
@@ -455,15 +457,15 @@ export class RelationshipCRUDService {
    * 📊 Update Organizational Hierarchy
    */
   private static async updateOrganizationalHierarchy(relationship: ContactRelationship): Promise<void> {
-    console.log('📊 CRUD: Starting organizational hierarchy update για relationship', relationship.id);
+    logger.info('📊 CRUD: Starting organizational hierarchy update για relationship', relationship.id);
 
     // Add timeout to prevent infinite hanging
     return new Promise((resolve) => {
-      console.log('💭 CRUD: Organizational hierarchy update is placeholder - completing successfully');
+      logger.info('💭 CRUD: Organizational hierarchy update is placeholder - completing successfully');
 
       // Complete immediately to prevent any hanging
       setTimeout(() => {
-        console.log('✅ CRUD: Organizational hierarchy update completed (placeholder)');
+        logger.info('✅ CRUD: Organizational hierarchy update completed (placeholder)');
         resolve();
       }, 10); // Minimal delay just to ensure logs appear in correct order
     });
@@ -477,7 +479,7 @@ export class RelationshipCRUDService {
    * 💾 Save Relationship to Database (Copied από παλιό working code)
    */
   private static async saveRelationship(relationship: ContactRelationship): Promise<void> {
-    console.log('💾 CRUD: Saving relationship to database', relationship.id);
+    logger.info('💾 CRUD: Saving relationship to database', relationship.id);
     await FirestoreRelationshipAdapter.saveRelationship(relationship);
   }
 
@@ -497,7 +499,7 @@ export class RelationshipCRUDService {
     target: Contact,
     relationshipType: RelationshipType
   ): Promise<void> {
-    console.log('🔍 VALIDATION: Checking business rules', {
+    logger.info('🔍 VALIDATION: Checking business rules', {
       sourceType: source.type,
       targetType: target.type,
       relationshipType
@@ -524,7 +526,7 @@ export class RelationshipCRUDService {
       if (target.type === 'company') {
         // ✅ Individual → shareholder → Company (φυσικός μέτοχος)
         // ✅ Company → shareholder → Company (εταιρική συμμετοχή)
-        console.log('✅ VALIDATION: Valid shareholder relationship', {
+        logger.info('✅ VALIDATION: Valid shareholder relationship', {
           source: source.type,
           target: target.type
         });
@@ -540,7 +542,7 @@ export class RelationshipCRUDService {
       }
     }
 
-    console.log('✅ VALIDATION: Business rules passed');
+    logger.info('✅ VALIDATION: Business rules passed');
   }
 }
 

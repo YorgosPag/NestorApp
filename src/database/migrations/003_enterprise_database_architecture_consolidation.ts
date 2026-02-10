@@ -27,6 +27,8 @@ import { collection, query, getDocs, doc, setDoc, writeBatch, where, Timestamp, 
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('Migration003');
 
 // Enterprise Document Interfaces
 interface EnterpriseDocument {
@@ -118,7 +120,7 @@ class EnterpriseArchitectureConsolidationSteps {
       stepId: 'analyze_fragmented_collections',
       description: 'Analyze fragmented collections για enterprise consolidation',
       execute: async () => {
-        console.log('🔍 Analyzing fragmented collections for enterprise consolidation...');
+        logger.info('🔍 Analyzing fragmented collections for enterprise consolidation...');
 
         // Collections to consolidate
         const fragmentedCollections = [
@@ -136,7 +138,7 @@ class EnterpriseArchitectureConsolidationSteps {
 
         for (const collectionMap of fragmentedCollections) {
           try {
-            console.log(`   📊 Analyzing collection: ${collectionMap.source}`);
+            logger.info(`   📊 Analyzing collection: ${collectionMap.source}`);
             const snapshot = await getDocs(collection(db, collectionMap.source));
             const documentCount = snapshot.docs.length;
             totalDocuments += documentCount;
@@ -148,11 +150,11 @@ class EnterpriseArchitectureConsolidationSteps {
               migratedCount: 0
             };
 
-            console.log(`     Found ${documentCount} documents in ${collectionMap.source}`);
+            logger.info(`     Found ${documentCount} documents in ${collectionMap.source}`);
 
           } catch (error) {
             const errorMsg = `Failed to analyze ${collectionMap.source}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-            console.log(`     ⚠️  Collection ${collectionMap.source} not found (this is OK)`);
+            logger.info(`     ⚠️  Collection ${collectionMap.source} not found (this is OK)`);
             this.stats.collections[collectionMap.source] = {
               sourceCollection: collectionMap.source,
               targetCollection: collectionMap.target,
@@ -166,10 +168,10 @@ class EnterpriseArchitectureConsolidationSteps {
         this.stats.documentsAnalyzed = totalDocuments;
         this.stats.documentsToMigrate = totalDocuments;
 
-        console.log('📊 Fragmentation Analysis Complete:');
-        console.log(`   - Collections to consolidate: ${this.stats.collectionsToMigrate}`);
-        console.log(`   - Total documents found: ${this.stats.documentsAnalyzed}`);
-        console.log(`   - Documents to migrate: ${this.stats.documentsToMigrate}`);
+        logger.info('📊 Fragmentation Analysis Complete:');
+        logger.info(`   - Collections to consolidate: ${this.stats.collectionsToMigrate}`);
+        logger.info(`   - Total documents found: ${this.stats.documentsAnalyzed}`);
+        logger.info(`   - Documents to migrate: ${this.stats.documentsToMigrate}`);
 
         return {
           affectedRecords: this.stats.documentsToMigrate,
@@ -190,7 +192,7 @@ class EnterpriseArchitectureConsolidationSteps {
       stepId: 'migrate_floorplans_unified',
       description: 'Consolidate building_floorplans, project_floorplans, unit_floorplans into unified enterprise collection',
       execute: async () => {
-        console.log('🏗️ Migrating fragmented floorplans to unified enterprise collection...');
+        logger.info('🏗️ Migrating fragmented floorplans to unified enterprise collection...');
 
         const floorplanCollections = [
           { source: 'building_floorplans', entityType: 'building' as const },
@@ -202,7 +204,7 @@ class EnterpriseArchitectureConsolidationSteps {
 
         for (const collectionMap of floorplanCollections) {
           try {
-            console.log(`   📋 Processing ${collectionMap.source}...`);
+            logger.info(`   📋 Processing ${collectionMap.source}...`);
             const snapshot = await getDocs(collection(db, collectionMap.source));
 
             for (const docSnapshot of snapshot.docs) {
@@ -249,7 +251,7 @@ class EnterpriseArchitectureConsolidationSteps {
               await setDoc(enterpriseDocRef, enterpriseFloorplan);
 
               migratedCount++;
-              console.log(`     ✅ Migrated floorplan: ${enterpriseFloorplan.fileName} (${collectionMap.entityType})`);
+              logger.info(`     ✅ Migrated floorplan: ${enterpriseFloorplan.fileName} (${collectionMap.entityType})`);
             }
 
             // Update statistics
@@ -260,13 +262,13 @@ class EnterpriseArchitectureConsolidationSteps {
           } catch (error) {
             const errorMsg = `Error migrating ${collectionMap.source}: ${error instanceof Error ? error.message : 'Unknown error'}`;
             this.stats.errors.push(errorMsg);
-            console.error(`     ❌ ${errorMsg}`);
+            logger.error(`     ❌ ${errorMsg}`);
           }
         }
 
         this.stats.documentsMigrated += migratedCount;
 
-        console.log(`✅ Floorplans migration complete: ${migratedCount} documents migrated`);
+        logger.info(`✅ Floorplans migration complete: ${migratedCount} documents migrated`);
 
         return {
           affectedRecords: migratedCount,
@@ -274,7 +276,7 @@ class EnterpriseArchitectureConsolidationSteps {
         };
       },
       rollback: async () => {
-        console.log('🔄 Rolling back floorplans migration...');
+        logger.info('🔄 Rolling back floorplans migration...');
 
         // Query all documents created by this migration
         const migrationQuery = query(
@@ -290,7 +292,7 @@ class EnterpriseArchitectureConsolidationSteps {
         });
 
         await batch.commit();
-        console.log(`   ↩️ Deleted ${snapshot.docs.length} migrated floorplan documents`);
+        logger.info(`   ↩️ Deleted ${snapshot.docs.length} migrated floorplan documents`);
       },
       validate: async () => {
         // Verify documents were created in target collection
@@ -317,7 +319,7 @@ class EnterpriseArchitectureConsolidationSteps {
       stepId: 'migrate_cad_files_unified',
       description: 'Consolidate dxf_files into enterprise CAD management system',
       execute: async () => {
-        console.log('🎨 Migrating CAD files to enterprise unified system...');
+        logger.info('🎨 Migrating CAD files to enterprise unified system...');
 
         try {
           const snapshot = await getDocs(collection(db, 'dxf_files'));
@@ -363,7 +365,7 @@ class EnterpriseArchitectureConsolidationSteps {
             await setDoc(enterpriseDocRef, enterpriseCADFile);
 
             migratedCount++;
-            console.log(`     ✅ Migrated CAD file: ${enterpriseCADFile.fileName}`);
+            logger.info(`     ✅ Migrated CAD file: ${enterpriseCADFile.fileName}`);
           }
 
           // Update statistics
@@ -373,7 +375,7 @@ class EnterpriseArchitectureConsolidationSteps {
 
           this.stats.documentsMigrated += migratedCount;
 
-          console.log(`✅ CAD files migration complete: ${migratedCount} files migrated`);
+          logger.info(`✅ CAD files migration complete: ${migratedCount} files migrated`);
 
           return {
             affectedRecords: migratedCount,
@@ -383,7 +385,7 @@ class EnterpriseArchitectureConsolidationSteps {
         } catch (error) {
           const errorMsg = `Error migrating CAD files: ${error instanceof Error ? error.message : 'Unknown error'}`;
           this.stats.errors.push(errorMsg);
-          console.error(`❌ ${errorMsg}`);
+          logger.error(`❌ ${errorMsg}`);
           throw error;
         }
       },
@@ -407,7 +409,7 @@ class EnterpriseArchitectureConsolidationSteps {
       stepId: 'validate_enterprise_integrity',
       description: 'Validate enterprise database architecture integrity and standards compliance',
       execute: async () => {
-        console.log('✅ Validating enterprise database architecture integrity...');
+        logger.info('✅ Validating enterprise database architecture integrity...');
 
         const validationResults = {
           totalDocumentsMigrated: 0,
@@ -457,17 +459,17 @@ class EnterpriseArchitectureConsolidationSteps {
           );
         }
 
-        console.log('📊 Enterprise Integrity Validation Results:');
-        console.log(`   - Total documents migrated: ${validationResults.totalDocumentsMigrated}`);
-        console.log(`   - Documents with enterprise metadata: ${validationResults.documentsWithEnterpriseMetadata}`);
-        console.log(`   - Documents with audit trail: ${validationResults.documentsWithValidAuditTrail}`);
-        console.log(`   - Collections consolidated: ${validationResults.collectionsConsolidated}`);
-        console.log(`   - Enterprise compliance score: ${validationResults.integrityScore}%`);
+        logger.info('📊 Enterprise Integrity Validation Results:');
+        logger.info(`   - Total documents migrated: ${validationResults.totalDocumentsMigrated}`);
+        logger.info(`   - Documents with enterprise metadata: ${validationResults.documentsWithEnterpriseMetadata}`);
+        logger.info(`   - Documents with audit trail: ${validationResults.documentsWithValidAuditTrail}`);
+        logger.info(`   - Collections consolidated: ${validationResults.collectionsConsolidated}`);
+        logger.info(`   - Enterprise compliance score: ${validationResults.integrityScore}%`);
 
         if (validationResults.integrityScore < 95) {
-          console.warn(`⚠️  Enterprise compliance below 95% (${validationResults.integrityScore}%)`);
+          logger.warn(`⚠️  Enterprise compliance below 95% (${validationResults.integrityScore}%)`);
         } else {
-          console.log('🎉 Enterprise standards compliance achieved!');
+          logger.info('🎉 Enterprise standards compliance achieved!');
         }
 
         return {

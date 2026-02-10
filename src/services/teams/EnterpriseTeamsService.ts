@@ -24,6 +24,8 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseTeamsService');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -425,9 +427,9 @@ class EnterpriseTeamsService {
       });
 
       this.db = getFirestore(app);
-      console.log('✅ Enterprise Teams Service: Firebase connection established');
+      logger.info('✅ Enterprise Teams Service: Firebase connection established');
     } catch (error) {
-      console.warn('⚠️ Enterprise Teams Service: Firebase connection failed, using fallback mode', error);
+      logger.warn('⚠️ Enterprise Teams Service: Firebase connection failed, using fallback mode', error);
     }
   }
 
@@ -468,11 +470,11 @@ class EnterpriseTeamsService {
           ttl: this.cacheTtl.config
         });
 
-        console.log(`✅ Enterprise teams configuration loaded from database: ${organizationId}${tenantId ? ` (tenant: ${tenantId})` : ''}`);
+        logger.info(`✅ Enterprise teams configuration loaded from database: ${organizationId}${tenantId ? ` (tenant: ${tenantId})` : ''}`);
         return config;
       }
     } catch (error) {
-      console.warn('⚠️ Enterprise Teams Service: Database load failed, using fallback', error);
+      logger.warn('⚠️ Enterprise Teams Service: Database load failed, using fallback', error);
     }
 
     // Fallback to default configuration
@@ -561,7 +563,7 @@ class EnterpriseTeamsService {
         return teams;
       }
     } catch (error) {
-      console.warn('⚠️ Teams loading failed, using fallback', error);
+      logger.warn('⚠️ Teams loading failed, using fallback', error);
     }
 
     // Fallback to default teams
@@ -657,7 +659,7 @@ class EnterpriseTeamsService {
         return members;
       }
     } catch (error) {
-      console.warn('⚠️ Team members loading failed, using fallback', error);
+      logger.warn('⚠️ Team members loading failed, using fallback', error);
     }
 
     // Fallback to default members
@@ -775,7 +777,7 @@ class EnterpriseTeamsService {
         return chart;
       }
     } catch (error) {
-      console.warn('⚠️ Organization chart loading failed, using fallback', error);
+      logger.warn('⚠️ Organization chart loading failed, using fallback', error);
     }
 
     // Fallback to default chart
@@ -889,14 +891,14 @@ class EnterpriseTeamsService {
     this.membersCache.clear();
     this.orgChartCache.clear();
     this.configCache.clear();
-    console.log('✅ Enterprise teams service cache cleared');
+    logger.info('✅ Enterprise teams service cache cleared');
   }
 
   /**
    * Warm up cache for specific organization/tenant
    */
   async warmCache(organizationId: string, tenantId?: string): Promise<void> {
-    console.log(`🔥 Warming teams cache for ${organizationId}${tenantId ? ` (tenant: ${tenantId})` : ''}`);
+    logger.info(`🔥 Warming teams cache for ${organizationId}${tenantId ? ` (tenant: ${tenantId})` : ''}`);
 
     // Load all configurations in parallel
     await Promise.allSettled([
@@ -905,7 +907,7 @@ class EnterpriseTeamsService {
       this.loadTeamsConfiguration(organizationId, tenantId)
     ]);
 
-    console.log('✅ Teams cache warmed successfully');
+    logger.info('✅ Teams cache warmed successfully');
   }
 
   // ========================================================================

@@ -14,6 +14,8 @@ import { ContactRelationship, RelationshipType } from '@/types/contacts/relation
 import { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
 import { BulkRelationshipService } from './BulkRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ImportExportService');
 
 // 🏢 ENTERPRISE: Type guards for Contact union type
 function isIndividualContact(contact: Contact): contact is IndividualContact {
@@ -108,7 +110,7 @@ export class ImportExportService {
     organizationId: string,
     options: ImportOptions = {}
   ): Promise<ImportResult> {
-    console.log('📥 IMPORT: Starting CSV import για organization:', organizationId);
+    logger.info('📥 IMPORT: Starting CSV import για organization:', organizationId);
 
     const startTime = Date.now();
     const {
@@ -121,7 +123,7 @@ export class ImportExportService {
     try {
       // Parse CSV data
       const rows = this.parseCSV(csvData);
-      console.log('📄 IMPORT: Parsed CSV rows:', rows.length);
+      logger.info('📄 IMPORT: Parsed CSV rows:', rows.length);
 
       const result: ImportResult = {
         processedRows: rows.length,
@@ -182,11 +184,11 @@ export class ImportExportService {
       result.summary.totalTime = Date.now() - startTime;
       result.summary.successRate = (result.importedRelationships / result.processedRows) * 100;
 
-      console.log('✅ IMPORT: CSV import completed', result.summary);
+      logger.info('✅ IMPORT: CSV import completed', result.summary);
       return result;
 
     } catch (error) {
-      console.error('❌ IMPORT: CSV import failed:', error);
+      logger.error('❌ IMPORT: CSV import failed:', error);
       throw error;
     }
   }
@@ -199,7 +201,7 @@ export class ImportExportService {
     organizationId: string,
     options: ImportOptions = {}
   ): Promise<ImportResult> {
-    console.log('📥 IMPORT: Importing organization structure');
+    logger.info('📥 IMPORT: Importing organization structure');
 
     // Extended import logic για organizational hierarchies
     const result = await this.importFromCSV(csvData, organizationId, options);
@@ -225,7 +227,7 @@ export class ImportExportService {
       dateRange?: { from: Date; to: Date };
     }
   ): Promise<ExportResult> {
-    console.log('📤 EXPORT: Exporting relationships to CSV για organization:', organizationId);
+    logger.info('📤 EXPORT: Exporting relationships to CSV για organization:', organizationId);
 
     try {
       // Get relationships based on filters
@@ -238,7 +240,7 @@ export class ImportExportService {
       const fileName = `relationships-${organizationId}-${Date.now()}.csv`;
       const fileSize = new Blob([csvContent]).size;
 
-      console.log('✅ EXPORT: CSV export completed', {
+      logger.info('✅ EXPORT: CSV export completed', {
         recordCount: relationships.length,
         fileSize
       });
@@ -251,7 +253,7 @@ export class ImportExportService {
       };
 
     } catch (error) {
-      console.error('❌ EXPORT: CSV export failed:', error);
+      logger.error('❌ EXPORT: CSV export failed:', error);
       throw error;
     }
   }
@@ -263,7 +265,7 @@ export class ImportExportService {
     organizationId: string,
     departmentName: string
   ): Promise<ExportResult> {
-    console.log('📤 EXPORT: Exporting department structure:', departmentName);
+    logger.info('📤 EXPORT: Exporting department structure:', departmentName);
 
     const filters = {
       departments: [departmentName]
@@ -279,7 +281,7 @@ export class ImportExportService {
     organizationId: string,
     format: 'csv' | 'json' | 'xml' = 'csv'
   ): Promise<ExportResult> {
-    console.log('📤 EXPORT: Exporting organizational chart in format:', format);
+    logger.info('📤 EXPORT: Exporting organizational chart in format:', format);
 
     // Get all relationships για organizational chart
     const relationships = await this.getRelationshipsForExport(organizationId);

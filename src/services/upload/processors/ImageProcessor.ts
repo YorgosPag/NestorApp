@@ -29,6 +29,8 @@ import { PhotoUploadService, type PhotoUploadOptions as OriginalPhotoUploadOptio
 import { validateImageFile } from '@/utils/file-validation';
 import { smartCompressContactPhoto } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
 import compressionConfig, { type UsageContext } from '@/config/photo-compression-config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ImageProcessor');
 
 // ============================================================================
 // IMAGE PROCESSOR CLASS
@@ -84,7 +86,7 @@ export class ImageProcessor implements FileProcessor {
     const compressionDecision = compressionConfig.shouldCompress(file.size, compressionUsage);
 
     if (!compressionDecision.shouldCompress) {
-      console.log('✅ IMAGE_PROCESSOR: No compression needed:', compressionDecision.strategy.reason);
+      logger.info('✅ IMAGE_PROCESSOR: No compression needed:', compressionDecision.strategy.reason);
       return {
         file,
         metadata: {
@@ -96,7 +98,7 @@ export class ImageProcessor implements FileProcessor {
       };
     }
 
-    console.log('🗜️ IMAGE_PROCESSOR: Compressing image...');
+    logger.info('🗜️ IMAGE_PROCESSOR: Compressing image...');
 
     try {
       // Map full UsageContext to the limited set supported by smartCompressContactPhoto
@@ -122,7 +124,7 @@ export class ImageProcessor implements FileProcessor {
         lastModified: file.lastModified,
       });
 
-      console.log('✅ IMAGE_PROCESSOR: Compression completed', {
+      logger.info('✅ IMAGE_PROCESSOR: Compression completed', {
         originalSize: file.size,
         compressedSize: compressionResult.blob.size,
         ratio: compressionResult.compressionInfo.stats.compressionRatio,
@@ -138,7 +140,7 @@ export class ImageProcessor implements FileProcessor {
         },
       };
     } catch (error) {
-      console.warn('⚠️ IMAGE_PROCESSOR: Compression failed, using original:', error);
+      logger.warn('⚠️ IMAGE_PROCESSOR: Compression failed, using original:', error);
       return {
         file,
         metadata: {
@@ -173,7 +175,7 @@ export class ImageProcessor implements FileProcessor {
     options: ImageUploadOptions,
     onProgress?: ProgressCallback
   ): Promise<ImageUploadResult> {
-    console.log('🖼️ IMAGE_PROCESSOR: Starting image upload', {
+    logger.info('🖼️ IMAGE_PROCESSOR: Starting image upload', {
       fileName: file.name,
       fileSize: file.size,
       folderPath: options.folderPath,
@@ -182,7 +184,7 @@ export class ImageProcessor implements FileProcessor {
     // Validate
     const validation = this.validate(file);
     if (!validation.isValid) {
-      console.error('❌ IMAGE_PROCESSOR: Validation failed:', validation.error);
+      logger.error('❌ IMAGE_PROCESSOR: Validation failed:', validation.error);
       throw new Error(validation.error || 'Image validation failed');
     }
 
@@ -213,7 +215,7 @@ export class ImageProcessor implements FileProcessor {
     // Use PhotoUploadService for the actual upload
     const result = await PhotoUploadService.uploadPhoto(file, photoOptions);
 
-    console.log('✅ IMAGE_PROCESSOR: Upload completed');
+    logger.info('✅ IMAGE_PROCESSOR: Upload completed');
 
     return {
       url: result.url,

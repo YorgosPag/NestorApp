@@ -38,6 +38,8 @@ import LivePreview from "@/components/obligations/live-preview";
 import { getDynamicHeightClass } from "@/components/ui/utils/dynamic-styles";
 import { OBLIGATION_PREVIEW_LAYOUT } from "@/components/obligations/config/preview-layout";
 import Link from "next/link";
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('NewObligationPage');
 
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
 import { CompaniesService } from "@/services/companies.service";
@@ -129,7 +131,7 @@ export default function NewObligationPage() {
       const neededHeight = OBLIGATION_PREVIEW_LAYOUT.fixedPreviewHeightPx;
 
       // Debug logging για το ύψος του κίτρινου container
-      console.log('🟨 ΚΙΤΡΙΝΟ CONTAINER HEIGHT:', {
+      logger.info('Container height calculated', {
         scrollHeight: `${scrollHeight}px`,
         viewportHeight: `${viewportHeight}px`,
         headerHeight: `${headerHeight}px`,
@@ -209,14 +211,14 @@ export default function NewObligationPage() {
 
         setNavigationCompanyMap(mapping);
 
-        console.log("🏢 Companies mapping built:", {
+        logger.info('Companies mapping built', {
           totalCompanies: companyContacts.length,
           mappingEntries: mapping.size,
           navigationIds: navigationIds.length
         });
 
       } catch (error) {
-        console.error("Error loading companies:", error);
+        logger.error('Error loading companies', { error });
       } finally {
         setLoadingCompanies(false);
       }
@@ -238,21 +240,21 @@ export default function NewObligationPage() {
         // 🔗 ENTERPRISE: Χρησιμοποιούμε το mapping για να βρούμε το σωστό contactId
         const contactIdForProjects = navigationCompanyMap.get(formData.companyId) || formData.companyId;
 
-        console.log("🔗 Loading projects:", {
+        logger.info('Loading projects', {
           selectedCompanyId: formData.companyId,
           mappedContactId: contactIdForProjects,
           usingMapping: contactIdForProjects !== formData.companyId
         });
 
         // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Φόρτωση projects μέσω centralized system
-        console.log(`🏗️ ENTERPRISE: Loading projects for company ${contactIdForProjects} via Relationship Engine`);
+        logger.info(`Loading projects for company ${contactIdForProjects} via Relationship Engine`);
         const projectsData = await companyRelationships.getProjects();
         setProjects(projectsData as Project[]);
 
-        console.log(`✅ ENTERPRISE: Loaded ${projectsData.length} projects for company ${contactIdForProjects} via Relationship Engine`);
+        logger.info(`Loaded ${projectsData.length} projects for company ${contactIdForProjects} via Relationship Engine`);
 
       } catch (error) {
-        console.error("Error loading projects for company:", error);
+        logger.error('Error loading projects for company', { error });
         setProjects([]);
       } finally {
         setLoadingProjects(false);
@@ -548,7 +550,7 @@ export default function NewObligationPage() {
 
     // 🔗 ENTERPRISE: Validate company selection (optional but recommended)
     if (!formData.companyId) {
-      console.warn("⚠️ No company selected - obligation will use legacy contractorCompany field");
+      logger.warn('No company selected - obligation will use legacy contractorCompany field');
     }
 
     try {
@@ -585,7 +587,7 @@ export default function NewObligationPage() {
         })
       };
 
-      console.log("🏢 Creating obligation with enterprise data:", {
+      logger.info('Creating obligation with enterprise data', {
         hasCompany: !!formData.companyId,
         hasProject: !!formData.projectId,
         companyName: selectedCompany?.companyName,
@@ -596,7 +598,7 @@ export default function NewObligationPage() {
 
       router.push(`/obligations/${newObligation.id}/edit`);
     } catch (error) {
-      console.error("Error creating obligation:", error);
+      logger.error('Error creating obligation', { error });
       alert(t('validation.createError'));
     } finally {
       setIsLoading(false);

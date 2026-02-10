@@ -21,6 +21,8 @@
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseFileSystemService');
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -148,7 +150,7 @@ class EnterpriseFileSystemService {
   invalidateCache(): void {
     this.configCache.clear();
     this.cacheTimestamps.clear();
-    console.log('🗑️ File system configuration caches invalidated');
+    logger.info('🗑️ File system configuration caches invalidated');
   }
 
   /**
@@ -170,7 +172,7 @@ class EnterpriseFileSystemService {
       this.cacheTimestamps.delete(key);
     });
 
-    console.log(`🗑️ Cleared file system cache for tenant: ${tenantId}`);
+    logger.info(`🗑️ Cleared file system cache for tenant: ${tenantId}`);
   }
 
   // ========================================================================
@@ -191,13 +193,13 @@ class EnterpriseFileSystemService {
     if (this.isCacheValid(cacheKey)) {
       const cached = this.configCache.get(cacheKey);
       if (cached) {
-        console.log('✅ File system configuration loaded from cache:', cacheKey);
+        logger.info('✅ File system configuration loaded from cache:', cacheKey);
         return cached;
       }
     }
 
     try {
-      console.log('🔄 Loading file system configuration from Firebase:', { locale, tenantId, environment });
+      logger.info('🔄 Loading file system configuration from Firebase:', { locale, tenantId, environment });
 
       // Build query constraints
       const constraints = [
@@ -229,7 +231,7 @@ class EnterpriseFileSystemService {
 
       // Fallback to default configuration if not found
       if (!configuration) {
-        console.log('🔄 Using fallback file system configuration για locale:', locale);
+        logger.info('🔄 Using fallback file system configuration για locale:', locale);
         configuration = this.getFallbackConfiguration(locale);
       }
 
@@ -239,7 +241,7 @@ class EnterpriseFileSystemService {
       // Cache the results
       this.setCache(cacheKey, completeConfiguration);
 
-      console.log('✅ File system configuration loaded successfully:', {
+      logger.info('✅ File system configuration loaded successfully:', {
         locale,
         tenantId,
         sizeUnitsCount: completeConfiguration.sizeUnits.length,
@@ -249,10 +251,10 @@ class EnterpriseFileSystemService {
       return completeConfiguration;
 
     } catch (error) {
-      console.error('❌ Error loading file system configuration:', error);
+      logger.error('❌ Error loading file system configuration:', error);
 
       // Return fallback configuration
-      console.log('🔄 Using fallback file system configuration:', locale);
+      logger.info('🔄 Using fallback file system configuration:', locale);
       return this.getFallbackConfiguration(locale);
     }
   }
@@ -333,7 +335,7 @@ class EnterpriseFileSystemService {
       return parseFloat(size.toFixed(decimals)) + ' ' + unit.labelShort;
 
     } catch (error) {
-      console.error('Error formatting file size:', error);
+      logger.error('Error formatting file size:', error);
       // Fallback to English units
       return this.formatFileSizeFallback(bytes, decimals);
     }
@@ -385,7 +387,7 @@ class EnterpriseFileSystemService {
       return { isValid: true };
 
     } catch (error) {
-      console.error('Error validating file for tenant:', error);
+      logger.error('Error validating file for tenant:', error);
       return { isValid: false, error: 'Validation error occurred' };
     }
   }
@@ -431,9 +433,9 @@ class EnterpriseFileSystemService {
       // Invalidate relevant caches
       this.clearCacheForTenant(tenantId || 'default');
 
-      console.log('✅ File system configuration saved:', configId);
+      logger.info('✅ File system configuration saved:', configId);
     } catch (error) {
-      console.error('❌ Error saving file system configuration:', error);
+      logger.error('❌ Error saving file system configuration:', error);
       throw error;
     }
   }

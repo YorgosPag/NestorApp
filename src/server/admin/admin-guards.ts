@@ -12,6 +12,8 @@ import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import {
   getAdminAuth,
 } from '@/lib/firebaseAdmin';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AdminGuards');
 
 /**
  * ENTERPRISE: Centralized Admin Guards Module
@@ -212,7 +214,7 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
     const decodedToken = await auth.verifyIdToken(token);
     return decodedToken;
   } catch (error) {
-    console.log('[ADMIN_GUARDS] Token verification failed:', (error as Error).message);
+    logger.info('[ADMIN_GUARDS] Token verification failed:', (error as Error).message);
     return null;
   }
 }
@@ -228,7 +230,7 @@ async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedI
     const decodedToken = await auth.verifySessionCookie(sessionCookie, false);
     return decodedToken;
   } catch (error) {
-    console.log('[ADMIN_GUARDS] Session cookie verification failed:', (error as Error).message);
+    logger.info('[ADMIN_GUARDS] Session cookie verification failed:', (error as Error).message);
     return null;
   }
 }
@@ -244,13 +246,13 @@ function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
 
   // Check globalRole first (preferred claim name)
   if (globalRole && ADMIN_ROLES.includes(globalRole as AdminRole)) {
-    console.log(`🔐 [admin-guards] Role from globalRole claim: ${globalRole}`);
+    logger.info(`🔐 [admin-guards] Role from globalRole claim: ${globalRole}`);
     return globalRole as AdminRole;
   }
 
   // Check role claim (legacy)
   if (role && ADMIN_ROLES.includes(role as AdminRole)) {
-    console.log(`🔐 [admin-guards] Role from role claim: ${role}`);
+    logger.info(`🔐 [admin-guards] Role from role claim: ${role}`);
     return role as AdminRole;
   }
 
@@ -274,7 +276,7 @@ function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
       .filter(Boolean);
 
     if (adminEmails.includes(email.toLowerCase())) {
-      console.log(`🔐 [admin-guards] Admin access granted via email for: ${email}`);
+      logger.info(`🔐 [admin-guards] Admin access granted via email for: ${email}`);
       return 'admin';
     }
   }
@@ -329,7 +331,7 @@ export async function requireAdminContext(
 
   // Development bypass (when no token and in development)
   if (!token && environment === 'development') {
-    console.log('[ADMIN_GUARDS] Development mode: bypassing auth (no token provided)');
+    logger.info('[ADMIN_GUARDS] Development mode: bypassing auth (no token provided)');
     return {
       success: true,
       context: {
@@ -374,7 +376,7 @@ export async function requireAdminContext(
 
   if (roleRequiresMfa(role) && !mfaEnrolled) {
     // Log MFA denial for audit
-    console.log(`🔐 [ADMIN_GUARDS] MFA DENIED: User ${decodedToken.email} (${role}) - MFA not enrolled`);
+    logger.info(`🔐 [ADMIN_GUARDS] MFA DENIED: User ${decodedToken.email} (${role}) - MFA not enrolled`);
 
     return {
       success: false,
@@ -596,7 +598,7 @@ export async function requireAdminForPage(
 
   // Development bypass (when no token and in development)
   if (!sessionCookie && environment === 'development') {
-    console.log('[ADMIN_GUARDS] Development mode: bypassing page auth (no session cookie)');
+    logger.info('[ADMIN_GUARDS] Development mode: bypassing page auth (no session cookie)');
     return {
       uid: 'dev-admin',
       email: 'dev@localhost',
@@ -628,7 +630,7 @@ export async function requireAdminForPage(
   const mfaEnrolled = decodedToken.mfaEnrolled === true;
 
   if (roleRequiresMfa(role) && !mfaEnrolled) {
-    console.log(`🔐 [ADMIN_GUARDS] MFA DENIED (Page): User ${decodedToken.email} (${role}) - MFA not enrolled`);
+    logger.info(`🔐 [ADMIN_GUARDS] MFA DENIED (Page): User ${decodedToken.email} (${role}) - MFA not enrolled`);
     throw new Error(`MFA enrollment required for ${role} role`);
   }
 
@@ -676,5 +678,5 @@ export function audit(
   };
 
   // Structured logging for parsing compatibility
-  console.log(`[AUDIT] ${JSON.stringify(entry)}`);
+  logger.info(`[AUDIT] ${JSON.stringify(entry)}`);
 }

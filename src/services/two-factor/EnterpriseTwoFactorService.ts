@@ -30,6 +30,8 @@ import { doc, setDoc, getDoc, updateDoc, Firestore, serverTimestamp } from 'fire
 import QRCode from 'qrcode';
 import { auth } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseTwoFactorService');
 import { API_ROUTES } from '@/config/domain-constants';
 import { designTokens } from '@/styles/design-tokens';
 import type {
@@ -126,7 +128,7 @@ export class EnterpriseTwoFactorService {
   private isInitialized = false;
 
   private constructor() {
-    console.log('🔐 EnterpriseTwoFactorService created');
+    logger.info('🔐 EnterpriseTwoFactorService created');
   }
 
   // ===========================================================================
@@ -182,7 +184,7 @@ export class EnterpriseTwoFactorService {
 
     this.db = firestore;
     this.isInitialized = true;
-    console.log('🔐 EnterpriseTwoFactorService initialized');
+    logger.info('🔐 EnterpriseTwoFactorService initialized');
   }
 
   // ===========================================================================
@@ -247,7 +249,7 @@ export class EnterpriseTwoFactorService {
           }
         }
       } catch (error) {
-        console.warn('⚠️ [2FA] Failed to get backup codes info:', error);
+        logger.warn('⚠️ [2FA] Failed to get backup codes info:', error);
       }
     }
 
@@ -318,7 +320,7 @@ export class EnterpriseTwoFactorService {
         period: 30
       };
 
-      console.log('🔐 [2FA] TOTP enrollment started for:', currentUser.email);
+      logger.info('🔐 [2FA] TOTP enrollment started for:', currentUser.email);
 
       return {
         success: true,
@@ -326,7 +328,7 @@ export class EnterpriseTwoFactorService {
         qrCodeDataUrl
       };
     } catch (error) {
-      console.error('❌ [2FA] Failed to start enrollment:', error);
+      logger.error('❌ [2FA] Failed to start enrollment:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to generate TOTP secret'
@@ -379,7 +381,7 @@ export class EnterpriseTwoFactorService {
         f.factorId === TotpMultiFactorGenerator.FACTOR_ID
       );
 
-      console.log('✅ [2FA] TOTP enrollment completed for:', currentUser.email);
+      logger.info('✅ [2FA] TOTP enrollment completed for:', currentUser.email);
 
       return {
         success: true,
@@ -392,7 +394,7 @@ export class EnterpriseTwoFactorService {
         } : undefined
       };
     } catch (error) {
-      console.error('❌ [2FA] Failed to complete enrollment:', error);
+      logger.error('❌ [2FA] Failed to complete enrollment:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to verify code'
@@ -424,7 +426,7 @@ export class EnterpriseTwoFactorService {
     const docRef = doc(this.db, FIRESTORE_COLLECTION, userId);
     await setDoc(docRef, { backupCodes: backupCodesData }, { merge: true });
 
-    console.log('🔐 [2FA] Backup codes stored for user:', userId);
+    logger.info('🔐 [2FA] Backup codes stored for user:', userId);
   }
 
   // ===========================================================================
@@ -442,7 +444,7 @@ export class EnterpriseTwoFactorService {
     try {
       return getMultiFactorResolver(auth, error);
     } catch {
-      console.error('❌ [2FA] Failed to get MFA resolver');
+      logger.error('❌ [2FA] Failed to get MFA resolver');
       return null;
     }
   }
@@ -469,14 +471,14 @@ export class EnterpriseTwoFactorService {
 
       const userCredential = await resolver.resolveSignIn(assertion);
 
-      console.log('✅ [2FA] MFA sign-in verified successfully');
+      logger.info('✅ [2FA] MFA sign-in verified successfully');
 
       return {
         result: 'success',
         userCredential
       };
     } catch (error) {
-      console.error('❌ [2FA] MFA verification failed:', error);
+      logger.error('❌ [2FA] MFA verification failed:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('invalid') || error.message.includes('incorrect')) {
@@ -537,11 +539,11 @@ export class EnterpriseTwoFactorService {
         'backupCodes.remainingCount': codes.filter(c => !c.used).length
       });
 
-      console.log('✅ [2FA] Backup code verified and marked as used');
+      logger.info('✅ [2FA] Backup code verified and marked as used');
 
       return { success: true };
     } catch (error) {
-      console.error('❌ [2FA] Backup code verification failed:', error);
+      logger.error('❌ [2FA] Backup code verification failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Verification failed'
@@ -594,11 +596,11 @@ export class EnterpriseTwoFactorService {
         await updateDoc(docRef, { backupCodes: null });
       }
 
-      console.log('✅ [2FA] Factor unenrolled successfully');
+      logger.info('✅ [2FA] Factor unenrolled successfully');
 
       return { success: true };
     } catch (error) {
-      console.error('❌ [2FA] Failed to disable 2FA:', error);
+      logger.error('❌ [2FA] Failed to disable 2FA:', error);
 
       if (error instanceof Error && error.message.includes('user-token-expired')) {
         return { success: false, error: 'Please re-authenticate and try again' };
@@ -633,11 +635,11 @@ export class EnterpriseTwoFactorService {
       const newCodes = generateBackupCodes();
       await this.storeBackupCodes(currentUser.uid, newCodes);
 
-      console.log('✅ [2FA] Backup codes regenerated');
+      logger.info('✅ [2FA] Backup codes regenerated');
 
       return { success: true, codes: newCodes };
     } catch (error) {
-      console.error('❌ [2FA] Failed to regenerate backup codes:', error);
+      logger.error('❌ [2FA] Failed to regenerate backup codes:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to regenerate codes'

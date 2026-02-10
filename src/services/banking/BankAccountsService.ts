@@ -40,6 +40,8 @@ import type {
   BankAccountUpdate
 } from '@/types/contacts/banking';
 import { validateIBAN, cleanIBAN } from '@/types/contacts/banking';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('BankAccountsService');
 
 // ============================================================================
 // CONSTANTS
@@ -183,7 +185,7 @@ export class BankAccountsService {
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
     } catch (error) {
-      console.error('[BankAccountsService] Error getting accounts:', error);
+      logger.error('[BankAccountsService] Error getting accounts:', error);
       throw error;
     }
   }
@@ -209,7 +211,7 @@ export class BankAccountsService {
 
       return docToBankAccount(docSnap as QueryDocumentSnapshot<DocumentData>);
     } catch (error) {
-      console.error('[BankAccountsService] Error getting account:', error);
+      logger.error('[BankAccountsService] Error getting account:', error);
       throw error;
     }
   }
@@ -237,7 +239,7 @@ export class BankAccountsService {
 
       return docToBankAccount(snapshot.docs[0]);
     } catch (error) {
-      console.error('[BankAccountsService] Error getting primary account:', error);
+      logger.error('[BankAccountsService] Error getting primary account:', error);
       throw error;
     }
   }
@@ -292,11 +294,11 @@ export class BankAccountsService {
 
       const docRef = await addDoc(accountsRef, docData);
 
-      console.log(`[BankAccountsService] Created account ${docRef.id} for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Created account ${docRef.id} for contact ${contactId}`);
 
       return docRef.id;
     } catch (error) {
-      console.error('[BankAccountsService] Error adding account:', error);
+      logger.error('[BankAccountsService] Error adding account:', error);
       throw error;
     }
   }
@@ -363,9 +365,9 @@ export class BankAccountsService {
 
       await updateDoc(docRef, updateData);
 
-      console.log(`[BankAccountsService] Updated account ${accountId} for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Updated account ${accountId} for contact ${contactId}`);
     } catch (error) {
-      console.error('[BankAccountsService] Error updating account:', error);
+      logger.error('[BankAccountsService] Error updating account:', error);
       throw error;
     }
   }
@@ -391,9 +393,9 @@ export class BankAccountsService {
         updatedAt: serverTimestamp()
       });
 
-      console.log(`[BankAccountsService] Set account ${accountId} as primary for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Set account ${accountId} as primary for contact ${contactId}`);
     } catch (error) {
-      console.error('[BankAccountsService] Error setting primary account:', error);
+      logger.error('[BankAccountsService] Error setting primary account:', error);
       throw error;
     }
   }
@@ -417,9 +419,9 @@ export class BankAccountsService {
         updatedAt: serverTimestamp()
       });
 
-      console.log(`[BankAccountsService] Set account ${accountId} active=${isActive} for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Set account ${accountId} active=${isActive} for contact ${contactId}`);
     } catch (error) {
-      console.error('[BankAccountsService] Error toggling account active:', error);
+      logger.error('[BankAccountsService] Error toggling account active:', error);
       throw error;
     }
   }
@@ -442,9 +444,9 @@ export class BankAccountsService {
       const docRef = this.getAccountDoc(contactId, accountId);
       await deleteDoc(docRef);
 
-      console.log(`[BankAccountsService] Deleted account ${accountId} for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Deleted account ${accountId} for contact ${contactId}`);
     } catch (error) {
-      console.error('[BankAccountsService] Error deleting account:', error);
+      logger.error('[BankAccountsService] Error deleting account:', error);
       throw error;
     }
   }
@@ -472,9 +474,9 @@ export class BankAccountsService {
 
       await batch.commit();
 
-      console.log(`[BankAccountsService] Deleted ${accounts.length} accounts for contact ${contactId}`);
+      logger.info(`[BankAccountsService] Deleted ${accounts.length} accounts for contact ${contactId}`);
     } catch (error) {
-      console.error('[BankAccountsService] Error deleting all accounts:', error);
+      logger.error('[BankAccountsService] Error deleting all accounts:', error);
       throw error;
     }
   }
@@ -513,7 +515,7 @@ export class BankAccountsService {
 
       callback(sortedAccounts);
     }, (error) => {
-      console.error('[BankAccountsService] Subscription error:', error);
+      logger.error('[BankAccountsService] Subscription error:', error);
     });
   }
 

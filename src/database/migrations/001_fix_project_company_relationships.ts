@@ -16,6 +16,8 @@ import { Migration, MigrationStep } from './types';
 import { collection, query, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('Migration001');
 
 interface ProjectRecord {
   id: string;
@@ -60,7 +62,7 @@ class ProjectCompanyMigrationSteps {
       stepId: 'analyze_data',
       description: 'Analyze current projects and companies data',
       execute: async () => {
-        console.log('📊 Analyzing current data state...');
+        logger.info('Analyzing current data state...');
 
         // Fetch all companies
         const companiesSnapshot = await getDocs(
@@ -77,7 +79,7 @@ class ProjectCompanyMigrationSteps {
           })
           .filter(contact => contact.type === 'company' && contact.status === 'active') as CompanyRecord[];
 
-        console.log(`   Found ${this.migrationData.companies.length} active companies`);
+        logger.info('Found active companies', { count: this.migrationData.companies.length });
 
         // Fetch all projects
         const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
@@ -86,7 +88,7 @@ class ProjectCompanyMigrationSteps {
           id: doc.id
         })) as ProjectRecord[];
 
-        console.log(`   Found ${this.migrationData.projects.length} projects`);
+        logger.info('Found projects', { count: this.migrationData.projects.length });
 
         // Analyze mapping requirements
         for (const project of this.migrationData.projects) {
@@ -105,7 +107,7 @@ class ProjectCompanyMigrationSteps {
           }
         }
 
-        console.log(`   Found ${this.migrationData.mappings.length} projects requiring companyId updates`);
+        logger.info('Found projects requiring companyId updates', { count: this.migrationData.mappings.length });
 
         return {
           affectedRecords: this.migrationData.mappings.length,
@@ -130,7 +132,7 @@ class ProjectCompanyMigrationSteps {
       stepId: 'validate_mappings',
       description: 'Validate project-company mappings for data integrity',
       execute: async () => {
-        console.log('🔍 Validating project-company mappings...');
+        logger.info('Validating project-company mappings...');
 
         const validationResults = {
           validMappings: 0,
@@ -154,12 +156,11 @@ class ProjectCompanyMigrationSteps {
           }
         }
 
-        console.log(`   ✅ Valid mappings: ${validationResults.validMappings}`);
-        console.log(`   ⚠️  Invalid mappings: ${validationResults.invalidMappings}`);
+        logger.info('Valid mappings', { count: validationResults.validMappings });
+        logger.warn('Invalid mappings', { count: validationResults.invalidMappings });
 
         if (validationResults.warnings.length > 0) {
-          console.log('   Warnings:');
-          validationResults.warnings.forEach(warning => console.log(`     - ${warning}`));
+          logger.warn('Validation warnings', { warnings: validationResults.warnings });
         }
 
         if (validationResults.invalidMappings > 0) {
@@ -187,7 +188,7 @@ class ProjectCompanyMigrationSteps {
       stepId: 'update_projects',
       description: 'Update project companyId fields with correct values',
       execute: async () => {
-        console.log('📝 Updating project companyId fields...');
+        logger.info('Updating project companyId fields...');
 
         const updateResults = {
           successfulUpdates: 0,
@@ -211,17 +212,17 @@ class ProjectCompanyMigrationSteps {
             });
 
             updateResults.successfulUpdates++;
-            console.log(`   ✅ Updated ${mapping.projectName}: ${mapping.oldCompanyId} → ${mapping.newCompanyId}`);
+            logger.info('Updated project', { projectName: mapping.projectName, oldCompanyId: mapping.oldCompanyId, newCompanyId: mapping.newCompanyId });
 
           } catch (error) {
             updateResults.failedUpdates++;
             const errorMessage = `Failed to update ${mapping.projectName}: ${error instanceof Error ? error.message : 'Unknown error'}`;
             updateResults.errors.push(errorMessage);
-            console.error(`   ❌ ${errorMessage}`);
+            logger.error(errorMessage);
           }
         }
 
-        console.log(`   📊 Summary: ${updateResults.successfulUpdates} successful, ${updateResults.failedUpdates} failed`);
+        logger.info('Update summary', { successful: updateResults.successfulUpdates, failed: updateResults.failedUpdates });
 
         if (updateResults.failedUpdates > 0) {
           throw new Error(`${updateResults.failedUpdates} project updates failed. See errors above.`);
@@ -233,7 +234,7 @@ class ProjectCompanyMigrationSteps {
         };
       },
       rollback: async () => {
-        console.log('🔄 Rolling back project updates...');
+        logger.info('Rolling back project updates...');
 
         for (const mapping of this.migrationData.mappings) {
           try {
@@ -244,9 +245,9 @@ class ProjectCompanyMigrationSteps {
               updatedAt: new Date().toISOString()
             });
 
-            console.log(`   ↩️ Rolled back ${mapping.projectName}`);
+            logger.info('Rolled back project', { projectName: mapping.projectName });
           } catch (error) {
-            console.error(`   ❌ Failed to rollback ${mapping.projectName}: ${error}`);
+            logger.error('Failed to rollback project', { projectName: mapping.projectName, error });
           }
         }
       },
@@ -274,7 +275,7 @@ class ProjectCompanyMigrationSteps {
       stepId: 'verify_integrity',
       description: 'Verify data integrity after migration',
       execute: async () => {
-        console.log('✅ Verifying post-migration data integrity...');
+        logger.info('Verifying post-migration data integrity...');
 
         // Re-fetch projects to verify changes
         const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
@@ -298,17 +299,17 @@ class ProjectCompanyMigrationSteps {
             integrityResults.projectsWithValidCompanyIds++;
           } else {
             integrityResults.orphanProjects++;
-            console.log(`   ⚠️ Orphan project: ${project.name} (companyId: "${project.companyId}")`);
+            logger.warn('Orphan project found', { projectName: project.name, companyId: project.companyId });
           }
         }
 
-        console.log(`   📊 Integrity Check Results:`);
-        console.log(`     - Total projects: ${integrityResults.totalProjects}`);
-        console.log(`     - Projects with valid companyIds: ${integrityResults.projectsWithValidCompanyIds}`);
-        console.log(`     - Orphan projects: ${integrityResults.orphanProjects}`);
-
         const integrityScore = (integrityResults.projectsWithValidCompanyIds / integrityResults.totalProjects) * 100;
-        console.log(`     - Data integrity: ${integrityScore.toFixed(1)}%`);
+        logger.info('Integrity Check Results', {
+          totalProjects: integrityResults.totalProjects,
+          validCompanyIds: integrityResults.projectsWithValidCompanyIds,
+          orphanProjects: integrityResults.orphanProjects,
+          integrityScore: `${integrityScore.toFixed(1)}%`
+        });
 
         return {
           affectedRecords: integrityResults.projectsWithValidCompanyIds,

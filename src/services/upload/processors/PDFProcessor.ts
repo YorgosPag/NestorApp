@@ -39,6 +39,8 @@ import {
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { Logger, LogLevel, ConsoleOutput } from '@/subapps/dxf-viewer/settings/telemetry';
+import { createModuleLogger } from '@/lib/telemetry';
+const pdfLogger = createModuleLogger('PDFProcessor');
 
 // ============================================================================
 // MODULE LOGGER (for canonical flows only)
@@ -168,7 +170,7 @@ export class PDFProcessor implements FileProcessor {
     options: PDFUploadOptions,
     onProgress?: ProgressCallback
   ): Promise<PDFUploadResult> {
-    console.log('📄 PDF_PROCESSOR: Starting floor plan upload', {
+    pdfLogger.info('📄 PDF_PROCESSOR: Starting floor plan upload', {
       fileName: file.name,
       fileSize: file.size,
       buildingId: options.buildingId,
@@ -178,10 +180,10 @@ export class PDFProcessor implements FileProcessor {
     // Step 1: Validate
     const validation = this.validate(file);
     if (!validation.isValid) {
-      console.error('❌ PDF_PROCESSOR: Validation failed:', validation.error);
+      pdfLogger.error('❌ PDF_PROCESSOR: Validation failed:', validation.error);
       throw new Error(validation.error || 'PDF validation failed');
     }
-    console.log('✅ PDF_PROCESSOR: Validation passed');
+    pdfLogger.info('✅ PDF_PROCESSOR: Validation passed');
 
     // Report progress
     onProgress?.({
@@ -227,7 +229,7 @@ export class PDFProcessor implements FileProcessor {
       message: 'Η κάτοψη ανέβηκε επιτυχώς!',
     });
 
-    console.log('✅ PDF_PROCESSOR: Upload completed successfully');
+    pdfLogger.info('✅ PDF_PROCESSOR: Upload completed successfully');
 
     return {
       url: uploadResult.url,
@@ -251,32 +253,32 @@ export class PDFProcessor implements FileProcessor {
   private async cleanupExistingFiles(buildingId: string, floorId: string): Promise<void> {
     const folderPath = `floor-plans/${buildingId}/${floorId}`;
 
-    console.log('🗑️ PDF_PROCESSOR: Cleaning up existing files in:', folderPath);
+    pdfLogger.info('🗑️ PDF_PROCESSOR: Cleaning up existing files in:', folderPath);
 
     try {
       const folderRef = ref(storage, folderPath);
       const existingFiles = await listAll(folderRef);
 
       if (existingFiles.items.length > 0) {
-        console.log(`🗑️ PDF_PROCESSOR: Found ${existingFiles.items.length} existing file(s) - deleting...`);
+        pdfLogger.info(`🗑️ PDF_PROCESSOR: Found ${existingFiles.items.length} existing file(s) - deleting...`);
 
         const deletePromises = existingFiles.items.map(async (fileRef) => {
           try {
             await deleteObject(fileRef);
-            console.log(`✅ PDF_PROCESSOR: Deleted: ${fileRef.name}`);
+            pdfLogger.info(`✅ PDF_PROCESSOR: Deleted: ${fileRef.name}`);
           } catch (deleteError) {
-            console.warn(`⚠️ PDF_PROCESSOR: Could not delete ${fileRef.name}:`, deleteError);
+            pdfLogger.warn(`⚠️ PDF_PROCESSOR: Could not delete ${fileRef.name}:`, deleteError);
           }
         });
 
         await Promise.all(deletePromises);
-        console.log('✅ PDF_PROCESSOR: Folder cleanup completed');
+        pdfLogger.info('✅ PDF_PROCESSOR: Folder cleanup completed');
       } else {
-        console.log('✅ PDF_PROCESSOR: Folder is empty - no cleanup needed');
+        pdfLogger.info('✅ PDF_PROCESSOR: Folder is empty - no cleanup needed');
       }
     } catch (cleanupError) {
       // Folder might not exist yet - that's OK
-      console.log('ℹ️ PDF_PROCESSOR: Folder may not exist yet - proceeding with upload');
+      pdfLogger.info('ℹ️ PDF_PROCESSOR: Folder may not exist yet - proceeding with upload');
     }
   }
 
@@ -308,7 +310,7 @@ export class PDFProcessor implements FileProcessor {
           });
         },
         (error) => {
-          console.error('❌ PDF_PROCESSOR: Upload error:', error);
+          pdfLogger.error('❌ PDF_PROCESSOR: Upload error:', error);
 
           let errorMessage = 'Σφάλμα κατά την αποστολή του αρχείου';
 
@@ -331,10 +333,10 @@ export class PDFProcessor implements FileProcessor {
         async () => {
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log('✅ PDF_PROCESSOR: Download URL obtained');
+            pdfLogger.info('✅ PDF_PROCESSOR: Download URL obtained');
             resolve({ url: downloadURL });
           } catch (error) {
-            console.error('❌ PDF_PROCESSOR: Failed to get download URL:', error);
+            pdfLogger.error('❌ PDF_PROCESSOR: Failed to get download URL:', error);
             reject(new Error('Σφάλμα κατά τη λήψη URL αρχείου'));
           }
         }
@@ -355,7 +357,7 @@ export class PDFProcessor implements FileProcessor {
       buildingId: string;
     }
   ): Promise<void> {
-    console.log('📝 PDF_PROCESSOR: Updating Firestore floor document:', floorId);
+    pdfLogger.info('📝 PDF_PROCESSOR: Updating Firestore floor document:', floorId);
 
     try {
       const floorDocRef = doc(db, COLLECTIONS.FLOORS, floorId);
@@ -374,9 +376,9 @@ export class PDFProcessor implements FileProcessor {
         updatedAt: new Date().toISOString(),
       });
 
-      console.log('✅ PDF_PROCESSOR: Firestore updated successfully');
+      pdfLogger.info('✅ PDF_PROCESSOR: Firestore updated successfully');
     } catch (error) {
-      console.error('❌ PDF_PROCESSOR: Firestore update failed:', error);
+      pdfLogger.error('❌ PDF_PROCESSOR: Firestore update failed:', error);
       throw new Error('Σφάλμα κατά την ενημέρωση βάσης δεδομένων');
     }
   }
@@ -396,7 +398,7 @@ export class PDFProcessor implements FileProcessor {
 
       return null;
     } catch (error) {
-      console.error('❌ PDF_PROCESSOR: Error getting floor PDF URL:', error);
+      pdfLogger.error('❌ PDF_PROCESSOR: Error getting floor PDF URL:', error);
       return null;
     }
   }
@@ -408,14 +410,14 @@ export class PDFProcessor implements FileProcessor {
     try {
       const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
-      console.log('✅ PDF_PROCESSOR: PDF deleted successfully:', storagePath);
+      pdfLogger.info('✅ PDF_PROCESSOR: PDF deleted successfully:', storagePath);
       return true;
     } catch (error) {
       if (isFirebaseStorageError(error) && error.code === 'storage/object-not-found') {
-        console.log('⚠️ PDF_PROCESSOR: PDF not found (already deleted)');
+        pdfLogger.info('⚠️ PDF_PROCESSOR: PDF not found (already deleted)');
         return false;
       }
-      console.error('❌ PDF_PROCESSOR: Error deleting PDF:', error);
+      pdfLogger.error('❌ PDF_PROCESSOR: Error deleting PDF:', error);
       return false;
     }
   }

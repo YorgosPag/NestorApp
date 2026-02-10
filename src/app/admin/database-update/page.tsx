@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('DatabaseUpdatePage');
 
 // Services
 import {
@@ -47,7 +49,7 @@ const getExistingContactIds = (): string[] => {
       return JSON.parse(envContactIds);
     }
   } catch (error) {
-    console.warn('⚠️ Invalid EXISTING_CONTACT_IDS format, using fallback');
+    logger.warn('Invalid EXISTING_CONTACT_IDS format, using fallback');
   }
 
   // 🏢 ENTERPRISE: Fallback για testing/development
@@ -174,7 +176,7 @@ export default function DatabaseUpdatePage() {
 
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
-    console.log(message);
+    logger.info(message);
   };
 
   // ========================================================================

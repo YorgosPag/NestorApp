@@ -19,6 +19,8 @@ import type { Migration, MigrationResult } from './types';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PROJECT_CODE_CONFIG, formatProjectCode } from '@/services/project-code.service';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('Migration005');
 
 // ============================================================================
 // MIGRATION METADATA
@@ -139,7 +141,7 @@ export async function executeDryRun(): Promise<DryRunResult> {
   for (const project of projects) {
     if (project.projectCode) {
       result.projectsAlreadyMigrated++;
-      console.log(`  ✓ ${project.name} - already has code: ${project.projectCode}`);
+      logger.info(`  ✓ ${project.name} - already has code: ${project.projectCode}`);
 
       // Update nextSequence if existing code is higher
       const existingSequence = parseInt(project.projectCode.replace(/\D/g, ''), 10);
@@ -154,15 +156,15 @@ export async function executeDryRun(): Promise<DryRunResult> {
         projectName: project.name || 'Unnamed',
         proposedCode
       });
-      console.log(`  → ${project.name} - will receive: ${proposedCode}`);
+      logger.info(`  → ${project.name} - will receive: ${proposedCode}`);
       nextSequence++;
     }
   }
 
-  console.log('\n📊 DRY RUN SUMMARY:');
-  console.log(`  Total projects: ${result.totalProjects}`);
-  console.log(`  Already migrated: ${result.projectsAlreadyMigrated}`);
-  console.log(`  To be migrated: ${result.projectsToMigrate}`);
+  logger.info('\n📊 DRY RUN SUMMARY:');
+  logger.info(`  Total projects: ${result.totalProjects}`);
+  logger.info(`  Already migrated: ${result.projectsAlreadyMigrated}`);
+  logger.info(`  To be migrated: ${result.projectsToMigrate}`);
 
   return result;
 }
@@ -188,8 +190,8 @@ export async function executeMigration(
     };
   }
 
-  console.log('🚀 Starting LIVE migration for project codes...\n');
-  console.log('⚠️  THIS WILL MODIFY YOUR DATABASE\n');
+  logger.info('🚀 Starting LIVE migration for project codes...\n');
+  logger.info('⚠️  THIS WILL MODIFY YOUR DATABASE\n');
 
   const database = getFirestore();
   const projects = await fetchProjectsSorted();
@@ -209,12 +211,12 @@ export async function executeMigration(
     }
   }
 
-  console.log(`📌 Starting sequence: ${nextSequence}\n`);
+  logger.info(`📌 Starting sequence: ${nextSequence}\n`);
 
   // Second pass: assign codes to projects without them
   for (const project of projects) {
     if (project.projectCode) {
-      console.log(`  ✓ ${project.name} - keeping existing: ${project.projectCode}`);
+      logger.info(`  ✓ ${project.name} - keeping existing: ${project.projectCode}`);
       continue;
     }
 
@@ -238,13 +240,13 @@ export async function executeMigration(
         timestamp: new Date()
       });
 
-      console.log(`  ✓ ${project.name} - assigned: ${newCode}`);
+      logger.info(`  ✓ ${project.name} - assigned: ${newCode}`);
       affectedRecords++;
       nextSequence++;
     } catch (error) {
       const errorMessage = `Failed to update project ${project.id}: ${error}`;
       errors.push(errorMessage);
-      console.error(`  ✗ ${project.name} - ERROR: ${error}`);
+      logger.error(`  ✗ ${project.name} - ERROR: ${error}`);
     }
   }
 
@@ -262,15 +264,15 @@ export async function executeMigration(
       migratedBy: MIGRATION_ID
     }, { merge: true });
 
-    console.log(`\n✓ Counter initialized at: ${nextSequence}`);
+    logger.info(`\n✓ Counter initialized at: ${nextSequence}`);
   } catch (error) {
     errors.push(`Failed to initialize counter: ${error}`);
   }
 
-  console.log('\n📊 MIGRATION COMPLETE:');
-  console.log(`  Projects updated: ${affectedRecords}`);
-  console.log(`  Errors: ${errors.length}`);
-  console.log(`  Execution time: ${Date.now() - startTime}ms`);
+  logger.info('\n📊 MIGRATION COMPLETE:');
+  logger.info(`  Projects updated: ${affectedRecords}`);
+  logger.info(`  Errors: ${errors.length}`);
+  logger.info(`  Execution time: ${Date.now() - startTime}ms`);
 
   return {
     success: errors.length === 0,
@@ -294,7 +296,7 @@ export async function rollbackMigration(
   rollbackData: MigrationLogEntry[]
 ): Promise<MigrationResult> {
   const startTime = Date.now();
-  console.log('🔄 Starting ROLLBACK for project code migration...\n');
+  logger.info('🔄 Starting ROLLBACK for project code migration...\n');
 
   const database = getFirestore();
   const errors: string[] = [];
@@ -310,18 +312,18 @@ export async function rollbackMigration(
           updatedAt: new Date()
         });
 
-      console.log(`  ✓ Reverted: ${entry.projectName} (${entry.newCode} → ${entry.oldCode || 'null'})`);
+      logger.info(`  ✓ Reverted: ${entry.projectName} (${entry.newCode} → ${entry.oldCode || 'null'})`);
       affectedRecords++;
     } catch (error) {
       const errorMessage = `Failed to rollback project ${entry.projectId}: ${error}`;
       errors.push(errorMessage);
-      console.error(`  ✗ ${entry.projectName} - ERROR: ${error}`);
+      logger.error(`  ✗ ${entry.projectName} - ERROR: ${error}`);
     }
   }
 
-  console.log('\n📊 ROLLBACK COMPLETE:');
-  console.log(`  Projects reverted: ${affectedRecords}`);
-  console.log(`  Errors: ${errors.length}`);
+  logger.info('\n📊 ROLLBACK COMPLETE:');
+  logger.info(`  Projects reverted: ${affectedRecords}`);
+  logger.info(`  Errors: ${errors.length}`);
 
   return {
     success: errors.length === 0,
@@ -368,7 +370,7 @@ export const migration: Migration = {
         };
       },
       rollback: async () => {
-        console.warn('Rollback requires manual intervention with rollbackData');
+        logger.warn('Rollback requires manual intervention with rollbackData');
       }
     }
   ]

@@ -28,6 +28,8 @@ import Link from 'next/link';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('StorageUnitPage');
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) {
     const iconSizes = useIconSizes();
@@ -59,7 +61,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
             // Handle case where unit is not found
           }
         })
-        .catch(console.error)
+        .catch((error: unknown) => logger.error('Failed to fetch storage unit', { error }))
         .finally(() => setLoading(false));
     }
   }, [params.id]);

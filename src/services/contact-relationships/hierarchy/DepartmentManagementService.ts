@@ -15,6 +15,8 @@
 import { Contact } from '@/types/contacts';
 import { RelationshipCRUDService } from '../core/RelationshipCRUDService';
 import { RelationshipQueryBuilder } from '../search/RelationshipQueryBuilder';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('DepartmentManagementService');
 
 // ============================================================================
 // DEPARTMENT TYPES
@@ -87,7 +89,7 @@ export class DepartmentManagementService {
     departmentHead: Contact,
     budget?: number
   ): Promise<{ success: boolean; departmentId: string }> {
-    console.log('🏗️ DEPT: Creating department:', departmentName);
+    logger.info('🏗️ DEPT: Creating department:', departmentName);
 
     try {
       // Create department head relationship
@@ -100,11 +102,11 @@ export class DepartmentManagementService {
         status: 'active'
       });
 
-      console.log('✅ DEPT: Department created successfully:', departmentName);
+      logger.info('✅ DEPT: Department created successfully:', departmentName);
       return { success: true, departmentId: departmentName };
 
     } catch (error) {
-      console.error('❌ DEPT: Error creating department:', error);
+      logger.error('❌ DEPT: Error creating department:', error);
       throw error;
     }
   }
@@ -119,7 +121,7 @@ export class DepartmentManagementService {
     newPosition?: string,
     reason?: string
   ): Promise<boolean> {
-    console.log('👤 DEPT: Transferring employee:', {
+    logger.info('👤 DEPT: Transferring employee:', {
       employeeId,
       fromDepartment,
       toDepartment,
@@ -144,11 +146,11 @@ export class DepartmentManagementService {
         relationshipNotes: `${currentEmployment.relationshipNotes || ''}\n[TRANSFER] ${reason || 'Department transfer'}`
       });
 
-      console.log('✅ DEPT: Employee transferred successfully');
+      logger.info('✅ DEPT: Employee transferred successfully');
       return true;
 
     } catch (error) {
-      console.error('❌ DEPT: Error transferring employee:', error);
+      logger.error('❌ DEPT: Error transferring employee:', error);
       return false;
     }
   }
@@ -161,7 +163,7 @@ export class DepartmentManagementService {
     departmentName: string,
     restructuring: DepartmentRestructuring
   ): Promise<boolean> {
-    console.log('🔄 DEPT: Reorganizing department:', departmentName);
+    logger.info('🔄 DEPT: Reorganizing department:', departmentName);
 
     try {
       // Process employee moves
@@ -175,11 +177,11 @@ export class DepartmentManagementService {
         );
       }
 
-      console.log('✅ DEPT: Department reorganized successfully');
+      logger.info('✅ DEPT: Department reorganized successfully');
       return true;
 
     } catch (error) {
-      console.error('❌ DEPT: Error reorganizing department:', error);
+      logger.error('❌ DEPT: Error reorganizing department:', error);
       return false;
     }
   }
@@ -197,7 +199,7 @@ export class DepartmentManagementService {
     teamName: string,
     teamLead: Contact
   ): Promise<boolean> {
-    console.log('👥 DEPT: Creating team:', teamName);
+    logger.info('👥 DEPT: Creating team:', teamName);
 
     try {
       // Create team lead relationship
@@ -214,7 +216,7 @@ export class DepartmentManagementService {
       return true;
 
     } catch (error) {
-      console.error('❌ DEPT: Error creating team:', error);
+      logger.error('❌ DEPT: Error creating team:', error);
       return false;
     }
   }
@@ -227,7 +229,7 @@ export class DepartmentManagementService {
     teamName: string,
     role?: string
   ): Promise<boolean> {
-    console.log('👤 DEPT: Assigning employee to team:', { employeeId, teamName, role });
+    logger.info('👤 DEPT: Assigning employee to team:', { employeeId, teamName, role });
 
     try {
       // Find current employment relationship
@@ -247,7 +249,7 @@ export class DepartmentManagementService {
       return true;
 
     } catch (error) {
-      console.error('❌ DEPT: Error assigning employee to team:', error);
+      logger.error('❌ DEPT: Error assigning employee to team:', error);
       return false;
     }
   }
@@ -263,7 +265,7 @@ export class DepartmentManagementService {
     organizationId: string,
     departmentName: string
   ): Promise<DepartmentMetrics> {
-    console.log('📊 DEPT: Getting department metrics:', departmentName);
+    logger.info('📊 DEPT: Getting department metrics:', departmentName);
 
     try {
       // Get department employees (simplified query)
@@ -283,7 +285,7 @@ export class DepartmentManagementService {
       };
 
     } catch (error) {
-      console.error('❌ DEPT: Error getting department metrics:', error);
+      logger.error('❌ DEPT: Error getting department metrics:', error);
       throw error;
     }
   }
@@ -301,7 +303,7 @@ export class DepartmentManagementService {
     retention: number[];
     dates: string[];
   }> {
-    console.log('📈 DEPT: Tracking department performance:', departmentName);
+    logger.info('📈 DEPT: Tracking department performance:', departmentName);
 
     // TODO: Implement performance tracking με historical data
     return {
@@ -324,7 +326,7 @@ export class DepartmentManagementService {
     totalBudget: number,
     allocation: Record<string, number>
   ): Promise<boolean> {
-    console.log('💰 DEPT: Allocating budget για department:', departmentName);
+    logger.info('💰 DEPT: Allocating budget για department:', departmentName);
 
     try {
       // TODO: Implement budget allocation logic
@@ -334,11 +336,11 @@ export class DepartmentManagementService {
         throw new Error('Budget allocation exceeds total budget');
       }
 
-      console.log('✅ DEPT: Budget allocated successfully');
+      logger.info('✅ DEPT: Budget allocated successfully');
       return true;
 
     } catch (error) {
-      console.error('❌ DEPT: Error allocating budget:', error);
+      logger.error('❌ DEPT: Error allocating budget:', error);
       return false;
     }
   }
@@ -360,7 +362,7 @@ export class DepartmentManagementService {
     budgetImpact: number;
     timeline: string;
   }> {
-    console.log('👤 DEPT: Planning headcount changes for:', departmentName);
+    logger.info('👤 DEPT: Planning headcount changes for:', departmentName);
 
     try {
       // Get current headcount
@@ -382,7 +384,7 @@ export class DepartmentManagementService {
       };
 
     } catch (error) {
-      console.error('❌ DEPT: Error planning headcount changes:', error);
+      logger.error('❌ DEPT: Error planning headcount changes:', error);
       throw error;
     }
   }

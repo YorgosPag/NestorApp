@@ -60,6 +60,8 @@ interface RawAuditTrailEntry {
 
 // 🏢 ENTERPRISE: Import centralized legal forms - NO MORE DUPLICATES
 import { getLegalFormOptions, getGemiStatusOptions } from '@/subapps/dxf-viewer/config/modal-select';
+import { createModuleLogger } from '@/lib/telemetry';
+const loggerService = createModuleLogger('EnterpriseBusinessRulesService');
 
 // ============================================================================
 // UTILITY FUNCTIONS FOR CENTRALIZED DATA
@@ -408,7 +410,7 @@ export class EnterpriseBusinessRulesService {
   async initialize(firestore: Firestore): Promise<void> {
     this.db = firestore;
     this.initialized = true;
-    console.log('🏢 EnterpriseBusinessRulesService initialized');
+    loggerService.info('🏢 EnterpriseBusinessRulesService initialized');
   }
 
   /**
@@ -470,7 +472,7 @@ export class EnterpriseBusinessRulesService {
     this.cache.legalForms.clear();
     this.cache.companyStatuses.clear();
     this.cache.businessRules.clear();
-    console.log('🏢 Business rules cache cleared');
+    loggerService.info('🏢 Business rules cache cleared');
   }
 
   // ============================================================================
@@ -492,7 +494,7 @@ export class EnterpriseBusinessRulesService {
     // Check cache first
     const cached = this.getCacheEntry(this.cache.configurations, cacheKey);
     if (cached) {
-      console.log(`🏢 Business rules configuration loaded from cache: ${cacheKey}`);
+      loggerService.info(`🏢 Business rules configuration loaded from cache: ${cacheKey}`);
       return cached;
     }
 
@@ -532,16 +534,16 @@ export class EnterpriseBusinessRulesService {
         // Cache the configuration
         this.setCacheEntry(this.cache.configurations, cacheKey, config, config.cacheSettings?.ttl || 300);
 
-        console.log(`🏢 Business rules configuration loaded from database: ${cacheKey}`);
+        loggerService.info(`🏢 Business rules configuration loaded from database: ${cacheKey}`);
         return config;
       } else {
         // Create default configuration
         const defaultConfig = this.createDefaultConfiguration(tenantId, jurisdiction, environment);
-        console.log(`🏢 Created default business rules configuration: ${cacheKey}`);
+        loggerService.info(`🏢 Created default business rules configuration: ${cacheKey}`);
         return defaultConfig;
       }
     } catch (error) {
-      console.error('❌ Failed to load business rules configuration:', error);
+      loggerService.error('❌ Failed to load business rules configuration:', error);
       // Return default configuration as fallback
       return this.createDefaultConfiguration(tenantId, jurisdiction, environment);
     }
@@ -562,7 +564,7 @@ export class EnterpriseBusinessRulesService {
       .filter(lf => !lf.expiryDate || lf.expiryDate > new Date())
       .sort((a, b) => a.order - b.order);
 
-    console.log(`🏢 Retrieved ${legalForms.length} legal forms for ${jurisdiction}`);
+    loggerService.info(`🏢 Retrieved ${legalForms.length} legal forms for ${jurisdiction}`);
     return legalForms;
   }
 
@@ -580,7 +582,7 @@ export class EnterpriseBusinessRulesService {
       .filter(cs => cs.isActive)
       .sort((a, b) => a.order - b.order);
 
-    console.log(`🏢 Retrieved ${statuses.length} company statuses for ${jurisdiction}`);
+    loggerService.info(`🏢 Retrieved ${statuses.length} company statuses for ${jurisdiction}`);
     return statuses;
   }
 
@@ -603,7 +605,7 @@ export class EnterpriseBusinessRulesService {
 
     rules.sort((a, b) => a.priority - b.priority);
 
-    console.log(`🏢 Retrieved ${rules.length} business rules for ${category || 'all categories'}`);
+    loggerService.info(`🏢 Retrieved ${rules.length} business rules for ${category || 'all categories'}`);
     return rules;
   }
 

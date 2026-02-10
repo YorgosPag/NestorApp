@@ -17,6 +17,8 @@ import {
   RelationshipSearchCriteria
 } from '@/types/contacts/relationships';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('RelationshipSearchService');
 
 // ============================================================================
 // SEARCH RESULT TYPES
@@ -119,7 +121,7 @@ export class RelationshipSearchService {
     const startTime = Date.now();
 
     try {
-      console.log('🔍 SEARCH: Advanced search started', { filters, options });
+      logger.info('🔍 SEARCH: Advanced search started', { filters, options });
 
       // Set defaults
       const {
@@ -154,7 +156,7 @@ export class RelationshipSearchService {
         Date.now() - startTime
       );
 
-      console.log('✅ SEARCH: Advanced search completed', {
+      logger.info('✅ SEARCH: Advanced search completed', {
         resultCount: result.items.length,
         totalCount: result.totalCount,
         searchTime: result.searchTime
@@ -163,7 +165,7 @@ export class RelationshipSearchService {
       return result;
 
     } catch (error) {
-      console.error('❌ SEARCH: Advanced search failed:', error);
+      logger.error('❌ SEARCH: Advanced search failed:', error);
       throw error;
     }
   }
@@ -354,7 +356,7 @@ export class RelationshipSearchService {
       return stats;
 
     } catch (error) {
-      console.error('❌ SEARCH: Error calculating statistics:', error);
+      logger.error('❌ SEARCH: Error calculating statistics:', error);
       throw error;
     }
   }
@@ -450,7 +452,7 @@ export class RelationshipSearchService {
     }
 
     // TODO: Implement complex search με RelationshipQueryBuilder
-    console.warn('⚠️ SEARCH: Complex search not yet fully implemented, using simple fallback');
+    logger.warn('⚠️ SEARCH: Complex search not yet fully implemented, using simple fallback');
     return [];
   }
 

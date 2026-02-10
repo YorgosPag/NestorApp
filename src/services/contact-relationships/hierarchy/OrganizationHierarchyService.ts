@@ -31,6 +31,8 @@ function getOrganizationName(organization: Contact): string {
 }
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RelationshipQueryBuilder } from '../search/RelationshipQueryBuilder';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('OrganizationHierarchyService');
 
 // ============================================================================
 // HIERARCHY TYPES
@@ -102,8 +104,8 @@ export class OrganizationHierarchyService {
    * Constructs full organizational tree με all employees και relationships
    */
   static async buildOrganizationHierarchy(organizationId: string): Promise<OrganizationTree> {
-    console.log('🌳 HIERARCHY: Building REAL organization hierarchy for:', organizationId);
-    console.log('🔧 HIERARCHY: FIXED - Now building children array with contact IDs for UI component');
+    logger.info('🌳 HIERARCHY: Building REAL organization hierarchy for:', organizationId);
+    logger.info('🔧 HIERARCHY: FIXED - Now building children array with contact IDs for UI component');
 
     try {
       // Get organization contact από Firebase
@@ -112,11 +114,11 @@ export class OrganizationHierarchyService {
         throw new Error(`Organization not found: ${organizationId}`);
       }
 
-      console.log('🏢 HIERARCHY: Organization found:', organization.type, getOrganizationName(organization));
+      logger.info('🏢 HIERARCHY: Organization found:', organization.type, getOrganizationName(organization));
 
       // Get all REAL employees από Firebase
       const employees = await this.getOrganizationEmployees(organizationId);
-      console.log('👥 HIERARCHY: Found employees:', employees.length);
+      logger.info('👥 HIERARCHY: Found employees:', employees.length);
 
       if (employees.length === 0) {
         // Return empty but valid tree για organizations με no employees
@@ -154,7 +156,7 @@ export class OrganizationHierarchyService {
         }>;
 
 
-      console.log('👥 HIERARCHY: Created children array with', children.length, 'employees:',
+      logger.info('👥 HIERARCHY: Created children array with', children.length, 'employees:',
         children.map(c => ({ id: c.id, position: c.position, type: c.relationshipType }))
       );
 
@@ -167,7 +169,7 @@ export class OrganizationHierarchyService {
         children // 🔧 FIX: Add children array for UI component
       };
 
-      console.log('✅ HIERARCHY: REAL organization hierarchy built successfully', {
+      logger.info('✅ HIERARCHY: REAL organization hierarchy built successfully', {
         employeeCount: employees.length,
         departmentCount: Object.keys(departments).length,
         hierarchyDepth: statistics.hierarchyDepth,
@@ -177,7 +179,7 @@ export class OrganizationHierarchyService {
       return result;
 
     } catch (error) {
-      console.error('❌ HIERARCHY: Error building REAL organization hierarchy:', error);
+      logger.error('❌ HIERARCHY: Error building REAL organization hierarchy:', error);
       throw error;
     }
   }
@@ -188,7 +190,7 @@ export class OrganizationHierarchyService {
    * Comprehensive analysis με metrics και recommendations
    */
   static async analyzeOrganization(organizationId: string): Promise<HierarchyAnalysis> {
-    console.log('📊 HIERARCHY: Analyzing organization:', organizationId);
+    logger.info('📊 HIERARCHY: Analyzing organization:', organizationId);
 
     try {
       // Build basic hierarchy
@@ -215,7 +217,7 @@ export class OrganizationHierarchyService {
       };
 
     } catch (error) {
-      console.error('❌ HIERARCHY: Error analyzing organization:', error);
+      logger.error('❌ HIERARCHY: Error analyzing organization:', error);
       throw error;
     }
   }
@@ -226,7 +228,7 @@ export class OrganizationHierarchyService {
    * Gets complete management chain για specific employee
    */
   static async getManagerChain(employeeId: string): Promise<OrganizationHierarchyNode[]> {
-    console.log('👤 HIERARCHY: Getting manager chain for:', employeeId);
+    logger.info('👤 HIERARCHY: Getting manager chain for:', employeeId);
 
     try {
       const chain: OrganizationHierarchyNode[] = [];
@@ -252,7 +254,7 @@ export class OrganizationHierarchyService {
       return chain;
 
     } catch (error) {
-      console.error('❌ HIERARCHY: Error getting manager chain:', error);
+      logger.error('❌ HIERARCHY: Error getting manager chain:', error);
       return [];
     }
   }
@@ -263,7 +265,7 @@ export class OrganizationHierarchyService {
    * Gets all direct reports για specific manager
    */
   static async getDirectReports(managerId: string): Promise<OrganizationHierarchyNode[]> {
-    console.log('👥 HIERARCHY: Getting direct reports for:', managerId);
+    logger.info('👥 HIERARCHY: Getting direct reports for:', managerId);
 
     try {
       // Get all relationships where this person is target (manager)
@@ -294,7 +296,7 @@ export class OrganizationHierarchyService {
       return directReports;
 
     } catch (error) {
-      console.error('❌ HIERARCHY: Error getting direct reports:', error);
+      logger.error('❌ HIERARCHY: Error getting direct reports:', error);
       return [];
     }
   }
@@ -309,7 +311,7 @@ export class OrganizationHierarchyService {
    * Detailed analysis of specific department
    */
   static async analyzeDepartment(organizationId: string, departmentName: string): Promise<DepartmentSummary> {
-    console.log('🏢 HIERARCHY: Analyzing department:', departmentName);
+    logger.info('🏢 HIERARCHY: Analyzing department:', departmentName);
 
     try {
       // Get all employees στο department
@@ -330,7 +332,7 @@ export class OrganizationHierarchyService {
       };
 
     } catch (error) {
-      console.error('❌ HIERARCHY: Error analyzing department:', error);
+      logger.error('❌ HIERARCHY: Error analyzing department:', error);
       throw error;
     }
   }
@@ -350,7 +352,7 @@ export class OrganizationHierarchyService {
     risks: string[];
     timeline: string;
   }> {
-    console.log('🔄 HIERARCHY: Suggesting reorganization for:', departmentName);
+    logger.info('🔄 HIERARCHY: Suggesting reorganization for:', departmentName);
 
     try {
       const currentStructure = await this.analyzeDepartment(organizationId, departmentName);
@@ -379,7 +381,7 @@ export class OrganizationHierarchyService {
       };
 
     } catch (error) {
-      console.error('❌ HIERARCHY: Error suggesting reorganization:', error);
+      logger.error('❌ HIERARCHY: Error suggesting reorganization:', error);
       throw error;
     }
   }
@@ -441,7 +443,7 @@ export class OrganizationHierarchyService {
       return employees;
 
     } catch (error) {
-      console.error('❌ HIERARCHY: Error getting organization employees:', error);
+      logger.error('❌ HIERARCHY: Error getting organization employees:', error);
       return [];
     }
   }
@@ -472,7 +474,7 @@ export class OrganizationHierarchyService {
     // This is a complex algorithm που builds parent-child relationships
     // For now, simplified implementation
 
-    console.log('📊 HIERARCHY: Calculating hierarchy levels για', nodes.length, 'employees');
+    logger.info('📊 HIERARCHY: Calculating hierarchy levels για', nodes.length, 'employees');
 
     // TODO: Implement proper hierarchy level calculation
     // This involves finding manager relationships και building tree structure

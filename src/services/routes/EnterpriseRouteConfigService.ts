@@ -15,6 +15,8 @@
 import { collection, doc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseRouteConfigService');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -184,11 +186,11 @@ export class EnterpriseRouteConfigService {
     try {
       // Check cache first
       if (this.isCacheValid()) {
-        console.debug('🚀 Using cached route configuration');
+        logger.info('🚀 Using cached route configuration');
         return this.configCache;
       }
 
-      console.log('📥 Loading route configuration from Firebase...');
+      logger.info('📥 Loading route configuration from Firebase...');
 
       const configQuery = query(
         collection(db, COLLECTIONS.CONFIG),
@@ -198,7 +200,7 @@ export class EnterpriseRouteConfigService {
       const snapshot = await getDocs(configQuery);
 
       if (snapshot.empty) {
-        console.warn('⚠️ No route configuration found in Firebase, using fallback');
+        logger.warn('⚠️ No route configuration found in Firebase, using fallback');
         return this.initializeDefaultConfig(tenantId);
       }
 
@@ -227,11 +229,11 @@ export class EnterpriseRouteConfigService {
       this.configCache = routeConfigs;
       this.cacheTimestamp = Date.now();
 
-      console.log(`✅ Loaded ${routeConfigs.length} route configurations from Firebase`);
+      logger.info(`✅ Loaded ${routeConfigs.length} route configurations from Firebase`);
       return routeConfigs;
 
     } catch (error) {
-      console.error('❌ Error loading route configuration from Firebase:', error);
+      logger.error('❌ Error loading route configuration from Firebase:', error);
       return this.getFallbackConfig();
     }
   }
@@ -241,7 +243,7 @@ export class EnterpriseRouteConfigService {
    */
   async initializeDefaultConfig(tenantId?: string): Promise<RouteConfig[]> {
     try {
-      console.log('🏗️ Initializing default route configuration in Firebase...');
+      logger.info('🏗️ Initializing default route configuration in Firebase...');
 
       const batch = [];
       for (const config of FALLBACK_ROUTE_CONFIG) {
@@ -254,11 +256,11 @@ export class EnterpriseRouteConfigService {
       }
 
       await Promise.all(batch);
-      console.log('✅ Default route configuration initialized in Firebase');
+      logger.info('✅ Default route configuration initialized in Firebase');
 
       return FALLBACK_ROUTE_CONFIG;
     } catch (error) {
-      console.error('❌ Error initializing default route configuration:', error);
+      logger.error('❌ Error initializing default route configuration:', error);
       return this.getFallbackConfig();
     }
   }
@@ -353,10 +355,10 @@ export class EnterpriseRouteConfigService {
       // Invalidate cache
       this.invalidateCache();
 
-      console.log(`✅ Updated route configuration: ${configId}`);
+      logger.info(`✅ Updated route configuration: ${configId}`);
       return true;
     } catch (error) {
-      console.error(`❌ Error updating route configuration ${configId}:`, error);
+      logger.error(`❌ Error updating route configuration ${configId}:`, error);
       return false;
     }
   }
@@ -379,10 +381,10 @@ export class EnterpriseRouteConfigService {
       // Invalidate cache
       this.invalidateCache();
 
-      console.log(`✅ Added new route configuration: ${docRef.id}`);
+      logger.info(`✅ Added new route configuration: ${docRef.id}`);
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error adding new route configuration:', error);
+      logger.error('❌ Error adding new route configuration:', error);
       return null;
     }
   }
@@ -395,7 +397,7 @@ export class EnterpriseRouteConfigService {
    * 🔄 Fallback configuration
    */
   getFallbackConfig(): RouteConfig[] {
-    console.log('📋 Using fallback route configuration');
+    logger.info('📋 Using fallback route configuration');
     return FALLBACK_ROUTE_CONFIG;
   }
 

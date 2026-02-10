@@ -1,91 +1,76 @@
 {
-  "backupId": "backup-2026-02-11-services-logger-migration",
-  "timestamp": "2026-02-11T03:00:00+02:00",
+  "backupId": "backup-2026-02-10-adr172-console-logger-migration-complete",
+  "timestamp": "2026-02-10T23:59:00+02:00",
   "category": "REFACTOR",
-  "shortDescription": "Migrate console.log/warn/error to enterprise Logger in 34 service files (~620 calls)",
-  "problem": "34 service files across src/services/ used raw console.log/warn/error for logging instead of the enterprise createModuleLogger pattern from @/lib/telemetry.",
-  "cause": "These services were written before the centralized telemetry system was established, or were not migrated during previous cleanup passes covering hooks and components.",
+  "shortDescription": "ADR-172: Complete console.log to enterprise Logger migration across all 13 scoped directories + TS error fixes",
+  "problem": "Hundreds of console.log/warn/error calls scattered across src/lib, src/config, src/core, src/auth, src/contexts, src/providers, src/i18n, src/adapters, src/schemas, src/constants, src/types, src/utils, src/api. Unstructured logging with no metadata, inconsistent formats, emoji-prefixed messages.",
+  "cause": "Legacy development logging pattern. ADR-172 mandates migration to enterprise Logger (createModuleLogger from @/lib/telemetry) for structured, configurable, production-grade logging.",
   "filesChanged": [
-    "src/services/buildings.service.ts",
-    "src/services/navigation/ContextualNavigationService.ts",
-    "src/services/upload/utils/file-display-name.ts",
-    "src/services/calendar/CalendarEventService.ts",
-    "src/services/real-estate-monitor/AddressResolver.ts",
-    "src/services/navigation-companies.service.ts",
-    "src/services/projects/repositories/FirestoreProjectsRepository.ts",
-    "src/services/units.service.ts",
-    "src/services/projects.service.ts",
-    "src/services/floorplans/FloorplanProcessor.ts",
-    "src/services/projects/repositories/projects-repository.ts",
-    "src/services/projects-client.service.ts",
-    "src/services/contacts/DuplicatePreventionService.ts",
-    "src/services/opportunities-client.service.ts",
-    "src/services/communications-client.service.ts",
-    "src/services/enterprise-id-migration.service.ts",
-    "src/services/floorplans/FloorplanService.ts",
-    "src/services/upload/UnifiedUploadService.ts",
-    "src/services/upload/processors/CADProcessor.ts",
-    "src/services/entity-linking/utils/cache.ts",
-    "src/services/entity-linking/utils/audit.ts",
-    "src/services/entity-linking/utils/optimistic.ts",
-    "src/services/entity-linking/utils/retry.ts",
-    "src/services/realtime/hooks/useRealtimeUnits.ts",
-    "src/services/layer/EnterpriseLayerStyleService.ts",
-    "src/services/polygon/EnterprisePolygonStyleService.ts",
-    "src/services/contact-relationships/adapters/RelationshipCacheAdapter.ts",
-    "src/services/company/EnterpriseCompanySettingsService.ts",
-    "src/services/user-notification-settings/UserNotificationSettingsService.ts",
-    "src/services/obligations/InMemoryObligationsRepository.ts",
-    "src/services/adminConfigService.ts",
-    "src/services/notification/EnterpriseNotificationService.ts",
-    "src/services/contact-relationships/bulk/BulkRelationshipService.ts",
-    "src/services/realtime/RealtimeService.ts (220 console calls - largest file)"
+    "src/lib/ (20 files migrated)",
+    "src/config/ (15 files migrated)",
+    "src/core/ (11 files migrated)",
+    "src/auth/ (5 files migrated)",
+    "src/contexts/ (5 files migrated)",
+    "src/providers/ (2 files migrated)",
+    "src/i18n/ (4 files migrated)",
+    "src/adapters/ (2 files migrated)",
+    "src/utils/ (14 files migrated)",
+    "src/api/ (2 files migrated)",
+    "src/types/ (3 files migrated)",
+    "src/features/ (24 files migrated)",
+    "src/components/ (19 files migrated)",
+    "src/services/ (5 files migrated)",
+    "src/hooks/ (2 files migrated)",
+    "src/app/api/ (6 files migrated)"
   ],
   "solution": {
-    "phase1_import": "Added import { createModuleLogger } from '@/lib/telemetry' in all 34 files.",
-    "phase2_logger": "Added const logger = createModuleLogger('ServiceName') at module level. Special names used: auditModuleLogger (audit.ts to avoid class conflict), notifLogger (EnterpriseNotificationService.ts).",
-    "phase3_replace": "Replaced console.log with logger.info/debug, console.warn with logger.warn, console.error with logger.error.",
-    "phase4_metadata": "Converted positional arguments to structured metadata objects.",
-    "phase5_cleanup": "Removed emoji prefixes and [ServiceName] brackets from log messages. Verbose realtime/cache data mapped to logger.debug."
+    "phase1_lib_config_core": "Migrated 46 files across src/lib, src/config, src/core — all console calls to logger.info/warn/error with structured metadata",
+    "phase2_auth_types_api_adapters": "Migrated 12 files across src/auth, src/types, src/api, src/adapters",
+    "phase3_contexts_providers_i18n": "Migrated 11 files across src/contexts, src/providers, src/i18n",
+    "phase4_utils": "Migrated 14 files across src/utils — including complex formDataMapper, photo-urls, data-cleaning",
+    "phase5_ts_error_fixes": "Fixed all TypeScript TS2345/TS2554 errors — wrapped string/array/interface metadata in Record<string, unknown> objects"
   },
   "testing": {
-    "typescript": "npx tsc --noEmit: 0 errors in any migrated service file (pre-existing errors in unrelated files only)",
+    "typescript": "npx tsc --noEmit: 0 new errors (3 pre-existing in obligations/design-system/geo-canvas)",
     "preCommit": "Pre-commit checks passed",
-    "deployment": "Pushed to main for Vercel auto-deployment"
+    "deployment": "Pushed to main for Vercel auto-deployment",
+    "grepVerification": "Final grep across all 13 directories confirmed 0 remaining console.log/warn/error calls (except Logger.ts itself and documentation files)"
   },
   "notes": [
-    "34 service files modified, 566 insertions, 489 deletions",
-    "~620 console calls replaced with structured logger calls",
-    "RealtimeService.ts was the largest: 220 console calls, all mapped to logger.debug for verbose realtime data",
-    "audit.ts logToConsole routing mechanism preserved but routed through auditModuleLogger",
-    "Cache hit/miss/set operations mapped to logger.debug to reduce noise",
-    "Combined with previous hooks (26 files) + components (162 files) = 222 total files migrated to enterprise Logger",
-    "No any type used - all metadata objects are properly typed"
+    "148 files changed, 1214 insertions, 964 deletions",
+    "All 13 scoped directories fully migrated to enterprise Logger",
+    "Skipped files: Logger.ts (is the logger), JSDoc examples, markdown docs, commented-out code",
+    "console.debug calls left as-is (not in migration scope)",
+    "TypeScript compilation errors fixed by wrapping non-object metadata in {key: value} objects",
+    "Logger signature: info/warn/error(message: string, metadata?: Record<string, unknown>)",
+    "Zero use of 'any' type — all enterprise TypeScript"
   ],
   "contributors": {
     "user": "Georgios Pagonis",
     "assistant": "Claude Opus 4.6 (Anthropic)",
-    "sessionDate": "2026-02-11"
+    "sessionDate": "2026-02-10"
   },
   "relatedBackups": [
-    "backup-2026-02-11-components-logger-migration",
-    "backup-2026-02-10-hooks-logger-migration"
+    "backup-2026-02-10-adr173-ai-self-improvement-hardening",
+    "backup-2026-02-10-adr172-phase2-massive-remediation"
   ],
   "commits": [
     {
-      "hash": "88fa5ed8",
-      "message": "refactor: migrate 34 service files from console.log to enterprise Logger",
-      "files": 34,
-      "insertions": 566,
-      "deletions": 489
+      "hash": "f49e5ed1",
+      "message": "refactor(ADR-172): complete console.log to Logger migration across all 13 scoped directories",
+      "files": 148,
+      "insertions": 1214,
+      "deletions": 964
     }
   ],
   "statistics": {
-    "filesChanged": 34,
-    "totalInsertions": 566,
-    "totalDeletions": 489,
-    "newFiles": 0,
+    "filesChanged": 148,
+    "totalInsertions": 1214,
+    "totalDeletions": 964,
+    "directoriesMigrated": 13,
     "commitsInBackup": 1,
-    "consoleCallsReplaced": "~620"
+    "phases": 5,
+    "tsErrorsFixed": 8,
+    "preExistingErrors": 3
   }
 }

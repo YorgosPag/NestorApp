@@ -28,6 +28,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('RelationshipQueryBuilder');
 
 // ============================================================================
 // QUERY BUILDER TYPES
@@ -158,7 +160,7 @@ export class RelationshipQueryBuilder {
   orWhere(field: string, operator: WhereFilterOp, value: QueryFilterValue): RelationshipQueryBuilder {
     // Note: Firestore doesn't support OR directly, so this is για future implementation
     // που θα combine multiple queries
-    console.warn('⚠️ OR queries require special handling με multiple Firestore queries');
+    logger.warn('⚠️ OR queries require special handling με multiple Firestore queries');
     return this.where(field, operator, value);
   }
 
@@ -297,7 +299,7 @@ export class RelationshipQueryBuilder {
   textSearch(searchTerm: string): RelationshipQueryBuilder {
     // Note: Firestore doesn't have full-text search
     // This would need to be implemented με algolia ή elasticsearch
-    console.warn('⚠️ Text search requires external search service (Algolia, Elasticsearch)');
+    logger.warn('⚠️ Text search requires external search service (Algolia, Elasticsearch)');
 
     // For now, search in position field only
     const term = searchTerm.toLowerCase();
@@ -380,7 +382,7 @@ export class RelationshipQueryBuilder {
   offset(offsetCount: number): RelationshipQueryBuilder {
     // Note: Firestore doesn't support offset directly
     // This would need special implementation
-    console.warn('⚠️ Offset requires special pagination handling με Firestore');
+    logger.warn('⚠️ Offset requires special pagination handling με Firestore');
     return this;
   }
 

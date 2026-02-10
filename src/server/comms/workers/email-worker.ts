@@ -5,6 +5,8 @@ import { isFirebaseAvailable } from '../../../app/api/communications/webhooks/te
 import { getFirestoreHelpers } from '../../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EmailWorker');
 
 export class EmailWorker {
   private isRunning = false;
@@ -20,11 +22,11 @@ export class EmailWorker {
    */
   start(): void {
     if (this.isRunning) {
-      console.log('📧 Email worker is already running');
+      logger.info('📧 Email worker is already running');
       return;
     }
 
-    console.log('🚀 Starting email worker...');
+    logger.info('🚀 Starting email worker...');
     this.isRunning = true;
 
     // Process immediately on start
@@ -35,7 +37,7 @@ export class EmailWorker {
       this.processPendingEmails();
     }, this.pollInterval);
 
-    console.log(`✅ Email worker started (polling every ${this.pollInterval}ms)`);
+    logger.info(`✅ Email worker started (polling every ${this.pollInterval}ms)`);
   }
 
   /**
@@ -43,11 +45,11 @@ export class EmailWorker {
    */
   stop(): void {
     if (!this.isRunning) {
-      console.log('📧 Email worker is not running');
+      logger.info('📧 Email worker is not running');
       return;
     }
 
-    console.log('🛑 Stopping email worker...');
+    logger.info('🛑 Stopping email worker...');
     this.isRunning = false;
 
     if (this.intervalId) {
@@ -55,7 +57,7 @@ export class EmailWorker {
       this.intervalId = null;
     }
 
-    console.log('✅ Email worker stopped');
+    logger.info('✅ Email worker stopped');
   }
 
   /**
@@ -63,13 +65,13 @@ export class EmailWorker {
    */
   async processPendingEmails(): Promise<void> {
     if (!isFirebaseAvailable()) {
-      console.warn('⚠️ Firebase not available, skipping email processing');
+      logger.warn('⚠️ Firebase not available, skipping email processing');
       return;
     }
 
     const firestoreHelpers = await getFirestoreHelpers();
     if (!firestoreHelpers) {
-      console.warn('⚠️ Firestore helpers not available for email processing');
+      logger.warn('⚠️ Firestore helpers not available for email processing');
       return;
     }
 
@@ -77,33 +79,33 @@ export class EmailWorker {
       const pendingJobs = await this.getPendingEmailJobs();
       
       if (pendingJobs.length === 0) {
-        console.log('📧 No pending email jobs found');
+        logger.info('📧 No pending email jobs found');
         return;
       }
 
-      console.log(`📧 Processing ${pendingJobs.length} pending email job(s)...`);
+      logger.info(`📧 Processing ${pendingJobs.length} pending email job(s)...`);
 
       // Process jobs sequentially to avoid overwhelming Mailgun API
       for (const job of pendingJobs) {
         try {
           const success = await emailAdapter.processEmailJob(job.id);
           if (success) {
-            console.log(`✅ Email job ${job.id} processed successfully`);
+            logger.info(`✅ Email job ${job.id} processed successfully`);
           } else {
-            console.log(`❌ Email job ${job.id} failed to process`);
+            logger.info(`❌ Email job ${job.id} failed to process`);
           }
           
           // Small delay between jobs to be respectful to Mailgun API
           await this.delay(1000);
         } catch (error) {
-          console.error(`❌ Error processing email job ${job.id}:`, error);
+          logger.error(`❌ Error processing email job ${job.id}:`, error);
         }
       }
 
-      console.log('📧 Finished processing email jobs');
+      logger.info('📧 Finished processing email jobs');
 
     } catch (error) {
-      console.error('❌ Error in email worker:', error);
+      logger.error('❌ Error in email worker:', error);
     }
   }
 
@@ -155,18 +157,18 @@ export class EmailWorker {
    */
   async processEmailJob(jobId: string): Promise<boolean> {
     try {
-      console.log(`📧 Processing single email job: ${jobId}`);
+      logger.info(`📧 Processing single email job: ${jobId}`);
       const success = await emailAdapter.processEmailJob(jobId);
       
       if (success) {
-        console.log(`✅ Email job ${jobId} processed successfully`);
+        logger.info(`✅ Email job ${jobId} processed successfully`);
       } else {
-        console.log(`❌ Email job ${jobId} failed to process`);
+        logger.info(`❌ Email job ${jobId} failed to process`);
       }
       
       return success;
     } catch (error) {
-      console.error(`❌ Error processing email job ${jobId}:`, error);
+      logger.error(`❌ Error processing email job ${jobId}:`, error);
       return false;
     }
   }

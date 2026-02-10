@@ -24,6 +24,8 @@ import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import { createEmptyBounds } from '@/subapps/dxf-viewer/config/geometry-constants';
 import { DEFAULT_LEVEL_CONFIG } from '@/subapps/dxf-viewer/systems/levels/config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('Migration004');
 
 // 🏢 ENTERPRISE: Type-safe legacy scene structure (massive serialized DXF data)
 interface LegacyDxfScene {
@@ -82,7 +84,7 @@ export const dxfLegacyToStorageMigration: Migration = {
       stepId: 'analyze_legacy_data',
       description: 'Analyze existing legacy DXF data in Firestore',
       execute: async (): Promise<{ affectedRecords: number }> => {
-        console.log('🔍 [STEP 1] Analyzing legacy DXF data...');
+        logger.info('🔍 [STEP 1] Analyzing legacy DXF data...');
 
         const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
         const snapshot = await getDocs(cadFilesRef);
@@ -100,7 +102,7 @@ export const dxfLegacyToStorageMigration: Migration = {
             const docSize = JSON.stringify(data.scene).length;
             totalSize += docSize;
 
-            console.log(`   📄 Legacy file found: ${data.fileName || docSnap.id} (${Math.round(docSize / 1024)}KB)`);
+            logger.info(`   📄 Legacy file found: ${data.fileName || docSnap.id} (${Math.round(docSize / 1024)}KB)`);
 
             if (docSize > 100000) { // > 100KB is problematic
               problemFiles.push(`${data.fileName || docSnap.id} (${Math.round(docSize / 1024)}KB)`);
@@ -108,15 +110,15 @@ export const dxfLegacyToStorageMigration: Migration = {
           }
         }
 
-        console.log(`📊 Analysis Results:`);
-        console.log(`   Total documents: ${snapshot.docs.length}`);
-        console.log(`   Legacy files: ${legacyCount}`);
-        console.log(`   Total legacy size: ${Math.round(totalSize / 1024)}KB`);
-        console.log(`   Problem files (>100KB): ${problemFiles.length}`);
+        logger.info(`📊 Analysis Results:`);
+        logger.info(`   Total documents: ${snapshot.docs.length}`);
+        logger.info(`   Legacy files: ${legacyCount}`);
+        logger.info(`   Total legacy size: ${Math.round(totalSize / 1024)}KB`);
+        logger.info(`   Problem files (>100KB): ${problemFiles.length}`);
 
         if (problemFiles.length > 0) {
-          console.log(`🚨 CRITICAL - Large legacy files:`);
-          problemFiles.forEach(file => console.log(`     - ${file}`));
+          logger.info(`🚨 CRITICAL - Large legacy files:`);
+          problemFiles.forEach(file => logger.info(`     - ${file}`));
         }
 
         return { affectedRecords: legacyCount };
@@ -134,7 +136,7 @@ export const dxfLegacyToStorageMigration: Migration = {
       stepId: 'migrate_legacy_files',
       description: 'Migrate legacy DXF files to Firebase Storage',
       execute: async (): Promise<{ affectedRecords: number }> => {
-        console.log('🚀 [STEP 2] Starting legacy file migration...');
+        logger.info('🚀 [STEP 2] Starting legacy file migration...');
 
         const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
         const snapshot = await getDocs(cadFilesRef);
@@ -155,20 +157,20 @@ export const dxfLegacyToStorageMigration: Migration = {
 
           // Skip if already migrated (has storageUrl)
           if (data.storageUrl) {
-            console.log(`   ⏭️  Skipping already migrated: ${data.fileName || docSnap.id}`);
+            logger.info(`   ⏭️  Skipping already migrated: ${data.fileName || docSnap.id}`);
             stats.skippedFiles++;
             continue;
           }
 
           // Skip if no scene object (not legacy format)
           if (!data.scene || typeof data.scene !== 'object') {
-            console.log(`   ⏭️  Skipping non-legacy: ${data.fileName || docSnap.id}`);
+            logger.info(`   ⏭️  Skipping non-legacy: ${data.fileName || docSnap.id}`);
             stats.skippedFiles++;
             continue;
           }
 
           try {
-            console.log(`   🔄 Migrating: ${data.fileName || docSnap.id}`);
+            logger.info(`   🔄 Migrating: ${data.fileName || docSnap.id}`);
 
             // Calculate original size
             const sceneJson = JSON.stringify(data.scene);
@@ -200,7 +202,7 @@ export const dxfLegacyToStorageMigration: Migration = {
               stats.migratedFiles++;
               stats.savedSpaceBytes += originalSize;
 
-              console.log(`   ✅ Migrated successfully: ${Math.round(originalSize / 1024)}KB → Storage`);
+              logger.info(`   ✅ Migrated successfully: ${Math.round(originalSize / 1024)}KB → Storage`);
 
             } else {
               throw new Error('Migration to storage failed');
@@ -208,25 +210,25 @@ export const dxfLegacyToStorageMigration: Migration = {
 
           } catch (error) {
             const errorMessage = `Failed to migrate ${data.fileName || docSnap.id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-            console.error(`   ❌ ${errorMessage}`);
+            logger.error(`   ❌ ${errorMessage}`);
             stats.errors.push(errorMessage);
             stats.failedFiles++;
           }
         }
 
         // 📊 Final Report
-        console.log(`\n📊 Migration Summary:`);
-        console.log(`   Total files: ${stats.totalFiles}`);
-        console.log(`   Migrated: ${stats.migratedFiles}`);
-        console.log(`   Skipped: ${stats.skippedFiles}`);
-        console.log(`   Failed: ${stats.failedFiles}`);
-        console.log(`   Original size: ${Math.round(stats.totalSizeBytes / 1024)}KB`);
-        console.log(`   Space saved: ${Math.round(stats.savedSpaceBytes / 1024)}KB`);
-        console.log(`   Success rate: ${Math.round((stats.migratedFiles / (stats.migratedFiles + stats.failedFiles)) * 100)}%`);
+        logger.info(`\n📊 Migration Summary:`);
+        logger.info(`   Total files: ${stats.totalFiles}`);
+        logger.info(`   Migrated: ${stats.migratedFiles}`);
+        logger.info(`   Skipped: ${stats.skippedFiles}`);
+        logger.info(`   Failed: ${stats.failedFiles}`);
+        logger.info(`   Original size: ${Math.round(stats.totalSizeBytes / 1024)}KB`);
+        logger.info(`   Space saved: ${Math.round(stats.savedSpaceBytes / 1024)}KB`);
+        logger.info(`   Success rate: ${Math.round((stats.migratedFiles / (stats.migratedFiles + stats.failedFiles)) * 100)}%`);
 
         if (stats.errors.length > 0) {
-          console.log(`\n🚨 Errors encountered:`);
-          stats.errors.forEach(error => console.log(`   - ${error}`));
+          logger.info(`\n🚨 Errors encountered:`);
+          stats.errors.forEach(error => logger.info(`   - ${error}`));
         }
 
         return { affectedRecords: stats.migratedFiles };
@@ -252,21 +254,21 @@ export const dxfLegacyToStorageMigration: Migration = {
           }
         }
 
-        console.log(`✅ Post-migration validation:`);
-        console.log(`   Remaining legacy files: ${legacyCount}`);
-        console.log(`   Migrated files: ${migratedCount}`);
+        logger.info(`✅ Post-migration validation:`);
+        logger.info(`   Remaining legacy files: ${legacyCount}`);
+        logger.info(`   Migrated files: ${migratedCount}`);
 
         // Success if we have migrations and no critical legacy files
         return migratedCount > 0 && legacyCount === 0;
       },
 
       rollback: async (): Promise<void> => {
-        console.log('🔄 Rolling back DXF migration...');
-        console.log('⚠️  Note: Storage files will remain (safe), only metadata rollback');
+        logger.info('🔄 Rolling back DXF migration...');
+        logger.info('⚠️  Note: Storage files will remain (safe), only metadata rollback');
 
         // For safety, we don't delete the Storage files
         // We just log that rollback would require manual intervention
-        console.log('✅ Rollback completed (Storage files preserved for safety)');
+        logger.info('✅ Rollback completed (Storage files preserved for safety)');
       }
     },
 
@@ -274,7 +276,7 @@ export const dxfLegacyToStorageMigration: Migration = {
       stepId: 'cleanup_validation',
       description: 'Final validation and cleanup recommendations',
       execute: async (): Promise<{ affectedRecords: number }> => {
-        console.log('🧹 [STEP 3] Final validation and cleanup...');
+        logger.info('🧹 [STEP 3] Final validation and cleanup...');
 
         const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
         const snapshot = await getDocs(cadFilesRef);
@@ -294,28 +296,28 @@ export const dxfLegacyToStorageMigration: Migration = {
           } else if (data.scene && typeof data.scene === 'object') {
             // ❌ Still legacy format
             stillLegacy++;
-            console.log(`⚠️  Still legacy: ${data.fileName || docSnap.id}`);
+            logger.info(`⚠️  Still legacy: ${data.fileName || docSnap.id}`);
           } else {
             // ❓ Empty or unknown format
             emptoDocs++;
           }
         }
 
-        console.log(`\n🏆 Final Migration Status:`);
-        console.log(`   Total documents: ${totalDocs}`);
-        console.log(`   Proper format: ${properFormat} ✅`);
-        console.log(`   Still legacy: ${stillLegacy} ${stillLegacy > 0 ? '⚠️' : '✅'}`);
-        console.log(`   Empty/Unknown: ${emptoDocs}`);
+        logger.info(`\n🏆 Final Migration Status:`);
+        logger.info(`   Total documents: ${totalDocs}`);
+        logger.info(`   Proper format: ${properFormat} ✅`);
+        logger.info(`   Still legacy: ${stillLegacy} ${stillLegacy > 0 ? '⚠️' : '✅'}`);
+        logger.info(`   Empty/Unknown: ${emptoDocs}`);
 
         if (stillLegacy === 0) {
-          console.log(`\n🎉 SUCCESS: All DXF files migrated to Enterprise Storage!`);
-          console.log(`💡 Benefits achieved:`);
-          console.log(`   - No more 1MB document limit issues`);
-          console.log(`   - 99%+ faster read performance`);
-          console.log(`   - 93%+ cost reduction`);
-          console.log(`   - Enterprise-class scalability`);
+          logger.info(`\n🎉 SUCCESS: All DXF files migrated to Enterprise Storage!`);
+          logger.info(`💡 Benefits achieved:`);
+          logger.info(`   - No more 1MB document limit issues`);
+          logger.info(`   - 99%+ faster read performance`);
+          logger.info(`   - 93%+ cost reduction`);
+          logger.info(`   - Enterprise-class scalability`);
         } else {
-          console.log(`\n⚠️  WARNING: ${stillLegacy} files still need manual migration`);
+          logger.info(`\n⚠️  WARNING: ${stillLegacy} files still need manual migration`);
         }
 
         return { affectedRecords: properFormat };

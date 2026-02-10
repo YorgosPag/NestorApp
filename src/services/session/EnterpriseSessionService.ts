@@ -52,6 +52,8 @@ import type {
 } from './session.types';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseSessionService');
 
 // ============================================================================
 // CONSTANTS
@@ -296,7 +298,7 @@ export class EnterpriseSessionService {
   initialize(firestore: Firestore): void {
     this.db = firestore;
     this.initialized = true;
-    console.log('🔐 EnterpriseSessionService initialized');
+    logger.info('🔐 EnterpriseSessionService initialized');
   }
 
   /**
@@ -399,7 +401,7 @@ export class EnterpriseSessionService {
     // Mark other sessions as not current
     await this.markOtherSessionsNotCurrent(userId, sessionId);
 
-    console.log(`🔐 Session created: ${sessionId} for user ${userId}`);
+    logger.info(`🔐 Session created: ${sessionId} for user ${userId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchSessionCreated({
@@ -433,7 +435,7 @@ export class EnterpriseSessionService {
         'timestamps.lastActiveAt': Timestamp.fromDate(new Date())
       });
     } catch (error) {
-      console.warn('Failed to update session activity:', error);
+      logger.warn('Failed to update session activity:', error);
     }
   }
 
@@ -457,7 +459,7 @@ export class EnterpriseSessionService {
         revocationReason: reason || 'user_requested'
       });
 
-      console.log(`🔐 Session revoked: ${sessionId}`);
+      logger.info(`🔐 Session revoked: ${sessionId}`);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchSessionDeleted({
@@ -471,7 +473,7 @@ export class EnterpriseSessionService {
         action: 'revoke'
       };
     } catch (error) {
-      console.error('Failed to revoke session:', error);
+      logger.error('Failed to revoke session:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -505,7 +507,7 @@ export class EnterpriseSessionService {
 
       await batch.commit();
 
-      console.log(`🔐 Revoked ${sessionsToRevoke.length} other sessions for user ${userId}`);
+      logger.info(`🔐 Revoked ${sessionsToRevoke.length} other sessions for user ${userId}`);
 
       return {
         success: true,
@@ -513,7 +515,7 @@ export class EnterpriseSessionService {
         action: 'revoke_all'
       };
     } catch (error) {
-      console.error('Failed to revoke all sessions:', error);
+      logger.error('Failed to revoke all sessions:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

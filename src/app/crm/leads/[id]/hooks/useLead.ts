@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getOpportunityById } from '@/services/opportunities.service';
 import type { Opportunity } from '@/types/crm';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useLead');
 
 export function useLead(id: string) {
   const [lead, setLead] = useState<Opportunity | null>(null);
@@ -30,7 +32,7 @@ export function useLead(id: string) {
     } catch (err) {
       if (signal?.aborted) return;
       setError('Σφάλμα κατά τη φόρτωση του lead.');
-      console.error(err);
+      logger.error('Failed to fetch lead', { error: err });
     } finally {
       if (!signal?.aborted) {
         setLoading(false);

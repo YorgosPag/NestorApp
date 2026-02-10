@@ -4,6 +4,8 @@ import { isFirebaseAvailable } from '../../app/api/communications/webhooks/teleg
 import { getFirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EmailAdapter');
 
 interface EmailJob {
   id: string;
@@ -39,10 +41,10 @@ export class EmailAdapter {
     this.fromEmail = this.getFromEmail();
 
     if (!this.apiKey) {
-      console.warn('⚠️ MAILGUN_API_KEY not found in environment');
+      logger.warn('⚠️ MAILGUN_API_KEY not found in environment');
     }
     if (!this.domain) {
-      console.warn('⚠️ MAILGUN_DOMAIN not found in environment');
+      logger.warn('⚠️ MAILGUN_DOMAIN not found in environment');
     }
   }
 
@@ -104,7 +106,7 @@ export class EmailAdapter {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Mailgun API error:', response.status, errorText);
+        logger.error('❌ Mailgun API error:', response.status, errorText);
         return {
           success: false,
           error: `Mailgun API error: ${response.status}`
@@ -114,14 +116,14 @@ export class EmailAdapter {
       const result = await response.json() as { id?: string; message?: string };
       const messageId = result.id || undefined;
 
-      console.log(`✅ Email sent successfully via Mailgun. MessageId: ${messageId}`);
+      logger.info(`✅ Email sent successfully via Mailgun. MessageId: ${messageId}`);
       return {
         success: true,
         messageId
       };
 
     } catch (error) {
-      console.error('❌ Error sending email:', error);
+      logger.error('❌ Error sending email:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -134,13 +136,13 @@ export class EmailAdapter {
    */
   async processEmailJob(jobId: string): Promise<boolean> {
     if (!isFirebaseAvailable()) {
-      console.warn('⚠️ Firebase not available, cannot process email job');
+      logger.warn('⚠️ Firebase not available, cannot process email job');
       return false;
     }
 
     const firestoreHelpers = await getFirestoreHelpers();
     if (!firestoreHelpers) {
-      console.warn('⚠️ Firestore helpers not available');
+      logger.warn('⚠️ Firestore helpers not available');
       return false;
     }
 
@@ -152,7 +154,7 @@ export class EmailAdapter {
       const communicationsRef = database.collection(COLLECTIONS.COMMUNICATIONS);
       const jobDoc = await getDoc(doc(communicationsRef, jobId));
       if (!jobDoc.exists) {
-        console.error(`❌ Email job ${jobId} not found`);
+        logger.error(`❌ Email job ${jobId} not found`);
         return false;
       }
 
@@ -160,18 +162,18 @@ export class EmailAdapter {
 
       // 🏢 ENTERPRISE: Null check for jobData
       if (!jobData) {
-        console.error(`❌ Email job ${jobId} has no data`);
+        logger.error(`❌ Email job ${jobId} has no data`);
         return false;
       }
 
       // Validate job data
       if (jobData.status !== 'pending') {
-        console.log(`ℹ️ Email job ${jobId} already processed (status: ${jobData.status})`);
+        logger.info(`ℹ️ Email job ${jobId} already processed (status: ${jobData.status})`);
         return true;
       }
 
       if (jobData.attempts >= jobData.maxAttempts) {
-        console.warn(`⚠️ Email job ${jobId} exceeded max attempts`);
+        logger.warn(`⚠️ Email job ${jobId} exceeded max attempts`);
         await updateDoc(jobDoc.ref, {
           status: 'failed',
           error: 'Max attempts exceeded',

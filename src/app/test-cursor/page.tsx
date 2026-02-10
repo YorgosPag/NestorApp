@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('TestCursorPage');
 
 // Dynamic import για SSR compatibility
 // 🏢 ENTERPRISE: Type-safe component state
@@ -23,7 +25,7 @@ const TestCursorPageClient = () => {
         setCursorComponent(() => module.default as React.ComponentType<CursorSettingsPanelProps>);
       })
       .catch((error) => {
-        console.error('Failed to load CursorSettingsPanel:', error);
+        logger.error('Failed to load CursorSettingsPanel', { error });
       });
   }, []);
 

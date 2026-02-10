@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getTasksByLead } from '@/services/tasks.service';
 import type { CrmTask } from '@/types/crm';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useLeadTasks');
 
 export function useLeadTasks(leadId: string) {
   const [tasks, setTasks] = useState<CrmTask[]>([]);
@@ -26,7 +28,7 @@ export function useLeadTasks(leadId: string) {
     } catch (err) {
       if (!signal?.aborted) {
         setError('Σφάλμα κατά τη φόρτωση των εργασιών.');
-        console.error(err);
+        logger.error('Failed to fetch lead tasks', { error: err });
       }
     } finally {
       if (!signal?.aborted) {

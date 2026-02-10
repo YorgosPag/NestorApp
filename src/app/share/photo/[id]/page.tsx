@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('PhotoSharePage');
 
 interface PhotoData {
   id: string;
@@ -31,7 +33,7 @@ const PhotoSharePage = () => {
         const data = JSON.parse(decoded);
         setPhotoData(data);
       } catch (e) {
-        console.error('Parse error:', e);
+        logger.error('Parse error', { error: e });
       }
     }
     setLoading(false);

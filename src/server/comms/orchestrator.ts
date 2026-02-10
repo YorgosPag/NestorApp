@@ -4,6 +4,8 @@ import { isFirebaseAvailable } from '../../app/api/communications/webhooks/teleg
 import { getFirestoreHelpers, type FirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CommsOrchestrator');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Import from canonical SSoT (for local use)
@@ -135,7 +137,7 @@ export interface EnqueueResult {
  */
 export async function enqueueMessage(params: EnqueueMessageParams): Promise<EnqueueResult> {
   if (!isFirebaseAvailable()) {
-    console.warn('⚠️ Firebase not available, cannot enqueue message');
+    logger.warn('⚠️ Firebase not available, cannot enqueue message');
     return {
       success: false,
       messageIds: [],
@@ -145,7 +147,7 @@ export async function enqueueMessage(params: EnqueueMessageParams): Promise<Enqu
 
   const firestoreHelpers = await getFirestoreHelpers();
   if (!firestoreHelpers) {
-    console.warn('⚠️ Firestore helpers not available for message queuing');
+    logger.warn('⚠️ Firestore helpers not available for message queuing');
     return {
       success: false,
       messageIds: [],
@@ -166,7 +168,7 @@ export async function enqueueMessage(params: EnqueueMessageParams): Promise<Enqu
     const errorMsg = `❌ FAIL-FAST: Cannot dispatch to unimplemented channels: ${unimplementedChannels.join(', ')}. ` +
       `Implemented channels: ${supported}. ` +
       `See src/types/communications.ts IMPLEMENTED_CHANNELS for the canonical list.`;
-    console.error(errorMsg);
+    logger.error(errorMsg);
     return {
       success: false,
       messageIds: [],
@@ -187,13 +189,13 @@ export async function enqueueMessage(params: EnqueueMessageParams): Promise<Enqu
         
         if (messageId) {
           messageIds.push(messageId);
-          console.log(`✅ Message queued for ${channel} to ${recipient}: ${messageId}`);
+          logger.info(`✅ Message queued for ${channel} to ${recipient}: ${messageId}`);
         } else {
           errors.push(`Failed to queue ${channel} message to ${recipient}`);
         }
       } catch (error) {
         const errorMsg = `Error queuing ${channel} message to ${recipient}: ${error}`;
-        console.error(errorMsg);
+        logger.error(errorMsg);
         errors.push(errorMsg);
       }
     }
@@ -273,7 +275,7 @@ async function enqueueMessageForChannel(
     const docRef = await addDoc(collectionRef, messageRecord);
     
     // Log for debugging
-    console.log(`📝 ${channel.toUpperCase()} message queued:`, {
+    logger.info(`📝 ${channel.toUpperCase()} message queued:`, {
       id: docRef.id,
       to: recipient,
       channel,

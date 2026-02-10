@@ -28,6 +28,8 @@ import type { Migration, MigrationResult } from './types';
 import { DEFAULT_MIGRATION_CONFIG } from './types';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('Migration006');
 
 // ============================================================================
 // MIGRATION METADATA
@@ -123,7 +125,7 @@ async function fetchBuildingsMap(): Promise<Map<string, BuildingDocument>> {
     }
   });
 
-  console.log(`📋 [Migration] Loaded ${buildingsMap.size} buildings for matching`);
+  logger.info(`📋 [Migration] Loaded ${buildingsMap.size} buildings for matching`);
   return buildingsMap;
 }
 
@@ -148,7 +150,7 @@ async function fetchStorages(): Promise<StorageDocument[]> {
     });
   });
 
-  console.log(`📋 [Migration] Found ${storages.length} storage documents`);
+  logger.info(`📋 [Migration] Found ${storages.length} storage documents`);
   return storages;
 }
 
@@ -173,7 +175,7 @@ function matchBuildingId(
  * Perform dry-run analysis without modifying data
  */
 export async function dryRun(): Promise<DryRunResult> {
-  console.log('🔍 [Migration] Starting dry-run analysis...');
+  logger.info('🔍 [Migration] Starting dry-run analysis...');
 
   const buildingsMap = await fetchBuildingsMap();
   const storages = await fetchStorages();
@@ -216,16 +218,16 @@ export async function dryRun(): Promise<DryRunResult> {
     }
   }
 
-  console.log('📊 [Migration] Dry-run results:');
-  console.log(`   Total storages: ${result.totalStorages}`);
-  console.log(`   To migrate: ${result.storagesToMigrate}`);
-  console.log(`   Already migrated: ${result.storagesAlreadyMigrated}`);
-  console.log(`   Unmatched: ${result.unmatchedStorages}`);
+  logger.info('📊 [Migration] Dry-run results:');
+  logger.info(`   Total storages: ${result.totalStorages}`);
+  logger.info(`   To migrate: ${result.storagesToMigrate}`);
+  logger.info(`   Already migrated: ${result.storagesAlreadyMigrated}`);
+  logger.info(`   Unmatched: ${result.unmatchedStorages}`);
 
   if (result.unmatchedList.length > 0) {
-    console.log('⚠️ [Migration] Unmatched storages:');
+    logger.info('⚠️ [Migration] Unmatched storages:');
     result.unmatchedList.forEach(s => {
-      console.log(`   - ${s.storageName} (building: "${s.buildingName}")`);
+      logger.info(`   - ${s.storageName} (building: "${s.buildingName}")`);
     });
   }
 
@@ -245,8 +247,8 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  console.log(`🚀 [Migration] Starting ${MIGRATION_ID} v${MIGRATION_VERSION}`);
-  console.log(`   Mode: ${options.dryRun ? 'DRY-RUN' : 'EXECUTE'}`);
+  logger.info(`🚀 [Migration] Starting ${MIGRATION_ID} v${MIGRATION_VERSION}`);
+  logger.info(`   Mode: ${options.dryRun ? 'DRY-RUN' : 'EXECUTE'}`);
 
   try {
     // Step 1: Dry-run analysis
@@ -267,7 +269,7 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
 
     // Step 2: Execute migration
     if (dryRunResult.storagesToMigrate === 0) {
-      console.log('✅ [Migration] No storages to migrate');
+      logger.info('✅ [Migration] No storages to migrate');
       return {
         success: true,
         migrationId: MIGRATION_ID,
@@ -306,7 +308,7 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
       // Commit batch if reaching limit
       if (batchCount >= maxBatchSize) {
         await batch.commit();
-        console.log(`📦 [Migration] Committed batch of ${batchCount} updates`);
+        logger.info(`📦 [Migration] Committed batch of ${batchCount} updates`);
         batchCount = 0;
       }
     }
@@ -314,7 +316,7 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
     // Commit remaining
     if (batchCount > 0) {
       await batch.commit();
-      console.log(`📦 [Migration] Committed final batch of ${batchCount} updates`);
+      logger.info(`📦 [Migration] Committed final batch of ${batchCount} updates`);
     }
 
     // Handle unmatched storages
@@ -325,7 +327,7 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
       );
     }
 
-    console.log(`✅ [Migration] Successfully migrated ${dryRunResult.storagesToMigrate} storages`);
+    logger.info(`✅ [Migration] Successfully migrated ${dryRunResult.storagesToMigrate} storages`);
 
     return {
       success: true,
@@ -342,7 +344,7 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
     };
 
   } catch (error) {
-    console.error('❌ [Migration] Error:', error);
+    logger.error('❌ [Migration] Error:', error);
     errors.push(error instanceof Error ? error.message : 'Unknown error');
 
     return {
@@ -366,7 +368,7 @@ export async function execute(options: { dryRun?: boolean } = {}): Promise<Migra
 export async function rollback(): Promise<MigrationResult> {
   const startTime = Date.now();
 
-  console.log(`🔄 [Migration] Rolling back ${MIGRATION_ID}...`);
+  logger.info(`🔄 [Migration] Rolling back ${MIGRATION_ID}...`);
 
   try {
     const database = getFirestore();
@@ -378,7 +380,7 @@ export async function rollback(): Promise<MigrationResult> {
       .get();
 
     if (snapshot.empty) {
-      console.log('ℹ️ [Migration] No migrated storages found to rollback');
+      logger.info('ℹ️ [Migration] No migrated storages found to rollback');
       return {
         success: true,
         migrationId: MIGRATION_ID,
@@ -402,7 +404,7 @@ export async function rollback(): Promise<MigrationResult> {
 
     await batch.commit();
 
-    console.log(`✅ [Migration] Rolled back ${count} storages`);
+    logger.info(`✅ [Migration] Rolled back ${count} storages`);
 
     return {
       success: true,
@@ -413,7 +415,7 @@ export async function rollback(): Promise<MigrationResult> {
     };
 
   } catch (error) {
-    console.error('❌ [Migration] Rollback error:', error);
+    logger.error('❌ [Migration] Rollback error:', error);
 
     return {
       success: false,

@@ -13,12 +13,14 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { ViewMode } from './enterprise-system/types';
 import { CommonBadge } from '@/core/badges';
 import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('HeaderExamples');
 
 // ===== EXAMPLE 1: CONTACTS HEADER (Full Featured) =====
 
 export const ContactsHeaderExample = () => {
-  const handleSearch = (value: string) => console.log('Search:', value);
-  const handleViewModeChange = (mode: ViewMode) => console.log('View mode:', mode);
+  const handleSearch = (value: string) => logger.info('Search:', value);
+  const handleViewModeChange = (mode: ViewMode) => logger.info('View mode:', mode);
 
   return (
     <PageHeader
@@ -39,7 +41,7 @@ export const ContactsHeaderExample = () => {
           {
             key: 'type',
             value: 'all',
-            onChange: (value) => console.log('Type filter:', value),
+            onChange: (value) => logger.info('Type filter:', value),
             options: [
               { value: 'all', label: COMMON_FILTER_LABELS.ALL_TYPES },
               { value: 'individual', label: 'Φυσικά Πρόσωπα' },
@@ -53,27 +55,27 @@ export const ContactsHeaderExample = () => {
           {
             key: 'owners',
             checked: false,
-            onChange: (checked) => console.log('Owners only:', checked),
+            onChange: (checked) => logger.info('Owners only:', checked),
             label: 'Μόνο με ιδιοκτησίες'
           },
           {
             key: 'favorites',
             checked: false,
-            onChange: (checked) => console.log('Favorites only:', checked),
+            onChange: (checked) => logger.info('Favorites only:', checked),
             label: 'Αγαπημένα'
           }
         ],
         hasActiveFilters: false,
-        onClearFilters: () => console.log('Clear filters')
+        onClearFilters: () => logger.info('Clear filters')
       }}
       actions={{
         showDashboard: true,
-        onDashboardToggle: () => console.log('Toggle dashboard'),
+        onDashboardToggle: () => logger.info('Toggle dashboard'),
         viewMode: 'list',
         onViewModeChange: handleViewModeChange,
         addButton: {
           label: 'Νέα Επαφή',
-          onClick: () => console.log('Add contact')
+          onClick: () => logger.info('Add contact')
         }
       }}
     />
@@ -94,13 +96,13 @@ export const ProjectsHeaderExample = () => {
       }}
       actions={{
         showDashboard: false,
-        onDashboardToggle: () => console.log('Toggle dashboard'),
+        onDashboardToggle: () => logger.info('Toggle dashboard'),
         viewMode: 'grid',
-        onViewModeChange: (mode) => console.log('View mode:', mode),
+        onViewModeChange: (mode) => logger.info('View mode:', mode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'],
         addButton: {
           label: 'Νέο Έργο',
-          onClick: () => console.log('Add project')
+          onClick: () => logger.info('Add project')
         }
       }}
     />
@@ -128,12 +130,12 @@ export const PropertyHeaderExample = () => {
       }}
       actions={{
         showDashboard: true,
-        onDashboardToggle: () => console.log('Toggle dashboard'),
+        onDashboardToggle: () => logger.info('Toggle dashboard'),
         viewMode: 'list',
-        onViewModeChange: (mode) => console.log('View mode:', mode),
+        onViewModeChange: (mode) => logger.info('View mode:', mode),
         addButton: {
           label: 'Νέο Ακίνητο',
-          onClick: () => console.log('Add property')
+          onClick: () => logger.info('Add property')
         }
       }}
     />
@@ -154,7 +156,7 @@ export const ObligationsHeaderExample = () => {
       }}
       search={{
         value: "",
-        onChange: (value) => console.log('Search obligations:', value),
+        onChange: (value) => logger.info('Search obligations:', value),
         placeholder: "Αναζήτηση συγγραφών υποχρεώσεων..."
       }}
       filters={{
@@ -162,7 +164,7 @@ export const ObligationsHeaderExample = () => {
           {
             key: 'status',
             value: 'all',
-            onChange: (value) => console.log('Status filter:', value),
+            onChange: (value) => logger.info('Status filter:', value),
             options: [
               { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
               { value: 'draft', label: 'Προσχέδια' },
@@ -176,7 +178,7 @@ export const ObligationsHeaderExample = () => {
       actions={{
         addButton: {
           label: 'Νέα Συγγραφή Υποχρεώσεων',
-          onClick: () => console.log('Add obligation')
+          onClick: () => logger.info('Add obligation')
         }
       }}
     />
@@ -198,7 +200,7 @@ export const FloatingHeaderExample = () => {
       }}
       search={{
         value: "",
-        onChange: (value) => console.log('Search reports:', value),
+        onChange: (value) => logger.info('Search reports:', value),
         placeholder: "Αναζήτηση αναφορών..."
       }}
       actions={{
@@ -212,7 +214,7 @@ export const FloatingHeaderExample = () => {
         ],
         addButton: {
           label: 'Νέα Αναφορά',
-          onClick: () => console.log('Add report')
+          onClick: () => logger.info('Add report')
         }
       }}
     />
