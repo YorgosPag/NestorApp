@@ -48,14 +48,9 @@ interface UploadDocumentDialogProps {
 // CONSTANTS
 // ============================================================================
 
-const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [
-  { value: 'purchase_invoice', label: 'Τιμολόγιο Αγοράς' },
-  { value: 'receipt', label: 'Απόδειξη' },
-  { value: 'utility_bill', label: 'Λογαριασμός ΔΕΚΟ' },
-  { value: 'telecom_bill', label: 'Λογαριασμός Τηλεπικοινωνιών' },
-  { value: 'fuel_receipt', label: 'Απόδειξη Καυσίμων' },
-  { value: 'bank_statement', label: 'Αντίγραφο Τράπεζας' },
-  { value: 'other', label: 'Λοιπό' },
+const DOCUMENT_TYPE_CODES: DocumentType[] = [
+  'purchase_invoice', 'receipt', 'utility_bill', 'telecom_bill',
+  'fuel_receipt', 'bank_statement', 'other',
 ];
 
 const MIME_TYPES: Record<string, string> = {
@@ -187,9 +182,9 @@ export function UploadDocumentDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {DOCUMENT_TYPES.map((dt) => (
-                  <SelectItem key={dt.value} value={dt.value}>
-                    {dt.label}
+                {DOCUMENT_TYPE_CODES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {t(`documentTypes.${code}`)}
                   </SelectItem>
                 ))}
               </SelectContent>

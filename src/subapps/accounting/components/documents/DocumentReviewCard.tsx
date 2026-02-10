@@ -49,40 +49,23 @@ interface DocumentReviewCardProps {
 // CONSTANTS
 // ============================================================================
 
-const EXPENSE_CATEGORIES: { value: ExpenseCategory; labelKey: string }[] = [
-  { value: 'third_party_fees', labelKey: 'Αμοιβές Τρίτων' },
-  { value: 'rent', labelKey: 'Ενοίκιο' },
-  { value: 'utilities', labelKey: 'ΔΕΚΟ' },
-  { value: 'telecom', labelKey: 'Τηλεπικοινωνίες' },
-  { value: 'fuel', labelKey: 'Καύσιμα' },
-  { value: 'vehicle_expenses', labelKey: 'Έξοδα Οχημάτων' },
-  { value: 'vehicle_insurance', labelKey: 'Ασφάλεια Οχήματος' },
-  { value: 'office_supplies', labelKey: 'Αναλώσιμα Γραφείου' },
-  { value: 'software', labelKey: 'Λογισμικό' },
-  { value: 'equipment', labelKey: 'Εξοπλισμός' },
-  { value: 'travel', labelKey: 'Ταξίδια' },
-  { value: 'training', labelKey: 'Εκπαίδευση' },
-  { value: 'advertising', labelKey: 'Διαφήμιση' },
-  { value: 'efka', labelKey: 'ΕΦΚΑ' },
-  { value: 'professional_tax', labelKey: 'Φόρος Επαγγέλματος' },
-  { value: 'bank_fees', labelKey: 'Τραπεζικά Έξοδα' },
-  { value: 'tee_fees', labelKey: 'Τέλη ΤΕΕ' },
-  { value: 'depreciation', labelKey: 'Αποσβέσεις' },
-  { value: 'other_expense', labelKey: 'Λοιπά Έξοδα' },
+const EXPENSE_CATEGORY_CODES: ExpenseCategory[] = [
+  'third_party_fees', 'rent', 'utilities', 'telecom', 'fuel',
+  'vehicle_expenses', 'vehicle_insurance', 'office_supplies', 'software',
+  'equipment', 'travel', 'training', 'advertising', 'efka',
+  'professional_tax', 'bank_fees', 'tee_fees', 'depreciation', 'other_expense',
 ];
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-function getStatusBadge(status: ReceivedExpenseDocument['status']): { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string } {
-  switch (status) {
-    case 'processing': return { variant: 'secondary', label: 'Επεξεργασία...' };
-    case 'review': return { variant: 'outline', label: 'Αναμένει Έλεγχο' };
-    case 'confirmed': return { variant: 'default', label: 'Επιβεβαιωμένο' };
-    case 'rejected': return { variant: 'destructive', label: 'Απορρίφθηκε' };
-  }
-}
+const STATUS_VARIANT_MAP: Record<ReceivedExpenseDocument['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  processing: 'secondary',
+  review: 'outline',
+  confirmed: 'default',
+  rejected: 'destructive',
+};
 
 // ============================================================================
 // COMPONENT
@@ -113,7 +96,8 @@ export function DocumentReviewCard({
     doc.confirmedIssuerName ?? doc.extractedData.issuerName ?? ''
   );
 
-  const statusBadge = getStatusBadge(doc.status);
+  const statusVariant = STATUS_VARIANT_MAP[doc.status];
+  const statusLabel = t(`documents.statuses.${doc.status}`);
   const isEditable = doc.status === 'review';
 
   const handleConfirm = useCallback(async () => {
@@ -135,7 +119,7 @@ export function DocumentReviewCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">{doc.fileName}</CardTitle>
-          <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+          <Badge variant={statusVariant}>{statusLabel}</Badge>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {doc.mimeType} — {(doc.fileSize / 1024).toFixed(1)} KB
@@ -161,9 +145,9 @@ export function DocumentReviewCard({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {EXPENSE_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.labelKey}
+                    {EXPENSE_CATEGORY_CODES.map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {t(`categories.expense.${code}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>

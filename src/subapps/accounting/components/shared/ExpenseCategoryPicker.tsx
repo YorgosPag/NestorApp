@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import {
   Select,
   SelectContent,
@@ -16,34 +17,34 @@ interface ExpenseCategoryPickerProps {
   disabled?: boolean;
 }
 
-const INCOME_CATEGORIES: { code: AccountCategory; label: string }[] = [
-  { code: 'service_income', label: 'Αμοιβές Υπηρεσιών' },
-  { code: 'construction_income', label: 'Κατασκευαστικά Έσοδα' },
-  { code: 'construction_res_income', label: 'Κατασκευαστικά (Οικιστικά)' },
-  { code: 'asset_sale_income', label: 'Πώληση Παγίου' },
-  { code: 'other_income', label: 'Λοιπά Έσοδα' },
+const INCOME_CATEGORY_CODES: AccountCategory[] = [
+  'service_income',
+  'construction_income',
+  'construction_res_income',
+  'asset_sale_income',
+  'other_income',
 ];
 
-const EXPENSE_CATEGORIES: { code: AccountCategory; label: string }[] = [
-  { code: 'third_party_fees', label: 'Αμοιβές Τρίτων' },
-  { code: 'rent', label: 'Ενοίκια' },
-  { code: 'utilities', label: 'Κοινόχρηστα/ΔΕΗ' },
-  { code: 'telecom', label: 'Τηλεπικοινωνίες' },
-  { code: 'fuel', label: 'Καύσιμα' },
-  { code: 'vehicle_expenses', label: 'Έξοδα Οχήματος' },
-  { code: 'vehicle_insurance', label: 'Ασφάλεια Οχήματος' },
-  { code: 'office_supplies', label: 'Αναλώσιμα Γραφείου' },
-  { code: 'software', label: 'Λογισμικό/Συνδρομές' },
-  { code: 'equipment', label: 'Εξοπλισμός' },
-  { code: 'travel', label: 'Μετακινήσεις/Ταξίδια' },
-  { code: 'training', label: 'Εκπαίδευση' },
-  { code: 'advertising', label: 'Διαφήμιση' },
-  { code: 'efka', label: 'ΕΦΚΑ Εισφορές' },
-  { code: 'professional_tax', label: 'Τέλος Επιτηδεύματος' },
-  { code: 'bank_fees', label: 'Τραπεζικά Έξοδα' },
-  { code: 'tee_fees', label: 'Εισφορές ΤΕΕ' },
-  { code: 'depreciation', label: 'Αποσβέσεις' },
-  { code: 'other_expense', label: 'Λοιπά Έξοδα' },
+const EXPENSE_CATEGORY_CODES: AccountCategory[] = [
+  'third_party_fees',
+  'rent',
+  'utilities',
+  'telecom',
+  'fuel',
+  'vehicle_expenses',
+  'vehicle_insurance',
+  'office_supplies',
+  'software',
+  'equipment',
+  'travel',
+  'training',
+  'advertising',
+  'efka',
+  'professional_tax',
+  'bank_fees',
+  'tee_fees',
+  'depreciation',
+  'other_expense',
 ];
 
 export function ExpenseCategoryPicker({
@@ -52,7 +53,9 @@ export function ExpenseCategoryPicker({
   type,
   disabled,
 }: ExpenseCategoryPickerProps) {
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const { t } = useTranslation('accounting');
+  const codes = type === 'income' ? INCOME_CATEGORY_CODES : EXPENSE_CATEGORY_CODES;
+  const i18nSection = type === 'income' ? 'categories.income' : 'categories.expense';
 
   return (
     <Select
@@ -64,9 +67,9 @@ export function ExpenseCategoryPicker({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {categories.map(({ code, label }) => (
+        {codes.map((code) => (
           <SelectItem key={code} value={code}>
-            {label}
+            {t(`${i18nSection}.${code}`)}
           </SelectItem>
         ))}
       </SelectContent>

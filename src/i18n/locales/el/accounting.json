@@ -357,6 +357,53 @@
       "mainKadRequired": "Η κύρια δραστηριότητα είναι υποχρεωτική"
     }
   },
+  "categories": {
+    "income": {
+      "service_income": "Αμοιβές Υπηρεσιών",
+      "construction_income": "Κατασκευαστικά Έσοδα",
+      "construction_res_income": "Κατασκευαστικά (Οικιστικά)",
+      "asset_sale_income": "Πώληση Παγίου",
+      "other_income": "Λοιπά Έσοδα"
+    },
+    "expense": {
+      "third_party_fees": "Αμοιβές Τρίτων",
+      "rent": "Ενοίκια",
+      "utilities": "Κοινόχρηστα/ΔΕΗ",
+      "telecom": "Τηλεπικοινωνίες",
+      "fuel": "Καύσιμα",
+      "vehicle_expenses": "Έξοδα Οχήματος",
+      "vehicle_insurance": "Ασφάλεια Οχήματος",
+      "office_supplies": "Αναλώσιμα Γραφείου",
+      "software": "Λογισμικό/Συνδρομές",
+      "equipment": "Εξοπλισμός",
+      "travel": "Μετακινήσεις/Ταξίδια",
+      "training": "Εκπαίδευση",
+      "advertising": "Διαφήμιση",
+      "efka": "ΕΦΚΑ Εισφορές",
+      "professional_tax": "Τέλος Επιτηδεύματος",
+      "bank_fees": "Τραπεζικά Έξοδα",
+      "tee_fees": "Εισφορές ΤΕΕ",
+      "depreciation": "Αποσβέσεις",
+      "other_expense": "Λοιπά Έξοδα"
+    }
+  },
+  "documentTypes": {
+    "purchase_invoice": "Τιμολόγιο Αγοράς",
+    "receipt": "Απόδειξη",
+    "utility_bill": "Λογαριασμός ΔΕΚΟ",
+    "telecom_bill": "Λογαριασμός Τηλεπικοινωνιών",
+    "fuel_receipt": "Απόδειξη Καυσίμων",
+    "bank_statement": "Αντίγραφο Τράπεζας",
+    "other": "Λοιπό"
+  },
+  "units": {
+    "pieces": "τεμ",
+    "hours": "ώρες",
+    "days": "ημέρες",
+    "meters": "μ.",
+    "squareMeters": "τ.μ.",
+    "kg": "κγρ."
+  },
   "dashboard": {
     "title": "Dashboard Λογιστικού",
     "totalIncome": "Σύνολο Εσόδων",

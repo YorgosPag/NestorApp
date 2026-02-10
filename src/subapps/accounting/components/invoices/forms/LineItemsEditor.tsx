@@ -14,19 +14,19 @@ interface LineItemsEditorProps {
   onLineItemsChange: (items: InvoiceLineItem[]) => void;
 }
 
-const DEFAULT_LINE_ITEM: InvoiceLineItem = {
-  lineNumber: 1,
-  description: '',
-  quantity: 1,
-  unit: 'τεμ',
-  unitPrice: 0,
-  vatRate: 24,
-  netAmount: 0,
-  mydataCode: 'category1_3' as MyDataIncomeType,
-};
-
 export function LineItemsEditor({ lineItems, onLineItemsChange }: LineItemsEditorProps) {
   const { t } = useTranslation('accounting');
+
+  const DEFAULT_LINE_ITEM: InvoiceLineItem = {
+    lineNumber: 1,
+    description: '',
+    quantity: 1,
+    unit: t('units.pieces'),
+    unitPrice: 0,
+    vatRate: 24,
+    netAmount: 0,
+    mydataCode: 'category1_3' as MyDataIncomeType,
+  };
 
   const addItem = useCallback(() => {
     onLineItemsChange([

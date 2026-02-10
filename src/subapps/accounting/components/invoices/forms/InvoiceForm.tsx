@@ -58,17 +58,6 @@ const DEFAULT_CUSTOMER: InvoiceCustomer = {
   email: null,
 };
 
-const DEFAULT_LINE_ITEM: InvoiceLineItem = {
-  lineNumber: 1,
-  description: '',
-  quantity: 1,
-  unit: 'τεμ',
-  unitPrice: 0,
-  vatRate: 24,
-  netAmount: 0,
-  mydataCode: 'category1_3' as MyDataIncomeType,
-};
-
 function calculateTotals(lineItems: InvoiceLineItem[]) {
   let totalNet = 0;
   let totalVat = 0;
@@ -90,6 +79,17 @@ function calculateTotals(lineItems: InvoiceLineItem[]) {
 export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
   const { t } = useTranslation('accounting');
   const { user } = useAuth();
+
+  const DEFAULT_LINE_ITEM: InvoiceLineItem = {
+    lineNumber: 1,
+    description: '',
+    quantity: 1,
+    unit: t('units.pieces'),
+    unitPrice: 0,
+    vatRate: 24,
+    netAmount: 0,
+    mydataCode: 'category1_3' as MyDataIncomeType,
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -83,6 +83,7 @@ if (typeof window !== 'undefined') {
       'properties',    // 🏢 Properties module - status labels used by DXF overlays
       'dxf-viewer',
       'geo-canvas',
+      'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets
     ];
 
     const saved = localStorage.getItem('preferred-language');

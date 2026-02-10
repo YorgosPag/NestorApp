@@ -42,7 +42,8 @@ export const SUPPORTED_NAMESPACES = [
   'storage',   // 🏢 Storage management module
   'parking',   // 🏢 Parking management module - added 2026-01-24
   'admin',     // 🏢 Admin tools (units, claims repair)
-  'tool-hints' // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
+  'tool-hints', // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
+  'accounting' // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -150,6 +151,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'tool-hints':
           translations = await import('./locales/el/tool-hints.json');
           break;
+        case 'accounting':
+          translations = await import('./locales/el/accounting.json');
+          break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -237,6 +241,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'tool-hints':
           translations = await import('./locales/en/tool-hints.json');
+          break;
+        case 'accounting':
+          translations = await import('./locales/en/accounting.json');
           break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
@@ -348,6 +355,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'storage',       // 🏢 Storage management module - added 2026-01-24
     'parking',       // 🏢 Parking management module - added 2026-01-24
     'dxf-viewer',    // ?? DXF viewer UI - avoids fallback-to-keys after language switch
+    'accounting',    // 🏢 Accounting subapp - all financial modules
     // Note: 'crm' loads on-demand via useTranslation('crm')
   ];
 

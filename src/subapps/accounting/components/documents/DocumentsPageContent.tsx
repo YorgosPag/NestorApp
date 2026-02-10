@@ -40,14 +40,12 @@ function formatCurrency(amount: number | null): string {
   return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 }
 
-function getStatusBadge(status: DocumentProcessingStatus): { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string } {
-  switch (status) {
-    case 'processing': return { variant: 'secondary', label: 'Επεξεργασία' };
-    case 'review': return { variant: 'outline', label: 'Έλεγχος' };
-    case 'confirmed': return { variant: 'default', label: 'Επιβεβαιωμένο' };
-    case 'rejected': return { variant: 'destructive', label: 'Απορρίφθηκε' };
-  }
-}
+const STATUS_VARIANT_MAP: Record<DocumentProcessingStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  processing: 'secondary',
+  review: 'outline',
+  confirmed: 'default',
+  rejected: 'destructive',
+};
 
 // ============================================================================
 // COMPONENT
@@ -184,7 +182,8 @@ export function DocumentsPageContent() {
             {/* Document List */}
             <ul className="space-y-3">
               {documents.map((doc) => {
-                const statusInfo = getStatusBadge(doc.status);
+                const statusVariant = STATUS_VARIANT_MAP[doc.status];
+                const statusLabel = t(`documents.statuses.${doc.status}`);
                 const isSelected = selectedDocId === doc.documentId;
 
                 return (
@@ -209,7 +208,7 @@ export function DocumentsPageContent() {
                             <span className="text-sm font-medium">
                               {formatCurrency(doc.extractedData.grossAmount)}
                             </span>
-                            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                            <Badge variant={statusVariant}>{statusLabel}</Badge>
                           </div>
                         </div>
                       </CardHeader>

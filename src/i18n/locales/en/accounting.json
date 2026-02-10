@@ -357,6 +357,53 @@
       "mainKadRequired": "Main activity code is required"
     }
   },
+  "categories": {
+    "income": {
+      "service_income": "Service Fees",
+      "construction_income": "Construction Income",
+      "construction_res_income": "Construction (Residential)",
+      "asset_sale_income": "Asset Sale",
+      "other_income": "Other Income"
+    },
+    "expense": {
+      "third_party_fees": "Third-Party Fees",
+      "rent": "Rent",
+      "utilities": "Utilities",
+      "telecom": "Telecommunications",
+      "fuel": "Fuel",
+      "vehicle_expenses": "Vehicle Expenses",
+      "vehicle_insurance": "Vehicle Insurance",
+      "office_supplies": "Office Supplies",
+      "software": "Software/Subscriptions",
+      "equipment": "Equipment",
+      "travel": "Travel/Transport",
+      "training": "Training",
+      "advertising": "Advertising",
+      "efka": "EFKA Contributions",
+      "professional_tax": "Professional Tax",
+      "bank_fees": "Bank Fees",
+      "tee_fees": "TEE Fees",
+      "depreciation": "Depreciation",
+      "other_expense": "Other Expenses"
+    }
+  },
+  "documentTypes": {
+    "purchase_invoice": "Purchase Invoice",
+    "receipt": "Receipt",
+    "utility_bill": "Utility Bill",
+    "telecom_bill": "Telecom Bill",
+    "fuel_receipt": "Fuel Receipt",
+    "bank_statement": "Bank Statement",
+    "other": "Other"
+  },
+  "units": {
+    "pieces": "pcs",
+    "hours": "hours",
+    "days": "days",
+    "meters": "m",
+    "squareMeters": "sq.m.",
+    "kg": "kg"
+  },
   "dashboard": {
     "title": "Accounting Dashboard",
     "totalIncome": "Total Income",

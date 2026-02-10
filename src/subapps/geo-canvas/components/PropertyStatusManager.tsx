@@ -92,24 +92,24 @@ export function PropertyStatusManager({
   }, [selectedStatuses, onLayerVisibilityChange]);
 
   // ✅ ENTERPRISE: Get status color using centralized COLOR_BRIDGE system
-  const getStatusColor = useCallback((status: PropertyStatus): string => {
+  const getStatusBgClass = useCallback((status: PropertyStatus): string => {
     // Map EnhancedPropertyStatus to semantic color patterns via COLOR_BRIDGE
     switch (status) {
       case 'for-sale':
       case 'for-rent':
       case 'coming-soon':
-        return colors.text.success; // Green available color
+        return colors.bg.success; // Green available color
       case 'sold':
       case 'rented':
-        return colors.text.info; // Blue completed color
+        return colors.bg.info; // Blue completed color
       case 'reserved':
       case 'under-negotiation':
-        return colors.text.warning; // Yellow pending color
+        return colors.bg.warning; // Yellow pending color
       case 'unavailable':
       case 'off-market':
-        return colors.text.error; // Red cancelled color
+        return colors.bg.error; // Red cancelled color
       default:
-        return colors.text.muted; // Gray fallback
+        return colors.bg.muted; // Gray fallback
     }
   }, [colors]);
 
@@ -217,7 +217,7 @@ export function PropertyStatusManager({
           <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
             {getAllStatuses().map((status) => {
               const isVisible = isStatusVisible(status);
-              const statusColor = getStatusColor(status);
+              const statusBgClass = getStatusBgClass(status);
 
               return (
                 <div
@@ -289,3 +289,5 @@ export function PropertyStatusManager({
     </div>
   );
 }
+
+
