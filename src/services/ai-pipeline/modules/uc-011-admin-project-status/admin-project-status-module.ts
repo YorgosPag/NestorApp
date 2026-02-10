@@ -71,11 +71,18 @@ interface UnitStats {
   other: number;
 }
 
+interface GanttBuildingDetail {
+  buildingName: string;
+  phaseCount: number;
+}
+
 interface ProjectWithDetails {
   project: ProjectInfo;
   unitStats: UnitStats;
   hasGantt: boolean;
   buildingCount: number;
+  /** Building-level Gantt details (Google-style: answer at EVERY level of hierarchy) */
+  ganttDetails: GanttBuildingDetail[];
 }
 
 interface ProjectLookupData {
@@ -203,95 +210,139 @@ export class AdminProjectStatusModule implements IUCModule {
 
   /**
    * Enrich projects with unit stats, building count, and Gantt availability.
-   * Uses batch queries to minimize Firestore reads.
+   *
+   * STRATEGY: Bottom-Up Discovery (Google/OpenAI approach)
+   * ──────────────────────────────────────────────────────
+   * Uses REQUIRED fields only — never depends on optional companyId in buildings/units:
+   *   Projects (companyId) → Buildings (projectId ✅) → Units (buildingId ✅)
+   *                                                   → Phases (buildingId ✅)
+   *
+   * This ensures:
+   * 1. ALL buildings are found (projectId is required, companyId is optional)
+   * 2. ALL units are found (via buildingId, not companyId)
+   * 3. ALL Gantt data is found (via buildingId)
+   * 4. Response shows BOTH project-level AND building-level Gantt info
    */
   private async enrichProjectDetails(
     adminDb: FirebaseFirestore.Firestore,
     projects: Array<{ id: string; info: ProjectInfo }>,
-    companyId: string,
+    _companyId: string,
   ): Promise<ProjectWithDetails[]> {
     const projectIds = projects.map((p) => p.id);
+    const BATCH_SIZE = 30; // Firestore 'in' operator max
 
-    // Batch: get all units for these projects
-    const unitsSnapshot = await adminDb
-      .collection(COLLECTIONS.UNITS)
-      .where('companyId', '==', companyId)
-      .get();
+    // ── STEP 1: Buildings by projectId (REQUIRED field — always populated) ──
+    const buildingsByProject = new Map<string, Array<{ id: string; name: string }>>();
+    const allBuildingIds: string[] = [];
+    const buildingToProject = new Map<string, string>();
 
-    // Batch: get all buildings for these projects
-    const buildingsSnapshot = await adminDb
-      .collection(COLLECTIONS.BUILDINGS)
-      .where('companyId', '==', companyId)
-      .get();
-
-    // Index units by projectId
-    const unitsByProject = new Map<string, UnitStats>();
-    for (const unitDoc of unitsSnapshot.docs) {
-      const data = unitDoc.data();
-      const projId = data.projectId as string;
-      if (!projectIds.includes(projId)) continue;
-
-      if (!unitsByProject.has(projId)) {
-        unitsByProject.set(projId, { total: 0, sold: 0, available: 0, reserved: 0, other: 0 });
-      }
-      const stats = unitsByProject.get(projId)!;
-      stats.total++;
-      const unitStatus = ((data.status ?? '') as string).toLowerCase();
-      if (unitStatus === 'sold' || unitStatus === 'πωλημένο') stats.sold++;
-      else if (unitStatus === 'available' || unitStatus === 'διαθέσιμο') stats.available++;
-      else if (unitStatus === 'reserved' || unitStatus === 'κρατημένο') stats.reserved++;
-      else stats.other++;
-    }
-
-    // Index buildings by projectId, track buildingIds
-    const buildingsByProject = new Map<string, string[]>();
-    const allCompanyBuildingIds = new Set<string>();
-    for (const buildDoc of buildingsSnapshot.docs) {
-      const data = buildDoc.data();
-      const projId = data.projectId as string;
-      allCompanyBuildingIds.add(buildDoc.id);
-      if (!projectIds.includes(projId)) continue;
-
-      if (!buildingsByProject.has(projId)) {
-        buildingsByProject.set(projId, []);
-      }
-      buildingsByProject.get(projId)!.push(buildDoc.id);
-    }
-
-    // Gantt detection: query construction_phases by buildingId (batched)
-    // Legacy phases may not have companyId, so we query per building batch
-    const buildingsWithGantt = new Set<string>();
-    const buildingIdArray = Array.from(allCompanyBuildingIds);
-
-    // Firestore 'in' operator supports max 30 values per query
-    const BATCH_SIZE = 30;
-    for (let i = 0; i < buildingIdArray.length; i += BATCH_SIZE) {
-      const batch = buildingIdArray.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < projectIds.length; i += BATCH_SIZE) {
+      const batch = projectIds.slice(i, i + BATCH_SIZE);
       if (batch.length === 0) continue;
 
-      const phasesSnapshot = await adminDb
+      const snapshot = await adminDb
+        .collection(COLLECTIONS.BUILDINGS)
+        .where('projectId', 'in', batch)
+        .get();
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const projId = data.projectId as string;
+        allBuildingIds.push(doc.id);
+        buildingToProject.set(doc.id, projId);
+
+        if (!buildingsByProject.has(projId)) {
+          buildingsByProject.set(projId, []);
+        }
+        buildingsByProject.get(projId)!.push({
+          id: doc.id,
+          name: (data.name as string) ?? doc.id,
+        });
+      }
+    }
+
+    logger.info('UC-011 ENRICH: Buildings discovery', {
+      totalBuildings: allBuildingIds.length,
+      projectsWithBuildings: buildingsByProject.size,
+      projectIds: projectIds.slice(0, 5),
+    });
+
+    // ── STEP 2: Construction phases by buildingId → Gantt detection ──
+    const buildingsWithGantt = new Set<string>();
+    const ganttPhaseCount = new Map<string, number>();
+
+    for (let i = 0; i < allBuildingIds.length; i += BATCH_SIZE) {
+      const batch = allBuildingIds.slice(i, i + BATCH_SIZE);
+      if (batch.length === 0) continue;
+
+      const snapshot = await adminDb
         .collection(COLLECTIONS.CONSTRUCTION_PHASES)
         .where('buildingId', 'in', batch)
         .limit(1000)
         .get();
 
-      for (const phaseDoc of phasesSnapshot.docs) {
-        const data = phaseDoc.data();
-        buildingsWithGantt.add(data.buildingId as string);
+      for (const doc of snapshot.docs) {
+        const bId = doc.data().buildingId as string;
+        buildingsWithGantt.add(bId);
+        ganttPhaseCount.set(bId, (ganttPhaseCount.get(bId) ?? 0) + 1);
       }
     }
 
-    // Build enriched results
+    logger.info('UC-011 ENRICH: Gantt detection', {
+      buildingsWithGantt: buildingsWithGantt.size,
+      totalPhases: Array.from(ganttPhaseCount.values()).reduce((a, b) => a + b, 0),
+    });
+
+    // ── STEP 3: Units by buildingId → unit stats mapped to projects ──
+    const unitsByProject = new Map<string, UnitStats>();
+
+    for (let i = 0; i < allBuildingIds.length; i += BATCH_SIZE) {
+      const batch = allBuildingIds.slice(i, i + BATCH_SIZE);
+      if (batch.length === 0) continue;
+
+      const snapshot = await adminDb
+        .collection(COLLECTIONS.UNITS)
+        .where('buildingId', 'in', batch)
+        .limit(2000)
+        .get();
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const bId = data.buildingId as string;
+        const projId = buildingToProject.get(bId);
+        if (!projId) continue;
+
+        if (!unitsByProject.has(projId)) {
+          unitsByProject.set(projId, { total: 0, sold: 0, available: 0, reserved: 0, other: 0 });
+        }
+        const stats = unitsByProject.get(projId)!;
+        stats.total++;
+        const unitStatus = ((data.status ?? '') as string).toLowerCase();
+        if (unitStatus === 'sold' || unitStatus === 'πωλημένο') stats.sold++;
+        else if (unitStatus === 'available' || unitStatus === 'διαθέσιμο') stats.available++;
+        else if (unitStatus === 'reserved' || unitStatus === 'κρατημένο') stats.reserved++;
+        else stats.other++;
+      }
+    }
+
+    // ── STEP 4: Assemble enriched results with building-level Gantt details ──
+    const emptyStats: UnitStats = { total: 0, sold: 0, available: 0, reserved: 0, other: 0 };
+
     return projects.map(({ id, info }) => {
-      const unitStats = unitsByProject.get(id) ?? { total: 0, sold: 0, available: 0, reserved: 0, other: 0 };
-      const buildingIds = buildingsByProject.get(id) ?? [];
-      const hasGantt = buildingIds.some((bid) => buildingsWithGantt.has(bid));
+      const buildings = buildingsByProject.get(id) ?? [];
+      const ganttBuildings = buildings
+        .filter((b) => buildingsWithGantt.has(b.id))
+        .map((b) => ({
+          buildingName: b.name,
+          phaseCount: ganttPhaseCount.get(b.id) ?? 0,
+        }));
 
       return {
         project: info,
-        unitStats,
-        hasGantt,
-        buildingCount: buildingIds.length,
+        unitStats: unitsByProject.get(id) ?? emptyStats,
+        hasGantt: ganttBuildings.length > 0,
+        buildingCount: buildings.length,
+        ganttDetails: ganttBuildings,
       };
     });
   }
@@ -439,14 +490,23 @@ export class AdminProjectStatusModule implements IUCModule {
       return `Δεν βρέθηκε έργο με όνομα "${(params.searchTerm as string) ?? ''}".`;
     }
 
-    const { project, unitStats, hasGantt, buildingCount } = details;
+    const { project, unitStats, hasGantt, buildingCount, ganttDetails } = details;
     const lines: string[] = [`Έργο: ${project.name}`];
 
     if (project.statusLabel) lines.push(`Κατάσταση: ${project.statusLabel}`);
     if (project.address) lines.push(`Διεύθυνση: ${project.address}`);
     if (project.progress > 0) lines.push(`Πρόοδος: ${project.progress}%`);
     if (buildingCount > 0) lines.push(`Κτήρια: ${buildingCount}`);
-    lines.push(`Gantt: ${hasGantt ? 'Ναι' : 'Όχι'}`);
+
+    // Gantt: show building-level details
+    if (hasGantt && ganttDetails.length > 0) {
+      const ganttLines = ganttDetails
+        .map((g) => `  ${g.buildingName} (${g.phaseCount} φάσεις)`)
+        .join('\n');
+      lines.push(`Gantt: Ναι\n${ganttLines}`);
+    } else {
+      lines.push('Gantt: Όχι');
+    }
 
     if (unitStats.total > 0) {
       lines.push('');
@@ -483,17 +543,23 @@ export class AdminProjectStatusModule implements IUCModule {
     }
     lines.push('');
 
-    // Project entries
-    for (const { project, unitStats, hasGantt, buildingCount } of projects) {
+    // Project entries — hierarchical with building-level Gantt details
+    for (const { project, unitStats, hasGantt, buildingCount, ganttDetails } of projects) {
       const statusPart = project.statusLabel ? ` [${project.statusLabel}]` : '';
       const progressPart = project.progress > 0 ? ` ${project.progress}%` : '';
-      const ganttPart = hasGantt ? ' | Gantt' : '';
       const unitsPart = unitStats.total > 0
         ? ` | ${unitStats.total} units (${unitStats.sold} πωλ./${unitStats.available} διαθ.)`
         : '';
       const buildingsPart = buildingCount > 0 ? ` | ${buildingCount} κτήρια` : '';
 
-      lines.push(`- ${project.name}${statusPart}${progressPart}${buildingsPart}${unitsPart}${ganttPart}`);
+      lines.push(`- ${project.name}${statusPart}${progressPart}${buildingsPart}${unitsPart}`);
+
+      // Show building-level Gantt details (Google approach: answer at EVERY hierarchy level)
+      if (hasGantt && ganttDetails.length > 0) {
+        for (const g of ganttDetails) {
+          lines.push(`    Gantt: ${g.buildingName} (${g.phaseCount} φάσεις)`);
+        }
+      }
     }
 
     return lines.join('\n');
