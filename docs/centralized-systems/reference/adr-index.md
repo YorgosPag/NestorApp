@@ -493,6 +493,8 @@ Based on these ADRs, the following are **PROHIBITED**:
 | **ADR-ACC-008** | Bank Reconciliation | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-008-bank-reconciliation.md) |
 | **ADR-ACC-009** | Tax Engine | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-009-tax-engine.md) |
 | **ADR-ACC-010** | Portability & Abstraction Layers | ✅ IMPLEMENTED | 2026-02-09 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-010-portability-abstraction-layers.md) |
+| **ADR-ACC-011** | Service Presets | ✅ IMPLEMENTED | 2026-02-10 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-011-service-presets.md) |
+| **ADR-ACC-012** | OE Partnership Support (Ομόρρυθμη Εταιρεία) | ✅ IMPLEMENTED | 2026-02-10 | [📄](../../../src/subapps/accounting/docs/adrs/ADR-ACC-012-oe-partnership-support.md) |
 
 ---
 

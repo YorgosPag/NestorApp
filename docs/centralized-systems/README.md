@@ -85,6 +85,8 @@
 - **[🏦 Bank Reconciliation (ADR-ACC-008)](../../src/subapps/accounting/docs/adrs/ADR-ACC-008-bank-reconciliation.md)** - CSV import + smart matching
 - **[📊 Tax Engine (ADR-ACC-009)](../../src/subapps/accounting/docs/adrs/ADR-ACC-009-tax-engine.md)** - Income tax + prepayment + brackets
 - **[🔌 Portability (ADR-ACC-010)](../../src/subapps/accounting/docs/adrs/ADR-ACC-010-portability-abstraction-layers.md)** - Abstract interfaces for standalone deployment
+- **[📋 Service Presets (ADR-ACC-011)](../../src/subapps/accounting/docs/adrs/ADR-ACC-011-service-presets.md)** - Predefined service templates for invoicing
+- **[🤝 OE Partnership (ADR-ACC-012)](../../src/subapps/accounting/docs/adrs/ADR-ACC-012-oe-partnership-support.md)** - Ομόρρυθμη Εταιρεία — discriminated union, per-partner tax/EFKA
 
 > **📍 Location**: `src/subapps/accounting/` — Portable subapp with independent ADR numbering (ACC-xxx)
 
