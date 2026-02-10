@@ -94,8 +94,8 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
         throw new Error(errorData.error ?? `HTTP ${response.status}`);
       }
 
-      const data: { entries: JournalEntry[] } = await response.json();
-      setEntries(data.entries);
+      const result: { success: boolean; data: { items: JournalEntry[] } } = await response.json();
+      setEntries(result.data?.items ?? []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.journalEntriesLoadFailed';
       setError(message);

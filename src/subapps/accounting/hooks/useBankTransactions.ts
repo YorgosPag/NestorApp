@@ -90,8 +90,8 @@ export function useBankTransactions(options: UseBankTransactionsOptions = {}): U
         throw new Error(errorData.error ?? `HTTP ${response.status}`);
       }
 
-      const data: { transactions: BankTransaction[] } = await response.json();
-      setTransactions(data.transactions);
+      const result: { success: boolean; data: { items: BankTransaction[] } } = await response.json();
+      setTransactions(result.data?.items ?? []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.bankTransactionsLoadFailed';
       setError(message);
