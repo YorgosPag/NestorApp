@@ -128,20 +128,20 @@ export class Logger {
   // PUBLIC API - LOG METHODS
   // ==========================================================================
 
-  error(message: string, metadata?: Record<string, unknown>): void {
-    this.log(LogLevel.ERROR, message, metadata);
+  error(message: string, ...args: unknown[]): void {
+    this.log(LogLevel.ERROR, message, this.normalizeMetadata(args));
   }
 
-  warn(message: string, metadata?: Record<string, unknown>): void {
-    this.log(LogLevel.WARN, message, metadata);
+  warn(message: string, ...args: unknown[]): void {
+    this.log(LogLevel.WARN, message, this.normalizeMetadata(args));
   }
 
-  info(message: string, metadata?: Record<string, unknown>): void {
-    this.log(LogLevel.INFO, message, metadata);
+  info(message: string, ...args: unknown[]): void {
+    this.log(LogLevel.INFO, message, this.normalizeMetadata(args));
   }
 
-  debug(message: string, metadata?: Record<string, unknown>): void {
-    this.log(LogLevel.DEBUG, message, metadata);
+  debug(message: string, ...args: unknown[]): void {
+    this.log(LogLevel.DEBUG, message, this.normalizeMetadata(args));
   }
 
   // ==========================================================================
@@ -196,6 +196,49 @@ export class Logger {
   // ==========================================================================
   // PRIVATE
   // ==========================================================================
+
+  /**
+   * Normalize variadic arguments into a single Record<string, unknown> metadata object.
+   *
+   * Supports:
+   * - No args → undefined
+   * - Single Record<string, unknown> → pass through
+   * - Single Error → { error: message, stack }
+   * - Single primitive → { value: ... }
+   * - Multiple args → { arg0, arg1, ... }
+   */
+  private normalizeMetadata(args: unknown[]): Record<string, unknown> | undefined {
+    if (args.length === 0) return undefined;
+
+    if (args.length === 1) {
+      const single = args[0];
+      if (single === undefined || single === null) return undefined;
+
+      // Already a plain object (most common case)
+      if (
+        typeof single === 'object' &&
+        !Array.isArray(single) &&
+        !(single instanceof Error)
+      ) {
+        return single as Record<string, unknown>;
+      }
+
+      // Error objects → structured metadata
+      if (single instanceof Error) {
+        return { error: single.message, stack: single.stack };
+      }
+
+      // Primitives or arrays → wrap
+      return { value: single };
+    }
+
+    // Multiple args → numbered keys
+    const result: Record<string, unknown> = {};
+    args.forEach((arg, index) => {
+      result[`arg${index}`] = arg;
+    });
+    return result;
+  }
 
   private log(
     level: LogLevel,
