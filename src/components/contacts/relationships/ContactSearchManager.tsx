@@ -18,6 +18,8 @@ import type { ContactType } from '@/types/contacts';
 import { designSystem } from '@/lib/design-system';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🔐 ENTERPRISE: Defense-in-depth auth guard
+import { useAuth } from '@/auth/hooks/useAuth';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -76,6 +78,8 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 }) => {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
+  // 🔐 ENTERPRISE: Defense-in-depth — gate data fetching on auth state
+  const { user, loading: authLoading } = useAuth();
 
   // Use translated defaults
   const displayLabel = label ?? t('relationships.form.labels.contact');
@@ -104,7 +108,8 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
    * 🔍 Handle Contact Search - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΛΟΓΙΚΗ
    */
   const handleContactSearch = useCallback(async (query: string) => {
-    console.log('🔍 STARTING CONTACT SEARCH - Query:', query);
+    const DEBUG = finalSearchConfig.debug;
+    if (DEBUG) console.log('🔍 STARTING CONTACT SEARCH - Query:', query);
     setIsSearching(true);
     setSearchError(null);
 
@@ -114,20 +119,12 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
       if (!query.trim()) {
         // Load all contacts when no query
         const allContactsResult = await ContactsService.getAllContacts({
-          limitCount: 100 // Ensure we get enough contacts for the dropdown
+          limitCount: 100
         });
         contacts = allContactsResult.contacts || [];
 
-        if (finalSearchConfig.debug) {
+        if (DEBUG) {
           console.log('🔍 DEBUG: All contacts loaded:', contacts.length);
-          console.log('🔍 DEBUG: All contacts data:', contacts.map(c => ({
-            id: c.id,
-            firstName: c.firstName,
-            lastName: c.lastName,
-            name: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
-            type: c.type,
-            status: c.status
-          })));
         }
       } else {
         // Search with query
@@ -136,95 +133,43 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         });
         contacts = searchResults;
 
-        if (finalSearchConfig.debug) {
+        if (DEBUG) {
           console.log('🔍 DEBUG: Search results for query "' + query + '":', contacts.length);
-          console.log('🔍 DEBUG: Search results data:', contacts.map(c => ({
-            id: c.id,
-            firstName: c.firstName,
-            lastName: c.lastName,
-            name: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
-            type: c.type,
-            status: c.status
-          })));
         }
       }
 
       // 🏢 ENTERPRISE: Use centralized ContactNameResolver για mapping
-      console.log('🔧 PROCESSING CONTACTS THROUGH ContactNameResolver...');
       const contactSummaries = ContactNameResolver.mapContactsToSummaries(
         contacts,
-        undefined, // Don't exclude based on current contact here
+        undefined,
         {
-          debug: true, // Force debug to see resolver details
+          debug: DEBUG,
           maxLength: 100
         }
       );
 
-      console.log('📊 AFTER CONTACTNAMERESOLVER MAPPING:', contactSummaries.length);
-      console.log('📊 CONTACT SUMMARIES DETAILS:', contactSummaries.map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        email: c.email,
-        phone: c.phone,
-        company: c.company
-      })));
-
-      if (finalSearchConfig.debug) {
-        console.log('🔍 DEBUG: After ContactNameResolver mapping:', contactSummaries.length);
-        console.log('🔍 DEBUG: Contact summaries:', contactSummaries.map(c => ({
-          id: c.id,
-          name: c.name,
-          type: c.type
-        })));
-      }
+      if (DEBUG) console.log('📊 AFTER CONTACTNAMERESOLVER MAPPING:', contactSummaries.length);
 
       // Filter based on configuration
-      console.log('🔧 APPLYING FILTERS...');
-      console.log('📊 FILTER CONFIG - excludeContactIds:', excludeContactIds);
-      console.log('📊 FILTER CONFIG - allowedContactTypes:', allowedContactTypes);
-      console.log('📊 FILTER CONFIG - maxResults:', finalSearchConfig.maxResults);
-
       const filteredContacts = contactSummaries
         .filter(contact => {
           // Exclude specified contact IDs
           if (excludeContactIds.includes(contact.id)) {
-            console.log('❌ FILTERING OUT BY ID:', contact.id, contact.name);
-            if (finalSearchConfig.debug) {
-              console.log('🔍 DEBUG: Excluding contact by ID:', contact.id, contact.name);
-            }
+            if (DEBUG) console.log('🔍 DEBUG: Excluding contact by ID:', contact.id, contact.name);
             return false;
           }
 
           // Filter by allowed contact types
           if (allowedContactTypes.length > 0 && !allowedContactTypes.includes(contact.type)) {
-            console.log('❌ FILTERING OUT BY TYPE:', contact.type, contact.name, 'allowed:', allowedContactTypes);
-            if (finalSearchConfig.debug) {
-              console.log('🔍 DEBUG: Excluding contact by type:', contact.type, contact.name);
-            }
+            if (DEBUG) console.log('🔍 DEBUG: Excluding contact by type:', contact.type, contact.name);
             return false;
           }
 
-          console.log('✅ CONTACT PASSED FILTERS:', contact.id, contact.name, contact.type);
           return true;
         })
         .slice(0, finalSearchConfig.maxResults);
 
-      console.log('📊 AFTER FILTERING:', filteredContacts.length);
-      console.log('📊 FINAL FILTERED CONTACTS:', filteredContacts.map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type
-      })));
-
-      if (finalSearchConfig.debug) {
-        console.log('🔍 DEBUG: Final filtered contacts:', filteredContacts.length);
-        console.log('🔍 DEBUG: Sample contacts:', filteredContacts.slice(0, 3).map(c => ({
-          id: c.id,
-          name: c.name,
-          type: c.type
-        })));
-      }
+      if (DEBUG) console.log('📊 FINAL FILTERED CONTACTS:', filteredContacts.length);
 
       setSearchResults(filteredContacts);
 
@@ -261,23 +206,15 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
   const hasAutoLoaded = React.useRef(false);
 
   useEffect(() => {
-    console.log('🔄 AUTO-LOAD EFFECT TRIGGERED:', {
-      autoLoadContacts: finalSearchConfig.autoLoadContacts,
-      hasAutoLoaded: hasAutoLoaded.current,
-      shouldLoad: finalSearchConfig.autoLoadContacts && !hasAutoLoaded.current
-    });
+    // 🔐 ENTERPRISE: Gate on authentication (Defense-in-Depth, NavigationContext pattern)
+    if (authLoading) return;
+    if (!user) return;
 
     if (finalSearchConfig.autoLoadContacts && !hasAutoLoaded.current) {
-      console.log('🚀 TRIGGERING AUTO-LOAD: handleContactSearch(\'\')');
       hasAutoLoaded.current = true;
       handleContactSearch('');
-    } else {
-      console.log('❌ AUTO-LOAD SKIPPED:', {
-        autoLoadContacts: finalSearchConfig.autoLoadContacts,
-        hasAutoLoaded: hasAutoLoaded.current
-      });
     }
-  }, []); // Empty dependency array to run only once on mount
+  }, [authLoading, user]); // Re-run when auth state resolves
 
   // ============================================================================
   // RENDER

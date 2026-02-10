@@ -332,22 +332,17 @@ export class ContactsService {
     cursorId?: string | null; // ΝΕΟ, optional
   }): Promise<{ contacts: Contact[]; lastDoc: DocumentSnapshot | null; nextCursor: string | null }> {
     try {
-      console.log('📥 CONTACTSSERVICE: getAllContacts called with options:', options);
+      // 🔐 ENTERPRISE: Defense-in-depth — auth guard on read operations
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.warn('⚠️ [ContactsService] getAllContacts called without authentication — returning empty');
+        return { contacts: [], lastDoc: null, nextCursor: null };
+      }
+
       const q = await buildContactsQuery(options);
       const qs = await getDocs(q);
       // Type assertion: converter ensures data is Contact type
       const contacts = mapDocs<Contact>(qs as unknown as QuerySnapshot<Contact>);
-
-      console.log('📊 RAW FIRESTORE RESULTS:', contacts.length, 'contacts');
-      console.log('📊 RAW CONTACTS FROM FIRESTORE:', contacts.map(c => ({
-        id: c.id,
-        firstName: isIndividualContact(c) ? c.firstName : undefined,
-        lastName: isIndividualContact(c) ? c.lastName : undefined,
-        companyName: isCompanyContact(c) ? c.companyName : undefined,
-        serviceName: isServiceContact(c) ? c.serviceName : undefined,
-        type: c.type,
-        status: c.status || 'no-status'
-      })));
 
       // Client-side filtering (status & search)
       let filtered = contacts;
@@ -355,37 +350,16 @@ export class ContactsService {
       // Filter by archived status (client-side για να αποφύγουμε Firestore index)
       if (options?.includeArchived === true) {
         // Δείχνει ΜΟΝΟ archived επαφές
-        console.log('🔍 FILTERING FOR ARCHIVED CONTACTS ONLY');
         filtered = filtered.filter((contact) =>
           contact.status === 'archived'
         );
       } else {
         // Exclude archived contacts (default behavior)
-        console.log('🔍 FILTERING OUT ARCHIVED CONTACTS (default)');
-        console.log('🔍 BEFORE ARCHIVED FILTER:', filtered.length, 'contacts');
-
-        const beforeFilter = filtered.length;
         filtered = filtered.filter((contact) => {
-          const isArchived = contact.status === 'archived';
           const hasNoStatus = !contact.status;
           const shouldInclude = hasNoStatus || contact.status !== 'archived';
-
-          if (isArchived) {
-            // Get display name based on contact type
-            const displayName = isIndividualContact(contact)
-              ? contact.firstName
-              : isCompanyContact(contact)
-                ? contact.companyName
-                : contact.serviceName;
-            console.log('❌ FILTERING OUT ARCHIVED CONTACT:', contact.id,
-              displayName, 'status:', contact.status);
-          }
-
           return shouldInclude;
         });
-
-        console.log('🔍 AFTER ARCHIVED FILTER:', filtered.length, 'contacts');
-        console.log('🔍 FILTERED OUT:', beforeFilter - filtered.length, 'archived contacts');
       }
 
       // Search filter
@@ -746,6 +720,13 @@ export class ContactsService {
     hasPhone?: boolean; hasEmail?: boolean; createdAfter?: Date; createdBefore?: Date;
   }): Promise<Contact[]> {
     try {
+      // 🔐 ENTERPRISE: Defense-in-depth — auth guard on read operations
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.warn('⚠️ [ContactsService] searchContacts called without authentication — returning empty');
+        return [];
+      }
+
       const constraints: QueryConstraint[] = [];
       if (searchOptions.type) constraints.push(where('type', '==', searchOptions.type));
 
