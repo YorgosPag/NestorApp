@@ -101,7 +101,7 @@ const DEFAULT_CONFIG: AgenticLoopConfig = {
   maxIterations: 7,
   totalTimeoutMs: 50_000,
   perCallTimeoutMs: 15_000,
-  maxToolResultChars: 8000,
+  maxToolResultChars: 12_000,
 };
 
 // ============================================================================
@@ -119,8 +119,13 @@ function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatMessage[
         .join('\n')
     : 'No previous messages.';
 
+  const channelLabel = ctx.channel === 'telegram' ? 'Telegram'
+    : ctx.channel === 'email' ? 'Email'
+    : ctx.channel ?? 'Εφαρμογή';
+
   return `Είσαι ο AI βοηθός του Nestor — μια εφαρμογή διαχείρισης κατασκευαστικών έργων.
 Ο χρήστης είναι ο Super Admin. Έχεις πλήρη πρόσβαση στα δεδομένα.
+Κανάλι επικοινωνίας: ${channelLabel}.
 
 ${schema}
 
@@ -164,8 +169,8 @@ COLLECTIONS ΠΟΥ ΔΕΝ ΧΡΕΙΑΖΟΝΤΑΙ JOINS (απάντα κατευ�
 
 ΣΗΜΑΝΤΙΚΟ ΓΙΑ companyId:
 - Το companyId προστίθεται ΑΥΤΟΜΑΤΑ σε κάθε query — ΜΗΝ το βάζεις στα filters
-- Για child collections (construction_phases, construction_tasks, floors) το companyId αγνοείται αυτόματα
-- Αυτά τα collections συνδέονται μέσω parent ID (buildingId, phaseId κλπ)
+- Για child collections (buildings, construction_phases, construction_tasks, floors) το companyId αγνοείται αυτόματα
+- Αυτά τα collections συνδέονται μέσω parent ID (projectId, buildingId, phaseId κλπ)
 
 ΣΤΡΑΤΗΓΙΚΗ ΑΝΑΖΗΤΗΣΗΣ:
 - Για "ποια έργα έχουν X": ξεκίνα από projects query

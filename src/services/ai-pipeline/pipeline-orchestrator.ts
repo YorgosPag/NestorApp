@@ -309,6 +309,7 @@ export class PipelineOrchestrator {
       const agenticCtx: AgenticContext = {
         companyId: ctx.companyId,
         isAdmin: true,
+        channel: ctx.intake.channel,
         channelSenderId,
         requestId: ctx.requestId,
         telegramChatId: ctx.intake.normalized.sender.telegramId

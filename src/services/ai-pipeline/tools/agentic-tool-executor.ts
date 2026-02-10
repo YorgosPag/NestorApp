@@ -31,6 +31,8 @@ const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
 export interface AgenticContext {
   companyId: string;
   isAdmin: boolean;
+  /** Communication channel: telegram, email, in_app */
+  channel: string;
   channelSenderId: string;
   requestId: string;
   /** Telegram chatId for send_telegram_message */
@@ -609,6 +611,7 @@ export class AgenticToolExecutor {
     // These are child collections linked via parentId (buildingId, phaseId)
     // Data isolation for these is enforced via their parent (buildings.companyId)
     const collectionsWithOptionalCompanyId = new Set([
+      'buildings',
       'floors',
       'construction_phases',
       'construction_tasks',
