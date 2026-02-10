@@ -20,6 +20,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 import { withAuth } from '@/lib/auth';
+
+/**
+ * Vercel Serverless Function max duration.
+ * The AI pipeline runs OpenAI calls inside after(), which can exceed the default 10s.
+ * @enterprise Required for full pipeline execution via after() callback
+ */
+export const maxDuration = 60;
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';

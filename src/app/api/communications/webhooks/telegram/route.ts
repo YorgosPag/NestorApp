@@ -5,6 +5,14 @@ import { handlePOST, handleGET } from './handler';
 import { withTelegramRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
+ * Vercel Serverless Function max duration.
+ * The AI pipeline runs TWO OpenAI calls inside after() (intent + reply),
+ * which exceeds the default 10s on Hobby plan.
+ * @enterprise Required for full pipeline execution via after() callback
+ */
+export const maxDuration = 60;
+
+/**
  * Handles POST requests to the Telegram webhook endpoint.
  * This is the main entry point for incoming messages from Telegram.
  *

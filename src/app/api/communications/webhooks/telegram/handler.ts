@@ -188,10 +188,11 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
       telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
     }
 
-    // ── ADR-132: Feed to AI Pipeline (non-blocking) ──
-    // Skip bot commands — only feed actual user messages
+    // ── ADR-132: Feed to AI Pipeline ──
+    // Await enqueue to ensure item is in queue before after() batch runs.
+    // Non-fatal: pipeline failure should never break the Telegram bot.
     if (!isBotCommand && effectiveMessageText.trim().length > 0 && isFirebaseAvailable()) {
-      feedTelegramToPipeline(webhookData.message, effectiveMessageText);
+      await feedTelegramToPipeline(webhookData.message, effectiveMessageText);
     }
 
   }
@@ -232,14 +233,15 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
 }
 
 /**
- * Feed a Telegram message to the AI Pipeline (non-blocking).
+ * Feed a Telegram message to the AI Pipeline.
  *
- * Fires and forgets — pipeline failure does NOT affect the Telegram bot response.
+ * Awaitable to ensure enqueue completes before after() batch processing.
+ * Non-fatal: catches all errors so pipeline failure never breaks the bot.
  * Uses dynamic import to avoid circular dependency issues.
  *
  * @see ADR-132 (UC Modules Expansion + Telegram Channel)
  */
-function feedTelegramToPipeline(message: TelegramMessage['message'], overrideText?: string): void {
+async function feedTelegramToPipeline(message: TelegramMessage['message'], overrideText?: string): Promise<void> {
   if (!message) return;
 
   const chatId = String(message.chat.id);
@@ -255,32 +257,29 @@ function feedTelegramToPipeline(message: TelegramMessage['message'], overrideTex
     ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
     ?? 'default';
 
-  // Fire and forget — use void + catch to prevent unhandled rejection
-  void (async () => {
-    try {
-      const { TelegramChannelAdapter } = await import(
-        '@/services/ai-pipeline/channel-adapters/telegram-channel-adapter'
-      );
+  try {
+    const { TelegramChannelAdapter } = await import(
+      '@/services/ai-pipeline/channel-adapters/telegram-channel-adapter'
+    );
 
-      const result = await TelegramChannelAdapter.feedToPipeline({
-        chatId,
-        userId,
-        userName,
-        messageText,
-        messageId,
-        companyId,
-      });
+    const result = await TelegramChannelAdapter.feedToPipeline({
+      chatId,
+      userId,
+      userName,
+      messageText,
+      messageId,
+      companyId,
+    });
 
-      if (result.enqueued) {
-        console.log(`🤖 [Telegram→Pipeline] Enqueued: ${result.requestId}`);
-      } else {
-        console.warn(`⚠️ [Telegram→Pipeline] Failed: ${result.error}`);
-      }
-    } catch (error) {
-      // Non-fatal: pipeline failure should never break the Telegram bot
-      console.warn('[Telegram→Pipeline] Non-fatal error:', error instanceof Error ? error.message : String(error));
+    if (result.enqueued) {
+      console.log(`🤖 [Telegram→Pipeline] Enqueued: ${result.requestId}`);
+    } else {
+      console.warn(`⚠️ [Telegram→Pipeline] Failed: ${result.error}`);
     }
-  })();
+  } catch (error) {
+    // Non-fatal: pipeline failure should never break the Telegram bot
+    console.warn('[Telegram→Pipeline] Non-fatal error:', error instanceof Error ? error.message : String(error));
+  }
 }
 
 /**

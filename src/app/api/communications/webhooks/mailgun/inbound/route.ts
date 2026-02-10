@@ -19,6 +19,13 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
+
+/**
+ * Vercel Serverless Function max duration.
+ * The AI pipeline runs OpenAI calls inside after(), which can exceed the default 10s.
+ * @enterprise Required for full pipeline execution via after() callback
+ */
+export const maxDuration = 60;
 import { createHmac, timingSafeEqual } from 'crypto';
 import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
