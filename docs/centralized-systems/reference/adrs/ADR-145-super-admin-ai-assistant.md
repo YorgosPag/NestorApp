@@ -504,6 +504,12 @@ interface AdminSession {
 | 2026-02-09 | Feat: UC-010 missing fields mode — `detectMissingFieldsMode()` + `getContactMissingFields()` integration. Δείχνει filled/total πεδία + λίστα κενών πεδίων ανά επαφή | Claude Code |
 | 2026-02-10 | Prompt Upgrade: SEMANTIC UNDERSTANDING — αντικατάσταση keyword-based περιγραφών με σημασιολογικές. Το AI πλέον κατανοεί ΝΟΗΜΑ αντί να ψάχνει λέξεις-κλειδιά. `admin_unit_stats` καλύπτει ΟΠΟΙΑΔΗΠΟΤΕ ερώτηση για ακίνητα (σπίτια, διαμερίσματα, οικόπεδα κτλ.), status, πωλήσεις, ερωτήσεις ναι/όχι. `general_inquiry` ορίστηκε ως LAST RESORT. | Claude Code |
 | 2026-02-10 | UC-013 keywords: Προσθήκη 15+ νέων property/status keywords (σπίτι, κατοικία, οικόπεδο, μεζονέτα, ρετιρέ, πουλημένα, διαθέσιμα, αδιάθετα κτλ.) στο `detectStatsType()` | Claude Code |
+| 2026-02-10 | Fix 1: Fuzzy Greek name search — `greek-text-utils.ts` (transliteration, stem match, accent strip). `findContactByName()` χρησιμοποιεί `fuzzyGreekMatch()` αντί exact substring. "Γιάννη"→"Γιάννης", "Giorgos"→"Γιώργος" | Claude Code |
+| 2026-02-10 | Fix 2: Compound commands — UC-012 ανιχνεύει "στοιχεία του/της X" pattern, κάνει δεύτερο lookup, στέλνει contact card ως email body | Claude Code |
+| 2026-02-10 | Fix 3: Smart fallback — νέο intent `admin_general_question` + UC-014 κάνει OpenAI conversational κλήση αντί static help text. `generateAdminConversationalReply()` στο `ai-reply-generator.ts` | Claude Code |
+| 2026-02-10 | Bug fix: UC-013 property type breakdown — "ποιες κατηγορίες ακινήτων" δείχνει ανά τύπο (Στούντιο, Διαμέρισμα κτλ.) αντί μόνο status counts. Νέο `unit_categories` StatsType + `UNIT_TYPE_LABELS` mapping | Claude Code |
+| 2026-02-10 | Bug fix: UC-016 REMOVE mode — "αφαίρεσε/σβήσε/βγάλε" keywords → `removeContactField()` (arrayRemove for phone/email, null for scalar). Νέο `removeContactField()` στο `contact-lookup.ts` | Claude Code |
+| 2026-02-10 | Bug fix: "ταυτότητα/ΑΔΤ" intent misclassification — προσθήκη `idNumber` field mapping στο UC-016, clarification στο AI prompt ότι ταυτότητα+πρόσωπο → `admin_update_contact` (ΟΧΙ unit_stats) | Claude Code |
 
 ---
 

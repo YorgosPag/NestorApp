@@ -119,20 +119,23 @@ ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents o
   • Sales performance: revenue, sales trends, what's selling
   • Yes/no questions about properties: "υπάρχουν πουλημένα;", "έχουμε διαθέσιμα;", "μήπως μείνανε αδιάθετα;"
   • Comparisons & trends: "πωλούνται γρήγορα;", "τι πάει καλά;"
-  EXCEPTION: If asking about a SPECIFIC contact's data completeness → use admin_contact_search instead.
+  EXCEPTION: If asking about a SPECIFIC contact's data (completeness, ID number, ταυτότητα, phone, email) → use admin_contact_search or admin_update_contact instead.
+  EXCEPTION: Words like "αριθμό ταυτότητας", "ΑΔΤ", "πατρώνυμο", "ΑΦΜ" in context of a PERSON → NOT this intent.
 
 - admin_create_contact: Any request to CREATE/ADD a new contact. Covers: "δημιούργησε επαφή", "πρόσθεσε επαφή", "νέα επαφή", "φτιάξε επαφή". Extract: contactName, email, phone, contactType.
 
-- admin_update_contact: Any request to UPDATE/MODIFY an existing contact's field. Covers: "πρόσθεσε τηλέφωνο", "βάλε ΑΦΜ", "άλλαξε email", "ενημέρωσε διεύθυνση". Extract: contactName, fieldName, fieldValue.
+- admin_update_contact: Any request to UPDATE/MODIFY/ADD/REMOVE an existing contact's field. Covers: "πρόσθεσε τηλέφωνο", "βάλε ΑΦΜ", "άλλαξε email", "ενημέρωσε διεύθυνση", "αφαίρεσε τηλέφωνο", "σβήσε email", "θέλω τον αριθμό ταυτότητας στη X" (= add ID number to contact X). IMPORTANT: Any mention of "ταυτότητα", "ΑΔΤ", "αριθμό ταυτότητας" in context of a PERSON → this intent, NOT admin_unit_stats. Extract: contactName, fieldName, fieldValue.
 
-- general_inquiry: LAST RESORT — use ONLY when the message truly does not relate to contacts, projects, properties, or email. If there is ANY reasonable match to the above intents, prefer that intent instead.
+- admin_general_question: General questions, advice, translation, or knowledge requests that don't map to a specific business ACTION but can be answered conversationally. Covers: "πώς γράφεται...", "τι σημαίνει...", "ποια η διαφορά...", "πώς μεταφράζεται...", casual conversation, greetings, thanks. Use this INSTEAD of general_inquiry for admin messages.
+
+- general_inquiry: LAST RESORT — use ONLY when the message truly does not relate to contacts, projects, properties, email, or conversational questions. If there is ANY reasonable match to the above intents, prefer that intent instead.
 
 ENTITY EXTRACTION RULES:
 - For admin_contact_search: Extract person name in "contactName" (empty string if listing all). Extract "contactType" as "individual" or "company" if specified.
 - For admin_project_status: Extract the project name in "projectName"
 - For admin_send_email: Extract "recipientName" and "emailContent"
 - For admin_create_contact: Extract "contactName", "email", "phone", "contactType" (default: "individual")
-- For admin_update_contact: Extract "contactName", "fieldName", "fieldValue"
+- For admin_update_contact: Extract "contactName", "fieldName" (e.g., "phone", "email", "vatNumber", "idNumber", "profession"), "fieldValue" (empty if removing)
 - For admin_unit_stats: Extract "projectName" if a specific project is mentioned (otherwise means all projects)
 
 RULES:

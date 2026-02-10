@@ -34,7 +34,7 @@ const logger = createModuleLogger('ai-reply-generator');
 /** Context for generating an AI reply — passed by the UC module */
 export interface AIReplyContext {
   /** Use case identifier for prompt selection */
-  useCase: 'appointment' | 'property_search' | 'complaint' | 'general_inquiry' | 'document_request' | 'general';
+  useCase: 'appointment' | 'property_search' | 'complaint' | 'general_inquiry' | 'document_request' | 'general' | 'admin_conversational';
   /** Sender's name for greeting */
   senderName: string;
   /** Whether sender is a known CRM contact */
@@ -158,6 +158,17 @@ const SYSTEM_PROMPTS: Record<AIReplyContext['useCase'], string> = {
 6. Τέλειωσε πάντα με "Με εκτίμηση," — ΧΩΡΙΣ υπογραφή μετά
 7. ΜΗΝ υποσχεθείς πράγματα που δεν γνωρίζεις
 8. ΜΗΝ αναφέρεις εσωτερικές διαδικασίες ή AI`,
+
+  admin_conversational: `Είσαι ο AI βοηθός του ιδιοκτήτη ενός κτηματομεσιτικού/κατασκευαστικού γραφείου στην Ελλάδα.
+Απάντησε ΑΜΕΣΑ και ΣΥΝΤΟΜΑ στα ελληνικά (2-5 γραμμές μέγιστο).
+
+ΚΑΝΟΝΕΣ:
+1. Μορφή: Plain text μόνο — ΧΩΡΙΣ HTML, markdown, αστερίσκους
+2. Απάντησε ΑΜΕΣΑ στην ερώτηση — μην κάνεις εισαγωγή
+3. Αν δεν ξέρεις, πες "Δεν γνωρίζω αυτήν την πληροφορία."
+4. ΜΗΝ αναφέρεις ότι είσαι AI. Μίλα φυσικά.
+5. Αν σε χαιρετούν, χαιρέτα πίσω ζεστά
+6. Αν ρωτούν κάτι γενικό (μετάφραση, σημασία λέξης, συμβουλή), απάντα κατευθείαν`,
 };
 
 // ============================================================================
@@ -365,6 +376,63 @@ function validateReply(text: string): boolean {
   }
 
   return true;
+}
+
+// ============================================================================
+// ADMIN CONVERSATIONAL REPLY (ADR-145: Smart Fallback)
+// ============================================================================
+
+/**
+ * Generate a conversational AI reply for admin general questions.
+ *
+ * Unlike email replies, this does NOT require "Αγαπητέ" greeting format.
+ * Used by UC-014 when admin asks a non-business question (e.g., translations,
+ * general knowledge, greetings).
+ *
+ * @param message - The admin's original message
+ * @param requestId - Pipeline request ID for logging
+ * @returns The AI response text, or null if generation fails
+ */
+export async function generateAdminConversationalReply(
+  message: string,
+  requestId: string,
+): Promise<{ replyText: string | null; aiGenerated: boolean; durationMs: number }> {
+  const startTime = Date.now();
+  const systemPrompt = SYSTEM_PROMPTS.admin_conversational;
+
+  const userPrompt = `Ο ιδιοκτήτης ρωτάει:\n${message.slice(0, 500)}\n\nΑπάντησε.`;
+
+  try {
+    const replyText = await callOpenAI(systemPrompt, userPrompt, requestId);
+    const durationMs = Date.now() - startTime;
+
+    if (!replyText || replyText.length < 5) {
+      logger.warn('Admin conversational reply returned empty', { requestId, durationMs });
+      return { replyText: null, aiGenerated: false, durationMs };
+    }
+
+    // Basic sanity: no HTML, reasonable length
+    if (/<[a-z/][^>]*>/i.test(replyText) || replyText.length > 2000) {
+      logger.warn('Admin conversational reply failed basic validation', { requestId, durationMs });
+      return { replyText: null, aiGenerated: false, durationMs };
+    }
+
+    logger.info('Admin conversational reply succeeded', {
+      requestId,
+      durationMs,
+      replyLength: replyText.length,
+    });
+
+    return { replyText, aiGenerated: true, durationMs };
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logger.error('Admin conversational reply failed', {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+      durationMs,
+    });
+    return { replyText: null, aiGenerated: false, durationMs };
+  }
 }
 
 // ============================================================================

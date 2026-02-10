@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { fuzzyGreekMatch } from './greek-text-utils';
 
 const logger = createModuleLogger('PIPELINE_CONTACT_LOOKUP');
 
@@ -142,10 +143,10 @@ export async function findContactByName(
     const companyName = (data.companyName as string) ?? '';
     const fullName = [firstName, lastName].filter(Boolean).join(' ');
 
-    // Check if any name field contains the search term
+    // Check if any name field matches the search term (fuzzy: accents, declension, transliteration)
     const namesToCheck = [displayName, firstName, lastName, companyName, fullName];
     const matches = namesToCheck.some(name =>
-      name.toLowerCase().includes(normalizedSearch)
+      name.length > 0 && fuzzyGreekMatch(name, normalizedSearch)
     );
 
     if (!matches) continue;
@@ -397,6 +398,57 @@ export async function updateContactField(
   await docRef.update(updateData);
 
   logger.info('Contact field updated', {
+    contactId,
+    field,
+    isArray,
+    updatedBy,
+  });
+}
+
+// ============================================================================
+// REMOVE CONTACT FIELD (ADR-145: UC-016 REMOVE mode)
+// ============================================================================
+
+/**
+ * Remove array entries (phone/email) or clear scalar fields on a contact.
+ *
+ * - Array fields (phone, email): removes ALL entries (clear the array)
+ * - Scalar fields: sets to null
+ *
+ * @param contactId - Firestore document ID
+ * @param field - Canonical field name (e.g., 'phone', 'email', 'vatNumber')
+ * @param updatedBy - Admin display name for audit trail
+ */
+export async function removeContactField(
+  contactId: string,
+  field: string,
+  updatedBy: string
+): Promise<void> {
+  const adminDb = getAdminFirestore();
+  const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
+
+  const isArray = ARRAY_FIELDS.has(field);
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+    lastModifiedBy: updatedBy,
+  };
+
+  if (isArray) {
+    // Clear the array entirely
+    if (field === 'phone') {
+      updateData['phones'] = [];
+    } else if (field === 'email') {
+      updateData['emails'] = [];
+    }
+  } else {
+    // Clear scalar field
+    updateData[field] = null;
+  }
+
+  await docRef.update(updateData);
+
+  logger.info('Contact field removed', {
     contactId,
     field,
     isArray,

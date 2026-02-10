@@ -22,6 +22,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
   findContactByName,
   updateContactField,
+  removeContactField,
   getContactById,
   getContactMissingFields,
   type ContactNameSearchResult,
@@ -68,15 +69,34 @@ const FIELD_KEYWORDS: readonly FieldMapping[] = [
   { field: 'legalForm', firestoreField: 'legalForm', greekLabel: 'Νομική μορφή', keywords: ['νομικη μορφη', 'legal form', 'μορφη'] },
   { field: 'employer', firestoreField: 'employer', greekLabel: 'Εργοδότης', keywords: ['εργοδοτης', 'employer'] },
   { field: 'position', firestoreField: 'position', greekLabel: 'Θέση', keywords: ['θεση', 'ρολος', 'position', 'role'] },
+  { field: 'idNumber', firestoreField: 'idNumber', greekLabel: 'Αριθμός Ταυτότητας', keywords: ['ταυτοτητα', 'αδτ', 'adt', 'id number', 'αριθμο ταυτοτητας', 'αριθμος ταυτοτητας', 'δελτιο ταυτοτητας'] },
 ] as const;
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
+/** Action mode: add/update value, or remove/clear it */
+type UpdateAction = 'set' | 'remove';
+
+/** Keywords that indicate a REMOVE/DELETE operation */
+const REMOVE_KEYWORDS: readonly string[] = [
+  'αφαίρεσε', 'αφαιρεσε', 'αφαιρέσεις', 'αφαιρεσεις',
+  'σβήσε', 'σβησε', 'διέγραψε', 'διεγραψε',
+  'βγάλε', 'βγαλε', 'αφαίρεση', 'αφαιρεση',
+  'διαγραφή', 'διαγραφη', 'remove', 'delete', 'clear',
+];
+
+/** Detect if the message asks to REMOVE a field */
+function detectRemoveAction(message: string): boolean {
+  const lower = message.toLowerCase();
+  return REMOVE_KEYWORDS.some(kw => lower.includes(kw));
+}
+
 interface UpdateContactLookupData {
   detectedField: FieldMapping | null;
   detectedValue: string | null;
+  action: UpdateAction;
   contactName: string | null;
   resolvedContact: ContactNameSearchResult | null;
   multipleMatches: ContactNameSearchResult[];
@@ -101,19 +121,23 @@ export class AdminUpdateContactModule implements IUCModule {
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
     const rawMessage = ctx.intake.normalized.contentText ?? '';
 
-    // 1. Detect field from message
+    // 1. Detect action: SET (default) or REMOVE
+    const action: UpdateAction = detectRemoveAction(rawMessage) ? 'remove' : 'set';
+
+    // 2. Detect field from message
     const detectedField = detectField(rawMessage);
 
-    // 2. Extract value for the detected field
-    const detectedValue = detectedField
+    // 3. Extract value for the detected field (not needed for REMOVE)
+    const detectedValue = (action === 'set' && detectedField)
       ? extractFieldValue(rawMessage, detectedField)
       : null;
 
-    // 3. Extract contact name from message
+    // 4. Extract contact name from message
     const contactName = extractContactName(rawMessage, detectedField, detectedValue);
 
     logger.info('UC-016 LOOKUP: Parsed update data', {
       requestId: ctx.requestId,
+      action,
       detectedField: detectedField?.field ?? null,
       detectedValue,
       contactName,
@@ -162,13 +186,15 @@ export class AdminUpdateContactModule implements IUCModule {
       error = 'Δεν αναγνωρίστηκε ποιο πεδίο θέλετε να ενημερώσετε.';
     }
 
-    if (!detectedValue && detectedField) {
+    // Only require value for SET action (not for REMOVE)
+    if (action === 'set' && !detectedValue && detectedField) {
       error = `Δεν αναγνωρίστηκε η τιμή για "${detectedField.greekLabel}".`;
     }
 
     const lookupData: UpdateContactLookupData = {
       detectedField,
       detectedValue,
+      action,
       contactName,
       resolvedContact,
       multipleMatches,
@@ -193,6 +219,8 @@ export class AdminUpdateContactModule implements IUCModule {
     } else if (hasMultiple) {
       const names = lookup!.multipleMatches.map((c, i) => `${i + 1}. ${c.name}`).join(', ');
       summary = `Βρέθηκαν πολλαπλές επαφές: ${names}`;
+    } else if (lookup?.action === 'remove') {
+      summary = `Αφαίρεση: ${lookup?.detectedField?.greekLabel ?? '?'} από ${lookup?.resolvedContact?.name ?? '?'}`;
     } else {
       summary = `Ενημέρωση: +${lookup?.detectedField?.greekLabel ?? '?'} ${lookup?.detectedValue ?? '?'} στον ${lookup?.resolvedContact?.name ?? '?'}`;
     }
@@ -208,6 +236,7 @@ export class AdminUpdateContactModule implements IUCModule {
             field: lookup?.detectedField?.firestoreField ?? null,
             fieldLabel: lookup?.detectedField?.greekLabel ?? null,
             value: lookup?.detectedValue ?? null,
+            action: lookup?.action ?? 'set',
             resolvedViaSession: lookup?.resolvedViaSession ?? false,
             error: (hasError || hasMultiple)
               ? (lookup?.error ?? null)
@@ -290,8 +319,11 @@ export class AdminUpdateContactModule implements IUCModule {
         return { success: true, sideEffects: ['disambiguation_reply_sent'] };
       }
 
-      // ── Case 3: Valid update ──
-      if (!contactId || !field || !value) {
+      // ── Determine action mode ──
+      const actionMode = (params.action as string) ?? 'set';
+
+      // ── Case 3: Valid update or remove ──
+      if (!contactId || !field) {
         const msg = errorMsg ?? 'Ελλιπή στοιχεία για ενημέρωση.';
         await sendChannelReply({
           channel: ctx.intake.channel,
@@ -305,35 +337,63 @@ export class AdminUpdateContactModule implements IUCModule {
         return { success: true, sideEffects: ['error_reply_sent'] };
       }
 
+      // For SET mode, value is required
+      if (actionMode === 'set' && !value) {
+        const msg = errorMsg ?? `Δεν αναγνωρίστηκε η τιμή για "${fieldLabel ?? field}".`;
+        await sendChannelReply({
+          channel: ctx.intake.channel,
+          recipientEmail: ctx.intake.normalized.sender.email ?? undefined,
+          telegramChatId: telegramChatId ?? undefined,
+          inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
+          subject: 'Ενημέρωση επαφής',
+          textBody: msg,
+          requestId: ctx.requestId,
+        });
+        return { success: true, sideEffects: ['error_reply_sent'] };
+      }
+
       const adminName = ctx.adminCommandMeta?.adminIdentity.displayName ?? 'Admin';
+      const sideEffects: string[] = [];
+      const ackLines: string[] = [];
 
-      // Perform the update
-      await updateContactField(contactId, field, value, adminName);
+      if (actionMode === 'remove') {
+        // ── REMOVE mode ──
+        await removeContactField(contactId, field, adminName);
+        sideEffects.push(`contact_field_removed:${contactId}:${field}`);
 
-      const sideEffects: string[] = [`contact_updated:${contactId}:${field}`];
+        logger.info('UC-016 EXECUTE: Contact field removed', {
+          requestId: ctx.requestId,
+          contactId,
+          field,
+        });
 
-      logger.info('UC-016 EXECUTE: Contact field updated', {
-        requestId: ctx.requestId,
-        contactId,
-        field,
-        value,
-      });
+        ackLines.push(`Αφαιρέθηκε ${fieldLabel ?? field} από ${contactName ?? 'επαφή'}.`);
+      } else {
+        // ── SET mode ──
+        await updateContactField(contactId, field, value!, adminName);
+        sideEffects.push(`contact_updated:${contactId}:${field}`);
+
+        logger.info('UC-016 EXECUTE: Contact field updated', {
+          requestId: ctx.requestId,
+          contactId,
+          field,
+          value,
+        });
+
+        ackLines.push(`${fieldLabel ?? field} "${value}" προστέθηκε στον ${contactName ?? 'επαφή'}.`);
+      }
 
       // Get remaining missing fields for smart ack
       const contact = await getContactById(contactId);
       const contactType = (contact?.type === 'company') ? 'company' : 'individual';
       const missingFields = await getContactMissingFields(contactId, contactType as 'individual' | 'company');
 
-      const ackLines: string[] = [
-        `✅ ${fieldLabel ?? field} "${value}" προστέθηκε στον ${contactName ?? 'επαφή'}.`,
-      ];
-
       if (missingFields.length > 0) {
         ackLines.push('');
-        ackLines.push(`📋 Υπόλοιπα ελλιπή: ${missingFields.join(', ')}`);
+        ackLines.push(`Υπόλοιπα ελλιπή: ${missingFields.join(', ')}`);
       } else {
         ackLines.push('');
-        ackLines.push('✨ Όλα τα στοιχεία είναι συμπληρωμένα!');
+        ackLines.push('Όλα τα στοιχεία είναι συμπληρωμένα!');
       }
 
       const replyResult = await sendChannelReply({

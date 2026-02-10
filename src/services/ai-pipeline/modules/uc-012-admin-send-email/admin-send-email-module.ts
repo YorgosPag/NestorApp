@@ -41,6 +41,36 @@ interface SendEmailLookupData {
 }
 
 // ============================================================================
+// CONTACT CARD PATTERN — Compound command detection
+// ============================================================================
+
+/**
+ * Detects "στοιχεία του/της X" pattern in email content.
+ * Returns the name of the contact whose details are requested, or null.
+ *
+ * Matches:
+ *   "τα στοιχεία του Γιάννη"
+ *   "στοιχεία της Σοφίας"
+ *   "πληροφορίες για τον Κώστα"
+ *   "τα δεδομένα επαφής Νίκου"
+ */
+const CONTACT_CARD_PATTERN = /(?:στοιχεί|επαφ|πληροφορ|δεδομέν)(?:α|ές|ων|ής)?\s+(?:του|της|τον|την|για τον|για την|επαφής)\s+([\p{L}\s]{2,40})/iu;
+
+/**
+ * Format a contact's details as a readable card (plain text).
+ */
+function formatContactCard(contact: ContactNameSearchResult): string {
+  const lines: string[] = [`Στοιχεία επαφής: ${contact.name}`];
+
+  if (contact.email) lines.push(`Email: ${contact.email}`);
+  if (contact.phone) lines.push(`Τηλέφωνο: ${contact.phone}`);
+  if (contact.company) lines.push(`Εταιρεία: ${contact.company}`);
+  if (contact.type) lines.push(`Τύπος: ${contact.type}`);
+
+  return lines.join('\n');
+}
+
+// ============================================================================
 // MODULE
 // ============================================================================
 
@@ -90,6 +120,30 @@ export class AdminSendEmailModule implements IUCModule {
         const msg = error instanceof Error ? error.message : String(error);
         logger.warn('UC-012 LOOKUP: Contact search failed', {
           requestId: ctx.requestId,
+          error: msg,
+        });
+      }
+    }
+
+    // ── Compound command: "στοιχεία του/της X" → lookup + format contact card ──
+    const cardMatch = emailContent.match(CONTACT_CARD_PATTERN);
+    if (cardMatch?.[1]) {
+      const cardContactName = cardMatch[1].trim();
+      try {
+        const cardResults = await findContactByName(cardContactName, ctx.companyId, 1);
+        if (cardResults.length > 0) {
+          emailContent = formatContactCard(cardResults[0]);
+          logger.info('UC-012 LOOKUP: Compound command — contact card resolved', {
+            requestId: ctx.requestId,
+            cardContactName,
+            resolvedName: cardResults[0].name,
+          });
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        logger.warn('UC-012 LOOKUP: Contact card lookup failed', {
+          requestId: ctx.requestId,
+          cardContactName,
           error: msg,
         });
       }

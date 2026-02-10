@@ -37,7 +37,7 @@ const logger = createModuleLogger('UC_013_ADMIN_UNIT_STATS');
 // TYPES
 // ============================================================================
 
-type StatsType = 'units' | 'contacts' | 'projects' | 'all';
+type StatsType = 'units' | 'contacts' | 'projects' | 'all' | 'unit_categories';
 
 interface BusinessStatsLookupData {
   statsType: StatsType;
@@ -66,6 +66,8 @@ interface AggregateUnitStats {
   available: number;
   reserved: number;
   other: number;
+  /** Breakdown by property type (e.g., apartment: 5, studio: 3) */
+  byType: Record<string, number>;
 }
 
 interface ProjectUnitBreakdown {
@@ -77,6 +79,31 @@ interface ProjectUnitBreakdown {
   reserved: number;
   other: number;
 }
+
+// ============================================================================
+// UNIT TYPE LABELS — Greek display names for unit types
+// ============================================================================
+
+const UNIT_TYPE_LABELS: Record<string, string> = {
+  studio: 'Στούντιο',
+  apartment_1br: 'Γκαρσονιέρα',
+  apartment: 'Διαμέρισμα',
+  apartment_2br: 'Διαμέρισμα 2Δ',
+  apartment_3br: 'Διαμέρισμα 3Δ',
+  maisonette: 'Μεζονέτα',
+  shop: 'Κατάστημα',
+  office: 'Γραφείο',
+  storage: 'Αποθήκη',
+  parking: 'Parking',
+  // Legacy Greek values (from Firestore data)
+  'στούντιο': 'Στούντιο',
+  'γκαρσονιέρα': 'Γκαρσονιέρα',
+  'διαμέρισμα 2δ': 'Διαμέρισμα 2Δ',
+  'διαμέρισμα 3δ': 'Διαμέρισμα 3Δ',
+  'μεζονέτα': 'Μεζονέτα',
+  'κατάστημα': 'Κατάστημα',
+  'αποθήκη': 'Αποθήκη',
+};
 
 // ============================================================================
 // MODULE
@@ -98,6 +125,12 @@ export class AdminUnitStatsModule implements IUCModule {
    */
   private detectStatsType(messageText: string): StatsType {
     const text = messageText.toLowerCase();
+
+    // Category/type breakdown keywords — must check FIRST (before generic unit keywords)
+    const categoryKeywords = ['κατηγορί', 'τύπο', 'τυπο', 'είδ', 'ειδ', 'categories', 'types'];
+    const hasCategories = categoryKeywords.some(kw => text.includes(kw));
+    if (hasCategories && text.includes('ακίνητ')) return 'unit_categories';
+
     const contactKeywords = ['επαφ', 'contact', 'πελάτ', 'φυσικ', 'εταιρ', 'πρόσωπ', 'customer', 'client'];
     const projectKeywords = ['έργ', 'project', 'πρότζεκτ'];
     const unitKeywords = [
@@ -118,6 +151,7 @@ export class AdminUnitStatsModule implements IUCModule {
     if (hasContacts && !hasUnits && !hasProjects) return 'contacts';
     if (hasProjects && !hasUnits && !hasContacts) return 'projects';
     if (hasUnits && !hasContacts && !hasProjects) return 'units';
+    if (hasCategories) return 'unit_categories'; // fallback: categories asked but no "ακίνητ" keyword
     if (!hasContacts && !hasProjects && !hasUnits) return 'units'; // default
     return 'all';
   }
@@ -136,7 +170,7 @@ export class AdminUnitStatsModule implements IUCModule {
     });
 
     const adminDb = getAdminFirestore();
-    const totalStats: AggregateUnitStats = { total: 0, sold: 0, available: 0, reserved: 0, other: 0 };
+    const totalStats: AggregateUnitStats = { total: 0, sold: 0, available: 0, reserved: 0, other: 0, byType: {} };
     const projectBreakdown: ProjectUnitBreakdown[] = [];
     let contactStats: ContactStats | null = null;
     let projectStats: ProjectStats | null = null;
@@ -183,7 +217,7 @@ export class AdminUnitStatsModule implements IUCModule {
       }
 
       // ── Unit stats (if requested) ──
-      if (statsType === 'units' || statsType === 'all') {
+      if (statsType === 'units' || statsType === 'all' || statsType === 'unit_categories') {
         const unitsSnapshot = await adminDb
           .collection(COLLECTIONS.UNITS)
           .where('companyId', '==', ctx.companyId)
@@ -211,6 +245,13 @@ export class AdminUnitStatsModule implements IUCModule {
           const stats = perProject.get(projectId)!;
           stats.total++;
           totalStats.total++;
+
+          // Collect unit type for category breakdown
+          const unitType = ((data.type ?? '') as string);
+          if (unitType) {
+            const typeKey = unitType.toLowerCase();
+            totalStats.byType[typeKey] = (totalStats.byType[typeKey] ?? 0) + 1;
+          }
 
           const status = ((data.status ?? '') as string).toLowerCase();
           if (status === 'sold' || status === 'πωλημένο') {
@@ -337,25 +378,61 @@ export class AdminUnitStatsModule implements IUCModule {
       }
 
       // ── Unit stats ──
-      if (totalStats && (statsType === 'units' || statsType === 'all')) {
+      if (totalStats && (statsType === 'units' || statsType === 'all' || statsType === 'unit_categories')) {
         if (lines.length > 0) lines.push('');
-        if (projectFilter) {
-          lines.push(`Στατιστικά ακινήτων (φίλτρο: "${projectFilter}"):`);
-        } else {
-          lines.push('Στατιστικά ακινήτων:');
-        }
-        lines.push('');
-        lines.push(`Σύνολο: ${totalStats.total}`);
-        lines.push(`  Πωλημένα: ${totalStats.sold}`);
-        lines.push(`  Διαθέσιμα: ${totalStats.available}`);
-        if (totalStats.reserved > 0) lines.push(`  Κρατημένα: ${totalStats.reserved}`);
-        if (totalStats.other > 0) lines.push(`  Λοιπά: ${totalStats.other}`);
 
-        if (projectBreakdown.length > 1) {
+        if (statsType === 'unit_categories') {
+          // Category/type breakdown mode
+          lines.push('Κατηγορίες ακινήτων:');
           lines.push('');
-          lines.push('Ανά έργο:');
-          for (const proj of projectBreakdown) {
-            lines.push(`  ${proj.projectName}: ${proj.total} (${proj.sold} πωλ., ${proj.available} διαθ.)`);
+          lines.push(`Σύνολο: ${totalStats.total}`);
+
+          const byType = totalStats.byType as Record<string, number>;
+          const typeEntries = Object.entries(byType).sort((a, b) => b[1] - a[1]);
+
+          if (typeEntries.length > 0) {
+            lines.push('');
+            lines.push('Ανά τύπο:');
+            for (const [typeName, count] of typeEntries) {
+              const label = UNIT_TYPE_LABELS[typeName] ?? typeName;
+              lines.push(`  ${label}: ${count}`);
+            }
+          } else {
+            lines.push('');
+            lines.push('Δεν βρέθηκαν καταχωρημένοι τύποι.');
+          }
+        } else {
+          // Standard stats mode
+          if (projectFilter) {
+            lines.push(`Στατιστικά ακινήτων (φίλτρο: "${projectFilter}"):`);
+          } else {
+            lines.push('Στατιστικά ακινήτων:');
+          }
+          lines.push('');
+          lines.push(`Σύνολο: ${totalStats.total}`);
+          lines.push(`  Πωλημένα: ${totalStats.sold}`);
+          lines.push(`  Διαθέσιμα: ${totalStats.available}`);
+          if (totalStats.reserved > 0) lines.push(`  Κρατημένα: ${totalStats.reserved}`);
+          if (totalStats.other > 0) lines.push(`  Λοιπά: ${totalStats.other}`);
+
+          // Also show type breakdown if available
+          const byType = totalStats.byType as Record<string, number>;
+          const typeEntries = Object.entries(byType).sort((a, b) => b[1] - a[1]);
+          if (typeEntries.length > 1) {
+            lines.push('');
+            lines.push('Ανά τύπο:');
+            for (const [typeName, count] of typeEntries) {
+              const label = UNIT_TYPE_LABELS[typeName] ?? typeName;
+              lines.push(`  ${label}: ${count}`);
+            }
+          }
+
+          if (projectBreakdown.length > 1) {
+            lines.push('');
+            lines.push('Ανά έργο:');
+            for (const proj of projectBreakdown) {
+              lines.push(`  ${proj.projectName}: ${proj.total} (${proj.sold} πωλ., ${proj.available} διαθ.)`);
+            }
           }
         }
       }

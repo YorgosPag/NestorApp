@@ -153,9 +153,11 @@ export class PipelineOrchestrator {
 
     // ── ADR-145: Admin Fallback Override ──
     // If sender is admin and no admin module matched (unknown/general_inquiry),
-    // substitute with AdminFallbackModule for a helpful response instead of manual triage.
+    // OR if intent is admin_general_question (conversational AI),
+    // substitute with AdminFallbackModule for a helpful/conversational response.
+    const adminIntent = ctx.understanding!.intent;
     const isAdminWithUnknownIntent = ctx.adminCommandMeta?.isAdminCommand === true
-      && !ctx.understanding!.intent.startsWith('admin_');
+      && (!adminIntent.startsWith('admin_') || adminIntent === 'admin_general_question');
 
     if (isAdminWithUnknownIntent) {
       return this.executeAdminFallback(ctx);

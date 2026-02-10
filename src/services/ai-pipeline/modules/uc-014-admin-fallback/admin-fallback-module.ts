@@ -18,6 +18,7 @@ import 'server-only';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
+import { generateAdminConversationalReply } from '../../shared/ai-reply-generator';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -99,12 +100,26 @@ export class AdminFallbackModule implements IUCModule {
     try {
       const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
       const action = actions.find(a => a.type === 'admin_fallback_reply');
-      const helpText = (action?.params.helpText as string) ?? ADMIN_HELP_TEXT;
 
       const telegramChatId = (action?.params.telegramChatId as string)
         ?? (ctx.intake.rawPayload.chatId as string)
         ?? (ctx.intake.normalized.sender.telegramId)
         ?? undefined;
+
+      // ── Conversational AI: try OpenAI first, fallback to static help ──
+      const originalMessage = ctx.intake.normalized.contentText ?? '';
+      let replyText = ADMIN_HELP_TEXT;
+      const sideEffects: string[] = [];
+
+      if (originalMessage.length > 0) {
+        const aiResult = await generateAdminConversationalReply(originalMessage, ctx.requestId);
+        if (aiResult.replyText) {
+          replyText = aiResult.replyText;
+          sideEffects.push(`ai_conversational:${aiResult.durationMs}ms`);
+        } else {
+          sideEffects.push('ai_conversational_fallback');
+        }
+      }
 
       const replyResult = await sendChannelReply({
         channel: ctx.intake.channel,
@@ -112,16 +127,17 @@ export class AdminFallbackModule implements IUCModule {
         telegramChatId: telegramChatId ?? undefined,
         inAppCommandId: (ctx.intake.rawPayload?.commandId as string) ?? undefined,
         subject: 'Admin Assistant',
-        textBody: helpText,
+        textBody: replyText,
         requestId: ctx.requestId,
       });
 
-      return {
-        success: true,
-        sideEffects: replyResult.success
-          ? [`reply_sent:${replyResult.messageId ?? 'unknown'}`]
-          : [`reply_failed:${replyResult.error ?? 'unknown'}`],
-      };
+      if (replyResult.success) {
+        sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);
+      } else {
+        sideEffects.push(`reply_failed:${replyResult.error ?? 'unknown'}`);
+      }
+
+      return { success: true, sideEffects };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('UC-014 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
