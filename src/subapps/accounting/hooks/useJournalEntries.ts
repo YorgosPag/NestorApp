@@ -87,7 +87,7 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
 
       const headers = await getAuthHeaders();
       const queryString = buildQueryString();
-      const response = await fetch(`/api/accounting/journal-entries${queryString}`, { headers });
+      const response = await fetch(`/api/accounting/journal${queryString}`, { headers });
 
       if (!response.ok) {
         const errorData: { error?: string } = await response.json();
@@ -112,7 +112,7 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
       try {
         setError(null);
         const headers = await getAuthHeaders();
-        const response = await fetch('/api/accounting/journal-entries', {
+        const response = await fetch('/api/accounting/journal', {
           method: 'POST',
           headers,
           body: JSON.stringify(data),

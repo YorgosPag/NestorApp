@@ -50,8 +50,7 @@ export default function NotFound() {
         {/* 404 Title */}
         <h1
           id="not-found-title"
-          className={`${typography.heading.lg} ${colors.text.muted}`}
-          style={{ fontSize: '6rem', lineHeight: 1 }}
+          className={`${typography.heading.xl} ${colors.text.muted}`}
         >
           {t('notFound.title')}
         </h1>
@@ -73,5 +72,9 @@ export default function NotFound() {
     </main>
   );
 }
+
+
+
+
 
 

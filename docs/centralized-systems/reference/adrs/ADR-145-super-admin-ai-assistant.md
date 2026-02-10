@@ -185,6 +185,11 @@ if (isAdminCommand && intent δεν ξεκινά με 'admin_')
 
 - **Intents**: `admin_send_email`
 - **Lookup**: `findContactByName()` → get email address
+- **Compound Commands**: Supports "Βρες επαφή X και στείλε" → formats contact card as email body
+  - `COMPOUND_FIND_SEND_PATTERN`: detects "βρες...επαφή...και στείλε" pattern
+  - `CONTACT_CARD_PATTERN`: detects "στοιχεία του/της X" pattern
+  - `EXPLICIT_EMAIL_PATTERN`: extracts explicit email from command text
+  - `overrideRecipientEmail`: explicit email in command overrides contact's email
 - **Execute**: `sendReplyViaMailgun()` (existing centralized sender)
 - **Acknowledge**: Confirm delivery: "Email στάλθηκε στον X"
 - **autoApprovable**: `true` (admin gave explicit order)
@@ -510,6 +515,7 @@ interface AdminSession {
 | 2026-02-10 | Bug fix: UC-013 property type breakdown — "ποιες κατηγορίες ακινήτων" δείχνει ανά τύπο (Στούντιο, Διαμέρισμα κτλ.) αντί μόνο status counts. Νέο `unit_categories` StatsType + `UNIT_TYPE_LABELS` mapping | Claude Code |
 | 2026-02-10 | Bug fix: UC-016 REMOVE mode — "αφαίρεσε/σβήσε/βγάλε" keywords → `removeContactField()` (arrayRemove for phone/email, null for scalar). Νέο `removeContactField()` στο `contact-lookup.ts` | Claude Code |
 | 2026-02-10 | Bug fix: "ταυτότητα/ΑΔΤ" intent misclassification — προσθήκη `idNumber` field mapping στο UC-016, clarification στο AI prompt ότι ταυτότητα+πρόσωπο → `admin_update_contact` (ΟΧΙ unit_stats) | Claude Code |
+| 2026-02-10 | Fix: UC-012 compound "find+send" commands — `COMPOUND_FIND_SEND_PATTERN` detects "Βρες επαφή X και στείλε", `EXPLICIT_EMAIL_PATTERN` extracts email from command, `overrideRecipientEmail` overrides contact's email. Fixes bug where raw command was sent as email body instead of contact card | Claude Code |
 | 2026-02-10 | Critical fix: Telegram function timeout — `maxDuration=60` στο webhook route.ts (default 10s δεν αρκεί για 2 OpenAI calls). Fix: `admin_general_question` mapping στον orchestrator. Fix: race condition — `feedTelegramToPipeline` γίνεται awaitable αντί fire-and-forget ώστε η `after()` να βρίσκει πάντα το item στο queue | Claude Code |
 
 ---

@@ -38,6 +38,8 @@ interface SendEmailLookupData {
   emailContent: string;
   targetContact: ContactNameSearchResult | null;
   companyId: string;
+  /** Explicit email from command (e.g. "στείλε στο georgios@example.com") overrides contact email */
+  overrideRecipientEmail: string | null;
 }
 
 // ============================================================================
@@ -53,8 +55,23 @@ interface SendEmailLookupData {
  *   "στοιχεία της Σοφίας"
  *   "πληροφορίες για τον Κώστα"
  *   "τα δεδομένα επαφής Νίκου"
+ *
+ * NOTE: Capture limited to 1-2 words to avoid greedy matching past conjunctions.
  */
-const CONTACT_CARD_PATTERN = /(?:στοιχεί|επαφ|πληροφορ|δεδομέν)(?:α|ές|ων|ής)?\s+(?:του|της|τον|την|για τον|για την|επαφής)\s+([\p{L}\s]{2,40})/iu;
+const CONTACT_CARD_PATTERN = /(?:στοιχεί|επαφ|πληροφορ|δεδομέν)(?:α|ές|ων|ής)?\s+(?:του|της|τον|την|για τον|για την|επαφής)\s+([\p{L}]+(?:\s[\p{L}]+)?)/iu;
+
+/**
+ * Detects compound "find contact + send" commands.
+ *
+ * Matches:
+ *   "Βρες την επαφή της σοφίας και στείλε την..."
+ *   "Βρείτε τα στοιχεία του Κώστα και στείλε τα..."
+ *   "Βρες την επαφή σοφίας και στείλε..."
+ */
+const COMPOUND_FIND_SEND_PATTERN = /βρ(?:ες|είτε)\s+(?:την?\s+)?(?:επαφ[ήέ]|στοιχεί[αά])\s+(?:του|της|τον|την)?\s*([\p{L}]+(?:\s[\p{L}]+)?)\s+και\s+στείλ/iu;
+
+/** Extract an explicit email address from raw text */
+const EXPLICIT_EMAIL_PATTERN = /[\w.+-]+@[\w.-]+\.\w{2,}/i;
 
 /**
  * Format a contact's details as a readable card (plain text).
@@ -125,27 +142,66 @@ export class AdminSendEmailModule implements IUCModule {
       }
     }
 
-    // ── Compound command: "στοιχεία του/της X" → lookup + format contact card ──
-    const cardMatch = emailContent.match(CONTACT_CARD_PATTERN);
-    if (cardMatch?.[1]) {
-      const cardContactName = cardMatch[1].trim();
+    // ── Extract explicit email from command (e.g. "στο georgios@example.com") ──
+    let overrideRecipientEmail: string | null = null;
+    const explicitEmailMatch = rawMessage.match(EXPLICIT_EMAIL_PATTERN);
+    if (explicitEmailMatch) {
+      overrideRecipientEmail = explicitEmailMatch[0];
+      logger.info('UC-012 LOOKUP: Explicit recipient email found in command', {
+        requestId: ctx.requestId,
+        overrideRecipientEmail,
+      });
+    }
+
+    // ── Compound command: "Βρες επαφή X και στείλε" → contact card as content ──
+    const compoundMatch = rawMessage.match(COMPOUND_FIND_SEND_PATTERN);
+    if (compoundMatch?.[1]) {
+      const compoundContactName = compoundMatch[1].trim();
       try {
-        const cardResults = await findContactByName(cardContactName, ctx.companyId, 1);
-        if (cardResults.length > 0) {
-          emailContent = formatContactCard(cardResults[0]);
-          logger.info('UC-012 LOOKUP: Compound command — contact card resolved', {
+        const compoundResults = await findContactByName(compoundContactName, ctx.companyId, 1);
+        if (compoundResults.length > 0) {
+          emailContent = formatContactCard(compoundResults[0]);
+          // If no recipient was found yet, use the compound contact for name display
+          if (!targetContact) {
+            targetContact = compoundResults[0];
+          }
+          logger.info('UC-012 LOOKUP: Compound find+send — contact card resolved', {
             requestId: ctx.requestId,
-            cardContactName,
-            resolvedName: cardResults[0].name,
+            compoundContactName,
+            resolvedName: compoundResults[0].name,
           });
         }
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        logger.warn('UC-012 LOOKUP: Contact card lookup failed', {
+        logger.warn('UC-012 LOOKUP: Compound find+send lookup failed', {
           requestId: ctx.requestId,
-          cardContactName,
+          compoundContactName,
           error: msg,
         });
+      }
+    } else {
+      // ── Fallback: "στοιχεία του/της X" pattern (without "βρες...και στείλε") ──
+      const cardMatch = emailContent.match(CONTACT_CARD_PATTERN);
+      if (cardMatch?.[1]) {
+        const cardContactName = cardMatch[1].trim();
+        try {
+          const cardResults = await findContactByName(cardContactName, ctx.companyId, 1);
+          if (cardResults.length > 0) {
+            emailContent = formatContactCard(cardResults[0]);
+            logger.info('UC-012 LOOKUP: Contact card pattern resolved', {
+              requestId: ctx.requestId,
+              cardContactName,
+              resolvedName: cardResults[0].name,
+            });
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          logger.warn('UC-012 LOOKUP: Contact card lookup failed', {
+            requestId: ctx.requestId,
+            cardContactName,
+            error: msg,
+          });
+        }
       }
     }
 
@@ -154,6 +210,7 @@ export class AdminSendEmailModule implements IUCModule {
       emailContent,
       targetContact,
       companyId: ctx.companyId,
+      overrideRecipientEmail,
     };
 
     return lookupData as unknown as Record<string, unknown>;
@@ -165,9 +222,13 @@ export class AdminSendEmailModule implements IUCModule {
     const lookup = ctx.lookupData as unknown as SendEmailLookupData | undefined;
     const contact = lookup?.targetContact;
 
-    const summary = contact?.email
-      ? `Αποστολή email στον ${contact.name} (${contact.email})`
-      : `Δεν βρέθηκε email για "${lookup?.recipientName ?? ''}"`;
+    // Explicit email from command overrides contact's email
+    const resolvedEmail = lookup?.overrideRecipientEmail ?? contact?.email ?? null;
+    const resolvedName = lookup?.recipientName || contact?.name || '';
+
+    const summary = resolvedEmail
+      ? `Αποστολή email στον ${resolvedName} (${resolvedEmail})`
+      : `Δεν βρέθηκε email για "${resolvedName}"`;
 
     return {
       messageId: ctx.intake.id,
@@ -175,8 +236,8 @@ export class AdminSendEmailModule implements IUCModule {
         {
           type: 'admin_send_email_action',
           params: {
-            recipientName: lookup?.recipientName ?? null,
-            recipientEmail: contact?.email ?? null,
+            recipientName: resolvedName || null,
+            recipientEmail: resolvedEmail,
             recipientContactId: contact?.contactId ?? null,
             emailContent: lookup?.emailContent ?? null,
             contactFound: contact !== null,
