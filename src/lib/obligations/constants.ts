@@ -28,7 +28,7 @@ export const SECTION_CATEGORIES: Record<SectionCategory, {
   },
   systems: {
     label: 'obligations.categories.systems',
-    color: designTokens.colors.orange['900'],
+    color: designTokens.colors.orange['600'],
     icon: 'Settings',
     description: 'obligations.categories.systemsDescription'
   },
@@ -40,7 +40,7 @@ export const SECTION_CATEGORIES: Record<SectionCategory, {
   },
   installations: {
     label: 'obligations.categories.installations',
-    color: designTokens.colors.red['700'],
+    color: designTokens.colors.red['600'],
     icon: 'Zap',
     description: 'obligations.categories.installationsDescription'
   },

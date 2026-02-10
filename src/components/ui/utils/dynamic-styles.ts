@@ -96,6 +96,50 @@ export const getDynamicBorderClass = (color?: string, width: string = '1px'): st
   return className;
 };
 
+/**
+ * Generate dynamic width class
+ *
+ * @param width - CSS width value (e.g. '50%', '120px', 'var(--x)', 'calc(...)')
+ * @returns CSS class name with dynamic width
+ */
+export const getDynamicWidthClass = (width?: string): string => {
+  if (!width) return '';
+
+  if (!isValidDimension(width)) {
+    console.warn(`Invalid width provided to getDynamicWidthClass: ${width}`);
+    return '';
+  }
+
+  const widthId = generateDimensionId(width);
+  const className = `dynamic-w-${widthId}`;
+
+  injectDynamicStyle(className, 'width', width);
+
+  return className;
+};
+
+/**
+ * Generate dynamic height class
+ *
+ * @param height - CSS height value (e.g. '50%', '120px', 'var(--x)', 'calc(...)')
+ * @returns CSS class name with dynamic height
+ */
+export const getDynamicHeightClass = (height?: string): string => {
+  if (!height) return '';
+
+  if (!isValidDimension(height)) {
+    console.warn(`Invalid height provided to getDynamicHeightClass: ${height}`);
+    return '';
+  }
+
+  const heightId = generateDimensionId(height);
+  const className = `dynamic-h-${heightId}`;
+
+  injectDynamicStyle(className, 'height', height);
+
+  return className;
+};
+
 // ============================================================================
 // 🔧 UTILITY FUNCTIONS
 // ============================================================================
@@ -122,6 +166,27 @@ function isValidColor(color: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * Validate if dimension string is valid CSS size
+ */
+function isValidDimension(value: string): boolean {
+  if (value.startsWith('var(') || value.startsWith('calc(')) return true;
+  if (value.match(/^[0-9.]+%$/)) return true;
+  if (value.match(/^[0-9.]+(px|rem|em|vh|vw|vmin|vmax|ch|ex)$/)) return true;
+
+  return false;
+}
+
+/**
+ * Generate unique identifier for dimension values (width/height)
+ */
+function generateDimensionId(value: string): string {
+  return value
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase()
+    .substring(0, 12);
 }
 
 /**
@@ -220,6 +285,30 @@ export const useDynamicBorderClass = (color?: string, width?: string): string =>
   }, [color, width]);
 };
 
+/**
+ * React hook for memoized dynamic width class
+ *
+ * @param width - Width value
+ * @returns Memoized CSS class name
+ */
+export const useDynamicWidthClass = (width?: string): string => {
+  return useMemo(() => {
+    return getDynamicWidthClass(width);
+  }, [width]);
+};
+
+/**
+ * React hook for memoized dynamic height class
+ *
+ * @param height - Height value
+ * @returns Memoized CSS class name
+ */
+export const useDynamicHeightClass = (height?: string): string => {
+  return useMemo(() => {
+    return getDynamicHeightClass(height);
+  }, [height]);
+};
+
 // ============================================================================
 // 🎯 COMPOSITE DYNAMIC CLASSES
 // ============================================================================
@@ -298,3 +387,4 @@ export const getDynamicStylesCount = (): number => {
 
   return (styleContainer.textContent?.split('\n').filter(line => line.trim()).length) || 0;
 };
+

@@ -51,7 +51,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { typography as designTypography } from '@/styles/design-tokens';
+import { typography as designTypography, zIndex, colors } from '@/styles/design-tokens';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -761,7 +761,7 @@ export function GanttView({ building }: GanttViewProps) {
             position: 'fixed',
             left: Math.min(contextMenu.x, window.innerWidth - 200),
             top: Math.min(contextMenu.y, window.innerHeight - 280),
-            zIndex: 999999,
+            zIndex: zIndex.popover,
           }}
           role="menu"
         >
@@ -828,7 +828,7 @@ export function GanttView({ building }: GanttViewProps) {
             position: 'fixed',
             left: tooltipData.x,
             top: tooltipData.y,
-            zIndex: 999999,
+            zIndex: zIndex.tooltip,
           }}
         >
           <p className="font-bold mb-1">{tooltipData.name}</p>

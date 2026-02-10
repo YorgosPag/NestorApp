@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { getDynamicHeightClass } from '@/components/ui/utils/dynamic-styles';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
 
 // ============================================================================
@@ -113,6 +114,7 @@ interface ChartBarProps {
  */
 const ChartBar: React.FC<ChartBarProps> = ({ value, maxValue }) => {
   const heightPercent = (value / maxValue) * 100;
+  const heightClass = getDynamicHeightClass(`${heightPercent}%`);
   const colorClass = performanceMonitorUtilities.getChartBarClasses(value);
 
   return (
@@ -127,3 +129,7 @@ const ChartBar: React.FC<ChartBarProps> = ({ value, maxValue }) => {
 };
 
 export default PerformanceChart;
+
+
+
+
