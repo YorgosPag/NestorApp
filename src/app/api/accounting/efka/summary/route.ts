@@ -23,6 +23,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { isPartnership } from '@/subapps/accounting/utils/entity-guards';
 
 // =============================================================================
 // GET — EFKA Annual Summary
@@ -32,7 +33,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { service } = createAccountingServices();
+        const { service, repository } = createAccountingServices();
         const { searchParams } = new URL(req.url);
 
         const yearParam = searchParams.get('year');
@@ -47,9 +48,24 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           );
         }
 
+        // Check entity type for partnership path
+        const profile = await repository.getCompanySetup();
+        if (profile && isPartnership(profile)) {
+          const partnershipSummary = await service.getPartnershipEfkaSummary(year);
+          return NextResponse.json({
+            success: true,
+            entityType: 'oe',
+            data: partnershipSummary,
+          });
+        }
+
         const summary = await service.getEfkaAnnualSummary(year);
 
-        return NextResponse.json({ success: true, data: summary });
+        return NextResponse.json({
+          success: true,
+          entityType: 'sole_proprietor',
+          data: summary,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to get EFKA summary';
         return NextResponse.json(

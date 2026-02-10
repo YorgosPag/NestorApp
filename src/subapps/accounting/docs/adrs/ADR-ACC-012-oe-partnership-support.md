@@ -727,6 +727,10 @@ if (body.entityType === 'oe') {
 | 2026-02-10 | Nullable `partnerId` on EFKAPayment for backward compatibility | Claude Code |
 | 2026-02-10 | `TaxEngine.calculatePartnershipTax()` — pass-through taxation, same scale | Claude Code |
 | 2026-02-10 | 9 new files + 16 modified files — Phase 1 OE support implemented | Claude Code |
+| 2026-02-10 | Completion: wired PartnerTaxBreakdown + PartnerEFKATabs into pages | Claude Code |
+| 2026-02-10 | Hooks: entity-aware returns (useTaxEstimate, useEFKASummary) | Claude Code |
+| 2026-02-10 | EFKA route: discriminated response by entityType | Claude Code |
+| 2026-02-10 | BUG FIX: useEFKASummary response parsing (data.summary → result.data) | Claude Code |
 
 ---
 

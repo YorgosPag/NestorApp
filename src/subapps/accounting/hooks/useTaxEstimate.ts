@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import type { TaxEstimate } from '@/subapps/accounting/types';
+import type { TaxEstimate, PartnershipTaxResult, EntityType } from '@/subapps/accounting/types';
 
 // ============================================================================
 // TYPES
@@ -24,14 +24,25 @@ interface UseTaxEstimateOptions {
 }
 
 interface UseTaxEstimateReturn {
-  /** Δεδομένα εκτίμησης φόρου */
+  /** Δεδομένα εκτίμησης φόρου (sole_proprietor) */
   estimate: TaxEstimate | null;
+  /** Αποτέλεσμα φόρου ΟΕ (oe) */
+  partnershipResult: PartnershipTaxResult | null;
+  /** Τύπος νομικής μορφής */
+  entityType: EntityType | null;
   /** Κατάσταση φόρτωσης */
   loading: boolean;
   /** Μήνυμα σφάλματος */
   error: string | null;
   /** Ανανέωση δεδομένων */
   refetch: () => Promise<void>;
+}
+
+/** API response discriminated by entityType */
+interface TaxEstimateApiResponse {
+  success: boolean;
+  entityType: EntityType;
+  data: TaxEstimate | PartnershipTaxResult;
 }
 
 // ============================================================================
@@ -43,6 +54,8 @@ export function useTaxEstimate(options: UseTaxEstimateOptions): UseTaxEstimateRe
   const { user } = useAuth();
 
   const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
+  const [partnershipResult, setPartnershipResult] = useState<PartnershipTaxResult | null>(null);
+  const [entityType, setEntityType] = useState<EntityType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,12 +83,21 @@ export function useTaxEstimate(options: UseTaxEstimateOptions): UseTaxEstimateRe
         throw new Error(errorData.error ?? `HTTP ${response.status}`);
       }
 
-      const data: { success: boolean; data: TaxEstimate } = await response.json();
-      setEstimate(data.data);
+      const result: TaxEstimateApiResponse = await response.json();
+      setEntityType(result.entityType);
+
+      if (result.entityType === 'oe') {
+        setPartnershipResult(result.data as PartnershipTaxResult);
+        setEstimate(null);
+      } else {
+        setEstimate(result.data as TaxEstimate);
+        setPartnershipResult(null);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.taxEstimateLoadFailed';
       setError(message);
       setEstimate(null);
+      setPartnershipResult(null);
     } finally {
       setLoading(false);
     }
@@ -89,6 +111,8 @@ export function useTaxEstimate(options: UseTaxEstimateOptions): UseTaxEstimateRe
 
   return {
     estimate,
+    partnershipResult,
+    entityType,
     loading,
     error,
     refetch: fetchTaxEstimate,

@@ -28,6 +28,7 @@ import { useTaxEstimate } from '../../hooks/useTaxEstimate';
 import { VATReportCard } from './VATReportCard';
 import { TaxEstimateCard } from './TaxEstimateCard';
 import { TaxDashboard } from './TaxDashboard';
+import { PartnerTaxBreakdown } from '../tax/PartnerTaxBreakdown';
 
 // ============================================================================
 // COMPONENT
@@ -39,10 +40,43 @@ export function ReportsPageContent() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showDashboard, setShowDashboard] = useState(true);
 
-  const { estimate, loading } = useTaxEstimate({ fiscalYear: selectedYear });
+  const { estimate, partnershipResult, entityType, loading } = useTaxEstimate({ fiscalYear: selectedYear });
 
-  // Dashboard stats from tax estimate
+  // Dashboard stats — entity-aware
   const dashboardStats: DashboardStat[] = useMemo(() => {
+    if (entityType === 'oe' && partnershipResult) {
+      return [
+        {
+          title: t('reports.totalIncome'),
+          value: formatCurrency(partnershipResult.totalEntityIncome),
+          icon: TrendingUp,
+          color: 'green' as const,
+          loading,
+        },
+        {
+          title: t('reports.totalExpenses'),
+          value: formatCurrency(partnershipResult.totalEntityExpenses),
+          icon: TrendingDown,
+          color: 'red' as const,
+          loading,
+        },
+        {
+          title: t('reports.taxableIncome'),
+          value: formatCurrency(partnershipResult.totalEntityProfit),
+          icon: Calculator,
+          color: 'blue' as const,
+          loading,
+        },
+        {
+          title: t('tax.partnerBreakdown.professionalTax'),
+          value: formatCurrency(partnershipResult.entityProfessionalTax),
+          icon: DollarSign,
+          color: 'orange' as const,
+          loading,
+        },
+      ];
+    }
+
     const income = estimate?.actualIncome ?? 0;
     const expenses = estimate?.actualExpenses ?? 0;
     const taxableIncome = (estimate?.projectedAnnualIncome ?? 0) - (estimate?.projectedAnnualExpenses ?? 0);
@@ -78,7 +112,7 @@ export function ReportsPageContent() {
         loading,
       },
     ];
-  }, [estimate, loading, t]);
+  }, [estimate, partnershipResult, entityType, loading, t]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -99,16 +133,22 @@ export function ReportsPageContent() {
       {/* Stats Dashboard */}
       {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
 
-      {/* Report Cards Grid */}
+      {/* Report Cards — Entity-aware */}
       <section className="p-6 space-y-6">
-        {/* Top Row: VAT and Tax Estimate */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <VATReportCard fiscalYear={selectedYear} />
-          <TaxEstimateCard fiscalYear={selectedYear} />
-        </div>
+        {entityType === 'oe' && partnershipResult ? (
+          <PartnerTaxBreakdown result={partnershipResult} />
+        ) : (
+          <>
+            {/* Top Row: VAT and Tax Estimate */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <VATReportCard fiscalYear={selectedYear} />
+              <TaxEstimateCard fiscalYear={selectedYear} />
+            </div>
 
-        {/* Bottom Row: Tax Dashboard (full width) */}
-        <TaxDashboard fiscalYear={selectedYear} />
+            {/* Bottom Row: Tax Dashboard (full width) */}
+            <TaxDashboard fiscalYear={selectedYear} />
+          </>
+        )}
       </section>
     </main>
   );

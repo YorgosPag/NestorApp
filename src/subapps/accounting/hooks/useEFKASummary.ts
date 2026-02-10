@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import type { EFKAAnnualSummary } from '@/subapps/accounting/types';
+import type { EFKAAnnualSummary, PartnershipEFKASummary, EntityType } from '@/subapps/accounting/types';
 
 // ============================================================================
 // TYPES
@@ -24,14 +24,25 @@ interface UseEFKASummaryOptions {
 }
 
 interface UseEFKASummaryReturn {
-  /** Ετήσια σύνοψη ΕΦΚΑ */
+  /** Ετήσια σύνοψη ΕΦΚΑ (sole_proprietor) */
   summary: EFKAAnnualSummary | null;
+  /** Σύνοψη ΕΦΚΑ ΟΕ (oe) */
+  partnershipSummary: PartnershipEFKASummary | null;
+  /** Τύπος νομικής μορφής */
+  entityType: EntityType | null;
   /** Κατάσταση φόρτωσης */
   loading: boolean;
   /** Μήνυμα σφάλματος */
   error: string | null;
   /** Ανανέωση δεδομένων */
   refetch: () => Promise<void>;
+}
+
+/** API response discriminated by entityType */
+interface EFKASummaryApiResponse {
+  success: boolean;
+  entityType: EntityType;
+  data: EFKAAnnualSummary | PartnershipEFKASummary;
 }
 
 // ============================================================================
@@ -43,6 +54,8 @@ export function useEFKASummary(options: UseEFKASummaryOptions): UseEFKASummaryRe
   const { user } = useAuth();
 
   const [summary, setSummary] = useState<EFKAAnnualSummary | null>(null);
+  const [partnershipSummary, setPartnershipSummary] = useState<PartnershipEFKASummary | null>(null);
+  const [entityType, setEntityType] = useState<EntityType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,12 +83,21 @@ export function useEFKASummary(options: UseEFKASummaryOptions): UseEFKASummaryRe
         throw new Error(errorData.error ?? `HTTP ${response.status}`);
       }
 
-      const data: { summary: EFKAAnnualSummary } = await response.json();
-      setSummary(data.summary);
+      const result: EFKASummaryApiResponse = await response.json();
+      setEntityType(result.entityType);
+
+      if (result.entityType === 'oe') {
+        setPartnershipSummary(result.data as PartnershipEFKASummary);
+        setSummary(null);
+      } else {
+        setSummary(result.data as EFKAAnnualSummary);
+        setPartnershipSummary(null);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.efkaSummaryLoadFailed';
       setError(message);
       setSummary(null);
+      setPartnershipSummary(null);
     } finally {
       setLoading(false);
     }
@@ -89,6 +111,8 @@ export function useEFKASummary(options: UseEFKASummaryOptions): UseEFKASummaryRe
 
   return {
     summary,
+    partnershipSummary,
+    entityType,
     loading,
     error,
     refetch: fetchEFKASummary,

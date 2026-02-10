@@ -17,8 +17,15 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import type { TaxEstimate } from '@/subapps/accounting/types';
+import type { TaxEstimate, EntityType, PartnershipTaxResult } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
+
+/** API response discriminated by entityType */
+interface TaxEstimateApiResponse {
+  success: boolean;
+  entityType: EntityType;
+  data: TaxEstimate | PartnershipTaxResult;
+}
 
 // ============================================================================
 // TYPES
@@ -50,6 +57,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
   const colors = useSemanticColors();
 
   const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
+  const [isPartnership, setIsPartnership] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,8 +81,16 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
         throw new Error(errorData.error ?? `HTTP ${response.status}`);
       }
 
-      const data: { success: boolean; data: TaxEstimate } = await response.json();
-      setEstimate(data.data);
+      const result: TaxEstimateApiResponse = await response.json();
+
+      if (result.entityType === 'oe') {
+        // OE partnership — the card shows a fallback; detailed view is in PartnerTaxBreakdown
+        setIsPartnership(true);
+        setEstimate(null);
+      } else {
+        setIsPartnership(false);
+        setEstimate(result.data as TaxEstimate);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'accounting.errors.taxEstimateLoadFailed';
       setError(message);
@@ -108,6 +124,10 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
           </div>
         ) : error ? (
           <p className="text-sm text-destructive text-center py-4">{error}</p>
+        ) : isPartnership ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            {t('tax.partnerBreakdown.entitySummary')}
+          </p>
         ) : !estimate ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             {t('reports.noTaxData')}

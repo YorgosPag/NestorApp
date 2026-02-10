@@ -32,6 +32,7 @@ import { useEFKASummary } from '../../hooks/useEFKASummary';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { EFKAMonthlyBreakdown } from './EFKAMonthlyBreakdown';
 import { EFKAPaymentsList } from './EFKAPaymentsList';
+import { PartnerEFKATabs } from './PartnerEFKATabs';
 
 // ============================================================================
 // TYPES
@@ -93,7 +94,7 @@ export function EFKAPageContent() {
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
-  const { summary, loading, error, refetch } = useEFKASummary({ year: selectedYear });
+  const { summary, partnershipSummary, entityType, loading, error, refetch } = useEFKASummary({ year: selectedYear });
 
   // Filter payments by payment status (client-side)
   const filteredPayments = useMemo(() => {
@@ -110,8 +111,41 @@ export function EFKAPageContent() {
     return summary.monthlyBreakdown.filter((m) => matchingMonths.has(m.month));
   }, [summary, filters.paymentStatus, filteredPayments]);
 
-  // Compute dashboard stats from summary
+  // Compute dashboard stats — entity-aware
   const dashboardStats: DashboardStat[] = useMemo(() => {
+    // Partnership (OE) dashboard stats
+    if (entityType === 'oe' && partnershipSummary) {
+      const totalPaid = partnershipSummary.totalAllPartnersPaid;
+      const totalDue = partnershipSummary.totalAllPartnersDue;
+      const balance = totalDue - totalPaid;
+
+      return [
+        {
+          title: t('dashboard.totalPaid'),
+          value: formatCurrency(totalPaid),
+          icon: CheckCircle,
+          color: 'green' as const,
+          description: t('efka.partnerTabs.totalAllPartners'),
+          loading,
+        },
+        {
+          title: t('dashboard.totalDue'),
+          value: formatCurrency(totalDue),
+          icon: DollarSign,
+          color: 'blue' as const,
+          loading,
+        },
+        {
+          title: t('dashboard.balanceDue'),
+          value: formatCurrency(balance),
+          icon: balance > 0 ? AlertTriangle : CheckCircle,
+          color: balance > 0 ? 'red' as const : 'green' as const,
+          loading,
+        },
+      ];
+    }
+
+    // Sole proprietor dashboard stats
     if (!summary) {
       return [
         { title: t('dashboard.totalPaid'), value: '—', icon: CheckCircle, color: 'green' as const, loading },
@@ -144,7 +178,7 @@ export function EFKAPageContent() {
         loading,
       },
     ];
-  }, [summary, loading, t]);
+  }, [summary, partnershipSummary, entityType, loading, t]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -186,6 +220,8 @@ export function EFKAPageContent() {
               {t('common.retry')}
             </Button>
           </div>
+        ) : entityType === 'oe' && partnershipSummary ? (
+          <PartnerEFKATabs summary={partnershipSummary} />
         ) : !summary ? (
           <div className="text-center py-12">
             <p className="text-lg font-medium text-foreground mb-1">
