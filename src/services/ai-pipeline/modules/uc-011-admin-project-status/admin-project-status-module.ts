@@ -224,13 +224,6 @@ export class AdminProjectStatusModule implements IUCModule {
       .where('companyId', '==', companyId)
       .get();
 
-    // Batch: get all construction phases (Gantt data) for the company
-    const phasesSnapshot = await adminDb
-      .collection(COLLECTIONS.CONSTRUCTION_PHASES)
-      .where('companyId', '==', companyId)
-      .limit(500)
-      .get();
-
     // Index units by projectId
     const unitsByProject = new Map<string, UnitStats>();
     for (const unitDoc of unitsSnapshot.docs) {
@@ -252,9 +245,11 @@ export class AdminProjectStatusModule implements IUCModule {
 
     // Index buildings by projectId, track buildingIds
     const buildingsByProject = new Map<string, string[]>();
+    const allCompanyBuildingIds = new Set<string>();
     for (const buildDoc of buildingsSnapshot.docs) {
       const data = buildDoc.data();
       const projId = data.projectId as string;
+      allCompanyBuildingIds.add(buildDoc.id);
       if (!projectIds.includes(projId)) continue;
 
       if (!buildingsByProject.has(projId)) {
@@ -263,11 +258,27 @@ export class AdminProjectStatusModule implements IUCModule {
       buildingsByProject.get(projId)!.push(buildDoc.id);
     }
 
-    // Index construction phases by buildingId → check which buildings have Gantt
+    // Gantt detection: query construction_phases by buildingId (batched)
+    // Legacy phases may not have companyId, so we query per building batch
     const buildingsWithGantt = new Set<string>();
-    for (const phaseDoc of phasesSnapshot.docs) {
-      const data = phaseDoc.data();
-      buildingsWithGantt.add(data.buildingId as string);
+    const buildingIdArray = Array.from(allCompanyBuildingIds);
+
+    // Firestore 'in' operator supports max 30 values per query
+    const BATCH_SIZE = 30;
+    for (let i = 0; i < buildingIdArray.length; i += BATCH_SIZE) {
+      const batch = buildingIdArray.slice(i, i + BATCH_SIZE);
+      if (batch.length === 0) continue;
+
+      const phasesSnapshot = await adminDb
+        .collection(COLLECTIONS.CONSTRUCTION_PHASES)
+        .where('buildingId', 'in', batch)
+        .limit(1000)
+        .get();
+
+      for (const phaseDoc of phasesSnapshot.docs) {
+        const data = phaseDoc.data();
+        buildingsWithGantt.add(data.buildingId as string);
+      }
     }
 
     // Build enriched results
