@@ -3,12 +3,80 @@
  * @description SSoT for EFKA contribution categories and amounts per year
  * @author Claude Code (Anthropic AI) + Giorgos Pagonis
  * @created 2026-02-09
- * @version 1.0.0
+ * @version 1.1.0 — Fixed TDZ: data constants moved before EFKA_YEAR_CONFIGS
  * @see ADR-ACC-006 EFKA Contributions
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
 import type { EFKACategoryRate, EFKAYearConfig, EFKAMonthlyBreakdown } from '../../types/efka';
+
+// ============================================================================
+// DATA CONSTANTS — Must be defined BEFORE EFKA_YEAR_CONFIGS (TDZ prevention)
+// ============================================================================
+
+/** Ποσά κύριας σύνταξης ανά κατηγορία (2025/2026) */
+const MAIN_PENSION_AMOUNTS: Record<number, readonly number[]> = {
+  2025: [210, 274, 342, 410, 479, 548],
+  2026: [220, 287, 358, 430, 502, 574],
+};
+
+/** Ποσά επικουρικής ανά κατηγορία */
+const SUPPLEMENTARY_AMOUNTS: Record<number, readonly number[]> = {
+  2025: [42, 51, 62],
+  2026: [44, 53, 65],
+};
+
+/** Ποσά εφάπαξ ανά κατηγορία */
+const LUMP_SUM_AMOUNTS: Record<number, readonly number[]> = {
+  2025: [26, 31, 37],
+  2026: [27, 32, 39],
+};
+
+// ============================================================================
+// CATEGORY BUILDERS — Κατηγορίες εισφορών
+// ============================================================================
+
+function buildMainPensionCategories(year: number): EFKACategoryRate[] {
+  const amounts = MAIN_PENSION_AMOUNTS[year] ?? MAIN_PENSION_AMOUNTS[2025];
+  if (!amounts) {
+    throw new Error(`[EFKAConfig] No main pension amounts for year ${year}`);
+  }
+  return amounts.map((monthlyAmount, idx) => ({
+    code: `main_${idx + 1}`,
+    label: `${idx + 1}η Κατηγορία - ${monthlyAmount}€`,
+    monthlyAmount,
+    annualAmount: monthlyAmount * 12,
+    branch: 'main_pension' as const,
+  }));
+}
+
+function buildSupplementaryCategories(year: number): EFKACategoryRate[] {
+  const amounts = SUPPLEMENTARY_AMOUNTS[year] ?? SUPPLEMENTARY_AMOUNTS[2025];
+  if (!amounts) {
+    throw new Error(`[EFKAConfig] No supplementary amounts for year ${year}`);
+  }
+  return amounts.map((monthlyAmount, idx) => ({
+    code: `supplementary_${idx + 1}`,
+    label: `${idx + 1}η Κατηγορία Επικουρικής - ${monthlyAmount}€`,
+    monthlyAmount,
+    annualAmount: monthlyAmount * 12,
+    branch: 'supplementary' as const,
+  }));
+}
+
+function buildLumpSumCategories(year: number): EFKACategoryRate[] {
+  const amounts = LUMP_SUM_AMOUNTS[year] ?? LUMP_SUM_AMOUNTS[2025];
+  if (!amounts) {
+    throw new Error(`[EFKAConfig] No lump sum amounts for year ${year}`);
+  }
+  return amounts.map((monthlyAmount, idx) => ({
+    code: `lump_sum_${idx + 1}`,
+    label: `${idx + 1}η Κατηγορία Εφάπαξ - ${monthlyAmount}€`,
+    monthlyAmount,
+    annualAmount: monthlyAmount * 12,
+    branch: 'lump_sum' as const,
+  }));
+}
 
 // ============================================================================
 // EFKA YEAR CONFIGS (ΦΕΚ ποσά 2025, 2026)
@@ -19,6 +87,10 @@ import type { EFKACategoryRate, EFKAYearConfig, EFKAMonthlyBreakdown } from '../
  *
  * Πηγή: ΦΕΚ / e-ΕΦΚΑ
  * 6 κύριες + 3 επικουρικές + 3 εφάπαξ κατηγορίες
+ *
+ * IMPORTANT: Data constants and builder functions MUST be defined above
+ * this declaration. `const` is not hoisted in production builds (Webpack
+ * preserves `const` semantics → TDZ if accessed before initialization).
  */
 export const EFKA_YEAR_CONFIGS: ReadonlyMap<number, EFKAYearConfig> = new Map<number, EFKAYearConfig>([
   [
@@ -44,70 +116,6 @@ export const EFKA_YEAR_CONFIGS: ReadonlyMap<number, EFKAYearConfig> = new Map<nu
     },
   ],
 ]);
-
-// ============================================================================
-// CATEGORY BUILDERS — Κατηγορίες εισφορών
-// ============================================================================
-
-/** Ποσά κύριας σύνταξης ανά κατηγορία (2025/2026) */
-const MAIN_PENSION_AMOUNTS: Record<number, readonly number[]> = {
-  2025: [210, 274, 342, 410, 479, 548],
-  2026: [220, 287, 358, 430, 502, 574],
-};
-
-function buildMainPensionCategories(year: number): EFKACategoryRate[] {
-  const amounts = MAIN_PENSION_AMOUNTS[year] ?? MAIN_PENSION_AMOUNTS[2025];
-  if (!amounts) {
-    throw new Error(`[EFKAConfig] No main pension amounts for year ${year}`);
-  }
-  return amounts.map((monthlyAmount, idx) => ({
-    code: `main_${idx + 1}`,
-    label: `${idx + 1}η Κατηγορία - ${monthlyAmount}€`,
-    monthlyAmount,
-    annualAmount: monthlyAmount * 12,
-    branch: 'main_pension' as const,
-  }));
-}
-
-/** Ποσά επικουρικής ανά κατηγορία */
-const SUPPLEMENTARY_AMOUNTS: Record<number, readonly number[]> = {
-  2025: [42, 51, 62],
-  2026: [44, 53, 65],
-};
-
-function buildSupplementaryCategories(year: number): EFKACategoryRate[] {
-  const amounts = SUPPLEMENTARY_AMOUNTS[year] ?? SUPPLEMENTARY_AMOUNTS[2025];
-  if (!amounts) {
-    throw new Error(`[EFKAConfig] No supplementary amounts for year ${year}`);
-  }
-  return amounts.map((monthlyAmount, idx) => ({
-    code: `supplementary_${idx + 1}`,
-    label: `${idx + 1}η Κατηγορία Επικουρικής - ${monthlyAmount}€`,
-    monthlyAmount,
-    annualAmount: monthlyAmount * 12,
-    branch: 'supplementary' as const,
-  }));
-}
-
-/** Ποσά εφάπαξ ανά κατηγορία */
-const LUMP_SUM_AMOUNTS: Record<number, readonly number[]> = {
-  2025: [26, 31, 37],
-  2026: [27, 32, 39],
-};
-
-function buildLumpSumCategories(year: number): EFKACategoryRate[] {
-  const amounts = LUMP_SUM_AMOUNTS[year] ?? LUMP_SUM_AMOUNTS[2025];
-  if (!amounts) {
-    throw new Error(`[EFKAConfig] No lump sum amounts for year ${year}`);
-  }
-  return amounts.map((monthlyAmount, idx) => ({
-    code: `lump_sum_${idx + 1}`,
-    label: `${idx + 1}η Κατηγορία Εφάπαξ - ${monthlyAmount}€`,
-    monthlyAmount,
-    annualAmount: monthlyAmount * 12,
-    branch: 'lump_sum' as const,
-  }));
-}
 
 // ============================================================================
 // HELPER FUNCTIONS
