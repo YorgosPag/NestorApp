@@ -105,6 +105,14 @@ const nextConfig = {
     // PRODUCTION-ONLY CONFIGURATIONS BELOW
     // =========================================================================
 
+    // [CRITICAL] Disable module concatenation on server bundles to prevent
+    // TDZ errors ("Cannot access 'f' before initialization").
+    // Module concatenation inlines modules into a single scope, which can
+    // reorder class/const declarations and cause TDZ violations in API routes.
+    if (isServer) {
+      config.optimization.concatenateModules = false;
+    }
+
     // [ENTERPRISE] pdf.js configuration for Next.js (production)
     // Fixes ESM compatibility issues with pdfjs-dist
 
