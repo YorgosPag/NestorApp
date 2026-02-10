@@ -9,6 +9,9 @@ import type { FilterState } from '@/types/property-viewer';
 import { useSearchParams } from 'next/navigation';
 import { ContactsService } from '@/services/contacts.service';
 import { BUILDING_IDS } from '@/config/building-ids-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useUnitsViewerState');
 
 const noop = () => {};
 
@@ -71,7 +74,7 @@ export function useUnitsViewerState() {
             const ids = await ContactsService.getAllContactIds();
             setAllContactIds(ids);
         } catch (error) {
-            console.error("Failed to fetch contact IDs:", error);
+            logger.error('Failed to fetch contact IDs', { error });
         }
     }
     fetchContactIds();
@@ -89,7 +92,7 @@ export function useUnitsViewerState() {
             onSelectFloor(unit.floorId);
         }
       } else {
-        console.warn('⚠️ [useUnitsViewerState] Unit not found in properties:', unitIdFromUrl);
+        logger.warn('Unit not found in properties', { unitId: unitIdFromUrl });
       }
     }
   }, [unitIdFromUrl, properties, setSelectedProperties, onSelectFloor]);
@@ -281,17 +284,14 @@ export function useUnitsViewerState() {
   const handleFiltersChange = (newFilters: Partial<FilterState> | Record<string, unknown>) => {
     const hasAreaRange = typeof newFilters === 'object' && newFilters !== null && 'areaRange' in newFilters;
     const areaRange = hasAreaRange ? (newFilters as Record<string, unknown>).areaRange : undefined;
-    console.log('🚀 FILTERS CHANGE DEBUG:', {
-      newFilters,
-      areaRange,
+    logger.info('Filters change', {
       hasAreaRange
     });
 
     if (setFilters) {
       setFilters((prev: FilterState) => {
         const updated = { ...prev, ...newFilters } as FilterState;
-        console.log('🔄 UPDATED FILTERS:', {
-          updatedFilters: updated,
+        logger.info('Updated filters', {
           updatedAreaRange: updated.areaRange
         });
         return updated;

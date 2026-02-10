@@ -25,6 +25,9 @@ import type {
   LayerExportOptions,
   LayerValidationResult
 } from '@/types/layers';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useLayerManagement');
 
 export interface UseLayerManagementOptions {
   floorId: string;
@@ -222,7 +225,7 @@ export function useLayerManagement({
       }));
       
     } catch (err) {
-      console.error('Error loading layers:', err);
+      logger.error('Error loading layers', { error: err });
       setError('Σφάλμα κατά τη φόρτωση των layers');
     } finally {
       setIsLoading(false);
@@ -486,7 +489,7 @@ export function useLayerManagement({
       }
       
     } catch (err) {
-      console.error('Error saving to Firestore:', err);
+      logger.error('Error saving to Firestore', { error: err });
       setError('Σφάλμα κατά την αποθήκευση');
     }
   }, [state.layers, state.groups]);

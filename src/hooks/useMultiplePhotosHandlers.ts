@@ -3,6 +3,9 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { validateFile } from '@/utils/file-validation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useMultiplePhotosHandlers');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -80,7 +83,7 @@ export function useMultiplePhotosHandlers({
 
       if (!validation.isValid) {
         notifications.error(`📸 ${file.name}: ${validation.error}`);
-        console.warn('❌ MULTIPLE PHOTOS HANDLER: Validation failed:', file.name, validation.error);
+        logger.warn('MULTIPLE PHOTOS HANDLER: Validation failed', { fileName: file.name, error: validation.error });
         continue;
       }
 
@@ -89,7 +92,7 @@ export function useMultiplePhotosHandlers({
 
     if (files.length > maxFiles) {
       notifications.error(`📊 Μπορείτε να προσθέσετε μέχρι ${maxFiles} φωτογραφίες`);
-      console.warn('❌ MULTIPLE PHOTOS HANDLER: Too many files:', files.length);
+      logger.warn('MULTIPLE PHOTOS HANDLER: Too many files', { count: files.length });
     }
 
     return validFiles;
@@ -108,7 +111,7 @@ export function useMultiplePhotosHandlers({
 
     const validFiles = validateMultiplePhotos(files);
     if (validFiles.length === 0) {
-      console.warn('⚠️ MULTIPLE PHOTOS HANDLER: No valid files to process');
+      logger.warn('MULTIPLE PHOTOS HANDLER: No valid files to process');
       return;
     }
 

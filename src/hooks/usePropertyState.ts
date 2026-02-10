@@ -3,6 +3,9 @@
 import { useState, useCallback } from "react";
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import { BUILDING_IDS } from '@/config/building-ids-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('usePropertyState');
 
 interface Floor {
   id: string;
@@ -32,11 +35,11 @@ export function usePropertyState() {
   const [canRedoState, setCanRedoState] = useState(false);
   
   const undo = useCallback(() => {
-    console.log('Undo not yet implemented with Firestore sync');
+    logger.info('Undo not yet implemented with Firestore sync');
   }, []);
 
   const redo = useCallback(() => {
-    console.log('Redo not yet implemented with Firestore sync');
+    logger.info('Redo not yet implemented with Firestore sync');
   }, []);
   
   const onHoverProperty = useCallback((propertyId: string | null) => {

@@ -24,6 +24,9 @@ import type { MessageListItem } from './useInboxApi';
 import type { MessageDirection, DeliveryStatus } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useRealtimeMessages');
 
 // ============================================================================
 // TYPES
@@ -178,7 +181,7 @@ export function useRealtimeMessages(
       const unsubscribe = onSnapshot(
         q,
         async (snapshot) => {
-          console.log(`🔥 [Realtime] Received ${snapshot.docs.length} messages for ${conversationId}`);
+          logger.info('Received messages', { count: snapshot.docs.length, conversationId });
 
           // Convert Firestore docs to MessageListItem
           // 🏢 ENTERPRISE: Reverse to display chronologically (oldest first)
@@ -209,7 +212,7 @@ export function useRealtimeMessages(
                   channel: message.channel,
                 });
               } catch (err) {
-                console.error('[Realtime] Failed to dispatch notification:', err);
+                logger.error('Failed to dispatch notification', { error: err });
               }
             }
 
@@ -227,7 +230,7 @@ export function useRealtimeMessages(
           setError(null);
         },
         (err) => {
-          console.error('❌ [Realtime] Firestore listener error:', err);
+          logger.error('Firestore listener error', { error: err });
           setError(err.message || 'Realtime connection failed');
           setConnected(false);
           setLoading(false);
@@ -237,9 +240,9 @@ export function useRealtimeMessages(
       // Store unsubscribe function
       unsubscribeRef.current = unsubscribe;
 
-      console.log(`✅ [Realtime] Started listening to ${conversationId}`);
+      logger.info('Started listening', { conversationId });
     } catch (err) {
-      console.error('❌ [Realtime] Failed to start listener:', err);
+      logger.error('Failed to start listener', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to start realtime listener');
       setLoading(false);
     }
@@ -247,7 +250,7 @@ export function useRealtimeMessages(
     // Cleanup: unsubscribe when conversation changes or component unmounts
     return () => {
       if (unsubscribeRef.current) {
-        console.log(`🔌 [Realtime] Unsubscribed from ${conversationId}`);
+        logger.info('Unsubscribed', { conversationId });
         unsubscribeRef.current();
         unsubscribeRef.current = null;
       }

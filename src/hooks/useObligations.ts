@@ -10,6 +10,9 @@
 import { useState, useEffect } from 'react';
 import { FirestoreObligationsRepository } from '@/services/obligations/InMemoryObligationsRepository';
 import type { ObligationDocument, ObligationTemplate } from '@/types/obligations';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useObligations');
 
 // 🔥 ENTERPRISE: Firebase-based obligations hook
 export function useObligations() {
@@ -25,10 +28,10 @@ export function useObligations() {
         setError(null);
         const data = await repository.getAll();
         setObligations(data);
-        console.log(`✅ Loaded ${data.length} obligations from Firebase`);
+        logger.info('Loaded obligations from Firebase', { count: data.length });
       // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
       } catch (err) {
-        console.error('❌ Error loading obligations:', err);
+        logger.error('Error loading obligations', { error: err });
         setError('obligations.errors.loadFailed');
         setObligations([]);
       } finally {
@@ -44,11 +47,11 @@ export function useObligations() {
       const success = await repository.delete(id);
       if (success) {
         setObligations(prev => prev.filter(o => o.id !== id));
-        console.log(`✅ Deleted obligation: ${id}`);
+        logger.info('Deleted obligation', { id });
       }
       return success;
     } catch (err) {
-      console.error('❌ Error deleting obligation:', err);
+      logger.error('Error deleting obligation', { error: err });
       return false;
     }
   };
@@ -58,11 +61,11 @@ export function useObligations() {
       const duplicate = await repository.duplicate(id);
       if (duplicate) {
         setObligations(prev => [...prev, duplicate]);
-        console.log(`✅ Duplicated obligation: ${id} -> ${duplicate.id}`);
+        logger.info('Duplicated obligation', { sourceId: id, newId: duplicate.id });
       }
       return duplicate;
     } catch (err) {
-      console.error('❌ Error duplicating obligation:', err);
+      logger.error('Error duplicating obligation', { error: err });
       return null;
     }
   };
@@ -73,7 +76,7 @@ export function useObligations() {
       const data = await repository.getAll();
       setObligations(data);
     } catch (err) {
-      console.error('❌ Error refreshing obligations:', err);
+      logger.error('Error refreshing obligations', { error: err });
       setError('obligations.errors.refreshFailed');
     } finally {
       setLoading(false);
@@ -113,7 +116,7 @@ export function useObligation(id: string) {
         const data = await repository.getById(id);
         setObligation(data);
       } catch (err) {
-        console.error('❌ Error loading obligation:', err);
+        logger.error('Error loading obligation', { error: err });
         setError('obligations.errors.loadSingleFailed');
         setObligation(null);
       } finally {
@@ -150,9 +153,9 @@ export function useObligationTemplates() {
         setError(null);
         const data = await repository.getTemplates();
         setTemplates(data);
-        console.log(`✅ Loaded ${data.length} obligation templates from Firebase`);
+        logger.info('Loaded obligation templates from Firebase', { count: data.length });
       } catch (err) {
-        console.error('❌ Error loading templates:', err);
+        logger.error('Error loading templates', { error: err });
         setError('obligations.errors.loadTemplatesFailed');
         setTemplates([]);
       } finally {
@@ -192,9 +195,9 @@ export function useObligationStats() {
         setError(null);
         const data = await repository.getStatistics();
         setStats(data);
-        console.log(`✅ Loaded obligation statistics from Firebase:`, data);
+        logger.info('Loaded obligation statistics from Firebase', { data });
       } catch (err) {
-        console.error('❌ Error loading stats:', err);
+        logger.error('Error loading stats', { error: err });
         setError('obligations.errors.loadStatsFailed');
       } finally {
         setLoading(false);

@@ -2,6 +2,9 @@
 
 import { useCallback } from 'react';
 import type React from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFileSelectionHandlers');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -89,7 +92,7 @@ export function useFileSelectionHandlers({
   const handleFileSelection = useCallback(
     (file: File | null) => {
       if (debug) {
-        console.log('📁 FILE SELECTION:', {
+        logger.info('FILE SELECTION', {
           hasFile: !!file,
           fileName: file?.name,
           fileSize: file?.size,
@@ -146,7 +149,7 @@ export function useFileSelectionHandlers({
         const file = files[0];
 
         if (debug) {
-          console.log('📥 FILE DROPPED:', {
+          logger.info('FILE DROPPED', {
             fileName: file.name,
             fileSize: file.size,
             fileType: file.type,

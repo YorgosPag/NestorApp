@@ -4,6 +4,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Project } from '@/types/project';
 import { defaultProjectFilters, type ProjectFilterState } from '@/components/core/AdvancedFilters';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useProjectsPageState');
 
 export function useProjectsPageState(initialProjects: Project[]) {
   // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
@@ -29,7 +32,7 @@ export function useProjectsPageState(initialProjects: Project[]) {
       // URL parameter has priority - find and select the project
       const found = initialProjects.find(p => p.id === projectIdFromUrl);
       if (found) {
-        console.log('📋 [useProjectsPageState] Auto-selecting project from URL:', found.name);
+        logger.info('Auto-selecting project from URL', { projectName: found.name });
         setSelectedProject(found);
         return;
       }
@@ -58,7 +61,7 @@ export function useProjectsPageState(initialProjects: Project[]) {
         updatedProject.status !== selectedProject.status;
 
       if (hasChanged) {
-        console.log('🔄 [useProjectsPageState] Syncing selectedProject with updated data:', updatedProject.name);
+        logger.info('Syncing selectedProject with updated data', { projectName: updatedProject.name });
         setSelectedProject(updatedProject);
       }
     }

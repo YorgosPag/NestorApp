@@ -14,6 +14,9 @@
  */
 
 import { useState, useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useMessagePin');
 
 // ============================================================================
 // TYPES
@@ -132,7 +135,7 @@ export function useMessagePin(): UseMessagePinReturn {
 
       return { success: true };
     } catch (error) {
-      console.error('[useMessagePin] Pin error:', error);
+      logger.error('Pin error', { error });
       return { success: false, error: 'Network error' };
     } finally {
       setIsLoading(false);
@@ -170,7 +173,7 @@ export function useMessagePin(): UseMessagePinReturn {
 
       return { success: true };
     } catch (error) {
-      console.error('[useMessagePin] Unpin error:', error);
+      logger.error('Unpin error', { error });
       return { success: false, error: 'Network error' };
     } finally {
       setIsLoading(false);

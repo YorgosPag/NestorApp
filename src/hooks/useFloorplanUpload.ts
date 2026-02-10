@@ -25,6 +25,9 @@ import { FileRecordService } from '@/services/file-record.service';
 import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFloorplanUpload');
 
 // ============================================================================
 // TYPES
@@ -119,17 +122,17 @@ async function validateAuthAndClaims(expectedCompanyId: string): Promise<AuthVal
     const globalRole = typeof claims.globalRole === 'string' ? claims.globalRole : null;
 
     if (!companyIdFromClaim) {
-      console.error('🔐 [Upload] User missing companyId claim:', { uid: currentUser.uid });
+      logger.error('User missing companyId claim', { uid: currentUser.uid });
       return { valid: false, errorCode: 'AUTH_MISSING_COMPANY_CLAIM' };
     }
 
     const isSuperAdmin = globalRole === 'super_admin';
     if (!isSuperAdmin && companyIdFromClaim !== expectedCompanyId) {
-      console.error('🔐 [Upload] Company mismatch:', { claim: companyIdFromClaim, expected: expectedCompanyId });
+      logger.error('Company mismatch', { claim: companyIdFromClaim, expected: expectedCompanyId });
       return { valid: false, errorCode: 'AUTH_COMPANY_MISMATCH' };
     }
 
-    console.log('✅ [Upload] Auth validated:', { uid: currentUser.uid, companyId: companyIdFromClaim });
+    logger.info('Auth validated', { uid: currentUser.uid, companyId: companyIdFromClaim });
     return { valid: true, companyId: companyIdFromClaim, globalRole: globalRole || undefined };
 
   } catch {
@@ -193,7 +196,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       }
 
       setProgress(10);
-      console.log('📝 [Upload] Creating FileRecord...');
+      logger.info('Creating FileRecord');
 
       // Phase 3: Create pending FileRecord
       const { fileId, storagePath, fileRecord } = await FileRecordService.createPendingFileRecord({
@@ -202,16 +205,16 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
         contentType: file.type, createdBy: userId,
       });
 
-      console.log('✅ [Upload] FileRecord created:', fileId);
+      logger.info('FileRecord created', { fileId });
       setProgress(25);
 
       // Phase 4: Wait for Firestore propagation (2s for cross-service consistency)
-      console.log('⏳ [Upload] Waiting for consistency...');
+      logger.info('Waiting for consistency');
       await new Promise(resolve => setTimeout(resolve, 2000));
       setProgress(30);
 
       // Phase 5: Upload to Storage
-      console.log('📤 [Upload] Uploading to Storage:', storagePath);
+      logger.info('Uploading to Storage', { storagePath });
       const storageRef = ref(storage, storagePath);
 
       try {
@@ -219,13 +222,13 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       } catch (uploadErr) {
         const err = uploadErr instanceof Error ? uploadErr : new Error(String(uploadErr));
         const code = getErrorCodeFromError(err);
-        console.error('❌ [Upload] Storage failed:', err.message);
+        logger.error('Storage failed', { error: err.message });
         setError(ERROR_MESSAGES[code]);
         setErrorCode(code);
         return { success: false, error: ERROR_MESSAGES[code], errorCode: code };
       }
 
-      console.log('✅ [Upload] Uploaded to Storage');
+      logger.info('Uploaded to Storage');
       setProgress(50);
 
       // Phase 6: Get download URL
@@ -234,7 +237,7 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
 
       // Phase 7: Finalize FileRecord
       await FileRecordService.finalizeFileRecord({ fileId, sizeBytes: file.size, downloadUrl });
-      console.log('✅ [Upload] FileRecord finalized');
+      logger.info('FileRecord finalized');
       setProgress(90);
 
       // 🏢 ENTERPRISE V2: Processing is handled by useFloorplanFiles hook
@@ -245,14 +248,14 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
       setProgress(100);
 
       const finalFileRecord: FileRecord = { ...fileRecord, downloadUrl, sizeBytes: file.size, status: 'ready' };
-      console.log('🎉 [Upload] Complete (processing delegated to useFloorplanFiles):', fileId);
+      logger.info('Upload complete (processing delegated to useFloorplanFiles)', { fileId });
 
       return { success: true, fileRecord: finalFileRecord };
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       const code = getErrorCodeFromError(error);
-      console.error('❌ [Upload] Error:', error.message);
+      logger.error('Upload error', { error: error.message });
       setError(error.message);
       setErrorCode(code);
       return { success: false, error: error.message, errorCode: code };

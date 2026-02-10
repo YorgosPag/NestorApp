@@ -5,6 +5,9 @@ import type { Property } from '@/types/property-viewer';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 // 🏢 ENTERPRISE: Firestore persistence for property updates
 import { updateUnit } from '@/services/units.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('usePolygonHandlers');
 
 interface UsePolygonHandlersProps {
   properties: Property[];
@@ -95,7 +98,7 @@ export function usePolygonHandlers({
         } else {
             if (firstConnectionPoint.id === property.id) return;
             // setConnections is not available here, it should be handled where the state lives
-            console.log(`Connecting ${firstConnectionPoint.id} to ${property.id}`);
+            logger.info('Connecting properties', { fromId: firstConnectionPoint.id, toId: property.id });
             setFirstConnectionPoint(null);
             setIsConnecting(false);
         }
@@ -114,7 +117,7 @@ export function usePolygonHandlers({
       try {
           await updateUnit(propertyId, updates);
       } catch (error) {
-          console.error('Failed to persist property update to Firestore:', error);
+          logger.error('Failed to persist property update to Firestore', { error });
           // Note: Local state is already updated for optimistic UI
           // Consider adding rollback or notification here if needed
       }

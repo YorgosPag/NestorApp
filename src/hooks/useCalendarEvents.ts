@@ -15,6 +15,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { getCalendarEvents } from '@/services/calendar/CalendarEventService';
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useCalendarEvents');
 
 // ============================================================================
 // TYPES
@@ -75,7 +78,7 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load calendar events';
       setError(message);
-      console.error('[useCalendarEvents] Error:', err);
+      logger.error('Error fetching calendar events', { error: err });
     } finally {
       setLoading(false);
     }

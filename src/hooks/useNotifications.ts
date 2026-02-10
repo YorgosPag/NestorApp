@@ -27,6 +27,9 @@ import {
   type NotificationListResult
 } from '@/services/notificationService';
 import type { Notification } from '@/types/notification';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useNotifications');
 
 // =============================================================================
 // TYPES
@@ -109,7 +112,7 @@ export function useNotifications(
           setConnectionStatus('connected');
         })
         .catch((err: Error) => {
-          console.error('❌ Failed to fetch notifications:', err);
+          logger.error('Failed to fetch notifications', { error: err });
           setError(err.message);
           setLoading(false);
           setConnectionStatus('disconnected');
@@ -119,7 +122,7 @@ export function useNotifications(
 
     // Real-time subscription
     setConnectionStatus('connecting');
-    console.log('🔔 [Notifications] Setting up real-time subscription for:', user.uid);
+    logger.info('Setting up real-time subscription', { userId: user.uid });
 
     const unsubscribe = subscribeToNotifications(
       user.uid,
@@ -144,10 +147,10 @@ export function useNotifications(
         // Update tracking
         prevNotificationIds.current = currentIds;
 
-        console.log(`✅ [Notifications] Updated: ${updatedNotifications.length} total, ${newNotifications.length} new`);
+        logger.info('Notifications updated', { total: updatedNotifications.length, newCount: newNotifications.length });
       },
       (subscriptionError: Error) => {
-        console.error('❌ [Notifications] Subscription error:', subscriptionError);
+        logger.error('Subscription error', { error: subscriptionError });
         setError(subscriptionError.message);
         setConnectionStatus('disconnected');
       }
@@ -155,7 +158,7 @@ export function useNotifications(
 
     // Cleanup on unmount
     return () => {
-      console.log('🔔 [Notifications] Cleaning up subscription');
+      logger.info('Cleaning up subscription');
       unsubscribe();
       setConnectionStatus('disconnected');
     };
@@ -180,9 +183,9 @@ export function useNotifications(
         )
       );
 
-      console.log(`✅ [Notifications] Marked ${notificationIds.length} as read`);
+      logger.info('Marked notifications as read', { count: notificationIds.length });
     } catch (err) {
-      console.error('❌ [Notifications] Failed to mark as read:', err);
+      logger.error('Failed to mark as read', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to mark as read');
     }
   }, []);
@@ -204,7 +207,7 @@ export function useNotifications(
       setNotifications(result.items);
       setError(null);
     } catch (err) {
-      console.error('❌ [Notifications] Refresh failed:', err);
+      logger.error('Refresh failed', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to refresh');
     } finally {
       setLoading(false);

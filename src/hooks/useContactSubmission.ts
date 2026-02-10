@@ -9,6 +9,9 @@ import {
   validateDocumentDates,
   isDatePastOrToday
 } from '@/utils/validation';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useContactSubmission');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -210,7 +213,7 @@ export function useContactSubmission({
 
       default:
         notifications.error("validation.contacts.unknownType");
-        console.error('❌ SUBMISSION: Unknown contact type:', formData.type);
+        logger.error('SUBMISSION: Unknown contact type', { type: formData.type });
         return false;
     }
   }, [notifications]);
@@ -226,14 +229,14 @@ export function useContactSubmission({
    */
   const handleSubmit = useCallback(async (formData: ContactFormData) => {
     if (loading) {
-      console.warn('⚠️ SUBMISSION: Already submitting, ignoring duplicate request');
+      logger.warn('SUBMISSION: Already submitting, ignoring duplicate request');
       return;
     }
 
 
     // Validate form data
     if (!validateFormData(formData)) {
-      console.warn('❌ SUBMISSION: Form validation failed');
+      logger.warn('SUBMISSION: Form validation failed');
       return;
     }
 
@@ -241,11 +244,11 @@ export function useContactSubmission({
     const uploadValidation = validateUploadState(formData as unknown as Record<string, unknown>);
 
     if (!uploadValidation.isValid) {
-      console.log('🚫 SUBMISSION: Upload validation failed:', uploadValidation);
+      logger.info('SUBMISSION: Upload validation failed', { uploadValidation });
 
       // If we have failed uploads, block immediately
       if (uploadValidation.failedUploads > 0) {
-        console.error('🚫 SUBMISSION BLOCKED: Failed uploads detected:', uploadValidation);
+        logger.error('SUBMISSION BLOCKED: Failed uploads detected', { uploadValidation });
         // 🌐 i18n key with count interpolation
         notifications.error("contacts.submission.failedUploads");
         return;
@@ -253,7 +256,7 @@ export function useContactSubmission({
 
       // If we have pending uploads, wait for completion
       if (uploadValidation.pendingUploads > 0) {
-        console.log('⏳ SUBMISSION: Waiting for uploads to complete...', {
+        logger.info('SUBMISSION: Waiting for uploads to complete', {
           pendingUploads: uploadValidation.pendingUploads,
           errors: uploadValidation.errors
         });
@@ -268,13 +271,11 @@ export function useContactSubmission({
         // 🎯 CRITICAL SUCCESS: formDataRef fix για Representative Photo upload - 2025-12-05
         // ⚠️ WARNING: ΜΗΝ ΑΛΛΑΞΕΙΣ αυτό το setTimeout logic! Λύνει stale closure race condition
         setTimeout(() => {
-          console.log('🔄 SUBMISSION: Auto-retrying after upload delay...');
+          logger.info('SUBMISSION: Auto-retrying after upload delay');
           // 🎯 CRITICAL FIX: Use formDataRef to get FRESH formData and avoid stale closure
           const freshFormData = formDataRef?.current || formData;
-          console.log('🔄 RETRY: Using fresh formData from ref to avoid stale closure', {
+          logger.info('RETRY: Using fresh formData from ref to avoid stale closure', {
             hasRef: !!formDataRef,
-            freshPhotoURL: freshFormData.photoURL?.substring(0, 50) + '...',
-            freshPhotoPreview: freshFormData.photoPreview?.substring(0, 50) + '...',
             isRefFresh: formDataRef ? freshFormData !== formData : 'No ref available'
           });
           handleSubmit(freshFormData); // Recursive retry with FRESH data
@@ -295,7 +296,7 @@ export function useContactSubmission({
       const mappingResult = mapFormDataToContact(formData);
 
       if (mappingResult.warnings.length > 0) {
-        console.warn('⚠️ SUBMISSION: Mapping warnings:', mappingResult.warnings);
+        logger.warn('SUBMISSION: Mapping warnings', { warnings: mappingResult.warnings });
       }
 
       const { contactData } = mappingResult;
@@ -308,7 +309,7 @@ export function useContactSubmission({
         // Τελική διαμόρφωση που λειτουργεί 100% - Cleanup orphaned files από Firebase Storage
         // Ημερομηνία: 2025-12-05 - Status: WORKING PERFECTLY
         // 🔥 ΚΡΙΣΙΜΟ: Περιλαμβάνει logoURL, photoURL και multiplePhotoURLs cleanup!
-        console.log('🧹 ENTERPRISE CLEANUP: Starting photo comparison for contact update...');
+        logger.info('ENTERPRISE CLEANUP: Starting photo comparison for contact update');
 
         try {
           // 🏢✅ COLLECT OLD PHOTO URLs - ΜΗΝ ΑΛΛΑΞΕΙΣ! Λειτουργεί τέλεια!
@@ -331,14 +332,11 @@ export function useContactSubmission({
             !newPhotoUrls.includes(oldUrl)
           );
 
-          console.log('🧹 ENTERPRISE CLEANUP: Photo comparison result:', {
+          logger.info('ENTERPRISE CLEANUP: Photo comparison result', {
             contactType: editContact.type,
             oldPhotosCount: oldPhotoUrls.length,
-            oldPhotoUrls: oldPhotoUrls.map(url => ({ type: getUrlType(url), url: url.substring(0, 50) + '...' })),
             newPhotosCount: newPhotoUrls.length,
-            newPhotoUrls: newPhotoUrls.map(url => ({ type: getUrlType(url), url: url.substring(0, 50) + '...' })),
             orphanedCount: orphanedUrls.length,
-            orphanedUrls: orphanedUrls.map(url => ({ type: getUrlType(url), url: url.substring(0, 50) + '...' }))
           });
 
           // 🔍 Helper function για να δούμε τι τύπος είναι κάθε URL
@@ -354,20 +352,20 @@ export function useContactSubmission({
             const cleanupPromises = orphanedUrls.map(async (url) => {
               try {
                 await PhotoUploadService.deletePhotoByURL(url);
-                console.log('✅ ENTERPRISE CLEANUP: Deleted orphaned file:', url.substring(0, 50) + '...');
+                logger.info('ENTERPRISE CLEANUP: Deleted orphaned file');
               } catch (error) {
-                console.warn('⚠️ ENTERPRISE CLEANUP: Failed to delete orphaned file:', url.substring(0, 50) + '...', error);
+                logger.warn('ENTERPRISE CLEANUP: Failed to delete orphaned file', { error });
                 // Non-blocking - continue with other files
               }
             });
 
             await Promise.allSettled(cleanupPromises);
-            console.log('✅ ENTERPRISE CLEANUP: Completed cleanup of', orphanedUrls.length, 'orphaned files');
+            logger.info('ENTERPRISE CLEANUP: Completed cleanup of orphaned files', { count: orphanedUrls.length });
           } else {
-            console.log('✅ ENTERPRISE CLEANUP: No orphaned files to clean');
+            logger.info('ENTERPRISE CLEANUP: No orphaned files to clean');
           }
         } catch (cleanupError) {
-          console.warn('⚠️ ENTERPRISE CLEANUP: Photo cleanup failed, but continuing with contact update:', cleanupError);
+          logger.warn('ENTERPRISE CLEANUP: Photo cleanup failed, but continuing with contact update', { error: cleanupError });
           // Non-blocking - contact update continues
         }
 
@@ -381,7 +379,7 @@ export function useContactSubmission({
 
       } else {
         // Create new contact
-        console.log('🆕 SUBMISSION: Creating new contact');
+        logger.info('SUBMISSION: Creating new contact');
         await ContactsService.createContact(contactData);
         notifications.success("contacts.submission.createSuccess");
       }
@@ -391,7 +389,7 @@ export function useContactSubmission({
 
       // 🔥 ENTERPRISE CACHE INVALIDATION: Forced component refresh
       // Αυτό εξασφαλίζει ότι όλα τα cached UI components θα ενημερωθούν
-      console.log('🔄 SUBMISSION: Triggering enterprise cache invalidation...');
+      logger.info('SUBMISSION: Triggering enterprise cache invalidation');
 
       // Small delay για να ολοκληρωθεί το database update
       setTimeout(() => {
@@ -403,7 +401,7 @@ export function useContactSubmission({
             affectedFields: Object.keys(formData).filter(key => formData[key as keyof typeof formData])
           }
         }));
-        console.log('📡 SUBMISSION: Global cache invalidation event dispatched');
+        logger.info('SUBMISSION: Global cache invalidation event dispatched');
       }, 100);
 
       onOpenChange(false);
@@ -411,14 +409,14 @@ export function useContactSubmission({
 
 
     } catch (error) {
-      console.error('❌ SUBMISSION: Form submission failed:', error);
+      logger.error('SUBMISSION: Form submission failed', { error });
 
       // 🏢 ENTERPRISE ERROR HANDLING με intelligent error categorization
       const errorMessage = error instanceof Error ? error.message : String(error);
 
       if (errorMessage.startsWith('DUPLICATE_CONTACT_DETECTED')) {
         // 🚨 ENTERPRISE DUPLICATE PREVENTION - Smart UX handling
-        console.log('🛡️ DUPLICATE PREVENTION: Intelligent duplicate detected, providing user guidance...');
+        logger.info('DUPLICATE PREVENTION: Intelligent duplicate detected, providing user guidance');
 
         // Extract useful information from error message
         const confidenceMatch = errorMessage.match(/Confidence: ([\d.]+)%/);
@@ -447,8 +445,8 @@ export function useContactSubmission({
         }
 
         // Log για debugging χωρίς sensitive information
-        console.log('🛡️ DUPLICATE PREVENTION: Smart handling applied', {
-          confidence: confidence,
+        logger.info('DUPLICATE PREVENTION: Smart handling applied', {
+          confidence,
           hasExistingId: Boolean(existingContactId),
           errorType: 'DUPLICATE_DETECTED'
         });
@@ -463,11 +461,10 @@ export function useContactSubmission({
         notifications.error(userErrorMessage);
 
         // Log detailed error for debugging
-        console.error('💥 SUBMISSION: Detailed error:', {
+        logger.error('SUBMISSION: Detailed error', {
           contactType: formData.type,
           isEdit: Boolean(editContact),
-          error: errorMessage,
-          stack: error instanceof Error ? error.stack : undefined
+          errorMessage,
         });
       }
 

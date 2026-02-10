@@ -36,6 +36,9 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFloorFloorplans');
 
 // ============================================================================
 // TYPES
@@ -117,7 +120,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
    */
   const findFloorId = useCallback(async (bId: string, fNum: number): Promise<string | null> => {
     try {
-      console.log('🔍 [useFloorFloorplans] Finding floor by buildingId + number:', { buildingId: bId, floorNumber: fNum });
+      logger.info('Finding floor by buildingId + number', { buildingId: bId, floorNumber: fNum });
 
       const floorsRef = collection(db, 'floors');
       const q = query(
@@ -130,14 +133,14 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       if (!snapshot.empty) {
         const floorDoc = snapshot.docs[0];
         const floorData = floorDoc.data() as FloorDocument;
-        console.log('✅ [useFloorFloorplans] Found floor:', { id: floorDoc.id, name: floorData.name });
+        logger.info('Found floor', { id: floorDoc.id, name: floorData.name });
         return floorDoc.id;
       }
 
-      console.log('📋 [useFloorFloorplans] No floor found for buildingId + number');
+      logger.info('No floor found for buildingId + number');
       return null;
     } catch (err) {
-      console.warn('⚠️ [useFloorFloorplans] Error finding floor:', err);
+      logger.warn('Error finding floor', { error: err });
       return null;
     }
   }, []);
@@ -147,7 +150,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
    */
   const searchFloorFloorplans = useCallback(async (floorIdStr: string): Promise<FloorFloorplanData | null> => {
     try {
-      console.log('🔍 [useFloorFloorplans] Searching floor_floorplans collection for:', floorIdStr);
+      logger.info('Searching floor_floorplans collection for', { floorId: floorIdStr });
 
       const floorplansRef = collection(db, 'floor_floorplans');
       const q = query(floorplansRef, where('floorId', '==', floorIdStr));
@@ -157,11 +160,11 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
         const docData = snapshot.docs[0].data() as FloorFloorplanMetadata;
 
         if (docData.deleted) {
-          console.log('⚠️ [useFloorFloorplans] Floorplan is deleted');
+          logger.info('Floorplan is deleted');
           return null;
         }
 
-        console.log('✅ [useFloorFloorplans] Found floorplan metadata:', {
+        logger.info('Found floorplan metadata', {
           buildingId: docData.buildingId,
           floorId: docData.floorId,
           fileType: docData.fileType,
@@ -186,14 +189,14 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
           return await FloorFloorplanService.loadFloorplan({ companyId, floorId: floorIdStr });
         }
         // Legacy fallback - return metadata only (no scene loading without companyId)
-        console.warn('📋 [useFloorFloorplans] companyId not available for Enterprise loading');
+        logger.warn('companyId not available for Enterprise loading');
         return null;
       }
 
-      console.log('📋 [useFloorFloorplans] No floorplan found in floor_floorplans collection');
+      logger.info('No floorplan found in floor_floorplans collection');
       return null;
     } catch (err) {
-      console.warn('⚠️ [useFloorFloorplans] Error searching floor_floorplans:', err);
+      logger.warn('Error searching floor_floorplans', { error: err });
       return null;
     }
   }, [companyId]);
@@ -203,7 +206,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
    */
   const searchCadFiles = useCallback(async (floorIdStr: string): Promise<FloorFloorplanData | null> => {
     try {
-      console.log('🔍 [useFloorFloorplans] Searching cadFiles collection for floor:', floorIdStr);
+      logger.info('Searching cadFiles collection for floor', { floorId: floorIdStr });
 
       const cadFilesRef = collection(db, 'cadFiles');
       const snapshot = await getDocs(cadFilesRef);
@@ -215,7 +218,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
 
       if (matchingDoc) {
         const fileId = matchingDoc.id;
-        console.log('✅ [useFloorFloorplans] Found cadFile:', fileId);
+        logger.info('Found cadFile', { fileId });
 
         const parts = fileId.replace('floor_floorplan_', '').split('_');
         const floorIdIndex = parts.findIndex(p => p === floorIdStr || parts.join('_').includes(floorIdStr));
@@ -237,10 +240,10 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
         }
       }
 
-      console.log('📋 [useFloorFloorplans] No cadFile found for floor');
+      logger.info('No cadFile found for floor');
       return null;
     } catch (err) {
-      console.warn('⚠️ [useFloorFloorplans] Error searching cadFiles:', err);
+      logger.warn('Error searching cadFiles', { error: err });
       return null;
     }
   }, []);
@@ -252,13 +255,13 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
     try {
       // 🏢 ENTERPRISE: Requires companyId for the new API
       if (!companyId) {
-        console.warn('⚠️ [useFloorFloorplans] companyId required for Enterprise pattern');
+        logger.warn('companyId required for Enterprise pattern');
         return null;
       }
-      console.log('🔍 [useFloorFloorplans] Loading directly with FloorFloorplanService:', { companyId, floorId: fId });
+      logger.info('Loading directly with FloorFloorplanService', { companyId, floorId: fId });
       return await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
     } catch (err) {
-      console.warn('⚠️ [useFloorFloorplans] Error loading directly:', err);
+      logger.warn('Error loading directly', { error: err });
       return null;
     }
   }, [companyId]);
@@ -269,7 +272,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   const fetchFloorplans = useCallback(async () => {
     // Check if we have enough data to search
     if (!floorId && (!buildingId || floorNumber === null)) {
-      console.log('📋 [useFloorFloorplans] No floor identification data provided');
+      logger.info('No floor identification data provided');
       setFloorFloorplan(null);
       setLoading(false);
       return;
@@ -288,13 +291,13 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       }
 
       if (!effectiveFloorId) {
-        console.log('📋 [useFloorFloorplans] Could not determine floorId');
+        logger.info('Could not determine floorId');
         setFloorFloorplan(null);
         setLoading(false);
         return;
       }
 
-      console.log('🏢 [useFloorFloorplans] Fetching floor floorplan for:', effectiveFloorId);
+      logger.info('Fetching floor floorplan for', { floorId: effectiveFloorId });
 
       // Strategy 1: Search floor_floorplans collection
       let floorplanData = await searchFloorFloorplans(effectiveFloorId);
@@ -312,7 +315,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       setFloorFloorplan(floorplanData);
 
       if (floorplanData) {
-        console.log('✅ [useFloorFloorplans] Floor floorplan loaded:', {
+        logger.info('Floor floorplan loaded', {
           buildingId: floorplanData.buildingId,
           floorId: floorplanData.floorId,
           fileType: floorplanData.fileType || 'dxf',
@@ -320,12 +323,12 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
           hasPdf: !!floorplanData.pdfImageUrl,
         });
       } else {
-        console.log('📋 [useFloorFloorplans] No floorplan found');
+        logger.info('No floorplan found');
       }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ [useFloorFloorplans] Error fetching floor floorplan:', err);
+      logger.error('Error fetching floor floorplan', { error: err });
       setError(errorMessage);
     } finally {
       setLoading(false);

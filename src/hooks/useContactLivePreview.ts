@@ -1,6 +1,9 @@
 import { useMemo, useEffect, useRef } from 'react';
 import type { Contact, CompanyContact, IndividualContact, ServiceContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useContactLivePreview');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -106,7 +109,7 @@ export function useContactLivePreview({
 
       return updatedContact;
     } catch (error) {
-      console.error('❌ LIVE PREVIEW: Failed to create live contact:', error);
+      logger.error('LIVE PREVIEW: Failed to create live contact', { error });
       return null;
     }
   }, [

@@ -28,6 +28,9 @@ import {
 } from '@/services/enterprise-id-migration.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useEnterpriseIds');
 
 /**
  * Hook για enterprise ID generation
@@ -113,7 +116,7 @@ export function useIdResolution() {
 
       return resolved;
     } catch (error) {
-      console.warn(`⚠️ ID resolution failed for ${id}:`, error);
+      logger.warn('ID resolution failed', { id, error });
       return id; // Fallback to original ID
     }
   }, [resolvedIds]);

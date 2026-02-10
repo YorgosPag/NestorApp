@@ -5,6 +5,9 @@ import { InfiniteScrollPagination, PaginatedResult } from '@/lib/pagination';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFirestoreProjectsPaginated');
 
 // =============================================================================
 // 🚀 PAGINATED PROJECTS HOOK - ENTERPRISE PERFORMANCE
@@ -137,7 +140,7 @@ export function useFirestoreProjectsPaginated(
   // ==========================================================================
 
   const initializePagination = useCallback(() => {
-    console.log('🔄 [ProjectsPaginated] Initializing pagination with filters:', filters);
+    logger.info('Initializing pagination with filters', { filters });
 
     const projectsQuery = buildQuery(filters);
     const newPagination = new InfiniteScrollPagination(projectsQuery, mapDocument, pageSize);
@@ -159,7 +162,7 @@ export function useFirestoreProjectsPaginated(
       setLoading(true);
       setError(null);
 
-      console.log('📥 [ProjectsPaginated] Loading next page...');
+      logger.info('Loading next page');
       const result: PaginatedResult<FirestoreProject> = await pagination.loadNext();
 
       const allProjects = pagination.getAllItems();
@@ -168,9 +171,9 @@ export function useFirestoreProjectsPaginated(
       setProjects(filtered);
       setHasNext(result.hasNext);
 
-      console.log('✅ [ProjectsPaginated] Loaded', result.items.length, 'projects, hasNext:', result.hasNext);
+      logger.info('Loaded projects', { count: result.items.length, hasNext: result.hasNext });
     } catch (err) {
-      console.error('❌ [ProjectsPaginated] Load failed:', err);
+      logger.error('Load failed', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to load projects');
     } finally {
       setLoading(false);
@@ -178,7 +181,7 @@ export function useFirestoreProjectsPaginated(
   }, [pagination, loading, filteredProjects]);
 
   const refresh = useCallback(async () => {
-    console.log('🔄 [ProjectsPaginated] Refreshing...');
+    logger.info('Refreshing');
 
     const newPagination = initializePagination();
     setPagination(newPagination);
@@ -194,9 +197,9 @@ export function useFirestoreProjectsPaginated(
       setProjects(filtered);
       setHasNext(result.hasNext);
 
-      console.log('✅ [ProjectsPaginated] Refresh complete, loaded', result.items.length, 'projects');
+      logger.info('Refresh complete', { count: result.items.length });
     } catch (err) {
-      console.error('❌ [ProjectsPaginated] Refresh failed:', err);
+      logger.error('Refresh failed', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to refresh projects');
     } finally {
       setLoading(false);
@@ -208,7 +211,7 @@ export function useFirestoreProjectsPaginated(
   // ==========================================================================
 
   const updateFilters = useCallback((newFilters: ProjectFilters) => {
-    console.log('🎯 [ProjectsPaginated] Updating filters:', newFilters);
+    logger.info('Updating filters', { newFilters });
     setFilters(newFilters);
   }, []);
 
@@ -220,7 +223,7 @@ export function useFirestoreProjectsPaginated(
   // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
   useEffect(() => {
     const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
-      console.log('🔄 [ProjectsPaginated] Applying update for project:', payload.projectId);
+      logger.info('Applying update for project', { projectId: payload.projectId });
 
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId

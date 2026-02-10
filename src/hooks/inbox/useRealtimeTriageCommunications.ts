@@ -31,6 +31,9 @@ import { TRIAGE_STATUSES, type TriageStatus } from '@/constants/triage-statuses'
 import type { Communication, FirestoreishTimestamp } from '@/types/crm';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
 import toast from 'react-hot-toast';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useRealtimeTriageCommunications');
 
 // ============================================================================
 // TYPES
@@ -290,7 +293,7 @@ export function useRealtimeTriageCommunications(
           setError(null);
         },
         (err) => {
-          console.error('❌ [RealtimeTriage] Firestore listener error:', err);
+          logger.error('Firestore listener error', { error: err });
           setError(err.message || 'Real-time connection failed');
           setConnected(false);
           setLoading(false);
@@ -299,7 +302,7 @@ export function useRealtimeTriageCommunications(
 
       unsubscribeRef.current = unsubscribe;
     } catch (err) {
-      console.error('❌ [RealtimeTriage] Failed to start listener:', err);
+      logger.error('Failed to start listener', { error: err });
       setError(err instanceof Error ? err.message : 'Failed to start real-time listener');
       setLoading(false);
     }

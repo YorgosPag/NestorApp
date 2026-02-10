@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import type { Project } from '@/types/project';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useProjectsState');
 
 export function useProjectsState(initialProjects: Project[]) {
 
@@ -24,7 +27,7 @@ export function useProjectsState(initialProjects: Project[]) {
   // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
   useEffect(() => {
     const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
-      console.log('🔄 [useProjectsState] Applying update for project:', payload.projectId);
+      logger.info('Applying update for project', { projectId: payload.projectId });
 
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId

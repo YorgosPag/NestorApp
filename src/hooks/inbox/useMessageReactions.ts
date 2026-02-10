@@ -28,6 +28,9 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { MessageReaction, MessageReactionsMap, QuickReactionEmoji } from '@/types/conversations';
 import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useMessageReactions');
 
 // ============================================================================
 // TYPES
@@ -280,15 +283,15 @@ export function useMessageReactions(
           setConnected(true);
         },
         (error) => {
-          console.error(`[useMessageReactions] Realtime error for ${messageId}:`, error);
+          logger.error('Realtime error', { messageId, error });
           setConnected(false);
         }
       );
 
       subscriptionsRef.current.set(messageId, { messageId, unsubscribe });
-      console.log(`✅ [Reactions] Subscribed to ${messageId}`);
+      logger.info('Subscribed to message reactions', { messageId });
     } catch (error) {
-      console.error('[useMessageReactions] Failed to subscribe:', error);
+      logger.error('Failed to subscribe', { error });
     }
   }, [realtime, currentUserId, loadingSet]);
 
@@ -300,7 +303,7 @@ export function useMessageReactions(
     if (subscription) {
       subscription.unsubscribe();
       subscriptionsRef.current.delete(messageId);
-      console.log(`🔌 [Reactions] Unsubscribed from ${messageId}`);
+      logger.info('Unsubscribed from message reactions', { messageId });
     }
   }, []);
 
@@ -477,7 +480,7 @@ export function useMessageReactions(
         userReactions: response.userReactions
       };
     } catch (error) {
-      console.error('[useMessageReactions] Add error:', error);
+      logger.error('Add reaction error', { error });
       rollbackState(messageId);
       return { success: false, error: 'Network error' };
     } finally {
@@ -574,7 +577,7 @@ export function useMessageReactions(
         userReactions: response.userReactions
       };
     } catch (error) {
-      console.error('[useMessageReactions] Remove error:', error);
+      logger.error('Remove reaction error', { error });
       rollbackState(messageId);
       return { success: false, error: 'Network error' };
     } finally {

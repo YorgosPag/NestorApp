@@ -2,6 +2,9 @@
 
 import { useEffect } from 'react';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useAutoUploadEffect');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -89,13 +92,11 @@ export function useAutoUploadEffect({
 }: UseAutoUploadEffectConfig): void {
   useEffect(() => {
     if (debug) {
-      console.log('🔄 AUTO-UPLOAD EFFECT TRIGGERED:', {
+      logger.info('AUTO-UPLOAD EFFECT TRIGGERED', {
         hasFile: !!file,
         fileName: file?.name,
         isUploading: upload.isUploading,
         uploadSuccess: upload.success,
-        hasUploadHandler: !!uploadHandler,
-        hasOnUploadComplete: !!onUploadComplete,
         purpose,
       });
     }
@@ -109,7 +110,7 @@ export function useAutoUploadEffect({
 
     if (!isValidFile || upload.isUploading || upload.success) {
       if (debug) {
-        console.log('🛑 AUTO-UPLOAD: Skipping upload:', {
+        logger.info('AUTO-UPLOAD: Skipping upload', {
           reason: !file
             ? 'No file'
             : !(file instanceof File)
@@ -127,7 +128,7 @@ export function useAutoUploadEffect({
     }
 
     if (debug) {
-      console.log('🚀 AUTO-UPLOAD: Starting upload for:', file.name);
+      logger.info('AUTO-UPLOAD: Starting upload', { fileName: file.name });
     }
 
     const startUpload = async () => {
@@ -135,7 +136,7 @@ export function useAutoUploadEffect({
         const result = await upload.uploadFile(file, uploadHandler);
 
         if (debug) {
-          console.log('🎉 AUTO-UPLOAD: Result received:', {
+          logger.info('AUTO-UPLOAD: Result received', {
             hasResult: !!result,
             hasSuccess: !!result?.success,
             hasUrl: !!result?.url,
@@ -153,7 +154,7 @@ export function useAutoUploadEffect({
           };
           onUploadComplete(enhancedResult);
         } else if (debug) {
-          console.error('❌ AUTO-UPLOAD: Callback NOT called:', {
+          logger.error('AUTO-UPLOAD: Callback NOT called', {
             hasResult: !!result,
             hasSuccess: !!result?.success,
             hasUrl: !!result?.url,
@@ -162,7 +163,7 @@ export function useAutoUploadEffect({
           });
         }
       } catch (err) {
-        console.error('⚠️ AUTO-UPLOAD: Failed:', err, { purpose, fileName: file?.name });
+        logger.error('AUTO-UPLOAD: Failed', { error: err, purpose, fileName: file?.name });
 
         // Call onUploadComplete even on failure to prevent hanging
         if (onUploadComplete) {

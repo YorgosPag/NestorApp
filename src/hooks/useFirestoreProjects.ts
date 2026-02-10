@@ -3,6 +3,9 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFirestoreProjects');
 
 /**
  * 🏗️ FIRESTORE PROJECTS HOOK
@@ -71,7 +74,7 @@ export function useFirestoreProjects() {
    * Call this after successful updates to refresh the projects list
    */
   const refetch = () => {
-    console.log('🔄 [useFirestoreProjects] Manual refetch triggered');
+    logger.info('Manual refetch triggered');
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -79,7 +82,7 @@ export function useFirestoreProjects() {
   // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
   useEffect(() => {
     const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
-      console.log('🔄 [useFirestoreProjects] Applying update for project:', payload.projectId);
+      logger.info('Applying update for project', { projectId: payload.projectId });
 
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId
@@ -98,7 +101,7 @@ export function useFirestoreProjects() {
     async function fetchProjects() {
       // 🔐 AUTH-READY GATING - Wait for authentication
       if (authLoading) {
-        console.log('⏳ [useFirestoreProjects] Waiting for auth state...');
+        logger.info('Waiting for auth state');
         return;
       }
 
@@ -122,7 +125,7 @@ export function useFirestoreProjects() {
         setLoading(true);
         setError(null);
 
-        console.log('🏗️ [useFirestoreProjects] Fetching from /api/projects/list...');
+        logger.info('Fetching from /api/projects/list');
 
         // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
         // apiClient.get() returns unwrapped data (not { success, data })
@@ -130,7 +133,7 @@ export function useFirestoreProjects() {
 
         // Check if request was aborted
         if (controller.signal.aborted) {
-          console.log('🏗️ [useFirestoreProjects] Request aborted');
+          logger.info('Request aborted');
           return;
         }
 
@@ -139,18 +142,18 @@ export function useFirestoreProjects() {
           throw new Error('Invalid response format from API');
         }
 
-        console.log(`✅ [useFirestoreProjects] Loaded ${result.count} projects (source: ${result.source})`);
+        logger.info('Loaded projects', { count: result.count, source: result.source });
 
         setProjects(result.projects);
 
       } catch (err) {
         // Ignore abort errors
         if (err instanceof Error && err.name === 'AbortError') {
-          console.log('🏗️ [useFirestoreProjects] Request aborted');
+          logger.info('Request aborted');
           return;
         }
 
-        console.error('❌ [useFirestoreProjects] ERROR:', err);
+        logger.error('Fetch projects error', { error: err });
 
         // 🏢 Enterprise error handling με proper type guards
         if (err instanceof Error) {

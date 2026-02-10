@@ -12,6 +12,9 @@ import { useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { useMemoryCleanup } from './useMemoryCleanup';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useUploadCompletion');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -81,22 +84,17 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('🔥🔥🔥 UPLOAD COMPLETION: handleUploadedPhotoURL called!', {
-      photoURL: photoURL?.substring(0, 80) + '...',
-      fullPhotoURL: photoURL,
+    logger.info('handleUploadedPhotoURL called', {
       isEmpty: photoURL === '' || photoURL == null,
       isFirebase: photoURL?.includes('firebasestorage.googleapis.com'),
       isBlobURL: photoURL?.startsWith('blob:'),
       photoURLLength: photoURL?.length,
-      timestamp: new Date().toISOString()
     });
 
     // 🔥 CRITICAL FIX: Use flushSync for synchronous state update
     flushSync(() => {
-      console.log('🔥🔥🔥 UPLOAD COMPLETION: Before update - previous formData:', {
+      logger.info('Before update - previous formData', {
         prevPhotoFile: !!formData.photoFile,
-        prevPhotoPreview: formData.photoPreview?.substring(0, 50) + '...',
-        prevPhotoURL: formData.photoURL?.substring(0, 50) + '...',
         prevPhotoPreviewType: formData.photoPreview?.startsWith('blob:') ? 'BLOB' : 'OTHER'
       });
 
@@ -110,10 +108,8 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
         photoURL: photoURL // 🔥 FIX: Also update photoURL field for UnifiedPhotoManager validation
       };
 
-      console.log('🔥🔥🔥 UPLOAD COMPLETION: SYNCHRONOUSLY Updated formData:', {
+      logger.info('SYNCHRONOUSLY Updated formData', {
         newPhotoFile: !!newFormData.photoFile,
-        newPhotoPreview: newFormData.photoPreview?.substring(0, 50) + '...',
-        newPhotoURL: newFormData.photoURL?.substring(0, 50) + '...',
         bothFieldsSet: !!newFormData.photoPreview && !!newFormData.photoURL,
         bothFieldsMatch: newFormData.photoPreview === newFormData.photoURL,
         isFirebaseURL: newFormData.photoURL?.includes('firebasestorage.googleapis.com')
@@ -122,7 +118,7 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
       setFormData(newFormData);
     });
 
-    console.log('✅ UPLOAD COMPLETION: handleUploadedPhotoURL SYNCHRONOUS update completed successfully');
+    logger.info('handleUploadedPhotoURL SYNCHRONOUS update completed successfully');
   }, [revokePhotoPreview]);
 
   /**
@@ -133,10 +129,10 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('🔍 UPLOAD COMPLETION: handleUploadedLogoURL called with:', { logoURL, isEmpty: logoURL === '' || logoURL == null });
+    logger.info('handleUploadedLogoURL called', { isEmpty: logoURL === '' || logoURL == null });
 
     if (logoURL === '' || logoURL == null) {
-      console.log('🧹 UPLOAD COMPLETION: Clearing logo URL');
+      logger.info('Clearing logo URL');
       setFormData({
         ...formData,
         logoFile: null,
@@ -146,7 +142,7 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
       return;
     }
 
-    console.log('✅ UPLOAD COMPLETION: Setting logo URL in formData:', logoURL.substring(0, 50) + '...');
+    logger.info('Setting logo URL in formData');
     setFormData({
       ...formData,
       logoFile: null,
@@ -164,7 +160,7 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('📸 UPLOAD COMPLETION: Multiple photo upload complete for index:', index, 'result:', result);
+    logger.info('Multiple photo upload complete', { index, hasUrl: !!result.url });
 
     const newPhotos = JSON.parse(JSON.stringify([...formData.multiplePhotos])); // 🔥 Deep copy για να force re-render
 

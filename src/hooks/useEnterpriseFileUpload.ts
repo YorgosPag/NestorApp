@@ -22,6 +22,9 @@ import { FileNamingService } from '@/services/FileNamingService';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { UsageContext } from '@/config/photo-compression-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useEnterpriseFileUpload');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -121,7 +124,7 @@ function generateNamedFile(
       config.photoIndex
     );
   } catch (error) {
-    console.error('Filename generation failed:', error);
+    logger.error('Filename generation failed', { error });
     return file;
   }
 }
@@ -255,7 +258,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       });
 
       if (fileToUpload.name !== file.name) {
-        console.log('🏷️ FILE RENAMED FOR UPLOAD:', {
+        logger.info('FILE RENAMED FOR UPLOAD', {
           original: file.name,
           renamed: fileToUpload.name,
           purpose: config.purpose,
@@ -275,7 +278,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
         result = await uploadHandler(fileToUpload, onProgress);  // ✅ Use renamed file
       } else {
         // 🏢 ENTERPRISE: Use PhotoUploadService με automatic compression
-        console.log('🚀 ENTERPRISE: Using PhotoUploadService with compression');
+        logger.info('ENTERPRISE: Using PhotoUploadService with compression');
 
         // Map UploadPurpose to compression UsageContext
         let compressionUsage: UsageContext = 'profile-modal';
@@ -308,7 +311,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
           photoIndex: config.photoIndex
         });
 
-        console.log('✅ ENTERPRISE: PhotoUploadService completed', {
+        logger.info('ENTERPRISE: PhotoUploadService completed', {
           originalSize: fileToUpload.size,
           resultSize: result.fileSize,
           compressionApplied: result.compressionInfo?.wasCompressed || false,

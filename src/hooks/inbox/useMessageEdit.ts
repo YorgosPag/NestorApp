@@ -15,6 +15,9 @@
 
 import { useState, useCallback } from 'react';
 import type { MessageListItem } from './useInboxApi';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useMessageEdit');
 
 // ============================================================================
 // TYPES
@@ -141,7 +144,7 @@ export function useMessageEdit(): UseMessageEditReturn {
       setEditingMessage(null);
       return { success: true };
     } catch (error) {
-      console.error('[useMessageEdit] Save error:', error);
+      logger.error('Save error', { error });
       return { success: false, error: 'Network error' };
     } finally {
       setIsSaving(false);
