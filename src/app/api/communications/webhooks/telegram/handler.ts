@@ -427,6 +427,56 @@ export async function handleGET(): Promise<NextResponse> {
           companyId: d.data().companyId ?? null,
         }));
 
+        // Step 6: Test agentic tool executor (ADR-171 diagnostic)
+        let agenticTest: Record<string, unknown> = {};
+        try {
+          const { getAgenticToolExecutor } = await import(
+            '@/services/ai-pipeline/tools/agentic-tool-executor'
+          );
+          const executor = getAgenticToolExecutor();
+          const testCtx = {
+            companyId,
+            isAdmin: true,
+            channelSenderId: 'diagnostic_test',
+            requestId: 'diag_' + Date.now(),
+          };
+
+          // Test 1: Query construction_phases (no filters — what AI would do)
+          const phasesResult = await executor.executeTool('firestore_query', {
+            collection: 'construction_phases',
+            filters: [],
+            orderBy: null,
+            orderDirection: null,
+            limit: 10,
+          }, testCtx);
+
+          // Test 2: Query construction_phases with companyId (what AI might do)
+          const phasesWithCompanyResult = await executor.executeTool('firestore_query', {
+            collection: 'construction_phases',
+            filters: [{ field: 'companyId', operator: '==', value: companyId }],
+            orderBy: null,
+            orderDirection: null,
+            limit: 10,
+          }, testCtx);
+
+          // Test 3: Query projects (with auto companyId)
+          const projectsResult = await executor.executeTool('firestore_query', {
+            collection: 'projects',
+            filters: [],
+            orderBy: null,
+            orderDirection: null,
+            limit: 10,
+          }, testCtx);
+
+          agenticTest = {
+            phases_no_filter: phasesResult,
+            phases_with_companyId: phasesWithCompanyResult,
+            projects_auto_companyId: projectsResult,
+          };
+        } catch (agenticErr) {
+          agenticTest = { error: agenticErr instanceof Error ? agenticErr.message : String(agenticErr) };
+        }
+
         diagnostic = {
           companyId,
           step1_projects: { count: projects.length, data: projects },
@@ -434,6 +484,7 @@ export async function handleGET(): Promise<NextResponse> {
           step3_phases_by_buildingId: { count: phases.length, data: phases.slice(0, 10) },
           global_all_phases: { count: allPhases.length, data: allPhases },
           global_all_buildings: { count: allBuildings.length, data: allBuildings },
+          agentic_executor_test: agenticTest,
         };
       } catch (err) {
         diagnostic = { error: err instanceof Error ? err.message : String(err) };
