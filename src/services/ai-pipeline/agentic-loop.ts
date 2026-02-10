@@ -61,6 +61,7 @@ export interface ChatMessage {
 
 export interface AgenticResult {
   answer: string;
+  suggestions: string[];
   toolCalls: Array<{
     name: string;
     args: string;
@@ -180,6 +181,13 @@ COLLECTIONS ΠΟΥ ΔΕΝ ΧΡΕΙΑΖΟΝΤΑΙ JOINS (απάντα κατευ�
 - Για "στατιστικά": χρήσε firestore_count αντί πλήρες query
 - Αν query επιστρέφει 0 αποτελέσματα, δοκίμασε χωρίς φίλτρα ή με search_text
 - ΠΟΤΕ μην δίνεις "δεν βρέθηκαν" αν δεν δοκίμασες τουλάχιστον 2 διαφορετικές αναζητήσεις
+11. ΜΗΝ τελειώνεις ΠΟΤΕ με "Αν χρειάζεσαι...", "Μη διστάσεις...", "Ενημέρωσέ με" ή παρόμοιες γενικές φράσεις. Δώσε μόνο την ουσιαστική απάντηση.
+12. Στο τέλος ΚΑΘΕ απάντησης, πρόσθεσε ένα block [SUGGESTIONS] με 2-3 σύντομες context-aware προτάσεις follow-up. Κάθε πρόταση σε νέα γραμμή, max 40 χαρακτήρες. Παράδειγμα:
+[SUGGESTIONS]
+Λεπτομέρειες φάσεων
+Κατάσταση κτηρίων
+Στατιστικά έργου
+[/SUGGESTIONS]
 ${learnedPatterns}
 ΙΣΤΟΡΙΚΟ ΣΥΝΟΜΙΛΙΑΣ:
 ${historyStr}`;
@@ -331,6 +339,7 @@ export async function executeAgenticLoop(
       });
       return {
         answer: 'Η αναζήτηση πήρε πολύ χρόνο. Δοκίμασε μια πιο συγκεκριμένη ερώτηση.',
+        suggestions: [],
         toolCalls: allToolCalls,
         iterations: iteration + 1,
         totalDurationMs: Date.now() - startTime,
@@ -406,15 +415,20 @@ export async function executeAgenticLoop(
     // Clean potential JSON wrapping
     const cleanedAnswer = cleanAITextReply(answer);
 
+    // Phase 6B: Extract suggested follow-up actions from AI response
+    const { cleanAnswer: finalAnswer, suggestions } = extractSuggestions(cleanedAnswer);
+
     logger.info('Agentic loop completed', {
       requestId: context.requestId,
       iterations: iteration + 1,
       toolCallsTotal: allToolCalls.length,
+      suggestionsCount: suggestions.length,
       totalDurationMs: Date.now() - startTime,
     });
 
     return {
-      answer: cleanedAnswer,
+      answer: finalAnswer,
+      suggestions,
       toolCalls: allToolCalls,
       iterations: iteration + 1,
       totalDurationMs: Date.now() - startTime,
@@ -430,6 +444,7 @@ export async function executeAgenticLoop(
 
   return {
     answer: 'Ξεπέρασα το μέγιστο αριθμό βημάτων. Δοκίμασε μια πιο απλή ερώτηση.',
+    suggestions: [],
     toolCalls: allToolCalls,
     iterations: cfg.maxIterations,
     totalDurationMs: Date.now() - startTime,
@@ -439,6 +454,27 @@ export async function executeAgenticLoop(
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Phase 6B: Extract [SUGGESTIONS] block from AI response.
+ * Returns clean answer (without the block) and parsed suggestion strings.
+ * Graceful: if no block found, returns original text with empty suggestions.
+ */
+function extractSuggestions(rawAnswer: string): { cleanAnswer: string; suggestions: string[] } {
+  const regex = /\[SUGGESTIONS\]\n?([\s\S]*?)\[\/SUGGESTIONS\]/;
+  const match = rawAnswer.match(regex);
+
+  if (!match) return { cleanAnswer: rawAnswer, suggestions: [] };
+
+  const cleanAnswer = rawAnswer.replace(regex, '').trim();
+  const suggestions = match[1]
+    .split('\n')
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && s.length <= 40)
+    .slice(0, 3); // Max 3 suggestions
+
+  return { cleanAnswer, suggestions };
+}
 
 /**
  * Clean AI text reply — strip JSON wrapping if present

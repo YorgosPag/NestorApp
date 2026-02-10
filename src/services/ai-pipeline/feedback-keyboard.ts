@@ -29,6 +29,9 @@ const POSITIVE_CODE = 'p';
 const NEGATIVE_CODE = 'n';
 const CATEGORY_CODE = 'c';
 
+/** Phase 6C: Suggested action callback prefix */
+const SUGGESTION_PREFIX = 'sa';
+
 /**
  * Compact category codes for Telegram's 64-byte callback_data limit.
  */
@@ -162,4 +165,63 @@ export function parseCategoryCallback(
   if (!category) return null;
 
   return { feedbackDocId, category };
+}
+
+// ============================================================================
+// PHASE 6C: SUGGESTED ACTIONS KEYBOARD
+// ============================================================================
+
+/**
+ * Create an inline keyboard with context-aware suggested follow-up actions.
+ * Displayed between the AI answer and the feedback keyboard.
+ *
+ * Callback format: `sa:{index}:{feedbackDocId}` (fits in 64 bytes)
+ *
+ * @param feedbackDocId - Firestore feedback doc ID (stores the suggestions array)
+ * @param suggestions - 1-3 suggestion text strings (max 40 chars each)
+ * @returns TelegramReplyMarkup with inline keyboard buttons
+ */
+export function createSuggestedActionsKeyboard(
+  feedbackDocId: string,
+  suggestions: string[]
+): TelegramReplyMarkup {
+  const buttons = suggestions.slice(0, 3).map((text, index) => ({
+    text: `\u{1F4A1} ${text}`,
+    callback_data: `${SUGGESTION_PREFIX}:${index}:${feedbackDocId}`,
+  }));
+
+  return {
+    inline_keyboard: [buttons],
+  };
+}
+
+/**
+ * Check if a callback_data string is a suggestion action callback.
+ */
+export function isSuggestionCallback(data: string): boolean {
+  return data.startsWith(`${SUGGESTION_PREFIX}:`);
+}
+
+/**
+ * Parse a suggestion callback_data string.
+ * Format: `sa:{index}:{feedbackDocId}`
+ *
+ * @returns Parsed result or null if invalid
+ */
+export function parseSuggestionCallback(
+  data: string
+): { index: number; feedbackDocId: string } | null {
+  if (!isSuggestionCallback(data)) return null;
+
+  const parts = data.split(':');
+  // Expected: ['sa', index, feedbackDocId]
+  if (parts.length < 3) return null;
+
+  const index = parseInt(parts[1], 10);
+  if (isNaN(index) || index < 0 || index > 2) return null;
+
+  const feedbackDocId = parts.slice(2).join(':');
+  if (!feedbackDocId) return null;
+
+  return { index, feedbackDocId };
 }

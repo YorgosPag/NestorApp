@@ -39,13 +39,17 @@ User Message
 [Agentic Loop] --> [Prompt Enhancer] --> Fetches learned patterns
     |                                        |
     v                                        v
-[AI Response] --> [Feedback Keyboard]  [Pattern DB]
-    |                    |                   ^
-    v                    v                   |
-[User sees]    [Thumbs Up/Down]        [Learning Cron]
-               [Category Selection]         |
-                    |                       v
-                    v               [Extract Patterns]
+[AI Response + [SUGGESTIONS]] --------> [Pattern DB]
+    |                                        ^
+    v                                        |
+[1. Clean Answer]                      [Learning Cron]
+[2. Suggested Actions Keyboard]             |
+[3. Feedback Keyboard (👍/👎)]              v
+    |              |               [Extract Patterns]
+    v              v
+[User sees]  [Click suggestion]
+             → re-feed as new message
+             → pipeline processes with chat history
               [Firestore]
               ai_agent_feedback
 ```
@@ -173,3 +177,4 @@ Daily cron job:
 | 2026-02-10 | Phase 3: Greek NLP — stemming, domain boosting, Greeklish |
 | 2026-02-10 | Phase 4: Enhanced analytics — channel/token tracking, admin endpoint |
 | 2026-02-10 | Phase 5: ADR document, Firestore indexes |
+| 2026-02-10 | Phase 6: Context-aware suggested action buttons — replaces generic "Ενημέρωσέ με" with 2-3 actionable follow-up buttons per AI response |

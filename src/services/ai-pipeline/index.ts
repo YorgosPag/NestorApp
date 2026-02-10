@@ -79,10 +79,13 @@ export type { FeedbackSnapshot, FeedbackRating, NegativeFeedbackCategory } from 
 export {
   createFeedbackKeyboard,
   createNegativeCategoryKeyboard,
+  createSuggestedActionsKeyboard,
   isFeedbackCallback,
   isCategoryCallback,
+  isSuggestionCallback,
   parseFeedbackCallback,
   parseCategoryCallback,
+  parseSuggestionCallback,
 } from './feedback-keyboard';
 export { LearningService, getLearningService } from './learning-service';
 export { ToolAnalyticsService, getToolAnalyticsService } from './tool-analytics-service';

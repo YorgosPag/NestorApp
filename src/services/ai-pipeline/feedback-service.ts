@@ -61,6 +61,8 @@ export interface FeedbackSnapshot {
   channel: string;
   /** Phase 4A: Rough token count estimate for cost tracking */
   tokenEstimate: number;
+  /** Phase 6D: Context-aware suggested follow-up actions */
+  suggestedActions: string[];
   createdAt: string;
 }
 
@@ -74,6 +76,8 @@ export interface SaveFeedbackParams {
   durationMs: number;
   /** Channel identifier (e.g., 'telegram', 'email') */
   channel?: string;
+  /** Phase 6D: Suggested follow-up actions from AI */
+  suggestedActions?: string[];
 }
 
 // ============================================================================
@@ -129,6 +133,7 @@ export class FeedbackService {
         processedForLearning: false,
         channel,
         tokenEstimate,
+        suggestedActions: params.suggestedActions ?? [],
         createdAt: new Date().toISOString(),
       };
 
@@ -262,6 +267,34 @@ export class FeedbackService {
       logger.warn('Failed to mark feedback as processed', {
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+  }
+
+  /**
+   * Phase 6D: Get suggested actions stored in a feedback document.
+   * Used by suggestion callback handler to retrieve the suggestion text.
+   *
+   * @param feedbackDocId - Firestore document ID
+   * @returns Array of suggestion strings, or empty array if not found
+   */
+  async getSuggestedActions(feedbackDocId: string): Promise<string[]> {
+    try {
+      const db = getAdminFirestore();
+      const doc = await db.collection(COLLECTIONS.AI_AGENT_FEEDBACK).doc(feedbackDocId).get();
+
+      if (!doc.exists) {
+        logger.warn('Feedback document not found for suggestions', { feedbackDocId });
+        return [];
+      }
+
+      const data = doc.data() as FeedbackSnapshot | undefined;
+      return data?.suggestedActions ?? [];
+    } catch (error) {
+      logger.warn('Failed to get suggested actions', {
+        feedbackDocId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
     }
   }
 

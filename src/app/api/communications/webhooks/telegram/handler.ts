@@ -16,6 +16,7 @@ import { type NextRequest, NextResponse, after } from 'next/server';
 import { isFirebaseAvailable } from './firebase/availability';
 import { processMessage } from './message/process-message';
 import { handleCallbackQuery } from './message/callback-query';
+import type { SuggestionCallbackResult } from './message/callback-query';
 import { sendTelegramMessage } from './telegram/client';
 import { storeMessageInCRM } from './crm/store';
 import { BOT_IDENTITY } from '@/config/domain-constants';
@@ -125,10 +126,16 @@ function validateSecretToken(request: NextRequest): { valid: boolean; error?: st
   return { valid: true };
 }
 
+/** Return type for processTelegramUpdate — signals if pipeline re-feed is needed */
+interface ProcessUpdateResult {
+  /** True if a suggestion callback triggered pipeline re-feed */
+  needsPipelineBatch: boolean;
+}
+
 /**
  * Main orchestrator for handling incoming Telegram webhook requests.
  */
-async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void> {
+async function processTelegramUpdate(webhookData: TelegramMessage): Promise<ProcessUpdateResult> {
   let telegramResponse: TelegramSendPayload | null = null;
 
   if (webhookData.message) {
@@ -200,9 +207,40 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
 
   }
 
+  // Phase 6F: Track suggestion callbacks for pipeline re-feed
+  let suggestionResult: SuggestionCallbackResult | null = null;
+
   if (webhookData.callback_query) {
     logger.info('Processing callback query');
-    telegramResponse = await handleCallbackQuery(webhookData.callback_query);
+    const callbackResult = await handleCallbackQuery(webhookData.callback_query);
+
+    if (callbackResult && 'type' in callbackResult && callbackResult.type === 'suggestion') {
+      // Suggestion callback — send ack and trigger pipeline re-feed
+      suggestionResult = callbackResult;
+      telegramResponse = {
+        chat_id: callbackResult.chatId,
+        text: '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...',
+      };
+    } else {
+      telegramResponse = callbackResult as TelegramSendPayload | null;
+    }
+  }
+
+  // Phase 6F: Feed suggestion text to pipeline as a new user message
+  let didFeedSuggestion = false;
+  if (suggestionResult) {
+    try {
+      await feedSuggestionToPipeline(
+        String(suggestionResult.chatId),
+        suggestionResult.userId,
+        suggestionResult.suggestionText
+      );
+      didFeedSuggestion = true;
+    } catch (error) {
+      logger.warn('[Suggestion->Pipeline] Non-fatal error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   // Send response to Telegram if we have one
@@ -233,6 +271,8 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
       }
     }
   }
+
+  return { needsPipelineBatch: didFeedSuggestion };
 }
 
 /**
@@ -286,6 +326,42 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
 }
 
 /**
+ * Phase 6F: Feed a suggestion action to the AI Pipeline as a new user message.
+ * Reuses TelegramChannelAdapter with a synthetic message ID.
+ */
+async function feedSuggestionToPipeline(
+  chatId: string,
+  userId: string,
+  suggestionText: string
+): Promise<void> {
+  const companyId = process.env.DEFAULT_COMPANY_ID
+    ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
+    ?? 'default';
+
+  const { TelegramChannelAdapter } = await import(
+    '@/services/ai-pipeline/channel-adapters/telegram-channel-adapter'
+  );
+
+  const result = await TelegramChannelAdapter.feedToPipeline({
+    chatId,
+    userId,
+    userName: 'Admin',
+    messageText: suggestionText,
+    messageId: `sa_${Date.now()}`,
+    companyId,
+  });
+
+  if (result.enqueued) {
+    logger.info('[Suggestion->Pipeline] Enqueued', {
+      requestId: result.requestId,
+      text: suggestionText,
+    });
+  } else {
+    logger.warn('[Suggestion->Pipeline] Failed', { error: result.error });
+  }
+}
+
+/**
  * Handles POST requests from the main route file.
  * @enterprise Security-first: validates secret token before processing
  */
@@ -313,16 +389,19 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     const webhookData = await request.json();
     logger.info('Processing webhook data');
 
-    await processTelegramUpdate(webhookData);
+    const updateResult = await processTelegramUpdate(webhookData);
 
     // ── ADR-134: Trigger AI pipeline worker after response ──
     // Same pattern as Mailgun webhook: "Respond Fast, Process After"
     // Runs processAIPipelineBatch() after the 200 response is sent to Telegram.
     // ADR-156: Also trigger for voice messages (no text but has voice)
+    // Phase 6F: Also trigger for suggestion callback re-feeds
     const rawText = webhookData.message?.text ?? webhookData.message?.caption ?? '';
     const hasVoice = !!webhookData.message?.voice;
     const isBotCmd = rawText.startsWith('/');
-    if (!isBotCmd && (rawText.trim().length > 0 || hasVoice) && isFirebaseAvailable()) {
+    const needsBatch = (!isBotCmd && (rawText.trim().length > 0 || hasVoice))
+      || updateResult.needsPipelineBatch;
+    if (needsBatch && isFirebaseAvailable()) {
       after(async () => {
         try {
           const { processAIPipelineBatch } = await import(

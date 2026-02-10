@@ -7,16 +7,28 @@ import type { TelegramSendPayload, TelegramCallbackQuery } from '../telegram/typ
 import {
   isFeedbackCallback,
   isCategoryCallback,
+  isSuggestionCallback,
   parseFeedbackCallback,
   parseCategoryCallback,
+  parseSuggestionCallback,
   createNegativeCategoryKeyboard,
 } from '@/services/ai-pipeline/feedback-keyboard';
 import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
 import { createModuleLogger } from '@/lib/telemetry';
 
+/** Phase 6F: Result type for suggestion callbacks that need pipeline re-feed */
+export interface SuggestionCallbackResult {
+  type: 'suggestion';
+  suggestionText: string;
+  chatId: number | string;
+  userId: string;
+}
+
 const logger = createModuleLogger('TelegramCallbackQuery');
 
-export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promise<TelegramSendPayload | null> {
+export async function handleCallbackQuery(
+  callbackQuery: TelegramCallbackQuery
+): Promise<TelegramSendPayload | SuggestionCallbackResult | null> {
   const data = callbackQuery.data;
 
   if (!callbackQuery.message) {
@@ -58,6 +70,11 @@ export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery):
       return createContactResponse(chatId);
 
     default:
+        // Phase 6F: Check suggestion callbacks FIRST (before feedback)
+        if (data && isSuggestionCallback(data)) {
+          return handleSuggestionCallback(data, chatId, userId);
+        }
+
         // ADR-173 Phase 2: Check category callbacks BEFORE rating callbacks
         if (data && isCategoryCallback(data)) {
           return handleCategoryCallback(data, chatId);
@@ -123,6 +140,52 @@ async function handleCategoryCallback(
       text: '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.',
     };
   } catch {
+    return null;
+  }
+}
+
+/**
+ * Phase 6F: Handle suggested action button press.
+ * Fetches the suggestion text from Firestore and returns a SuggestionCallbackResult
+ * which tells the handler to re-feed this as a new message through the pipeline.
+ */
+async function handleSuggestionCallback(
+  data: string,
+  chatId: number | string,
+  userId: string
+): Promise<SuggestionCallbackResult | null> {
+  const parsed = parseSuggestionCallback(data);
+  if (!parsed) return null;
+
+  try {
+    const suggestions = await getFeedbackService().getSuggestedActions(parsed.feedbackDocId);
+    const suggestionText = suggestions[parsed.index];
+
+    if (!suggestionText) {
+      logger.warn('Suggestion index out of bounds', {
+        feedbackDocId: parsed.feedbackDocId,
+        index: parsed.index,
+        available: suggestions.length,
+      });
+      return null;
+    }
+
+    logger.info('Suggestion callback resolved', {
+      feedbackDocId: parsed.feedbackDocId,
+      index: parsed.index,
+      text: suggestionText,
+    });
+
+    return {
+      type: 'suggestion',
+      suggestionText,
+      chatId,
+      userId,
+    };
+  } catch (error) {
+    logger.warn('Failed to handle suggestion callback', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }
