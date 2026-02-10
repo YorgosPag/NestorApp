@@ -66,7 +66,8 @@ AI Agent (system prompt with schema map)
 3. **Write Restrictions** — Only admin users can write. All writes are audit-logged.
 4. **Result Truncation** — Max 50 results per query, max 8000 chars per tool result.
 5. **Sensitive Field Redaction** — Passwords, tokens, keys are replaced with `[REDACTED]`.
-6. **Iteration Limits** — Max 5 AI iterations, 50s total timeout (within Vercel 60s limit).
+6. **Iteration Limits** — Max 7 AI iterations, 50s total timeout (within Vercel 60s limit).
+7. **Atomic Dedup** — Firestore Transaction prevents race condition where concurrent webhook calls could enqueue the same message twice.
 
 ### Chat History
 
@@ -111,3 +112,7 @@ ai_chat_history (ADR-156)
 | Date | Change |
 |------|--------|
 | 2026-02-10 | Phase 1 implemented: 8 tools, agentic loop, chat history, pipeline integration |
+| 2026-02-10 | Fix: mandatory join resolution for parent entities (phases→building→project) |
+| 2026-02-10 | Fix: smart tool rules — collections without joins (contacts etc) skip unnecessary calls |
+| 2026-02-10 | Fix: maxIterations 5→7 to accommodate multi-step join queries |
+| 2026-02-10 | Fix: atomic dedup via Firestore Transaction (prevents duplicate processing race condition) |
