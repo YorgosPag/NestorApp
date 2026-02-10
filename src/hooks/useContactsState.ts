@@ -10,6 +10,11 @@ import { getContactDisplayName } from '@/types/contacts';
 import { normalizeToDate } from '@/lib/date-local';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ContactUpdatedPayload, type ContactCreatedPayload, type ContactDeletedPayload } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+// 🔐 ENTERPRISE: Defense-in-depth — auth guard (same pattern as useRealtimeBuildings)
+import { useAuth } from '@/hooks/useAuth';
+
+const logger = createModuleLogger('useContactsState');
 
 
 export type ViewMode = 'list' | 'grid';
@@ -25,6 +30,7 @@ interface ContactStats {
 export function useContactsState() {
   const searchParams = useSearchParams();
   const contactIdFromUrl = searchParams.get('contactId');
+  const { user, loading: authLoading } = useAuth();
 
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
   const [allUnits, setAllUnits] = useState<Property[]>([]);
@@ -57,8 +63,16 @@ export function useContactsState() {
   }, []);
 
   // 🏢 ENTERPRISE: Real-time contacts subscription via Firestore onSnapshot
-  // Replaces one-time fetch — picks up server-side writes (Admin SDK / AI pipeline)
+  // 🔐 Defense-in-depth: Gate on authentication (same pattern as useRealtimeBuildings)
   useEffect(() => {
+    // Wait for auth state to resolve before subscribing
+    if (authLoading) return;
+    if (!user) {
+      setAllContacts([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     let unsubContacts: (() => void) | null = null;
 
@@ -77,7 +91,7 @@ export function useContactsState() {
           { limitCount: 1000 }
         );
       } catch (error) {
-        console.error("Failed to setup contacts subscription:", error);
+        logger.error('Failed to setup contacts subscription', { error });
         setIsLoading(false);
       }
     };
@@ -87,13 +101,13 @@ export function useContactsState() {
     return () => {
       if (unsubContacts) unsubContacts();
     };
-  }, [refreshKey]);
+  }, [user, authLoading, refreshKey]);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
   // Subscribe to contact updates for cross-page sync
   useEffect(() => {
     const handleContactUpdate = (payload: ContactUpdatedPayload) => {
-      console.log('🔄 [useContactsState] Applying update for contact:', payload.contactId);
+      logger.info('Applying update for contact', { contactId: payload.contactId });
 
       // 🏢 ENTERPRISE: Type-safe partial update helper
       const applyContactUpdates = <T extends Contact>(contact: T): T => {
@@ -134,7 +148,7 @@ export function useContactsState() {
   // 🏢 ENTERPRISE: Subscribe to contact CREATED events for cross-page sync
   useEffect(() => {
     const handleContactCreated = (payload: ContactCreatedPayload) => {
-      console.log('➕ [useContactsState] New contact created:', payload.contactId);
+      logger.info('New contact created', { contactId: payload.contactId });
       // Force refresh to fetch the new contact with all its data
       forceDataRefresh();
     };
@@ -149,7 +163,7 @@ export function useContactsState() {
   // 🏢 ENTERPRISE: Subscribe to contact DELETED events for cross-page sync
   useEffect(() => {
     const handleContactDeleted = (payload: ContactDeletedPayload) => {
-      console.log('🗑️ [useContactsState] Contact deleted:', payload.contactId);
+      logger.info('Contact deleted', { contactId: payload.contactId });
 
       // Remove the deleted contact from the list
       setAllContacts(prev => prev.filter(contact => contact.id !== payload.contactId));
