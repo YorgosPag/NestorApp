@@ -62,6 +62,13 @@ const LOW_QUALITY_SCORE_THRESHOLD = 0.3;
 const LOW_QUALITY_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_KEYWORDS_PER_QUERY = 5;
 
+/**
+ * ADR-173 Phase 1B: Minimum ratings before a pattern is considered trustworthy.
+ * Prevents data poisoning — 5 crafted poisoned documents can achieve 90% attack success.
+ * A pattern must have at least this many total ratings before being used in prompts.
+ */
+const MIN_RATINGS_THRESHOLD = 3;
+
 // ============================================================================
 // SERVICE
 // ============================================================================
@@ -151,6 +158,11 @@ export class LearningService {
             pattern: { id: doc.id, ...data },
             compositeScore,
           };
+        })
+        // ADR-173 Phase 1B: Require minimum ratings to prevent data poisoning
+        .filter(item => {
+          const totalRatings = item.pattern.successCount + item.pattern.failureCount;
+          return totalRatings >= MIN_RATINGS_THRESHOLD;
         })
         .filter(item => item.compositeScore > 0.05) // Min relevance threshold
         .sort((a, b) => b.compositeScore - a.compositeScore)

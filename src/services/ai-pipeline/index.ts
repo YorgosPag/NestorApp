@@ -75,7 +75,18 @@ export { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';
 
 // ADR-173: AI Self-Improvement
 export { FeedbackService, getFeedbackService } from './feedback-service';
-export { createFeedbackKeyboard, isFeedbackCallback, parseFeedbackCallback } from './feedback-keyboard';
+export type { FeedbackSnapshot, FeedbackRating, NegativeFeedbackCategory } from './feedback-service';
+export {
+  createFeedbackKeyboard,
+  createNegativeCategoryKeyboard,
+  isFeedbackCallback,
+  isCategoryCallback,
+  parseFeedbackCallback,
+  parseCategoryCallback,
+} from './feedback-keyboard';
 export { LearningService, getLearningService } from './learning-service';
 export { ToolAnalyticsService, getToolAnalyticsService } from './tool-analytics-service';
 export { enhanceSystemPrompt } from './prompt-enhancer';
+
+// ADR-173: Prompt Sanitizer (OWASP LLM01:2025)
+export { sanitizeForPromptInjection, containsPromptInjection } from './shared/prompt-sanitizer';

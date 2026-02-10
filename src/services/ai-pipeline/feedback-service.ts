@@ -19,6 +19,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { sanitizeForPromptInjection, containsPromptInjection } from './shared/prompt-sanitizer';
 
 const logger = createModuleLogger('FEEDBACK_SERVICE');
 
@@ -34,10 +35,21 @@ export interface ToolChainDetailEntry {
   filterFields?: string[];
 }
 
+/**
+ * Negative feedback categories (Phase 2: ChatGPT/Intercom pattern).
+ * Allows users to specify WHY the response was bad.
+ */
+export type NegativeFeedbackCategory =
+  | 'wrong_answer'
+  | 'wrong_data'
+  | 'not_understood'
+  | 'slow';
+
 export interface FeedbackSnapshot {
   requestId: string;
   channelSenderId: string;
   rating: FeedbackRating | null;
+  negativeCategory: NegativeFeedbackCategory | null;
   userQuery: string;
   aiAnswer: string;
   toolChain: string[];
@@ -45,6 +57,10 @@ export interface FeedbackSnapshot {
   iterations: number;
   durationMs: number;
   processedForLearning: boolean;
+  /** Phase 4A: Channel identifier (telegram/email) for analytics segmentation */
+  channel: string;
+  /** Phase 4A: Rough token count estimate for cost tracking */
+  tokenEstimate: number;
   createdAt: string;
 }
 
@@ -56,6 +72,8 @@ export interface SaveFeedbackParams {
   toolCalls: Array<{ name: string; args: string; result: string }>;
   iterations: number;
   durationMs: number;
+  /** Channel identifier (e.g., 'telegram', 'email') */
+  channel?: string;
 }
 
 // ============================================================================
@@ -82,17 +100,35 @@ export class FeedbackService {
       const toolChain = params.toolCalls.map(tc => tc.name);
       const toolChainDetail = this.extractToolChainDetail(params.toolCalls);
 
+      // ADR-173 Phase 1A: Sanitize user/AI text before storage (OWASP LLM01)
+      const sanitizedQuery = sanitizeForPromptInjection(params.userQuery, MAX_QUERY_LENGTH);
+      const sanitizedAnswer = sanitizeForPromptInjection(params.aiAnswer, MAX_ANSWER_LENGTH);
+
+      if (containsPromptInjection(params.userQuery)) {
+        logger.warn('Prompt injection detected in user query', {
+          requestId: params.requestId,
+          channelSenderId: params.channelSenderId,
+        });
+      }
+
+      // Phase 4A: Extract channel from channelSenderId and estimate tokens
+      const channel = params.channel ?? this.extractChannel(params.channelSenderId);
+      const tokenEstimate = this.estimateTokens(params.userQuery, params.aiAnswer);
+
       const snapshot: FeedbackSnapshot = {
         requestId: params.requestId,
         channelSenderId: params.channelSenderId,
         rating: null,
-        userQuery: params.userQuery.substring(0, MAX_QUERY_LENGTH),
-        aiAnswer: params.aiAnswer.substring(0, MAX_ANSWER_LENGTH),
+        negativeCategory: null,
+        userQuery: sanitizedQuery,
+        aiAnswer: sanitizedAnswer,
         toolChain,
         toolChainDetail,
         iterations: params.iterations,
         durationMs: params.durationMs,
         processedForLearning: false,
+        channel,
+        tokenEstimate,
         createdAt: new Date().toISOString(),
       };
 
@@ -139,6 +175,41 @@ export class FeedbackService {
       return true;
     } catch (error) {
       logger.warn('Failed to update feedback rating', {
+        feedbackDocId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Update negative category on a feedback document (from category keyboard press).
+   * Phase 2: Follow-up after thumbs-down — user specifies WHY the response was bad.
+   */
+  async updateNegativeCategory(
+    feedbackDocId: string,
+    category: NegativeFeedbackCategory
+  ): Promise<boolean> {
+    try {
+      const db = getAdminFirestore();
+      const docRef = db.collection(COLLECTIONS.AI_AGENT_FEEDBACK).doc(feedbackDocId);
+      const doc = await docRef.get();
+
+      if (!doc.exists) {
+        logger.warn('Feedback document not found for category update', { feedbackDocId });
+        return false;
+      }
+
+      await docRef.update({ negativeCategory: category });
+
+      logger.info('Negative feedback category updated', {
+        feedbackDocId,
+        category,
+      });
+
+      return true;
+    } catch (error) {
+      logger.warn('Failed to update negative feedback category', {
         feedbackDocId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -231,6 +302,26 @@ export class FeedbackService {
   // ==========================================================================
   // HELPERS
   // ==========================================================================
+
+  /**
+   * Extract channel name from channelSenderId format.
+   * Format: "telegram_123456" or "email_user@example.com"
+   */
+  private extractChannel(channelSenderId: string): string {
+    const separatorIndex = channelSenderId.indexOf('_');
+    if (separatorIndex > 0) {
+      return channelSenderId.substring(0, separatorIndex);
+    }
+    return 'unknown';
+  }
+
+  /**
+   * Rough token count estimation (~4 chars per token for mixed Greek/English).
+   */
+  private estimateTokens(query: string, answer: string): number {
+    const totalChars = (query?.length ?? 0) + (answer?.length ?? 0);
+    return Math.ceil(totalChars / 4);
+  }
 
   /**
    * Extract structured tool chain detail from raw tool calls.

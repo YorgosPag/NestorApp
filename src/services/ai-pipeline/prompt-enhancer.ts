@@ -16,6 +16,7 @@ import 'server-only';
 
 import { getLearningService } from './learning-service';
 import { getToolAnalyticsService } from './tool-analytics-service';
+import { sanitizeForPromptInjection } from './shared/prompt-sanitizer';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('PROMPT_ENHANCER');
@@ -59,11 +60,15 @@ export async function enhanceSystemPrompt(userQuery: string): Promise<string> {
           ? p.toolChain.join(' → ')
           : 'χωρίς εργαλεία';
 
+        // ADR-173 Phase 1A: Sanitize patterns before prompt injection (OWASP LLM01)
+        const safeQuery = sanitizeForPromptInjection(p.exampleQuery, 200);
+        const safeAnswer = sanitizeForPromptInjection(p.exampleAnswer, 150);
+
         const statusIcon = p.patternType === 'success' ? '\u2705' : '\u26A0\uFE0F';
         const entry = `\n${statusIcon} Παράδειγμα ${i + 1}:`
-          + `\n- Ερώτηση: "${p.exampleQuery}"`
+          + `\n- Ερώτηση: "${safeQuery}"`
           + `\n- Εργαλεία: ${toolChainStr}`
-          + `\n- Αποτέλεσμα: ${p.exampleAnswer.substring(0, 150)}`;
+          + `\n- Αποτέλεσμα: ${safeAnswer}`;
 
         if (charCount + entry.length > MAX_PATTERN_CHARS) break;
         patternsText += entry;
