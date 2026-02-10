@@ -165,7 +165,7 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
         notes: form.notes.trim() || null,
       };
 
-      const res = await fetch('/api/accounting/journal-entries', {
+      const res = await fetch('/api/accounting/journal', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
