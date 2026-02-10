@@ -1,19 +1,24 @@
 /**
  * =============================================================================
- * AGENTIC LOOP — Multi-Step Reasoning Engine
+ * AGENTIC LOOP — Multi-Step Reasoning Engine (Chat Completions API)
  * =============================================================================
  *
  * Implements the agentic loop: AI calls tools iteratively until it produces
  * a final text answer. Each iteration:
- *   1. Send messages + tools to OpenAI
+ *   1. Send messages + tools to OpenAI Chat Completions API
  *   2. If AI requests tool calls → execute them, append results
  *   3. If AI returns text → done
+ *
+ * Uses Chat Completions API (not Responses API) because:
+ * - Well-established multi-turn tool calling with tool_call_id tracking
+ * - Proper assistant + tool message format for iterative reasoning
+ * - Better error handling for complex multi-step flows
  *
  * Safety limits:
  * - maxIterations: 5 (prevent infinite loops)
  * - totalTimeoutMs: 50_000 (within Vercel 60s limit)
  * - perCallTimeoutMs: 15_000 (per OpenAI call)
- * - maxToolResultTokens: 3000 (truncate large results)
+ * - maxToolResultChars: 8000 (truncate large results)
  *
  * @module services/ai-pipeline/agentic-loop
  * @see ADR-171 (Autonomous AI Agent)
@@ -63,21 +68,33 @@ export interface AgenticResult {
   totalDurationMs: number;
 }
 
-/** OpenAI Responses API message format */
-interface OpenAIMessage {
-  role: 'system' | 'user' | 'assistant' | 'function';
-  content: Array<{ type: 'input_text'; text: string }> | string;
-  name?: string;
+// ── Chat Completions API types ──
+
+interface ChatCompletionMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null;
+  /** Only for assistant messages with tool calls */
+  tool_calls?: ChatCompletionToolCall[];
+  /** Only for tool result messages */
+  tool_call_id?: string;
 }
 
-/** OpenAI Responses API output item */
-interface OpenAIOutputItem {
-  type: string;
-  name?: string;
-  call_id?: string;
-  arguments?: string;
-  content?: Array<{ type: string; text?: string }>;
-  text?: string;
+interface ChatCompletionToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
+interface ChatCompletionChoice {
+  message: {
+    role: 'assistant';
+    content: string | null;
+    tool_calls?: ChatCompletionToolCall[];
+  };
+  finish_reason: string;
 }
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {
@@ -117,22 +134,24 @@ ${schema}
 7. Στο τέλος δώσε σαφή, μορφοποιημένη απάντηση στον χρήστη
 8. Για αριθμούς/ποσά/εμβαδά, χρησιμοποίησε μονάδες (€, τ.μ., κλπ)
 9. Αν η ερώτηση είναι γενική/casual/μετάφραση, μην καλέσεις tools — απάντησε κατευθείαν
+10. Τα values σε φίλτρα ΠΑΝΤΑ ως string (ακόμα και αριθμούς, π.χ. "42")
+11. Για αναζήτηση κτηρίων με Gantt, ψάξε construction_phases collection
 
 ΙΣΤΟΡΙΚΟ ΣΥΝΟΜΙΛΙΑΣ:
 ${historyStr}`;
 }
 
 // ============================================================================
-// OPENAI API CALL
+// OPENAI CHAT COMPLETIONS API CALL
 // ============================================================================
 
-async function callOpenAI(
-  messages: OpenAIMessage[],
+async function callChatCompletions(
+  messages: ChatCompletionMessage[],
   tools: AgenticToolDefinition[],
   timeoutMs: number
 ): Promise<{
-  outputItems: OpenAIOutputItem[];
-  outputText: string | null;
+  message: ChatCompletionChoice['message'];
+  finishReason: string;
 }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -142,27 +161,9 @@ async function callOpenAI(
   const baseUrl = AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL;
   const model = AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL;
 
-  // Convert messages to Responses API format
-  const input = messages.map(msg => {
-    if (msg.role === 'function') {
-      // Function results go as user messages with tool context
-      return {
-        role: 'user' as const,
-        content: [{ type: 'input_text' as const, text: `[Tool result for ${msg.name ?? 'unknown'}]:\n${typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}` }],
-      };
-    }
-
-    return {
-      role: msg.role as 'system' | 'user',
-      content: Array.isArray(msg.content)
-        ? msg.content
-        : [{ type: 'input_text' as const, text: msg.content }],
-    };
-  });
-
   const requestBody = {
     model,
-    input,
+    messages,
     tools,
     tool_choice: 'auto' as const,
   };
@@ -171,7 +172,7 @@ async function callOpenAI(
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`${baseUrl}/responses`, {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -184,18 +185,33 @@ async function callOpenAI(
     clearTimeout(timeout);
 
     if (!response.ok) {
-      const errorPayload = await response.json().catch(() => ({})) as { error?: { message?: string } };
-      throw new Error(errorPayload.error?.message ?? `OpenAI error (${response.status})`);
+      const errorText = await response.text().catch(() => '');
+      let errorMsg = `OpenAI error (${response.status})`;
+      try {
+        const errorPayload = JSON.parse(errorText) as { error?: { message?: string } };
+        if (errorPayload.error?.message) {
+          errorMsg = errorPayload.error.message;
+        }
+      } catch {
+        if (errorText.length > 0 && errorText.length < 500) {
+          errorMsg += `: ${errorText}`;
+        }
+      }
+      throw new Error(errorMsg);
     }
 
     const payload = await response.json() as {
-      output?: OpenAIOutputItem[];
-      output_text?: string;
+      choices?: ChatCompletionChoice[];
     };
 
+    const choice = payload.choices?.[0];
+    if (!choice) {
+      throw new Error('OpenAI returned no choices');
+    }
+
     return {
-      outputItems: Array.isArray(payload.output) ? payload.output : [],
-      outputText: typeof payload.output_text === 'string' ? payload.output_text : null,
+      message: choice.message,
+      finishReason: choice.finish_reason,
     };
   } finally {
     clearTimeout(timeout);
@@ -228,8 +244,8 @@ export async function executeAgenticLoop(
   const executor = getAgenticToolExecutor();
   const allToolCalls: AgenticResult['toolCalls'] = [];
 
-  // Build message history for OpenAI
-  const messages: OpenAIMessage[] = [
+  // Build message history for OpenAI Chat Completions
+  const messages: ChatCompletionMessage[] = [
     {
       role: 'system',
       content: buildAgenticSystemPrompt(context, chatHistory),
@@ -247,7 +263,7 @@ export async function executeAgenticLoop(
   // Add current user message
   messages.push({
     role: 'user',
-    content: [{ type: 'input_text', text: userMessage }],
+    content: userMessage,
   });
 
   logger.info('Starting agentic loop', {
@@ -274,24 +290,29 @@ export async function executeAgenticLoop(
       };
     }
 
-    // Call OpenAI
+    // Call OpenAI Chat Completions
     const remainingTimeMs = Math.min(
       cfg.perCallTimeoutMs,
       cfg.totalTimeoutMs - elapsed
     );
 
-    const response = await callOpenAI(messages, tools, remainingTimeMs);
+    const response = await callChatCompletions(messages, tools, remainingTimeMs);
 
-    // Check for function calls
-    const functionCalls = response.outputItems.filter(
-      item => item.type === 'function_call'
-    );
+    // Check for tool calls
+    const toolCalls = response.message.tool_calls;
 
-    if (functionCalls.length > 0) {
-      // Execute each tool call
-      for (const fc of functionCalls) {
-        const toolName = fc.name ?? 'unknown';
-        const argsString = fc.arguments ?? '{}';
+    if (toolCalls && toolCalls.length > 0) {
+      // Add the assistant message WITH tool_calls to conversation
+      messages.push({
+        role: 'assistant',
+        content: response.message.content ?? null,
+        tool_calls: toolCalls,
+      });
+
+      // Execute each tool call and add results
+      for (const tc of toolCalls) {
+        const toolName = tc.function.name;
+        const argsString = tc.function.arguments;
         let toolArgs: Record<string, unknown> = {};
 
         try {
@@ -304,6 +325,7 @@ export async function executeAgenticLoop(
           requestId: context.requestId,
           iteration,
           tool: toolName,
+          callId: tc.id,
         });
 
         const result = await executor.executeTool(toolName, toolArgs, context);
@@ -319,11 +341,11 @@ export async function executeAgenticLoop(
           result: truncatedResult,
         });
 
-        // Add tool result as function message for next iteration
+        // Add tool result message with matching tool_call_id
         messages.push({
-          role: 'function',
-          name: toolName,
+          role: 'tool',
           content: truncatedResult,
+          tool_call_id: tc.id,
         });
       }
 
@@ -331,8 +353,7 @@ export async function executeAgenticLoop(
     }
 
     // No tool calls — AI generated final text answer
-    const answer = response.outputText
-      ?? extractTextFromOutput(response.outputItems)
+    const answer = response.message.content
       ?? 'Δεν μπόρεσα να επεξεργαστώ το αίτημα.';
 
     // Clean potential JSON wrapping
@@ -371,22 +392,6 @@ export async function executeAgenticLoop(
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/**
- * Extract text content from OpenAI output items
- */
-function extractTextFromOutput(items: OpenAIOutputItem[]): string | null {
-  for (const item of items) {
-    if (item.type === 'message' && Array.isArray(item.content)) {
-      for (const entry of item.content) {
-        if (entry.type === 'output_text' && typeof entry.text === 'string') {
-          return entry.text.trim();
-        }
-      }
-    }
-  }
-  return null;
-}
 
 /**
  * Clean AI text reply — strip JSON wrapping if present
