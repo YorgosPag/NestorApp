@@ -11,10 +11,15 @@ import 'server-only';
 import {
   AI_ANALYSIS_DEFAULTS,
   AI_MULTI_INTENT_SCHEMA,
-  AI_ADMIN_COMMAND_SCHEMA,
   AI_DOCUMENT_CLASSIFY_SCHEMA,
   AI_ANALYSIS_PROMPTS,
 } from '@/config/ai-analysis-config';
+import {
+  ADMIN_TOOL_DEFINITIONS,
+  ADMIN_TOOL_SYSTEM_PROMPT,
+  mapToolCallToAnalysisResult,
+  buildConversationalFallbackResult,
+} from '@/config/admin-tool-definitions';
 import {
   validateAIAnalysisResult,
   type AIAnalysisResult,
@@ -50,6 +55,14 @@ interface OpenAIRequestBody {
   text?: {
     format?: OpenAIResponsesFormat;
   };
+  tools?: ReadonlyArray<{
+    type: 'function';
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+    strict: boolean;
+  }>;
+  tool_choice?: 'auto' | 'none' | 'required';
 }
 
 interface OpenAIProviderConfig {
@@ -223,9 +236,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     const isAdminCommand = input.kind === 'message_intent' && input.context?.isAdminCommand === true;
     const systemPrompt = input.kind === 'document_classify'
       ? AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM
-      : isAdminCommand
-        ? AI_ANALYSIS_PROMPTS.ADMIN_COMMAND_SYSTEM
-        : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
+      : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
 
     const content: OpenAIRequestContent[] = [
       { type: 'input_text', text: prompt },
@@ -246,13 +257,69 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       }
     }
 
-    // Select the correct schema based on analysis kind (no oneOf needed)
-    // ADR-145: Admin commands use expanded schema with admin-specific entity fields
+    // ── ADR-145: Admin commands use tool calling (function calling) ──
+    // AI selects the appropriate tool and extracts ALL params semantically.
+    // Conversational replies come as plain text (no tool call → no 2nd API call).
+    if (isAdminCommand) {
+      const toolRequest: OpenAIRequestBody = {
+        model,
+        input: [
+          {
+            role: 'system',
+            content: [{ type: 'input_text', text: ADMIN_TOOL_SYSTEM_PROMPT }],
+          },
+          {
+            role: 'user',
+            content,
+          },
+        ],
+        tools: ADMIN_TOOL_DEFINITIONS,
+        tool_choice: 'auto',
+      };
+
+      let toolResponsePayload: unknown;
+      try {
+        toolResponsePayload = await this.executeRequest(toolRequest, options);
+      } catch (error) {
+        // If tool calling fails, fall back to structured output
+        if (error instanceof Error) {
+          const fallbackResult = buildFallbackResult(input, model);
+          return fallbackResult;
+        }
+        throw error;
+      }
+
+      // Extract function_call items from response.output
+      const outputArray = isRecord(toolResponsePayload)
+        && Array.isArray((toolResponsePayload as Record<string, unknown>).output)
+        ? (toolResponsePayload as Record<string, unknown>).output as Array<Record<string, unknown>>
+        : [];
+
+      const functionCalls = outputArray.filter(
+        (item) => isRecord(item) && item.type === 'function_call'
+      );
+
+      if (functionCalls.length > 0) {
+        // AI called a tool — map to pipeline result
+        return mapToolCallToAnalysisResult(
+          functionCalls[0] as { type: string; name?: string; call_id?: string; arguments?: string },
+          model
+        );
+      }
+
+      // No tool called → conversational reply (text output)
+      const textReply = extractOutputText(toolResponsePayload);
+      if (textReply) {
+        return buildConversationalFallbackResult(textReply, model);
+      }
+
+      return buildFallbackResult(input, model);
+    }
+
+    // ── Non-admin: structured output with JSON schema ──
     const jsonSchema = input.kind === 'document_classify'
       ? AI_DOCUMENT_CLASSIFY_SCHEMA
-      : isAdminCommand
-        ? AI_ADMIN_COMMAND_SCHEMA
-        : AI_MULTI_INTENT_SCHEMA;
+      : AI_MULTI_INTENT_SCHEMA;
 
     // Responses API: name/strict/schema go directly in format (NOT nested in json_schema)
     const request: OpenAIRequestBody = {

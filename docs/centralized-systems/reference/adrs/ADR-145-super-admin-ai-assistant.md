@@ -113,11 +113,14 @@ interface AdminCommandMeta {
 }
 ```
 
-### 3.3 Admin-Specific AI Prompt
+### 3.3 Admin-Specific AI — Tool Calling (Function Calling)
 
-Νέο `ADMIN_COMMAND_SYSTEM` prompt στο `ai-analysis-config.ts`:
-- Αναγνωρίζει admin command intents: contact search, project status, send email, unit stats
-- Εξάγει entities: `contactName`, `projectName`, `recipientName`, `emailContent`
+**Αρχιτεκτονική (2026-02-10):** Αντί για structured output JSON schema, τα admin commands χρησιμοποιούν **OpenAI tool calling** (function calling). Η AI επιλέγει το κατάλληλο tool και εξάγει ΟΛΑ τα params σημασιολογικά — μηδέν regex.
+
+- **7 tools** στο `src/config/admin-tool-definitions.ts`: `search_contacts`, `get_project_status`, `send_email`, `get_business_stats`, `create_contact`, `update_contact_field`, `remove_contact_field`
+- **System prompt**: `ADMIN_TOOL_SYSTEM_PROMPT` — οδηγίες για σημασιολογική κατανόηση, declension handling, field names
+- **Conversational fallback**: Αν η AI δεν καλέσει tool → text reply → UC-014 χωρίς 2η API κλήση
+- **Mapping**: `mapToolCallToAnalysisResult()` μετατρέπει tool call → pipeline-compatible `AIAnalysisResult`
 - Ενεργοποιείται **μόνο** όταν `isAdminCommand === true`
 
 ### 3.4 Admin Intent Types
@@ -517,6 +520,7 @@ interface AdminSession {
 | 2026-02-10 | Bug fix: "ταυτότητα/ΑΔΤ" intent misclassification — προσθήκη `idNumber` field mapping στο UC-016, clarification στο AI prompt ότι ταυτότητα+πρόσωπο → `admin_update_contact` (ΟΧΙ unit_stats) | Claude Code |
 | 2026-02-10 | Fix: UC-012 compound "find+send" commands — `COMPOUND_FIND_SEND_PATTERN` detects "Βρες επαφή X και στείλε", `EXPLICIT_EMAIL_PATTERN` extracts email from command, `overrideRecipientEmail` overrides contact's email. Fixes bug where raw command was sent as email body instead of contact card | Claude Code |
 | 2026-02-10 | Critical fix: Telegram function timeout — `maxDuration=60` στο webhook route.ts (default 10s δεν αρκεί για 2 OpenAI calls). Fix: `admin_general_question` mapping στον orchestrator. Fix: race condition — `feedTelegramToPipeline` γίνεται awaitable αντί fire-and-forget ώστε η `after()` να βρίσκει πάντα το item στο queue | Claude Code |
+| 2026-02-10 | **ARCH: OpenAI Function Calling (Tool Use)** — Αντικατάσταση structured output (JSON schema) με tool calling για admin commands. 7 tool definitions (`search_contacts`, `get_project_status`, `send_email`, `get_business_stats`, `create_contact`, `update_contact_field`, `remove_contact_field`) αντικαθιστούν `AI_ADMIN_COMMAND_SCHEMA`. Η AI εξάγει ΟΛΑ τα params σημασιολογικά — μηδέν regex parsing. Conversational replies μέσω text fallback (0 extra API calls). UC modules λαμβάνουν pre-parsed entities. Νέο αρχείο: `src/config/admin-tool-definitions.ts`. Customer pipeline δεν αλλάζει. | Claude Code |
 
 ---
 

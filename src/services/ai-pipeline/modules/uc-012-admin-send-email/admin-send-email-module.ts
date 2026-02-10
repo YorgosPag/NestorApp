@@ -153,54 +153,78 @@ export class AdminSendEmailModule implements IUCModule {
       });
     }
 
-    // ── Compound command: "Βρες επαφή X και στείλε" → contact card as content ──
-    const compoundMatch = rawMessage.match(COMPOUND_FIND_SEND_PATTERN);
-    if (compoundMatch?.[1]) {
-      const compoundContactName = compoundMatch[1].trim();
+    // ── Contact card: AI extracts includeContactCardOf via tool calling ──
+    const includeCardOfEntity = (ctx.understanding?.entities?.includeContactCardOf as string) ?? null;
+
+    if (includeCardOfEntity) {
+      // AI-extracted entity — no regex needed
       try {
-        const compoundResults = await findContactByName(compoundContactName, ctx.companyId, 1);
-        if (compoundResults.length > 0) {
-          emailContent = formatContactCard(compoundResults[0]);
-          // If no recipient was found yet, use the compound contact for name display
-          if (!targetContact) {
-            targetContact = compoundResults[0];
-          }
-          logger.info('UC-012 LOOKUP: Compound find+send — contact card resolved', {
+        const cardResults = await findContactByName(includeCardOfEntity, ctx.companyId, 1);
+        if (cardResults.length > 0) {
+          emailContent = formatContactCard(cardResults[0]);
+          logger.info('UC-012 LOOKUP: Contact card via AI entity', {
             requestId: ctx.requestId,
-            compoundContactName,
-            resolvedName: compoundResults[0].name,
+            includeCardOf: includeCardOfEntity,
+            resolvedName: cardResults[0].name,
           });
         }
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        logger.warn('UC-012 LOOKUP: Compound find+send lookup failed', {
+        logger.warn('UC-012 LOOKUP: Contact card AI entity lookup failed', {
           requestId: ctx.requestId,
-          compoundContactName,
+          includeCardOf: includeCardOfEntity,
           error: msg,
         });
       }
     } else {
-      // ── Fallback: "στοιχεία του/της X" pattern (without "βρες...και στείλε") ──
-      const cardMatch = emailContent.match(CONTACT_CARD_PATTERN);
-      if (cardMatch?.[1]) {
-        const cardContactName = cardMatch[1].trim();
+      // ── Fallback: regex-based compound command detection ──
+      const compoundMatch = rawMessage.match(COMPOUND_FIND_SEND_PATTERN);
+      if (compoundMatch?.[1]) {
+        const compoundContactName = compoundMatch[1].trim();
         try {
-          const cardResults = await findContactByName(cardContactName, ctx.companyId, 1);
-          if (cardResults.length > 0) {
-            emailContent = formatContactCard(cardResults[0]);
-            logger.info('UC-012 LOOKUP: Contact card pattern resolved', {
+          const compoundResults = await findContactByName(compoundContactName, ctx.companyId, 1);
+          if (compoundResults.length > 0) {
+            emailContent = formatContactCard(compoundResults[0]);
+            if (!targetContact) {
+              targetContact = compoundResults[0];
+            }
+            logger.info('UC-012 LOOKUP: Compound find+send — contact card resolved (regex fallback)', {
               requestId: ctx.requestId,
-              cardContactName,
-              resolvedName: cardResults[0].name,
+              compoundContactName,
+              resolvedName: compoundResults[0].name,
             });
           }
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
-          logger.warn('UC-012 LOOKUP: Contact card lookup failed', {
+          logger.warn('UC-012 LOOKUP: Compound find+send lookup failed', {
             requestId: ctx.requestId,
-            cardContactName,
+            compoundContactName,
             error: msg,
           });
+        }
+      } else {
+        // ── Fallback: "στοιχεία του/της X" pattern ──
+        const cardMatch = emailContent.match(CONTACT_CARD_PATTERN);
+        if (cardMatch?.[1]) {
+          const cardContactName = cardMatch[1].trim();
+          try {
+            const cardResults = await findContactByName(cardContactName, ctx.companyId, 1);
+            if (cardResults.length > 0) {
+              emailContent = formatContactCard(cardResults[0]);
+              logger.info('UC-012 LOOKUP: Contact card pattern resolved (regex fallback)', {
+                requestId: ctx.requestId,
+                cardContactName,
+                resolvedName: cardResults[0].name,
+              });
+            }
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            logger.warn('UC-012 LOOKUP: Contact card lookup failed', {
+              requestId: ctx.requestId,
+              cardContactName,
+              error: msg,
+            });
+          }
         }
       }
     }

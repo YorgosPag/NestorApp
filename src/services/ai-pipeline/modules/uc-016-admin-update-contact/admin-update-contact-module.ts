@@ -121,19 +121,29 @@ export class AdminUpdateContactModule implements IUCModule {
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
     const rawMessage = ctx.intake.normalized.contentText ?? '';
 
-    // 1. Detect action: SET (default) or REMOVE
-    const action: UpdateAction = detectRemoveAction(rawMessage) ? 'remove' : 'set';
+    // ── AI tool calling extracts entities semantically — fallback to regex ──
+    const aiAction = (ctx.understanding?.entities?.action as string) ?? null;
+    const aiFieldName = (ctx.understanding?.entities?.fieldName as string) ?? null;
+    const aiFieldValue = (ctx.understanding?.entities?.fieldValue as string) ?? null;
+    const aiContactName = (ctx.understanding?.entities?.contactName as string) ?? null;
 
-    // 2. Detect field from message
-    const detectedField = detectField(rawMessage);
+    // 1. Detect action: AI entity first, then regex fallback
+    const action: UpdateAction = aiAction === 'remove'
+      ? 'remove'
+      : (aiAction === 'set' ? 'set' : (detectRemoveAction(rawMessage) ? 'remove' : 'set'));
 
-    // 3. Extract value for the detected field (not needed for REMOVE)
+    // 2. Detect field: AI entity first, then keyword detection fallback
+    const detectedField = aiFieldName
+      ? (FIELD_KEYWORDS.find(f => f.field === aiFieldName) ?? detectField(rawMessage))
+      : detectField(rawMessage);
+
+    // 3. Extract value: AI entity first, then regex fallback (not needed for REMOVE)
     const detectedValue = (action === 'set' && detectedField)
-      ? extractFieldValue(rawMessage, detectedField)
+      ? (aiFieldValue ?? extractFieldValue(rawMessage, detectedField))
       : null;
 
-    // 4. Extract contact name from message
-    const contactName = extractContactName(rawMessage, detectedField, detectedValue);
+    // 4. Extract contact name: AI entity first, then regex fallback
+    const contactName = aiContactName ?? extractContactName(rawMessage, detectedField, detectedValue);
 
     logger.info('UC-016 LOOKUP: Parsed update data', {
       requestId: ctx.requestId,

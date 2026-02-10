@@ -39,6 +39,14 @@ const logger = createModuleLogger('UC_013_ADMIN_UNIT_STATS');
 
 type StatsType = 'units' | 'contacts' | 'projects' | 'all' | 'unit_categories';
 
+const VALID_STATS_TYPES: ReadonlySet<string> = new Set<StatsType>([
+  'units', 'contacts', 'projects', 'all', 'unit_categories',
+]);
+
+function isValidStatsType(value: string): value is StatsType {
+  return VALID_STATS_TYPES.has(value);
+}
+
 interface BusinessStatsLookupData {
   statsType: StatsType;
   projectFilter: string | null;
@@ -161,7 +169,12 @@ export class AdminUnitStatsModule implements IUCModule {
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
     const projectFilter = (ctx.understanding?.entities?.projectName as string) ?? null;
     const messageText = ctx.intake.normalized.contentText ?? '';
-    const statsType = this.detectStatsType(messageText);
+
+    // AI tool calling extracts statsType semantically — fallback to keyword detection
+    const aiStatsType = (ctx.understanding?.entities?.statsType as string) ?? null;
+    const statsType: StatsType = (aiStatsType && isValidStatsType(aiStatsType))
+      ? aiStatsType
+      : this.detectStatsType(messageText);
 
     logger.info('UC-013 LOOKUP: Aggregating business statistics', {
       requestId: ctx.requestId,

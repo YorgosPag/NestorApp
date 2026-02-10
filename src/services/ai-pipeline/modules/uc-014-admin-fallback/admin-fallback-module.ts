@@ -106,12 +106,19 @@ export class AdminFallbackModule implements IUCModule {
         ?? (ctx.intake.normalized.sender.telegramId)
         ?? undefined;
 
-      // ── Conversational AI: try OpenAI first, fallback to static help ──
+      // ── Conversational AI: check pre-generated reply from tool calling first ──
       const originalMessage = ctx.intake.normalized.contentText ?? '';
       let replyText = ADMIN_HELP_TEXT;
       const sideEffects: string[] = [];
 
-      if (originalMessage.length > 0) {
+      // Tool calling: AI already generated a conversational reply (no 2nd API call needed)
+      const preGeneratedReply = (ctx.understanding?.entities?.conversationalReply as string) ?? null;
+
+      if (preGeneratedReply) {
+        replyText = preGeneratedReply;
+        sideEffects.push('ai_conversational_pregenerated');
+      } else if (originalMessage.length > 0) {
+        // Fallback: generate via separate OpenAI call
         const aiResult = await generateAdminConversationalReply(originalMessage, ctx.requestId);
         if (aiResult.replyText) {
           replyText = aiResult.replyText;
