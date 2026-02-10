@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface DashboardStats {
   totalIncome: number;
@@ -28,6 +29,7 @@ export function AccountingDashboard() {
   const { t } = useTranslation('accounting');
   const router = useRouter();
   const { user } = useAuth();
+  const colors = useSemanticColors();
 
   const [stats, setStats] = useState<DashboardStats>({
     totalIncome: 0,
@@ -81,29 +83,29 @@ export function AccountingDashboard() {
       title: t('dashboard.totalIncome'),
       value: stats.totalIncome,
       icon: ArrowUpRight,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-950/20',
+      color: colors.text.success,
+      bgColor: colors.bg.successSubtle,
     },
     {
       title: t('dashboard.totalExpenses'),
       value: stats.totalExpenses,
       icon: ArrowDownRight,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50 dark:bg-red-950/20',
+      color: colors.text.error,
+      bgColor: colors.bg.errorSubtle,
     },
     {
       title: t('dashboard.vatOwed'),
       value: stats.vatOwed,
       icon: DollarSign,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50 dark:bg-amber-950/20',
+      color: colors.text.warning,
+      bgColor: colors.bg.warningSubtle,
     },
     {
       title: t('dashboard.pendingInvoices'),
       value: stats.pendingInvoices,
       icon: FileWarning,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-950/20',
+      color: colors.text.info,
+      bgColor: colors.bg.infoSubtle,
       isCount: true,
     },
   ];
@@ -204,3 +206,4 @@ export function AccountingDashboard() {
     </main>
   );
 }
+

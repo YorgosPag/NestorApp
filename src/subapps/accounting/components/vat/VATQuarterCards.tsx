@@ -12,6 +12,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Badge } from '@/components/ui/badge';
 import type { VATQuarterSummary, VATQuarterStatus, FiscalQuarter } from '@/subapps/accounting/types';
 
@@ -59,6 +60,7 @@ interface QuarterCardProps {
 
 function QuarterCard({ quarter }: QuarterCardProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   return (
     <Card>
@@ -87,14 +89,14 @@ function QuarterCard({ quarter }: QuarterCardProps) {
           </div>
           <div className="flex justify-between border-t border-border pt-2">
             <dt className="font-medium">{t('vat.vatPayable')}</dt>
-            <dd className={`font-bold ${quarter.vatPayable >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+            <dd className={`font-bold ${quarter.vatPayable >= 0 ? colors.text.error : colors.text.success}`}>
               {formatCurrency(quarter.vatPayable)}
             </dd>
           </div>
           {quarter.vatCredit > 0 && (
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{t('vat.vatCredit')}</dt>
-              <dd className="font-medium text-green-600">{formatCurrency(quarter.vatCredit)}</dd>
+              <dd className={`font-medium ${colors.text.success}`}>{formatCurrency(quarter.vatCredit)}</dd>
             </div>
           )}
         </dl>
@@ -113,6 +115,7 @@ interface EmptyQuarterCardProps {
 
 function EmptyQuarterCard({ quarterNumber }: EmptyQuarterCardProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   return (
     <Card className="opacity-60">
@@ -168,3 +171,4 @@ export function VATQuarterCards({ quarters }: VATQuarterCardsProps) {
     </div>
   );
 }
+

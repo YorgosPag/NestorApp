@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-02-03T12:07:20.617Z",
-  "duration": 66772,
+  "timestamp": "2026-02-09T23:47:47.497Z",
+  "duration": 44808,
   "total": 7,
   "passed": 7,
   "failed": 0,
@@ -17,8 +17,8 @@
         "width": 800,
         "height": 600
       },
-      "timestamp": "2026-02-03T12:06:20.548Z",
-      "duration": 6653,
+      "timestamp": "2026-02-09T23:47:08.012Z",
+      "duration": 5311,
       "artifacts": {
         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-800x600.baseline.png",
@@ -44,8 +44,8 @@
         "width": 800,
         "height": 600
       },
-      "timestamp": "2026-02-03T12:06:25.559Z",
-      "duration": 4963,
+      "timestamp": "2026-02-09T23:47:11.385Z",
+      "duration": 3367,
       "artifacts": {
         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.baseline.png",
@@ -71,8 +71,8 @@
         "width": 800,
         "height": 600
       },
-      "timestamp": "2026-02-03T12:06:30.807Z",
-      "duration": 5205,
+      "timestamp": "2026-02-09T23:47:14.714Z",
+      "duration": 3322,
       "artifacts": {
         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-800x600.baseline.png",
@@ -98,8 +98,8 @@
         "width": 1920,
         "height": 1080
       },
-      "timestamp": "2026-02-03T12:06:59.909Z",
-      "duration": 29095,
+      "timestamp": "2026-02-09T23:47:32.031Z",
+      "duration": 17308,
       "artifacts": {
         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.baseline.png",
@@ -125,8 +125,8 @@
         "width": 800,
         "height": 800
       },
-      "timestamp": "2026-02-03T12:07:08.373Z",
-      "duration": 8377,
+      "timestamp": "2026-02-09T23:47:39.129Z",
+      "duration": 7093,
       "artifacts": {
         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.baseline.png",
@@ -152,8 +152,8 @@
         "width": 320,
         "height": 240
       },
-      "timestamp": "2026-02-03T12:07:09.780Z",
-      "duration": 1306,
+      "timestamp": "2026-02-09T23:47:39.964Z",
+      "duration": 822,
       "artifacts": {
         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.baseline.png",
@@ -179,8 +179,8 @@
         "width": 1024,
         "height": 768
       },
-      "timestamp": "2026-02-03T12:07:20.450Z",
-      "duration": 10625,
+      "timestamp": "2026-02-09T23:47:47.319Z",
+      "duration": 7349,
       "artifacts": {
         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.baseline.png",

@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { JournalEntry } from '@/subapps/accounting/types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { JournalEntryRow } from './JournalEntryRow';
 
 // ============================================================================
@@ -42,6 +43,7 @@ const formatCurrency = (amount: number): string =>
 
 export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const totalIncome = entries
     .filter((e) => e.type === 'income')
@@ -81,15 +83,15 @@ export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
       <footer className="mt-4 flex flex-wrap gap-6 text-sm">
         <dl className="flex items-center gap-2">
           <dt className="text-muted-foreground">{t('journal.totalIncome')}:</dt>
-          <dd className="font-semibold text-green-600">{formatCurrency(totalIncome)}</dd>
+          <dd className={`font-semibold ${colors.text.success}`}>{formatCurrency(totalIncome)}</dd>
         </dl>
         <dl className="flex items-center gap-2">
           <dt className="text-muted-foreground">{t('journal.totalExpenses')}:</dt>
-          <dd className="font-semibold text-red-600">{formatCurrency(totalExpenses)}</dd>
+          <dd className={`font-semibold ${colors.text.error}`}>{formatCurrency(totalExpenses)}</dd>
         </dl>
         <dl className="flex items-center gap-2">
           <dt className="text-muted-foreground">{t('journal.netResult')}:</dt>
-          <dd className={`font-bold ${netResult >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <dd className={`font-bold ${netResult >= 0 ? colors.text.success : colors.text.error}`}>
             {formatCurrency(netResult)}
           </dd>
         </dl>
@@ -97,3 +99,5 @@ export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
     </section>
   );
 }
+
+

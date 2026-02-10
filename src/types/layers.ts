@@ -1,4 +1,5 @@
 import type { Property } from '@/types/property-viewer';
+import { designTokens } from '@/styles/design-tokens';
 
 /**
  * 🚨 ENTERPRISE MIGRATION NOTICE
@@ -263,39 +264,39 @@ export type LayerCategory = Exclude<NonNullable<Layer['metadata']>['category'], 
  */
 export const DEFAULT_LAYER_STYLES: Record<LayerElementType, LayerStyle> = {
   property: {
-    strokeColor: '#3b82f6',    // Enhanced blue (WCAG AA)
-    fillColor: '#3b82f6',
+    strokeColor: designTokens.colors.blue['500'],    // Enhanced blue (WCAG AA)
+    fillColor: designTokens.colors.blue['500'],
     strokeWidth: 2,
     opacity: 0.3
   },
   annotation: {
-    strokeColor: '#10b981',    // Enhanced green (WCAG AA)
-    fillColor: '#10b981',
+    strokeColor: designTokens.colors.green['500'],    // Enhanced green (WCAG AA)
+    fillColor: designTokens.colors.green['500'],
     strokeWidth: 1,
     opacity: 1
   },
   measurement: {
-    strokeColor: '#f59e0b',    // Enhanced amber (WCAG AA)
-    fillColor: '#f59e0b',
+    strokeColor: designTokens.colors.yellow['500'],    // Enhanced amber (WCAG AA)
+    fillColor: designTokens.colors.yellow['500'],
     strokeWidth: 2,
     opacity: 1,
     dashArray: '5,5'
   },
   line: {
-    strokeColor: '#6b7280',    // Enhanced gray (WCAG AA)
-    fillColor: 'transparent',
+    strokeColor: designTokens.colors.gray['500'],    // Enhanced gray (WCAG AA)
+    fillColor: designTokens.colors.background.transparent,
     strokeWidth: 2,
     opacity: 1
   },
   circle: {
-    strokeColor: '#8b5cf6',    // Enhanced purple (WCAG AA)
-    fillColor: '#8b5cf6',
+    strokeColor: designTokens.colors.purple['500'],    // Enhanced purple (WCAG AA)
+    fillColor: designTokens.colors.purple['500'],
     strokeWidth: 2,
     opacity: 0.2
   },
   rectangle: {
-    strokeColor: '#ef4444',    // Enhanced red (WCAG AA)
-    fillColor: '#ef4444',
+    strokeColor: designTokens.colors.red['500'],    // Enhanced red (WCAG AA)
+    fillColor: designTokens.colors.red['500'],
     strokeWidth: 2,
     opacity: 0.2
   }
@@ -340,37 +341,37 @@ export const LAYER_CATEGORIES: Record<LayerCategory, { name: string; icon: strin
   structural: {
     name: 'Δομικά Στοιχεία',
     icon: 'Building',
-    color: '#64748b'    // Enhanced slate (WCAG AA)
+    color: designTokens.colors.gray['500']    // Enhanced slate (WCAG AA)
   },
   electrical: {
     name: 'Ηλεκτρολογικά',
     icon: 'Zap',
-    color: '#eab308'    // Enhanced yellow (WCAG AA)
+    color: designTokens.colors.yellow['500']    // Enhanced yellow (WCAG AA)
   },
   plumbing: {
     name: 'Υδραυλικά',
     icon: 'Droplets',
-    color: '#3b82f6'    // Enhanced blue (WCAG AA)
+    color: designTokens.colors.blue['500']    // Enhanced blue (WCAG AA)
   },
   hvac: {
     name: 'Κλιματισμός',
     icon: 'Wind',
-    color: '#10b981'    // Enhanced green (WCAG AA)
+    color: designTokens.colors.green['500']    // Enhanced green (WCAG AA)
   },
   furniture: {
     name: 'Έπιπλα',
     icon: 'Armchair',
-    color: '#8b5cf6'    // Enhanced purple (WCAG AA)
+    color: designTokens.colors.purple['500']    // Enhanced purple (WCAG AA)
   },
   annotations: {
     name: 'Σημειώσεις',
     icon: 'MessageSquare',
-    color: '#f59e0b'    // Enhanced amber (WCAG AA)
+    color: designTokens.colors.yellow['500']    // Enhanced amber (WCAG AA)
   },
   measurements: {
     name: 'Μετρήσεις',
     icon: 'Ruler',
-    color: '#ef4444'    // Enhanced red (WCAG AA)
+    color: designTokens.colors.red['500']    // Enhanced red (WCAG AA)
   }
 };
 
@@ -438,4 +439,5 @@ export interface LayerExportData {
     totalElements: number;
   };
 }
+
 

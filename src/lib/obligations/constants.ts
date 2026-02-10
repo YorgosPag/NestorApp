@@ -1,4 +1,5 @@
 import { SectionCategory, ObligationStatus } from '@/types/obligations';
+import { designTokens } from '@/styles/design-tokens';
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const SECTION_CATEGORIES: Record<SectionCategory, {
@@ -9,49 +10,49 @@ export const SECTION_CATEGORIES: Record<SectionCategory, {
 }> = {
   general: {
     label: 'obligations.categories.general',
-    color: '#6B7280',
+    color: designTokens.colors.gray['500'],
     icon: 'FileText',
     description: 'obligations.categories.generalDescription'
   },
   construction: {
     label: 'obligations.categories.construction',
-    color: '#DC2626',
+    color: designTokens.colors.red['600'],
     icon: 'Hammer',
     description: 'obligations.categories.constructionDescription'
   },
   materials: {
     label: 'obligations.categories.materials',
-    color: '#059669',
+    color: designTokens.colors.green['600'],
     icon: 'Package',
     description: 'obligations.categories.materialsDescription'
   },
   systems: {
     label: 'obligations.categories.systems',
-    color: '#7C2D12',
+    color: designTokens.colors.orange['900'],
     icon: 'Settings',
     description: 'obligations.categories.systemsDescription'
   },
   finishes: {
     label: 'obligations.categories.finishes',
-    color: '#7C3AED',
+    color: designTokens.colors.purple['600'],
     icon: 'Palette',
     description: 'obligations.categories.finishesDescription'
   },
   installations: {
     label: 'obligations.categories.installations',
-    color: '#B91C1C',
+    color: designTokens.colors.red['700'],
     icon: 'Zap',
     description: 'obligations.categories.installationsDescription'
   },
   safety: {
     label: 'obligations.categories.safety',
-    color: '#DC2626',
+    color: designTokens.colors.red['600'],
     icon: 'Shield',
     description: 'obligations.categories.safetyDescription'
   },
   environment: {
     label: 'obligations.categories.environment',
-    color: '#16A34A',
+    color: designTokens.colors.green['600'],
     icon: 'Leaf',
     description: 'obligations.categories.environmentDescription'
   }
@@ -102,7 +103,7 @@ export function getCategoryLabel(category: SectionCategory): string {
 }
 
 export function getCategoryColor(category: SectionCategory): string {
-  return SECTION_CATEGORIES[category]?.color || '#6B7280';
+  return SECTION_CATEGORIES[category]?.color || designTokens.colors.gray['500'];
 }
 
 export function getCategoryIcon(category: SectionCategory): string {

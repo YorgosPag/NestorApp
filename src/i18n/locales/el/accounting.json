@@ -315,7 +315,7 @@
     "city": "Πόλη",
     "postalCode": "Ταχ. Κώδικας",
     "phone": "Τηλέφωνο",
-    "email": "Email",
+    "email": "Ηλεκτρονικό ταχυδρομείο",
     "fiscalInfo": "Φορολογικά Στοιχεία",
     "bookCategory": "Κατηγορία Βιβλίων",
     "bookCategories": {
@@ -367,3 +367,4 @@
     "recentActivity": "Πρόσφατη Δραστηριότητα"
   }
 }
+

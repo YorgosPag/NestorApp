@@ -21,6 +21,7 @@
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { designTokens } from '@/styles/design-tokens';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -475,39 +476,39 @@ class EnterpriseLayerStyleService {
   getFallbackStyles(theme: string): Record<LayerElementType, EnterpriseLayerStyle> {
     const baseStyles: Record<LayerElementType, EnterpriseLayerStyle> = {
       property: {
-        strokeColor: '#3b82f6',
-        fillColor: '#3b82f6',
+        strokeColor: designTokens.colors.blue['500'],
+        fillColor: designTokens.colors.blue['500'],
         strokeWidth: 2,
         opacity: 0.3
       },
       annotation: {
-        strokeColor: '#10b981',
-        fillColor: '#10b981',
+        strokeColor: designTokens.colors.green['500'],
+        fillColor: designTokens.colors.green['500'],
         strokeWidth: 1,
         opacity: 1
       },
       measurement: {
-        strokeColor: '#f59e0b',
-        fillColor: '#f59e0b',
+        strokeColor: designTokens.colors.yellow['500'],
+        fillColor: designTokens.colors.yellow['500'],
         strokeWidth: 2,
         opacity: 1,
         dashArray: '5,5'
       },
       line: {
-        strokeColor: '#6b7280',
-        fillColor: 'transparent',
+        strokeColor: designTokens.colors.gray['500'],
+        fillColor: designTokens.colors.background.transparent,
         strokeWidth: 2,
         opacity: 1
       },
       circle: {
-        strokeColor: '#8b5cf6',
-        fillColor: '#8b5cf6',
+        strokeColor: designTokens.colors.purple['500'],
+        fillColor: designTokens.colors.purple['500'],
         strokeWidth: 2,
         opacity: 0.2
       },
       rectangle: {
-        strokeColor: '#ef4444',
-        fillColor: '#ef4444',
+        strokeColor: designTokens.colors.red['500'],
+        fillColor: designTokens.colors.red['500'],
         strokeWidth: 2,
         opacity: 0.2
       }
@@ -519,23 +520,23 @@ class EnterpriseLayerStyleService {
       Object.keys(baseStyles).forEach(key => {
         const style = baseStyles[key as LayerElementType];
         style.strokeColor = this.adjustColorForDarkTheme(style.strokeColor);
-        if (style.fillColor !== 'transparent') {
+        if (style.fillColor !== designTokens.colors.background.transparent) {
           style.fillColor = this.adjustColorForDarkTheme(style.fillColor);
         }
       });
     } else if (theme === 'high-contrast') {
       // High contrast colors για accessibility
-      baseStyles.property.strokeColor = '#ffffff';
-      baseStyles.property.fillColor = '#000000';
-      baseStyles.annotation.strokeColor = '#ffff00';
-      baseStyles.annotation.fillColor = '#ffff00';
-      baseStyles.measurement.strokeColor = '#ff0000';
-      baseStyles.measurement.fillColor = '#ff0000';
-      baseStyles.line.strokeColor = '#ffffff';
-      baseStyles.circle.strokeColor = '#00ff00';
-      baseStyles.circle.fillColor = '#00ff00';
-      baseStyles.rectangle.strokeColor = '#0000ff';
-      baseStyles.rectangle.fillColor = '#0000ff';
+      baseStyles.property.strokeColor = designTokens.colors.text.inverse;
+      baseStyles.property.fillColor = designTokens.colors.text.primary;
+      baseStyles.annotation.strokeColor = designTokens.colors.yellow['500'];
+      baseStyles.annotation.fillColor = designTokens.colors.yellow['500'];
+      baseStyles.measurement.strokeColor = designTokens.colors.red['500'];
+      baseStyles.measurement.fillColor = designTokens.colors.red['500'];
+      baseStyles.line.strokeColor = designTokens.colors.text.inverse;
+      baseStyles.circle.strokeColor = designTokens.colors.green['500'];
+      baseStyles.circle.fillColor = designTokens.colors.green['500'];
+      baseStyles.rectangle.strokeColor = designTokens.colors.blue['500'];
+      baseStyles.rectangle.fillColor = designTokens.colors.blue['500'];
     }
 
     return baseStyles;
@@ -549,37 +550,37 @@ class EnterpriseLayerStyleService {
       structural: {
         name: 'Δομικά Στοιχεία',
         icon: 'Building',
-        color: '#64748b'
+        color: designTokens.colors.text.secondary
       },
       electrical: {
         name: 'Ηλεκτρολογικά',
         icon: 'Zap',
-        color: '#eab308'
+        color: designTokens.colors.yellow['500']
       },
       plumbing: {
         name: 'Υδραυλικά',
         icon: 'Droplets',
-        color: '#3b82f6'
+        color: designTokens.colors.blue['500']
       },
       hvac: {
         name: 'Κλιματισμός',
         icon: 'Wind',
-        color: '#10b981'
+        color: designTokens.colors.green['500']
       },
       furniture: {
         name: 'Έπιπλα',
         icon: 'Armchair',
-        color: '#8b5cf6'
+        color: designTokens.colors.purple['500']
       },
       annotations: {
         name: 'Σημειώσεις',
         icon: 'MessageSquare',
-        color: '#f59e0b'
+        color: designTokens.colors.orange['500']
       },
       measurements: {
         name: 'Μετρήσεις',
         icon: 'Ruler',
-        color: '#ef4444'
+        color: designTokens.colors.red['500']
       }
     };
 
@@ -600,14 +601,14 @@ class EnterpriseLayerStyleService {
   private adjustColorForDarkTheme(color: string): string {
     // Simple color adjustment για dark theme (could be more sophisticated)
     const colorMap: Record<string, string> = {
-      '#3b82f6': '#60a5fa', // blue
-      '#10b981': '#34d399', // green
-      '#f59e0b': '#fbbf24', // yellow
-      '#6b7280': '#9ca3af', // gray
-      '#8b5cf6': '#a78bfa', // purple
-      '#ef4444': '#f87171', // red
-      '#64748b': '#94a3b8', // slate
-      '#eab308': '#facc15'  // yellow
+      [designTokens.colors.blue['500']]: designTokens.colors.blue['400'],
+      [designTokens.colors.green['500']]: designTokens.colors.green['400'],
+      [designTokens.colors.yellow['500']]: designTokens.colors.yellow['400'],
+      [designTokens.colors.gray['500']]: designTokens.colors.text.muted,
+      [designTokens.colors.purple['500']]: designTokens.colors.purple['400'],
+      [designTokens.colors.red['500']]: designTokens.colors.red['300'],
+      [designTokens.colors.text.secondary]: designTokens.colors.text.muted,
+      [designTokens.colors.orange['500']]: designTokens.colors.orange['300']
     };
 
     return colorMap[color] || color;
@@ -687,3 +688,4 @@ class EnterpriseLayerStyleService {
 
 export const layerStyleService = new EnterpriseLayerStyleService();
 export default layerStyleService;
+

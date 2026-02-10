@@ -13,6 +13,7 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -36,6 +37,7 @@ const formatCurrency = (amount: number): string =>
 
 export function VATSummaryCard({ summary }: VATSummaryCardProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   return (
     <Card>
@@ -61,7 +63,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
           {/* Annual VAT Payable */}
           <div className="flex justify-between">
             <dt className="font-medium">{t('vat.vatPayable')}</dt>
-            <dd className={`text-lg font-bold ${summary.annualVatPayable >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+            <dd className={`text-lg font-bold ${summary.annualVatPayable >= 0 ? colors.text.error : colors.text.success}`}>
               {formatCurrency(summary.annualVatPayable)}
             </dd>
           </div>
@@ -70,7 +72,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
           {summary.annualVatCredit > 0 && (
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{t('vat.vatCredit')}</dt>
-              <dd className="font-medium text-green-600">{formatCurrency(summary.annualVatCredit)}</dd>
+              <dd className={`font-medium ${colors.text.success}`}>{formatCurrency(summary.annualVatCredit)}</dd>
             </div>
           )}
 
@@ -91,7 +93,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
               {t('vat.annualSummary')}
               {')'}
             </dt>
-            <dd className={`text-lg font-bold ${summary.settlementAmount >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+            <dd className={`text-lg font-bold ${summary.settlementAmount >= 0 ? colors.text.error : colors.text.success}`}>
               {formatCurrency(Math.abs(summary.settlementAmount))}
             </dd>
           </div>
@@ -100,3 +102,4 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
     </Card>
   );
 }
+

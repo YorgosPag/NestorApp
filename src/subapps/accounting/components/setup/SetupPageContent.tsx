@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Save } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
 import type { CompanySetupInput, KadEntry } from '../../types';
 import { BasicInfoSection } from './BasicInfoSection';
@@ -88,6 +89,7 @@ function validateForm(data: CompanySetupInput): Record<string, string> {
 export function SetupPageContent() {
   const { t } = useTranslation('accounting');
   const { profile, loading, saving, error, saveSetup } = useCompanySetup();
+  const colors = useSemanticColors();
 
   const [formData, setFormData] = useState<CompanySetupInput>(createDefaultData);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -168,7 +170,7 @@ export function SetupPageContent() {
             {saveSuccess && (
               <div
                 role="status"
-                className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                className={`rounded-md border ${colors.border.success} ${colors.bg.successSubtle} p-3 text-sm ${colors.text.success}`}
               >
                 {t('setup.saveSuccess')}
               </div>
@@ -207,3 +209,5 @@ export function SetupPageContent() {
     </main>
   );
 }
+
+

@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEFKASummary } from '../../hooks/useEFKASummary';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { EFKAMonthlyBreakdown } from './EFKAMonthlyBreakdown';
@@ -35,6 +36,7 @@ function formatCurrency(amount: number): string {
 
 export function EFKAPageContent() {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -90,7 +92,7 @@ export function EFKAPageContent() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <p className={`text-2xl font-bold ${colors.text.success}`}>
                       {formatCurrency(summary.totalPaid)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -127,8 +129,8 @@ export function EFKAPageContent() {
                     <p
                       className={`text-2xl font-bold ${
                         summary.balanceDue > 0
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-emerald-600 dark:text-emerald-400'
+                          ? colors.text.error
+                          : colors.text.success
                       }`}
                     >
                       {formatCurrency(summary.balanceDue)}
@@ -168,3 +170,4 @@ export function EFKAPageContent() {
     </main>
   );
 }
+

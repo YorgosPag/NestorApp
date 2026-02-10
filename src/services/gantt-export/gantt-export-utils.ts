@@ -9,6 +9,7 @@
 
 import { toPng, toSvg } from 'html-to-image';
 import type { TaskGroup } from 'react-modern-gantt';
+import { designTokens } from '@/styles/design-tokens';
 import type { GanttTaskExportRow } from './types';
 
 // ─── DOM Capture ──────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ export async function captureGanttAsDataUrl(
 
     const captureFunc = format === 'png' ? toPng : toSvg;
     return await captureFunc(element, {
-      backgroundColor: '#ffffff',
+      backgroundColor: designTokens.colors.background.primary,
       quality: 1.0,
       pixelRatio: 2, // 2x DPI for crisp text
     });
@@ -128,3 +129,4 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+

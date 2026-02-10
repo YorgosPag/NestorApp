@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useVATSummary } from '../../hooks/useVATSummary';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
 
@@ -48,6 +49,7 @@ function isAnnualSummary(data: unknown): data is VATAnnualSummary {
 
 export function VATReportCard({ fiscalYear }: VATReportCardProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const { summary, loading, error } = useVATSummary({ fiscalYear });
 
@@ -93,8 +95,8 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
               <dd
                 className={`text-lg font-bold ${
                   summary.annualVatPayable > 0
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
+                    ? colors.text.error
+                    : colors.text.success
                 }`}
               >
                 {formatCurrency(summary.annualVatPayable)}
@@ -105,7 +107,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
             {summary.annualVatCredit > 0 && (
               <div className="flex items-center justify-between">
                 <dt className="text-sm text-muted-foreground">{t('reports.vatCredit')}</dt>
-                <dd className="font-medium text-sm text-emerald-600 dark:text-emerald-400">
+                <dd className={`font-medium text-sm ${colors.text.success}`}>
                   {formatCurrency(summary.annualVatCredit)}
                 </dd>
               </div>
@@ -125,8 +127,8 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
               <dd
                 className={`font-semibold text-sm ${
                   summary.settlementAmount > 0
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
+                    ? colors.text.error
+                    : colors.text.success
                 }`}
               >
                 {formatCurrency(summary.settlementAmount)}
@@ -138,3 +140,4 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
     </Card>
   );
 }
+

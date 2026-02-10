@@ -19,6 +19,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { designTokens } from '@/styles/design-tokens';
 
 // ============================================================================
 // ENTERPRISE COMPANY TYPES
@@ -215,9 +216,9 @@ const FALLBACK_COMPANY_SETTINGS: EnterpriseCompanySettings = {
   },
 
   brandSettings: {
-    primaryColor: process.env.NEXT_PUBLIC_BRAND_PRIMARY_COLOR || '#3b82f6',
-    secondaryColor: process.env.NEXT_PUBLIC_BRAND_SECONDARY_COLOR || '#64748b',
-    accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || '#10b981',
+    primaryColor: process.env.NEXT_PUBLIC_BRAND_PRIMARY_COLOR || designTokens.colors.blue['500'],
+    secondaryColor: process.env.NEXT_PUBLIC_BRAND_SECONDARY_COLOR || designTokens.colors.gray['500'],
+    accentColor: process.env.NEXT_PUBLIC_BRAND_ACCENT_COLOR || designTokens.colors.green['500'],
     theme: process.env.NEXT_PUBLIC_DEFAULT_THEME || 'default'
   },
 
@@ -475,7 +476,7 @@ export class EnterpriseCompanySettingsService {
       },
 
       brandSettings: {
-        primaryColor: contactData.brandColor || contactData.primaryColor || '#3b82f6',
+        primaryColor: contactData.brandColor || contactData.primaryColor || designTokens.colors.blue['500'],
         logoUrl: contactData.logo || contactData.logoUrl
       },
 
@@ -785,3 +786,4 @@ export async function getCompanyDomain(tenantId?: string): Promise<string> {
 export async function getCommunicationTemplateVars(tenantId?: string): Promise<Record<string, string>> {
   return companySettingsService.getTemplateVariables(tenantId);
 }
+

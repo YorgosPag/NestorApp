@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxEstimate } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -49,6 +50,7 @@ function formatPercent(rate: number): string {
 export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
   const { t } = useTranslation('accounting');
   const { user } = useAuth();
+  const colors = useSemanticColors();
 
   const [estimate, setEstimate] = useState<TaxEstimate | null>(null);
   const [loading, setLoading] = useState(false);
@@ -118,7 +120,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
             {/* Projected Income */}
             <div className="flex items-center justify-between">
               <dt className="text-sm text-muted-foreground">{t('reports.projectedIncome')}</dt>
-              <dd className="font-medium text-sm text-emerald-600 dark:text-emerald-400">
+              <dd className={`font-medium text-sm ${colors.text.success}`}>
                 {formatCurrency(estimate.projectedAnnualIncome)}
               </dd>
             </div>
@@ -126,7 +128,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
             {/* Projected Expenses */}
             <div className="flex items-center justify-between">
               <dt className="text-sm text-muted-foreground">{t('reports.projectedExpenses')}</dt>
-              <dd className="font-medium text-sm text-red-600 dark:text-red-400">
+              <dd className={`font-medium text-sm ${colors.text.error}`}>
                 {formatCurrency(estimate.projectedAnnualExpenses)}
               </dd>
             </div>
@@ -146,7 +148,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
             {/* Estimated Tax */}
             <div className="flex items-center justify-between">
               <dt className="text-sm font-semibold text-foreground">{t('reports.estimatedTax')}</dt>
-              <dd className="text-lg font-bold text-red-600 dark:text-red-400">
+              <dd className={`text-lg font-bold ${colors.text.error}`}>
                 {formatCurrency(estimate.projectedAnnualTax)}
               </dd>
             </div>
@@ -165,8 +167,8 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
               <dd
                 className={`text-lg font-bold ${
                   estimate.projectedFinalAmount > 0
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
+                    ? colors.text.error
+                    : colors.text.success
                 }`}
               >
                 {formatCurrency(estimate.projectedFinalAmount)}
@@ -178,3 +180,4 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
     </Card>
   );
 }
+

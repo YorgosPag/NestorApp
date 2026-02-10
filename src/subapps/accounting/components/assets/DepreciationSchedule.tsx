@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { DepreciationRecord } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -45,6 +46,7 @@ function formatCurrency(amount: number): string {
 
 export function DepreciationSchedule({ assetDescription, records }: DepreciationScheduleProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const sortedRecords = [...records].sort((a, b) => a.fiscalYear - b.fiscalYear);
 
@@ -94,7 +96,7 @@ export function DepreciationSchedule({ assetDescription, records }: Depreciation
                     <TableCell className="text-right text-sm">
                       {formatCurrency(openingValue)}
                     </TableCell>
-                    <TableCell className="text-right text-sm text-red-600 dark:text-red-400">
+                    <TableCell className={`text-right text-sm ${colors.text.error}`}>
                       -{formatCurrency(record.annualDepreciation)}
                     </TableCell>
                     <TableCell className="text-right font-medium text-sm">
@@ -110,3 +112,5 @@ export function DepreciationSchedule({ assetDescription, records }: Depreciation
     </Card>
   );
 }
+
+

@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '@/core/canvas/primitives/coordinates';
+import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 
 export type { Point2D } from '@/core/canvas/primitives/coordinates';
 
@@ -109,9 +110,9 @@ export const MEASUREMENT_UNITS: Record<MeasurementUnit, { name: string; factor: 
 };
 
 export const DEFAULT_RULER_STYLE: RulerStyle = {
-  lineColor: '#00ff00',
-  textColor: '#f1f5f9', // ✅ ENTERPRISE: High contrast light gray instead of pure white
-  backgroundColor: '#000000',
+  lineColor: UI_COLORS.MEASUREMENT_LINE,
+  textColor: UI_COLORS.RULER_NEUTRAL_GRAY, // ✅ ENTERPRISE: High contrast light gray instead of pure white
+  backgroundColor: UI_COLORS.CANVAS_BACKGROUND,
   lineWidth: 1,
   fontSize: 12,
   arrowSize: 8,
@@ -119,3 +120,4 @@ export const DEFAULT_RULER_STYLE: RulerStyle = {
   textOffset: 5,
   opacity: 0.9
 };
+

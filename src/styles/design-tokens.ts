@@ -11,6 +11,7 @@ const colors = {
     tertiary: "#f1f5f9",
     hover: "#f1f5f9",
     overlay: "rgba(0, 0, 0, 0.5)",
+    transparent: "transparent",
     accent: "#e0f2fe", // ✅ ENTERPRISE FIX: Added missing accent color
     muted: "#f8fafc"   // ✅ ENTERPRISE FIX: Added missing muted color
   },
@@ -50,6 +51,10 @@ const colors = {
     "300": "#fca5a5",
     "500": "#ef4444",
     "600": "#dc2626"
+  },
+  purple: {
+    "400": "#a78bfa",
+    "500": "#8b5cf6"
   },
   // ✅ ENTERPRISE FIX: Added error color palette (alias of red) for semantic usage
   error: {
@@ -3667,3 +3672,6 @@ export const bg = {
   zinc: 'bg-zinc-100',
   magenta: 'bg-pink-100'
 } as const;
+
+
+

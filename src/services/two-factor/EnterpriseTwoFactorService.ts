@@ -32,6 +32,7 @@ import QRCode from 'qrcode';
 import { auth } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { API_ROUTES } from '@/config/domain-constants';
+import { designTokens } from '@/styles/design-tokens';
 import type {
   TotpSecretInfo,
   EnrolledTotpFactor,
@@ -303,8 +304,8 @@ export class EnterpriseTwoFactorService {
         width: 200,
         margin: 2,
         color: {
-          dark: '#000000',
-          light: '#FFFFFF'
+          dark: designTokens.colors.text.primary,
+          light: designTokens.colors.background.primary
         }
       });
 
@@ -670,3 +671,4 @@ export class EnterpriseTwoFactorService {
 // =============================================================================
 
 export const twoFactorService = EnterpriseTwoFactorService.getInstance();
+

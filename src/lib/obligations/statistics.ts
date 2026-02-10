@@ -2,6 +2,7 @@ import { ObligationDocument, ObligationSection } from '@/types/obligations';
 import { calculateWordCount, estimateReadingTime } from './text-utils';
 import { PROGRESS_THRESHOLDS, QUALITY_THRESHOLD } from '@/core/configuration/business-rules';
 import { formatDate } from '@/lib/intl-utils';
+import { designTokens } from '@/styles/design-tokens';
 
 export interface DocumentStatistics {
   totalSections: number;
@@ -82,23 +83,23 @@ export function calculateProgressMetrics(document: ObligationDocument): Progress
   if (percentage >= PROGRESS_THRESHOLDS.excellent) {
     status = 'excellent';
     label = 'Άριστη Πρόοδος';
-    color = '#10B981';
-    backgroundColor = '#ECFDF5';
+    color = designTokens.colors.severity.low.icon;
+    backgroundColor = designTokens.colors.severity.low.background;
   } else if (percentage >= PROGRESS_THRESHOLDS.good) {
     status = 'good';
     label = 'Καλή Πρόοδος';
-    color = '#3B82F6';
-    backgroundColor = '#EFF6FF';
+    color = designTokens.colors.severity.info.icon;
+    backgroundColor = designTokens.colors.severity.info.background;
   } else if (percentage >= PROGRESS_THRESHOLDS.moderate) {
     status = 'moderate';
     label = 'Μέτρια Πρόοδος';
-    color = '#F59E0B';
-    backgroundColor = '#FFFBEB';
+    color = designTokens.colors.severity.medium.icon;
+    backgroundColor = designTokens.colors.severity.medium.background;
   } else {
     status = 'poor';
     label = 'Χρειάζεται Προσοχή';
-    color = '#EF4444';
-    backgroundColor = '#FEF2F2';
+    color = designTokens.colors.severity.critical.icon;
+    backgroundColor = designTokens.colors.severity.critical.background;
   }
 
   return {

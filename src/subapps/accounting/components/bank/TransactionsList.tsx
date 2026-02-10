@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BankTransaction, MatchStatus } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -64,6 +65,7 @@ function formatDate(iso: string): string {
 
 export function TransactionsList({ transactions }: TransactionsListProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   if (transactions.length === 0) {
     return (
@@ -101,8 +103,8 @@ export function TransactionsList({ transactions }: TransactionsListProps) {
               <TableCell
                 className={`text-right font-medium ${
                   tx.direction === 'credit'
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-red-600 dark:text-red-400'
+                    ? colors.text.success
+                    : colors.text.error
                 }`}
               >
                 {tx.direction === 'credit' ? '+' : '-'}
@@ -120,3 +122,4 @@ export function TransactionsList({ transactions }: TransactionsListProps) {
     </div>
   );
 }
+

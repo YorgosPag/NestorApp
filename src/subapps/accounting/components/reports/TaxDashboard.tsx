@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxResult, TaxInstallment } from '@/subapps/accounting/types';
 import { TaxBracketsVisual } from './TaxBracketsVisual';
 import { InstallmentsCard } from './InstallmentsCard';
@@ -48,6 +49,7 @@ function formatCurrency(amount: number): string {
 export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
   const { t } = useTranslation('accounting');
   const { user } = useAuth();
+  const colors = useSemanticColors();
 
   const [data, setData] = useState<TaxDashboardData>({ taxResult: null, installments: [] });
   const [loading, setLoading] = useState(false);
@@ -143,8 +145,8 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
                 <p
                   className={`text-lg font-bold ${
                     data.taxResult.finalAmount > 0
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-emerald-600 dark:text-emerald-400'
+                      ? colors.text.error
+                      : colors.text.success
                   }`}
                 >
                   {formatCurrency(data.taxResult.finalAmount)}
@@ -170,3 +172,4 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
     </section>
   );
 }
+

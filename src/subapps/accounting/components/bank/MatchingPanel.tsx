@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BankTransaction, MatchCandidate } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -66,6 +67,7 @@ function getConfidenceBadgeVariant(
 
 export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPanelProps) {
   const { t } = useTranslation('accounting');
+  const colors = useSemanticColors();
 
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [matching, setMatching] = useState(false);
@@ -133,8 +135,8 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
                       <TableCell
                         className={`text-right font-medium ${
                           tx.direction === 'credit'
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-red-600 dark:text-red-400'
+                            ? colors.text.success
+                            : colors.text.error
                         }`}
                       >
                         {formatCurrency(tx.amount)}
@@ -212,3 +214,4 @@ export function MatchingPanel({ transactions, candidates, onMatch }: MatchingPan
     </section>
   );
 }
+

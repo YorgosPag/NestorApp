@@ -10,18 +10,23 @@
 
 import ExcelJS from 'exceljs';
 import type { GanttExportOptions } from './types';
+import { designTokens } from '@/styles/design-tokens';
 import { flattenTaskGroupsToRows, triggerBlobDownload } from './gantt-export-utils';
+const toExcelArgb = (hexColor: string): string => {
+  const normalized = hexColor.replace('#', '').toUpperCase();
+  return `FF${normalized}`;
+};
 
-/** Blue header style — matches the app's primary color (#3B82F6) */
+/** Header style — matches the app's primary brand color */
 const HEADER_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FF3B82F6' },
+  fgColor: { argb: toExcelArgb(designTokens.colors.blue['500']) },
 };
 
 const HEADER_FONT: Partial<ExcelJS.Font> = {
   bold: true,
-  color: { argb: 'FFFFFFFF' },
+  color: { argb: toExcelArgb(designTokens.colors.background.primary) },
 };
 
 /**
@@ -108,3 +113,4 @@ export async function exportGanttToExcel(options: GanttExportOptions): Promise<v
   });
   triggerBlobDownload(blob, filename);
 }
+

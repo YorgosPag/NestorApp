@@ -11,6 +11,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type { TaxBracketResult } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -41,40 +42,40 @@ const GREEK_TAX_BRACKETS: StaticBracketDisplay[] = [
     to: 10000,
     rate: 9,
     label: '0 - 10.000',
-    colorClass: 'text-emerald-700 dark:text-emerald-400',
-    bgClass: 'bg-emerald-500',
+    colorClass: COLOR_BRIDGE.text.success,
+    bgClass: COLOR_BRIDGE.bg.success,
   },
   {
     from: 10000,
     to: 20000,
     rate: 22,
     label: '10.000 - 20.000',
-    colorClass: 'text-lime-700 dark:text-lime-400',
-    bgClass: 'bg-lime-500',
+    colorClass: COLOR_BRIDGE.text.info,
+    bgClass: COLOR_BRIDGE.bg.info,
   },
   {
     from: 20000,
     to: 30000,
     rate: 28,
     label: '20.000 - 30.000',
-    colorClass: 'text-amber-700 dark:text-amber-400',
-    bgClass: 'bg-amber-500',
+    colorClass: COLOR_BRIDGE.text.warning,
+    bgClass: COLOR_BRIDGE.bg.warning,
   },
   {
     from: 30000,
     to: 40000,
     rate: 36,
     label: '30.000 - 40.000',
-    colorClass: 'text-orange-700 dark:text-orange-400',
-    bgClass: 'bg-orange-500',
+    colorClass: COLOR_BRIDGE.text.orange,
+    bgClass: COLOR_BRIDGE.bg.orange,
   },
   {
     from: 40000,
     to: null,
     rate: 44,
     label: '40.000+',
-    colorClass: 'text-red-700 dark:text-red-400',
-    bgClass: 'bg-red-500',
+    colorClass: COLOR_BRIDGE.text.error,
+    bgClass: COLOR_BRIDGE.bg.error,
   },
 ];
 
@@ -181,3 +182,4 @@ export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracke
     </section>
   );
 }
+
