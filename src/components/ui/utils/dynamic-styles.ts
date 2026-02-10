@@ -119,6 +119,28 @@ export const getDynamicWidthClass = (width?: string): string => {
 };
 
 /**
+ * Generate dynamic transform class
+ *
+ * @param transform - CSS transform value (e.g. 'translateX(-50%)')
+ * @returns CSS class name with dynamic transform
+ */
+export const getDynamicTransformClass = (transform?: string): string => {
+  if (!transform) return '';
+
+  if (!isValidTransform(transform)) {
+    console.warn(`Invalid transform provided to getDynamicTransformClass: ${transform}`);
+    return '';
+  }
+
+  const transformId = generateDimensionId(transform);
+  const className = `dynamic-transform-${transformId}`;
+
+  injectDynamicStyle(className, 'transform', transform);
+
+  return className;
+};
+
+/**
  * Generate dynamic height class
  *
  * @param height - CSS height value (e.g. '50%', '120px', 'var(--x)', 'calc(...)')
@@ -176,6 +198,15 @@ function isValidDimension(value: string): boolean {
   if (value.match(/^[0-9.]+%$/)) return true;
   if (value.match(/^[0-9.]+(px|rem|em|vh|vw|vmin|vmax|ch|ex)$/)) return true;
 
+  return false;
+}
+
+/**
+ * Validate if transform string is a valid CSS transform
+ */
+function isValidTransform(value: string): boolean {
+  if (value.startsWith('var(') || value.startsWith('calc(')) return true;
+  if (/^(translate|rotate|scale|skew|matrix|perspective)/.test(value)) return true;
   return false;
 }
 
@@ -298,6 +329,18 @@ export const useDynamicWidthClass = (width?: string): string => {
 };
 
 /**
+ * React hook for memoized dynamic transform class
+ *
+ * @param transform - Transform value
+ * @returns Memoized CSS class name
+ */
+export const useDynamicTransformClass = (transform?: string): string => {
+  return useMemo(() => {
+    return getDynamicTransformClass(transform);
+  }, [transform]);
+};
+
+/**
  * React hook for memoized dynamic height class
  *
  * @param height - Height value
@@ -387,4 +430,5 @@ export const getDynamicStylesCount = (): number => {
 
   return (styleContainer.textContent?.split('\n').filter(line => line.trim()).length) || 0;
 };
+
 

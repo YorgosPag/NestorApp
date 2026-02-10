@@ -365,6 +365,7 @@
     "pendingInvoices": "Εκκρεμή Τιμολόγια",
     "quickActions": "Γρήγορες Ενέργειες",
     "recentActivity": "Πρόσφατη Δραστηριότητα"
-  }
+  },
+  "quarterCard": "Τρίμηνο {quarter}"
 }
 

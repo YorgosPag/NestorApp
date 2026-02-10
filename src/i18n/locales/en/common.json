@@ -1750,5 +1750,20 @@
     "commandSent": "Command sent",
     "openPanel": "Open AI panel",
     "submitError": "Failed to submit command"
-  }
+  },
+  "months": {
+  "5": "May",
+  "2": "February",
+  "9": "September",
+  "11": "November",
+  "10": "October",
+  "6": "June",
+  "8": "August",
+  "3": "March",
+  "4": "April",
+  "7": "July",
+  "1": "January",
+  "12": "December"
 }
+}
+
