@@ -47,14 +47,12 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import { HoverManager } from '../../utils/hover';
 import { pointToLineDistance } from './shared/geometry-utils';
-import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTextCheck } from './shared/line-utils';
+import { createEdgeGrips, renderSplitLine } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
 // 🏢 ADR-065: Centralized Distance & Vector Operations, ADR-124: Centralized Text Gap
 import { calculateDistance, getPerpendicularUnitVector, calculateTextGap } from './shared/geometry-rendering-utils';
 // 🏢 ADR-102: Centralized Entity Type Guards
-import { isLineEntity, type Entity } from '../../types/entities';
 // 🏢 ADR-165: Centralized Entity Validation
 import { validateLineEntity } from './shared/entity-validation-utils';
 // 🏢 ADR-124: Centralized Dot Radius

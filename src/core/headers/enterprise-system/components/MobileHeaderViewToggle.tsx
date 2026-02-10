@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HeaderViewToggleProps, ViewMode } from '../types';
-import { HEADER_THEME, VIEW_MODE_CONFIG } from '../constants';
+import { HEADER_THEME } from '../constants';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';

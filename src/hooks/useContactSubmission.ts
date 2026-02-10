@@ -7,8 +7,7 @@ import { ContactsService } from '@/services/contacts.service';
 import { mapFormDataToContact, validateUploadState } from '@/utils/contactForm/formDataMapper';
 import {
   validateDocumentDates,
-  isDatePastOrToday,
-  formatDateForDisplay
+  isDatePastOrToday
 } from '@/utils/validation';
 
 // ============================================================================

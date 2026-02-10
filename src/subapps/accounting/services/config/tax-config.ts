@@ -9,6 +9,7 @@
  */
 
 import type { TaxScaleConfig, TaxBracket } from '../../types/tax';
+import type { EntityType } from '../../types/entity';
 
 // ============================================================================
 // GREEK TAX BRACKETS (Ν.4172/2013, αρ.15 — Κλίμακα Φόρου Εισοδήματος)

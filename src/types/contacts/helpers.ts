@@ -1,4 +1,4 @@
-import { Contact, IndividualContact, CompanyContact, ServiceContact, AddressInfo, isIndividualContact, isCompanyContact, isServiceContact } from './contracts';
+import { Contact, ServiceContact, AddressInfo, isIndividualContact, isCompanyContact, isServiceContact } from './contracts';
 
 // 🏢 ENTERPRISE: Type-safe interface for legacy service contact fields
 // These fields may exist in older service contacts but are not in the standard schema

@@ -20,7 +20,7 @@
 
 import { useMemo } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useDynamicElementClasses, getDynamicBackgroundClass, getDynamicElementClasses } from '@/components/ui/utils/dynamic-styles';
+import { useDynamicElementClasses, getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { cn } from '@/lib/utils';
 
 // ============================================================================

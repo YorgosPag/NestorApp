@@ -4,7 +4,7 @@
  * Μπορεί να toggle on/off μέσω debug controls
  */
 
-import type { Point2D, Viewport, ViewTransform } from '../rendering/types/Types';
+import type { Viewport, ViewTransform } from '../rendering/types/Types';
 // 🏢 ADR-119: Centralized Opacity Constants
 import { UI_COLORS, OPACITY } from '../config/color-config';
 // 🏢 ADR-077: Centralized TAU Constant

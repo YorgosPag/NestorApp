@@ -376,7 +376,7 @@ describe('ThreadView', () => {
         <ThreadView
           conversation={mockConversation}
           messages={[]}
-          loading={true}
+          loading
           error={null}
           hasMore={false}
           onLoadMore={jest.fn()}

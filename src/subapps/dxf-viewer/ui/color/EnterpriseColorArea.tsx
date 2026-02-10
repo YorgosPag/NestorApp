@@ -18,7 +18,7 @@
 
 'use client';
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef } from 'react';
 import { useColorArea } from '@react-aria/color';
 import { useColorAreaState } from '@react-stately/color';
 import { parseColor as parseAriaColor } from '@react-stately/color';
@@ -26,7 +26,6 @@ import { useFocusRing } from '@react-aria/focus';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../config/color-config';
-import type { AriaColorAreaProps } from '@react-aria/color';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized spacing tokens

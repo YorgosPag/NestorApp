@@ -9,7 +9,6 @@ import type { Point2D } from '../types/Types';
 import type { RectangleEntity, RectEntity, Entity } from '../../types/entities';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isRectangleEntity, isRectEntity } from '../../types/entities';
-import { pointToLineDistance } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
 import { drawVerticesPath } from './shared/geometry-rendering-utils';

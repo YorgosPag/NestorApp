@@ -14,8 +14,8 @@
  * - Admin SDK uses: database.collection().add(), database.runTransaction(), etc.
  */
 
-import { getAdminFirestore, safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import type { Firestore, Transaction, FieldValue } from 'firebase-admin/firestore';
+import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type {

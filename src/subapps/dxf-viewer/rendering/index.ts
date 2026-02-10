@@ -85,7 +85,6 @@ import { SplineRenderer } from './entities/SplineRenderer';
 import { AngleMeasurementRenderer } from './entities/AngleMeasurementRenderer';
 import { PointRenderer } from './entities/PointRenderer';
 import { BaseEntityRenderer } from './entities/BaseEntityRenderer';
-import type { IRenderContext } from './core/IRenderContext';
 
 /**
  * Auto-register standard renderers
@@ -123,9 +122,7 @@ export function initializeRenderingSystem(): void {
  * Convenience function για δημιουργία spatial index από entities
  */
 // Spatial index functionality moved to core/spatial system
-import { createHitTester } from './hitTesting/HitTester';
 import { getGlobalPathCache } from './cache/PathCache';
-import type { EntityModel } from './types/Types';
 
 // Διαγράφηκε το περιττό wrapper createOptimizedHitTester
 // Χρησιμοποιείστε απευθείας createHitTester που έχει ήδη default useSpatialIndex = true

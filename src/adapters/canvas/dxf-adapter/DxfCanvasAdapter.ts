@@ -18,8 +18,7 @@ import type {
 } from '../../../core/canvas/interfaces/ICanvasProvider';
 
 import type {
-  CanvasInstance,
-  CanvasManagerOptions
+  CanvasInstance
 } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 
 import type { CanvasRenderSettings } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasSettings';

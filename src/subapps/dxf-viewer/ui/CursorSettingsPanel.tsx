@@ -264,7 +264,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             </div>
             {settings.performance.precision_mode && (
               <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} ${PANEL_LAYOUT.ANIMATE.PULSE}`}></div>
+                <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />
                 <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικα ψηφια</span>
               </div>
             )}

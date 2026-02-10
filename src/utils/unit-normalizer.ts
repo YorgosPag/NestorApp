@@ -10,23 +10,15 @@
  * @enterprise Production-ready normalization system
  */
 
-import type { Timestamp } from 'firebase/firestore';
 import type {
   Unit,
   UnitDoc,
   UnitModel,
-  BackfillDefaults,
-  UnitCoverage
+  BackfillDefaults
 } from '@/types/unit';
 import type { I18nParams } from '@/types/i18n-params';
-import type {
-  OrientationType,
-  ViewTypeValue,
-  ViewQuality,
-  InteriorFeatureCodeType,
-  SecurityFeatureCodeType,
-  AmenityCodeType
-} from '@/constants/unit-features-enterprise';
+
+
 
 /**
  * 🏢 ENTERPRISE: Clean normalizer function

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEnterFormNavigation } from '@/hooks/useEnterFormNavigation';
 import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';

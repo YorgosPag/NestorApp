@@ -29,7 +29,7 @@
  * @see ADR-056 in docs/centralized-systems/reference/adr-index.md
  */
 
-import { completionStyleStore, type CompletionStyle } from '../stores/CompletionStyleStore';
+import { completionStyleStore } from '../stores/CompletionStyleStore';
 import type { LineType } from '../settings-core/types';
 // 🏢 ADR-083: Centralized Line Dash Patterns
 import { LINE_DASH_PATTERNS, scaleDashPattern } from '../config/text-rendering-config';

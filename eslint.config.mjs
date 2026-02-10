@@ -4,6 +4,7 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
+import unusedImports from "eslint-plugin-unused-imports";
 import { defineConfig } from "eslint/config";
 import customRules from "./eslint-rules/index.js";
 import designSystemRules from "./eslint/index.js";
@@ -17,8 +18,18 @@ export default defineConfig([
     plugins: {
       "custom": customRules,
       "design-system": designSystemRules,
+      "unused-imports": unusedImports,
     },
     rules: {
+      // ADR-172: Auto-remove unused imports
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": ["warn", {
+        vars: "all",
+        varsIgnorePattern: "^_",
+        args: "after-used",
+        argsIgnorePattern: "^_",
+      }],
+
       // Enable custom hardcoded strings detection
       "custom/no-hardcoded-strings": ["error", {
         allowedPatterns: [

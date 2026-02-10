@@ -16,9 +16,7 @@ import {
   RelationshipStatus,
   RelationshipSearchCriteria
 } from '@/types/contacts/relationships';
-import { Contact } from '@/types/contacts';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
-import { RelationshipQueryBuilder } from './RelationshipQueryBuilder';
 
 // ============================================================================
 // SEARCH RESULT TYPES

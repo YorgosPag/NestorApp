@@ -50,7 +50,6 @@ import type {
   UnlinkEntityParams,
   GetAvailableEntitiesParams,
   LinkResult,
-  LinkSuccessResult,
   OperationErrorResult,
   GetAvailableEntitiesResult,
   EntityWithMetadata,

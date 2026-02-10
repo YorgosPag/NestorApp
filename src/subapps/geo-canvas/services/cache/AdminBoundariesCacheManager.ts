@@ -9,9 +9,7 @@
 
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import type {
-  AdminSearchResult,
-  GreekAdminLevel,
-  BoundingBox
+  GreekAdminLevel
 } from '../../types/administrative-types';
 
 // ============================================================================

@@ -14,14 +14,12 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 // Enterprise Property Status System imports
 import {
-  ENHANCED_STATUS_LABELS,
   getAllEnhancedStatuses,
   getEnhancedStatusLabel,
   getEnhancedStatusColor,

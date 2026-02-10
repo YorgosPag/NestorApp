@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { ConfigurationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';

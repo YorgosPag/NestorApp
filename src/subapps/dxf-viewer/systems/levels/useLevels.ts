@@ -87,7 +87,7 @@ let _cachedLevelsContext: React.Context<LevelsHookReturn | null> | null = null;
 
 function getLevelsContext(): React.Context<LevelsHookReturn | null> {
   if (!_cachedLevelsContext) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { LevelsContext } = require('./LevelsSystem') as { LevelsContext: React.Context<LevelsHookReturn | null> };
     _cachedLevelsContext = LevelsContext;
   }

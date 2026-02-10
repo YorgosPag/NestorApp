@@ -12,21 +12,13 @@
  * Urgency: HIGH - Large documents causing performance issues
  */
 
-import { Migration, MigrationStep } from './types';
-import { db, storage } from '@/lib/firebase';
+import { Migration } from './types';
+import { db } from '@/lib/firebase';
 import {
   collection,
   getDocs,
-  doc,
-  setDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
   Timestamp
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';

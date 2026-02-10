@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { ZoomWindowState } from './useZoomWindow';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για διάσπαρτη fit logic
 import { FitToViewService } from '../services/FitToViewService';
-import type { ViewTransform, Viewport } from '../rendering/types/Types';
+import type { Viewport } from '../rendering/types/Types';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { createZeroPoint } from '../config/geometry-constants';
 

@@ -32,7 +32,6 @@ import type * as GeoJSON from 'geojson';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
-import { AddressMarker } from './AddressMarker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { TooltipProvider } from '@/components/ui/tooltip';

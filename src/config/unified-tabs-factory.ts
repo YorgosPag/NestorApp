@@ -16,7 +16,6 @@
  * @version 1.0.0
  */
 
-import type { LucideIcon } from 'lucide-react';
 import type { ContactType } from '@/types/contacts';
 
 export type { ContactType };

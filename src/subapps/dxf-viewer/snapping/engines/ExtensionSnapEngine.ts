@@ -7,11 +7,9 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
-import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { filterValidEntities, isWithinTolerance } from './shared/snap-engine-utils';
 import { CoordinateUtils } from '../../systems/constraints/utils';
-import { getNearestPointOnLine, getLineParameter } from '../../rendering/entities/shared/geometry-utils';
+import { getLineParameter } from '../../rendering/entities/shared/geometry-utils';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
 // 🏢 ADR-149: Centralized Snap Engine Priorities

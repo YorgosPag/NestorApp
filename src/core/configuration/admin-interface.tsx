@@ -38,7 +38,6 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import {
-  AlertTriangle,
   Building,
   Settings,
   Database,
@@ -48,35 +47,26 @@ import {
   RefreshCw,
   Save,
   Upload,
-  Download,
   Eye,
   EyeOff,
-  Lock,
-  Unlock,
   AlertCircle,
   Activity,
   Globe,
   Mail,
-  Phone,
-  Clock,
-  User
+  Clock
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // Import our enterprise configuration system
 import {
-  EnterpriseConfigurationManager,
   CompanyConfiguration,
   SystemConfiguration,
   ProjectTemplateConfiguration,
-  ConfigurationAPI,
   getConfigManager
 } from './enterprise-config-management';
 import {
   HardcodedValuesMigrationEngine,
-  MigrationAPI,
-  MigrationResult,
   MigrationProgress
 } from './hardcoded-values-migration';
 

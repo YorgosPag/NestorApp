@@ -63,9 +63,9 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
               context="project"
               variant="table"
               size="md"
-              showPhone={true}
-              showActions={true}
-              showUnitsCount={true}
+              showPhone
+              showActions
+              showUnitsCount
               unitsCount={customer.unitsCount}
               className="hover:bg-accent/30 transition-colors rounded-md"
               customerData={{

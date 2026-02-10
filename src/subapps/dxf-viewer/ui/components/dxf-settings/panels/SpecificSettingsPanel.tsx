@@ -3,7 +3,6 @@
 // STATUS: ACTIVE - Phase 3 Step 3.8
 // PURPOSE: Router for all 7 Specific Settings categories with lazy loading
 
-import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { PANEL_TOKENS, PanelTokenUtils, PANEL_LAYOUT } from '../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';

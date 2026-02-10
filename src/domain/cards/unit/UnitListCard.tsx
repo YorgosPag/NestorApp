@@ -240,10 +240,10 @@ export function UnitListCard({
       onKeyDown={handleKeyDown}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
-      compact={true} // 🏢 PR1.2: Always compact for mobile-first
+      compact // 🏢 PR1.2: Always compact for mobile-first
       hideStats={false} // 🏢 PR1.2: Show stats with icons + values
-      inlineBadges={true} // 🏢 PR1.2: Badge inline with title
-      hideIcon={true} // 🏢 PR1.2: Hide entity icon (icon-less compact)
+      inlineBadges // 🏢 PR1.2: Badge inline with title
+      hideIcon // 🏢 PR1.2: Hide entity icon (icon-less compact)
       className={className}
       aria-label={t('card.ariaLabel', { name: unit.name || unit.code || unit.id })}
     />

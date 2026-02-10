@@ -15,15 +15,7 @@ import { MODAL_SELECT_COMPANY_FIELD_LABELS } from '../subapps/dxf-viewer/config/
 import { MODAL_SELECT_COMPANY_HELP_TEXTS } from '../subapps/dxf-viewer/config/modal-select/core/options/company';
 import {
   getLegalFormOptions,
-  getGemiStatusOptions,
-  getCurrencyOptions,
-  getActivityTypeOptions,
-  getAddressTypeOptions,
-  getShareholderTypeOptions,
-  getDocumentTypeOptions,
-  getBoardTypeOptions,
-  getRepresentativePositionOptions,
-  MODAL_SELECT_GEMI_STATUSES
+  getGemiStatusOptions
 } from '../subapps/dxf-viewer/config/modal-select';
 
 import { getSortedSections, getAllCompanyFields, getCompanyField, type FieldConfig } from './company-gemi';

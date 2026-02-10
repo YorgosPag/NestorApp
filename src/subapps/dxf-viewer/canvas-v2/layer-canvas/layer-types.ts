@@ -6,7 +6,6 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { RegionStatus } from '../../types/overlay';
 // ✅ REMOVED DUPLICATE: Use main RulerSettings from systems/rulers-grid/config.ts
-import type { RulerSettings as CoreRulerSettings } from '../../systems/rulers-grid/config';
 
 // === LAYER TYPES ===
 export interface ColorLayer {

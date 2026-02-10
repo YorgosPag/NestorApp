@@ -2,7 +2,6 @@
 // Overlay types, constants και enums για το DXF Viewer Βήμα 2
 
 import { PropertyStatus, ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS, DEFAULT_PROPERTY_STATUS } from '../../../constants/property-statuses-enterprise';
-import type { Point2D } from '../rendering/types/Types';
 // 🏢 ADR-044: Centralized line widths (import at top of file to avoid hoisting issues)
 import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 

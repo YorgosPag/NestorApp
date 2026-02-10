@@ -1,7 +1,6 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 import React, { useState, useEffect, useMemo } from 'react';
 import { ACI_PALETTE } from '../../../../../settings/standards/aci';
-import { UI_COLORS } from '../../../../../config/color-config';
 import { Minus, Square, Pen, Hexagon, Ruler, Triangle, Wrench, PenLine, CheckCircle2, Mouse, SquareDashedMousePointer } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -24,25 +23,16 @@ import {
   useLineSettingsFromProvider,
   useGripSettingsFromProvider
 } from '../../../../../settings-provider';
-import { LineSettings } from '../core/LineSettings';
-import { TextSettings } from '../core/TextSettings';
-import { GripSettings } from '../core/GripSettings';
 import { LinePreview } from '../shared/LinePreview';
-import { CurrentSettingsDisplay } from '../shared/CurrentSettingsDisplay';
-import { OverrideToggle } from '../../../shared/OverrideToggle';
-import { SubTabRenderer, SubTabType } from '../../../shared/SubTabRenderer';
+import { SubTabRenderer } from '../../../shared/SubTabRenderer';
 import { useEntitiesSettingsReducer } from '../../../../reducers/entitiesSettingsReducer';
 
 // 🏢 ENTERPRISE: Import centralized DXF entities settings labels - ZERO HARDCODED VALUES
 import {
   DXF_SETTINGS_TAB_LABELS,
-  DXF_SETTINGS_OVERRIDE_LABELS,
   DXF_DRAWING_SIMPLE_LABELS,
   DXF_MEASUREMENT_SIMPLE_LABELS
 } from '../../../../../../../constants/property-statuses-enterprise';
-import { updateDraftSettingsStore } from '../../../../../hooks/useLinePreviewStyle';
-import { updateDraftTextSettingsStore } from '../../../../../hooks/useTextPreviewStyle';
-import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPreviewStyle';
 import { INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
@@ -462,7 +452,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             value={activeLineTab || ''}
             onTabChange={handleLineToolTabChange}
             theme="dark"
-            alwaysShowLabels={true}
+            alwaysShowLabels
             className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
           />
 
@@ -638,7 +628,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
         value={activeSpecificTab}
         onTabChange={handleSpecificTabChange}
         theme="dark"
-        alwaysShowLabels={true}
+        alwaysShowLabels
         className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
       />
 

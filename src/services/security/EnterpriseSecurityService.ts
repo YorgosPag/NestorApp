@@ -24,15 +24,10 @@
 
 import {
   collection,
-  doc,
   getDocs,
-  getDoc,
   query,
   where,
-  orderBy,
-  DocumentSnapshot,
-  QuerySnapshot,
-  DocumentData
+  orderBy
 } from 'firebase/firestore';
 
 // ============================================================================

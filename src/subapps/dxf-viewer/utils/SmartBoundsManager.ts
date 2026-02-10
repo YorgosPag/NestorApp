@@ -8,11 +8,7 @@ import { dlog, dwarn } from '../debug';
 import { calculateLineBounds } from '../rendering/entities/shared/geometry-rendering-utils';
 import type { Point2D } from '../rendering/types/Types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import κεντρικής υπηρεσίας αντί για renderer.fitToView()
-import { FitToViewService } from '../services/FitToViewService';
-import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
-import type { ColorLayer } from '../canvas-v2/layer-canvas/layer-types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import centralized BoundingBox από rulers-grid system
-import type { BoundingBox } from '../systems/rulers-grid/config';
 // 🏢 ADR-119: UnifiedFrameScheduler για centralized RAF management
 import { UnifiedFrameScheduler } from '../rendering/core/UnifiedFrameScheduler';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization

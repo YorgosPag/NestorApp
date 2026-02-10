@@ -8,9 +8,8 @@
 //
 // ============================================================================
 
-import { PHOTO_SIZES, PHOTO_HEIGHTS, PHOTO_WIDTHS } from '../dimensions/sizes';
+import { PHOTO_SIZES } from '../dimensions/sizes';
 import { PHOTO_LAYOUTS } from '../dimensions/layouts';
-import { PHOTO_RESPONSIVE } from '../dimensions/responsive';
 
 /**
  * Photo type enumeration για different photo categories

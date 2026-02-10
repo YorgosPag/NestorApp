@@ -9,7 +9,6 @@ import {
   PHOTO_LAYOUTS,
   PHOTO_SIZES,
   PHOTO_TEXT_COLORS,
-  PHOTO_HEIGHTS,
   PHOTO_TYPOGRAPHY
 } from '../config/photo-config';
 // 🏢 ENTERPRISE: i18n support

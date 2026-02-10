@@ -6,7 +6,6 @@ import { GripSettings as GripSettingsComponent } from '../dxf-settings/settings/
 import { LinePreview } from '../dxf-settings/settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from '../dxf-settings/settings/shared/CurrentSettingsDisplay';
 import { OverrideToggle } from './OverrideToggle';
-import { INTERACTIVE_PATTERNS } from '../../../ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../config/color-config';
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
@@ -186,7 +185,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
         value={activeSubTab || ''}
         onTabChange={handleSubTabChange}
         theme="dark"
-        alwaysShowLabels={true}
+        alwaysShowLabels
       />
 
       {/* Line Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
@@ -199,7 +198,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
               onChange={overrideSettings.line.onChange}
               label={overrideSettings.line.label}
               description={overrideSettings.line.description}
-              showStatusBadge={true}
+              showStatusBadge
               statusText={overrideSettings.line.statusText || config.statusText || config.label}
               className={`border-l-4 border-${config.color}`}
             />
@@ -237,7 +236,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
               onChange={overrideSettings.grips.onChange}
               label={overrideSettings.grips.label}
               description={overrideSettings.grips.description}
-              showStatusBadge={true}
+              showStatusBadge
               statusText={overrideSettings.grips.statusText || config.statusText || config.label}
               className={`border-l-4 border-${config.color}`}
             />

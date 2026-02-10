@@ -29,7 +29,7 @@ export function TimelineMilestones({ milestones, getStatusColor, getStatusText, 
             </CardHeader>
             <CardContent>
                 <div className="relative">
-                    <div className={`absolute left-6 top-4 bottom-4 w-0.5 ${colors.bg.muted}`}></div>
+                    <div className={`absolute left-6 top-4 bottom-4 w-0.5 ${colors.bg.muted}`} />
 
                     <div className="space-y-6">
                         {milestones.map((milestone) => (

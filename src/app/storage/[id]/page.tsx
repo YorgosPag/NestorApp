@@ -21,7 +21,7 @@ import {
   ArrowLeft,
   User
 } from 'lucide-react';
-import { getParkingStatusLabel, getParkingStatusColor, getParkingTypeLabel } from '@/components/projects/utils/parking-utils';
+import { getParkingStatusLabel, getParkingStatusColor } from '@/components/projects/utils/parking-utils';
 import type { ParkingSpotStatus } from '@/types/parking';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';

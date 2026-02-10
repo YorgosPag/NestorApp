@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, HOVER_TEXT_EFFECTS } from '../../../../../ui/effects';
+import { INTERACTIVE_PATTERNS, CORE_HOVER_TRANSFORMS } from '../../../../../ui/effects';
 import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
 import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '@/constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -113,7 +113,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         value={activeTab}
         onTabChange={handleTabChange}
         theme="dark"
-        alwaysShowLabels={true}
+        alwaysShowLabels
         className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
       />
 

@@ -3,19 +3,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { BarChart3, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
-import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
 // 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
 import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
 import type { SmartActionConfig } from '@/core/actions/SmartActionFactory';
 
 // Import DXF scene types
-import type { SceneModel, AnySceneEntity } from '../../dxf-viewer/types/scene';
+import type { SceneModel } from '../../dxf-viewer/types/scene';
 
 // ============================================================================
 // TRANSFORMATION PREVIEW TYPES

@@ -26,29 +26,19 @@ import {
   EditButton,
   ArchiveButton,
   RestoreButton,
-  ToolbarAddButton,
-  ToolbarEditButton,
-  ToolbarDeleteButton,
-  ToolbarArchiveButton,
-  ToolbarCallButton,
   ToolbarEmailButton,
-  ToolbarSMSButton,
   ToolbarExportButton,
   ToolbarImportButton,
   ToolbarSortToggleButton,
   ToolbarHelpButton,
-  ToolbarFavoritesButton,
-  ToolbarArchivedFilterButton,
   ToolbarRefreshButton,
-  BUTTON_CATEGORIES,
-  BUTTON_STYLES
+  BUTTON_CATEGORIES
 } from '@/components/ui/form/ActionButtons';
 
 // Import από existing centralized configuration system
 import { getActionButtons } from '@/subapps/dxf-viewer/config/modal-select';
 
 // Import από existing centralized design system
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 

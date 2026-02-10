@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { Header } from './GeneralTabContent/Header';
 import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 import { TechnicalSpecsCard } from './GeneralTabContent/TechnicalSpecsCard';

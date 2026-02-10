@@ -16,7 +16,7 @@
 import { useEffect, useRef } from 'react';
 import { loadOrDefault } from '../../settings/io/safeLoad';
 import { safeSave } from '../../settings/io/safeSave';
-import { migrateFromLegacyProvider, isLegacyFormat, getMigrationInfo } from '../../settings/io/legacyMigration';
+import { migrateFromLegacyProvider, isLegacyFormat } from '../../settings/io/legacyMigration';
 import type { StorageDriver } from '../../settings/io/StorageDriver';
 import type { SettingsState } from '../../settings/core/types';
 

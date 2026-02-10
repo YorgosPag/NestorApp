@@ -27,7 +27,6 @@ import {
 import { useDynamicInputMultiPoint } from '../hooks/useDynamicInputMultiPoint';
 import { normalizeNumber, isValidNumber } from '../utils/number';
 import { dispatchDynamicSubmit } from '../utils/events';
-import type { Point2D } from '../../../rendering/types/Types';
 import type { DynamicInputSystemProps } from '../DynamicInputSystem';
 
 interface DynamicInputOverlayProps extends DynamicInputSystemProps {

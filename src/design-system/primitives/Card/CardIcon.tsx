@@ -20,10 +20,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   NAVIGATION_ENTITIES,
-  type NavigationEntityType,
 } from '@/components/navigation/config/navigation-entities';
 import type { CardIconProps, CardIconSize } from './types';
-import { CARD_SIZES, CARD_ROUNDED } from './types';
+import { CARD_ROUNDED } from './types';
 
 /**
  * 🏢 CardIcon Component

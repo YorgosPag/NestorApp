@@ -30,7 +30,7 @@ export function UnitsListHeader({
                 icon={UnitIcon}
                 entityName={t('list.title')}
                 itemCount={unitCount}
-                hideSearch={true}
+                hideSearch
                 showToolbar={showToolbar}
                 onToolbarToggle={onToolbarToggle}
             />

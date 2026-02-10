@@ -7,7 +7,6 @@ import type { Viewport } from '../../types/Types';
 import type { GridSettings } from './GridTypes';
 import type { GridSettings as LayerGridSettings } from '../../../canvas-v2/layer-canvas/layer-types';
 import { GridRenderer } from './GridRenderer';
-import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../core/UIRenderContext';
 // 🏢 ADR-076: Centralized Color Conversion
 import { parseHex, rgbToHex } from '../../../ui/color/utils';
 // 🏢 ADR-034: Centralized Rendering Z-Index

@@ -370,7 +370,7 @@ export function LevelPanel({
             className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.BASE}
           >
             {isAdding ? (
-              <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.LOADING_SPINNER}></div>
+              <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.LOADING_SPINNER} />
             ) : (
               <Plus className={iconSizes.sm} />
             )}

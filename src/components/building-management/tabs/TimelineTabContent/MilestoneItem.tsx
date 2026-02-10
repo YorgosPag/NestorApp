@@ -86,7 +86,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                     progress={milestone.progress ?? 0}
                     label={t('tabs.timeline.milestone.progressLabel')}
                     size="sm"
-                    showPercentage={true}
+                    showPercentage
                 />
 
                 {milestone.status === 'in-progress' && (

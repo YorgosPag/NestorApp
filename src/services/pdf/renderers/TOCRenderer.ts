@@ -1,7 +1,7 @@
 import type { TableOfContentsItem } from '@/types/obligations';
 import type { IPDFDoc, ITOCRenderer, Margins } from '../contracts';
 import { TextRenderer } from './TextRenderer';
-import { COLORS, FONTS, FONT_STYLES, FONT_SIZES } from '../layout';
+import { COLORS, FONTS, FONT_STYLES } from '../layout';
 
 export class TOCRenderer implements ITOCRenderer {
   private textRenderer = new TextRenderer();

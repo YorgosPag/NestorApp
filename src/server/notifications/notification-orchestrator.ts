@@ -37,8 +37,6 @@ import {
   COMMUNICATION_CHANNELS,
   MESSAGE_CATEGORIES,
   type EnqueueMessageParams,
-  type CommunicationChannel,
-  type MessageCategory,
 } from '@/server/comms/orchestrator';
 import {
   type UserNotificationSettings,

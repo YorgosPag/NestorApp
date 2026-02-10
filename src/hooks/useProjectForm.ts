@@ -35,7 +35,6 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import {
   createProjectAddress,
   extractLegacyFields,
-  migrateLegacyAddress,
 } from '@/types/project/address-helpers';
 
 // =============================================================================

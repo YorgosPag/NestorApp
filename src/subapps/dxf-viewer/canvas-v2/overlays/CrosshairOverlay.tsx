@@ -19,7 +19,7 @@
  * - Full TypeScript support (ZERO any)
  */
 
-import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../../systems/cursor/config';
 import { useCursorState } from '../../systems/cursor/useCursor';
 import { useGripContext } from '../../providers/GripProvider';

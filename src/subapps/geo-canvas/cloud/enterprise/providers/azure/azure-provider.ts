@@ -11,7 +11,6 @@
 
 import type {
   AzureCloudProvider,
-  AzureCredentials,
   CloudFeatures,
   CloudEndpoints,
   CloudPricing,

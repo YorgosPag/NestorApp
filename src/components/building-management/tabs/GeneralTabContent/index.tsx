@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Header } from './Header';
 import { BasicInfoCard } from './BasicInfoCard';
 import { TechnicalSpecsCard } from './TechnicalSpecsCard';

@@ -7,10 +7,9 @@ import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
 import { IndividualFormRenderer, type IndividualFormData, type CustomFieldRenderer } from './IndividualFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
-import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
-import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
@@ -110,7 +109,7 @@ function createIndividualFormTabsFromConfig(
           contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
           className="mt-4"
           // ✅ CRITICAL FIX: Εμφάνιση φωτογραφιών και στο disabled mode
-          showPhotosWhenDisabled={true}
+          showPhotosWhenDisabled
           // 🖼️ Photo click handler για gallery preview
           onPhotoClick={(index) => {
             console.log('🔍 DEBUG IndividualFormTabRenderer: Photo click received', { index, onPhotoClickExists: !!onPhotoClick });

@@ -6,7 +6,7 @@
  *
  * 🏢 ENTERPRISE UPDATE: Added real-time building counts via useRealtimeBuildings
  */
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
 import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS, RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';

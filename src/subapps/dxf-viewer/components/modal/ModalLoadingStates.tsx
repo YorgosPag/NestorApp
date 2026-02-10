@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import and re-export AnimatedSpinner from canonical location
 // This provides backward compatibility for existing imports while

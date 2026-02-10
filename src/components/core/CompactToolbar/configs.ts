@@ -6,11 +6,7 @@ import {
   UNIFIED_STATUS_FILTER_LABELS,
   PROPERTY_BUILDING_TYPE_LABELS,
   // 🏢 ENTERPRISE: Import additional centralized labels - ZERO HARDCODED VALUES
-  CONTACT_BUSINESS_TYPE_LABELS,
-  STORAGE_LABELS,
-  AVAILABILITY_STATUS_LABELS,
-  EXTENDED_PROPERTY_TYPE_LABELS,
-  BUILDING_NAME_FILTER_LABELS
+  CONTACT_BUSINESS_TYPE_LABELS
 } from '@/constants/property-statuses-enterprise';
 
 // 🏢 ENTERPRISE: Import centralized CompactToolbar search placeholders from modal-select

@@ -48,7 +48,6 @@ import {
   Mail,
   Receipt,
   User,
-  Building2,
   Landmark,
   FileText, // 🏢 ADR-029: Global Search
   // 🏢 ADR-029 Phase 2: CRM Entities

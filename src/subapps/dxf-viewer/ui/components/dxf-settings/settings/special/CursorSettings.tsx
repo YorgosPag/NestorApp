@@ -10,8 +10,6 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   getCursorPreviewBorderStyles,
-  getCursorShapeButtonStyles,
-  getCursorColorPreviewStyles,
   getCursorLinePreviewStyles,
   getCursorSizePreviewStyles,
   getCursorDimensionPreviewStyles
@@ -101,7 +99,7 @@ export function CursorSettings() {
                 <div
                   className={`${iconSizes.sm} mx-auto ${radius.full} border`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
-                ></div>
+                 />
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.shape.circle')}</span>
               </button>
               <button
@@ -115,7 +113,7 @@ export function CursorSettings() {
                 <div
                   className={`${iconSizes.sm} mx-auto border`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
-                ></div>
+                 />
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.shape.square')}</span>
               </button>
             </div>
@@ -133,8 +131,8 @@ export function CursorSettings() {
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
-              recent={true}
-              eyedropper={true}
+              recent
+              eyedropper
         />
       </section>
 
@@ -154,7 +152,7 @@ export function CursorSettings() {
                 <div
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'solid')}
-                ></div>
+                 />
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.solid')}</span>
               </button>
               <button
@@ -168,7 +166,7 @@ export function CursorSettings() {
                 <div
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'dashed')}
-                ></div>
+                 />
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.dashed')}</span>
               </button>
             </div>
@@ -184,7 +182,7 @@ export function CursorSettings() {
                 <div
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'dotted')}
-                ></div>
+                 />
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.dotted')}</span>
               </button>
               <button
@@ -198,7 +196,7 @@ export function CursorSettings() {
                 <div
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'dash-dot')}
-                ></div>
+                 />
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.dashDot')}</span>
               </button>
             </div>
@@ -234,7 +232,7 @@ export function CursorSettings() {
               <div
                 className="w-full mx-auto border"
                 style={getCursorSizePreviewStyles(settings.cursor.color, settings.cursor.shape, width)}
-              ></div>
+               />
               <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{width}px</span>
             </button>
           ))}
@@ -271,7 +269,7 @@ export function CursorSettings() {
                   <div
                     className="mx-auto border"
                     style={getCursorDimensionPreviewStyles(settings.cursor.color, settings.cursor.shape, size)}
-                  ></div>
+                   />
                   <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{size}px</span>
                 </button>
               ))}

@@ -2,13 +2,11 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { ContactBadge, CommonBadge } from '@/core/badges';
+import { CommonBadge } from '@/core/badges';
 import { formatDate } from '@/lib/intl-utils';
-import { User, Mail, Phone, Tag, Calendar, MessageSquare } from 'lucide-react';
+import { User, Mail, Phone, MessageSquare } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
-import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';

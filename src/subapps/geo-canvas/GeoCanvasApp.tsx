@@ -29,10 +29,10 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
         <UserTypeProvider>
           <ErrorBoundary
             componentName="GeoCanvas"
-            enableRetry={true}
+            enableRetry
             maxRetries={3}
-            enableReporting={true}
-            showErrorDetails={true}
+            enableReporting
+            showErrorDetails
           >
             {/* 🏢 ENTERPRISE PROVIDERS STACK */}
             {/* TODO Phase 2: GeoTransformProvider */}

@@ -33,7 +33,7 @@ import { FloatingPanel } from '@/components/ui/floating';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { ToolType } from '../toolbar/types';
 import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
-import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS } from '../../overlays/types';
+import { STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS } from '../../overlays/types';
 import { useUnifiedOverlayCreation } from '../../hooks/overlay/useUnifiedOverlayCreation';
 import { toolStyleStore } from '../../stores/ToolStyleStore';
 import { STATUS_COLORS_MAPPING, getKindFromLabel } from '../../config/color-mapping';

@@ -1,13 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
 import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/individual-config';
-import { getIconComponent } from './utils/IconMapping';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';

@@ -261,6 +261,33 @@ export interface TaxPlanningInsight {
  * παρακράτηση φόρου 20%. Αυτό πρέπει να αντιστοιχιστεί
  * με τη βεβαίωση αποδοχών.
  */
+// ============================================================================
+// PARTNERSHIP TAX RESULT — Αποτέλεσμα Φόρου ΟΕ
+// ============================================================================
+
+/** Αποτέλεσμα φόρου ανά εταίρο */
+export interface PartnerTaxResult {
+  partnerId: string;
+  partnerName: string;
+  profitSharePercent: number;
+  profitShare: number;
+  taxResult: TaxResult;
+}
+
+/** Συνολικό αποτέλεσμα φόρου ΟΕ */
+export interface PartnershipTaxResult {
+  fiscalYear: number;
+  totalEntityIncome: number;
+  totalEntityExpenses: number;
+  totalEntityProfit: number;
+  entityProfessionalTax: number;
+  partnerResults: PartnerTaxResult[];
+}
+
+// ============================================================================
+// WITHHOLDING RECONCILIATION — Αντιστοίχιση Παρακρατήσεων
+// ============================================================================
+
 export interface WithholdingReconciliation {
   /** ID τιμολογίου */
   invoiceId: string;

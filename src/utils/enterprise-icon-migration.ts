@@ -25,7 +25,6 @@
  * @author Enterprise Frontend Team
  */
 
-import { componentSizes } from '@/styles/design-tokens';
 
 // ============================================================================
 // 🎯 TYPE DEFINITIONS - ENTERPRISE TYPE SAFETY

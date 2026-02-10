@@ -7,11 +7,9 @@
 import type {
   DxfCoordinate,
   GeoCoordinate,
-  ProjectedCoordinate,
   GeoTransformMatrix,
   GeoreferenceInfo,
-  GeoControlPoint,
-  SpatialEntity
+  GeoControlPoint
 } from '../../types';
 
 // Import existing DXF types

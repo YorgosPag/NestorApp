@@ -13,11 +13,9 @@ import { useCursor } from './CursorSystem';
 import { isPointInRulerArea } from './utils';
 import {
   CoordinateTransforms,
-  COORDINATE_LAYOUT,
   getPointerSnapshotFromElement,
   getScreenPosFromEvent,
-  screenToWorldWithSnapshot,
-  type PointerSnapshot
+  screenToWorldWithSnapshot
 } from '../../rendering/core/CoordinateTransforms';
 import { canvasEventBus, CANVAS_EVENTS } from '../../rendering/canvas/core/CanvasEventSystem';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';

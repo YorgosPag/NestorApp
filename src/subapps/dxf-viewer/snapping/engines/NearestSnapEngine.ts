@@ -7,7 +7,6 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { BaseSnapEngine } from '../shared/BaseSnapEngine';
-import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-149: Centralized Snap Engine Priorities

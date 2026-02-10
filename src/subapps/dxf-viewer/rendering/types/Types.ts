@@ -3,7 +3,6 @@
  * ✅ ΕΝΟΠΟΙΗΜΕΝΟ: Κοινά types για όλο το rendering system
  */
 
-import type { LineType } from '../../settings-core/types';
 
 // ===== BASIC GEOMETRY TYPES =====
 /**

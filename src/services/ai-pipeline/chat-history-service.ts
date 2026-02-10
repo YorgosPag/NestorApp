@@ -156,6 +156,23 @@ export class ChatHistoryService {
   }
 
   /**
+   * Clear all chat history for a specific channel+sender.
+   * Used to reset poisoned history (e.g. after multiple failed attempts).
+   */
+  async clearHistory(channelSenderId: string): Promise<void> {
+    try {
+      const db = getAdminFirestore();
+      await db.collection(COLLECTION_NAME).doc(channelSenderId).delete();
+      logger.info('Cleared chat history', { channelSenderId });
+    } catch (error) {
+      logger.warn('Failed to clear chat history', {
+        channelSenderId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
    * Clean up old chat history documents (older than 24h)
    * Call this from a daily cron job or periodic cleanup.
    *

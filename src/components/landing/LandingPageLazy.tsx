@@ -16,8 +16,8 @@ const LandingPageDynamic = dynamic(
           <div className="text-center">
             <AnimatedSpinner size="large" className="mx-auto mb-6" /> {/* 🏢 ENTERPRISE: Changed x-large to large */}
             <div className="space-y-3">
-              <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse w-64"></div>
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-48"></div>
+              <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse w-64" />
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-48" />
             </div>
           </div>
         </div>

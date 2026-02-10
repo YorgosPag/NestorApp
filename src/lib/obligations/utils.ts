@@ -1,4 +1,4 @@
-import { ObligationDocument, ObligationSection, SectionCategory } from '@/types/obligations';
+import { ObligationSection, SectionCategory } from '@/types/obligations';
 import { getDefaultTemplate } from './constants';
 import { formatDate } from '@/lib/intl-utils';
 import {

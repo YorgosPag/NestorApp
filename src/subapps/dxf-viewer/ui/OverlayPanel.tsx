@@ -4,11 +4,11 @@ import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Square, Eye, EyeOff, Palette, MousePointer2 } from 'lucide-react';
+import { Square, Eye, Palette } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
 import { useOverlayManager } from '../state/overlay-manager';
 import type { RegionStatus } from '../types/overlay';
-import { STATUS_COLORS_MAPPING, getStatusColors } from '../config/color-mapping';
+import { STATUS_COLORS_MAPPING } from '../config/color-mapping';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { PANEL_TOKENS, PANEL_LAYOUT } from '../config/panel-tokens';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';

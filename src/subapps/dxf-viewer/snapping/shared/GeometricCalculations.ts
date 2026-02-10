@@ -9,7 +9,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { ExtendedSnapType } from '../extended-types';
 import type { Entity } from '../extended-types';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { calculateDistance, rotatePoint, pointOnCircle, squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -21,11 +20,6 @@ import {
 } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE: Import centralized entity types and type guards
 import type {
-  LineEntity,
-  PolylineEntity,
-  LWPolylineEntity,
-  CircleEntity,
-  ArcEntity,
   RectangleEntity
 } from '../../types/entities';
 import {

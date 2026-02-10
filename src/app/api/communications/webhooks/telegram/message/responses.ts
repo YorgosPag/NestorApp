@@ -10,11 +10,10 @@
 
 import type { TelegramSendPayload } from '../telegram/types';
 import {
-  TelegramTemplateResolver,
   getTemplateResolver,
   type TelegramLocale
 } from '../templates/template-resolver';
-import { getActiveTypes, type TypeCatalogEntry } from '../catalogs/type-catalog';
+import { getActiveTypes } from '../catalogs/type-catalog';
 
 // ============================================================================
 // CONFIGURATION (from environment - NO hardcoded company values)

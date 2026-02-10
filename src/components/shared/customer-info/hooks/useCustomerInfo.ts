@@ -10,7 +10,6 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts/helpers';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {

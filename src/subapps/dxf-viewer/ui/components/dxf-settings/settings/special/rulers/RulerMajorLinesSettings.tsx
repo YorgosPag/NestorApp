@@ -230,8 +230,8 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}
-          recent={true}
-          eyedropper={true}
+          recent
+          eyedropper
         />
       </div>
 

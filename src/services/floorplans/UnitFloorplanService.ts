@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';

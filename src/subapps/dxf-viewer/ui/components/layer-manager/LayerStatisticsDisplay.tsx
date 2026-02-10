@@ -36,7 +36,7 @@ export function LayerStatisticsDisplay({
         </div>
       </div>
 
-      <div className={`h-px ${colors.bg.muted}`}></div>
+      <div className={`h-px ${colors.bg.muted}`} />
     </>
   );
 }

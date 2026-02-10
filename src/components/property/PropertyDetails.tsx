@@ -4,7 +4,7 @@
 import React from 'react';
 import { toast } from 'react-hot-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PropertyBadge, CommonBadge } from '@/core/badges';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EntityDetailsHeader } from '@/core/entity-headers';
@@ -16,10 +16,9 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import {
-  MapPin, Euro, Ruler, Users, Phone, Mail, FileText, ExternalLink, Calendar, Share2, Home
+  MapPin, Euro, Ruler, Users, Calendar, Share2, Home
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate } from '@/lib/intl-utils';
 import type { Property } from '@/types/property';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';

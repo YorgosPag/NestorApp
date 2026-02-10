@@ -22,7 +22,7 @@
 
 import { FitToViewService } from './FitToViewService';
 import { HitTestingService } from './HitTestingService';
-import { canvasBoundsService, type CanvasBoundsCache } from './CanvasBoundsService';
+import { canvasBoundsService } from './CanvasBoundsService';
 import { LayerOperationsService } from './LayerOperationsService';
 import { EntityMergeService } from './EntityMergeService';
 import { DxfFirestoreService } from './dxf-firestore.service';

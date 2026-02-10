@@ -54,7 +54,6 @@
 // import { useConsolidatedSettings } from './useConsolidatedSettings';
 import {
   useLineSettingsFromProvider,
-  useTextSettingsFromProvider,
   useLineDraftSettings,
   useLineHoverSettings,
   useLineSelectionSettings,

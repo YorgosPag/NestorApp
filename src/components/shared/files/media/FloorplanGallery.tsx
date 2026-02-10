@@ -39,7 +39,6 @@ import {
   Trash2,
   ZoomIn,
   ZoomOut,
-  RotateCw,
   Maximize2,
   Map,
   FileText,

@@ -96,7 +96,7 @@ export function ErrorReportingDashboard({
           onClick={() => setIsMinimized(false)}
         >
           <div className="flex items-center space-x-2">
-            <div className={`${iconSizes.xs} ${colors.bg.success} ${radius.full} animate-pulse`}></div>
+            <div className={`${iconSizes.xs} ${colors.bg.success} ${radius.full} animate-pulse`} />
             <span className="text-sm font-mono">
               🛡️ Errors: {stats.totalErrors}
             </span>
@@ -121,7 +121,7 @@ export function ErrorReportingDashboard({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b ${getStatusBorder('muted')}">
             <div className="flex items-center space-x-2">
-              <div className={`${iconSizes.xs} ${colors.bg.success} ${radius.full} animate-pulse`}></div>
+              <div className={`${iconSizes.xs} ${colors.bg.success} ${radius.full} animate-pulse`} />
               <h3 className="font-semibold">🛡️ Error Tracking</h3>
             </div>
             <div className="flex items-center space-x-2">

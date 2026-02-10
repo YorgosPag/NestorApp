@@ -17,7 +17,7 @@
  */
 
 import { Migration, MigrationStep } from './types';
-import { collection, query, getDocs, doc, updateDoc, getDoc, addDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, getDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 

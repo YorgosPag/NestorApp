@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 const { useState, useCallback } = React;
-import { Tag, Palette, Eye, EyeOff, Settings, Info } from 'lucide-react';
+import { Tag, Palette, Eye, EyeOff, Info } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized navigation entities for building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
@@ -23,7 +23,6 @@ const HOVER_BACKGROUND_EFFECTS = {
 import {
   EnhancedPropertyStatus as PropertyStatus,
   ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS,
-  ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS,
   getAllEnhancedStatuses as getAllStatuses
 } from '../../../constants/property-statuses-enterprise';
 // STATUS_COLORS_MAPPING removed - not used in component
@@ -123,8 +122,8 @@ export function PropertyStatusManager({
     return (
       <div className={`${colors.bg.card} p-4 ${className}`}>
         <div className="animate-pulse">
-          <div className={`h-6 ${colors.bg.secondary} rounded mb-4`}></div>
-          <div className={`h-32 ${colors.bg.secondary} rounded`}></div>
+          <div className={`h-6 ${colors.bg.secondary} rounded mb-4`} />
+          <div className={`h-32 ${colors.bg.secondary} rounded`} />
         </div>
       </div>
     );

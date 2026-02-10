@@ -8,7 +8,6 @@ import {
   projectAddressSchema,
   projectAddressCreateSchema,
   projectAddressesSchema,
-  projectAddressesCreateSchema,
   buildingAddressReferenceSchema,
   buildingAddressConfigsSchema,
   buildingBaseSchema,

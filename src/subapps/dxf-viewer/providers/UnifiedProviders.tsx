@@ -55,7 +55,7 @@ export function UnifiedProviders({
  */
 export function CompatibilityWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <UnifiedProviders enableLegacyMode={true}>
+    <UnifiedProviders enableLegacyMode>
       {children}
     </UnifiedProviders>
   );

@@ -28,7 +28,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized types
-import type { ContactType } from '@/types/contacts';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 
 // 🏢 ENTERPRISE: Import modular components

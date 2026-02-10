@@ -15,7 +15,6 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from 'react';
 import type {
   EntityType,
-  EntityRelationship,
   RelationshipOperationResult,
   IntegrityValidationResult,
   CascadeDeleteResult,

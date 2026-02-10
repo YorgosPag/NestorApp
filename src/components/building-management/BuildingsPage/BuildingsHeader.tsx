@@ -15,7 +15,6 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PageHeader } from '@/core/headers';
-import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // [ENTERPRISE] i18n - Full internationalization support

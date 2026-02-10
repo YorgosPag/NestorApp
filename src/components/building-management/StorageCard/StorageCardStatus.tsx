@@ -5,8 +5,6 @@ import { UnitBadge, CommonBadge } from '@/core/badges';
 import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { Star } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { cn } from '@/lib/utils';
-import { getTypeColor } from './StorageCardUtils';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 
 interface Props {

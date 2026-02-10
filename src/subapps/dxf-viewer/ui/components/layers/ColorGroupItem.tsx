@@ -15,7 +15,7 @@ import { LayerItem } from './LayerItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
 import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, createHoverBorderEffects } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, createHoverBorderEffects } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';

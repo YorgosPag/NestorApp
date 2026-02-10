@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { LINE_TYPE_LABELS, LINE_CAP_LABELS, LINE_JOIN_LABELS } from './LineConstants';
 import { getDashArray } from '../settings-core/defaults';
 // ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
 import { useLineSettingsFromProvider } from '../settings-provider';
@@ -11,7 +10,7 @@ import { guardGlobalAccess } from '../../../utils/overrideGuard';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΩΝ: Use unified types από settings-core
-import type { LineType, LineCapStyle, LineJoinStyle, LineSettings } from '../settings-core/types';
+import type { LineSettings } from '../settings-core/types';
 
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 // Mock missing ConfigurationProvider

@@ -12,7 +12,6 @@
 import { portalComponents, photoPreviewComponents, zIndex } from '../../../styles/design-tokens';
 import type {
   PortalVariant,
-  PortalPlacement,
   DropdownPosition,
   EnterprisePortalConfig
 } from './EnterprisePortalSystem';

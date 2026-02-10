@@ -9,8 +9,6 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Project, ProjectStatus } from '@/types/project';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { cn } from '@/lib/utils';
-import { getProjectLabel } from '@/lib/project-utils';
 import { useCompanyRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -123,7 +121,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
                                             progress={project.progress}
                                             label=""
                                             size="sm"
-                                            showPercentage={true}
+                                            showPercentage
                                         />
                                     </div>
                                 </TableCell>

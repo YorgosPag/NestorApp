@@ -18,7 +18,6 @@ import { NAVIGATION_ENTITIES } from '../config';
 import { useNavigation } from '../core/NavigationContext';
 import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
-import { getPriorityLabels } from '@/subapps/dxf-viewer/config/modal-select/core/labels/status';
 import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -114,7 +113,7 @@ export function MobileNavigation({
         <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">
           {getTitle()}
         </h3>
-        <div className="w-16"></div> {/* Spacer */}
+        <div className="w-16" /> {/* Spacer */}
       </div>
 
       {/* Mobile Content */}

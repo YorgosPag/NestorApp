@@ -13,7 +13,6 @@
 import React, { useState } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { borders } from '@/styles/design-tokens';
 
 export function BorderSystemDemo() {
   const {
@@ -93,7 +92,7 @@ export function BorderSystemDemo() {
             <h3 className="text-lg font-medium">Border Width Tokens</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {Object.entries(width).map(([name, value]) => (
-                <div key={name} className={`p-3 border rounded-md`} style={{borderWidth: value}}>
+                <div key={name} className="p-3 border rounded-md" style={{borderWidth: value}}>
                   <strong>{name}</strong>
                   <div className="text-sm text-muted-foreground">{value}</div>
                 </div>

@@ -201,17 +201,14 @@ export const GET = withStandardRateLimit(async function GET(
         // ============================================================================
 
         const customers = tenantContacts.map(contactDoc => {
-          // Firestore returns unknown, we assert it matches Contact structure
-          const contactData = { id: contactDoc.id, ...contactDoc.data() } as Record<string, unknown> & { id: string };
-
-          // Type assertion to Contact (safer than 'as any')
-          const contact = contactData as unknown as Contact;
+          // Firestore DocumentData → Contact (ADR-172: proper typing, no double assertion)
+          const contactData = { id: contactDoc.id, ...contactDoc.data() } as Contact & { id: string };
 
           return {
             contactId: contactData.id,
-            name: getContactDisplayName(contact),
-            phone: getPrimaryPhone(contact) || null,
-            email: getPrimaryEmail(contact) || null,
+            name: getContactDisplayName(contactData),
+            phone: getPrimaryPhone(contactData) || null,
+            email: getPrimaryEmail(contactData) || null,
             unitsCount: customerUnitCount[contactData.id] || 0,
           };
         });

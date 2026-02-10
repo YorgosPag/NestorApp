@@ -10,10 +10,8 @@
 //
 // ============================================================================
 
-import {
-  ContactRelationship,
-  OrganizationHierarchyNode
-} from '@/types/contacts/relationships';
+
+
 import { Contact } from '@/types/contacts';
 import { RelationshipCRUDService } from '../core/RelationshipCRUDService';
 import { RelationshipQueryBuilder } from '../search/RelationshipQueryBuilder';

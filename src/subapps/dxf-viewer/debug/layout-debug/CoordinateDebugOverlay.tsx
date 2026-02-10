@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useTransformValue } from '../../contexts/TransformContext';
 // Enterprise CSS Module - CLAUDE.md Protocol N.3 compliance

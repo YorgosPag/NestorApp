@@ -17,9 +17,8 @@
  * @see docs/centralized-systems/reference/adr-index.md
  */
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import type { PdfBackgroundCanvasProps } from '../types/pdf.types';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion

@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +16,6 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
-import { VATRateSelector } from '../../shared/VATRateSelector';
 import { PaymentMethodSelector } from '../../shared/PaymentMethodSelector';
 import { CustomerSelector } from './CustomerSelector';
 import { LineItemsEditor } from './LineItemsEditor';

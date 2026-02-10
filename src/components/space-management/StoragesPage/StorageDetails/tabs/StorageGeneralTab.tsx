@@ -3,7 +3,7 @@
 import React from 'react';
 import { formatDate, formatCurrency, formatFloorString } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
-import { Warehouse, MapPin, Calendar, User, Euro, Layers } from 'lucide-react';
+import { Warehouse, MapPin, Calendar, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';

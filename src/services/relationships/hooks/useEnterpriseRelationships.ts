@@ -16,7 +16,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
   EntityType,
-  EntityRelationship,
   RelationshipOperationResult,
   IntegrityValidationResult,
   CascadeDeleteResult,

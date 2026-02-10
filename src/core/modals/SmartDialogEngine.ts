@@ -21,39 +21,23 @@ import { i18n } from '@/i18n';
 
 // Import από existing centralized modal configurations
 import {
-  MODAL_SELECT_STYLES,
-  getSelectStyles,
   MODAL_SELECT_PLACEHOLDERS,
-  getSelectPlaceholder,
-  MODAL_SELECT_ITEM_PATTERNS,
-  getSelectItemPattern,
   getCompanyFieldLabels,
   getServiceFieldLabels,
   getContactTypeLabels,
-  MODAL_SELECT_PROJECT_STATUS_LABELS,
   getProjectStatusLabels
 } from '../../subapps/dxf-viewer/config/modal-select';
 
 // Import από existing centralized label systems
 import {
-  DROPDOWN_PLACEHOLDERS,
-  PROCESS_STEP_LABELS,
-  getEnhancedStatusLabel,
-  getEnhancedStatusColor
+  DROPDOWN_PLACEHOLDERS
 } from '../../constants/property-statuses-enterprise';
 
 // Import από existing centralized design tokens
-import { useSemanticColors } from '../../ui-adapters/react/useSemanticColors';
-import { useIconSizes } from '../../hooks/useIconSizes';
-import { useBorderTokens } from '../../hooks/useBorderTokens';
-import { useTypography } from '../../hooks/useTypography';
 
 // Import από existing UI components
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { FormGrid, FormField, FormInput } from '../../components/ui/form/FormComponents';
-import { SaveButton, CancelButton } from '../../components/ui/form/ActionButtons';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS - SMART DIALOG ARCHITECTURE

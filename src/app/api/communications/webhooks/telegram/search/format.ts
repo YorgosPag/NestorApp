@@ -9,7 +9,7 @@
  */
 
 import type { SearchResult, TelegramProperty } from '../shared/types';
-import { getTypeEntry, type TypeCatalogEntry } from '../catalogs/type-catalog';
+import { getTypeEntry } from '../catalogs/type-catalog';
 import {
   getTemplateResolver,
   formatCurrency,

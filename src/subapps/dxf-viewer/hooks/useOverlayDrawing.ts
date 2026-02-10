@@ -4,7 +4,7 @@
  * Extracted from DxfViewerContent.tsx for better separation of concerns
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useSnapManager } from '../snapping/hooks/useSnapManager';
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 import { MIN_POLY_POINTS } from '../overlays/types';

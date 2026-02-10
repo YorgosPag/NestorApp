@@ -13,10 +13,8 @@ import {
   where,
   orderBy,
   serverTimestamp,
-  QueryConstraint,
   Timestamp,
   writeBatch,
-  deleteDoc,
   QueryDocumentSnapshot,
   DocumentData
 } from 'firebase/firestore';

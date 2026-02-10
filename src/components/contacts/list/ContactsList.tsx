@@ -144,7 +144,7 @@ export function ContactsList({
           searchPlaceholder={t('list.searchPlaceholder')}
           showToolbar={showToolbar}
           onToolbarToggle={setShowToolbar}
-          hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
+          hideSearch  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
         />
 
         {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
@@ -234,7 +234,7 @@ export function ContactsList({
       <ContactTypeQuickFilters
         selectedTypes={selectedTypes}
         onTypeChange={setSelectedTypes}
-        compact={true}
+        compact
       />
 
       <ScrollArea className="flex-1">

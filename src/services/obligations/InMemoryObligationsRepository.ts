@@ -5,7 +5,7 @@
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit, QueryConstraint } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ObligationDocument, ObligationTemplate, ObligationStatus } from '@/types/obligations';
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';

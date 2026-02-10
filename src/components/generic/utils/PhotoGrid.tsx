@@ -8,8 +8,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   PHOTO_TEXT_COLORS,
   PHOTO_COLORS,
-  PHOTO_BORDERS,
-  PHOTO_COMBINED_EFFECTS
+  PHOTO_BORDERS
 } from '../config/photo-config';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support

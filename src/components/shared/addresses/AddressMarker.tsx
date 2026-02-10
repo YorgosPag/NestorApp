@@ -19,12 +19,8 @@
 import React, { memo } from 'react';
 import { MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+
+
 import type { ProjectAddress } from '@/types/project/addresses';
 import { formatAddressLine } from '@/types/project/address-helpers';
 import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useRef } from 'react';
+import React, { createContext, useContext } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { IDENTITY_COORDINATE_TRANSFORM } from '../../rendering/core/CoordinateTransforms';
 

@@ -15,11 +15,9 @@ import {
   PropertyIntent,
   MarketAvailability,
   PropertyPriority,
-  STATUS_CATEGORIES,
   getStatusCategory,
   isPropertyAvailable,
   isPropertyCommitted,
-  isPropertyOffMarket,
   hasPropertyIssues
 } from '@/constants/property-statuses-enterprise';
 

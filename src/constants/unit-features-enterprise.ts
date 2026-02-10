@@ -11,7 +11,6 @@
  * @enterprise Production-ready unit features management system
  */
 
-import type { Timestamp } from 'firebase/firestore';
 
 // =============================================================================
 // 🏢 REUSE EXISTING UNIT TYPE (from src/types/unit.ts)

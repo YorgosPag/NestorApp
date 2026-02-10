@@ -3,7 +3,6 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
 import { PropertyManagementPageContent } from '@/components/property-management/PropertyManagementPageContent';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';

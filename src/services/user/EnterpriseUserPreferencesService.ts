@@ -19,7 +19,7 @@
  */
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';

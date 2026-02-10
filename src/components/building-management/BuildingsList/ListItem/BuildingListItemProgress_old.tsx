@@ -13,7 +13,7 @@ export function BuildingListItemProgress({ progress }: BuildingListItemProgressP
       progress={progress}
       label="Πρόοδος"
       size="md"
-      showPercentage={true}
+      showPercentage
     />
   );
 }

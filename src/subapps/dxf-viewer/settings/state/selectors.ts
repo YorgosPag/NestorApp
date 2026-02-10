@@ -7,7 +7,7 @@
  *  - State Management
  */
 
-import type { SettingsState, ViewerMode, EntityType, LineSettings, TextSettings, GripSettings, OverrideFlags, StorageMode } from '../core/types';
+import type { SettingsState, ViewerMode, EntityType, LineSettings, TextSettings, GripSettings, StorageMode } from '../core/types';
 import { computeEffective } from '../core/computeEffective';
 
 // ============================================================================

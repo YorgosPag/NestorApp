@@ -4,9 +4,8 @@ import React from 'react';
 import { BuildingBadge } from "@/core/badges";
 import { MapPin } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { cn } from '@/lib/utils';
 import type { Building } from '../../BuildingsPageContent';
-import { getStatusColor, getStatusLabel, getCategoryIcon, getCategoryLabel } from '../../BuildingCard/BuildingCardUtils';
+import { getCategoryIcon, getCategoryLabel } from '../../BuildingCard/BuildingCardUtils';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 
 interface BuildingListItemHeaderProps {

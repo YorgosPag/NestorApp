@@ -110,7 +110,7 @@ export function Toolbar({
         </Tooltip>
       </div>
 
-      <div className={`h-6 w-px bg-muted-foreground/30 mx-1`} />
+      <div className="h-6 w-px bg-muted-foreground/30 mx-1" />
 
       {/* Lists and quotes */}
       <div className="flex items-center gap-1">
@@ -140,7 +140,7 @@ export function Toolbar({
         </Tooltip>
       </div>
 
-      <div className={`h-6 w-px bg-muted-foreground/30 mx-1`} />
+      <div className="h-6 w-px bg-muted-foreground/30 mx-1" />
 
       {/* Undo/Redo */}
       <div className="flex items-center gap-1">

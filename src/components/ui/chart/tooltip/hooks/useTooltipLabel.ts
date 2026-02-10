@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useChart } from "../../ChartContext";
 import { resolveItemConfig } from "../utils/payloadConfig";
-import type { TooltipPayloadItem, TooltipPayload } from "../types";
+import type { TooltipPayload } from "../types";
 
 export function useTooltipLabel({
   hideLabel, payload, labelKey, label,

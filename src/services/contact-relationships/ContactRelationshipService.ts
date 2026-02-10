@@ -96,7 +96,6 @@ import { RelationshipCacheAdapter } from './adapters/RelationshipCacheAdapter';
 
 // Import search services
 import { RelationshipSearchService } from './search/RelationshipSearchService';
-import { RelationshipQueryBuilder } from './search/RelationshipQueryBuilder';
 
 // Import hierarchy services
 import { OrganizationHierarchyService } from './hierarchy/OrganizationHierarchyService';
@@ -104,7 +103,7 @@ import { DepartmentManagementService } from './hierarchy/DepartmentManagementSer
 
 // Import bulk services
 import { BulkRelationshipService, BulkOperationResult as ServiceBulkOperationResult } from './bulk/BulkRelationshipService';
-import { ImportExportService, ExportResult as ServiceExportResult } from './bulk/ImportExportService';
+import { ImportExportService } from './bulk/ImportExportService';
 
 // Import types from specialized services
 import { DepartmentMetrics as ServiceDepartmentMetrics } from './hierarchy/DepartmentManagementService';

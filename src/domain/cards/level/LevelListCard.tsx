@@ -196,10 +196,10 @@ export function LevelListCard({
       isSelected={isSelected}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      compact={true}
+      compact
       hideStats={false}
-      inlineBadges={true}
-      hideIcon={true} // Hide icon to keep it minimal like current design
+      inlineBadges
+      hideIcon // Hide icon to keep it minimal like current design
       className={className}
       aria-label={t('levelCard.ariaLabel', { name: level.name })}
     />

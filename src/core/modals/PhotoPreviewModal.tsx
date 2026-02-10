@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'; // TypeScript refresh
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Download, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2, Camera } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShareButton } from '@/components/ui/ShareButton';
@@ -15,9 +15,7 @@ import { FileNamingService } from '@/services/FileNamingService';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { photoPreviewLayout } from '@/styles/design-tokens';
 import {
-  PHOTO_COLORS,
-  PHOTO_BORDERS,
-  PHOTO_COMBINED_EFFECTS
+  PHOTO_COLORS
 } from '@/components/generic/config/photo-config';
 import { useFocusTrap, announceToScreenReader } from '@/utils/accessibility';
 import { useIconSizes } from '@/hooks/useIconSizes';

@@ -14,7 +14,7 @@
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 import { UI_COLORS } from '../config/color-config';
-import { PANEL_COLORS, PANEL_LAYOUT } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors & typography
+import { PANEL_COLORS } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors & typography
 // 🏢 ENTERPRISE: Centralized z-index systems (ADR-002 compliance)
 import { zIndex as globalZIndex } from '../../../styles/design-tokens';
 import { dxfZIndex } from '../styles/DxfZIndexSystem.styles';

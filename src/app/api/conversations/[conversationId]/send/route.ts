@@ -28,7 +28,6 @@ import {
   MESSAGE_DIRECTION,
   DELIVERY_STATUS,
   type MessageAttachment,
-  ATTACHMENT_TYPES,
 } from '@/types/conversations';
 import {
   BOT_IDENTITY,

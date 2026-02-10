@@ -1,14 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { ProjectBadge } from '@/core/badges';
 import { Briefcase, Eye, Edit } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
-import type { Project, ProjectStatus } from '@/types/project';
-import { PROJECT_STATUS_LABELS } from '@/types/project';
+import type { Project } from '@/types/project';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

@@ -5,9 +5,8 @@
  */
 
 import type { UIRenderer, UIRenderContext, UIRenderMetrics } from '../core/UIRenderer';
-import type { Viewport, ViewTransform } from '../../types/Types';
+import type { Viewport } from '../../types/Types';
 import type { OriginMarkersSettings } from './OriginMarkersTypes';
-import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-042: Centralized UI Fonts
 // 🏢 ADR-091: Centralized Text Label Offsets
 import { UI_FONTS, TEXT_LABEL_OFFSETS } from '../../../config/text-rendering-config';

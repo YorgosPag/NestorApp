@@ -28,13 +28,11 @@ import type {
   PDFUploadOptions,
   PDFUploadResult,
   ProgressCallback,
-  FileUploadProgress,
 } from '../types/upload.types';
 import { UPLOAD_DEFAULTS, isFirebaseStorageError } from '../types/upload.types';
 // 🏢 ENTERPRISE: Canonical File Storage System imports
 import { FileRecordService } from '@/services/file-record.service';
 import {
-  ENTITY_TYPES,
   FILE_DOMAINS,
   FILE_CATEGORIES,
   type EntityType,

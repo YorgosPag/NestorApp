@@ -19,7 +19,7 @@
  */
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================

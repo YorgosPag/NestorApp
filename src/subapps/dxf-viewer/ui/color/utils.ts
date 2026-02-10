@@ -8,7 +8,7 @@
  * @since 2025-10-07
  */
 
-import type { ColorValue, RGBColor, HSLColor, HSVColor, ParseResult, FormatOptions } from './types';
+import type { RGBColor, HSLColor, HSVColor, ParseResult, FormatOptions } from './types';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp255 } from '../../rendering/entities/shared/geometry-utils';
 

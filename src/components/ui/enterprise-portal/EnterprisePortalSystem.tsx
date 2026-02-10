@@ -14,12 +14,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { portalComponents, photoPreviewComponents } from '../../../styles/design-tokens';
-import {
-  usePrecisionPositioning,
-  calculatePrecisePosition,
-  type Point2D,
-  type PositionAlignment
-} from '../../../subapps/dxf-viewer/utils/precision-positioning';
+
+
 
 // ============================================================================
 // ENTERPRISE PORTAL TYPES

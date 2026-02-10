@@ -100,7 +100,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (loading) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
         <p className="text-gray-500 dark:text-muted-foreground">{t('tree.loading')}</p>
       </div>
     );

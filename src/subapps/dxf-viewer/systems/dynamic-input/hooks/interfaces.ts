@@ -1,6 +1,5 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
 import type { Field, Phase } from './useDynamicInputState';
 import type { FullFieldState, CoordinateFieldState, ManualInputState } from '../types/common-interfaces';
 

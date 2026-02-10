@@ -1,6 +1,5 @@
 "use client"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Notification } from "@/types/header"
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects/hover-effects'

@@ -24,8 +24,7 @@ import {
   MultiFactorResolver,
   MultiFactorError,
   reauthenticateWithCredential,
-  EmailAuthProvider,
-  User as FirebaseUser
+  EmailAuthProvider
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, Firestore, serverTimestamp } from 'firebase/firestore';
 import QRCode from 'qrcode';

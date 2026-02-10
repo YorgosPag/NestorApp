@@ -121,7 +121,7 @@ export function CurrentSettingsDisplay({
                     {lineSettings.color}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${lineColorBgClass}`}
-                    ></div>
+                     />
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -165,7 +165,7 @@ export function CurrentSettingsDisplay({
                     {effectiveTextSettings.color}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${textColorBgClass}`}
-                    ></div>
+                     />
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -224,7 +224,7 @@ export function CurrentSettingsDisplay({
                     {gripSettings.colors.cold}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${gripColdColorBgClass}`}
-                    ></div>
+                     />
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -233,7 +233,7 @@ export function CurrentSettingsDisplay({
                     {gripSettings.colors.warm}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${gripWarmColorBgClass}`}
-                    ></div>
+                     />
                   </span>
                 </div>
               </div>

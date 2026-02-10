@@ -19,7 +19,7 @@ export function ProgressBlock({ progress }: ProgressBlockProps) {
             progress={progress}
             label={t('progressBlock.progress')}
             size="md"
-            showPercentage={true}
+            showPercentage
         />
     );
 }

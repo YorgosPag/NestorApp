@@ -32,7 +32,7 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { layoutUtilities } from '@/styles/design-tokens';
 

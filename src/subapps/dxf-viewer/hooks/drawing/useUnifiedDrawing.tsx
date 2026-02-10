@@ -30,22 +30,19 @@
 // DEBUG FLAG
 const DEBUG_UNIFIED_DRAWING = false;
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ENTERPRISE (2026-01-25): Drawing State Machine integration
-import { useDrawingMachine, type DrawingStateType } from '../../core/state-machine';
+import { useDrawingMachine } from '../../core/state-machine';
 // 🏢 ENTERPRISE (2026-01-26): Centralized tool configuration for continuous mode support
 import { getToolMetadata } from '../../systems/tools/ToolStateManager';
 import type { ToolType } from '../../ui/toolbar/types';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store for persistent tool selection
-import { toolStateStore } from '../../stores/ToolStateStore';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
-import { EventBus } from '../../systems/events';
 // NOTE: ADR-055 Event Bus pattern for entity creation temporarily disabled - needs debugging
 // import { emitEntityCreateRequest } from '../../systems/entity-creation';
-import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity, ArcEntity, SceneModel } from '../../types/scene';
+import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity, ArcEntity } from '../../types/scene';
 // ✅ ENTERPRISE FIX: Import centralized PreviewGripPoint from entities
-import type { PreviewGripPoint } from '../../types/entities';
 
 // Extended entity types for drawing preview functionality
 export interface PreviewPoint {
@@ -109,7 +106,6 @@ export type ExtendedSceneEntity =
   | AnySceneEntity;
 import { useLevels } from '../../systems/levels';
 // Snap functionality removed - use ProSnapEngine directly if needed
-import { useSnapContext } from '../../snapping/context/SnapContext';
 // 🏢 ENTERPRISE (2026-01-31): Geometry utilities - unified import from barrel export
 // calculateDistance: from geometry-rendering-utils.ts
 // arcFrom3Points, arcFromCenterStartEnd, arcFromStartCenterEnd: from geometry-utils.ts (ADR-059)
@@ -122,7 +118,6 @@ import {
   arcFromStartCenterEnd,
   radToDeg,
   normalizeAngleDeg,
-  dotProduct,
   // 🏢 ADR-078: Centralized Angle Between Vectors
   angleBetweenVectors,
   // 🏢 ADR-083: Circle from 3 points (circumcircle)

@@ -15,7 +15,7 @@
 'use client';
 
 import React from 'react';
-import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../../config/color-config';

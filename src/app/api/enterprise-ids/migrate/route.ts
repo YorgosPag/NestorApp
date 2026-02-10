@@ -7,7 +7,7 @@
  * 🔒 SECURITY: Protected with super_admin role (2026-02-06)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { MigrationPhase, type MigrationStats } from '@/services/enterprise-id-migration.service';
 import { EntityType, isValidEntityType } from '@/services/relationships/enterprise-relationship-engine.contracts';
 import { MigrationController, type MigrationConfig } from './migration-controller';

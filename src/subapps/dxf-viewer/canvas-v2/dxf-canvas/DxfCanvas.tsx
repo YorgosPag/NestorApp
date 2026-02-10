@@ -25,7 +25,7 @@ import type { GridSettings, RulerSettings, ColorLayer } from '../layer-canvas/la
 // ✅ ADD: Grid and Ruler renderers για independent UI rendering
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
-import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
+import { createUIRenderContext } from '../../rendering/ui/core/UIRenderContext';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // ✅ ADR-002: Centralized canvas theme

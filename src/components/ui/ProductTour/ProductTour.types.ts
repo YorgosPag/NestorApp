@@ -19,7 +19,7 @@
  * @see https://www.pendo.io/glossary/product-tour/
  */
 
-import type { ReactNode, CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 
 // =============================================================================
 // TOUR STEP TYPES

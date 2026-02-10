@@ -1,10 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, User, Camera, X } from 'lucide-react';
+import { Building2, User, Camera } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import { MultiplePhotosUpload } from './MultiplePhotosUpload';
@@ -12,12 +10,8 @@ import type { ContactType, Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from './MultiplePhotosUpload';
-import {
-  PHOTO_COLORS,
-  PHOTO_TEXT_COLORS,
-  PHOTO_BORDERS,
-  PHOTO_COMBINED_EFFECTS
-} from '@/components/generic/config/photo-config';
+
+
 import { openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { asDate } from '@/lib/firestore/utils';
@@ -136,12 +130,12 @@ function IndividualPhotoManager({
           onPhotoUploadComplete={handlers.handleMultiplePhotoUploadComplete}
           uploadHandler={uploadHandlers.photoUploadHandler}
           disabled={disabled}
-          compact={true}
-          showProgress={true}
+          compact
+          showProgress
           purpose="photo"
           contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
           className="w-full"
-          showProfileSelector={true}
+          showProfileSelector
           selectedProfilePhotoIndex={formData.selectedProfilePhotoIndex}
           onProfilePhotoSelection={handlers.handleProfilePhotoSelection}
           onPhotoClick={handlePhotoClick} // 🏢 ENTERPRISE: Photo click handler για gallery modal
@@ -212,8 +206,8 @@ function CompanyPhotoManager({
               }}
               disabled={disabled}
               contactData={formData} // 🏷️ Pass contact data for filename generation
-              compact={true}
-              showProgress={true}
+              compact
+              showProgress
               className="w-full"
             />
           </CardContent>
@@ -270,8 +264,8 @@ function CompanyPhotoManager({
               }}
               disabled={disabled}
               contactData={formData} // 🏷️ Pass contact data for filename generation
-              compact={true}
-              showProgress={true}
+              compact
+              showProgress
               className="w-full"
             />
           </CardContent>
@@ -334,8 +328,8 @@ function ServicePhotoManager({
             handlers.handleUploadedLogoURL?.(result.url || '');
           }}
           disabled={disabled}
-          compact={true}
-          showProgress={true}
+          compact
+          showProgress
         />
       </CardContent>
     </Card>

@@ -13,6 +13,7 @@ import type { PaginatedResult } from '@/lib/pagination';
 
 // ── Company Profile Types ────────────────────────────────────────────────────
 import type { CompanyProfile, CompanySetupInput } from './company';
+import type { Partner } from './entity';
 
 // ── Phase 1 Types ───────────────────────────────────────────────────────────
 import type {
@@ -125,6 +126,11 @@ export interface IAccountingRepository {
   listFixedAssets(filters: FixedAssetFilters, pageSize?: number): Promise<PaginatedResult<FixedAsset>>;
   createDepreciationRecord(data: Omit<DepreciationRecord, 'recordId'>): Promise<{ id: string }>;
   getDepreciationRecords(assetId: string, fiscalYear?: number): Promise<DepreciationRecord[]>;
+
+  // ── Partners (ADR-ACC-012 OE) ──────────────────────────────────────────
+  getPartners(): Promise<Partner[]>;
+  savePartners(partners: Partner[]): Promise<void>;
+  getPartnerEFKAPayments(partnerId: string, year: number): Promise<EFKAPayment[]>;
 
   // ── EFKA Payments ───────────────────────────────────────────────────────
   getEFKAPayments(year: number): Promise<EFKAPayment[]>;

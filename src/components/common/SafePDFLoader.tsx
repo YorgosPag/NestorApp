@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Chrome, Check } from 'lucide-react';
+import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Check } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
+import { canvasUtilities } from '@/styles/design-tokens';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 

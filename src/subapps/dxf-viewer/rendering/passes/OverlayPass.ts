@@ -4,7 +4,6 @@
  */
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
-import type { EntityModel } from '../types/Types';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../primitives/canvasPaths';

@@ -32,7 +32,7 @@ import { AddressCard, AddressFormSection } from '@/components/shared/addresses';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Plus, Star, Trash2, ChevronDown, ChevronUp, Map, X, Pencil } from 'lucide-react';
+import { MapPin, Plus, Star, Trash2, X, Pencil } from 'lucide-react';
 import {
   getPrimaryAddress,
   migrateLegacyAddress,
@@ -328,9 +328,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       {localAddresses.length > 0 && !isAddFormOpen && editingIndex === null && (
         <AddressMap
           addresses={localAddresses}
-          highlightPrimary={true}
-          showGeocodingStatus={true}
-          enableClickToFocus={true}
+          highlightPrimary
+          showGeocodingStatus
+          enableClickToFocus
           onMarkerClick={handleMarkerClick}
           heightPreset="viewerStandard"
           className="rounded-lg border shadow-sm"

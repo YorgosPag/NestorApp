@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import type { SceneModel, AnySceneEntity } from '../../types/scene';
+import type { SceneModel } from '../../types/scene';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry instead of direct imports
 import { serviceRegistry } from '../../services';
 import { useNotifications } from '../../../../providers/NotificationProvider';

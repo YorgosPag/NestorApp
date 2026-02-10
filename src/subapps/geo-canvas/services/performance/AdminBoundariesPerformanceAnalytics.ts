@@ -9,10 +9,7 @@
 
 import { performanceMonitor } from '../../performance/monitoring/PerformanceMonitor';
 import type {
-  AdminSearchResult,
-  GreekAdminLevel,
-  SearchHistoryEntry,
-  BoundingBox
+  GreekAdminLevel
 } from '../../types/administrative-types';
 import { generateSearchId, generateRequestId, generateAlertId } from '@/services/enterprise-id.service';
 

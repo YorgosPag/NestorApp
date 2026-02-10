@@ -1,22 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type {
   ConstraintsState,
   ConstraintDefinition,
   ConstraintResult,
-  ConstraintContext,
   ConstraintContextData,
   OrthoConstraintSettings,
   PolarConstraintSettings,
-  ConstraintsSettings,
-  PolarCoordinates,
-  CartesianCoordinates,
-  ConstraintOperation,
-  ConstraintOperationResult,
-  ConstraintPreset,
-  PolarConstraintsInterface,
-  ConstraintManagementInterface,
-  ConstraintFeedback,
-  ConstraintOperationType
+  ConstraintsSettings
 } from './config';
 import {
   DEFAULT_ORTHO_SETTINGS,

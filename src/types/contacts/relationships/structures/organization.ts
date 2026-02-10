@@ -9,7 +9,7 @@
 // ============================================================================
 
 // Import related types
-import type { Contact, ContactType } from '../../contracts';
+import type { Contact } from '../../contracts';
 import type { ContactRelationship } from '../interfaces/relationship';
 
 /**

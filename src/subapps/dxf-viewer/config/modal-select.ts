@@ -11,9 +11,7 @@
 // 🏢 ENTERPRISE IMPORTS - CENTRALIZED SOURCE OF TRUTH
 // ====================================================================
 
-import { componentSizes, semanticColors } from '../../../styles/design-tokens';
-import { COLOR_BRIDGE } from '../../../design-system/color-bridge';
-import { PANEL_COLORS, PANEL_LAYOUT } from './panel-tokens';
+import { PANEL_LAYOUT } from './panel-tokens';
 // 🏢 ENTERPRISE: Import centralized building features registry
 import {
   BUILDING_FEATURES,

@@ -50,15 +50,14 @@
 // DEBUG FLAG - 🔍 ENABLE FOR TRACING PREVIEW ISSUES
 const DEBUG_DRAWING_HANDLERS = false; // 🔧 DISABLED (2026-02-02) - performance investigation
 
-import { useCallback, useRef, useMemo } from 'react';
+import { useCallback, useRef } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
 // 🏢 ENTERPRISE (2026-01-30): Centralized tool metadata for continuous mode
-import { getToolMetadata } from '../../systems/tools/ToolStateManager';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
 import { toolStateStore } from '../../stores/ToolStateStore';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
-import { useUnifiedDrawing, type ExtendedSceneEntity, type DrawingTool } from './useUnifiedDrawing';
+import { useUnifiedDrawing } from './useUnifiedDrawing';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 import { useCanvasOperations } from '../interfaces/useCanvasOperations';

@@ -1,8 +1,5 @@
 import type { IProjectsService, IProjectsRepository, ProjectStructure, ProjectBuilding, ProjectUnit } from '../contracts';
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
-import type { Contact } from '@/types/contacts';
-import type { Building } from '@/types/building/contracts';
-import type { Property } from '@/types/property-viewer';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';

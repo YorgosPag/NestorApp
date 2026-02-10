@@ -245,7 +245,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
               mode={mode}
               enabled={enabledModes?.has(mode) || false}
               onClick={() => handleModeToggle(mode)}
-              compact={true}
+              compact
               t={t}
             />
           ))}

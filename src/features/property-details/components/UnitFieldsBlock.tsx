@@ -37,7 +37,7 @@ import {
 import { cn } from '@/lib/utils';
 
 // 🏢 ENTERPRISE: Icons from lucide + centralized entity colors
-import { NAVIGATION_ACTIONS, NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import {
   Bed, Bath, Compass, Wrench, Zap,
   Ruler, Thermometer, Snowflake, Home, Shield, Flame

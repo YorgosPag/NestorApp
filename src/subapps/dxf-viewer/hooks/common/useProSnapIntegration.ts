@@ -4,7 +4,6 @@ import { useSceneManager } from '../scene/useSceneManager';
 import { useLevels } from '../../systems/levels';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { useSnapContext } from '../../snapping/context/SnapContext';
-import { GridSettings } from '../../systems/rulers-grid/config';
 
 interface ProSnapIntegrationState {
   enabledModes: Set<ExtendedSnapType>;

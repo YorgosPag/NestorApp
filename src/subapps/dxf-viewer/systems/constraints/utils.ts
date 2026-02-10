@@ -4,7 +4,6 @@
  */
 
 import type {
-  ConstraintType,
   ConstraintDefinition,
   ConstraintContextData,
   ConstraintResult,

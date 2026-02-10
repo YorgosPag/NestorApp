@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Car, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
+import { Car } from 'lucide-react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -52,7 +52,7 @@ export function ParkingsListHeader({
         searchPlaceholder={t('parkings.header.searchPlaceholder')}
         showToolbar={showToolbar}
         onToolbarToggle={onToolbarToggle}
-        hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
+        hideSearch  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
       />
     </div>
   );

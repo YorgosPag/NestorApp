@@ -14,7 +14,7 @@ import { extractPhotoURL, extractMultiplePhotoURLs } from '../extractors/photo-u
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
 import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121)
-import type { PersonaData, PersonaType } from '@/types/contacts/personas';
+import type { PersonaData } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { getPersonaFields } from '@/config/persona-config';
 

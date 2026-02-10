@@ -11,7 +11,6 @@ import {
   Square,
   TrendingUp,
   Eye,
-  MapPin,
   Calendar,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';

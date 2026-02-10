@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileType, FileText } from 'lucide-react';
+import { Upload, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -15,16 +15,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getModalConfig } from '../config/modal-config';
 import {
-  UploadModalContainer,
   ModalFormSection,
   ModalField,
   ModalActions
 } from './modal/ModalContainer';
-import { useTypography } from '@/hooks/useTypography';
-import { getModalColorScheme, getModalIconColor } from '../config/modal-colors';
+import { getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, getIconSize } from '../config/modal-layout';
 import { getSelectStyles, getEncodingOptions } from '../config/modal-select';
 // 🏢 ENTERPRISE: Centralized spacing tokens

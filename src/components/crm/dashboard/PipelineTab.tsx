@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Filter, Plus, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';

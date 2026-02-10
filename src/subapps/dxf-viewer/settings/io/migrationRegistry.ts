@@ -17,7 +17,6 @@
  *  - Module #5
  */
 
-import type { SettingsStateType } from './schema';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../../utils/clone-utils';

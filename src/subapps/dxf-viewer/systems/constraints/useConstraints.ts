@@ -6,19 +6,7 @@
 import { useContext } from 'react';
 import type { Context } from 'react';
 import type {
-  ConstraintType,
-  ConstraintDefinition,
-  ConstraintsState,
-  ConstraintsSettings,
-  OrthoConstraintSettings,
-  PolarConstraintSettings,
-  ConstraintContext,
-  ConstraintResult,
-  ConstraintOperation,
-  ConstraintOperationResult,
-  ConstraintPreset,
-  PolarCoordinates,
-  CartesianCoordinates
+  ConstraintContext
 } from './config';
 
 export type ConstraintsContextType = ConstraintContext;

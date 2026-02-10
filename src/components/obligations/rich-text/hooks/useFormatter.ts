@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from 'react';
-import { getSelection, setSelection, restoreCaret } from '../utils/selection';
+import { getSelection, restoreCaret } from '../utils/selection';
 
 interface UseFormatterProps {
   textareaRef: React.RefObject<HTMLTextAreaElement>;

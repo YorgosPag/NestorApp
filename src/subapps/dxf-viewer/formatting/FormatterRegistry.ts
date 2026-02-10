@@ -30,7 +30,6 @@ import type {
   SupportedLocale,
 } from '../config/number-format-config';
 import {
-  DEFAULT_NUMBER_FORMAT_CONFIG,
   mergeNumberFormatConfig,
 } from '../config/number-format-config';
 

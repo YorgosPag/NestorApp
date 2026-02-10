@@ -27,9 +27,8 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { ViewTransform } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
-import { portalComponents } from '@/styles/design-tokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';

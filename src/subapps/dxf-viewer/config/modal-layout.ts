@@ -14,7 +14,6 @@
 
 import { componentSizes } from '../../../styles/design-tokens';
 // 🏢 ENTERPRISE: Import centralized panel tokens
-import { PANEL_COLORS } from './panel-tokens';
 
 // ====================================================================
 // MODAL SPACING CONSTANTS - 100% CENTRALIZED

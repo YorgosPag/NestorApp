@@ -4,9 +4,8 @@
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
-import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
+import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
-import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
 
 export class QuadrantSnapEngine extends BaseSnapEngine {

@@ -13,7 +13,6 @@
 
 import { useCallback } from 'react';
 import { getDashArray } from '../../settings-core/defaults';
-import { ENTERPRISE_CONSTANTS } from '../constants';
 import type { LineSettings, TextSettings } from '../../settings-core/types';
 import type { GripSettings } from '../../types/gripSettings';
 import type { ViewerMode } from '../../settings/core/types';

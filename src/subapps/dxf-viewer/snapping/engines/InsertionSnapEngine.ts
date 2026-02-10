@@ -12,14 +12,8 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 // 🏢 ENTERPRISE: Import centralized entity types and type guards
-import type {
-  PointEntity,
-  SplineEntity,
-  LeaderEntity,
-  HatchEntity,
-  XLineEntity,
-  RayEntity
-} from '../../types/entities';
+
+
 import {
   isTextEntity,
   isMTextEntity,

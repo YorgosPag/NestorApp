@@ -32,9 +32,7 @@ import {
   onSnapshot,
   collection,
   getDocs,
-  updateDoc,
   Timestamp,
-  DocumentSnapshot,
   Unsubscribe
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';

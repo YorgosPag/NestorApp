@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -63,15 +64,15 @@ export const dynamic = 'force-dynamic';
  * @author Claude AI Assistant
  */
 
-// Dynamic route handler wrapper
+// Dynamic route handler wrapper — ADR-172: Added withStandardRateLimit
 export async function GET(
   request: NextRequest,
   segmentData: { params: Promise<{ contactId: string }> }
 ) {
   const { contactId } = await segmentData.params;
 
-  // Create authenticated handler - using unknown for flexible response types
-  const handler = withAuth<unknown>(
+  // Create authenticated handler with rate limiting
+  const handler = withStandardRateLimit(withAuth<unknown>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         console.log(`📇 API: Loading contact for contactId: ${contactId}`);
@@ -262,7 +263,7 @@ export async function GET(
   }
     },
     { permissions: 'crm:contacts:view' }
-  );
+  ));
 
   // Execute authenticated handler
   return handler(request);

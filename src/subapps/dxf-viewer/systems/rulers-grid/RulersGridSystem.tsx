@@ -12,14 +12,11 @@ import {
   RULERS_GRID_CONFIG,
   UnitType,
   GridBounds,
-  SnapResult,
   RulerTick,
   GridLine,
   RulersLayoutInfo,
   RulersGridOperationResult,
-  RulersGridOperation,
-  RulerSettingsUpdate,
-  GridSettingsUpdate
+  RulersGridOperation
 } from './config';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-092: Centralized localStorage Service
@@ -32,7 +29,7 @@ declare global {
     __RULER_SETTINGS__?: RulerSettings;
   }
 }
-import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping, PerformanceUtilities, UnitConversion, SettingsValidationUtils } from './utils';
+import { RulersGridCalculations, PerformanceUtilities, UnitConversion, SettingsValidationUtils } from './utils';
 // 🏢 ADR-125: Types imported from types.ts to prevent circular dependencies
 import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';

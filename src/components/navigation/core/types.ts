@@ -3,7 +3,6 @@
  * Extracted from DXF Viewer for reusability across the application
  */
 
-import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavigationCompany {

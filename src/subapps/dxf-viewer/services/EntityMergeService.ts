@@ -4,7 +4,6 @@
  */
 
 import { SceneModel, AnySceneEntity } from '../types/scene';
-import type { Point2D } from '../rendering/types/Types';
 import { entityToSegments, samePoint } from '../utils/geometry/GeometryUtils';
 import { chainSegments } from '../utils/geometry/SegmentChaining';
 import { publishHighlight } from '../events/selection-bus';

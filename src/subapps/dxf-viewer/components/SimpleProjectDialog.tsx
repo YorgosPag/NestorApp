@@ -38,7 +38,6 @@ import { FloorplanService, type FloorplanData } from '../../../services/floorpla
 import { BuildingFloorplanService } from '../../../services/floorplans/BuildingFloorplanService';
 import { UnitFloorplanService, type UnitFloorplanData } from '../../../services/floorplans/UnitFloorplanService';
 import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
-import { useNotifications } from '../../../providers/NotificationProvider';
 import { useAuth } from '@/hooks/useAuth';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
@@ -46,24 +45,20 @@ import type { SceneModel } from '../types/scene';
 import { usePdfBackgroundStore } from '../pdf-background/stores/pdfBackgroundStore';
 // 🏢 ENTERPRISE: DXF Scene manager for clearing scene when loading PDF
 import { unifiedSceneManager } from '../managers/SceneUpdateManager';
-import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { MODAL_CONFIGURATIONS, getModalConfig, getModalZIndex } from '../config/modal-config';
+import { getModalConfig } from '../config/modal-config';
 import {
   ProjectModalContainer,
-  ModalFormSection,
-  ModalField,
   ModalActions,
-  ModalContentGrid,
   ErrorModalContainer
 } from './modal/ModalContainer';
 import { useTypography } from '@/hooks/useTypography';
-import { MODAL_COLOR_SCHEMES, getModalColorScheme, getModalIconColor } from '../config/modal-colors';
+import { getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
-import { getSelectStyles, getSelectPlaceholder, MODAL_SELECT_ITEM_PATTERNS } from '../config/modal-select';
+import { getSelectStyles } from '../config/modal-select';
 // 🏢 ENTERPRISE: Centralized spacing & timing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
-import { CompaniesLoadingState, ProjectsLoadingState, ModalEmptyState, InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
+import { InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -1247,7 +1242,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         onClose={() => setShowDxfModal(false)}
         onImport={handleDxfImportFromModal}
         onPdfImport={handlePdfImportFromModal}
-        allowPdf={true}
+        allowPdf
       />
 
       {/* ✅ ENTERPRISE: Floorplan Replacement Confirmation Dialog */}

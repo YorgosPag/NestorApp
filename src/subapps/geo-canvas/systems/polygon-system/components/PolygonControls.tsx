@@ -18,7 +18,6 @@ import { usePolygonSystemContext } from '../hooks/usePolygonSystemContext';
 import type { PolygonControlsProps } from '../types/polygon-system.types';
 import {
   INTERACTIVE_PATTERNS,
-  HOVER_TEXT_EFFECTS,
   HOVER_BACKGROUND_EFFECTS,
   TRANSITION_PRESETS
 } from '@/components/ui/effects';

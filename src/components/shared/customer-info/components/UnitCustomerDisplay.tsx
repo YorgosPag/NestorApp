@@ -131,7 +131,7 @@ export function UnitCustomerDisplay({
         <User className={`${styles.iconSize} text-muted-foreground`} />
         <div className="space-y-1">
           <Skeleton className={`${iconSizes.xs} w-20`} />
-          <Skeleton className={`h-2 w-16`} />
+          <Skeleton className="h-2 w-16" />
         </div>
       </div>
     );

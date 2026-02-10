@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bell, X, Check, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { Bell, X, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { useWebSocketEvent, useRealTimeNotifications } from '@/contexts/WebSocketContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

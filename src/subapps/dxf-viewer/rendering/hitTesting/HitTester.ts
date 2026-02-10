@@ -5,7 +5,6 @@
 
 import type { Viewport } from '../types/Types';
 import type { Entity } from '../../types/entities';
-import { getEntityBounds } from '../../types/entities';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryOptions, type SpatialQueryResult } from '../../core/spatial';
 import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';

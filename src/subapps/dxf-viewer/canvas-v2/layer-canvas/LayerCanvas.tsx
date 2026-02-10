@@ -45,7 +45,7 @@ import { CANVAS_THEME } from '../../config/color-config';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
 
 // ✅ ΦΑΣΗ 7: Event system κεντρικοποιημένο στο rendering/canvas/core/CanvasEventSystem
-import { canvasEventBus, CANVAS_EVENTS, subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
+import { subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
 import type { DxfScene } from '../dxf-canvas/dxf-types';
 import type {
@@ -59,7 +59,6 @@ import type {
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 import type { CursorSettings } from '../../systems/cursor/config';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
-import { serviceRegistry } from '../../services';
 
 interface LayerCanvasProps {
   layers: ColorLayer[];

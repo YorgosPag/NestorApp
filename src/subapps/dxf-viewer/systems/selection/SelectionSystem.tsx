@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useMemo } from 'react';
 import { useSelectionSystemState, type SelectionContextType } from './useSelectionSystemState';
-import type { UniversalSelectionActions } from './config';
 import type { SelectableEntityType, SelectionEntry, SelectionPayload } from './types';
 
 // Create context

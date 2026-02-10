@@ -15,7 +15,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Star, MoreVertical, Edit, Eye } from 'lucide-react';

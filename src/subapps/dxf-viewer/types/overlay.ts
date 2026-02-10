@@ -1,5 +1,5 @@
 import type { Point2D } from '../rendering/types/Types';
-import { PropertyStatus, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '../../../constants/property-statuses-enterprise';
+import { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 

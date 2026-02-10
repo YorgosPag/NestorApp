@@ -74,8 +74,8 @@ export function FilesCard() {
         <FileUploadZone
           onUpload={handleFileUpload}
           accept="*/*"
-          multiple={true}
-          enableCompression={true}
+          multiple
+          enableCompression
         />
 
         <section className="mt-6 space-y-3" role="region" aria-labelledby="existing-files-heading">

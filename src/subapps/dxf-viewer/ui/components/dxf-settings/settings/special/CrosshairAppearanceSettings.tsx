@@ -124,8 +124,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}
-          recent={true}
-          eyedropper={true}
+          recent
+          eyedropper
         />
       </section>
 
@@ -147,7 +147,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.solid(settings.crosshair.line_width, cursorColors.crosshairColor)}
-            ></div>
+             />
             <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.solid')}</span>
           </button>
           <button
@@ -161,7 +161,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.dashed(settings.crosshair.line_width, cursorColors.crosshairColor)}
-            ></div>
+             />
             <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.dashed')}</span>
           </button>
           <button
@@ -175,7 +175,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.dotted(settings.crosshair.line_width, cursorColors.crosshairColor)}
-            ></div>
+             />
             <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.dotted')}</span>
           </button>
           <button
@@ -189,7 +189,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.dashDot(settings.crosshair.line_width, cursorColors.crosshairColor)}
-            ></div>
+             />
             <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.dashDot')}</span>
           </button>
         </div>
@@ -225,7 +225,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               <div
                 className="w-full mx-auto"
                 style={layoutUtilities.dxf.composite.coloredBar(width, cursorColors.crosshairColor)}
-              ></div>
+               />
               <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{width}px</span>
             </button>
           ))}
@@ -251,7 +251,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               <div
                 className={`${iconSizes.xxs} ${radius.full}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
             </div>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>0%</span>
           </button>
@@ -268,12 +268,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.xs} h-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
               {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_5_PERCENT} w-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
             </div>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>5%</span>
           </button>
@@ -290,12 +290,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.sm} h-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
               {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_8_PERCENT} w-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
             </div>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>8%</span>
           </button>
@@ -312,12 +312,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.md} h-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
               {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_15_PERCENT} w-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
             </div>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>15%</span>
           </button>
@@ -334,17 +334,17 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               <div
                 className={`absolute ${PANEL_LAYOUT.INSET['0']} border`}
                 style={layoutUtilities.dxf.colors.borderColor(cursorColors.crosshairColor)}
-              ></div>
+               />
               {/* Οριζόντια γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_0} w-full h-px ${PANEL_LAYOUT.TRANSFORM.CENTER_Y}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
               {/* Κάθετη γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
                 className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.POSITION.TOP_0} h-full w-px ${PANEL_LAYOUT.TRANSFORM.CENTER_X}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
-              ></div>
+               />
             </div>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Full</span>
           </button>

@@ -1,4 +1,4 @@
-import { getAdminFirestore, safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 // ✅ ENTERPRISE FIX: Use Firestore functions from db instance, not direct imports
 // Firebase Admin SDK Firestore functions are methods on the db instance
 import type { IProjectsRepository } from '../contracts';

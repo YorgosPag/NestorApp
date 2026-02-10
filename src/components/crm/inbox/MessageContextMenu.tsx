@@ -26,7 +26,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Trash2, Copy, CheckSquare, Square, Reply, Forward, Pencil, Pin, PinOff, Smile } from 'lucide-react';
+import { Trash2, Copy, CheckSquare, Square, Reply, Forward, Pencil, Pin, PinOff } from 'lucide-react';
 import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
 
 // ============================================================================

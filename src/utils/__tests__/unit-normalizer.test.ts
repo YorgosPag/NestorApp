@@ -19,7 +19,6 @@ import {
 } from '../unit-normalizer';
 import type {
   UnitDoc,
-  UnitModel,
   BackfillDefaults
 } from '@/types/unit';
 

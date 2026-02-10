@@ -11,7 +11,7 @@
  * centralized design tokens while maintaining backward compatibility.
  */
 
-import { semanticColors, spacing, typography } from '../../styles/design-tokens';
+import { semanticColors, spacing } from '../../styles/design-tokens';
 import { hardcodedColorValues } from '../../design-system/tokens/colors';
 import type { SemanticColorName } from '../useSemanticColors';
 

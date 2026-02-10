@@ -1,12 +1,9 @@
 'use client';
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 // === CANVAS V2 IMPORTS ===
-import { DxfCanvas, LayerCanvas, type ColorLayer, type SnapSettings, type GridSettings, type RulerSettings, type SelectionSettings, type DxfScene, type DxfEntityUnion, type DxfCanvasRef } from '../../canvas-v2';
+import { DxfCanvas, LayerCanvas, type DxfScene, type DxfEntityUnion } from '../../canvas-v2';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
-import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 // ✅ CURSOR SETTINGS: Import από κεντρικό system αντί για duplicate
-import type { CursorSettings } from '../../systems/cursor/config';
-import { useCanvasOperations } from '../../hooks/interfaces/useCanvasOperations';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 import { UI_COLORS } from '../../config/color-config';
@@ -16,9 +13,6 @@ import { getLayerNameOrDefault } from '../../config/layer-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // CanvasProvider removed - not needed for Canvas V2
 // OverlayCanvas import removed - it was dead code
-import { FloatingPanelContainer } from '../../ui/FloatingPanelContainer';
-import { OverlayList } from '../../ui/OverlayList';
-import { OverlayProperties } from '../../ui/OverlayProperties';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLevels } from '../../systems/levels';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
@@ -26,14 +20,11 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 import { useCursorSettings, useCursorActions } from '../../systems/cursor';
 // 🏢 ENTERPRISE (2026-01-25): Immediate position store για zero-latency crosshair
-import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { globalRulerStore } from '../../settings-provider';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
-import type { RegionStatus } from '../../types/overlay';
-import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
-import { calculateDistance, squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE (2026-01-31): Import pointToLineDistance for Circle TTT hit testing
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Movement Detection Constants
@@ -46,18 +37,14 @@ import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 import { useGripStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Centralized tool detection (Single Source of Truth)
 import { isDrawingTool, isMeasurementTool, isInteractiveTool, isInDrawingMode } from '../../systems/tools/ToolStateManager';
-import type { LayerRenderOptions } from '../../canvas-v2/layer-canvas/layer-types';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isLineEntity, isPolylineEntity, type Entity } from '../../types/entities';
 import { useZoom } from '../../systems/zoom';
 import {
   CoordinateTransforms,
   COORDINATE_LAYOUT,
-  getPointerSnapshotFromElement,
-  getScreenPosFromEvent,
-  screenToWorldWithSnapshot,
-  type PointerSnapshot
+  getPointerSnapshotFromElement
 } from '../../rendering/core/CoordinateTransforms';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
@@ -96,10 +83,7 @@ import {
   DeleteOverlayCommand,
   DeleteMultipleOverlaysCommand,
   DeleteOverlayVertexCommand,
-  DeleteMultipleOverlayVerticesCommand,
-  MoveOverlayCommand, // 🏢 ENTERPRISE (2027-01-27): Move entire overlay with undo/redo - Unified Toolbar Integration
-  MoveMultipleOverlayVerticesCommand,
-  type VertexMovement
+  DeleteMultipleOverlayVerticesCommand
 } from '../../core/commands';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../../utils/clone-utils';
@@ -1580,7 +1564,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
               dxfScene={dxfScene} // 🎯 SNAP FIX: Pass DXF scene for snap engine initialization
-              enableUnifiedCanvas={true} // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ: Unified event system για debugging
+              enableUnifiedCanvas // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ: Unified event system για debugging
               // 🏢 ENTERPRISE (2026-01-25): Prevent selection when hovering over grip OR already dragging
               // Note: We use hoveredVertexInfo/hoveredEdgeInfo because dragging state is set AFTER mousedown
               isGripDragging={

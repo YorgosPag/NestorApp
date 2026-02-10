@@ -40,7 +40,6 @@ import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleM
 import { useMapInteractions, type TransformState, type DrawingData, type MapInstance, type GeoPolygon } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
 // 🏢 ENTERPRISE: Import maplibre types for proper map reference typing
-import type { Map as MaplibreMap } from 'maplibre-gl';
 
 // Centralized Systems
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';

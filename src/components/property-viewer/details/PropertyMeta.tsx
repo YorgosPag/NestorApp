@@ -16,7 +16,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
-import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
+import { formatFloorLabel } from '@/lib/intl-utils';
 
 interface PropertyMetaProps {
   property: ExtendedPropertyDetails;

@@ -124,7 +124,7 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
           value={activeLinesTab}
           onTabChange={handleTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
         />
       </div>
 

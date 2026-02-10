@@ -1,8 +1,8 @@
 'use client';
 import {
-  MousePointer, Hand, ZoomIn, ZoomOut, Square, CircleDot, Circle, Pen,
+  MousePointer, Hand, ZoomIn, ZoomOut, Square, Pen,
   Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
-  Grid, Settings, Crop, Download, Plus, Crosshair,
+  Grid, Crop, Download, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
   FileUp // 🏢 ENTERPRISE: PDF Background icon
@@ -50,16 +50,10 @@ import * as React from 'react';
 import {
   DXF_TOOL_GROUP_COLORS,
   DXF_ACTION_COLORS,
-  getDxfToolColor,
-  type DxfToolGroup
+  getDxfToolColor
 } from '../../config/toolbar-colors';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import {
-  DXF_TOOL_SHORTCUTS,
-  DXF_ACTION_SHORTCUTS,
-  DXF_CTRL_SHORTCUTS,
-  DXF_SPECIAL_SHORTCUTS,
-  DXF_ZOOM_SHORTCUTS,
   getShortcutDisplayLabel
 } from '../../config/keyboard-shortcuts';
 // 🏢 ENTERPRISE: Centralized icon sizes - Zero hardcoded values (ADR-002)

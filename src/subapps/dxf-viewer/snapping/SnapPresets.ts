@@ -3,7 +3,7 @@
  * Configuration presets for different use cases
  */
 
-import { ExtendedSnapType, type ProSnapSettings } from './extended-types';
+import { ExtendedSnapType } from './extended-types';
 import type { SnapEngineCore } from './SnapEngineCore';
 
 export class SnapPresets {

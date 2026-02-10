@@ -9,7 +9,6 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import { isFirebaseStorageURL } from '../utils/data-cleaning';
 
 /**
  * Extract uploaded photo URLs from form data

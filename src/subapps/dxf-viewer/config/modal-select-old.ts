@@ -52,7 +52,6 @@ const MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES = {
   active: 'Ενεργά',
   inactive: 'Ανενεργά'
 };
-import { PANEL_COLORS } from './panel-tokens';
 
 // ====================================================================
 // SELECT STYLING CONSTANTS - 🚨 MOVED TO MODULAR SYSTEM

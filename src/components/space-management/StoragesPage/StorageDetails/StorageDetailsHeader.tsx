@@ -1,13 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Warehouse, Eye, Edit, Archive, Share, FileText } from 'lucide-react';
+import { Warehouse, Eye, Edit, FileText } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { UnitBadge, CommonBadge } from '@/core/badges/UnifiedBadgeSystem';
-import { cn } from '@/lib/utils';
 import type { Storage } from '@/types/storage/contracts';
-import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';

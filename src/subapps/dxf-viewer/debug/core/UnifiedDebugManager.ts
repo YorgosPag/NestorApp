@@ -9,7 +9,6 @@ import type {
   LogEntry,
   DebugStatistics,
   LogLevel,
-  LogFunction,
   Logger,
   DebugModule,
   PerformanceMetrics

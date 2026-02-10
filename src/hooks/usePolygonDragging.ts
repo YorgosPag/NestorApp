@@ -4,7 +4,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { Property } from '@/types/property-viewer';
 import type { LayerState } from '@/components/property-viewer/useLayerStates';
-import { distanceToLineSegment } from '@/lib/geometry';
 import { toSvgPointFromMouse } from '@/lib/coords';
 
 

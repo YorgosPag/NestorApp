@@ -23,12 +23,8 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE: Import centralized entity types and type guards
 import type {
-  LineEntity,
-  PolylineEntity,
-  LWPolylineEntity,
   CircleEntity,
-  ArcEntity,
-  RectangleEntity
+  ArcEntity
 } from '../../types/entities';
 import {
   isLineEntity,

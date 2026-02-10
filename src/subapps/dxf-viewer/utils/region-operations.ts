@@ -1,5 +1,5 @@
 import type { Point2D } from '../rendering/types/Types';
-import type { Region, RegionStatus, OverlayLayer } from '../types/overlay';
+import type { Region, RegionStatus } from '../types/overlay';
 import { calculateRegionArea, calculateRegionPerimeter } from '../types/overlay';
 import { getStatusColors } from '../config/color-mapping';
 // 🏢 ADR-134: Centralized Opacity Constants

@@ -167,7 +167,7 @@ export function PropertyDetailsContent({
             unitId={resolvedProperty?.id ?? ''}
             currentBuildingId={resolvedProperty?.buildingId}
             currentFloorId={resolvedProperty?.floorId}
-            isEditing={true}
+            isEditing
             onBuildingChanged={(newBuildingId: string, newFloorId?: string) => {
               if (onUpdateProperty && resolvedProperty?.id) {
                 const updates: Partial<Property> = { buildingId: newBuildingId };
@@ -184,7 +184,7 @@ export function PropertyDetailsContent({
               unitId={resolvedProperty?.id ?? ''}
               buildingId={resolvedProperty.buildingId}
               currentLinkedSpaces={resolvedProperty?.linkedSpaces}
-              isEditing={true}
+              isEditing
               onLinkedSpacesChanged={(newLinkedSpaces: Property['linkedSpaces']) => {
                 if (onUpdateProperty && resolvedProperty?.id) {
                   onUpdateProperty(resolvedProperty.id, { linkedSpaces: newLinkedSpaces });

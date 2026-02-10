@@ -427,8 +427,23 @@ export async function handleGET(): Promise<NextResponse> {
           companyId: d.data().companyId ?? null,
         }));
 
+        // ADR-171: Clear poisoned chat history for super admin
+        let chatHistoryCleared = false;
+        try {
+          const { getChatHistoryService } = await import(
+            '@/services/ai-pipeline/chat-history-service'
+          );
+          const chatService = getChatHistoryService();
+          // Super admin Telegram userId from ADR-145
+          await chatService.clearHistory('telegram_5618410820');
+          chatHistoryCleared = true;
+        } catch {
+          chatHistoryCleared = false;
+        }
+
         diagnostic = {
           companyId,
+          chat_history_cleared: chatHistoryCleared,
           step1_projects: { count: projects.length, data: projects },
           step2_buildings_by_projectId: { count: buildings.length, data: buildings },
           step3_phases_by_buildingId: { count: phases.length, data: phases.slice(0, 10) },

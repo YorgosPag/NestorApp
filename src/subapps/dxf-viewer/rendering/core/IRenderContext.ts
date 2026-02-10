@@ -22,7 +22,7 @@ export interface Transform2D {
 }
 
 // ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΟΥ: Χρήση unified Viewport από types/Types.ts
-import type { Point2D, Viewport } from '../types/Types';
+import type { Point2D } from '../types/Types';
 
 // Re-export unified types για backwards compatibility
 export type { Point2D, Viewport } from '../types/Types';

@@ -7,16 +7,11 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Eye,
-  EyeOff,
-  Grid,
-  Layers,
   MousePointer,
   Plus,
   Ruler,
   Move
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';

@@ -12,7 +12,7 @@
  * - Environment-specific route overrides
  */
 
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 

@@ -26,17 +26,12 @@
 import {
   Query,
   QueryConstraint,
-  CollectionReference,
   DocumentData,
   Firestore,
   collection,
   query,
   where,
-  orderBy,
-  limit as firestoreLimit,
-  getDocs,
-  QuerySnapshot,
-  FirestoreError
+  getDocs
 } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';

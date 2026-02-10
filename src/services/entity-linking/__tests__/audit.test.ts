@@ -8,7 +8,6 @@
  */
 
 import { AuditLogger } from '../utils/audit';
-import type { AuditLogEntry, AuditAction } from '../utils/audit';
 
 // ============================================================================
 // SETUP & TEARDOWN

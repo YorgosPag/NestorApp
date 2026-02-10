@@ -1,4 +1,4 @@
-import { SectionCategory, ObligationStatus } from '@/types/obligations';
+import { SectionCategory } from '@/types/obligations';
 import { designTokens } from '@/styles/design-tokens';
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18

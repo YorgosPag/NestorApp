@@ -11,7 +11,6 @@
 // ============================================================================
 
 import {
-  ContactRelationship,
   RelationshipType,
   RelationshipStatus
 } from '@/types/contacts/relationships';

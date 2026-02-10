@@ -40,7 +40,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type {
   FirebaseAuthUser,
   SignUpData,
-  SessionValidationStatus,
   SessionValidationResult,
   SessionIssue,
   UserProfileDocument

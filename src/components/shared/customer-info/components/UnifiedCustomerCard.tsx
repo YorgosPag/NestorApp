@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { Users, Phone, Mail, MapPin, Package, ArrowRight, Loader2 } from 'lucide-react';
+import { Users, Phone, Mail, MapPin, ArrowRight, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

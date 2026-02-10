@@ -3,7 +3,7 @@ import type { Region, RegionStatus } from '../types/overlay';
 import type { ViewTransform } from '../rendering/types/Types';
 import type { GripSettings } from '../types/gripSettings';
 import { getStatusColors } from '../config/color-mapping'; // 🔺 Κεντρική function για ελληνικά/αγγλικά mapping
-import { CAD_UI_COLORS, UI_COLORS, OPACITY } from '../config/color-config'; // 🏢 ADR-119: Centralized Opacity
+import { UI_COLORS, OPACITY } from '../config/color-config'; // 🏢 ADR-119: Centralized Opacity
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
 import { worldToScreenSimple } from '../rendering/core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized Line Widths

@@ -5,7 +5,7 @@ import React, { useState, useCallback } from 'react';
 interface MapRef {
   current: unknown | null;
 }
-import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
+import { Upload, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -34,7 +34,7 @@ type RealEstatePolygon = {
 };
 import type { ParserResult } from '../floor-plan-system/types';
 import type { EnhancedPropertyStatus as PropertyStatus } from '@/constants/property-statuses-enterprise';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface ProfessionalDrawingInterfaceProps {
   mapRef: React.RefObject<unknown | null>;

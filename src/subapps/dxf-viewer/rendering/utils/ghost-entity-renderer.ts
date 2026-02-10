@@ -41,7 +41,7 @@ import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS, UI_FONTS, TEXT_LABEL_OFFSETS } 
 // 🏢 ADR-166: Centralized Ghost Entity Colors
 import { GHOST_COLORS } from '../../config/color-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
-import { addCirclePath, TAU } from '../primitives/canvasPaths';
+import { addCirclePath } from '../primitives/canvasPaths';
 // 🏢 ADR-066: Centralized Angle Calculation
 // 🏢 ADR-080: Centralized Rectangle Bounds
 import { calculateAngle, rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';

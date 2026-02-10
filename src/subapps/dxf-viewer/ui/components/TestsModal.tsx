@@ -15,7 +15,7 @@ import { X, FlaskConical, Lightbulb } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // Custom hooks (extracted)

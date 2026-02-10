@@ -40,7 +40,6 @@ import { useMemo } from 'react';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 // Legacy imports kept for type compatibility
-import type { EnterpriseMessages } from '@/core/configuration/enterprise-messages-system';
 
 // ============================================================================
 // 🎯 HOOK INTERFACE - TYPE-SAFE RETURNS

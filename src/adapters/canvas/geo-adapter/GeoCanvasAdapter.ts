@@ -24,7 +24,7 @@ import { UI_COLORS } from '../../../subapps/dxf-viewer/config/color-config';
 import type { CanvasConfig as DxfCanvasConfig } from '../../../subapps/dxf-viewer/rendering/types/Types';
 
 // Import coordinate utilities
-import type { Point2D, CoordinateBounds } from '../../../core/canvas/primitives/coordinates';
+import type { Point2D } from '../../../core/canvas/primitives/coordinates';
 import { CoordinateUtils } from '../../../core/canvas/primitives/coordinates';
 
 /**

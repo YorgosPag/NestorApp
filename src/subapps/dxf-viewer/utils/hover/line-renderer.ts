@@ -3,8 +3,6 @@
  * Handles hover rendering for line entities with distance measurements
  */
 
-import { HOVER_CONFIG } from './config';
-import type { Point2D } from '../../rendering/types/Types';
 import { renderHoverEdgeWithDistance } from './edge-utils';
 
 // ✅ ENTERPRISE FIX: Import HoverRenderContext και LineEntity types

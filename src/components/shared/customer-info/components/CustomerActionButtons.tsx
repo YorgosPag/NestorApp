@@ -36,8 +36,7 @@ import type {
   CustomerActionButtonsProps,
   CustomerAction,
   CustomerActionType,
-  CustomerInfoContext,
-  DEFAULT_CONTEXT_ACTIONS
+  CustomerInfoContext
 } from '../types/CustomerInfoTypes';
 
 // ============================================================================

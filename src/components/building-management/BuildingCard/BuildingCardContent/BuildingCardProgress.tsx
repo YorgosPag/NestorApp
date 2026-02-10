@@ -18,7 +18,7 @@ export function BuildingCardProgress({ progress }: BuildingCardProgressProps) {
       progress={progress}
       label={t('card.progress.label')}
       size="md"
-      showPercentage={true}
+      showPercentage
     />
   );
 }

@@ -1,7 +1,6 @@
 
 'use client';
 
-import React from 'react';
 import { Package, Zap, Shield, Lightbulb } from 'lucide-react';
 import type { StorageUnit, StorageType } from '@/types/storage';
 

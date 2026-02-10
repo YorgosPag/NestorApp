@@ -31,7 +31,6 @@ import { useTranslation } from 'react-i18next';
 import { EscoService } from '@/services/esco.service';
 import type {
   EscoOccupationPickerProps,
-  EscoPickerValue,
   EscoSearchResult,
   EscoLanguage,
 } from '@/types/contacts/esco-types';

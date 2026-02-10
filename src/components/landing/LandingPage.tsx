@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, MapPin, Home, Filter, TrendingUp, Building, ArrowRight, ChevronDown, Star, Users, Shield } from 'lucide-react';
+import { Search, MapPin, Home, TrendingUp, Building, ArrowRight, Star, Users, Shield } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

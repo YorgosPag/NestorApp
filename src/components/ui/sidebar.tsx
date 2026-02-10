@@ -7,7 +7,6 @@ import { PanelLeft } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/useMobile"
 import { useIconSizes } from "@/hooks/useIconSizes"
-import { useBorderTokens } from "@/hooks/useBorderTokens"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"

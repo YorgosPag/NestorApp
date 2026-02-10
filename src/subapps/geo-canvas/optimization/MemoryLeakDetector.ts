@@ -6,7 +6,7 @@
  * και προλαμβάνει memory leaks σε real-time.
  */
 
-import { performance, PerformanceObserver, type EntryType } from 'perf_hooks';
+import { PerformanceObserver, type EntryType } from 'perf_hooks';
 
 // ============================================================================
 // TYPE DEFINITIONS

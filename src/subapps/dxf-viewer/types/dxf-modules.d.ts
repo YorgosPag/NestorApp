@@ -38,7 +38,6 @@ declare module './ui/components/QuickSnapButtons' {
 }
 
 declare module './canvas-v2/dxf-canvas/DxfCanvas' {
-  import { ForwardRefExoticComponent, RefAttributes } from 'react';
   export interface DxfCanvasProps {
     scene: SceneModel | null;
     onTransformChange: (transform: ViewTransform) => void;

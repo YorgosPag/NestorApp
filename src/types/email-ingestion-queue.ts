@@ -9,7 +9,7 @@
  * @module types/email-ingestion-queue
  */
 
-import type { ParsedAddress, InboundAttachmentDownload } from '@/services/communications/inbound/types';
+import type { ParsedAddress } from '@/services/communications/inbound/types';
 
 // ============================================================================
 // STATUS TYPES

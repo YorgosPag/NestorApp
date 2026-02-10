@@ -17,7 +17,7 @@
  * @since 2025-10-07
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import type { ContrastResult, RGBColor, TextSize } from '../types';
 // 🏢 ADR-076: Centralized Color Conversion
 import { parseHex, rgbToHex as centralizedRgbToHex } from '../utils';

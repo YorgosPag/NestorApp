@@ -2,27 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
-import { Button } from '@/components/ui/button';
-import { ContactBadge, CommonBadge } from '@/core/badges';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { EditableText } from '@/components/ui/EditableText';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
-import { Users, Building2, Landmark, Edit, Trash2, Check, X } from 'lucide-react';
+import { Edit, Trash2, Check, X } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   Contact,
-  ContactType,
-  IndividualContact,
-  CompanyContact,
-  ServiceContact
+  ContactType
 } from '@/types/contacts';
 import type { ContactStatus } from '@/core/types/BadgeTypes';
 import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
-import { cn } from '@/lib/utils';
 import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
 
 // 🎯 CENTRALIZED: Use centralized contact constants instead of hardcoded values

@@ -85,7 +85,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
               {summary.settlementAmount >= 0 ? t('vat.vatPayable') : t('vat.vatCredit')}
               {' ('}
               {t('vat.annualSummary')}
-              {')'}
+              )
             </dt>
             <dd className={`text-lg font-bold ${summary.settlementAmount >= 0 ? colors.text.error : colors.text.success}`}>
               {formatCurrency(Math.abs(summary.settlementAmount))}

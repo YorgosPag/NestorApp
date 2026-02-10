@@ -21,7 +21,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
-import type { FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_STATUS } from '@/config/domain-constants';
 

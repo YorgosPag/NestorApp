@@ -27,7 +27,6 @@
 import type { StorageDriver } from './StorageDriver';
 import { StorageError, StorageQuotaError, StorageUnavailableError } from './StorageDriver';
 import { validateSettingsState } from './schema';
-import type { SettingsState } from '../core/types';
 
 // ============================================================================
 // CONFIGURATION

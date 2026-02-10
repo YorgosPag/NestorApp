@@ -42,7 +42,6 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
 import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: i18n - Full internationalization support

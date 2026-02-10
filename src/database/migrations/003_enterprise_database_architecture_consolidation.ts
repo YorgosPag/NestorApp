@@ -23,7 +23,7 @@
  */
 
 import { Migration, MigrationStep } from './types';
-import { collection, query, getDocs, doc, setDoc, getDoc, writeBatch, where, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, query, getDocs, doc, setDoc, writeBatch, where, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { enterpriseIdService } from '@/services/enterprise-id.service';

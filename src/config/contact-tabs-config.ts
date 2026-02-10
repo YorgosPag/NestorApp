@@ -17,15 +17,7 @@
 // 🏢 ENTERPRISE: Import from unified factory (NEW)
 import {
   createTabsConfig,
-  getSortedTabs,
-  getEnabledTabsCount,
-  getTabById,
-  getTabByValue,
-  getTabsStats,
-  validateTabConfig,
-  getTabsForEnvironment,
   type UnifiedTabConfig,
-  type TabEntityType,
   type ContactType
 } from './unified-tabs-factory';
 

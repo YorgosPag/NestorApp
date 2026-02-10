@@ -7,7 +7,6 @@
 import type { UIRenderer, UIRenderContext, UIRenderMetrics } from '../rendering/ui/core/UIRenderer';
 import type { Viewport, ViewTransform } from '../rendering/types/Types';
 import type { RulerDebugSettings, CalibrationGridSettings } from './RulerDebugTypes';
-import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-091: Centralized UI Fonts
 // 🏢 ADR-141: Centralized Origin/Cursor Offsets

@@ -13,7 +13,7 @@ export function UnitListItemProgress({ progress }: UnitListItemProgressProps) {
       progress={progress}
       label="Πρόοδος Πώλησης"
       size="md"
-      showPercentage={true}
+      showPercentage
     />
   );
 }

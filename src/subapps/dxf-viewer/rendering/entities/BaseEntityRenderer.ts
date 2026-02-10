@@ -12,7 +12,6 @@ import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
 // 🏢 ADR-085: Centralized Split Line Rendering
-import { calculateSplitLineGap } from './shared/line-utils';
 import {
   renderSplitLineWithGap as renderSplitLineWithGapUtil,
   renderContinuousLine as renderContinuousLineUtil
@@ -40,7 +39,7 @@ import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '.
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
 // 🏢 ADR-077: Centralized TAU Constant
-import { addArcPath, addCirclePath, TAU } from '../primitives/canvasPaths';
+import { addArcPath, TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance, formatAngle } from './shared/distance-label-utils';
 

@@ -4,9 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import {
   getSkeletonTableGridStyles,
-  getSkeletonBarHeight,
-  getSkeletonChartContainerStyles,
-  getSkeletonChartBarsStyles
+  getSkeletonBarHeight
 } from './SkeletonComponents.styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';

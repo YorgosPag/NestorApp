@@ -11,7 +11,6 @@
 
 import type {
   AWSCloudProvider,
-  AWSCredentials,
   CloudFeatures,
   CloudEndpoints,
   CloudPricing,

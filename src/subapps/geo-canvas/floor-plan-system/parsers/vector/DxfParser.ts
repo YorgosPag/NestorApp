@@ -22,8 +22,7 @@ import DxfParserLib, {
   IArcEntity,
   ICircleEntity,
   ITextEntity,
-  IMtextEntity,
-  IPoint
+  IMtextEntity
 } from 'dxf-parser';
 
 import type { ParserResult } from '../../types';

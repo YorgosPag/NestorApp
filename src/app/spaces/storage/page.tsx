@@ -6,8 +6,6 @@
 
 import React, { Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { cn } from '@/lib/utils';
 import { StoragesHeader } from '@/components/space-management/StoragesPage/StoragesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { StoragesList } from '@/components/space-management/StoragesPage/StoragesList';
@@ -18,10 +16,7 @@ import {
   TrendingUp,
   BarChart3,
   MapPin,
-  Calendar,
-  PackageCheck,
-  Edit,
-  Trash2
+  PackageCheck
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';

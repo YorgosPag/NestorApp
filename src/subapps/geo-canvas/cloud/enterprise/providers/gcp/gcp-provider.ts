@@ -11,7 +11,6 @@
 
 import type {
   GCPCloudProvider,
-  GCPCredentials,
   CloudFeatures,
   CloudEndpoints,
   CloudPricing,

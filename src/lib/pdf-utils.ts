@@ -26,7 +26,7 @@
 
 import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
-import { doc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: i18n support for PDF validation/upload messages
 import i18n from '@/i18n/config';

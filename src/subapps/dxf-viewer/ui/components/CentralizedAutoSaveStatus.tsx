@@ -25,7 +25,6 @@ import { zIndex as enterpriseZIndex } from '@/styles/design-tokens';  // ✅ ENT
 import { useTranslation } from '@/i18n';
 import {
   centralizedAutoSaveStatusStyles,
-  getStatusColorStyles,
   getGeneralSettingsDotStyle,
   getSpecificSettingsDotStyle,
   getSeparatorStyle,
@@ -296,10 +295,10 @@ export function CentralizedAutoSaveStatusCompact() {
     }
 
     if (settings.saveStatus === 'error') {
-      return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.error}`}></div>;
+      return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.error}`} />;
     }
 
-    return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.success}`}></div>;
+    return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.success}`} />;
   };
 
   const getTooltip = () => {

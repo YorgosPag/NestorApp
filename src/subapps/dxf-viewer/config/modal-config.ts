@@ -11,7 +11,6 @@
 import { PANEL_COLORS } from './panel-tokens';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 // 🏢 ENTERPRISE: Import semantic colors for proper centralization
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ====================================================================
 // ENTERPRISE MODAL SIZING STANDARDS

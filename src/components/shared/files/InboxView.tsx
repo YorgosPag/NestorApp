@@ -26,7 +26,6 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   Inbox,
-  AlertTriangle,
   Clock,
   RefreshCw,
   HardDrive,

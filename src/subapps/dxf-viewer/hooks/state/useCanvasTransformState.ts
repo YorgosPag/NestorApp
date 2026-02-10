@@ -18,7 +18,6 @@ import { useCanvasOperations } from '../interfaces/useCanvasOperations';
 import {
   TRANSFORM_SCALE_LIMITS,
   TRANSFORM_OFFSET_LIMITS,
-  TRANSFORM_PRECISION,
   validateTransform as validateTransformConfig,
   transformsEqual as transformsEqualConfig,
 } from '../../config/transform-config';

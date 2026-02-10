@@ -20,8 +20,6 @@ import {
   PerformanceMetric,
   PerformanceSnapshot,
   PerformanceCategory,
-  PerformanceSource,
-  PerformanceUnit,
   RealTimePerformanceUpdate,
   MonitoringConfig,
   OptimizationSettings

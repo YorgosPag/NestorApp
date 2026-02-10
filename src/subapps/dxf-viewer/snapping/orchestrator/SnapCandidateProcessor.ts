@@ -7,7 +7,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { ExtendedSnapType, type Entity, type SnapCandidate, type ProSnapSettings, type ProSnapResult } from '../extended-types';
+import { type SnapCandidate, type ProSnapSettings, type ProSnapResult } from '../extended-types';
 
 export class SnapCandidateProcessor {
   private candidateIndex = 0;

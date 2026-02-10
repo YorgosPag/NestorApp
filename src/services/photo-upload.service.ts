@@ -2,11 +2,10 @@
 
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
-import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
-import { smartCompressContactPhoto, ImageParser } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
+import { smartCompressContactPhoto } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
 import compressionConfig, { type UsageContext } from '@/config/photo-compression-config';
-import { validateImageFile, type FileValidationResult } from '@/utils/file-validation';
+import { validateImageFile } from '@/utils/file-validation';
 import { generateTempId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Canonical File Storage System imports
 import { FileRecordService } from '@/services/file-record.service';

@@ -34,13 +34,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation';
 import { formatDateTime } from '@/lib/intl-utils';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { ConfirmDialog, DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
 import { HOLD_TYPES } from '@/config/domain-constants';

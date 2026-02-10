@@ -10,7 +10,6 @@ import {
 import { getDevCompanyId } from '@/config/dev-environment';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import {
-  getAdminFirestore,
   getAdminAuth,
 } from '@/lib/firebaseAdmin';
 

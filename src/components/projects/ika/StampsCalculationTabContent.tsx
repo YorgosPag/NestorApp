@@ -20,7 +20,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Save, Calculator, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';

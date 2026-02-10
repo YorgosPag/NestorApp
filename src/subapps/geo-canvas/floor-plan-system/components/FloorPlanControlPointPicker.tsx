@@ -28,7 +28,6 @@ import type { UseFloorPlanControlPointsReturn } from '../hooks/useFloorPlanContr
 import { toast } from 'react-hot-toast';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import { canvasUtilities } from '@/styles/design-tokens';
 import { layoutUtilities } from '@/styles/design-tokens';
 import {
   draggablePanelContainer,

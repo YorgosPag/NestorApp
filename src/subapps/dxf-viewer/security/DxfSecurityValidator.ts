@@ -25,7 +25,6 @@
 import type { SceneModel } from '../types/scene';
 import { generateTempId } from '@/services/enterprise-id.service';
 import { SceneValidator } from '../managers/SceneValidator';
-import { validateNumericInput, normalizeNumericInput } from '../ui/toolbar/shared/input-validation';
 
 // =============================================================================
 // 🏢 ENTERPRISE SECURITY THRESHOLDS

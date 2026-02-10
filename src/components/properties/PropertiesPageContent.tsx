@@ -3,7 +3,6 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';

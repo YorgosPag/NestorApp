@@ -25,7 +25,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import UnifiedInbox from './UnifiedInbox';
 import SendMessageModal from './SendMessageModal';
-import communicationsService, { 
+import { 
   initializeCommunications, 
   getChannelsStatus,
   testAllChannels,

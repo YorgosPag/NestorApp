@@ -9,7 +9,6 @@ import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
-import { projectsConfig } from '@/components/core/CompactToolbar';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 
@@ -252,7 +251,7 @@ export function ProjectsPageContent() {
               config={projectFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
-              defaultOpen={true}
+              defaultOpen
             />
           </aside>
         )}

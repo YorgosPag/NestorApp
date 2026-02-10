@@ -9,7 +9,6 @@
  * @version 1.0.0
  */
 
-import { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // INTERFACES & TYPES

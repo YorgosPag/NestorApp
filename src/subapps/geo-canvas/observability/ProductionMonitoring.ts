@@ -6,7 +6,6 @@
  * real-time visibility, alerting, logging, tracing, και comprehensive analytics.
  */
 
-import { performance } from 'perf_hooks';
 import { GEO_COLORS } from '../config/color-config';
 import { generateTraceId as generateEnterpriseTraceId, generateSpanId as generateEnterpriseSpanId, generateAlertId as generateEnterpriseAlertId } from '@/services/enterprise-id.service';
 

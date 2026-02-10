@@ -8,7 +8,6 @@
 
 // DEPRECATED - Use SimpleProjectDialog instead
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // interface EnhancedImportWizardProps {
 //   isOpen: boolean;

@@ -3,7 +3,7 @@
 import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import type { TelegramSendPayload, TelegramSendResult, TelegramMessageObject } from './telegram/types';
+import type { TelegramSendPayload, TelegramSendResult } from './telegram/types';
 
 /**
  * Sends a message to the Telegram API.

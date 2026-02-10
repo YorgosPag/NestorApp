@@ -124,7 +124,7 @@ export default function TestUploadPage() {
             progress={progress}
             label="Upload Progress"
             size="md"
-            showPercentage={true}
+            showPercentage
           />
         )}
 

@@ -174,7 +174,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
                 </>
               ) : (
                 <>
-                  <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 rounded`}></div>
+                  <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 rounded`} />
                   <Badge className={displayProps.color} variant="outline">
                     {translatedTypeLabel}
                   </Badge>

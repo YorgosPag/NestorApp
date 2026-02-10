@@ -5,7 +5,6 @@
  */
 
 import type { Point2D, Viewport, ViewTransform } from '../rendering/types/Types';
-import type { UIElementSettings } from '../rendering/ui/core/UIRenderer';
 import { UI_COLORS } from '../config/color-config';
 
 /**

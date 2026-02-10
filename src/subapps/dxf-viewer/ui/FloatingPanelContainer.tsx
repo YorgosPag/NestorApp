@@ -10,16 +10,13 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
 import { useOverlayManager } from '../state/overlay-manager';
-import { StorageStatus } from '../components/StorageStatus';
 // REMOVED: LayerManagementPanel - replaced with unified overlay system
-import { AutoSaveStatus } from './components/AutoSaveStatus';
-import { CentralizedAutoSaveStatus } from './components/CentralizedAutoSaveStatus';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { useLevels } from '../systems/levels';
-import { useFloatingPanelState, type PanelType } from './hooks/useFloatingPanelState';
+import { useFloatingPanelState } from './hooks/useFloatingPanelState';
 import { useLayerOperations } from './hooks/useLayerOperations';
-import { useFloatingPanelHandle, type SideTab, type FloatingPanelHandle as FloatingPanelHandleType } from './hooks/useFloatingPanelHandle';
+import { useFloatingPanelHandle, type FloatingPanelHandle as FloatingPanelHandleType } from './hooks/useFloatingPanelHandle';
 
 // Re-export FloatingPanelHandle type
 export type { FloatingPanelHandleType as FloatingPanelHandle };

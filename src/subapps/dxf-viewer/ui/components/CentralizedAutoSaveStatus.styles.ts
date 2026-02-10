@@ -8,7 +8,7 @@
  * @module src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.styles
  */
 
-import { statusIndicatorComponents, autoSaveStatusTokens } from '@/styles/design-tokens';
+import { statusIndicatorComponents } from '@/styles/design-tokens';
 import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================

@@ -15,7 +15,6 @@
 
 'use client';
 
-import React from 'react';
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
 import type { Contact } from '@/types/contacts';
 

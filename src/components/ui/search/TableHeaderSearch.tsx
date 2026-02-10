@@ -109,7 +109,7 @@ export function UnitsHeaderSearch({
       searchTerm={searchTerm}
       onSearchChange={onSearchChange}
       placeholder={t('placeholders.searchUnits')}
-      compact={true}
+      compact
     />
   );
 }
@@ -128,7 +128,7 @@ export function BuildingsHeaderSearch({
       searchTerm={searchTerm}
       onSearchChange={onSearchChange}
       placeholder={t('placeholders.searchBuildings')}
-      compact={true}
+      compact
     />
   );
 }
@@ -147,7 +147,7 @@ export function ProjectsHeaderSearch({
       searchTerm={searchTerm}
       onSearchChange={onSearchChange}
       placeholder={t('placeholders.searchProjects')}
-      compact={true}
+      compact
     />
   );
 }
@@ -166,7 +166,7 @@ export function ContactsHeaderSearch({
       searchTerm={searchTerm}
       onSearchChange={onSearchChange}
       placeholder={t('placeholders.searchContacts')}
-      compact={true}
+      compact
     />
   );
 }

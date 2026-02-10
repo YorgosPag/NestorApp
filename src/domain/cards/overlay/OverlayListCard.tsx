@@ -348,9 +348,9 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(fun
       isSelected={isSelected}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      compact={true}
+      compact
       hideStats={false}
-      inlineBadges={true}
+      inlineBadges
       hideIcon={false} // Show icon to differentiate kinds
       className={className}
       aria-label={t('overlayCard.ariaLabel', { name: title })}

@@ -13,7 +13,7 @@ import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 // Imports from config are no longer needed here - types moved to types.ts
 
 // 🏢 ADR-125: Context type imported from types.ts to prevent circular dependencies
-import type { RulersGridContextType, RulersGridHookReturn } from './types';
+import type { RulersGridContextType } from './types';
 import { RulersGridContext } from './RulersGridSystem';
 
 export function useRulersGrid(): RulersGridContextType | null {

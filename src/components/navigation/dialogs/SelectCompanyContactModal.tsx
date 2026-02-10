@@ -10,7 +10,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
@@ -155,7 +154,7 @@ export function SelectCompanyContactModal({
               onChange={setSearchTerm}
               placeholder={t('company.searchPlaceholder')}
               debounceMs={300}
-              showClearButton={true}
+              showClearButton
               className="h-8 text-sm flex-1"
             />
           </div>

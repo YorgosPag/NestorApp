@@ -11,11 +11,9 @@ import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { UseEnterpriseFileUploadConfig, FileUploadResult, FileUploadProgress } from '@/hooks/useEnterpriseFileUpload';
-import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
 import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
 import { getDynamicBackgroundClass } from './utils/dynamic-styles';
-import { layoutUtilities, performanceComponents } from '@/styles/design-tokens';
 import {
   getProgressBarWidthStyles
 } from '@/subapps/dxf-viewer/ui/DxfViewerComponents.styles';
@@ -27,7 +25,6 @@ import {
   PHOTO_TRANSITIONS,
   PHOTO_TYPOGRAPHY,
   PHOTO_SEMANTIC_COLORS,
-  PHOTO_COMBINED_EFFECTS,
   PHOTO_BORDERS
 } from '@/components/generic/config/photo-config';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -283,7 +280,7 @@ export function EnterprisePhotoUpload({
             <PhotoPreview
               previewUrl={currentPreview}
               fileName={currentFile?.name}
-              compact={true}
+              compact
               purpose={purpose}
               onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
               onPreviewClick={disabled && onPreviewClick ? () => {

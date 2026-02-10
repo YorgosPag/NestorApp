@@ -1,6 +1,5 @@
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getApp } from 'firebase/app';
 import type { CompanyContact, Contact } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { getNavigationCompanyIds } from './navigation-companies.service';

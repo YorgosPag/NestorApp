@@ -18,10 +18,7 @@ import type {
   Contact,
   ContactType,
   EmailInfo,
-  PhoneInfo,
-  IndividualContact,
-  CompanyContact,
-  ServiceContact
+  PhoneInfo
 } from '@/types/contacts';
 import {
   isIndividualContact,

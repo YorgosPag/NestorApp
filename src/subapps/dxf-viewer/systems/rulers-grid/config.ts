@@ -3,7 +3,7 @@
  * Single Source of Truth για rulers και grid systems
  */
 
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 
 // Re-export για συμβατότητα με existing imports
 export type { Point2D, ViewTransform } from '../../rendering/types/Types';

@@ -3,8 +3,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Download, FileText, Printer, FileDown } from "lucide-react";
-import type { ObligationDocument } from "@/types/obligations";
+import { FileText, FileDown } from "lucide-react";
 import { getContentSummary } from "@/lib/obligations-utils";
 import { cn } from "@/lib/utils";
 import { useIconSizes } from "@/hooks/useIconSizes";

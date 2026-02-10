@@ -3,7 +3,6 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 

@@ -126,7 +126,7 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
         value={activeMainTab}
         onTabChange={handleTabChange}
         theme="dark"
-        alwaysShowLabels={true}
+        alwaysShowLabels
       />
 
       {/* Content based on active main tab */}

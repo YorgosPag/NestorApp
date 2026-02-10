@@ -94,7 +94,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
 
             <FormField id="maxRoofHeight" label={t('plotZoning.maxRoofHeight')} value={plotData.maxRoofHeight} onChange={handleChange} unit={t('units.linearMeters')} labelPosition='left' unitPosition='left' onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
             <FormField id="maxRoofSlope" label={t('plotZoning.maxRoofSlope')} value={plotData.maxRoofSlope} onChange={handleChange} unit={t('units.percentage')} labelPosition='left' unitPosition='left' onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
-            <FormField id="plotArea" label={t('plotZoning.plotArea')} value={plotData.plotArea} onChange={handleChange} unit={t('units.sqm')} labelPosition='left' unitPosition='left' useGrouping={true} onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
+            <FormField id="plotArea" label={t('plotZoning.plotArea')} value={plotData.plotArea} onChange={handleChange} unit={t('units.sqm')} labelPosition='left' unitPosition='left' useGrouping onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
         </div>
     );
 }

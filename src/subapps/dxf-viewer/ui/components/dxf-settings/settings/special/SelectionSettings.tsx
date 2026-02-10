@@ -102,7 +102,7 @@ export function SelectionSettings() {
         value={activeSelectionTab}
         onTabChange={handleTabChange}
         theme="dark"
-        alwaysShowLabels={true}
+        alwaysShowLabels
         className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
       />
 
@@ -144,8 +144,8 @@ export function SelectionSettings() {
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
-              recent={true}
-              eyedropper={true}
+              recent
+              eyedropper
             />
           </div>
 
@@ -182,8 +182,8 @@ export function SelectionSettings() {
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
-              recent={true}
-              eyedropper={true}
+              recent
+              eyedropper
             />
           </div>
 
@@ -304,8 +304,8 @@ export function SelectionSettings() {
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
-              recent={true}
-              eyedropper={true}
+              recent
+              eyedropper
             />
           </div>
 
@@ -342,8 +342,8 @@ export function SelectionSettings() {
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
-              recent={true}
-              eyedropper={true}
+              recent
+              eyedropper
             />
           </div>
 

@@ -144,7 +144,7 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
           value={activeTab}
           onTabChange={handleTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
         />
       </div>
 

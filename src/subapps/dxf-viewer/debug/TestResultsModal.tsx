@@ -18,7 +18,6 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRIS
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
-import { layoutUtilities } from '@/styles/design-tokens';
 import {
   getTestResultsInteractiveAutoStyles
 } from '../ui/DxfViewerComponents.styles';

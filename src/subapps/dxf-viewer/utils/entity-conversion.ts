@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
-import type { LineEntity, PolylineEntity, AnySceneEntity } from '../types/scene';
+import type { LineEntity, PolylineEntity } from '../types/scene';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { getNearestPointOnLine, calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-065: Centralized Distance Calculation

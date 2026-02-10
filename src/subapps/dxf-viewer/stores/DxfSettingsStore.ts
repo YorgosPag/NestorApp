@@ -45,8 +45,6 @@ import {
 import {
   mergeSettings,
   mergeDxfSettings,
-  diffSettings,
-  extractOverrides,
   hasOverrides,
   cleanEmptyOverrides
 } from '../settings-core/override';

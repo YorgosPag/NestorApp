@@ -50,7 +50,6 @@ import {
   getPredefinedTasksForPhase,
   findPhaseKeyByTranslatedName,
 } from '@/config/construction-templates';
-import type { PredefinedPhase, PredefinedTask } from '@/config/construction-templates';
 import type {
   ConstructionPhase,
   ConstructionTask,

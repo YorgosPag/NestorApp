@@ -107,7 +107,7 @@ export function PropertyCard({
       status={status}
       badges={badges}
       actions={actions}
-      hoverEffects={true}
+      hoverEffects
       variant="default"
       className="h-full"
     >

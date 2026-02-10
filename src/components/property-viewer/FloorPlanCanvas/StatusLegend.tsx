@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { layoutUtilities, interactionUtilities, colors as tokenColors, borderColors } from '@/styles/design-tokens';
+import { interactionUtilities, colors as tokenColors, borderColors } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

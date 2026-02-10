@@ -12,7 +12,7 @@
 
 import { ContactRelationship, RelationshipType } from '@/types/contacts/relationships';
 import { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
-import { BulkRelationshipService, BulkOperationResult } from './BulkRelationshipService';
+import { BulkRelationshipService } from './BulkRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
 
 // 🏢 ENTERPRISE: Type guards for Contact union type

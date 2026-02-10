@@ -168,7 +168,7 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
           value={activeTab}
           onTabChange={handleTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
         />
       </div>
 

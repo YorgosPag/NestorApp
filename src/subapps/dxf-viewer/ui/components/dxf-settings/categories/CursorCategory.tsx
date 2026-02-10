@@ -13,7 +13,7 @@
  * ╚════════════════════════════════════════════════════════════════════════════╝
  */
 
-import React, { Suspense } from 'react';
+import React from 'react';
 import { useTabNavigation } from '../hooks/useTabNavigation';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel/SelectionSettings/GeneralSettingsPanel)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -145,7 +145,7 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
           value={activeTab}
           onTabChange={handleTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
         />
       </nav>
 

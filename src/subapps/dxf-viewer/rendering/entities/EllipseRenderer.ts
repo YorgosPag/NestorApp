@@ -11,7 +11,7 @@ import { renderDotAtPoint, renderDotsAtPoints } from './shared/dot-rendering-uti
 import { createGripsFromPoints, createCenterGrip } from './shared/grip-utils';
 import { validateEllipseEntity } from './shared/entity-validation-utils';
 // 🏢 ADR-065: Centralized Distance Calculation
-import { applyRenderingTransform, calculateDistance } from './shared/geometry-rendering-utils';
+import { calculateDistance } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { TAU } from '../primitives/canvasPaths';

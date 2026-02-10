@@ -19,7 +19,7 @@
 'use client';
 
 import React, { useCallback, useRef, useState } from 'react';
-import { Upload, FileUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';

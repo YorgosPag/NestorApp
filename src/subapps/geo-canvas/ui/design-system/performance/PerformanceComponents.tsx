@@ -33,8 +33,6 @@ import {
   getVirtualizedTableClass,
   getVirtualizedImageContainerStyles,
   getVirtualizedImageStyles,
-  getImagePlaceholderStyles,
-  getLoadingContainerStyles,
   getLoadingContentStyles,
   getSpinnerContainerStyles,
   getSpinnerStyles,
@@ -42,12 +40,9 @@ import {
   getPerformanceMetricsContainerStyles,
   getSectionBorderStyles,
   getSectionTitleStyles,
-  getMetricLabelStyles,
-  getMetricTimestampStyles,
   getAlertSeverityColor,
   getAlertItemStyles,
   getAlertTitleStyles,
-  getAlertDescriptionStyles,
   getAlertTimestampStyles,
   getDynamicHeaderStyles
 } from './PerformanceComponents.styles';
@@ -992,7 +987,7 @@ export const AdminBoundariesPerformancePanel = memo(({
         >
           {isMonitoring ? (
             <span className="performance-monitor-status-active">
-              <span className={`performance-status-indicator ${colors.bg.success}`}></span>
+              <span className={`performance-status-indicator ${colors.bg.success}`} />
               Monitoring Active • Updates every {refreshInterval / 1000}s
             </span>
           ) : (

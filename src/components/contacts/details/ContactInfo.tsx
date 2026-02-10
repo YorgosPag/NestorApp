@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import type { Contact, IndividualContact, CompanyContact } from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
 import { getPrimaryEmail, getPrimaryPhone, isIndividualContact, isCompanyContact } from '@/types/contacts';
 import { CompanyProjectsTable } from './CompanyProjectsTable';
 import { CONTACT_TYPES } from '@/constants/contacts';

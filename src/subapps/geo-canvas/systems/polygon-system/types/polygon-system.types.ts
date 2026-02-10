@@ -6,7 +6,6 @@
  */
 
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { GEO_COLORS } from '../../../config/color-config';
 
 // ============================================================================

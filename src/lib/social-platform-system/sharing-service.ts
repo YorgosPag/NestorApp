@@ -17,7 +17,6 @@
 // ============================================================================
 
 import {
-  UNIFIED_SOCIAL_PLATFORMS,
   getSharingPlatforms,
   getPlatformById,
   type SocialPlatformType

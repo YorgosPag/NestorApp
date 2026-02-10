@@ -14,7 +14,6 @@ import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/type
 // 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
-import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

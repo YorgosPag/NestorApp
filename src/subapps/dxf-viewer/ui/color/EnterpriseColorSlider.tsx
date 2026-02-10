@@ -25,7 +25,6 @@ import { parseColor as parseAriaColor } from '@react-stately/color';
 import { useFocusRing } from '@react-aria/focus';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS, UI_GRADIENTS } from '../../config/color-config';
-import type { AriaColorSliderProps } from '@react-aria/color';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-081: Centralized percentage formatting

@@ -57,7 +57,7 @@ interface ArcPreviewEntity {
 // 🏢 ENTERPRISE: Centralized CAD colors & coordinate transforms
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-040: Centralized coordinate transforms - worldToScreen() Single Source of Truth
-import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-041: Centralized Distance Label Rendering
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-044: Centralized Line Widths

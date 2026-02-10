@@ -6,7 +6,6 @@ import { Eye, Download } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   PHOTO_COLORS,
-  PHOTO_BORDERS,
   PHOTO_COMBINED_EFFECTS,
   PHOTO_TEXT_COLORS
 } from '../config/photo-config';

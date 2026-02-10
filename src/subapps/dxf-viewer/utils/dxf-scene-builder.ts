@@ -1,5 +1,5 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap, type LayerColorMap } from './dxf-entity-parser';
+import { DxfEntityParser, type DxfHeaderData, type LayerColorMap } from './dxf-entity-parser';
 import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name

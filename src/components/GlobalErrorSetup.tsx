@@ -8,7 +8,6 @@
  */
 
 import { useEffect } from 'react';
-import type { ErrorTracker } from '@/services/ErrorTracker';
 
 // 🏢 ENTERPRISE: Extend Window interface for type-safe global access
 // Note: errorTracker is a proxy object with methods, not the full ErrorTracker class instance

@@ -20,7 +20,6 @@
  */
 import React from 'react';
 import Link from 'next/link';
-import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips (replaces native title)
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded imports

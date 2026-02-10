@@ -8,11 +8,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   PHOTO_SIZES,
-  PHOTO_TEXT_COLORS,
-  PHOTO_COLORS,
-  PHOTO_HEIGHTS,
-  PHOTO_BORDERS,
-  PHOTO_COMBINED_EFFECTS
+  PHOTO_TEXT_COLORS
 } from '../config/photo-config';
 import { usePhotoPreviewStyles } from '@/components/ui/enterprise-portal';
 // 🏢 ENTERPRISE: i18n support

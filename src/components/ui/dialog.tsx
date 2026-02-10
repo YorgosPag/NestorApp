@@ -5,7 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { INTERACTIVE_PATTERNS, HOVER_COLOR_EFFECTS } from '@/components/ui/effects'
+import { HOVER_COLOR_EFFECTS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'

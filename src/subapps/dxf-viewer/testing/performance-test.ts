@@ -11,7 +11,7 @@
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../rendering/primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized viewport defaults
-import { VIEWPORT_DEFAULTS, TRANSFORM_SCALE_LIMITS } from '../config/transform-config';
+import { TRANSFORM_SCALE_LIMITS } from '../config/transform-config';
 
 interface PerformanceTestResult {
   testName: string;

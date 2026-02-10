@@ -116,7 +116,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           isOverlaySectionCollapsed={isOverlaySectionCollapsed}
           onToggleOverlaySection={onToggleOverlaySection}
           // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - ToolbarStatusBar uses CursorContext (SSoT)
-          showCoordinates={true}
+          showCoordinates
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
 

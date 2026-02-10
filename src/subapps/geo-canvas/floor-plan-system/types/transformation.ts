@@ -6,7 +6,6 @@
  * @module floor-plan-system/types/transformation
  */
 
-import type { FloorPlanControlPoint } from './control-points';
 
 /**
  * 2D Affine Transformation Matrix

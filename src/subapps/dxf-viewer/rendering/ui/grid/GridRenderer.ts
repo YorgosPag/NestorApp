@@ -3,7 +3,7 @@
  * ✅ ΦΑΣΗ 6: Κεντρικοποιημένο grid rendering χωρίς διπλότυπα
  */
 
-import type { Point2D, Viewport } from '../../types/Types';
+import type { Viewport } from '../../types/Types';
 import type {
   UIRenderer,
   UIRenderContext,
@@ -12,11 +12,8 @@ import type {
 } from '../core/UIRenderer';
 import type {
   GridSettings,
-  GridRenderData,
-  GridRenderMode,
-  GridStyle
+  GridRenderMode
 } from './GridTypes';
-import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath } from '../../primitives/canvasPaths';
 // 🏢 ADR-118: Centralized Zero Point Pattern

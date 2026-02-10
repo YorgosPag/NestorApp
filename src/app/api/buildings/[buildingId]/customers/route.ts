@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact } from '@/types/contacts';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
-import { withAuth, requireBuildingInTenant, logAuditEvent, TenantIsolationError } from '@/lib/auth';
+import { withAuth, requireBuildingInTenant, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 

@@ -25,7 +25,6 @@ import { useNavigation } from '../core/NavigationContext';
 // 🏢 ENTERPRISE: Centralized Entity Linking Service (ZERO inline Firestore calls)
 import { EntityLinkingService, ENTITY_LINKING_CONFIG } from '@/services/entity-linking';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
-import { getPriorityLabels } from '@/subapps/dxf-viewer/config/modal-select/core/labels/status';
 import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 import {
   AlertDialog,

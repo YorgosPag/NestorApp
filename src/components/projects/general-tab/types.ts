@@ -1,5 +1,5 @@
 import type { Project, ProjectStatus } from "@/types/project";
-import type { ProjectCustomer, ProjectStats } from "@/types/project";
+import type { ProjectStats } from "@/types/project";
 
 export interface GeneralProjectTabProps {
   project: Project & { companyName: string };

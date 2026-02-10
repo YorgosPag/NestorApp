@@ -29,7 +29,6 @@ import {
   query,
   where,
   serverTimestamp,
-  type Timestamp,
 } from 'firebase/firestore';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';

@@ -71,7 +71,6 @@ import { useTourContext, TourProvider } from './ProductTour.context';
 import type {
   TourStep,
   TourTooltipPosition,
-  TourConfig,
   ProductTourProps,
 } from './ProductTour.types';
 

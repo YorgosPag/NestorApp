@@ -33,7 +33,6 @@ import {
   type EntityType,
   type FileDomain,
   type FileCategory,
-  type FileLifecycleState,
   type HoldType,
   FILE_STATUS,
   FILE_LIFECYCLE_STATES,
@@ -49,13 +48,9 @@ import type {
   FileRecordQuery,
 } from '@/types/file-record';
 import { isFileRecord } from '@/types/file-record';
+
+
 import {
-  buildStoragePath,
-  generateFileId,
-  getFileExtension,
-} from '@/services/upload';
-import {
-  buildFileDisplayName,
   ensureFilesNamespaceLoaded,
 } from '@/services/upload/utils/file-display-name';
 // 🏢 ENTERPRISE: SSoT Core module for FileRecord schema

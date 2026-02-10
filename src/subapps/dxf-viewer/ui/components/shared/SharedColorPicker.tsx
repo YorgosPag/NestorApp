@@ -17,8 +17,7 @@
 // ============================================================================
 
 import {
-  SharedColorPicker as CentralizedSharedColorPicker,
-  type UnifiedColorPickerProps
+  SharedColorPicker as CentralizedSharedColorPicker
 } from '../../color';
 
 // ============================================================================

@@ -61,7 +61,7 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
             ))}
             <StatusCard statsByStatus={stats.propertiesByStatus} getStatusLabel={getStatusLabel} />
             <DetailsCard title={t('dashboard.cards.unitTypes')} icon={NAVIGATION_ENTITIES.unit.icon} data={stats.propertiesByType} labelFormatter={getTypeLabel} />
-            <DetailsCard title={t('dashboard.cards.distributionByFloor')} icon={NAVIGATION_ENTITIES.floor.icon} data={stats.propertiesByFloor} isFloorData={true} />
+            <DetailsCard title={t('dashboard.cards.distributionByFloor')} icon={NAVIGATION_ENTITIES.floor.icon} data={stats.propertiesByFloor} isFloorData />
             <DetailsCard
                 title={t('dashboard.cards.storages')}
                 icon={NAVIGATION_ENTITIES.storage.icon}
@@ -70,7 +70,7 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
                     [t('dashboard.cards.available')]: stats.availableStorageUnits ?? 0,
                     [t('dashboard.cards.sold')]: stats.soldStorageUnits ?? 0,
                 }}
-                isThreeColumnGrid={true}
+                isThreeColumnGrid
             />
         </div>
     );

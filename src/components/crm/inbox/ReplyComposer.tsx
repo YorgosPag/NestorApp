@@ -38,7 +38,6 @@ import type { QuotedMessage, ReplyMode } from '@/hooks/inbox/useMessageReply';
 import type { EditingMessage } from '@/hooks/inbox/useMessageEdit';
 import type {
   MessageAttachment,
-  AttachmentUploadRequest,
   AttachmentType,
 } from '@/types/conversations';
 import {
@@ -631,7 +630,7 @@ export function ReplyComposer({
                     className="w-10 h-10 object-cover rounded"
                   />
                 ) : (
-                  <div className={`w-10 h-10 flex items-center justify-center rounded bg-muted`}>
+                  <div className="w-10 h-10 flex items-center justify-center rounded bg-muted">
                     {getAttachmentIcon(attachment.type, iconSizes)}
                   </div>
                 )}

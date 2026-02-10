@@ -4,9 +4,8 @@
  */
 
 import { useRouter } from 'next/navigation';
-import { buildNavigationUrl, resetNavigationState, updateNavigationLevel } from '../utils/navigationHelpers';
+import { buildNavigationUrl } from '../utils/navigationHelpers';
 import type { NavigationState, NavigationLevel } from '../types';
-import { NavigationApiService } from '../services/navigationApi';
 
 /** Navigation filter options */
 interface NavigationFilters {

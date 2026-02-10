@@ -1,7 +1,7 @@
 // api/notificationClient.ts
 // ✅ ENTERPRISE: REST/SSE/WS client με ETag, backoff, heartbeat, polling fallback
 
-import { ListResponse, AckRequest, ActionRequest, UserPreferences, Notification } from '@/types/notification';
+import { ListResponse, AckRequest, ActionRequest, UserPreferences } from '@/types/notification';
 import { ListResponseSchema, NotificationSchema, UserPreferencesSchema } from '@/schemas/notification';
 
 export type ClientOptions = {

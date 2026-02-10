@@ -6,9 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -20,20 +18,14 @@ import {
   Search,
   X,
   User,
-  MapPin,
-  Check,
   Loader2
 } from 'lucide-react';
-import { PHOTO_COLORS } from '@/components/generic/config/photo-config';
 // 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 ENTERPRISE: Import centralized contact types and type guards
 import type {
-  ContactType,
-  IndividualContact,
-  CompanyContact,
-  ServiceContact
+  ContactType
 } from '@/types/contacts';
 import {
   isIndividualContact,

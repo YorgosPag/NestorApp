@@ -26,11 +26,9 @@ import {
   TrendingUp,
   BarChart3,
   MapPin,
-  Home,
   CheckCircle,
   Euro
 } from 'lucide-react';
-import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';

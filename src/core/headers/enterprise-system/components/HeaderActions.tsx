@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import type { HeaderActionsProps } from '../types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

@@ -237,7 +237,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           value={gridSettings.visual.style}
           onTabChange={handleGridStyleTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
         />
       </section>
 
@@ -248,7 +248,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           value={activeGridLinesTab}
           onTabChange={handleGridLinesTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
           className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
         />
 
@@ -267,8 +267,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
                 palettes={['dxf', 'semantic', 'material']}
-                recent={true}
-                eyedropper={true}
+                recent
+                eyedropper
               />
             </div>
 
@@ -309,8 +309,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
                 palettes={['dxf', 'semantic', 'material']}
-                recent={true}
-                eyedropper={true}
+                recent
+                eyedropper
               />
             </div>
 

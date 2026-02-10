@@ -13,14 +13,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { calculateRelationshipStats, type RelationshipStats } from '../../utils/summary/statistics-calculator';
 import {
   Users,
-  Building2,
   UserCheck,
-  TrendingUp,
-  Eye,
-  Settings,
-  Plus,
-  ChevronUp,
-  ChevronDown,
   Briefcase,
   Calendar,
   Star,

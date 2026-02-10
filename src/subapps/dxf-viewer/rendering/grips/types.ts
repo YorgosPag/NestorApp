@@ -8,7 +8,6 @@
  */
 
 import type { Point2D } from '../types/Types';
-import type { GripSettings } from '../../types/gripSettings';
 
 // ============================================================================
 // GRIP TYPE DEFINITIONS

@@ -10,7 +10,6 @@
 import React from 'react';
 import { Car, Eye, Edit, FileText } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { UnitBadge, CommonBadge } from '@/core/badges/UnifiedBadgeSystem';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n support

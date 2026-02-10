@@ -6,7 +6,6 @@
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
-import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
 // 🏢 ADR-065: Centralized Distance Calculation
 // 🏢 ADR-066: Centralized Angle Calculation

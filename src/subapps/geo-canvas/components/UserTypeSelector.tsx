@@ -8,7 +8,7 @@ import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { userTypeStyles, getUserTypeColorClass, type UserTypeVariant } from '@/styles/design-tokens/components/user-type';
+import { userTypeStyles, type UserTypeVariant } from '@/styles/design-tokens/components/user-type';
 
 interface UserTypeSelectorProps {
   currentType?: UserType;
@@ -37,10 +37,10 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
     return (
       <div className={`${colors.bg.primary} rounded-lg shadow-sm ${quick.card} p-6`}>
         <div className="animate-pulse">
-          <div className={`${iconSizes.lg} ${colors.bg.hover} rounded mb-4`}></div>
+          <div className={`${iconSizes.lg} ${colors.bg.hover} rounded mb-4`} />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className={`${iconSizes.xl8} ${colors.bg.hover} rounded-lg`}></div>
+              <div key={i} className={`${iconSizes.xl8} ${colors.bg.hover} rounded-lg`} />
             ))}
           </div>
         </div>

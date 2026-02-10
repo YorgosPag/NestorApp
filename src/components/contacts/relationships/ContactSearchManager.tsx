@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { EnterpriseContactDropdown, type ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';

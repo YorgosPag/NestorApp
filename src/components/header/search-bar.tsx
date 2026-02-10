@@ -24,7 +24,7 @@ export function HeaderSearchBar() {
   return (
     <HeaderSearch
       placeholder={t('header.searchBar.placeholder')}
-      showShortcut={true}
+      showShortcut
       shortcutKey="k"
     />
   );

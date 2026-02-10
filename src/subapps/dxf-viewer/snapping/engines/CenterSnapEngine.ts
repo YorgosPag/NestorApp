@@ -6,8 +6,7 @@
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
-import { SpatialFactory } from '../../core/spatial';
-import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
+import type { ISpatialIndex } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants

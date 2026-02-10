@@ -5,7 +5,6 @@
 
 import * as React from 'react';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { UI_COLORS } from '../../../../dxf-viewer/config/color-config';
 import { GEO_COLORS } from '../../../config/color-config';
 import { colors, spacing, typography, shadows, animation, borders } from '../../../../../styles/design-tokens/core';
 import { semanticColors } from '../../../../../styles/design-tokens';

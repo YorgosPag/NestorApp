@@ -21,8 +21,6 @@ import {
 
 // Import centralized types και configurations από το νέο modular system
 import {
-  type CommunicationItem,
-  type CommunicationConfig,
   type UniversalCommunicationManagerProps
 } from './communication';
 

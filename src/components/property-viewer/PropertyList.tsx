@@ -1,8 +1,6 @@
 
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent } from "@/components/ui/card";
 import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { PropertyListCard } from '@/domain';

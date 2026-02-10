@@ -1,8 +1,8 @@
 // Firestore common helpers
 import {
-  collection, getFirestore, DocumentSnapshot, QuerySnapshot, QueryConstraint, doc, getDoc,
+  collection, DocumentSnapshot, QuerySnapshot, doc, getDoc,
 } from 'firebase/firestore';
-import type { Timestamp, FirestoreDataConverter } from 'firebase/firestore';
+import type { FirestoreDataConverter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export const getCol = <T = unknown>(path: string, converter?: FirestoreDataConverter<T>) =>

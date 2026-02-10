@@ -14,7 +14,7 @@
  * - Performance-optimized caching
  */
 
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, updateDoc, query, where, orderBy, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 

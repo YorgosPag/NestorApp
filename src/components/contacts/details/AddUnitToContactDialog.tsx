@@ -15,9 +15,7 @@
 
 'use client';
 
-import React from 'react';
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
-import type { Property } from '@/types/property-viewer';
 
 interface AddUnitToContactDialogProps {
   open: boolean;

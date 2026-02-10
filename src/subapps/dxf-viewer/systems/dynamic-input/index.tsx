@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 
 interface DynamicInputSystemProps {

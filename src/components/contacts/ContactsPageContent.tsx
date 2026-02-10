@@ -69,10 +69,6 @@ const ArchiveContactDialog = dynamic(
 );
 import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { MobileCompactHeader } from '@/core/headers';
-import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -710,7 +706,7 @@ export function ContactsPageContent() {
               stats={dashboardStats}
               columns={4}
               onCardClick={handleCardClick}
-              className={`px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden`}
+              className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
             />
           </section>
         )}
@@ -732,7 +728,7 @@ export function ContactsPageContent() {
               config={contactFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
-              defaultOpen={true}
+              defaultOpen
             />
           </aside>
         )}

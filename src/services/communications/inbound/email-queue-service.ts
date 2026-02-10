@@ -17,11 +17,8 @@ import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   EMAIL_QUEUE_CONFIG,
-  ATTACHMENT_MODE_CONFIG,
   getRetryDelayMs,
-  shouldMoveToDeadLetter,
   type EmailIngestionQueueItem,
-  type EmailIngestionQueueInput,
   type EmailIngestionQueueStats,
   type EmailIngestionQueueStatus,
   type SerializedAttachment,

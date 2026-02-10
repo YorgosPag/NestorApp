@@ -71,7 +71,7 @@ export default function CommunicationsHistory({ contactId }: CommunicationsHisto
           return (
             <li key={comm.id} className="relative">
               {index < communications.length - 1 && (
-                <div className={`absolute left-6 top-12 bottom-0 w-0.5 ${colors.border.muted}`}></div>
+                <div className={`absolute left-6 top-12 bottom-0 w-0.5 ${colors.border.muted}`} />
               )}
               <article className="flex gap-4">
                 <div className={`flex-shrink-0 ${iconSizes.xl2} rounded-full flex items-center justify-center ${getTypeColor(comm.type)}`}>

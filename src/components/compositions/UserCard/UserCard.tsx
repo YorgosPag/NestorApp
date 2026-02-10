@@ -18,7 +18,6 @@ import {
   Edit,
   MessageSquare,
   UserX,
-  Award,
   Clock
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';

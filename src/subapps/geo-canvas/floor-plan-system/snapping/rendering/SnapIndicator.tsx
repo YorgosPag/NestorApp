@@ -14,7 +14,7 @@
 
 import React from 'react';
 import type { SnapResult } from '../types';
-import { SNAP_VISUAL, SNAP_MODE_LABELS } from '../config';
+import { SNAP_VISUAL } from '../config';
 import { GEO_COLORS } from '../../../config/color-config';
 
 /**

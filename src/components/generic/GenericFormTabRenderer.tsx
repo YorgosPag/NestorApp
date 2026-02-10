@@ -146,7 +146,7 @@ function createFormTabsFromConfig(
               disabled={disabled}
               purpose="logo" // For services
               contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
-              compact={true} // Use compact mode for better layout
+              compact // Use compact mode for better layout
               className=""
             />
           </div>

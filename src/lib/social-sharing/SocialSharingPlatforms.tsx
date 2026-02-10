@@ -14,8 +14,6 @@ import React from 'react';
 import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { HOVER_SHADOWS, GROUP_HOVER_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { borders } from '@/styles/design-tokens';
 
 // ============================================================================

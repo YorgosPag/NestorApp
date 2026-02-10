@@ -10,7 +10,6 @@ import type {
   SecurityFeatureCodeType,
   AmenityCodeType,
   EnergyClassType,
-  OperationalStatusType,
   ConditionType,
   HeatingType,
   FuelType,

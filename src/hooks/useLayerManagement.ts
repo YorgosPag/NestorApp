@@ -6,15 +6,12 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   collection,
   doc,
-  addDoc,
   updateDoc,
-  deleteDoc,
   getDocs,
   query,
   where,
   orderBy,
-  onSnapshot,
-  Timestamp
+  onSnapshot
 } from 'firebase/firestore';
 import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES, SYSTEM_LAYER_COLORS } from '@/types/layers';
 import { generateHistoryId, generateLayerId, generateElementId } from '@/services/enterprise-id.service';

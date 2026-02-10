@@ -42,10 +42,8 @@
  */
 
 import { useMemo } from 'react';
-import {
-  AGENT_COORDINATION_API,
-  type TypographyTokenBridge
-} from './internal/enterprise-token-bridge';
+
+
 import { typography } from '../styles/design-tokens';
 
 // ============================================================================

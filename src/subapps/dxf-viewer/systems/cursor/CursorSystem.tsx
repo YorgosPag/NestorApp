@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import {
   type CursorSettings,
   type CursorState,
@@ -10,7 +10,7 @@ import {
   updateCursorSettings,
   subscribeToCursorSettings
 } from './config';
-import { createDefaultCursorState, throttleMouseEvents } from './utils';
+import { createDefaultCursorState } from './utils';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 
 // Context type that combines state and actions

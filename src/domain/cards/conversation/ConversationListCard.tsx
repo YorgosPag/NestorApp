@@ -239,8 +239,8 @@ export function ConversationListCard({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       compact={compact}
-      hideStats={true}
-      inlineBadges={true}
+      hideStats
+      inlineBadges
       hideIcon={false}
       className={className}
       aria-label={t('inbox.card.ariaLabel', { name: displayName })}

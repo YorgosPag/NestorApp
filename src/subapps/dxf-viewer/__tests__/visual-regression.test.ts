@@ -6,7 +6,6 @@
 
 /// <reference path="../types/jest-globals.d.ts" />
 
-import fs from 'node:fs';
 import path from 'node:path';
 import type { PixelmatchFn, PNGCombined } from '../test/visual/types';
 

@@ -13,7 +13,7 @@
  * - setTransform handled via context
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 // ✅ ENTERPRISE FIX: Import from centralized types
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { useCanvasContext } from '../../contexts/CanvasContext';

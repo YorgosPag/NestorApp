@@ -2,7 +2,7 @@
 
 'use client';
 
-import { colors, coreBorderRadius } from '@/styles/design-tokens';
+import { colors } from '@/styles/design-tokens';
 import type { Property } from '@/types/property-viewer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

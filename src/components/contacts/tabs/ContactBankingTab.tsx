@@ -19,7 +19,7 @@ import { BankAccountsService } from '@/services/banking';
 import { BankAccountCard } from '@/components/banking/BankAccountCard';
 import { BankAccountForm } from '@/components/banking/BankAccountForm';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
 import { Plus, Building2, CreditCard, Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import toast from 'react-hot-toast';

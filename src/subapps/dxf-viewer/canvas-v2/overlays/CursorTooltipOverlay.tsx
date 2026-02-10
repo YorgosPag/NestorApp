@@ -2,7 +2,7 @@
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 // Enterprise Canvas UI Migration - Phase B
-import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
+import { portalComponents } from '@/styles/design-tokens';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized layout tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';

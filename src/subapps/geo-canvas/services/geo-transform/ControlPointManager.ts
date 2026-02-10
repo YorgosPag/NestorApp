@@ -7,9 +7,7 @@
 import type {
   GeoControlPoint,
   DxfCoordinate,
-  GeoCoordinate,
-  GeoreferenceInfo,
-  BoundingBox
+  GeoCoordinate
 } from '../../types';
 
 // ============================================================================

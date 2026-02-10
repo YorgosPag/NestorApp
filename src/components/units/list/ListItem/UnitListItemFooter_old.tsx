@@ -70,7 +70,7 @@ export function UnitListItemFooter({ unit }: UnitListItemFooterProps) {
           unit={unit}
           variant="inline"
           size="sm"
-          showActions={true}
+          showActions
           className="mb-2"
         />
       ) : (

@@ -34,7 +34,7 @@ import type { FloorPlanViewerLayoutProps } from './types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση existing enterprise zoom system αντί διπλότυπου
 import { useZoom } from '@/subapps/dxf-viewer/systems/zoom/hooks/useZoom';
 import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
-import { asArray, ensureFloor, isNodeEditMode, safeGetProperty } from './utils/safeProps';
+import { asArray, ensureFloor, safeGetProperty } from './utils/safeProps';
 
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
   const { quick } = useBorderTokens();
@@ -217,11 +217,11 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
               onPropertyUpdate={onPropertyUpdate}
               isReadOnly={isReadOnly}
               pdfBackgroundUrl={pdfUrl}
-              enableGrid={true}
-              enableMeasurements={true}
+              enableGrid
+              enableMeasurements
               enableConnections={isConnecting}
-              showStatusLegend={true}
-              showPropertyCount={true}
+              showStatusLegend
+              showPropertyCount
               connectionPairs={connectionPairs || []}
               onConnectionPairsChange={onConnectionPairsChange}
               onModeChange={onViewModeChange}

@@ -34,10 +34,8 @@ import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/ef
 import { canvasUtilities } from '@/styles/design-tokens';
 import {
   draggablePanelContainer,
-  floorPlanOverlay,
   fixedSidebarPanel
 } from '../components/InteractiveMap.styles';
-import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import {
   Select,
   SelectContent,
@@ -47,7 +45,7 @@ import {
 } from '@/components/ui/select';
 import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucide-react';
 import type { GeoCanvasAppProps } from '../types';
-import type { GeoCoordinate, DxfCoordinate } from '../types';
+import type { GeoCoordinate } from '../types';
 import { generateLayerId } from '@/services/enterprise-id.service';
 import type { MapInstance } from '../hooks/map/useMapInteractions';
 
@@ -806,11 +804,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   <InteractiveMap
                     className="w-full h-full"
                     onCoordinateClick={handleCoordinateClick}
-                    showControlPoints={true}
-                    showTransformationPreview={true}
+                    showControlPoints
+                    showTransformationPreview
                     isPickingCoordinates={controlPoints.pickingState === 'picking-geo'}
                     transformState={transformState}
-                    enablePolygonDrawing={true}
+                    enablePolygonDrawing
                     searchMarker={searchMarker}
                     administrativeBoundaries={administrativeBoundaries}
                     onPolygonComplete={() => {
@@ -978,27 +976,27 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               </h3>
               <ul className="space-y-2 text-sm list-none">
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
                   <span>{t('sidebar.availableFeatures.controlPointManagement')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
                   <span>{t('sidebar.availableFeatures.affineTransformation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
                   <span>{t('sidebar.availableFeatures.accuracyValidation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
                   <span>{t('sidebar.availableFeatures.spatialDistributionAnalysis')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
                   <span>{t('sidebar.availableFeatures.rmsErrorCalculation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
                   <span>{t('sidebar.availableFeatures.coordinateTransformation')}</span>
                 </li>
               </ul>
@@ -1096,7 +1094,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       )}
 
       {/* 🛠️ DEVELOPMENT ERROR REPORTING DASHBOARD */}
-      <ErrorReportingDashboard position="bottom-right" minimized={true} />
+      <ErrorReportingDashboard position="bottom-right" minimized />
     </div>
     </PolygonSystemProvider>
   );
@@ -1107,9 +1105,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
   <PageErrorBoundary
     componentName="GeoCanvasContent"
-    enableRetry={true}
+    enableRetry
     maxRetries={2}
-    enableReporting={true}
+    enableReporting
     onError={(error, errorInfo, errorId) => {
       // ✅ ENTERPRISE FIX: Defer error logging to avoid setState during render
       setTimeout(() => {

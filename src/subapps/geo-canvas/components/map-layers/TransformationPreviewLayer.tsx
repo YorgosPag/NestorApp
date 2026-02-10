@@ -15,8 +15,6 @@
  */
 
 import React, { memo } from 'react';
-import { Source, Layer } from 'react-map-gl/maplibre';
-import { GEO_COLORS } from '../../config/color-config';
 import type { TransformState } from '../../hooks/map/useMapInteractions';
 
 // ============================================================================

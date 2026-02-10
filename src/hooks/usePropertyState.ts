@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
-import type { Property } from '@/types/property-viewer';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 
 interface Floor {

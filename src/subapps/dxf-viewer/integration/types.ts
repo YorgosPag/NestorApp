@@ -2,9 +2,7 @@
 'use client';
 
 import React, { Dispatch, SetStateAction } from 'react';
-import type { DXFEntity, Layer, ViewMode, Status, Point, Measurement } from '../types';
-import type { ToolType } from '../ui/toolbar/types';
-import type { DrawingState } from '../hooks/drawing/useUnifiedDrawing';
+import type { DXFEntity, Layer, ViewMode, Status, Point } from '../types';
 import type { useDxfViewerState } from '../hooks/useDxfViewerState';
 import type { SceneModel } from '../types/scene';
 import type { ViewTransform, Point2D } from '../rendering/types/Types';

@@ -8,7 +8,6 @@ import { UnitListCard } from '@/domain';
 import { CompactToolbar, unitsConfig, type SortField } from '@/components/core/CompactToolbar';
 import { UnitTypeQuickFilters } from './UnitTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
-import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -231,7 +230,7 @@ export function UnitsList({
       <UnitTypeQuickFilters
         selectedTypes={selectedTypes}
         onTypeChange={setSelectedTypes}
-        compact={true}
+        compact
       />
 
       <ScrollArea className="flex-1">

@@ -17,7 +17,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByName, type ContactNameSearchResult } from '../../shared/contact-lookup';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { sendReplyViaMailgun } from '../../shared/mailgun-sender';
-import { PipelineChannel, PipelineIntentType } from '@/types/ai-pipeline';
+import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
   PipelineContext,

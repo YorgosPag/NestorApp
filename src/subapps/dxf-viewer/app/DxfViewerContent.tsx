@@ -20,9 +20,8 @@ import { matchesShortcut } from '../config/keyboard-shortcuts';
 import React from 'react';
 
 // Types - Updated for Canvas V2
-import type { DxfViewerAppProps, Status as AppStatus } from '../types';
-import type { SceneModel, LineEntity, CircleEntity, ArcEntity, PolylineEntity } from '../types/scene';
-import type { OverlayEditorMode, OverlayKind, Status } from '../overlays/types';
+import type { DxfViewerAppProps } from '../types';
+import type { CircleEntity, ArcEntity, PolylineEntity } from '../types/scene';
 import type { ViewTransform, Point2D } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
 
@@ -48,7 +47,6 @@ interface WorkflowTestResult {
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useOverlayDrawing } from '../hooks/useOverlayDrawing';
-import { useCursor } from '../systems/cursor';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
 import { useEventBus, EventBus } from '../systems/events/EventBus';
@@ -69,12 +67,10 @@ import { useOverlayStore } from '../overlays/overlay-store';
 import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useGripContext } from '../providers/GripProvider';
-import { globalRulerStore } from '../settings-provider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ⚡ LCP OPTIMIZATION: Critical UI Components (Load immediately for paint)
-import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
-import { EnhancedDXFToolbar } from '../ui/toolbar';
+import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 
 // 🚀 LAZY LOADED: Non-Critical UI Components (Load after initial paint to reduce LCP)
 const OverlayToolbar = React.lazy(() => import('../ui/OverlayToolbar').then(mod => ({ default: mod.OverlayToolbar })));
@@ -93,9 +89,6 @@ const PdfControlsPanel = React.lazy(() => import('../pdf-background').then(mod =
 const ToolbarWithCursorCoordinates = React.lazy(() => import('../ui/components/ToolbarWithCursorCoordinates').then(mod => ({ default: mod.ToolbarWithCursorCoordinates })));
 
 // Layout Components - Canvas V2
-import { DXFViewerLayout } from '../integration/DXFViewerLayout';
-import { getKindFromLabel } from '../config/color-mapping';
-import { isFeatureEnabled } from '../config/experimental-features';
 
 // ⚡ LCP OPTIMIZATION: Critical layout for initial paint
 import { SidebarSection } from '../layout/SidebarSection';
@@ -105,22 +98,18 @@ const MainContentSection = React.lazy(() => import('../layout/MainContentSection
 const FloatingPanelsSection = React.lazy(() => import('../layout/FloatingPanelsSection').then(mod => ({ default: mod.FloatingPanelsSection })));
 
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
-import { TransformProvider, useTransform } from '../contexts/TransformContext';
+import { TransformProvider } from '../contexts/TransformContext';
 // 🏢 ENTERPRISE: Canvas Context (Centralized Zoom System)
 import { CanvasProvider } from '../contexts/CanvasContext';
 
 // 🧪 UNIFIED TEST RUNNER - Import modal (test functions moved to DebugToolbar)
-import { TestResultsModal } from '../debug/TestResultsModal';
 import { type UnifiedTestReport } from '../debug/unified-test-runner';
 
 // 🛠️ DEBUG TOOLBAR - Consolidated debug/test controls (development only)
-import { DebugToolbar } from '../debug/DebugToolbar';
 
 // ✅ PERFORMANCE: Use existing LazyLoadWrapper system για heavy components
-import {
-  LazyFullLayoutDebug,
-  withLazyLoad
-} from '../ui/components/LazyLoadWrapper';
+
+
 
 // ⚡ ENTERPRISE: DXF Performance Optimizer (729 γραμμές Enterprise system)
 import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer';
@@ -1094,7 +1083,7 @@ Check console for detailed metrics`;
           - State persisted in localStorage */}
       {perfMonitorEnabled && (
         <ClientOnlyPerformanceDashboard
-          showDetails={true}
+          showDetails
           updateInterval={2000}
           categories={[
             PerformanceCategory.RENDERING,

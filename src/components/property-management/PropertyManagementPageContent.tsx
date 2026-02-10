@@ -155,7 +155,7 @@ export function PropertyManagementPageContent() {
             config={propertyFiltersConfig}
             filters={enterpriseFilters}
             onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
-            defaultOpen={true}
+            defaultOpen
           />
         </div>
       )}

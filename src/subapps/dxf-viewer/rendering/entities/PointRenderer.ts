@@ -1,7 +1,6 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel } from '../types/Types';
 import type { Point2D, GripInfo, RenderOptions } from '../types/Types';
-import { createVertexGrip } from './shared/grip-utils';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isPointEntity, type Entity, type PointEntity } from '../../types/entities';

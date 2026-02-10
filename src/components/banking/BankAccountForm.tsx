@@ -32,7 +32,6 @@ import type {
 import {
   createEmptyBankAccount,
   validateIBAN,
-  cleanIBAN,
   ACCOUNT_TYPE_LABELS,
   CURRENCY_LABELS
 } from '@/types/contacts/banking';

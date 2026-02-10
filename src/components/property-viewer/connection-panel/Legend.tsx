@@ -28,7 +28,7 @@ export function Legend() {
             <div className="space-y-1 text-xs text-muted-foreground">
                 {(Object.entries(connectionTypeColors) as [ConnectionTypeKey, string][]).map(([type, colorClass]) => (
                     <div key={type} className="flex items-center gap-2">
-                        <div className={`w-3 h-3 ${radius.sm} ${colorClass}`}></div>
+                        <div className={`w-3 h-3 ${radius.sm} ${colorClass}`} />
                         <span>{t(`connectionPanel.connectionTypes.${type}`)}</span>
                     </div>
                 ))}

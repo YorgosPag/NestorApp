@@ -18,8 +18,8 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import type { EnterpriseColorFieldProps, ColorMode, RGBColor, HSLColor } from './types';
-import { parseColor, rgbToHex, formatRgb, formatHsl, parseHex, parseRgb, parseHsl, hslToRgb } from './utils';
+import type { EnterpriseColorFieldProps, RGBColor, HSLColor } from './types';
+import { parseColor, rgbToHex, formatRgb, formatHsl, hslToRgb } from './utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../config/color-config';

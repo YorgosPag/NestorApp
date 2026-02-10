@@ -9,15 +9,12 @@ import {
   Package,
   ParkingCircle,
   Folder,
-  ChevronDown,
   Home
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { SelectionButton } from './shared/SelectionButton';
 import type { DxfDestination } from '../pipeline/types';
-import type { CompanyContact } from '../../../types/contacts';
-import type { Project, Building as ProjectBuilding, Floor } from '../contexts/ProjectHierarchyContext';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '../ui/effects';
 import { AnimatedSpinner } from '../components/modal/ModalLoadingStates';
 import {

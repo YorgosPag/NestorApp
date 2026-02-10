@@ -480,7 +480,6 @@ export default geoAlertDesignSystem;
 // 🔄 MIGRATION BRIDGE TO CENTRALIZED SYSTEM
 // ============================================================================
 
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * @deprecated Use useBorderTokens() hook directly

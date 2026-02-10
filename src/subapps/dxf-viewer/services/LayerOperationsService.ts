@@ -11,7 +11,6 @@ import {
   validateLayerExists,
   updateLayerProperties,
   updateEntitiesForLayer,
-  LayerOperationResult as ImportedLayerOperationResult,
   // ADR-129: Centralized entity layer filtering
   getEntityIdsByLayer,
   getEntityIdsByLayers,

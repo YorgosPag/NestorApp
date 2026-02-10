@@ -14,7 +14,6 @@
 
 'use client';
 
-import React from 'react';
 import { ColorPickerModal as CentralizedColorPickerModal } from '../../../color';
 
 /**

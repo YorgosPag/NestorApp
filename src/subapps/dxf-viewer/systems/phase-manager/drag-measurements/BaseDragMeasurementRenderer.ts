@@ -15,7 +15,6 @@ import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle
 import {
   calculateMeasurementPosition,
   calculateLineYOffset,
-  getCanvasBounds,
   POSITIONING_CONFIG
 } from '../positioning/MeasurementPositioning';
 // 🏢 ADR-065: Centralized Distance Calculation

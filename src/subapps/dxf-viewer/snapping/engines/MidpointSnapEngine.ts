@@ -12,10 +12,8 @@ const DEBUG_MIDPOINT_SNAP_ENGINE = false;
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
-import { SpatialFactory } from '../../core/spatial';
-import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
+import type { ISpatialIndex } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
-import { findStandardSnapCandidates, StandardSnapCandidate } from './shared/snap-engine-utils';
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 

@@ -231,7 +231,7 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
           value={activeTab}
           onTabChange={handleTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
         />
       </div>
 

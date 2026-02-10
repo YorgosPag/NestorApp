@@ -24,7 +24,7 @@ import type {
   ImageUploadResult,
   ProgressCallback,
 } from '../types/upload.types';
-import { UPLOAD_DEFAULTS, ALLOWED_MIME_TYPES } from '../types/upload.types';
+import { ALLOWED_MIME_TYPES } from '../types/upload.types';
 import { PhotoUploadService, type PhotoUploadOptions as OriginalPhotoUploadOptions } from '@/services/photo-upload.service';
 import { validateImageFile } from '@/utils/file-validation';
 import { smartCompressContactPhoto } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';

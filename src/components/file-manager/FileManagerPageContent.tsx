@@ -62,7 +62,7 @@ import {
   EMAIL_PROVIDERS,
   type EmailProvider
 } from '@/components/ui/ErrorBoundary/ErrorBoundary';
-import { AlertTriangle, Mail, RefreshCw as RetryIcon } from 'lucide-react';
+import { AlertTriangle, Mail } from 'lucide-react';
 import { notificationConfig } from '@/config/error-reporting';
 
 // 🏢 ENTERPRISE: Centralized Headers
@@ -539,7 +539,7 @@ export function FileManagerPageContent() {
               config={fileFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
-              defaultOpen={true}
+              defaultOpen
             />
           </aside>
         )}
@@ -828,8 +828,8 @@ export function FileManagerPageContent() {
                 /* 🏢 Wrapped in EnterpriseErrorBoundary for FULL error UI (Email, Admin, Tour) */
                 <EnterpriseErrorBoundary
                   componentName="Inbox View"
-                  enableRetry={true}
-                  enableReporting={true}
+                  enableRetry
+                  enableReporting
                 >
                   <InboxView
                     companyId={companyId}
@@ -842,8 +842,8 @@ export function FileManagerPageContent() {
                 /* 🏢 Wrapped in EnterpriseErrorBoundary for FULL error UI (Email, Admin, Tour) */
                 <EnterpriseErrorBoundary
                   componentName="Trash View"
-                  enableRetry={true}
-                  enableReporting={true}
+                  enableRetry
+                  enableReporting
                 >
                   <TrashView
                     companyId={companyId}
@@ -864,9 +864,9 @@ export function FileManagerPageContent() {
 export default function FileManagerPage() {
   return (
     <PageErrorBoundary
-      enableRetry={true}
+      enableRetry
       maxRetries={3}
-      enableReporting={true}
+      enableReporting
     >
       <FileManagerPageContent />
     </PageErrorBoundary>

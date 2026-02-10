@@ -1,9 +1,5 @@
-import {
-  Plus,
-  Activity,
-  Star,
-  Upload,
-} from "lucide-react";
+
+
 import type { QuickStats, Activity as ActivityType, Meeting } from "@/types/dashboard";
 
 // 🏢 ENTERPRISE: Hardcoded stats removed - use database queries

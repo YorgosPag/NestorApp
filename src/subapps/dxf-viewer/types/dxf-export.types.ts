@@ -27,8 +27,7 @@
  * ============================================================================
  */
 
-import type { Entity, SceneModel, SceneLayer, EntityType } from './entities';
-import type { Point2D } from '../rendering/types/Types';
+import type { Entity, SceneModel, EntityType } from './entities';
 
 // ============================================================================
 // DXF VERSION CONFIGURATION

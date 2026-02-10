@@ -32,7 +32,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';

@@ -4,13 +4,13 @@ import React from 'react';
 // Comprehensive Lucide imports για CAD
 import {
   Upload, Download, Save, Printer, FolderOpen, FileText, FilePlus,
-  PencilLine, Square, Circle, Triangle, Pentagon, Hexagon,
+  PencilLine, Square, Circle, Pentagon,
   Move, Copy, RotateCw, Scale, FlipHorizontal, Scissors,
   Expand, Move3D, CornerUpRight, CornerDownRight,
-  Type, MessageSquare, Tag, Table, FileSpreadsheet,
+  Type, MessageSquare, Tag, Table,
   ZoomIn, ZoomOut, Maximize, RotateCcw, Eye, EyeOff,
-  Layers, Settings, Lock, Unlock, MousePointer, Grid3X3,
-  Target, Crosshair, Dot, Compass, Plus, Minus
+  Layers, Settings, MousePointer, Grid3X3,
+  Target, Crosshair, Dot, Plus
 } from 'lucide-react';
 
 export type CommandId =

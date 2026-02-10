@@ -12,10 +12,9 @@ import { colors as tokenColors } from '@/styles/design-tokens';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
 import { NearbyProjectMarker } from './NearbyProjectMarker';
-import { useMapStyles, useMapCanvasStyles, useProjectMarkerStyles } from './hooks/useMapStyles';
+import { useMapCanvasStyles, useProjectMarkerStyles } from './hooks/useMapStyles';
 import {
   getProjectMarkerPosition,
-  getMapViewDisplayName,
   type MapViewType,
   type ProjectStatusType
 } from './MapComponents.styles';
@@ -56,7 +55,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     <div className="absolute inset-0 opacity-10">
                         <div className="grid grid-cols-12 grid-rows-8 h-full w-full">
                             {Array.from({ length: 96 }).map((_, i) => (
-                                <div key={i} className="border border-border/50"></div>
+                                <div key={i} className="border border-border/50" />
                             ))}
                         </div>
                     </div>
@@ -86,14 +85,14 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
 
                     {/* Distance circles */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className={`${iconSizes.xl8} ${createBorder('medium', tokenColors.blue['300'], 'dashed')} rounded-full opacity-30`}></div>
-                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${iconSizes.xl12} ${createBorder('medium', tokenColors.blue['200'], 'dashed')} rounded-full opacity-20`}></div>
+                        <div className={`${iconSizes.xl8} ${createBorder('medium', tokenColors.blue['300'], 'dashed')} rounded-full opacity-30`} />
+                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${iconSizes.xl12} ${createBorder('medium', tokenColors.blue['200'], 'dashed')} rounded-full opacity-20`} />
                     </div>
 
                     {/* Scale indicator */}
                     <div className={`absolute bottom-4 left-4 ${colors.bg.primary} opacity-90 px-3 py-2 ${quick.input} text-sm`}>
                         <div className="flex items-center gap-2">
-                            <div className={`${iconSizes.xl4} h-1 bg-black`}></div>
+                            <div className={`${iconSizes.xl4} h-1 bg-black`} />
                             <span>100m</span>
                         </div>
                     </div>

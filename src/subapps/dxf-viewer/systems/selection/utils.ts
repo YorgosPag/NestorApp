@@ -8,7 +8,7 @@
 // ✅ ΦΑΣΗ 7: Use unified coordinate transforms
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
-import { type AnySceneEntity, type SceneLayer } from '../../types/scene';
+import { type SceneLayer } from '../../types/scene';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import {
   isLineEntity,
@@ -21,7 +21,6 @@ import {
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../../config/layer-config';
 import { createRectangleVertices, calculateEntityBounds } from './shared/selection-duplicate-utils';
-import { calculateVerticesBounds } from '../../utils/geometry/GeometryUtils';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 

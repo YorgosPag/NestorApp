@@ -82,7 +82,7 @@ export function NearbyProjectsList() {
                                     project.status === 'active' ? bg.info :
                                         project.status === 'completed' ? bg.success :
                                             bg.warning
-                                )}></div>
+                                )} />
                                 <div>
                                     <p className="font-medium">{project.name}</p>
                                     <p className="text-sm text-muted-foreground">

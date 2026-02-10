@@ -133,7 +133,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                   </>
                 ) : (
                   <>
-                    <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 ${quick.rounded}`}></div>
+                    <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 ${quick.rounded}`} />
                     <Badge className={displayProps.color} variant="outline">
                       {translatedTypeLabel}
                     </Badge>

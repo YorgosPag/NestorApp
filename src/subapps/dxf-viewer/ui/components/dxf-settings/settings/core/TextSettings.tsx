@@ -67,7 +67,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 // 🏢 ENTERPRISE: Centralized Button component (Radix)
 import { Button } from '@/components/ui/button';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
-import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
@@ -528,8 +527,8 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}
-          recent={true}
-          eyedropper={true}
+          recent
+          eyedropper
         />
       </div>
         </div>

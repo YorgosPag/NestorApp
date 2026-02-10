@@ -13,7 +13,6 @@ import type { PreviewGripPoint } from '../../../types/entities';
 import type {
   PhaseRenderingState,
   GripTemperature,
-  GripIdentifier,
   Entity
 } from '../types';
 
@@ -23,12 +22,10 @@ import type {
 
 /** Union type for preview grip points (can be Point2D or PreviewGripPoint) */
 type PreviewGripPointInput = Point2D | PreviewGripPoint;
-import { UI_COLORS } from '../../../config/color-config';
 import { getGripPreviewStyleWithOverride } from '../../../hooks/useGripPreviewStyle';
-import { renderSquareGrip } from '../../../rendering/entities/shared/geometry-rendering-utils';
 
 // 🏢 ADR-048: Unified Grip Rendering System
-import { UnifiedGripRenderer, type GripRenderConfig } from '../../../rendering/grips';
+import { UnifiedGripRenderer } from '../../../rendering/grips';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS

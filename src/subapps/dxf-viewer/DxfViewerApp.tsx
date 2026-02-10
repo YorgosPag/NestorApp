@@ -54,16 +54,16 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
     <NotificationProvider>
       <EnterpriseErrorBoundaryWithTour
         componentName="DxfViewer"
-        enableRetry={true}
+        enableRetry
         maxRetries={2}
-        enableReporting={true}
-        showErrorDetails={true}
+        enableReporting
+        showErrorDetails
       >
           {/* ===== ΝΕΑ UNIFIED PROVIDERS (για internal use από contexts) ===== */}
           {/* 🗑️ REMOVED: ConfigurationProvider - MERGED into DxfSettingsProvider */}
               <ProjectHierarchyProvider>
                 {/* ===== ΚΕΝΤΡΙΚΟΣ AUTO-SAVE PROVIDER (πρώτα από όλα) ===== */}
-                <DxfSettingsProvider enabled={true} syncDeps={syncDeps}>
+                <DxfSettingsProvider enabled syncDeps={syncDeps}>
                   <StyleManagerProvider>
                 {/* LineSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
                 {/* TextSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
@@ -72,11 +72,11 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                       {/* ✅ ΑΦΑΙΡΕΣΗ ΠΑΛΙΩΝ SPECIFIC PROVIDERS - ΧΡΗΣΙΜΟΠΟΙΟΥΝΤΑΙ ΠΛΕΟΝ UNIFIED HOOKS */}
                       {/* 🚫 TEMPORARY: Re-enable providers one-by-one */}
                       <SnapProvider>
-                <RulersGridSystem enablePersistence={true} persistenceKey="dxf-viewer-rulers-grid">
+                <RulersGridSystem enablePersistence persistenceKey="dxf-viewer-rulers-grid">
                   <CursorSystem>
                       <SelectionSystem>
                         <ToolbarsSystem>
-                          <LevelsSystem enableFirestore={true}>
+                          <LevelsSystem enableFirestore>
                             <OverlayStoreProvider>
                               <CanvasProvider>
                                 <DxfViewerContent {...props} />

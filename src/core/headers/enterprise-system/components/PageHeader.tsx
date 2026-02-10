@@ -11,7 +11,6 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized layout classes
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
-import { HEADER_THEME } from '../constants';
 import { HeaderTitle } from './HeaderTitle';
 import { HeaderSearch } from './HeaderSearch';
 import { HeaderFilters } from './HeaderFilters';
@@ -183,7 +182,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <div className="flex items-center gap-2 min-w-0 sm:min-w-fit shrink-0">
               <HeaderTitle
                 {...title}
-                hideSubtitle={true}
+                hideSubtitle
               />
             </div>
             {/* 🏢 ENTERPRISE: Breadcrumb slot - flexible middle section */}

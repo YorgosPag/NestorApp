@@ -1,4 +1,4 @@
-import { Mail, Send, FileText, Users, Calendar } from "lucide-react";
+import { Mail, FileText, Users, Calendar } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18

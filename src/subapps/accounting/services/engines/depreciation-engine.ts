@@ -10,7 +10,6 @@
 
 import type { IDepreciationEngine, IAccountingRepository } from '../../types/interfaces';
 import type { FixedAsset, DepreciationRecord, DisposalResult } from '../../types/assets';
-import { getDepreciationRate } from '../config/depreciation-config';
 
 // ============================================================================
 // DEPRECIATION ENGINE IMPLEMENTATION

@@ -9,6 +9,7 @@
  */
 
 import type { InvoiceSeries } from './invoice';
+import type { EntityType, Partner } from './entity';
 
 // ============================================================================
 // ΚΑΔ — Κωδικοί Αριθμοί Δραστηριότητας
@@ -27,19 +28,19 @@ export interface KadEntry {
 }
 
 // ============================================================================
-// COMPANY PROFILE — Πλήρες Προφίλ Επιχείρησης
+// COMPANY PROFILE BASE — Κοινά πεδία για όλες τις μορφές
 // ============================================================================
 
 /**
- * Πλήρες προφίλ επιχείρησης για το λογιστικό module
+ * Κοινά πεδία προφίλ επιχείρησης
  *
  * Firestore path: `accounting_settings/company_profile`
- *
- * Περιλαμβάνει: βασικά στοιχεία, φορολογικές ρυθμίσεις, ΚΑΔ, ΕΦΚΑ, σειρές τιμολογίων.
- * Χωρίς αυτά τα στοιχεία, κανένα άλλο module δεν λειτουργεί σωστά.
+ * Χρησιμοποιείται ως βάση για discriminated union.
  */
-export interface CompanyProfile {
+interface CompanyProfileBase {
   // ── Βασικά Στοιχεία ─────────────────────────────────────────────────────
+  /** Νομική μορφή επιχείρησης */
+  entityType: EntityType;
   /** Επωνυμία επιχείρησης */
   businessName: string;
   /** Επάγγελμα (π.χ. "Αρχιτέκτονας Μηχανικός") */
@@ -81,10 +82,6 @@ export interface CompanyProfile {
   /** Νόμισμα (πάντα EUR για Ελλάδα) */
   currency: 'EUR';
 
-  // ── ΕΦΚΑ ────────────────────────────────────────────────────────────────
-  /** Κατηγορία ασφαλιστικών εισφορών (1η–6η) */
-  efkaCategory: 1 | 2 | 3 | 4 | 5 | 6;
-
   // ── Σειρές Τιμολογίων ──────────────────────────────────────────────────
   /** Σειρές αρίθμησης τιμολογίων */
   invoiceSeries: InvoiceSeries[];
@@ -95,6 +92,40 @@ export interface CompanyProfile {
   /** Ημερομηνία τελευταίας ενημέρωσης (ISO 8601) */
   updatedAt: string;
 }
+
+// ============================================================================
+// SOLE PROPRIETOR — Ατομική Επιχείρηση
+// ============================================================================
+
+export interface SoleProprietorProfile extends CompanyProfileBase {
+  entityType: 'sole_proprietor';
+  /** Κατηγορία ασφαλιστικών εισφορών (1η–6η) */
+  efkaCategory: 1 | 2 | 3 | 4 | 5 | 6;
+}
+
+// ============================================================================
+// OE — Ομόρρυθμη Εταιρεία (General Partnership)
+// ============================================================================
+
+export interface OECompanyProfile extends CompanyProfileBase {
+  entityType: 'oe';
+  /** Αριθμός ΓΕΜΗ */
+  gemiNumber: string | null;
+  /** Εταίροι ΟΕ */
+  partners: Partner[];
+}
+
+// ============================================================================
+// DISCRIMINATED UNION — CompanyProfile
+// ============================================================================
+
+/**
+ * Discriminated union: CompanyProfile
+ *
+ * Ατομική vs ΟΕ (extensible: +ΕΠΕ, +ΑΕ στο μέλλον).
+ * Backward compatibility: docs χωρίς entityType → 'sole_proprietor' στο repository.
+ */
+export type CompanyProfile = SoleProprietorProfile | OECompanyProfile;
 
 // ============================================================================
 // INPUT TYPES

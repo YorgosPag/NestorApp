@@ -36,7 +36,6 @@ import {
   where,
   orderBy,
   limit as firestoreLimit,
-  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -48,7 +47,6 @@ import {
 import type {
   Workspace,
   WorkspaceType,
-  WorkspaceStatus,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
   ListWorkspacesParams,

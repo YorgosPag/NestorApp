@@ -13,12 +13,11 @@ import {
   Eye,
   EyeOff,
   Home,
-  Circle,
   Activity  // 🏢 ENTERPRISE: Performance Monitor icon
 } from 'lucide-react';
 // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
 import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
-import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { useIconSizes } from '@/hooks/useIconSizes';

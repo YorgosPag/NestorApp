@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Save, Loader2, CheckCircle, AlertCircle, Plus, X, Car, Package } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -37,7 +36,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Domain constants for space types + Select clear value
 import { ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import type { LinkedSpace } from '@/types/unit';
-import type { AllocationSpaceType, SpaceInclusionType } from '@/config/domain-constants';
+import type { SpaceInclusionType } from '@/config/domain-constants';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type definitions (ZERO any)

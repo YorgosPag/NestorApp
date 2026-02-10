@@ -8,7 +8,6 @@ import { calculatePolygonArea, calculatePolygonCentroid } from '../../rendering/
 import { renderAreaLabel } from './render-utils';
 import { renderHoverEdgeWithDistance } from './edge-utils';
 import { renderHoverAngleAtVertex } from './angle-utils';
-import type { Point2D } from '../../rendering/types/Types';
 import type { HoverRenderContext } from './types';
 import { isPolylineEntity } from '../../types/entities';
 

@@ -18,9 +18,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
-import { EnterpriseColorDialog, ColorDialogTrigger } from './EnterpriseColorDialog';
-import { EnterpriseColorField } from './EnterpriseColorField';
-import type { ColorValue, PickerVariant } from './types';
+import { ColorDialogTrigger } from './EnterpriseColorDialog';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { UI_COLORS } from '../../config/color-config';
@@ -389,7 +387,7 @@ export function SimpleColorPicker({ label, value, onChange, disabled = false }: 
       onChange={onChange}
       label={label}
       disabled={disabled}
-      showPreview={true}
+      showPreview
       layout="horizontal"
     />
   );

@@ -7,19 +7,17 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Image, Plus, Star } from 'lucide-react';
+import { Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import {
-  PHOTO_SIZES,
   PHOTO_TEXT_COLORS,
   PHOTO_COLORS,
   PHOTO_LAYOUTS,
-  PHOTO_BORDERS,
-  PHOTO_COMBINED_EFFECTS
+  PHOTO_BORDERS
 } from '@/components/generic/config/photo-config';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -273,7 +271,7 @@ export function MultiplePhotosCompact({
                   if (handleUploadComplete) handleUploadComplete(index, result);
                 }}
                 disabled={disabled}
-                compact={true}
+                compact
                 showProgress={showProgress}
                 isLoading={photo.isUploading}
                 contactData={contactData}

@@ -163,7 +163,12 @@
     "noDataDescription": "Τα δεδομένα εισφορών θα εμφανιστούν μόλις ρυθμιστούν",
     "monthlyBreakdownTitle": "Μηνιαία Ανάλυση",
     "paymentsTitle": "Πληρωμές",
-    "healthcare": "Υγειονομική"
+    "healthcare": "Υγειονομική",
+    "partnerTabs": {
+      "totalAllPartners": "Σύνολο Όλων των Εταίρων",
+      "paidMonths": "Πληρωμένοι Μήνες",
+      "noPartners": "Δεν υπάρχουν εταίροι. Προσθέστε εταίρους στη Ρύθμιση Επιχείρησης."
+    }
   },
   "assets": {
     "title": "Πάγια Στοιχεία",
@@ -245,6 +250,23 @@
     },
     "noVATData": "Δεν υπάρχουν δεδομένα ΦΠΑ για αυτή την περίοδο",
     "noTaxData": "Δεν υπάρχουν φορολογικά δεδομένα για αυτή την περίοδο"
+  },
+  "tax": {
+    "partnerBreakdown": {
+      "entitySummary": "Στοιχεία Εταιρείας (ΟΕ)",
+      "totalIncome": "Σύνολο Εσόδων",
+      "totalExpenses": "Σύνολο Εξόδων",
+      "totalProfit": "Κέρδος",
+      "professionalTax": "Τέλος Επιτηδεύματος",
+      "profitShare": "Μερίδιο Κέρδους",
+      "taxableIncome": "Φορολογητέο",
+      "incomeTax": "Φόρος",
+      "finalAmount": "Τελικό Ποσό",
+      "bracketDetails": "Ανάλυση κλιμάκων",
+      "bracket": "Κλίμακα",
+      "taxableAmount": "Φορολογητέο",
+      "taxAmount": "Φόρος"
+    }
   },
   "forms": {
     "save": "Αποθήκευση",
@@ -377,6 +399,37 @@
       "businessNameRequired": "Η επωνυμία είναι υποχρεωτική",
       "taxOfficeRequired": "Η ΔΟΥ είναι υποχρεωτική",
       "mainKadRequired": "Η κύρια δραστηριότητα είναι υποχρεωτική"
+    },
+    "entityType": {
+      "title": "Νομική Μορφή",
+      "label": "Τύπος Επιχείρησης",
+      "hint": "Η νομική μορφή καθορίζει τον τρόπο φορολόγησης και τις εισφορές ΕΦΚΑ",
+      "types": {
+        "sole_proprietor": "Ατομική Επιχείρηση",
+        "oe": "ΟΕ — Ομόρρυθμη Εταιρεία",
+        "epe": "ΕΠΕ — Εταιρεία Περ. Ευθύνης (σύντομα)",
+        "ae": "ΑΕ — Ανώνυμη Εταιρεία (σύντομα)"
+      }
+    },
+    "gemiNumber": "Αριθμός ΓΕΜΗ",
+    "gemiNumberPlaceholder": "π.χ. 123456789000",
+    "partners": {
+      "title": "Εταίροι ΟΕ",
+      "partnerLabel": "Εταίρος {number}",
+      "fullName": "Ονοματεπώνυμο",
+      "fullNamePlaceholder": "π.χ. Ιωάννης Παπαδόπουλος",
+      "vatNumber": "ΑΦΜ Εταίρου",
+      "taxOffice": "ΔΟΥ Εταίρου",
+      "profitShare": "Ποσοστό Κέρδους (%)",
+      "efkaMainCategory": "Κατηγορία ΕΦΚΑ (Κύρια)",
+      "joinDate": "Ημ/νία Εισόδου",
+      "isFirstFiveYears": "Πρώτα 5 χρόνια (μειωμένη προκαταβολή)",
+      "active": "Ενεργός",
+      "remove": "Αφαίρεση Εταίρου",
+      "addPartner": "Προσθήκη Εταίρου",
+      "shareSum": "Σύνολο ποσοστών: {sum}%",
+      "shareSumValid": "Σωστό",
+      "shareSumInvalid": "Πρέπει να ισούται με 100%"
     }
   },
   "categories": {
@@ -462,7 +515,8 @@
     "requiredFields": "Υποχρεωτικά Πεδία",
     "kadCodes": "Κωδικοί ΚΑΔ",
     "invoiceSeries": "Σειρές Τιμολογίων",
-    "efkaCategoryDash": "Κατηγορία ΕΦΚΑ"
+    "efkaCategoryDash": "Κατηγορία ΕΦΚΑ",
+    "entityType": "Νομική Μορφή"
   },
   "filters": {
     "title": "Φίλτρα",

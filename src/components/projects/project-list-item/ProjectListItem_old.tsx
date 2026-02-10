@@ -1,15 +1,14 @@
 
 'use client';
 
-import React, { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import React from 'react';
+import { Card } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { ProjectListItemProps } from './types';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { ProjectBadge } from '@/core/badges';
 import { Briefcase } from 'lucide-react';
-import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { HOVER_SHADOWS, TRANSITION_PRESETS, HOVER_BORDER_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';

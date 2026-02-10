@@ -28,7 +28,6 @@ import {
   MapPin,
   User,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import type { MessageAttachment, AttachmentType } from '@/types/conversations';
 import { ATTACHMENT_TYPES } from '@/types/conversations';
 

@@ -22,7 +22,7 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================

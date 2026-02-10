@@ -6,7 +6,7 @@
  * real-time suggestions, και keyboard navigation. Enterprise-grade implementation.
  */
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useMemo, useRef, ReactNode } from 'react';
 import { highlightSearchTerm } from '@/lib/obligations-utils'; // ✅ Using centralized function
 import { Search, Clock } from 'lucide-react';
 import {

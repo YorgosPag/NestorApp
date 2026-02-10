@@ -3,7 +3,7 @@
  * ✅ ΦΑΣΗ 6: Adapter pattern για smooth transition από old SnapRenderer
  */
 
-import type { Point2D, Viewport, ViewTransform } from '../../types/Types';
+import type { Viewport, ViewTransform } from '../../types/Types';
 import type { SnapSettings, SnapResult } from './SnapTypes';
 import type { SnapSettings as LayerSnapSettings, SnapResult as LayerSnapResult } from '../../../canvas-v2/layer-canvas/layer-types';
 import { SnapRenderer } from './SnapRenderer';

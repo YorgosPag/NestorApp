@@ -1,7 +1,6 @@
 
 'use client';
 
-import { Timestamp } from 'firebase/firestore';
 import type { TriageStatus } from '@/constants/triage-statuses';
 import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
 

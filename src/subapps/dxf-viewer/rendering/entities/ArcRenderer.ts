@@ -19,7 +19,7 @@ import { addArcPath } from '../primitives/canvasPaths';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance, formatAngle } from './shared/distance-label-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
-import { degToRad, radToDeg } from './shared/geometry-utils';
+import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-074: Centralized Point On Circle
 import { pointOnCircle } from './shared/geometry-rendering-utils';
 // 🏢 ADR-091: Centralized Text Label Offsets, ADR-124: Dot Radius

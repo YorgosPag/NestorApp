@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { toast, Toaster } from 'sonner';
-import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2, X } from 'lucide-react';
+import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
@@ -12,7 +12,6 @@ import type {
   NotificationOptions,
   NotificationType,
   NotificationData,
-  NotificationQueue,
   NotificationPosition
 } from '@/types/notifications';
 

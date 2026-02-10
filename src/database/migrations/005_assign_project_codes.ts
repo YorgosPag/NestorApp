@@ -15,8 +15,7 @@
  * @version 1.0.0
  */
 
-import type { Migration, MigrationResult, MigrationStep } from './types';
-import { DEFAULT_MIGRATION_CONFIG } from './types';
+import type { Migration, MigrationResult } from './types';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PROJECT_CODE_CONFIG, formatProjectCode } from '@/services/project-code.service';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';

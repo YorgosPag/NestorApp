@@ -16,7 +16,7 @@ import { UI_COLORS } from '../../config/color-config';
 import { UI_FONTS, buildUIFont, LINE_DASH_PATTERNS, TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // 🏢 ADR-086: Centralized Angle Formatting
 import { formatAngle } from '../../rendering/entities/shared/distance-label-utils';
-import { isTextEntity, isAngleMeasurementEntity } from '../../types/entities';
+import { isTextEntity } from '../../types/entities';
 
 export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   // ✅ ENTERPRISE FIX: Use type guard to ensure entity is TextEntity

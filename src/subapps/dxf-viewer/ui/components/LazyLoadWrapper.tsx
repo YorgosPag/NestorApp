@@ -96,7 +96,7 @@ export function withLazyLoad<P extends object = Record<string, unknown>>(
   return React.memo((props: React.PropsWithoutRef<P>) => (
     <ErrorBoundary
       componentName="LazyComponent"
-      enableRetry={true}
+      enableRetry
       maxRetries={2}
       fallback={LazyLoadErrorFallback}
     >
@@ -151,7 +151,7 @@ export const LazyLoadWrapper: React.FC<LazyLoadWrapperProps> = ({
   return (
     <ErrorBoundary
       componentName="LazyLoadWrapper"
-      enableRetry={true}
+      enableRetry
       maxRetries={2}
       fallback={LazyLoadErrorFallback}
     >

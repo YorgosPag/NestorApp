@@ -19,8 +19,7 @@ import {
   enterpriseIdService,
   validateEnterpriseId,
   parseEnterpriseId,
-  isLegacyId,
-  type EnterpriseId
+  isLegacyId
 } from '@/services/enterprise-id.service';
 import {
   enterpriseIdMigrationService,

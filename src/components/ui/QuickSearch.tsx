@@ -27,7 +27,7 @@ export function QuickSearch({ searchTerm, onSearchChange, placeholder = "Search.
       searchTerm={searchTerm}
       onSearchChange={onSearchChange}
       placeholder={placeholder}
-      compact={true} // Preserves original compact styling
+      compact // Preserves original compact styling
     />
   );
 }

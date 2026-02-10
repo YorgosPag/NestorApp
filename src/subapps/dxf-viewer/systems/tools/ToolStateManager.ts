@@ -6,7 +6,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from '../../ui/toolbar/types';
-import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
 
 // Tool categories and validation
 // 🏢 ENTERPRISE (Phase 3): Added 'editing' category for move/copy/delete operations

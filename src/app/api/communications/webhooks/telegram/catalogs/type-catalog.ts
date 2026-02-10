@@ -8,7 +8,7 @@
  * @created 2026-01-13
  */
 
-import { PROPERTY_TYPE_LABELS, PropertyType } from '@/constants/property-statuses-enterprise';
+import { PROPERTY_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 
 // ============================================================================
 // TYPES

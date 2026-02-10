@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Warehouse, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
+import { Warehouse } from 'lucide-react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import type { Storage } from '@/types/storage/contracts';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -45,7 +45,7 @@ export function StoragesListHeader({
                 searchPlaceholder={t('storages.list.searchPlaceholder')}
                 showToolbar={showToolbar}
                 onToolbarToggle={onToolbarToggle}
-                hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
+                hideSearch  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
             />
         </div>
     );

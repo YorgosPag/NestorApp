@@ -3,7 +3,6 @@
 
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -17,7 +16,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
 import { BuildingCardTimeline } from './BuildingCard/BuildingCardTimeline';
 // 🏢 ENTERPRISE: Only import non-i18n utilities - labels come from centralized i18n
-import { getStatusColor, getCategoryIcon } from './BuildingCard/BuildingCardUtils';
+import { getCategoryIcon } from './BuildingCard/BuildingCardUtils';
 
 
 interface BuildingCardProps {

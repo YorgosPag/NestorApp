@@ -41,7 +41,6 @@ import {
 } from '@/components/core/AdvancedFilters';
 import type { PropertyFilterState } from '@/components/core/AdvancedFilters';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
-import type { Property } from '@/types/property-viewer';
 
 export function PropertyGridView() {
   const router = useRouter();
@@ -185,7 +184,7 @@ export function PropertyGridView() {
             config={propertyFiltersConfig}
             filters={enterpriseFilters}
             onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
-            defaultOpen={true}
+            defaultOpen
           />
         </div>
       )}

@@ -12,9 +12,7 @@ import type {
 } from '../core/UIRenderer';
 import type {
   UICursorSettings,
-  CursorRenderData,
   CursorRenderMode,
-  CursorShape,
   CursorLineStyle
 } from './CursorTypes';
 // 🏢 ADR-058/064: Centralized Canvas Primitives

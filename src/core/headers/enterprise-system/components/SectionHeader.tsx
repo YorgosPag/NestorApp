@@ -10,7 +10,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import type { SectionHeaderProps } from '../types';
-import { HeaderIcon } from './HeaderIcon';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({

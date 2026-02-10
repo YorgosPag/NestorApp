@@ -1,4 +1,4 @@
-import type { ParkingSpot, ParkingFilters } from "@/types/parking";
+import type { ParkingSpot } from "@/types/parking";
 
 export interface ParkingSpotTableProps {
   spots: ParkingSpot[];

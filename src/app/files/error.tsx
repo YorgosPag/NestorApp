@@ -32,7 +32,7 @@ export default function FileManagerError({ error, reset }: ErrorProps) {
       error={error}
       reset={reset}
       componentName="File Manager"
-      enableReporting={true}
+      enableReporting
     />
   );
 }

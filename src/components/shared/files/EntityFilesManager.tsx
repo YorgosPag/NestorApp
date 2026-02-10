@@ -25,7 +25,7 @@
 'use client';
 
 import React, { useCallback, useState, useMemo } from 'react';
-import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon } from 'lucide-react';
+import { FileText, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -48,7 +48,7 @@ import { AddCaptureMenu } from './AddCaptureMenu';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
 import app from '@/lib/firebase'; // 🏢 ENTERPRISE: For diagnostic logging
-import { buildStoragePath, generateFileId, getFileExtension } from '@/services/upload';
+import { getFileExtension } from '@/services/upload';
 import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { MediaGallery } from './media'; // 🏢 ENTERPRISE: Media Gallery for photos/videos (Procore/BIM360 pattern)
@@ -764,7 +764,7 @@ export function EntityFilesManager({
                     onUpload={handleUpload}
                     accept={acceptedTypes}
                     maxSize={maxFileSize}
-                    multiple={true}
+                    multiple
                     disabled={uploading}
                     uploading={uploading}
                   />
@@ -806,7 +806,7 @@ export function EntityFilesManager({
                     onChange={setSearchTerm}
                     placeholder={t('search.placeholder')}
                     debounceMs={300}
-                    showClearButton={true}
+                    showClearButton
                   />
                 </div>
                 {searchTerm && (
@@ -836,7 +836,7 @@ export function EntityFilesManager({
                   files={filteredFiles}
                   initialViewMode="grid"
                   showToolbar={false}
-                  enableSelection={true}
+                  enableSelection
                   cardSize="md"
                   onDelete={async (filesToDelete) => {
                     for (const file of filesToDelete) {

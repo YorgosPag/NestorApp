@@ -7,10 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
   Save,
@@ -28,7 +25,6 @@ import {
   ObligationSection, 
   ObligationArticle, 
   ObligationParagraph,
-  TableOfContentsItem,
   createNewSection,
   createNewArticle,
   createNewParagraph,
@@ -37,10 +33,8 @@ import {
 } from "@/types/obligations";
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
 import { obligationsService } from "@/services/obligations.service";
-import { TableOfContents } from "@/components/obligations/table-of-contents";
 import StructureEditor from "@/components/obligations/structure-editor";
 import LivePreview from "@/components/obligations/live-preview";
-import { RichTextEditor } from "@/components/obligations/rich-text-editor";
 import { getDynamicHeightClass } from "@/components/ui/utils/dynamic-styles";
 import { OBLIGATION_PREVIEW_LAYOUT } from "@/components/obligations/config/preview-layout";
 import Link from "next/link";

@@ -19,7 +19,6 @@ import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { sendChannelReply } from '../../shared/channel-reply-dispatcher';
 import { generateAdminConversationalReply } from '../../shared/ai-reply-generator';
-import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
   PipelineContext,

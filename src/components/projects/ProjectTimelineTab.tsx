@@ -11,7 +11,6 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { BuildingBadge } from '@/core/badges';
 import type { BuildingStatus } from '@/core/types/BadgeTypes';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
-import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized typography tokens

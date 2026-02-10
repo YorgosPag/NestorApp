@@ -74,7 +74,7 @@
  * @version 1.0.0 (Phase 2)
  */
 
-import type { SettingsState, LineSettings, TextSettings, GripSettings, StorageMode } from '../core/types';
+import type { SettingsState, LineSettings, TextSettings, GripSettings } from '../core/types';
 import { FACTORY_DEFAULTS } from '../FACTORY_DEFAULTS';
 
 // ============================================================================

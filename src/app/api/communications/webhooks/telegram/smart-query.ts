@@ -18,7 +18,7 @@ import {
   formatCurrency,
   type TelegramLocale
 } from './templates/template-resolver';
-import { getPropertyTypeLabel, getPropertyTypeEmoji } from './search/format';
+import { getPropertyTypeLabel } from './search/format';
 
 // ============================================================================
 // INTERFACES

@@ -96,7 +96,7 @@ export function GenericListHeader({
                     onChange={onSearchChange}
                     placeholder={displayPlaceholder} // 🏢 Dynamic placeholder based on entity
                     debounceMs={0} // Instant για table headers
-                    showClearButton={true}
+                    showClearButton
                     className="h-8 text-sm flex-1" // Minimal overrides - let SearchInput handle focus ring
                 />
             )}

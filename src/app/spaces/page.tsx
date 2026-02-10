@@ -8,9 +8,6 @@ import {
   Car,
   Users,
   Layout,
-  TrendingUp,
-  BarChart3,
-  MapPin,
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';

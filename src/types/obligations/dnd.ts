@@ -1,4 +1,4 @@
-import type { ObligationSection, ObligationArticle, ObligationParagraph } from './contracts';
+import type { ObligationSection, ObligationArticle } from './contracts';
 import { renumberSections, renumberArticles, renumberParagraphs } from './numbering';
 
 // Move operations for drag & drop

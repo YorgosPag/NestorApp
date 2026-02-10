@@ -12,11 +12,15 @@
  *
  * @module api/admin/ensure-user-profile
  * @see ADR-100: JIT User Profile Sync
+ * @security ADR-172: Added withAuth + withSensitiveRateLimit (was unprotected)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // TYPES
@@ -35,110 +39,104 @@ interface EnsureUserProfileRequest {
 }
 
 // ============================================================================
-// MAIN HANDLER
+// HANDLERS
 // ============================================================================
+
+/**
+ * GET /api/admin/ensure-user-profile?uid=xxx
+ *
+ * Reads a user profile document. Used for diagnostics.
+ * Requires super_admin or company_admin role.
+ */
+export const GET = withSensitiveRateLimit(
+  withAuth<unknown>(
+    async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
+      const uid = request.nextUrl.searchParams.get('uid');
+      if (!uid) {
+        return NextResponse.json({ success: false, error: 'uid query param required' }, { status: 400 });
+      }
+
+      const adminDb = getAdminFirestore();
+      const userSnapshot = await adminDb.collection(COLLECTIONS.USERS).doc(uid).get();
+
+      if (!userSnapshot.exists) {
+        return NextResponse.json({ success: false, error: 'Document not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, data: userSnapshot.data() });
+    },
+    { requiredGlobalRoles: ['super_admin', 'company_admin'] }
+  )
+);
 
 /**
  * POST /api/admin/ensure-user-profile
  *
  * Creates a user profile document if it doesn't exist.
  * Uses Admin SDK to bypass Firestore rules.
+ * Requires super_admin or company_admin role.
  */
-/**
- * GET /api/admin/ensure-user-profile?uid=xxx
- *
- * Reads a user profile document. Used for diagnostics.
- */
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  try {
-    const uid = request.nextUrl.searchParams.get('uid');
-    if (!uid) {
-      return NextResponse.json({ success: false, error: 'uid query param required' }, { status: 400 });
-    }
+export const POST = withSensitiveRateLimit(
+  withAuth<unknown>(
+    async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
+      const body = await request.json() as EnsureUserProfileRequest;
 
-    const adminDb = getAdminFirestore();
-    const userSnapshot = await adminDb.collection(COLLECTIONS.USERS).doc(uid).get();
+      if (!body.uid || !body.email) {
+        return NextResponse.json(
+          { success: false, error: 'uid and email are required' },
+          { status: 400 }
+        );
+      }
 
-    if (!userSnapshot.exists) {
-      return NextResponse.json({ success: false, error: 'Document not found' }, { status: 404 });
-    }
+      const adminDb = getAdminFirestore();
+      const userDocRef = adminDb.collection(COLLECTIONS.USERS).doc(body.uid);
+      const userSnapshot = await userDocRef.get();
 
-    return NextResponse.json({ success: true, data: userSnapshot.data() });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
-}
+      const now = new Date();
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    const body = await request.json() as EnsureUserProfileRequest;
+      if (userSnapshot.exists) {
+        // UPDATE: Merge missing fields (e.g., displayName) into existing document
+        await userDocRef.set({
+          displayName: body.displayName ?? null,
+          givenName: body.givenName ?? null,
+          familyName: body.familyName ?? null,
+          email: body.email,
+          globalRole: body.globalRole ?? null,
+          updatedAt: now,
+        }, { merge: true });
 
-    if (!body.uid || !body.email) {
-      return NextResponse.json(
-        { success: false, error: 'uid and email are required' },
-        { status: 400 }
-      );
-    }
+        return NextResponse.json({
+          success: true,
+          message: `User profile updated for ${body.uid}`,
+          created: false,
+        });
+      }
 
-    const adminDb = getAdminFirestore();
-    const userDocRef = adminDb.collection(COLLECTIONS.USERS).doc(body.uid);
-    const userSnapshot = await userDocRef.get();
-
-    const now = new Date();
-
-    if (userSnapshot.exists) {
-      // UPDATE: Merge missing fields (e.g., displayName) into existing document
+      // CREATE: Full profile with defaults
       await userDocRef.set({
+        uid: body.uid,
+        email: body.email,
         displayName: body.displayName ?? null,
         givenName: body.givenName ?? null,
         familyName: body.familyName ?? null,
-        email: body.email,
+        photoURL: body.photoURL ?? null,
+        companyId: body.companyId ?? null,
         globalRole: body.globalRole ?? null,
+        status: 'active',
+        emailVerified: true,
+        loginCount: 0,
+        lastLoginAt: now,
+        createdAt: now,
         updatedAt: now,
-      }, { merge: true });
-
-      console.log(`[ENTERPRISE] [ensure-user-profile] Updated profile for: ${body.uid}`);
+        authProvider: body.authProvider ?? 'unknown',
+      });
 
       return NextResponse.json({
         success: true,
-        message: `User profile updated for ${body.uid}`,
-        created: false,
+        message: `User profile created for ${body.uid}`,
+        created: true,
       });
-    }
-
-    // CREATE: Full profile with defaults
-    await userDocRef.set({
-      uid: body.uid,
-      email: body.email,
-      displayName: body.displayName ?? null,
-      givenName: body.givenName ?? null,
-      familyName: body.familyName ?? null,
-      photoURL: body.photoURL ?? null,
-      companyId: body.companyId ?? null,
-      globalRole: body.globalRole ?? null,
-      status: 'active',
-      emailVerified: true,
-      loginCount: 0,
-      lastLoginAt: now,
-      createdAt: now,
-      updatedAt: now,
-      authProvider: body.authProvider ?? 'unknown',
-    });
-
-    console.log(`[ENTERPRISE] [ensure-user-profile] Created profile for: ${body.uid}`);
-
-    return NextResponse.json({
-      success: true,
-      message: `User profile created for ${body.uid}`,
-      created: true,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[ensure-user-profile] Error:', message);
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
-  }
-}
+    },
+    { requiredGlobalRoles: ['super_admin', 'company_admin'] }
+  )
+);

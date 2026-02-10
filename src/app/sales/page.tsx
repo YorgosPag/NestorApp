@@ -10,7 +10,6 @@ import {
   CheckCircle,
   ShoppingCart,
   TrendingUp,
-  BarChart3,
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';

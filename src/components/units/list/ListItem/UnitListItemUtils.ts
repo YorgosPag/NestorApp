@@ -1,6 +1,6 @@
 'use client';
 
-import { Warehouse, Store, Car, Briefcase, BedSingle } from 'lucide-react';
+import { Store, Briefcase, BedSingle } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized navigation entities
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 

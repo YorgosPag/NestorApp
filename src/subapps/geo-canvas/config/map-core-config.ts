@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { colors, spacing, typography } from '@/styles/design-tokens';
+import { colors, typography } from '@/styles/design-tokens';
 import { GEO_COLORS, withOpacity } from './color-config';
 
 export const MAP_CORE_ZINDEX = {

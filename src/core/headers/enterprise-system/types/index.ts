@@ -13,7 +13,7 @@
 import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { QuickAction, Notification } from '@/types/header';
-import type { CompactToolbarConfig, CompactToolbarProps } from '@/components/core/CompactToolbar/types';
+import type { CompactToolbarProps } from '@/components/core/CompactToolbar/types';
 
 // ============================================================================
 // 🎯 CORE HEADER TYPES - ENTERPRISE PATTERNS

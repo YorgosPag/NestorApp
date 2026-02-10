@@ -7,7 +7,7 @@ import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 // 🏢 ADR-102: Centralized Entity Type Guards
-import { isCircleEntity, type CircleEntity, type Entity } from '../../types/entities';
+import { type CircleEntity } from '../../types/entities';
 // 🏢 ADR-165: Centralized Entity Validation
 import { validateCircleEntity } from './shared/entity-validation-utils';
 
@@ -24,9 +24,7 @@ import { createGripsFromPoints } from './shared/grip-utils';
 // 🏢 ADR-077: Centralized TAU Constant
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
 import { renderCircleAreaText } from './shared/circle-text-utils';
-import { renderSplitLineWithGap, renderContinuousLine, renderLineWithTextCheck } from './shared/line-rendering-utils';
-import { renderDistanceTextPhaseAware } from './shared/phase-text-utils';
-import { UI_COLORS } from '../../config/color-config';
+import { renderContinuousLine, renderLineWithTextCheck } from './shared/line-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-091: Centralized UI Fonts, ADR-124: Centralized Label Offsets
 import { buildUIFont, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';

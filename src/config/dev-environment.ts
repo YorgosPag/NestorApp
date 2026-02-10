@@ -15,7 +15,7 @@
 import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// eslint-disable-next-line no-console
+ 
 const warn = (message: string) => console.warn(message);
 
 // =============================================================================

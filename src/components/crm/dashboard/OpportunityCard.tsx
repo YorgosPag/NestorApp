@@ -8,8 +8,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CommonBadge } from '@/core/badges';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
-import { format } from 'date-fns';
-import { el } from 'date-fns/locale';
 import { formatDateTime } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 import { Button } from '@/components/ui/button';

@@ -11,7 +11,6 @@ import {
   Trees,
   Shield,
   Building,
-  TrendingUp,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';

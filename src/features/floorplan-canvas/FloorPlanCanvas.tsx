@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { SafePDFLoader } from '@/components/common/SafePDFLoader';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -14,14 +14,7 @@ import {
 } from './FloorPlanCanvas.styles';
 
 import type {
-  FloorPlanCanvasProps,
-  Point,
-  MeasurementLine,
-  PolyLine,
-  CanvasMode,
-  FloorData,
-  UIState,
-  ValidationError
+  FloorPlanCanvasProps
 } from './types';
 
 export function FloorPlanCanvas({

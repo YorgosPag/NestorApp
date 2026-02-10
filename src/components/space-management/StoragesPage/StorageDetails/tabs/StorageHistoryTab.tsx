@@ -11,7 +11,6 @@ import {
   Building,
   TrendingUp,
   Calendar,
-  FileText,
   AlertTriangle,
   CheckCircle,
   Circle,

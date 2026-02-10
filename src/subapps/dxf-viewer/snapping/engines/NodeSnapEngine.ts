@@ -7,10 +7,8 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { BaseSnapEngine } from '../shared/BaseSnapEngine';
-import { SpatialFactory } from '../../core/spatial';
-import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
-import { GeometricCalculations } from '../shared/GeometricCalculations';
-import { calculateDistance, pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
+import type { ISpatialIndex } from '../../core/spatial';
+import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { processRectangleSnapping } from './shared/snap-engine-utils';
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';

@@ -3,8 +3,7 @@
  * Shared interface definitions to eliminate duplication
  */
 
-import type { Dispatch, SetStateAction } from 'react';
-import type { Point2D, Phase } from '../../../rendering/types/Types';
+import type { Point2D } from '../../../rendering/types/Types';
 
 export type Field = 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter';
 

@@ -18,7 +18,6 @@
  * ✅ Enterprise-grade metrics & reporting
  */
 
-import { performanceMonitor } from '../../../utils/performanceMonitor';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
 import { UnifiedFrameScheduler } from '../rendering/core/UnifiedFrameScheduler';
 

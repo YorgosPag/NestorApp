@@ -4,14 +4,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { ChevronDown, Check } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useEnterprisePortal, createPortalConfig } from '@/components/ui/enterprise-portal';
-import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
+import { portalComponents } from '@/styles/design-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

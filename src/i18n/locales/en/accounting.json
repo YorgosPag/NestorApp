@@ -163,7 +163,12 @@
     "noDataDescription": "EFKA contribution data will appear here once configured",
     "monthlyBreakdownTitle": "Monthly Breakdown",
     "paymentsTitle": "Payments",
-    "healthcare": "Healthcare"
+    "healthcare": "Healthcare",
+    "partnerTabs": {
+      "totalAllPartners": "Total All Partners",
+      "paidMonths": "Paid Months",
+      "noPartners": "No partners found. Add partners in Company Setup."
+    }
   },
   "assets": {
     "title": "Fixed Assets",
@@ -245,6 +250,23 @@
     },
     "noVATData": "No VAT data available for this period",
     "noTaxData": "No tax data available for this period"
+  },
+  "tax": {
+    "partnerBreakdown": {
+      "entitySummary": "Entity Summary (OE)",
+      "totalIncome": "Total Income",
+      "totalExpenses": "Total Expenses",
+      "totalProfit": "Profit",
+      "professionalTax": "Professional Tax",
+      "profitShare": "Profit Share",
+      "taxableIncome": "Taxable Income",
+      "incomeTax": "Income Tax",
+      "finalAmount": "Final Amount",
+      "bracketDetails": "Bracket details",
+      "bracket": "Bracket",
+      "taxableAmount": "Taxable Amount",
+      "taxAmount": "Tax Amount"
+    }
   },
   "forms": {
     "save": "Save",
@@ -377,6 +399,37 @@
       "businessNameRequired": "Business name is required",
       "taxOfficeRequired": "Tax office is required",
       "mainKadRequired": "Main activity code is required"
+    },
+    "entityType": {
+      "title": "Legal Entity Type",
+      "label": "Business Type",
+      "hint": "The legal entity type determines taxation and EFKA contribution rules",
+      "types": {
+        "sole_proprietor": "Sole Proprietor",
+        "oe": "OE — General Partnership",
+        "epe": "EPE — Limited Liability (coming soon)",
+        "ae": "AE — Corporation (coming soon)"
+      }
+    },
+    "gemiNumber": "GEMI Number",
+    "gemiNumberPlaceholder": "e.g. 123456789000",
+    "partners": {
+      "title": "OE Partners",
+      "partnerLabel": "Partner {number}",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "e.g. John Smith",
+      "vatNumber": "Partner VAT Number",
+      "taxOffice": "Partner Tax Office",
+      "profitShare": "Profit Share (%)",
+      "efkaMainCategory": "EFKA Category (Main)",
+      "joinDate": "Join Date",
+      "isFirstFiveYears": "First 5 years (reduced prepayment)",
+      "active": "Active",
+      "remove": "Remove Partner",
+      "addPartner": "Add Partner",
+      "shareSum": "Share total: {sum}%",
+      "shareSumValid": "Valid",
+      "shareSumInvalid": "Must equal 100%"
     }
   },
   "categories": {
@@ -462,7 +515,8 @@
     "requiredFields": "Required Fields",
     "kadCodes": "KAD Codes",
     "invoiceSeries": "Invoice Series",
-    "efkaCategoryDash": "EFKA Category"
+    "efkaCategoryDash": "EFKA Category",
+    "entityType": "Legal Entity"
   },
   "filters": {
     "title": "Filters",

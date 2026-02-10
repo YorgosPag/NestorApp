@@ -8,10 +8,6 @@ import { CommonBadge } from '@/core/badges';
 import { Separator } from '@/components/ui/separator';
 import {
   Layers,
-  Eye,
-  EyeOff,
-  Wifi,
-  WifiOff,
   ZoomIn,
   ZoomOut,
   RotateCcw,
@@ -271,9 +267,9 @@ export function PropertyViewerWithLayers({
               onToggleCollapse={() => setIsLayersCollapsed(!isLayersCollapsed)}
               onLayerVisibilityChange={handleLayerVisibilityChange}
               onLayerOpacityChange={handleLayerOpacityChange}
-              showSearch={true}
-              showCategoryFilter={true}
-              showStatistics={true}
+              showSearch
+              showCategoryFilter
+              showStatistics
               maxHeight="600px"
             />
           </aside>
@@ -313,7 +309,7 @@ export function PropertyViewerWithLayers({
                 showGrid={false}
                 snapToGrid={false}
                 showMeasurements={false}
-                isReadOnly={true}
+                isReadOnly
                 // Layer visibility states
                 layerVisibilityStates={layerVisibilityStates}
                 pdfBackgroundUrl={pdfBackgroundUrl ?? undefined}

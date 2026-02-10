@@ -40,7 +40,7 @@ export default function AnalyticsOverview() {
                                     <div
                                         className={cn("h-3 rounded-full", TRANSITION_PRESETS.SLOW_ALL, item.color)}
                                         style={analyticsOverviewStyles.progressBars.item(item.percentage)}
-                                    ></div>
+                                     />
                                 </div>
                             </div>
                         ))}
@@ -78,11 +78,11 @@ export default function AnalyticsOverview() {
                                         <div
                                             className="h-4 bg-blue-200 dark:bg-blue-800 rounded-full"
                                             style={analyticsOverviewStyles.progressBars.planned(month.planned)}
-                                        ></div>
+                                         />
                                         <div
                                             className="absolute top-0 h-4 bg-primary rounded-full"
                                             style={analyticsOverviewStyles.progressBars.actual(month.actual)}
-                                        ></div>
+                                         />
                                         <div className="absolute right-2 top-0 text-xs font-medium text-primary-foreground">
                                             {month.actual}%
                                         </div>

@@ -29,7 +29,6 @@ import type {
   PipelineAction,
   PipelineChannelValue,
   PipelineIntentTypeValue,
-  DetectedIntent,
 } from '@/types/ai-pipeline';
 
 // ============================================================================

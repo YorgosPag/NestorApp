@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 148 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-10
+**📊 Stats**: 149 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-10
 
 ---
 
@@ -161,6 +161,7 @@
 | **ADR-134** | UC Modules Expansion + Telegram Channel — Omnichannel AI Pipeline | ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-134-uc-modules-expansion-telegram-channel.md) |
 | **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-145-super-admin-ai-assistant.md) |
 | **ADR-171** | Autonomous AI Agent with Agentic Tool Calling | ✅ IMPLEMENTED | 2026-02-10 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-171-autonomous-ai-agent.md) |
+| **ADR-172** | Pre-Production Code Quality Audit & Remediation | ✅ IN_PROGRESS | 2026-02-10 | Security & Auth / Infrastructure | [📄](./adrs/ADR-172-pre-production-audit-remediation.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-136** | Canvas Opacity Constants Centralization (Extended) | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-136-canvas-opacity-constants-centralization-extended.md) |
 | **ADR-137** | Snap Icon Geometry Centralization | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-137-snap-icon-geometry-centralization.md) |

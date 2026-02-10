@@ -17,7 +17,7 @@ import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab'
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για company name display
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
-import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
+import { getContactFormConfig, getContactFormSections, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121)
 import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector';

@@ -4,8 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   getTooltipIndicatorStyles,
   getTooltipIndicatorClassName,
-  type TooltipIndicatorType,
-  type ChartTooltipConfig
+  type TooltipIndicatorType
 } from "../../ChartComponents.styles";
 
 export interface IndicatorProps {

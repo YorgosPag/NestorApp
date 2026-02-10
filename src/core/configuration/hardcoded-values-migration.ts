@@ -31,8 +31,7 @@ import {
   getDoc,
   collection,
   writeBatch,
-  Timestamp,
-  FirestoreError
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { designTokens, borderColors } from '@/styles/design-tokens';
@@ -43,7 +42,6 @@ import {
   SystemConfiguration,
   ProjectTemplateConfiguration,
   EnterpriseConfigurationManager,
-  ConfigurationAPI,
   DEFAULT_SYSTEM_CONFIG
 } from './enterprise-config-management';
 

@@ -5,7 +5,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { logWebhookEvent } from '@/lib/auth/audit';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import type { Communication } from '@/types/crm';
-import { TRIAGE_STATUSES } from '@/types/crm';
 import {
   DEFAULTS,
   SYSTEM_IDENTITY,

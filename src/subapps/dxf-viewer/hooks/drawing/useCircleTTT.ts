@@ -17,7 +17,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { LineEntity, PolylineEntity, AnySceneEntity, CircleEntity } from '../../types/scene';
+import type { PolylineEntity, AnySceneEntity, CircleEntity } from '../../types/scene';
 import { isLineEntity, isPolylineEntity, generateEntityId } from '../../types/scene';
 // 🏢 ADR-XXX: Centralized geometry utils - pointToLineDistance replaces local pointToLineDistance
 import { circleTangentTo3Lines, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';

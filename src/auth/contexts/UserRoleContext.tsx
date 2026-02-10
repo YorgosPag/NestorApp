@@ -19,7 +19,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { useAuth } from './AuthContext';
 import { EnterpriseSecurityService } from '@/services/security/EnterpriseSecurityService';
 import { db } from '@/lib/firebase';
-import type { UserRole, User, FirebaseAuthUser, UserRoleContextType, SignUpData } from '../types/auth.types';
+import type { User, FirebaseAuthUser, UserRoleContextType, SignUpData } from '../types/auth.types';
 
 // =============================================================================
 // CONTEXT

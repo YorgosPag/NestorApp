@@ -195,7 +195,7 @@ export function CustomerInfoCompact({
           }))}
           size="sm"
           direction="horizontal"
-          iconsOnly={true}
+          iconsOnly
         />
       </div>
     );

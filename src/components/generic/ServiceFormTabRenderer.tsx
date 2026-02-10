@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
@@ -149,8 +148,8 @@ function createServiceFormTabsFromConfig(
               disabled={disabled}
               purpose="logo" // For services
               contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
-              compact={true} // Use compact mode for better layout
-              showPhotosWhenDisabled={true} // 🔧 FIX: Show upload slot even in disabled/read-only mode (2026-01-19)
+              compact // Use compact mode for better layout
+              showPhotosWhenDisabled // 🔧 FIX: Show upload slot even in disabled/read-only mode (2026-01-19)
               className=""
             />
           </div>

@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundaries';
 import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { Building2, Search } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

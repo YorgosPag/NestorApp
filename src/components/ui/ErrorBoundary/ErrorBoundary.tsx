@@ -968,9 +968,9 @@ export function PageErrorBoundary({ children, componentName = 'Page', ...props }
   return (
     <ErrorBoundary
       componentName={componentName}
-      enableRetry={true}
+      enableRetry
       maxRetries={2}
-      enableReporting={true}
+      enableReporting
       borderTokens={borderTokens}
       colors={colors}
       typography={typography}
@@ -992,8 +992,8 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
 
   return (
     <ErrorBoundary
-      isolateError={true}
-      enableRetry={true}
+      isolateError
+      enableRetry
       maxRetries={1}
       showErrorDetails={false}
       borderTokens={borderTokens}
@@ -1658,7 +1658,7 @@ function ErrorFallbackWithTour({ error, retry, componentName = 'Component' }: Er
       error={wrappedError}
       reset={retry}
       componentName={componentName}
-      enableReporting={true}
+      enableReporting
       showErrorDetails={process.env.NODE_ENV === 'development'}
     />
   );

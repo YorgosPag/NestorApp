@@ -26,8 +26,7 @@ import type {
   OverpassAdminResponse,
   OverpassQueryConfig,
   BoundingBox,
-  AdminSearchResult,
-  Coordinate
+  AdminSearchResult
 } from '../../types/administrative-types';
 
 // ============================================================================

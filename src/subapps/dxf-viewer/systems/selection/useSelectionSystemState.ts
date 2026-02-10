@@ -7,7 +7,7 @@ import {
   DEFAULT_SELECTION_STATE,
   DEFAULT_FILTER_STATE
 } from './config';
-import { selectionReducer, type SelectionContextState, type SelectionAction } from './useSelectionReducer';
+import { selectionReducer, type SelectionContextState } from './useSelectionReducer';
 import { useSelectionActions } from './useSelectionActions';
 import { useFilterActions } from './useFilterActions';
 import { useViewActions } from './useViewActions';

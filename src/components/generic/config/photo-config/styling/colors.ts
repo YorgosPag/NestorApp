@@ -8,7 +8,6 @@
 //
 // ============================================================================
 
-import { borderVariants } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 /**

@@ -13,7 +13,7 @@ import type { Point2D, Viewport } from '../rendering/types/Types';
 import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
 import type { SceneModel } from '../types/scene';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
+import { portalComponents } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
@@ -137,7 +137,7 @@ export default function CoordinateCalibrationOverlay({
             <p className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>📊 Κατάσταση Σκηνής:</p>
             <div className="flex justify-between items-center">
               <span>
-                <span className={`inline-block ${iconSizes.xs} ${quick.button} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} ${entitiesCount > 0 ? `${colors.bg.success}` : `${colors.bg.error}`}`}></span>
+                <span className={`inline-block ${iconSizes.xs} ${quick.button} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} ${entitiesCount > 0 ? `${colors.bg.success}` : `${colors.bg.error}`}`} />
                 <span className={`${colors.text.primary}`}>Οντότητες: {entitiesCount}</span>
               </span>
               <span className={`${colors.text.muted}`}>Επίπεδα: {layersCount}</span>

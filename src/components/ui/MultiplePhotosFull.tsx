@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Image, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
@@ -9,12 +9,10 @@ import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterprise
 import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import {
-  PHOTO_SIZES,
   PHOTO_TEXT_COLORS,
   PHOTO_COLORS,
   PHOTO_LAYOUTS,
-  PHOTO_BORDERS,
-  PHOTO_COMBINED_EFFECTS
+  PHOTO_BORDERS
 } from '@/components/generic/config/photo-config';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -235,7 +233,7 @@ export function MultiplePhotosFull({
                 className="overflow-hidden flex-shrink-0 mx-auto opacity-50"
                 style={responsiveStyle}
               >
-                <div className={`w-full h-full ${colors.bg.muted} rounded-lg`}></div>
+                <div className={`w-full h-full ${colors.bg.muted} rounded-lg`} />
               </div>
             );
           }
@@ -287,7 +285,7 @@ export function MultiplePhotosFull({
                   }
                 }}
                 disabled={disabled}
-                compact={true}
+                compact
                 showProgress={showProgress}
                 isLoading={photo.isUploading}
                 className="w-full h-full"

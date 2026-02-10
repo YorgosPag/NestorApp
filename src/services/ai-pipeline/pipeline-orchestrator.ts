@@ -291,8 +291,19 @@ export class PipelineOrchestrator {
       const channelSenderId = this.buildChannelSenderId(ctx);
       const userMessage = ctx.intake.normalized.contentText || ctx.intake.normalized.subject || '';
 
-      // 1. Fetch chat history
-      const history: ChatMessage[] = await chatHistoryService.getRecentHistory(channelSenderId);
+      // 1. Fetch chat history (filter out failed responses to prevent AI from giving up)
+      const rawHistory: ChatMessage[] = await chatHistoryService.getRecentHistory(channelSenderId);
+      const history = rawHistory.filter(msg => {
+        if (msg.role !== 'assistant') return true;
+        // Exclude known failure patterns from history
+        const failurePatterns = [
+          'τεχνικά προβλήματα',
+          'Ξεπέρασα το μέγιστο',
+          'αντιμετώπισα ένα πρόβλημα',
+          'πολύ χρόνο',
+        ];
+        return !failurePatterns.some(p => msg.content.includes(p));
+      });
 
       // 2. Build agentic context
       const agenticCtx: AgenticContext = {
@@ -320,19 +331,26 @@ export class PipelineOrchestrator {
         agenticCtx
       );
 
-      // 4. Save to chat history (user message + assistant response)
+      // 4. Save to chat history — ONLY if the agentic loop succeeded
+      //    (don't poison history with "max iterations" or error responses)
       const now = new Date().toISOString();
-      await chatHistoryService.addMessage(channelSenderId, {
-        role: 'user',
-        content: userMessage,
-        timestamp: now,
-      });
-      await chatHistoryService.addMessage(channelSenderId, {
-        role: 'assistant',
-        content: agenticResult.answer,
-        timestamp: now,
-        toolCalls: agenticResult.toolCalls,
-      });
+      const isFailedResponse = agenticResult.answer.includes('Ξεπέρασα το μέγιστο')
+        || agenticResult.answer.includes('πολύ χρόνο')
+        || agenticResult.iterations >= 5;
+
+      if (!isFailedResponse) {
+        await chatHistoryService.addMessage(channelSenderId, {
+          role: 'user',
+          content: userMessage,
+          timestamp: now,
+        });
+        await chatHistoryService.addMessage(channelSenderId, {
+          role: 'assistant',
+          content: agenticResult.answer,
+          timestamp: now,
+          toolCalls: agenticResult.toolCalls,
+        });
+      }
 
       // 5. Send reply via channel dispatcher
       const telegramChatId = ctx.intake.normalized.sender.telegramId

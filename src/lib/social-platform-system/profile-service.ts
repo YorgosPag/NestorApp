@@ -16,7 +16,6 @@
 // ============================================================================
 
 import {
-  UNIFIED_SOCIAL_PLATFORMS,
   getProfilePlatforms,
   getPlatformById,
   detectPlatformFromUrl,

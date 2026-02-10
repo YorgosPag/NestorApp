@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { NormalView, FullscreenView } from '../components/dxf-layout';
+import { NormalView } from '../components/dxf-layout';
 import type { DXFViewerLayoutProps } from './types';
 
 /**

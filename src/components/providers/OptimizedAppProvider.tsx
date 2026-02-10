@@ -77,7 +77,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
         <div className="w-full max-w-md px-4">
           <div className="text-center mb-8">
             <div className={`${iconSizes.xl} ${iconSizes.xl} bg-primary rounded-full mx-auto mb-4 flex items-center justify-center`}>
-              <div className={`${iconSizes.lg} ${colors.bg.secondary} rounded-full`}></div>
+              <div className={`${iconSizes.lg} ${colors.bg.secondary} rounded-full`} />
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">Nextn CRM</h1>
             <p className="text-muted-foreground">Initializing application...</p>
@@ -86,7 +86,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
           <ProgressiveLoader
             steps={LoadingPresets.appInit}
             currentStep={currentStep ?? undefined}
-            showEstimatedTime={true}
+            showEstimatedTime
             className="w-full"
           />
         </div>
@@ -144,9 +144,9 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary
       componentName="App"
-      enableRetry={true}
+      enableRetry
       maxRetries={2}
-      enableReporting={true}
+      enableReporting
       fallback={(error, errorInfo, retry) => (
         <div className={`min-h-screen ${COLOR_BRIDGE.bg.primary} flex items-center justify-center`}>
           <div className="max-w-lg w-full p-6">

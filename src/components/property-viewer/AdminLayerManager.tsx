@@ -36,8 +36,8 @@ import {
   Ruler
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
@@ -46,7 +46,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 // Import types
 import type { Property } from '@/types/property-viewer';
 import type { LayerState } from './useLayerStates';
-import type { Layer, LayerGroup, LayerCategory } from '@/types/layers';
+import type { Layer, LayerCategory } from '@/types/layers';
 import { LAYER_CATEGORIES } from '@/types/layers';
 import { useLayerManagement } from '@/hooks/useLayerManagement';
 import { useLayerSync } from '@/lib/layer-sync';

@@ -12,11 +12,11 @@
 const DEBUG_SNAP_DEBUG_LOGGER = false;
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity, ProSnapResult, SnapEngineStats } from '../../snapping/extended-types';
+import type { Entity, ProSnapResult } from '../../snapping/extended-types';
 import type { SnapEngineCore } from '../../snapping/SnapEngineCore';
 import type { SnapOrchestratorStats } from '../../snapping/orchestrator/SnapOrchestrator';
 // 🏢 ENTERPRISE: Import type guards from centralized types
-import { isPolylineEntity, isLWPolylineEntity, isRectangleEntity } from '../../types/entities';
+import { isPolylineEntity, isLWPolylineEntity } from '../../types/entities';
 
 interface SnapDebugStats {
   version: string;

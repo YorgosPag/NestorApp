@@ -14,9 +14,7 @@ import {
   validateGripSize
 } from '../types';
 import {
-  DEFAULT_LINE_SETTINGS,
-  DEFAULT_TEXT_SETTINGS,
-  DEFAULT_GRIP_SETTINGS
+  DEFAULT_LINE_SETTINGS
 } from '../defaults';
 import { UI_COLORS } from '../../config/color-config';
 

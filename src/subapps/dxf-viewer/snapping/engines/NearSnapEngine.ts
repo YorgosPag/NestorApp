@@ -9,7 +9,7 @@ import type { LineEntity, CircleEntity, ArcEntity, PolylineEntity, LWPolylineEnt
 import { isLineEntity, isCircleEntity, isArcEntity, isPolylineEntity, isLWPolylineEntity, isRectangleEntity } from '../../types/entities';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
-import { findEntityBasedSnapCandidates, GenericSnapPoint, processRectangleSnapping, LegacyRectangleEntity } from './shared/snap-engine-utils'; // ✅ ENTERPRISE FIX: Import proper type
+import { findEntityBasedSnapCandidates, processRectangleSnapping, LegacyRectangleEntity } from './shared/snap-engine-utils'; // ✅ ENTERPRISE FIX: Import proper type
 // 🏢 ADR-074: Centralized Point On Circle
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant

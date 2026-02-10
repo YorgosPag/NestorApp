@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { formatDate } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -11,7 +10,6 @@ import { badgeVariants } from '@/components/ui/badge';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { 
-  Clock, 
   Calendar, 
   User, 
   Phone, 

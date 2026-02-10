@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 // ✅ ENTERPRISE: Pako compression library with type assertion
 // @ts-ignore - Pako module lacks TypeScript definitions

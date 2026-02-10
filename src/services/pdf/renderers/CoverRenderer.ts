@@ -1,7 +1,7 @@
 import type { ObligationDocument } from '@/types/obligations';
 import type { IPDFDoc, ICoverRenderer, Margins } from '../contracts';
 import { TextRenderer } from './TextRenderer';
-import { COLORS, FONTS, FONT_STYLES, FONT_SIZES, LINE_SPACING } from '../layout';
+import { COLORS, FONT_SIZES } from '../layout';
 
 export class CoverRenderer implements ICoverRenderer {
   private textRenderer: TextRenderer = new TextRenderer();

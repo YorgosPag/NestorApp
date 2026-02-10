@@ -11,8 +11,6 @@ import type {
   ToolbarConfig,
   ToolbarOperation,
   ToolbarOperationResult,
-  ToolbarPosition,
-  ToolbarOrientation,
   ToolbarCustomization,
   ToolRunner,
   ToolStep

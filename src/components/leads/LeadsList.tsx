@@ -12,7 +12,6 @@ import { useLeadsList } from "./hooks/useLeadsList";
 import { LeadCard } from "./LeadCard";
 import { getStatusColor } from "./utils/formatters";
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
-import type { Opportunity } from "@/types/crm";
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';

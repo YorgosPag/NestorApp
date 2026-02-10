@@ -3,7 +3,7 @@
  * ✅ ΦΑΣΗ 6: Κεντρικοποιημένο snap indicator rendering χωρίς διπλότυπα
  */
 
-import type { Point2D, Viewport } from '../../types/Types';
+import type { Viewport } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 import type {
   UIRenderer,
@@ -14,7 +14,6 @@ import type {
 import type {
   SnapSettings,
   SnapResult,
-  SnapRenderData,
   SnapRenderMode,
   SnapType
 } from './SnapTypes';
@@ -33,7 +32,6 @@ import {
 import { GRIP_SIZE_MULTIPLIERS } from '../../grips/constants';
 // 🏢 ADR-137: Centralized Snap Icon Geometry
 import {
-  SNAP_ICON_GEOMETRY,
   getSnapIconQuarter,
   getTangentCircleRadius,
   getGridDotRadius

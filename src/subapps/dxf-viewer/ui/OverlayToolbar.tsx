@@ -1,6 +1,6 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -14,23 +14,22 @@ import { useTranslation } from '@/i18n';
 const Separator = ({ orientation, className }: { orientation?: string; className?: string }) => (
   <div className={className} />
 );
-import { MousePointer, Pen, X, Copy, Grid, Square, Circle, Triangle, Edit, RotateCcw, RotateCw } from 'lucide-react';
-import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
+import { Pen, X, Copy, Grid, Square, Circle, Triangle, Edit, RotateCcw, RotateCw } from 'lucide-react';
+import { STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCreation';
 import { toolStyleStore, type ToolStyle } from '../stores/ToolStyleStore';
-import { STATUS_COLORS_MAPPING, BUTTON_STATUS_COLORS, getKindFromLabel } from '../config/color-mapping';
+import { STATUS_COLORS_MAPPING, getKindFromLabel } from '../config/color-mapping';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '../../../components/ui/effects';
 import {
-  getStatusColorButtonStyles,
-  type ToolbarButtonVariant
+  getStatusColorButtonStyles
 } from './DxfViewerComponents.styles';
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
-import { getShortcutDisplayLabel, DXF_OVERLAY_SHORTCUTS, DXF_CTRL_SHORTCUTS, DXF_SPECIAL_SHORTCUTS } from '../config/keyboard-shortcuts';
+import { getShortcutDisplayLabel } from '../config/keyboard-shortcuts';
 
 interface OverlayToolbarProps {
   mode: OverlayEditorMode;
@@ -183,7 +182,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 onMouseDown={handleMouseDown}
                 className={`${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING} ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.hover} ${radius.md}`}
               >
-                <div className={`${iconSizes.xs} ${iconSizes.sm} ${colors.bg.active} ${quick.button}`}></div>
+                <div className={`${iconSizes.xs} ${iconSizes.sm} ${colors.bg.active} ${quick.button}`} />
               </div>
             </TooltipTrigger>
             <TooltipContent>{t('toolbar.dragToMove')}</TooltipContent>

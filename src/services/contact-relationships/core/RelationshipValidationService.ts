@@ -15,7 +15,7 @@ import {
   RelationshipType,
   isEmploymentRelationship
 } from '@/types/contacts/relationships';
-import { Contact, ContactType } from '@/types/contacts';
+import { Contact } from '@/types/contacts';
 
 // ============================================================================
 // VALIDATION ERROR TYPES

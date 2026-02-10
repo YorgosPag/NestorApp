@@ -3,12 +3,7 @@
 import React, { useState } from 'react';
 import {
   TaskCard,
-  UserCard,
-  // BuildingCard, // 🔧 TODO: Create BuildingCard composition
-  // ProjectCard,  // 🔧 TODO: Create ProjectCard composition
-  ContactCard,
-  NotificationCard,
-  StorageCard
+  UserCard
 } from '@/components/compositions';
 import type { CrmTask } from '@/types/crm';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -95,7 +90,7 @@ export function ComponentShowcase() {
                 notes: 'Επιτυχημένη προβολή'
               }
             }}
-            compact={true}
+            compact
           />
 
           <TaskCard 
@@ -137,7 +132,7 @@ export function ComponentShowcase() {
               lastActive: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
               achievements: 25
             }}
-            compact={true}
+            compact
             showStats={false}
           />
 

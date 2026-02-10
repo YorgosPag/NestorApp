@@ -3,7 +3,7 @@
  * ✅ ΦΑΣΗ 6: Κεντρικοποιημένο ruler rendering χωρίς διπλότυπα
  */
 
-import type { Point2D, Viewport } from '../../types/Types';
+import type { Viewport } from '../../types/Types';
 import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 import type {
   UIRenderer,
@@ -13,7 +13,6 @@ import type {
 } from '../core/UIRenderer';
 import type {
   RulerSettings,
-  RulerRenderData,
   RulerRenderMode,
   RulerOrientation,
   RulerPosition

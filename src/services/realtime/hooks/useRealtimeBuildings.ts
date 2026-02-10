@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';

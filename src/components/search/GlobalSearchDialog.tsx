@@ -430,7 +430,7 @@ export function GlobalSearchDialog({
               onChange={setQuery}
               placeholder={t('search.placeholder', 'Αναζήτηση σε έργα, επαφές, κτίρια...')}
               debounceMs={0} // Debouncing handled by useGlobalSearch hook
-              showClearButton={true}
+              showClearButton
               onClear={() => setQuery('')}
               className={cn(
                 'flex-1',

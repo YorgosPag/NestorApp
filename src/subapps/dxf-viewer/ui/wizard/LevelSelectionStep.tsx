@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';

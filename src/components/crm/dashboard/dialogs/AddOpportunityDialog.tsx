@@ -15,8 +15,7 @@
 
 'use client';
 
-import React from 'react';
-import { SmartDialogEngine, createSmartDialog } from '@/core/modals/SmartDialogEngine';
+import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
 import type { Opportunity } from '@/types/crm';
 
 interface AddOpportunityDialogProps {

@@ -12,8 +12,8 @@
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System (Phase 3)
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { CreditCard, FileCheck, AlertTriangle, Clock } from 'lucide-react';
+import React, { useMemo, useCallback } from 'react';
+import { CreditCard, FileCheck, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,

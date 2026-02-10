@@ -2,7 +2,6 @@
 
 'use client';
 
-import { cn } from "@/lib/utils";
 import type { Property } from '@/types/property-viewer';
 import { PolygonMeasurementInfo } from './PolygonMeasurementInfo';
 import { getCentroid } from '@/lib/geometry';

@@ -2,7 +2,6 @@
 'use client';
 
 import type { Property } from '@/types/property-viewer';
-import type { Connection } from '@/types/connections';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 // 🏢 ENTERPRISE: Firestore persistence for property updates
 import { updateUnit } from '@/services/units.service';

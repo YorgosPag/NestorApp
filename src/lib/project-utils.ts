@@ -1,7 +1,7 @@
 'use client';
 
 import type { ProjectStatus } from '@/types/project';
-import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '@/constants/property-statuses-enterprise';
+import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
 import { getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

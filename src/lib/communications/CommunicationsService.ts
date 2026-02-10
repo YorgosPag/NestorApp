@@ -11,11 +11,6 @@ import {
   orderBy,
   limit,
   getDocs,
-  doc,
-  getDoc,
-  serverTimestamp,
-  writeBatch,
-  updateDoc,
   type QueryConstraint
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';

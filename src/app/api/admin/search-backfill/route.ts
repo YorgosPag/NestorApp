@@ -36,10 +36,7 @@ import {
   SEARCH_AUDIENCE,
   type SearchEntityType,
   type SearchAudience,
-  type SearchFields,
   type SearchDocumentInput,
-  type TitleFieldConfig,
-  type AudienceFieldConfig,
   type SearchIndexConfig,
 } from '@/types/search';
 

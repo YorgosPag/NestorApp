@@ -6,7 +6,7 @@
  * Custom implementation χωρίς external chart libraries για full control.
  */
 
-import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useCallback, useState, useRef } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../../../config/color-config';
 
@@ -493,7 +493,7 @@ export const LineChart: React.FC<LineChartProps> = ({
       {/* Tooltip */}
       {hoveredPoint && showTooltip && (
         <ChartTooltip
-          visible={true}
+          visible
           x={hoveredPoint.x}
           y={hoveredPoint.y}
           content={
@@ -706,7 +706,7 @@ export const BarChart: React.FC<BarChartProps> = ({
       {/* Tooltip */}
       {hoveredBar && showTooltip && (
         <ChartTooltip
-          visible={true}
+          visible
           x={hoveredBar.x}
           y={hoveredBar.y}
           content={
@@ -946,7 +946,7 @@ export const PieChart: React.FC<PieChartProps> = ({
       {/* Tooltip */}
       {hoveredSlice && showTooltip && (
         <ChartTooltip
-          visible={true}
+          visible
           x={hoveredSlice.x}
           y={hoveredSlice.y}
           content={

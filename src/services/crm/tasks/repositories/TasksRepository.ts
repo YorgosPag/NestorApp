@@ -6,7 +6,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CrmTask } from '@/types/crm';
 import type { ITasksRepository } from '../contracts';
 import { transformTask } from '../mappers';
-import { isToday, isPast, isTomorrow } from 'date-fns';
+import { isToday, isPast } from 'date-fns';
 
 const TASKS_COLLECTION = COLLECTIONS.TASKS;
 const BATCH_SIZE = 500;

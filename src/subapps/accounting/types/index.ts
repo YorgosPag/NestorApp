@@ -6,11 +6,20 @@
  * @version 1.0.0
  */
 
+// ── Entity Types (ADR-ACC-012 OE) ───────────────────────────────────────────
+export type {
+  EntityType,
+  Partner,
+  PartnerEFKAConfig,
+} from './entity';
+
 // ── Company Profile Types (M-001 Company Setup) ────────────────────────────
 export type {
   KadEntry,
   CompanyProfile,
   CompanySetupInput,
+  SoleProprietorProfile,
+  OECompanyProfile,
 } from './company';
 
 // ── Common Types ────────────────────────────────────────────────────────────
@@ -92,6 +101,8 @@ export type {
   TaxInsightPriority,
   TaxPlanningInsight,
   WithholdingReconciliation,
+  PartnerTaxResult,
+  PartnershipTaxResult,
 } from './tax';
 
 // ── EFKA Types (ADR-ACC-006) ────────────────────────────────────────────────
@@ -105,6 +116,8 @@ export type {
   EFKAAnnualSummary,
   EFKANotificationType,
   EFKANotification,
+  PartnerEFKASummary,
+  PartnershipEFKASummary,
 } from './efka';
 
 // ── Fixed Assets Types (ADR-ACC-007) ────────────────────────────────────────

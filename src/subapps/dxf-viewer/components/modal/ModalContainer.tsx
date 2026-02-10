@@ -18,8 +18,6 @@ import { AlertCircle, CheckCircle2, Info, AlertTriangle, Upload } from 'lucide-r
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { spacing, typography } from '@/styles/design-tokens';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ====================================================================

@@ -24,7 +24,6 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   collection,
   addDoc,
-  updateDoc,
   doc,
   serverTimestamp,
   getDocs,

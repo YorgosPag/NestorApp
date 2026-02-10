@@ -11,7 +11,6 @@
 // ============================================================================
 
 import {
-  ContactRelationship,
   OrganizationTree,
   OrganizationHierarchyNode,
   ContactWithRelationship,

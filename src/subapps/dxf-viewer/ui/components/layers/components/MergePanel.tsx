@@ -3,7 +3,6 @@
 
 import React from 'react';
 import { GitMerge, Lightbulb } from 'lucide-react';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PANEL_TOKENS } from '../../../../config/panel-tokens';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';

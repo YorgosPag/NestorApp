@@ -82,11 +82,8 @@ This file has been refactored into Enterprise modular architecture:
 import {
   calculatePhotoDimensions,
   buildResponsiveGrid,
-  getPhotoConfig,
-  getPhotoContextConfig,
   PHOTO_LAYOUTS
 } from './photo-config';
-import type { PhotoContext } from './photo-config';
 
 // 🏢 ENTERPRISE: Define layout key type for type-safe casting
 type PhotoLayoutKey = keyof typeof PHOTO_LAYOUTS;

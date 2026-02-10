@@ -13,7 +13,7 @@
  * @since 2025-10-09
  */
 
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { safeSave } from '../../settings/io/safeSave';
 import { ENTERPRISE_CONSTANTS } from '../constants';
 import type { StorageDriver } from '../../settings/io/StorageDriver';

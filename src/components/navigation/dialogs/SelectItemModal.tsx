@@ -147,7 +147,7 @@ export function SelectItemModal({
                 <div className="text-center py-8 text-gray-500">
                   {items.length === 0 ? (
                     <div>
-                      <Icon className={`h-12 w-12 mx-auto mb-3 text-gray-300`} />
+                      <Icon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                       <p>{t('modal.noItemsFound')}</p>
                     </div>
                   ) : (

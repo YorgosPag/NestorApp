@@ -1,5 +1,4 @@
 import type { FilterPanelConfig } from '../types';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import {
   UNIFIED_STATUS_FILTER_LABELS,
   COMMON_FILTER_LABELS,

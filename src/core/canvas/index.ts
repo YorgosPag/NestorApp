@@ -16,7 +16,6 @@
 
 // 🏢 ENTERPRISE FIX (2026-01-19): Import values for internal use
 import {
-  CanvasRegistry as _CanvasRegistry,
   globalCanvasRegistry as _globalCanvasRegistry,
   registerCanvasProvider as _registerCanvasProvider,
   getCanvasProvider as _getCanvasProvider,

@@ -126,7 +126,7 @@ export function ListLayout({
               onSelectFloor={handleSelectFloor}
               properties={properties}
               onUpdateProperty={() => {}}
-              isReadOnly={true}
+              isReadOnly
             />
           </CardContent>
         </Card>

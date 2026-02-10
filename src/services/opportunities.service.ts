@@ -12,15 +12,13 @@ import {
   updateDoc, 
   deleteDoc,
   query,
-  where,
   orderBy,
   serverTimestamp,
-  QueryConstraint,
   Timestamp,
   writeBatch,
   getDoc
 } from 'firebase/firestore';
-import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
+import type { Opportunity } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 

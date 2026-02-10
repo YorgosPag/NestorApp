@@ -24,7 +24,7 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 // 🏢 ADR-097: Centralized Line Dash Patterns
 // 🏢 ADR-107: Centralized UI Size Defaults
-import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont, LINE_DASH_PATTERNS, UI_SIZE_DEFAULTS } from '../../config/text-rendering-config';
+import { RENDER_LINE_WIDTHS, buildUIFont, LINE_DASH_PATTERNS, UI_SIZE_DEFAULTS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -52,9 +52,9 @@ import type { CanvasSettings } from '../../rendering/canvas/core/CanvasSettings'
 // ✅ REMOVED: LegacyCrosshairAdapter, LegacyCursorAdapter - now handled in DxfCanvas
 import { LegacySnapAdapter } from '../../rendering/ui/snap/LegacySnapAdapter';
 import { SelectionRenderer } from './selection/SelectionRenderer';
-import { UIRendererComposite, type UICategory } from '../../rendering/ui/core/UIRendererComposite';
+import { UIRendererComposite } from '../../rendering/ui/core/UIRendererComposite';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
-import type { UIRenderOptions, UIElementSettings, UIRenderMetrics } from '../../rendering/ui/core/UIRenderer';
+import type { UIElementSettings, UIRenderMetrics } from '../../rendering/ui/core/UIRenderer';
 // 🏢 ENTERPRISE: Centralized GripSettings type
 import type { GripSettings } from '../../types/gripSettings';
 

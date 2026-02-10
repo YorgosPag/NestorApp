@@ -1,5 +1,4 @@
 // src/subapps/dxf-viewer/grips/resolveTarget.ts
-import { useOverlayStore } from '../overlays/overlay-store';
 import type { Point2D } from '../rendering/types/Types';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { DEFAULT_BOUNDS } from '../config/geometry-constants';

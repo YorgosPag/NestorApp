@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { AlertTriangle, Settings, Bell, Plus, Map } from 'lucide-react';
+import { AlertTriangle, Settings, Bell, Plus } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
@@ -17,10 +17,8 @@ import {
 import type { Alert, RuleContext, RuleEvaluationResult } from '@geo-alert/core/alert-engine';
 
 // Use existing unified system types
-import type {
-  AlertRules,
-  AlertZone
-} from '@/core/geo-alert-unified/database/types';
+
+
 
 // Existing UI Patterns
 import { useNotificationDrawer } from '@/components/NotificationDrawer.enterprise';
@@ -123,7 +121,7 @@ export function AlertManagementPanel({
     return (
       <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           <span className="ml-3 text-gray-600">Initializing Alert Engine...</span>
         </div>
       </div>
@@ -266,7 +264,7 @@ export function AlertManagementPanel({
       {/* Status Footer */}
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
         <div className="flex items-center text-sm text-gray-600">
-          <div className={`w-2 h-2 rounded-full mr-2 ${isInitialized ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <div className={`w-2 h-2 rounded-full mr-2 ${isInitialized ? 'bg-green-500' : 'bg-red-500'}`} />
           Alert Engine: {isInitialized ? 'Connected' : 'Disconnected'}
         </div>
       </div>

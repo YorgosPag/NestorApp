@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { layoutUtilities } from '@/styles/design-tokens';
 import { parkingComponentsStyles } from './ParkingComponents.styles';
 
 interface ParkingColumnFilterProps {

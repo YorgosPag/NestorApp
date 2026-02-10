@@ -5,7 +5,7 @@
 
 import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
-import { renderEdgeDistanceLabel, calculateEdgeTextPosition } from './text-labeling-utils';
+import { calculateEdgeTextPosition } from './text-labeling-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';

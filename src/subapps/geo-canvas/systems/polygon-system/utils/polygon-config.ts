@@ -7,15 +7,11 @@
 
 import type {
   UserRole,
-  RoleBasedConfig,
-  DEFAULT_VISUAL_CONFIG,
-  DEFAULT_NOTIFICATION_CONFIG
+  RoleBasedConfig
 } from '../types/polygon-system.types';
 import { GEO_COLORS } from '../../../config/color-config';
 
 // 🏢 ENTERPRISE INTEGRATION: Import existing centralized notification service
-import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // ============================================================================

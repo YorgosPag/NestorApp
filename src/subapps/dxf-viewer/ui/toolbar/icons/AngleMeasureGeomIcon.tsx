@@ -22,7 +22,7 @@ export function AngleMeasureGeomIcon({ size = DEFAULT_ICON_SIZE, color = "curren
       size={size}
       color={color}
       strokeWidth={strokeWidth}
-      showMeasurementSymbol={true}
+      showMeasurementSymbol
     />
   );
 }

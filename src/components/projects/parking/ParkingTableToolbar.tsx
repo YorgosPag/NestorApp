@@ -19,7 +19,6 @@ import type { ParkingFilters, ParkingStats } from '@/types/parking';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { ParkingStatsSummary } from './ParkingStatsSummary';
 import { ParkingFilterPanel } from './ParkingFilterPanel';
-import { SortToggleButton } from '@/features/units-toolbar/components/SortToggleButton';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

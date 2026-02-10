@@ -63,7 +63,6 @@ import { useLineSettingsFromProvider, useEnterpriseDxfSettings } from '../../../
 // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΜΕ UNIFIED HOOKS
 import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hooks/useUnifiedSpecificSettings';
 import type { LineTemplate as LineSettingsTemplate } from '../../../../../contexts/LineSettingsContext';
-import type { LineTemplate as LineConstantsTemplate } from '../../../../../contexts/LineConstants';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -79,14 +78,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  LINE_TYPE_LABELS,
-  LINE_CAP_LABELS,
-  LINE_JOIN_LABELS,
   LINE_WIDTH_RANGE,
   DASH_SCALE_RANGE,
   DASH_OFFSET_RANGE,
   OPACITY_RANGE,
-  TEMPLATE_LABELS,
   getTemplatesByCategory,
   getLineTypeLabel,
   getLineCapLabel,
@@ -96,7 +91,6 @@ import {
   getTemplateDescription
 } from '../../../../../contexts/LineConstants';
 import type { LineType, LineCapStyle, LineJoinStyle } from '../../../../../settings-core/types';
-import type { TemplateCategory } from '../../../../../contexts/LineSettingsContext';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
@@ -586,8 +580,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             alpha={false}
             modes={['hex', 'rgb', 'hsl']}
             palettes={['dxf', 'semantic', 'material']}
-            recent={true}
-            eyedropper={true}
+            recent
+            eyedropper
           />
         </div>
 
@@ -657,8 +651,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             alpha={false}
             modes={['hex', 'rgb', 'hsl']}
             palettes={['dxf', 'semantic', 'material']}
-            recent={true}
-            eyedropper={true}
+            recent
+            eyedropper
           />
         </div>
 
@@ -740,8 +734,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             alpha={false}
             modes={['hex', 'rgb', 'hsl']}
             palettes={['dxf', 'semantic', 'material']}
-            recent={true}
-            eyedropper={true}
+            recent
+            eyedropper
           />
         </div>
 

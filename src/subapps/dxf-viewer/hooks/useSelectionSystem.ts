@@ -5,7 +5,7 @@
  * This file will be removed in v2.0.0
  */
 
-import { useSelection, type SelectionContextType } from '../systems/selection/SelectionSystem';
+import { useSelection } from '../systems/selection/SelectionSystem';
 import type {
   SelectionState,
   FilterState,

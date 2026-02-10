@@ -8,7 +8,6 @@ import type { Project } from '@/types/project';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { ProjectCardContent } from './ProjectCard/ProjectCardContent';
 import { ProjectCardTimeline } from './ProjectCard/ProjectCardTimeline';
-import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 import { Briefcase } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';

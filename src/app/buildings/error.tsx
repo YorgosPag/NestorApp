@@ -32,7 +32,7 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
       error={error}
       reset={reset}
       componentName="Buildings"
-      enableReporting={true}
+      enableReporting
     />
   );
 }

@@ -23,7 +23,7 @@
  * @since 2025-10-09
  */
 
-import type { SyncDependencies, ToolStylePort, TextStylePort, GripStylePort, GridPort, RulerPort, Unsubscribe } from './ports';
+import type { SyncDependencies, ToolStylePort, TextStylePort, GripStylePort, Unsubscribe } from './ports';
 import type { LineSettings, TextSettings } from '../core/types';
 import type { GripSettings } from '../../types/gripSettings';
 import type { ViewerMode } from '../core/types';

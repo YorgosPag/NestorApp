@@ -34,12 +34,8 @@ import { cn } from '@/lib/utils';
 
 import {
   EnhancedPropertyStatus,
-  PropertyIntent,
-  MarketAvailability,
-  PropertyPriority,
   STATUS_CATEGORIES,
   getEnhancedStatusLabel,
-  getEnhancedStatusColor,
   getStatusCategory,
   getAllEnhancedStatuses
 } from '@/constants/property-statuses-enterprise';
@@ -53,7 +49,7 @@ import {
 import { UnifiedPropertyStatusBadge } from './UnifiedPropertyStatusBadge';
 
 // Icons
-import { Check, AlertTriangle, Info, ChevronDown, Filter } from 'lucide-react';
+import { Check, AlertTriangle, Info } from 'lucide-react';
 
 // ============================================================================
 // INTERFACES & TYPES

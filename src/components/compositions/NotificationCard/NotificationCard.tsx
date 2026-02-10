@@ -2,9 +2,8 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, HOVER_BACKGROUND_EFFECTS, GROUP_HOVER_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { Bell, AlertCircle, Info, CheckCircle, XCircle, Calendar, User, Eye, X } from 'lucide-react';
+import { AlertCircle, Info, CheckCircle, XCircle, Calendar, User, Eye, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getStatusBadgeClass } from '@/lib/design-system';
 import { badgeVariants } from '@/components/ui/badge';

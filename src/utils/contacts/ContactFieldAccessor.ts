@@ -1,14 +1,8 @@
 import type {
-  Contact,
-  IndividualContact,
-  CompanyContact,
-  ServiceContact
+  Contact
 } from '../../types/contacts/contracts';
-import {
-  isIndividualContact,
-  isCompanyContact,
-  isServiceContact
-} from '../../types/contacts/contracts';
+
+
 
 // Extended contact interface για legacy format support
 // Intersection type για compatibility με όλα τα existing contact formats

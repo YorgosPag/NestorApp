@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { UnitBadge, CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';

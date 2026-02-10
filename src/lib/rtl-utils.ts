@@ -3,7 +3,7 @@
  * Provides helpers for bidirectional text and layout support
  */
 
-import { getCurrentLocale, isRTLLocale, getTextDirection } from './intl-utils';
+import { getCurrentLocale, isRTLLocale } from './intl-utils';
 
 /**
  * RTL-aware CSS class utilities

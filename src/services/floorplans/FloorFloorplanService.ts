@@ -23,7 +23,6 @@ import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { FileRecordService } from '@/services/file-record.service';
-import { generateFileId } from '@/services/upload/utils/storage-path';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { FileRecord } from '@/types/file-record';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';

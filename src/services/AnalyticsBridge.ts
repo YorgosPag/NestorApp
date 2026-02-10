@@ -15,7 +15,6 @@
 
 // TODO: EventAnalyticsEngine not implemented yet - temporarily disabled
 // import { EventAnalyticsEngine } from '@geo-alert/core/alert-engine/analytics/EventAnalyticsEngine';
-import { errorTracker } from './ErrorTracker';
 import { generateSessionId as generateEnterpriseSessionId, generateEventId as generateEnterpriseEventId } from '@/services/enterprise-id.service';
 
 // ============================================================================

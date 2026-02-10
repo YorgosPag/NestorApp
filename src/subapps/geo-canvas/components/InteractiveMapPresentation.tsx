@@ -23,7 +23,6 @@ import type { FloorPlanControlPoint } from '../floor-plan-system/types/control-p
 import type { UniversalPolygon } from '@geo-alert/core/polygon-system/types';
 import type { ViewState } from '../hooks/map/useMapState';
 import type { TransformState, MapInstance } from '../hooks/map/useMapInteractions';
-import type { MapStyleType } from '../services/map/MapStyleManager';
 
 // Component imports
 import {
@@ -38,7 +37,6 @@ import type { CurrentDrawing } from './map-layers/LiveDrawingPreview';
 import type { GeoJSONFeatureCollection } from '../types';
 
 // Style imports
-import { interactiveMapStyles } from './InteractiveMap.styles';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -159,11 +157,11 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         onClick={onClick}
         onMouseMove={onMouseMove}
         cursor={cursor}
-        dragPan={true}
+        dragPan
         dragRotate={false}
-        doubleClickZoom={true}
-        keyboard={true}
-        touchZoomRotate={true}
+        doubleClickZoom
+        keyboard
+        touchZoomRotate
       >
         {/* ================================================================ */}
         {/* CONTROL POINTS LAYER */}
@@ -171,7 +169,7 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         {showControlPoints && (
           <ControlPointLayer
             controlPoints={controlPoints}
-            mapLoaded={true}
+            mapLoaded
           />
         )}
 
@@ -183,7 +181,7 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
             controlPoints={controlPoints}
             showControlPoints={showPolygonLines}
             isPolygonComplete={localIsPolygonComplete}
-            mapLoaded={true}
+            mapLoaded
           />
         )}
 
@@ -206,7 +204,7 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
           controlPoints={controlPoints}
           showAccuracyCircles={showAccuracyCircles}
           accuracyVisualizationMode={accuracyVisualizationMode}
-          mapLoaded={true}
+          mapLoaded
           zoomLevel={viewState.zoom}
         />
 
@@ -216,7 +214,7 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         <TransformationPreviewLayer
           showTransformationPreview={showTransformationPreview}
           transformState={transformState}
-          mapLoaded={true}
+          mapLoaded
         />
 
         {/* ================================================================ */}

@@ -142,6 +142,8 @@ export interface EFKAPayment {
   paidDate: string | null;
   /** Αναφορά τραπεζικής συναλλαγής (για αντιστοίχιση) */
   bankTransactionRef: string | null;
+  /** ID εταίρου (null = ατομική, backward compatible) */
+  partnerId: string | null;
   /** Σημειώσεις */
   notes: string | null;
 }
@@ -175,6 +177,29 @@ export interface EFKAAnnualSummary {
   paidMonths: number;
   /** Αριθμός εκπρόθεσμων μηνών */
   overdueMonths: number;
+}
+
+// ============================================================================
+// EFKA NOTIFICATION
+// ============================================================================
+
+// ============================================================================
+// PARTNERSHIP EFKA SUMMARY — ΟΕ per-partner
+// ============================================================================
+
+/** Σύνοψη ΕΦΚΑ ανά εταίρο */
+export interface PartnerEFKASummary {
+  partnerId: string;
+  partnerName: string;
+  summary: EFKAAnnualSummary;
+}
+
+/** Σύνοψη ΕΦΚΑ ΟΕ (σύνολα + ανά εταίρο) */
+export interface PartnershipEFKASummary {
+  year: number;
+  partnerSummaries: PartnerEFKASummary[];
+  totalAllPartnersPaid: number;
+  totalAllPartnersDue: number;
 }
 
 // ============================================================================

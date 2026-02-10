@@ -17,7 +17,6 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type {
-  SuperAdminIdentity,
   SuperAdminRegistryDoc,
   SuperAdminResolution,
 } from '@/types/super-admin';

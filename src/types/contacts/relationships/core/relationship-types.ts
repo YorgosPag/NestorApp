@@ -11,10 +11,8 @@
 // ============================================================================
 
 // 🏢 ENTERPRISE: Import centralized relationship type labels - ZERO HARDCODED VALUES
-import {
-  RELATIONSHIP_TYPE_LABELS,
-  EMPLOYMENT_STATUS_LABELS
-} from '@/constants/property-statuses-enterprise';
+
+
 
 /**
  * 🔗 Relationship Types - Enterprise Standard Categories

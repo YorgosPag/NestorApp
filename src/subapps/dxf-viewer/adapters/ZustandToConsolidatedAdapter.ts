@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useDxfSettingsStore } from '../stores/DxfSettingsStore';
 // ✅ UNIFIED TYPES: Μετά την ενοποίηση, όλα χρησιμοποιούν το ίδιο unified type
-import type { LineSettings, TextSettings, GripSettings, EntityId, LineCapStyle, LineJoinStyle } from '../settings-core/types';
+import type { LineSettings, GripSettings, EntityId } from '../settings-core/types';
 // ✅ ENTERPRISE: Import centralized colors
 import { UI_COLORS } from '../config/color-config';
 // 🏢 ADR-106: Centralized grip size multipliers για hover/highlight effects

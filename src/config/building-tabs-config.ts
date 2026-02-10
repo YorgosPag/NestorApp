@@ -15,18 +15,14 @@
 import {
   createTabsConfig,
   getSortedTabs,
-  getEnabledTabsCount,
   getTabById,
   getTabByValue,
   getTabsStats,
   validateTabConfig,
-  getTabsForEnvironment,
-  type UnifiedTabConfig,
-  type TabEntityType
+  type UnifiedTabConfig
 } from './unified-tabs-factory';
 
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports (DEPRECATED but maintained)
-import { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // BACKWARD COMPATIBLE TYPE EXPORTS

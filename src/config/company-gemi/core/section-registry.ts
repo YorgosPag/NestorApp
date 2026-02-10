@@ -20,11 +20,7 @@ import { fieldLabels } from '../labels/field-labels';
 import { gemiHelps } from '../labels/help-texts';
 import {
   ADDRESS_TYPE_OPTIONS,
-  SHAREHOLDER_TYPE_OPTIONS,
-  DOCUMENT_TYPE_OPTIONS,
-  BOARD_TYPE_OPTIONS,
-  REPRESENTATIVE_POSITION_OPTIONS,
-  getLifecycleGemiStatuses
+  SHAREHOLDER_TYPE_OPTIONS
 } from '../options';
 
 // ============================================================================

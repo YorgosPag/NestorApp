@@ -5,7 +5,6 @@
  */
 
 import React from 'react';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../../components/modal/ModalLoadingStates';
 // 🏢 ENTERPRISE: Centralized spacing tokens

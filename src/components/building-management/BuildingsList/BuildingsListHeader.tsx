@@ -27,7 +27,7 @@ export function BuildingsListHeader({
             icon={NAVIGATION_ENTITIES.building.icon}
             entityName={t('list.entityName')}
             itemCount={buildingCount}
-            hideSearch={true}
+            hideSearch
             showToolbar={showToolbar}
             onToolbarToggle={onToolbarToggle}
         />

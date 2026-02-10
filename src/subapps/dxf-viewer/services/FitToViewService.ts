@@ -6,7 +6,7 @@
  * @see ADR-010: Bounds Consolidation (2026-01-04)
  */
 
-import type { ViewTransform, Viewport, Point2D } from '../rendering/types/Types';
+import type { ViewTransform, Viewport } from '../rendering/types/Types';
 import type { ColorLayer } from '../canvas-v2/layer-canvas/layer-types';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 // ✅ ADR-010: Use canonical createCombinedBounds (type-safe, no 'any')

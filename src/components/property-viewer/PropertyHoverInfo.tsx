@@ -22,7 +22,6 @@ import { PropertyHoverInstruction } from '@/features/property-hover/components/P
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { formatFloorLabel } from '@/lib/intl-utils';
-import { formatPricePerSqm } from '@/components/building-management/BuildingCard/BuildingCardUtils';
 import type { Property } from '@/types/property-viewer';
 import { useHoveredProperty } from '@/features/property-hover/hooks/useHoveredProperty';
 

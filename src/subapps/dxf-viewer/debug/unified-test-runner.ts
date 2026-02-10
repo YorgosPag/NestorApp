@@ -8,7 +8,6 @@
  * @category Debug
  */
 
-import type { Point2D } from '../rendering/types/Types';
 
 // ============================================================================
 // TYPES

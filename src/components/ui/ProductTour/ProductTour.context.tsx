@@ -28,7 +28,6 @@ import {
 
 import type {
   TourState,
-  TourActions,
   TourContextValue,
   TourConfig,
   TourAnalyticsEvent,

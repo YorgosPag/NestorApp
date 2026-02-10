@@ -5,7 +5,6 @@
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
-import { GeometricCalculations } from './GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryResult } from '../../core/spatial';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization

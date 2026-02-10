@@ -12,7 +12,6 @@
 
 import type { FilterPanelConfig } from '../types';
 import {
-  UNIFIED_STATUS_FILTER_LABELS,
   COMMON_FILTER_LABELS,
   PROPERTY_FILTER_LABELS,
   PARKING_FILTER_LABELS

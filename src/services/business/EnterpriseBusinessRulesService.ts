@@ -23,16 +23,8 @@
  */
 
 import {
-  collection,
   doc,
-  getDocs,
   getDoc,
-  query,
-  where,
-  orderBy,
-  DocumentSnapshot,
-  QuerySnapshot,
-  DocumentData,
   Firestore
 } from 'firebase/firestore';
 

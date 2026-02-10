@@ -15,8 +15,8 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import type { AuthContext, GlobalRole, PermissionId, RequestContext } from './types';
-import { isAuthenticated, GLOBAL_ROLES } from './types';
+import type { AuthContext, GlobalRole, PermissionId } from './types';
+import { isAuthenticated } from './types';
 import { buildRequestContext } from './auth-context';
 import {
   hasPermission,

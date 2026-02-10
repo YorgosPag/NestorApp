@@ -6,7 +6,6 @@
 
 import type {
   GeoControlPoint,
-  GeoreferenceInfo,
   DxfCoordinate,
   GeoCoordinate
 } from '../types';

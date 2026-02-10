@@ -1,13 +1,13 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where,
-  orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint, Timestamp,
+  orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint,
   writeBatch, serverTimestamp, onSnapshot, Unsubscribe, deleteField, FieldValue,
   QuerySnapshot,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import {
   Contact, ContactType, ContactStatus, isIndividualContact, isCompanyContact, isServiceContact,
-  AddressInfo, PhoneInfo, EmailInfo,
+  AddressInfo,
 } from '@/types/contacts';
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import type { ContactFormData } from '@/types/ContactFormTypes';

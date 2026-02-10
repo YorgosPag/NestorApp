@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync

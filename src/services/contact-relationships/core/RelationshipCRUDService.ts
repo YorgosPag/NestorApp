@@ -19,7 +19,7 @@ import {
 import { Contact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
-import { RelationshipValidationService, DuplicateRelationshipError } from './RelationshipValidationService';
+import { RelationshipValidationService } from './RelationshipValidationService';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 
 // ============================================================================

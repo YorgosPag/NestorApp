@@ -1,10 +1,6 @@
 'use client';
 
 import React, { useRef, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ArrowUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { ParkingColumnHeader } from './ParkingColumnHeader';
 import { ParkingColumnFilter } from './ParkingColumnFilter';
 

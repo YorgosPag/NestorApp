@@ -475,7 +475,7 @@ export function ThreadView({
                     >
                       {/* Selection indicator */}
                       {isSelectionMode && (
-                        <div className={`absolute -left-6 top-1/2 -translate-y-1/2`}>
+                        <div className="absolute -left-6 top-1/2 -translate-y-1/2">
                           {messageIsSelected ? (
                             <CheckSquare className={`${iconSizes.sm} text-primary`} />
                           ) : (

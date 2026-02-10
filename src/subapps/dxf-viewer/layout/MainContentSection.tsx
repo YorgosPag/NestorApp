@@ -13,12 +13,11 @@
 
 import React from 'react';
 import type { SceneModel } from '../types/scene';
-import type { DxfViewerAppProps, Status as AppStatus } from '../types';
+import type { Status as AppStatus } from '../types';
 import type { OverlayEditorMode, OverlayKind, Status } from '../overlays/types';
 import type { ViewTransform, Point2D } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
 import { DXFViewerLayout } from '../integration/DXFViewerLayout';
-import { DebugToolbar } from '../debug/DebugToolbar';
 import type { UnifiedTestReport } from '../debug/unified-test-runner';
 import type { DxfViewerState } from '../integration/types';
 import { getMainContentSectionStyles } from '../ui/DxfViewerComponents.styles';

@@ -22,7 +22,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { Map, Mountain, Moon, Flag, Palette, Circle, Satellite, ChevronDown, MapPin, Target, Recycle, FlaskConical, Gamepad2, Languages } from 'lucide-react';
+import { Map, Mountain, Moon, Flag, Palette, Circle, Satellite, ChevronDown, MapPin } from 'lucide-react';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS

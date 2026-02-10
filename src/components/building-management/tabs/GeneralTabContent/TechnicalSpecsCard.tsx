@@ -11,7 +11,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
 import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
-import { formatCurrency, formatNumber } from '@/lib/intl-utils';
+import { formatCurrency } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

@@ -27,8 +27,7 @@
  */
 
 import type { AnySceneEntity } from '../types/scene';
-import type { Point2D } from '../rendering/types/Types';
-import type { DxfHeaderData, DimStyleMap, DimStyleEntry } from './dxf-entity-parser';
+import type { DxfHeaderData, DimStyleMap } from './dxf-entity-parser';
 // 🏢 ADR-065: Centralized Distance Calculation
 // 🏢 ADR-078: Centralized Angle Calculation
 // 🏢 ADR-163: Centralized Vector Magnitude (replaces inline Math.sqrt patterns)
@@ -39,7 +38,6 @@ import { radToDeg } from '../rendering/entities/shared/geometry-utils';
 // 🏢 ENTERPRISE: Import centralized helpers
 import {
   type EntityData,
-  type TextAlignment,
   parseVerticesFromData,
   decodeGreekText,
   mapHorizontalAlignment,

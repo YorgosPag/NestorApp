@@ -45,7 +45,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           error={error}
           reset={reset}
           componentName="Application"
-          enableReporting={true}
+          enableReporting
         />
       </body>
     </html>

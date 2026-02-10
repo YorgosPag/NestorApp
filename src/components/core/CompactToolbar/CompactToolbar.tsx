@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { SearchInput } from '@/components/ui/search'; // 🏢 ENTERPRISE centralized search
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
@@ -16,7 +15,6 @@ import {
   Download,
   Upload,
   RefreshCw,
-  Search,
   X,
   Archive,
   Star,
@@ -591,7 +589,7 @@ export function CompactToolbar({
           onChange={onSearchChange}
           placeholder={getTranslatedPlaceholder(config.searchPlaceholder)}
           debounceMs={0} // Instant για navigation filters
-          showClearButton={true}
+          showClearButton
           className="h-8 text-sm flex-1" // Same height as toolbar buttons
         />
       </div>

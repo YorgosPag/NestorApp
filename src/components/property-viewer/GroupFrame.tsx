@@ -3,7 +3,6 @@
 import React from 'react';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyGroup } from '@/types/connections';
-import { getCentroid } from '@/lib/geometry';
 import { svgUtilities } from '@/styles/design-tokens';
 
 interface Props {

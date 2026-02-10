@@ -7,7 +7,7 @@
 
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
-import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 // 🏢 ADR-097: Centralized Line Dash Patterns
@@ -21,7 +21,6 @@ import { EntityRendererComposite } from '../../rendering/core/EntityRendererComp
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import type { LineType } from '../../settings-core/types';
 
 
 

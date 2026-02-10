@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import type { SceneModel } from '../../../../types/scene';
 import { DEFAULT_LAYER_COLOR } from '../../../../config/color-config';
 

@@ -18,7 +18,7 @@
  * @security RBAC + Tenant Isolation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';

@@ -14,7 +14,6 @@ import type { Point2D } from '../../rendering/types/Types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
 import { useProSnapIntegration } from '../../hooks/common/useProSnapIntegration';
 import { ZoomControls } from './ZoomControls';
-import { ScaleControls } from './ScaleControls';
 import { ToolButton, ActionButton } from './ToolButton';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
 import { ProSnapToolbar } from '../components/ProSnapToolbar';
@@ -25,10 +24,9 @@ import { FolderUp } from 'lucide-react';
 // 🎨 ENTERPRISE: Centralized DXF toolbar colors - Single source of truth
 import { DXF_ACTION_COLORS } from '../../config/toolbar-colors';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
-import { matchesShortcut, DXF_TOOL_SHORTCUTS, DXF_CTRL_SHORTCUTS, DXF_SPECIAL_SHORTCUTS, DXF_ACTION_SHORTCUTS } from '../../config/keyboard-shortcuts';
+import { matchesShortcut } from '../../config/keyboard-shortcuts';
 import UploadDxfButton from '../UploadDxfButton';
 import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
-import type { SceneModel } from '../../types/scene';
 // 🏢 ADR-050: Overlay Toolbar Integration
 import { OverlayToolbarSection } from './overlay-section';
 import type { EnhancedDXFToolbarPropsExtended } from './types';
@@ -286,7 +284,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
             onToggleMode={toggleMode}
             snapEnabled={contextSnapEnabled}
             onToggleSnap={toggleSnap}
-            compact={true}
+            compact
             className={PANEL_LAYOUT.FLEX_SHRINK.NONE}
           />
         </div>

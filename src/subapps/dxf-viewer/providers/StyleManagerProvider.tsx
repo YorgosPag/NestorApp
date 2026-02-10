@@ -6,8 +6,7 @@ const DEBUG_STYLE_MANAGER_PROVIDER = false;
 import React, { createContext, useContext, useEffect, useCallback } from 'react';
 import type {
   StyleManagerContextType,
-  EntityType,
-  EffectiveSettings
+  EntityType
 } from '../types/viewerConfiguration';
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - Using DxfSettingsProvider instead
 // import { useViewerConfig } from './ConfigurationProvider';

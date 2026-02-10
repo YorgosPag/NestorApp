@@ -8,11 +8,11 @@
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
-import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
+import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { findEntityBasedSnapCandidates, GenericSnapPoint } from './shared/snap-engine-utils';
+import { findEntityBasedSnapCandidates } from './shared/snap-engine-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ENTERPRISE: Import centralized type guards
 import {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EmailService, type EmailResponse } from '@/services/email.service';
+import { EmailService } from '@/services/email.service';
 import type { EmailRequest } from '@/services/email.service';
 import type { EmailTemplateType } from '@/types/email-templates';
 import { withAuth, logAuditEvent, extractRequestMetadata } from '@/lib/auth';

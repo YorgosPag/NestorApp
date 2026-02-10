@@ -20,7 +20,6 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Admin SDK Parking Endpoint

@@ -14,7 +14,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Users } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized types and components
-import type { ContactRelationship } from '@/types/contacts/relationships';
 import { RelationshipCard } from './RelationshipCard';
 import type { RelationshipListProps } from './types/relationship-manager.types';
 // 🏢 ENTERPRISE: i18n - Full internationalization support

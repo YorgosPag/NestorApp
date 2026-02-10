@@ -18,22 +18,12 @@
 
 import type {
   TelegramMessageObject,
-  TelegramPhotoSize,
-  TelegramDocument,
-  TelegramAudio,
-  TelegramVideo,
-  TelegramVoice,
-  TelegramVideoNote,
-  TelegramAnimation,
   TelegramFile,
-  TelegramLocation,
-  TelegramContact,
 } from './types';
 import type { MessageAttachment, AttachmentType } from '@/types/conversations';
 import { ATTACHMENT_TYPES } from '@/types/conversations';
 import {
   FILE_CATEGORIES,
-  FILE_STATUS,
   type FileCategory,
 } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -41,7 +31,6 @@ import { FILE_TYPE_CONFIG, type FileType } from '@/config/file-upload-config';
 // 🏢 ENTERPRISE: SSoT Core module for FileRecord schema (ADR-055)
 import {
   buildIngestionFileRecordData,
-  buildFinalizeFileRecordUpdate,
   type FileSourceMetadata,
 } from '@/services/file-record';
 

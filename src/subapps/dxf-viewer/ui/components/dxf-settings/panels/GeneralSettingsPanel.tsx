@@ -244,7 +244,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
           value={activeTab}
           onTabChange={handleTabChange}
           theme="dark"
-          alwaysShowLabels={true}
+          alwaysShowLabels
         />
       </div>
 

@@ -21,16 +21,8 @@
  */
 
 import {
-  collection,
   doc,
-  getDocs,
-  getDoc,
-  query,
-  where,
-  orderBy,
-  DocumentSnapshot,
-  QuerySnapshot,
-  DocumentData
+  getDoc
 } from 'firebase/firestore';
 import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 

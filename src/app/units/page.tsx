@@ -7,7 +7,6 @@ import { UnitsHeader } from '@/components/units/page/UnitsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   TrendingUp,
-  BarChart3,
   MapPin,
   Package,
   Building2,
@@ -19,7 +18,7 @@ import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { CoverageCard } from '@/components/property-management/dashboard/CoverageCard';
-import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel, unitFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
@@ -345,7 +344,7 @@ function UnitsPageContent() {
               <>
                 <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
                 <DetailsCard title={t('page.dashboard.unitTypes')} icon={Building2} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
-                <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData={true} />
+                <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData />
                 {/* ✅ ENTERPRISE: Coverage card for documentation completeness (PR1.2) */}
                 <CoverageCard
                   coverage={dashboardStats.coverage}
@@ -376,7 +375,7 @@ function UnitsPageContent() {
               config={unitFiltersConfig}
               filters={filters as unknown as UnitFilterState}
               onFiltersChange={handleFiltersChange}
-              defaultOpen={true}
+              defaultOpen
             />
           </div>
         )}

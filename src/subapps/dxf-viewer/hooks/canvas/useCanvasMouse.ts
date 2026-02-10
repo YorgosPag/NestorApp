@@ -22,8 +22,7 @@ import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStor
 import {
   getPointerSnapshotFromElement,
   getScreenPosFromEvent,
-  screenToWorldWithSnapshot,
-  type PointerSnapshot
+  screenToWorldWithSnapshot
 } from '../../rendering/core/CoordinateTransforms';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { VertexMovement } from '../../core/commands';

@@ -88,7 +88,7 @@ export function useEmailForm(
 
     // Form validation
     let isFormValid = true;
-    let formErrors: string[] = [];
+    const formErrors: string[] = [];
 
     // Email validation
     if (validEmailCount === 0) {

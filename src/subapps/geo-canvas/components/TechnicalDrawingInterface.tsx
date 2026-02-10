@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X, Building, Sparkles } from 'lucide-react';
+import { Ruler, ExternalLink, Settings, Database, AlertTriangle, Monitor, Zap, X, Building, Sparkles } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
   Select,
