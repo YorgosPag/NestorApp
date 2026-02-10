@@ -591,15 +591,16 @@ export class AgenticToolExecutor {
     companyId: string,
     collection: string
   ): QueryFilter[] {
-    // Collections where companyId is optional or missing — skip enforcement
-    // These are typically child collections linked via parentId (buildingId, phaseId)
+    // Collections where companyId is optional or missing — strip any companyId filter
+    // These are child collections linked via parentId (buildingId, phaseId)
+    // Data isolation for these is enforced via their parent (buildings.companyId)
     const collectionsWithOptionalCompanyId = new Set([
       'floors',
       'construction_phases',
       'construction_tasks',
     ]);
     if (collectionsWithOptionalCompanyId.has(collection)) {
-      return filters;
+      return filters.filter(f => f.field !== 'companyId');
     }
 
     const hasCompanyFilter = filters.some(f => f.field === 'companyId');
