@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { getProjectStats } from "@/services/projects.service";
 import type { UseProjectStatsState } from "../types";
 import type { ProjectStats } from "@/types/project";
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useProjectStats');
 
 // 🏢 ENTERPRISE: projectId is string (Firestore document ID)
 export function useProjectStats(projectId: string): UseProjectStatsState {
@@ -20,7 +22,7 @@ export function useProjectStats(projectId: string): UseProjectStatsState {
         const data = await getProjectStats(projectId);
         if (mounted) setStats(data);
       } catch (e) {
-        console.error("❌ Failed to fetch project stats:", e);
+        logger.error('Failed to fetch project stats:', { error: e });
         if (mounted) setStats({ totalUnits: 0, soldUnits: 0, totalSoldArea: 0 });
         if (mounted) setError("Αποτυχία φόρτωσης στατιστικών.");
       } finally {

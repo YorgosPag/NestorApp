@@ -273,7 +273,7 @@ export function EntityFilesManager({
       category,
     };
     logger.info('UPLOAD_DIAGNOSTIC', diagnosticInfo);
-    console.log('[EntityFilesManager] 🔍 DIAGNOSTIC:', JSON.stringify(diagnosticInfo, null, 2));
+    logger.info('[EntityFilesManager] DIAGNOSTIC:', { data: JSON.stringify(diagnosticInfo, null, 2) });
 
     setUploading(true);
 
@@ -284,7 +284,7 @@ export function EntityFilesManager({
       const uploadCategory = category; // Always use props category (NOT entry point)
       const uploadPurpose = purpose || selectedEntryPoint?.purpose; // 🏢 ENTERPRISE: Tab purpose has priority over entry point (for Floorplan tab separation)
 
-      console.log(`[EntityFilesManager] Starting upload of ${selectedFiles.length} files`);
+      logger.info(`[EntityFilesManager] Starting upload of ${selectedFiles.length} files`);
 
       // Upload each file using canonical pipeline
       let successCount = 0;
@@ -292,13 +292,13 @@ export function EntityFilesManager({
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        console.log(`[EntityFilesManager] Processing file ${i + 1}/${selectedFiles.length}: ${file.name}`);
+        logger.info(`[EntityFilesManager] Processing file ${i + 1}/${selectedFiles.length}: ${file.name}`);
 
         try {
           const ext = getFileExtension(file.name);
 
           // 🏢 STEP A: Create pending FileRecord
-          console.log(`[EntityFilesManager] STEP A: Creating pending FileRecord for ${file.name}`);
+          logger.info(`[EntityFilesManager] STEP A: Creating pending FileRecord for ${file.name}`);
           const { fileId, storagePath, displayName, fileRecord } = await FileRecordService.createPendingFileRecord({
             companyId,
             projectId,
@@ -314,13 +314,13 @@ export function EntityFilesManager({
             createdBy: currentUserId,
             customTitle: selectedEntryPoint?.requiresCustomTitle ? customTitle : undefined, // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
           });
-          console.log(`[EntityFilesManager] ✅ Created FileRecord: ${fileId}`);
+          logger.info(`[EntityFilesManager] Created FileRecord: ${fileId}`);
 
           // 🏢 ENTERPRISE: Wait for Firestore propagation before Storage upload
           // Storage Rules validate against Firestore - need time for document to be readable
           // Pattern: Google Cloud / AWS eventually consistent systems
           // NOTE: 300ms is baseline - may need tuning for high-latency environments
-          console.log(`[EntityFilesManager] ⏱️ Waiting for Firestore propagation (300ms)...`);
+          logger.info(`[EntityFilesManager] ⏱Waiting for Firestore propagation (300ms)...`);
           await new Promise(resolve => setTimeout(resolve, 300));
 
           // 🏢 STEP B: Upload binary to Storage
@@ -334,23 +334,23 @@ export function EntityFilesManager({
             fileRecordId: fileId,
           };
           logger.info('UPLOAD_START', uploadDiagnostic);
-          console.log(`[EntityFilesManager] STEP B: Uploading to Storage:`, JSON.stringify(uploadDiagnostic, null, 2));
+          logger.info(`[EntityFilesManager] STEP B: Uploading to Storage:`, { data: JSON.stringify(uploadDiagnostic, null, 2) });
 
           const storageRef = ref(storage, storagePath);
           await uploadBytes(storageRef, file);
-          console.log(`[EntityFilesManager] ✅ Uploaded to Storage`);
+          logger.info(`[EntityFilesManager] Uploaded to Storage`);
 
           const downloadUrl = await getDownloadURL(storageRef);
-          console.log(`[EntityFilesManager] ✅ Got download URL: ${downloadUrl.substring(0, 50)}...`);
+          logger.info(`[EntityFilesManager] Got download URL: ${downloadUrl.substring(0, 50)}...`);
 
           // 🏢 STEP C: Finalize FileRecord
-          console.log(`[EntityFilesManager] STEP C: Finalizing FileRecord`);
+          logger.info(`[EntityFilesManager] STEP C: Finalizing FileRecord`);
           await FileRecordService.finalizeFileRecord({
             fileId,
             sizeBytes: file.size,
             downloadUrl,
           });
-          console.log(`[EntityFilesManager] ✅ Finalized FileRecord: ${fileId}`);
+          logger.info(`[EntityFilesManager] Finalized FileRecord: ${fileId}`);
 
           successCount++;
 
@@ -358,17 +358,17 @@ export function EntityFilesManager({
           // Storage Rules do Firestore validation (2-3 reads per upload)
           // Wait 300ms between uploads to stay under quota limits
           if (i < selectedFiles.length - 1) {
-            console.log(`[EntityFilesManager] ⏱️ Waiting 300ms before next upload...`);
+            logger.info(`[EntityFilesManager] ⏱Waiting 300ms before next upload...`);
             await new Promise(resolve => setTimeout(resolve, 300));
           }
         } catch (fileError) {
           failCount++;
-          console.error(`[EntityFilesManager] ❌ Failed to upload file ${file.name}:`, fileError);
+          logger.error(`[EntityFilesManager] Failed to upload file ${file.name}:`, { error: fileError });
           // Continue με το επόμενο file (don't stop entire upload)
         }
       }
 
-      console.log(`[EntityFilesManager] Upload complete: ${successCount} succeeded, ${failCount} failed`);
+      logger.info(`[EntityFilesManager] Upload complete: ${successCount} succeeded, ${failCount} failed`);
 
       // 🏢 ENTERPRISE: Show toast notifications for upload results
       if (failCount > 0 && successCount > 0) {
@@ -390,7 +390,7 @@ export function EntityFilesManager({
       setSelectedEntryPoint(null); // Reset για επόμενο upload
       setCustomTitle(''); // 🏢 ENTERPRISE: Reset custom title για επόμενο upload
     } catch (error) {
-      console.error('[EntityFilesManager] Upload failed:', error);
+      logger.error('[EntityFilesManager] Upload failed:', { error: error });
       showError(t('upload.errors.generic') || 'Σφάλμα κατά την αποστολή αρχείων');
     } finally {
       setUploading(false);

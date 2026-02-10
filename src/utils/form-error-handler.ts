@@ -4,6 +4,9 @@ import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { FieldErrors, FieldValues } from 'react-hook-form';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FormErrorHandler');
+
 // Form error severity levels
 export type ErrorSeverity = 'error' | 'warning' | 'info';
 
@@ -77,7 +80,7 @@ export function useFormErrorHandler() {
 
     // Log error for debugging
     if (process.env.NODE_ENV === 'development') {
-      console.warn(`Form validation error in field "${field}":`, {
+      logger.warn(`Form validation error in field "${field}"`, {
         error: errorMessage,
         context,
         options
@@ -245,7 +248,7 @@ export function useFormErrorHandler() {
 
     // Log server error for debugging
     if (process.env.NODE_ENV === 'development') {
-      console.error('Server error in form:', {
+      logger.error('Server error in form', {
         error,
         context,
         options

@@ -37,6 +37,8 @@ import { useTranslation } from 'react-i18next';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Centralized Select clear value (Radix forbids empty string in SelectItem)
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('BuildingSelectorCard');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type definitions (ZERO any)
@@ -123,7 +125,7 @@ export function BuildingSelectorCard({
       setDraftBuildingId(currentBuildingId);
       setDraftFloorId(currentFloorId);
       setSaveStatus('idle');
-      console.log('🔄 [BuildingSelectorCard] Edit cancelled - draft reset to props');
+      logger.info('[BuildingSelectorCard] Edit cancelled - draft reset to props');
     }
     prevIsEditingRef.current = isEditing;
   }, [isEditing, currentBuildingId, currentFloorId]);
@@ -146,7 +148,7 @@ export function BuildingSelectorCard({
         const result = await apiClient.get<BuildingsApiResponse>('/api/buildings');
 
         const buildingsData = result?.buildings || [];
-        console.log(`🔍 [BuildingSelectorCard] API returned ${buildingsData.length} buildings`);
+        logger.info(`[BuildingSelectorCard] API returned ${buildingsData.length} buildings`);
 
         // 🏢 ENTERPRISE: Filter to only buildings that exist in Navigation hierarchy
         // Legacy buildings have IDs like "building_1_palaiologou_luxury_apartments"
@@ -164,10 +166,10 @@ export function BuildingSelectorCard({
           name: b.name || t('buildingSelector.noName'),
         }));
         setBuildings(buildingOptions);
-        console.log(`✅ [BuildingSelectorCard] Loaded ${buildingOptions.length} enterprise buildings`);
-        console.log(`🏢 [BuildingSelectorCard] Building names:`, buildingOptions.map(b => b.name));
+        logger.info(`[BuildingSelectorCard] Loaded ${buildingOptions.length} enterprise buildings`);
+        logger.info(`[BuildingSelectorCard] Building names:`, { data: buildingOptions.map(b => b.name) });
       } catch (error) {
-        console.error('❌ [BuildingSelectorCard] Error loading buildings:', error);
+        logger.error('[BuildingSelectorCard] Error loading buildings:', { error: error });
       } finally {
         setLoading(false);
       }
@@ -215,14 +217,14 @@ export function BuildingSelectorCard({
         }));
 
         setFloors(floorOptions);
-        console.log(`✅ [BuildingSelectorCard] Loaded ${floorOptions.length} floors for building ${draftBuildingId}`);
+        logger.info(`[BuildingSelectorCard] Loaded ${floorOptions.length} floors for building ${draftBuildingId}`);
 
         // If draft floor is not in the new building, reset
         if (draftFloorId && !floorOptions.find(f => f.id === draftFloorId)) {
           setDraftFloorId(undefined);
         }
       } catch (error) {
-        console.error('❌ [BuildingSelectorCard] Error loading floors:', error);
+        logger.error('[BuildingSelectorCard] Error loading floors:', { error: error });
         setFloors([]);
       } finally {
         setLoadingFloors(false);
@@ -254,7 +256,7 @@ export function BuildingSelectorCard({
   // 🏢 ENTERPRISE: Save to Firestore (Building + Floor)
   const handleSave = useCallback(async () => {
     if (!unitId) {
-      console.error('❌ [BuildingSelectorCard] No unitId provided');
+      logger.error('[BuildingSelectorCard] No unitId provided');
       return;
     }
 
@@ -275,7 +277,7 @@ export function BuildingSelectorCard({
         updatedAt: new Date().toISOString(),
       });
 
-      console.log(`✅ [BuildingSelectorCard] Unit ${unitId} linked to building ${buildingIdToSave}, floor ${floorIdToSave}`);
+      logger.info(`[BuildingSelectorCard] Unit ${unitId} linked to building ${buildingIdToSave}, floor ${floorIdToSave}`);
       setSaveStatus('success');
 
       // 🏢 ENTERPRISE: Dispatch real-time event for Navigation updates
@@ -293,7 +295,7 @@ export function BuildingSelectorCard({
       // Reset success status after 3 seconds
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
-      console.error('❌ [BuildingSelectorCard] Error saving:', error);
+      logger.error('[BuildingSelectorCard] Error saving:', { error: error });
       setSaveStatus('error');
     } finally {
       setSaving(false);

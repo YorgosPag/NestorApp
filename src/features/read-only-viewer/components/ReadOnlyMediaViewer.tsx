@@ -45,6 +45,8 @@ import type { FileRecord } from '@/types/file-record';
 // 🏢 ENTERPRISE: Centralized Gallery Components (NO DUPLICATES)
 import { FloorplanGallery } from '@/components/shared/files/media/FloorplanGallery';
 import { MediaGallery } from '@/components/shared/files/media/MediaGallery';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ReadOnlyMediaViewer');
 
 // =============================================================================
 // TYPES
@@ -157,7 +159,7 @@ export function ReadOnlyMediaViewer({
 
   // 🏢 Floor floorplans (Κάτοψη Ορόφου) - Uses FloorFloorplanService (ADR-060)
   // This hook loads from dxf-scenes/{fileId}/scene.json via FloorFloorplanService
-  console.log('🏢 [ReadOnlyMediaViewer] Floor props:', { floorId, buildingId, floorNumber, companyId: user?.companyId });
+  logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: user?.companyId } });
   const { floorFloorplan, loading: floorFloorplanLoading, error: floorFloorplanError, refetch: refetchFloorFloorplan } = useFloorFloorplans({
     floorId: floorId || null,
     buildingId: buildingId || null,
@@ -170,7 +172,7 @@ export function ReadOnlyMediaViewer({
     const files: FileRecord[] = [];
 
     // 🔍 DEBUG: Log what data we're receiving
-    console.log('🏢 [ReadOnlyMediaViewer] floorFloorplan data:', {
+    logger.info('[ReadOnlyMediaViewer] floorFloorplan data:', { data: {
       hasFloorFloorplan: !!floorFloorplan,
       hasScene: !!floorFloorplan?.scene,
       sceneEntitiesCount: floorFloorplan?.scene?.entities?.length || 0,
@@ -178,7 +180,7 @@ export function ReadOnlyMediaViewer({
       sceneBounds: floorFloorplan?.scene?.bounds,
       fileType: floorFloorplan?.fileType,
       fileName: floorFloorplan?.fileName,
-    });
+    } });
 
     if (floorFloorplan) {
       // Create a synthetic FileRecord from FloorFloorplanData

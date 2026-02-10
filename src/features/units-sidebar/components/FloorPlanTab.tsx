@@ -28,6 +28,8 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FloorPlanTab');
 
 // =============================================================================
 // PROPS
@@ -105,7 +107,7 @@ export function FloorPlanTab({
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[FloorPlanTab] Failed to fetch company name:', error);
+        logger.error('[FloorPlanTab] Failed to fetch company name:', { error: error });
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };

@@ -1,4 +1,6 @@
 import 'server-only';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('environment-security-config');
 
 /**
  * 🏢 ENTERPRISE ENVIRONMENT SECURITY CONFIGURATION
@@ -308,7 +310,7 @@ export function logEnvironmentSecurityStatus(): void {
     return;
   }
 
-  console.log('🔒 [ENVIRONMENT_SECURITY] Current Configuration:', {
+  logger.info('[ENVIRONMENT_SECURITY] Current Configuration', {
     environment: env,
     apiAccess: policy.allowApiAccess,
     authentication: policy.requireAuthentication,

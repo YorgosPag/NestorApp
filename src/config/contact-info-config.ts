@@ -4,6 +4,9 @@
  * ZERO HARDCODED CONTACT VALUES - All data από environment variables
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('contact-info-config');
+
 interface ContactInfoConfig {
   readonly DEMO_PHONE_MOBILE: string;
   readonly DEMO_PHONE_BUSINESS: string;
@@ -104,7 +107,7 @@ export const ContactInfoUtils = {
       try {
         return JSON.parse(envDemoContacts);
       } catch (error) {
-        console.warn('⚠️ Invalid DEMO_CONTACTS_JSON format, using dynamic fallback');
+        logger.warn('Invalid DEMO_CONTACTS_JSON format, using dynamic fallback');
       }
     }
 

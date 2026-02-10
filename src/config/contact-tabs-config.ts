@@ -20,6 +20,8 @@ import {
   type UnifiedTabConfig,
   type ContactType
 } from './unified-tabs-factory';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('contact-tabs-config');
 
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports (DEPRECATED but maintained)
 
@@ -167,25 +169,18 @@ export function validateContactTabsConfig(): {
 export function debugContactTabsConfig(): void {
   if (typeof window === 'undefined') return; // Server-side safe
 
-  console.group('👥 Contact Tabs Configuration Debug');
-
   const validation = validateContactTabsConfig();
-  console.log('📊 Validation:', validation);
-
   const contactTypes: ContactType[] = ['individual', 'company', 'service'];
 
+  const tabsByType: Record<string, string[]> = {};
   for (const type of contactTypes) {
     const tabs = getSortedContactTabs(type);
-    console.group(`📋 ${type.toUpperCase()} Tabs (${tabs.length})`);
-
-    tabs.forEach((tab, index) => {
-      console.log(`${index + 1}. ${tab.label} (${tab.value}) - ${tab.component || 'NO COMPONENT'}`);
-    });
-
-    console.groupEnd();
+    tabsByType[type] = tabs.map((tab, index) =>
+      `${index + 1}. ${tab.label} (${tab.value}) - ${tab.component || 'NO COMPONENT'}`
+    );
   }
 
-  console.groupEnd();
+  logger.info('Contact Tabs Configuration Debug', { validation, tabsByType });
 }
 
 // ============================================================================

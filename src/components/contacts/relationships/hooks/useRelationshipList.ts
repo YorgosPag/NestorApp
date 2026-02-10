@@ -12,6 +12,8 @@ import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import type { UseRelationshipListReturn } from '../types/relationship-manager.types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useRelationshipList');
 
 /**
  * 🪝 useRelationshipList Hook
@@ -49,17 +51,17 @@ export const useRelationshipList = (
       setLoading(true);
       setError(null);
 
-      console.log('📋 Loading relationships for contact:', contactId);
+      logger.info('Loading relationships for contact:', { data: contactId });
       const data = await ContactRelationshipService.getContactRelationships(contactId);
 
       setRelationships(data);
       onRelationshipsChange?.(data);
 
-      console.log('✅ Loaded relationships:', data.length);
+      logger.info('Loaded relationships:', { data: data.length });
     } catch (err) {
       const errorMessage = 'Σφάλμα φόρτωσης σχέσεων επαφής';
       setError(errorMessage);
-      console.error('❌ Error loading relationships:', err);
+      logger.error('Error loading relationships:', { error: err });
       setRelationships([]);
     } finally {
       setLoading(false);
@@ -74,7 +76,7 @@ export const useRelationshipList = (
       setLoading(true);
       setError(null);
 
-      console.log('🗑️ Deleting relationship:', relationshipId);
+      logger.info('Deleting relationship:', { data: relationshipId });
       await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
 
       // Remove from local state immediately for better UX
@@ -91,11 +93,11 @@ export const useRelationshipList = (
         return newSet;
       });
 
-      console.log('✅ Relationship deleted successfully');
+      logger.info('Relationship deleted successfully');
     } catch (err) {
       const errorMessage = 'Σφάλμα διαγραφής σχέσης';
       setError(errorMessage);
-      console.error('❌ Error deleting relationship:', err);
+      logger.error('Error deleting relationship:', { error: err });
 
       // Refresh list to ensure consistency
       await loadRelationships();
@@ -108,9 +110,9 @@ export const useRelationshipList = (
    * 🔄 Refresh relationships (public API)
    */
   const refreshRelationships = useCallback(async () => {
-    console.log('🔄 RELATIONSHIP LIST: refreshRelationships called - reloading relationships...');
+    logger.info('RELATIONSHIP LIST: refreshRelationships called - reloading relationships...');
     await loadRelationships();
-    console.log('✅ RELATIONSHIP LIST: refreshRelationships completed - relationships should be updated');
+    logger.info('RELATIONSHIP LIST: refreshRelationships completed - relationships should be updated');
   }, [loadRelationships]);
 
   // ============================================================================

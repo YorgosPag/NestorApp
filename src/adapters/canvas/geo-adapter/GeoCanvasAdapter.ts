@@ -27,6 +27,9 @@ import type { CanvasConfig as DxfCanvasConfig } from '../../../subapps/dxf-viewe
 import type { Point2D } from '../../../core/canvas/primitives/coordinates';
 import { CoordinateUtils } from '../../../core/canvas/primitives/coordinates';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('GeoCanvasAdapter');
+
 /**
  * 🗺️ GEO-SPECIFIC TYPES
  * Geographic canvas-specific types και interfaces
@@ -140,10 +143,10 @@ export class GeoCanvasAdapter implements ICanvasProvider {
       }
 
       this._isInitialized = true;
-      console.log(`[GeoCanvasAdapter] Initialized provider: ${this.id}`);
+      logger.info(`[GeoCanvasAdapter] Initialized provider: ${this.id}`);
 
     } catch (error) {
-      console.error(`[GeoCanvasAdapter] Initialization failed:`, error);
+      logger.error(`[GeoCanvasAdapter] Initialization failed`, { error });
       throw new Error(`Failed to initialize Geo Canvas Provider '${this.id}': ${error}`);
     }
   }
@@ -158,7 +161,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
         try {
           plugin.cleanup();
         } catch (error) {
-          console.error(`[GeoCanvasAdapter] Plugin cleanup error: ${plugin.name}`, error);
+          logger.error(`[GeoCanvasAdapter] Plugin cleanup error: ${plugin.name}`, { error });
         }
       }
 
@@ -169,11 +172,11 @@ export class GeoCanvasAdapter implements ICanvasProvider {
       this.middlewares = [];
       this.plugins = [];
 
-      console.log(`[GeoCanvasAdapter] Cleaned up provider: ${this.id}`);
+      logger.info(`[GeoCanvasAdapter] Cleaned up provider: ${this.id}`);
       this._isInitialized = false;
 
     } catch (error) {
-      console.error(`[GeoCanvasAdapter] Cleanup error:`, error);
+      logger.error(`[GeoCanvasAdapter] Cleanup error`, { error });
       throw error;
     }
   }
@@ -241,11 +244,11 @@ export class GeoCanvasAdapter implements ICanvasProvider {
         providerId: this.id
       });
 
-      console.log(`[GeoCanvasAdapter] Created geo canvas: ${config.canvasId}`);
+      logger.info(`[GeoCanvasAdapter] Created geo canvas: ${config.canvasId}`);
       return canvasInstance;
 
     } catch (error) {
-      console.error(`[GeoCanvasAdapter] Geo canvas creation failed:`, error);
+      logger.error(`[GeoCanvasAdapter] Geo canvas creation failed`, { error });
       throw error;
     }
   }
@@ -260,7 +263,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
 
     const canvas = this.canvasInstances.get(id);
     if (!canvas) {
-      console.warn(`[GeoCanvasAdapter] Geo canvas '${id}' not found for destruction`);
+      logger.warn(`[GeoCanvasAdapter] Geo canvas '${id}' not found for destruction`);
       return;
     }
 
@@ -278,10 +281,10 @@ export class GeoCanvasAdapter implements ICanvasProvider {
         providerId: this.id
       });
 
-      console.log(`[GeoCanvasAdapter] Destroyed geo canvas: ${id}`);
+      logger.info(`[GeoCanvasAdapter] Destroyed geo canvas: ${id}`);
 
     } catch (error) {
-      console.error(`[GeoCanvasAdapter] Geo canvas destruction failed:`, error);
+      logger.error(`[GeoCanvasAdapter] Geo canvas destruction failed`, { error });
       throw error;
     }
   }
@@ -319,7 +322,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
   updateGeoTransform(canvasId: string, transform: Partial<GeographicTransform>): void {
     const existing = this.geoTransforms.get(canvasId);
     if (!existing) {
-      console.warn(`[GeoCanvasAdapter] No geo transform found for canvas '${canvasId}'`);
+      logger.warn(`[GeoCanvasAdapter] No geo transform found for canvas '${canvasId}'`);
       return;
     }
 
@@ -439,7 +442,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
       try {
         listener(event, data);
       } catch (error) {
-        console.error(`[GeoCanvasAdapter] Event listener error for '${event}':`, error);
+        logger.error(`[GeoCanvasAdapter] Event listener error for '${event}'`, { error });
       }
     });
 
@@ -560,7 +563,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
           }
         }
       } catch (error) {
-        console.error(`[GeoCanvasAdapter] Middleware '${middleware.name}' hook '${hookName}' error:`, error);
+        logger.error(`[GeoCanvasAdapter] Middleware '${middleware.name}' hook '${hookName}' error`, { error });
       }
     }
   }

@@ -40,6 +40,8 @@
 
 import { auth } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('enterprise-api-client');
 
 // =============================================================================
 // TYPES & INTERFACES
@@ -320,7 +322,7 @@ export class EnterpriseApiClient {
         if (shouldRetry) {
           // Wait before retry με exponential backoff
           const delay = this.calculateBackoff(attempts);
-          console.warn(`[API] Retrying request (${attempts}/${maxRetries}) after ${delay}ms...`);
+          logger.warn(`[API] Retrying request (${attempts}/${maxRetries}) after ${delay}ms...`);
           await this.sleep(delay);
           continue;
         }
@@ -381,7 +383,7 @@ export class EnterpriseApiClient {
 
       return token;
     } catch (error) {
-      console.error('[API] Failed to get ID token:', error);
+      logger.error('[API] Failed to get ID token', { error });
       throw new ApiClientError(
         'Failed to get authentication token',
         401,
@@ -562,8 +564,8 @@ export class EnterpriseApiClient {
 
         // 🚨 CONTRACT VIOLATION: 200 OK but not canonical format
         // This helps identify endpoints that need migration to canonical format
-        console.warn(
-          `⚠️ [API Contract] ${context.url} returned 200 but not canonical format. Keys: [${keys.join(', ')}]`
+        logger.warn(
+          `[API Contract] ${context.url} returned 200 but not canonical format. Keys: [${keys.join(', ')}]`
         );
 
         // For backwards compatibility, still return the raw response
@@ -711,7 +713,7 @@ export class EnterpriseApiClient {
   private logRequest(context: RequestContext, attempt: number, maxRetries: number): void {
     if (process.env.NODE_ENV === 'development') {
       const retryInfo = maxRetries > 1 ? ` (attempt ${attempt}/${maxRetries})` : '';
-      console.log(`🌐 [API] ${context.method} ${context.url}${retryInfo}`);
+      logger.info(`[API] ${context.method} ${context.url}${retryInfo}`);
     }
   }
 
@@ -721,7 +723,7 @@ export class EnterpriseApiClient {
   private logSuccess(context: RequestContext, status: number): void {
     if (process.env.NODE_ENV === 'development') {
       const duration = Date.now() - context.startTime;
-      console.log(`✅ [API] ${context.method} ${context.url} - ${status} (${duration}ms)`);
+      logger.info(`[API] ${context.method} ${context.url} - ${status} (${duration}ms)`);
     }
   }
 
@@ -731,11 +733,10 @@ export class EnterpriseApiClient {
   private logError(context: RequestContext, error: Error): void {
     const duration = Date.now() - context.startTime;
     const isClientError = error instanceof ApiClientError && error.statusCode >= 400 && error.statusCode < 500;
-    const logFn = isClientError ? console.warn : console.error;
-    const icon = isClientError ? '⚠️' : '❌';
-    logFn(
-      `${icon} [API] ${context.method} ${context.url} - ${isClientError ? error.statusCode : 'Failed'} (${duration}ms):`,
-      error.message
+    const logMethod = isClientError ? 'warn' : 'error';
+    logger[logMethod](
+      `[API] ${context.method} ${context.url} - ${isClientError ? error.statusCode : 'Failed'} (${duration}ms)`,
+      { error: error.message }
     );
   }
 }

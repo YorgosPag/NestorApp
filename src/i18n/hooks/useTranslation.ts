@@ -5,6 +5,9 @@ import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useTranslation');
+
 /**
  * Custom translation hook with lazy loading support
  *
@@ -47,11 +50,11 @@ export const useTranslation = (namespace?: string | string[]) => {
         .then(() => {
           setNamespaceLoaded(true);
           if (process.env.NODE_ENV === 'development') {
-            console.log(`? [i18n] Namespace(s) "${namespacesToLoad.join(', ')}" loaded for language "${i18n.language}"`);
+            logger.info(`[i18n] Namespace(s) "${namespacesToLoad.join(', ')}" loaded for language "${i18n.language}"`);
           }
         })
         .catch(error => {
-          console.error(`Failed to load namespace(s): ${namespacesToLoad.join(', ')}`, error);
+          logger.error(`Failed to load namespace(s): ${namespacesToLoad.join(', ')}`, { error });
           setNamespaceLoaded(true); // Mark as loaded to prevent infinite loading
         });
     }
@@ -83,7 +86,7 @@ export const useTranslation = (namespace?: string | string[]) => {
           localStorage.setItem('preferred-language', lng);
         }
       } catch (error) {
-        console.error('Failed to change language:', error);
+        logger.error('Failed to change language', { error });
       }
     },
     // 🏢 ENTERPRISE: Loading state for this specific namespace (not just ready)

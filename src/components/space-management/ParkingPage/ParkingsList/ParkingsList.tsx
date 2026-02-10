@@ -177,11 +177,11 @@ export function ParkingsList({
               setSortBy(newSortBy);
               setSortOrder(newSortOrder);
             }}
-            onNewItem={() => console.log('New parking')}
-            onEditItem={(id) => console.log('Edit parking:', id)}
-            onDeleteItems={(ids) => console.log('Delete parking:', ids)}
-            onExport={() => console.log('Export parking')}
-            onRefresh={() => console.log('Refresh parking')}
+            onNewItem={() => logger.info('New parking')}
+            onEditItem={(id) => logger.info('Edit parking', { id })}
+            onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
+            onExport={() => logger.info('Export parking')}
+            onRefresh={() => logger.info('Refresh parking')}
           />
         )}
       </div>

@@ -20,6 +20,9 @@
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Notification, Severity } from '@/types/notification';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('NotificationApi');
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -101,23 +104,23 @@ function transformToNotificationItem(notification: Notification): NotificationIt
  */
 export async function fetchNotifications(): Promise<NotificationItem[]> {
   try {
-    console.log('🔔 [NotificationApi] Fetching notifications from API...');
+    logger.info('[NotificationApi] Fetching notifications from API...');
 
     const response = await apiClient.get<NotificationsApiResponse>(
       '/api/notifications?limit=50'
     );
 
     if (!response.success || !response.items) {
-      console.warn('⚠️ [NotificationApi] Failed to fetch:', response.error);
+      logger.warn('[NotificationApi] Failed to fetch', { error: response.error });
       return [];
     }
 
     const items = response.items.map(transformToNotificationItem);
-    console.log(`✅ [NotificationApi] Fetched ${items.length} notifications`);
+    logger.info(`[NotificationApi] Fetched ${items.length} notifications`);
 
     return items;
   } catch (error) {
-    console.error('❌ [NotificationApi] Error fetching notifications:', error);
+    logger.error('[NotificationApi] Error fetching notifications', { error });
     return [];
   }
 }
@@ -135,7 +138,7 @@ export async function markNotificationsRead(notificationIds: string[]): Promise<
 
     return response.success;
   } catch (error) {
-    console.error('❌ [NotificationApi] Error marking as read:', error);
+    logger.error('[NotificationApi] Error marking as read', { error });
     return false;
   }
 }
@@ -145,7 +148,7 @@ export async function markNotificationsRead(notificationIds: string[]): Promise<
  * @deprecated Use `useNotifications` hook for real-time updates
  */
 export function connectSampleWS(onEvent: (n: NotificationItem) => void): () => void {
-  console.warn('⚠️ [NotificationApi] connectSampleWS is deprecated. Use useNotifications hook.');
+  logger.warn('[NotificationApi] connectSampleWS is deprecated. Use useNotifications hook.');
 
   // No-op - the useNotifications hook handles real-time subscriptions
   // This is kept for backward compatibility only

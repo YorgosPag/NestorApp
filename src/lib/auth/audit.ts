@@ -26,6 +26,8 @@ import type {
   AuditChangeValue,
   AuditMetadata,
 } from './types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('audit');
 
 // =============================================================================
 // CONSTANTS
@@ -120,7 +122,7 @@ export async function logAuditEvent(
   const db = getDb();
   if (!db) {
     // Log to console as fallback
-    console.log('[AUDIT] Firestore not available, logging to console:', {
+    logger.info('[AUDIT] Firestore not available, logging to console:', {
       companyId: ctx.companyId,
       action,
       actorId: ctx.uid,
@@ -166,8 +168,8 @@ export async function logAuditEvent(
       .add(entry);
   } catch (error) {
     // Never throw on audit failure - just log
-    console.error('[AUDIT] Failed to write audit log:', error);
-    console.log('[AUDIT] Fallback entry:', JSON.stringify(entry));
+    logger.error('[AUDIT] Failed to write audit log:', { error });
+    logger.info('[AUDIT] Fallback entry:', { entry: JSON.stringify(entry) });
   }
 }
 
@@ -625,7 +627,7 @@ export async function logWebhookEvent(
   const db = getDb();
   if (!db) {
     // Log to console as fallback
-    console.log('[AUDIT] [WEBHOOK] Firestore not available, logging to console:', {
+    logger.info('[AUDIT] [WEBHOOK] Firestore not available, logging to console:', {
       source: webhookSource,
       webhookId,
       timestamp: new Date().toISOString(),
@@ -676,7 +678,7 @@ export async function logWebhookEvent(
       .add(entry);
   } catch (error) {
     // Never throw on audit failure - just log
-    console.error('[AUDIT] [WEBHOOK] Failed to write webhook audit log:', error);
-    console.log('[AUDIT] [WEBHOOK] Fallback entry:', JSON.stringify(entry));
+    logger.error('[AUDIT] [WEBHOOK] Failed to write webhook audit log:', { error });
+    logger.info('[AUDIT] [WEBHOOK] Fallback entry:', { entry: JSON.stringify(entry) });
   }
 }

@@ -21,6 +21,8 @@ import {
   Award,
   Zap
 } from 'lucide-react';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useRelationshipStatistics');
 
 // ============================================================================
 // HOOK
@@ -44,18 +46,18 @@ export function useRelationshipStatistics(
   // ============================================================================
 
   const stats: RelationshipStats = useMemo(() => {
-    console.log('📊 RELATIONSHIPS STATS: Current relationships for contactId', contactId, ':', relationships);
-    console.log('📊 RELATIONSHIPS TYPES:', relationships.map(r => ({
+    logger.info('RELATIONSHIPS STATS: Current relationships for contactId', { contactId, count: relationships.length });
+    logger.info('RELATIONSHIPS TYPES:', { data: relationships.map(r => ({
       id: r.id,
       type: r.relationshipType,
       source: r.sourceContactId,
       target: r.targetContactId
-    })));
+    })) });
 
     const calculatedStats = calculateRelationshipStats(relationships);
 
-    console.log('📊 RELATIONSHIPS BY TYPE:', calculatedStats.byType);
-    console.log('🏢 MANAGEMENT STATS:', {
+    logger.info('RELATIONSHIPS BY TYPE:', { data: calculatedStats.byType });
+    logger.info('MANAGEMENT STATS:', { data: {
       directManagementCount: calculatedStats.management.direct,
       positionBasedManagementCount: calculatedStats.management.positionBased,
       totalManagementCount: calculatedStats.management.total,
@@ -69,7 +71,7 @@ export function useRelationshipStatistics(
             rel.position.toLowerCase().includes('ceo')
           ));
       }).map(r => ({ type: r.relationshipType, position: r.position }))
-    });
+    } });
 
     return calculatedStats;
   }, [relationships, contactId]);
@@ -140,22 +142,22 @@ export function useRelationshipStatistics(
   // ============================================================================
 
   useMemo(() => {
-    console.log('🔍 DEBUG RELATIONSHIPS DATA:', relationships.map(rel => ({
+    logger.info('DEBUG RELATIONSHIPS DATA:', { data: relationships.map(rel => ({
       id: rel.id,
       type: rel.relationshipType,
       createdAt: rel.createdAt,
       createdAtType: typeof rel.createdAt,
       department: rel.department,
       departmentType: typeof rel.department
-    })));
+    })) });
 
     relationships.forEach(rel => {
-      console.log('🔍 RECENT CHECK:', {
+      logger.info('RECENT CHECK:', { data: {
         id: rel.id,
         createdAt: rel.createdAt,
         createdAtExists: !!rel.createdAt,
         createdAtType: typeof rel.createdAt
-      });
+      } });
 
       if (rel.createdAt) {
         const oneMonthAgo = new Date();
@@ -173,33 +175,33 @@ export function useRelationshipStatistics(
         }
 
         const isRecent = relCreatedAt > oneMonthAgo;
-        console.log('🔍 RECENT RESULT:', {
+        logger.info('RECENT RESULT:', { data: {
           id: rel.id,
           relCreatedAt: relCreatedAt.toISOString(),
           oneMonthAgo: oneMonthAgo.toISOString(),
           isRecent
-        });
+        } });
       }
 
       const hasDept = !!(rel.department && rel.department.trim());
-      console.log('🔍 DEPT CHECK:', {
+      logger.info('DEPT CHECK:', { data: {
         id: rel.id,
         department: rel.department,
         departmentTrimmed: rel.department?.trim(),
         hasDept,
         type: rel.relationshipType
-      });
+      } });
     });
 
     const departmentsWithData = relationships.filter(rel =>
       rel.department && rel.department.trim()
     );
 
-    console.log('🔍 DEPARTMENTS FINAL:', {
+    logger.info('DEPARTMENTS FINAL:', { data: {
       departmentsWithData: departmentsWithData.length,
       uniqueDepartments: Array.from(new Set(departmentsWithData.map(rel => rel.department!.trim()))),
       departmentsCount: stats.departments
-    });
+    } });
   }, [relationships, stats.departments]);
 
   // ============================================================================

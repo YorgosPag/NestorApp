@@ -25,6 +25,8 @@ import {
   type PermissionCheckOptions,
 } from './permissions';
 import { apiErrorHandler } from '@/lib/api/ApiErrorHandler';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('middleware');
 
 // =============================================================================
 // TYPES
@@ -200,7 +202,7 @@ export function withAuth<T = unknown>(
       // User must have at least one of the required roles
       const hasRequiredRole = requiredRoles.includes(ctx.globalRole);
       if (!hasRequiredRole) {
-        console.warn(
+        logger.warn(
           `[withAuth] Role denied: user ${ctx.uid} (role: ${ctx.globalRole}) ` +
           `tried to access route requiring one of: ${requiredRoles.join(', ')}`
         );

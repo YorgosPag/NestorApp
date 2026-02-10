@@ -16,6 +16,9 @@ import { Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ProtectedRouteProps, UserRole } from '../types/auth.types';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ProtectedRoute');
+
 // =============================================================================
 // PROTECTED ROUTE COMPONENT
 // =============================================================================
@@ -36,7 +39,7 @@ export function ProtectedRoute({
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      console.log('🛡️ [ProtectedRoute] User not authenticated, redirecting to:', redirectTo);
+      logger.info('[ProtectedRoute] User not authenticated, redirecting to', { redirectTo });
       router.push(redirectTo);
     }
   }, [isAuthenticated, isLoading, router, redirectTo]);
@@ -50,7 +53,7 @@ export function ProtectedRoute({
       const hasRequiredRole = checkRole(user?.role, requiredRole);
 
       if (!hasRequiredRole) {
-        console.log('🛡️ [ProtectedRoute] User lacks required role:', requiredRole);
+        logger.info('[ProtectedRoute] User lacks required role', { requiredRole });
         router.push('/unauthorized');
       }
     }

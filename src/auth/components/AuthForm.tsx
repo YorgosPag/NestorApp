@@ -83,6 +83,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { TRANSITION_PRESETS } from '@/components/ui/effects/transitions';
 import type { AuthFormMode, AuthFormProps } from '../types/auth.types';
 import { AUTH_ROUTES } from '@/lib/routes';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AuthForm');
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Reuse existing header components for auth pages (ADR-020.1)
@@ -240,26 +242,26 @@ export function AuthForm({
       const { email, password, givenName, familyName } = formData;
 
       if (mode === 'signin') {
-        console.log('🔐 [AuthForm] Sign in attempt');
+        logger.info('[AuthForm] Sign in attempt');
         await signIn(email, password);
         setSuccessMessage(t('messages.signinSuccess'));
         onSuccess?.();
         // 🏢 ENTERPRISE: Show loading overlay before redirect
         setIsRedirecting(true);
-        console.log('🚀 [AuthForm] Redirecting to:', redirectTo);
+        logger.info('[AuthForm] Redirecting to', { redirectTo });
         // Small delay to show the loading state before navigation
         setTimeout(() => {
           router.push(redirectTo);
         }, 100);
         return; // Exit early, no need to continue
       } else if (mode === 'signup') {
-        console.log('🔐 [AuthForm] Sign up attempt');
+        logger.info('[AuthForm] Sign up attempt');
         // 🏢 ENTERPRISE: Pass SignUpData object with structured name data
         await signUp({ email, password, givenName, familyName });
         setSuccessMessage(t('messages.signupSuccess'));
         onSuccess?.();
       } else if (mode === 'reset') {
-        console.log('🔐 [AuthForm] Password reset attempt');
+        logger.info('[AuthForm] Password reset attempt');
         await resetPassword(email);
         setSuccessMessage(t('messages.resetEmailSent'));
         setMode('signin');
@@ -274,7 +276,7 @@ export function AuthForm({
         confirmPassword: ''
       });
     } catch (err) {
-      console.error('[ERROR] [AuthForm] Error:', err);
+      logger.error('[AuthForm] Error', { error: err });
     } finally {
       setLocalLoading(false);
     }
@@ -291,7 +293,7 @@ export function AuthForm({
       setValidationError(null);
       clearError();
 
-      console.log('[ENTERPRISE] [AuthForm] Google Sign-In attempt');
+      logger.info('[AuthForm] Google Sign-In attempt');
       await signInWithGoogle();
 
       // Success! Show message and redirect
@@ -300,7 +302,7 @@ export function AuthForm({
       setIsRedirecting(true);
       router.push(redirectTo);
     } catch (err) {
-      console.error('[ERROR] [AuthForm] Google Sign-In error:', err);
+      logger.error('[AuthForm] Google Sign-In error', { error: err });
     } finally {
       setGoogleLoading(false);
     }
@@ -330,7 +332,7 @@ export function AuthForm({
         router.push(redirectTo);
       }, 100);
     } catch (err) {
-      console.error('[ERROR] [AuthForm] MFA verification error:', err);
+      logger.error('[AuthForm] MFA verification error', { error: err });
     } finally {
       setLocalLoading(false);
     }

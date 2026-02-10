@@ -12,6 +12,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('WebSocketContext');
+
 /** WebSocket payload type for type-safe messaging */
 type WebSocketPayload = Record<string, unknown>;
 
@@ -229,9 +232,7 @@ export function WebSocketProvider({
     // Guard: WebSocket transport must be available
     if (!WS_TRANSPORT.isAvailable) {
       if (enableDevtools && WS_TRANSPORT.disabledReason) {
-        console.info(
-          `[WebSocket] ℹ️ Transport disabled: ${WS_TRANSPORT.disabledReason}`
-        );
+        logger.info(`[WebSocket] Transport disabled: ${WS_TRANSPORT.disabledReason}`);
       }
       return;
     }
@@ -240,7 +241,7 @@ export function WebSocketProvider({
       const ws = initializeWebSocket();
 
       ws.connect().catch((error) => {
-        console.warn('[WebSocket] Connection failed:', error);
+        logger.warn('[WebSocket] Connection failed', { error });
       });
 
       return () => {
@@ -263,7 +264,7 @@ export function WebSocketProvider({
       const pendingCount = pendingListenersRef.current.length;
 
       if (enableDevtools) {
-        console.log(`[WebSocket] 🚀 Flushing ${pendingCount} pending listeners...`);
+        logger.info(`[WebSocket] Flushing ${pendingCount} pending listeners...`);
       }
 
       // Attach all pending listeners to the now-ready WebSocket
@@ -273,7 +274,7 @@ export function WebSocketProvider({
         listenerMapRef.current.set(pending.id, realId);
 
         if (enableDevtools) {
-          console.log(`[WebSocket] ✅ Attached "${pending.type}" (${pending.id} → ${realId})`);
+          logger.info(`[WebSocket] Attached "${pending.type}" (${pending.id} -> ${realId})`);
         }
       });
 
@@ -281,7 +282,7 @@ export function WebSocketProvider({
       pendingListenersRef.current = [];
 
       if (enableDevtools) {
-        console.log(`[WebSocket] ✅ All pending listeners attached successfully!`);
+        logger.info(`[WebSocket] All pending listeners attached successfully`);
       }
     }
   }, [wsRef.current, enableDevtools]);
@@ -338,7 +339,7 @@ export function WebSocketProvider({
     }
   ) => {
     if (!wsRef.current) {
-      console.warn('WebSocket not initialized');
+      logger.warn('WebSocket not initialized');
       return false;
     }
     return wsRef.current.send(type, payload, options);
@@ -361,7 +362,7 @@ export function WebSocketProvider({
       });
 
       if (enableDevtools) {
-        console.log(`[WebSocket] 📋 Queued listener for "${type}" (ID: ${pendingId})`);
+        logger.info(`[WebSocket] Queued listener for "${type}" (ID: ${pendingId})`);
       }
 
       return pendingId;
@@ -380,7 +381,7 @@ export function WebSocketProvider({
       if (index !== -1) {
         const removed = pendingListenersRef.current.splice(index, 1)[0];
         if (enableDevtools) {
-          console.log(`[WebSocket] 🗑️ Removed pending listener "${removed.type}" (ID: ${listenerId})`);
+          logger.info(`[WebSocket] Removed pending listener "${removed.type}" (ID: ${listenerId})`);
         }
         return true;
       }
@@ -391,7 +392,7 @@ export function WebSocketProvider({
         listenerMapRef.current.delete(listenerId);
         const success = wsRef.current.removeEventListener(realId);
         if (enableDevtools && success) {
-          console.log(`[WebSocket] 🗑️ Removed mapped listener (${listenerId} → ${realId})`);
+          logger.info(`[WebSocket] Removed mapped listener (${listenerId} -> ${realId})`);
         }
         return success;
       }
@@ -423,7 +424,7 @@ export function WebSocketProvider({
   const reconnect = useCallback(async () => {
     // 🏢 ENTERPRISE: Prevent reconnect when transport is unavailable
     if (!WS_TRANSPORT.isAvailable) {
-      console.info('[WebSocket] ℹ️ Reconnect skipped — transport not available');
+      logger.info('[WebSocket] Reconnect skipped -- transport not available');
       return;
     }
     if (!wsRef.current) {

@@ -2,6 +2,9 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('i18n-lazy-config');
+
 /**
  * Lazy-loading i18n configuration
  * Loads translation files on demand for better performance
@@ -163,7 +166,7 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           translations = await import('./locales/el/addresses.json');
           break;
         default:
-          console.warn(`Namespace ${namespace} not found for language ${language}`);
+          logger.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
       }
     } else if (language === 'en') {
@@ -260,7 +263,7 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           translations = await import('./locales/en/addresses.json');
           break;
         default:
-          console.warn(`Namespace ${namespace} not found for language ${language}`);
+          logger.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
       }
     } else {
@@ -274,14 +277,14 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
     }
     return data;
   } catch (error) {
-    console.warn(`Failed to load translations for ${language}:${namespace}`, error);
+    logger.warn(`Failed to load translations for ${language}:${namespace}`, { error });
 
     // Fallback to Greek if available and not already trying Greek
     if (language !== 'el') {
       try {
         return await loadTranslations('el', namespace, forceReload);
       } catch (fallbackError) {
-        console.error(`Fallback failed for ${namespace}`, fallbackError);
+        logger.error(`Fallback failed for ${namespace}`, { error: fallbackError });
       }
     }
 
@@ -409,7 +412,7 @@ export function getLanguageDisplayName(language: Language): string {
  */
 export function clearTranslationCache() {
   translationCache.clear();
-  console.log('🗑️ Translation cache cleared');
+  logger.info('Translation cache cleared');
 }
 
 export default i18n;

@@ -4,6 +4,9 @@
 import { ListResponse, AckRequest, ActionRequest, UserPreferences } from '@/types/notification';
 import { ListResponseSchema, NotificationSchema, UserPreferencesSchema } from '@/schemas/notification';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('NotificationClient');
+
 export type ClientOptions = {
   baseUrl: string; // e.g. '/api/notifications'
   token?: string;  // bearer token if needed
@@ -88,7 +91,7 @@ export class NotificationClient {
   ) {
     // ✅ SSR-safe: Only run in browser
     if (typeof window === 'undefined') {
-      console.warn('NotificationClient.subscribe() called during SSR - skipping');
+      logger.warn('NotificationClient.subscribe() called during SSR - skipping');
       return;
     }
 

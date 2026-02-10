@@ -37,6 +37,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { updateProject } from '@/services/projects.service';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('GeneralProjectTab');
 
 export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   // 🏢 ENTERPRISE: Router for soft refresh after save
@@ -97,7 +99,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     try {
       setIsSaving(true);
       setSaveError(null);
-      console.log('🏗️ Saving project via Server Action...', projectData);
+      logger.info('Saving project via Server Action...', { data: projectData });
 
       // 🏢 ENTERPRISE: Call server action with update payload
       const result = await updateProject(project.id, {
@@ -111,7 +113,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         throw new Error(result.error || 'Failed to save project');
       }
 
-      console.log('✅ Project saved successfully via Server Action');
+      logger.info('Project saved successfully via Server Action');
       setIsEditing(false);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
@@ -127,7 +129,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       });
 
     } catch (error) {
-      console.error('❌ Error saving project:', error);
+      logger.error('Error saving project:', { error: error });
       setSaveError(error instanceof Error ? error.message : 'Failed to save project');
     } finally {
       setIsSaving(false);

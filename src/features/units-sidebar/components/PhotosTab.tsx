@@ -29,6 +29,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { DEFAULT_PHOTO_ACCEPT } from '@/config/file-upload-config';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('PhotosTab');
 
 // =============================================================================
 // PROPS
@@ -99,7 +101,7 @@ export function PhotosTab({
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[PhotosTab] Failed to fetch company name:', error);
+        logger.error('[PhotosTab] Failed to fetch company name:', { error: error });
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };

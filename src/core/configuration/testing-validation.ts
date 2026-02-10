@@ -37,6 +37,9 @@ import {
   MigrationAPI
 } from './hardcoded-values-migration';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('testing-validation');
+
 // ============================================================================
 // 🎯 TESTING TYPES - FULL TYPE SAFETY
 // ============================================================================
@@ -545,7 +548,7 @@ export class ConfigurationTestingSuite {
     const startTime = Date.now();
     const results: TestResult[] = [];
 
-    console.log('🧪 Starting Enterprise Configuration Test Suite...');
+    logger.info('Starting Enterprise Configuration Test Suite...');
 
     // Configuration tests
     results.push(await this.testCompanyConfiguration());
@@ -556,7 +559,7 @@ export class ConfigurationTestingSuite {
     results.push(await this.testMigrationSystem());
 
     // Performance benchmarks
-    console.log('⚡ Running performance benchmarks...');
+    logger.info('Running performance benchmarks...');
     const loadingBenchmark = await this.benchmarkConfigurationLoading();
     const apiBenchmark = await this.benchmarkConfigurationAPI();
 
@@ -579,7 +582,7 @@ export class ConfigurationTestingSuite {
     });
 
     // Security audit
-    console.log('🛡️ Performing security audit...');
+    logger.info('Performing security audit...');
     const securityAudit = await this.performSecurityAudit();
 
     results.push({

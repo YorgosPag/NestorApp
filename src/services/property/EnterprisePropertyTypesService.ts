@@ -25,6 +25,9 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EnterprisePropertyTypesService');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -247,7 +250,7 @@ export class EnterprisePropertyTypesService {
   async initialize(firestore: ReturnType<typeof import('firebase/firestore').getFirestore>): Promise<void> {
     this.db = firestore;
     this.initialized = true;
-    console.log('🏠 EnterprisePropertyTypesService initialized');
+    logger.info('EnterprisePropertyTypesService initialized');
   }
 
   /**
@@ -309,7 +312,7 @@ export class EnterprisePropertyTypesService {
     this.cache.propertyTypes.clear();
     this.cache.classifications.clear();
     this.cache.validationRules.clear();
-    console.log('🏠 Property types cache cleared');
+    logger.info('Property types cache cleared');
   }
 
   // ============================================================================
@@ -331,7 +334,7 @@ export class EnterprisePropertyTypesService {
     // Check cache first
     const cached = this.getCacheEntry(this.cache.configurations, cacheKey);
     if (cached) {
-      console.log(`🏠 Property types configuration loaded from cache: ${cacheKey}`);
+      logger.info('Property types configuration loaded from cache', { cacheKey });
       return cached;
     }
 
@@ -360,16 +363,16 @@ export class EnterprisePropertyTypesService {
         // Cache the configuration
         this.setCacheEntry(this.cache.configurations, cacheKey, config, config.cacheSettings?.ttl || 300);
 
-        console.log(`🏠 Property types configuration loaded from database: ${cacheKey}`);
+        logger.info('Property types configuration loaded from database', { cacheKey });
         return config;
       } else {
         // Create default configuration
         const defaultConfig = this.createDefaultConfiguration(tenantId, locale, environment);
-        console.log(`🏠 Created default property types configuration: ${cacheKey}`);
+        logger.info('Created default property types configuration', { cacheKey });
         return defaultConfig;
       }
     } catch (error) {
-      console.error('❌ Failed to load property types configuration:', error);
+      logger.error('Failed to load property types configuration', { error });
       // Return default configuration as fallback
       return this.createDefaultConfiguration(tenantId, locale, environment);
     }
@@ -396,7 +399,7 @@ export class EnterprisePropertyTypesService {
     // Sort by order
     propertyTypes.sort((a, b) => a.order - b.order);
 
-    console.log(`🏠 Retrieved ${propertyTypes.length} property types for ${tenantId}/${locale}/${category || 'all'}`);
+    logger.info('Retrieved property types', { count: propertyTypes.length, tenantId, locale, category: category || 'all' });
     return propertyTypes;
   }
 

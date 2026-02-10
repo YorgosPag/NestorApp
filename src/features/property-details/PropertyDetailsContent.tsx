@@ -29,6 +29,8 @@ import { isAppFeatureEnabled } from '@/config/feature-flags';
 import { resolveAttachments } from './utils/attachments';
 import { makeSafeUpdate } from './utils/safeUpdate';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('PropertyDetailsContent');
 
 // 🏢 ENTERPRISE: Lazy imports for Unit Linking (behind feature flag)
 // These are only loaded when UNIT_LINKING feature is enabled
@@ -96,7 +98,7 @@ export function PropertyDetailsContent({
 
   // Early return if no property data available
   if (!resolvedProperty) {
-    console.warn('PropertyDetailsContent: No property data provided');
+    logger.warn('PropertyDetailsContent: No property data provided');
     return null;
   }
 

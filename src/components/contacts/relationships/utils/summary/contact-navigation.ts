@@ -9,6 +9,8 @@
 
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('contact-navigation');
 
 // ============================================================================
 // TYPES
@@ -44,7 +46,7 @@ export function navigateToDashboardFilter(
   contactId: string,
   router: AppRouterInstance
 ): void {
-  console.log('🎯 DASHBOARD CLICK: Relationship filtering for card:', cardTitle);
+  logger.info('DASHBOARD CLICK: Relationship filtering for card:', { data: cardTitle });
 
   const relatedContactNames = getContactNamesForFilter(
     cardTitle,
@@ -57,12 +59,12 @@ export function navigateToDashboardFilter(
     // Use the first contact name for filtering
     const searchTerm = relatedContactNames[0];
     router.push(`/contacts?filter=${encodeURIComponent(searchTerm)}`);
-    console.log('🔗 NAVIGATION: Navigated to contacts with filter:', searchTerm, 'Related contacts:', relatedContactNames.length);
+    logger.info('NAVIGATION: Navigated to contacts with filter:', { searchTerm, relatedCount: relatedContactNames.length });
   } else {
     // Fallback to type-based search
     const fallbackTerm = getFallbackSearchTerm(cardTitle);
     router.push(`/contacts?filter=${encodeURIComponent(fallbackTerm)}`);
-    console.log('🔗 NAVIGATION: Fallback to generic filter:', fallbackTerm);
+    logger.info('NAVIGATION: Fallback to generic filter:', { data: fallbackTerm });
   }
 }
 
@@ -173,11 +175,11 @@ export function navigateToRelationshipContact(
 
   const contactName = contactNames[targetContactId];
 
-  console.log('🔗 NAVIGATION: Navigating to contacts with filter:', {
+  logger.info('NAVIGATION: Navigating to contacts with filter:', { data: {
     targetContactId,
     contactName,
     relationshipType: relationship.relationshipType
-  });
+  } });
 
   router.push(`/contacts?filter=${encodeURIComponent(contactName || targetContactId)}`);
 }

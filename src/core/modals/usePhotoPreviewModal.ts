@@ -4,6 +4,9 @@ import { useState, useCallback } from 'react';
 import type { Contact } from '@/types/contacts';
 import type { PhotoPreviewModalProps } from './PhotoPreviewModal';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('usePhotoPreviewModal');
+
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
@@ -147,7 +150,7 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
 
     // Αν δεν υπάρχει φωτογραφία, δεν ανοίγουμε modal
     if (!photoUrl) {
-      console.warn('usePhotoPreviewModal: No photoUrl provided');
+      logger.warn('usePhotoPreviewModal: No photoUrl provided');
       return;
     }
 
@@ -180,7 +183,7 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
   const handleOpenChange = useCallback((open: boolean) => {
     if (open) {
       // Αν προσπαθούν να ανοίξουν το modal χωρίς να έχουν καλέσει openModal πρώτα
-      console.warn('usePhotoPreviewModal: Use openModal() to open the modal with photo data');
+      logger.warn('usePhotoPreviewModal: Use openModal() to open the modal with photo data');
       return;
     }
     // Κλείνουμε το modal

@@ -16,6 +16,9 @@
  * - Single source of truth ✅
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('seed-data-config');
+
 // ============================================================================
 // 🔧 ENVIRONMENT CONFIGURATION
 // ============================================================================
@@ -42,7 +45,7 @@ export const SEED_DATA_CONFIG = {
 export const validateSeedConfig = (): boolean => {
   // Αν είμαστε σε production, το seeding πρέπει να είναι DISABLED
   if (SEED_DATA_CONFIG.IS_PRODUCTION && SEED_DATA_CONFIG.ENABLED) {
-    console.warn('🚨 WARNING: Seed data is ENABLED in PRODUCTION environment!');
+    logger.warn('WARNING: Seed data is ENABLED in PRODUCTION environment!');
     return false;
   }
 
@@ -94,7 +97,7 @@ export const getSeedData = () => {
  */
 export const logSeedDataStatus = (): void => {
   if (SEED_DATA_CONFIG.DEBUG) {
-    console.log('🌱 Seed Data Configuration:', {
+    logger.info('Seed Data Configuration', {
       enabled: SEED_DATA_CONFIG.ENABLED,
       environment: process.env.NODE_ENV,
       shouldSeed: shouldSeedDatabase(),
@@ -112,7 +115,7 @@ export const logSeedDataStatus = (): void => {
  */
 export const trackSeedDataUsage = (action: 'seeded' | 'skipped' | 'error') => {
   if (SEED_DATA_CONFIG.DEBUG) {
-    console.log(`📊 Seed Data Analytics: ${action} at ${new Date().toISOString()}`);
+    logger.info(`Seed Data Analytics: ${action} at ${new Date().toISOString()}`);
   }
 
   // Future: Send to analytics service

@@ -37,6 +37,8 @@ import { db } from '@/lib/firebase';
 import { designTokens, borderColors } from '@/styles/design-tokens';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateMigrationId, generateBackupId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('hardcoded-values-migration');
 import {
   CompanyConfiguration,
   SystemConfiguration,
@@ -431,12 +433,12 @@ export class HardcodedValuesMigrationEngine {
         await setDoc(doc(db, COLLECTIONS.SYSTEM, 'company'), companyConfig);
       }
 
-      console.log('✅ Company data migrated successfully');
+      logger.info('Company data migrated successfully');
       return { success: true };
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Company migration failed';
-      console.error('❌ Company migration error:', error);
+      logger.error('Company migration error', { error });
       return { success: false, error: errorMessage };
     }
   }
@@ -483,12 +485,12 @@ export class HardcodedValuesMigrationEngine {
         await setDoc(doc(db, COLLECTIONS.SYSTEM, 'settings'), systemConfig);
       }
 
-      console.log('✅ System data migrated successfully');
+      logger.info('System data migrated successfully');
       return { success: true };
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'System migration failed';
-      console.error('❌ System migration error:', error);
+      logger.error('System migration error', { error });
       return { success: false, error: errorMessage };
     }
   }
@@ -530,13 +532,13 @@ export class HardcodedValuesMigrationEngine {
           }
 
           itemsMigrated++;
-          console.log(`✅ Project template '${template.name}' prepared for migration`);
+          logger.info(`Project template '${template.name}' prepared for migration`);
 
         } catch (error) {
           itemsFailed++;
           const errorMessage = `Failed to migrate project ${projectData.name}: ${error}`;
           errors.push(errorMessage);
-          console.error('❌', errorMessage);
+          logger.error(errorMessage);
         }
       }
 
@@ -544,12 +546,12 @@ export class HardcodedValuesMigrationEngine {
         await batch.commit();
       }
 
-      console.log(`✅ Project templates migration completed: ${itemsMigrated} succeeded, ${itemsFailed} failed`);
+      logger.info(`Project templates migration completed: ${itemsMigrated} succeeded, ${itemsFailed} failed`);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Project templates migration failed';
       errors.push(errorMessage);
-      console.error('❌ Project templates batch error:', error);
+      logger.error('Project templates batch error', { error });
     }
 
     return { itemsMigrated, itemsFailed, errors };
@@ -566,12 +568,12 @@ export class HardcodedValuesMigrationEngine {
     try {
       // Check Firebase connection
       const testDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'health-check'));
-      console.log('✅ Firebase connection validated');
+      logger.info('Firebase connection validated');
 
       // Check permissions
       const testWrite = doc(db, COLLECTIONS.SYSTEM, 'migration-test');
       await setDoc(testWrite, { test: true, timestamp: Timestamp.now() });
-      console.log('✅ Write permissions validated');
+      logger.info('Write permissions validated');
 
       // Cleanup test
       await setDoc(testWrite, { deleted: true });
@@ -604,7 +606,7 @@ export class HardcodedValuesMigrationEngine {
         return { success: false, error: 'No project templates found after migration' };
       }
 
-      console.log('✅ Migrated data validation passed');
+      logger.info('Migrated data validation passed');
       return { success: true };
 
     } catch (error) {
@@ -642,7 +644,7 @@ export class HardcodedValuesMigrationEngine {
 
       await setDoc(doc(db, COLLECTIONS.SYSTEM, 'migration-backups', backupId), backupDoc);
 
-      console.log(`✅ Backup created successfully: ${backupId}`);
+      logger.info(`Backup created successfully: ${backupId}`);
       return backupId;
 
     } catch (error) {
@@ -665,10 +667,10 @@ export class HardcodedValuesMigrationEngine {
       };
 
       await setDoc(doc(db, COLLECTIONS.SYSTEM, 'migration-logs', this.migrationId), logDoc);
-      console.log(`✅ Migration result logged: ${this.migrationId}`);
+      logger.info(`Migration result logged: ${this.migrationId}`);
 
     } catch (error) {
-      console.error('❌ Failed to log migration result:', error);
+      logger.error('Failed to log migration result', { error });
     }
   }
 
@@ -685,7 +687,7 @@ export class HardcodedValuesMigrationEngine {
 
   private reportProgress(progress: MigrationProgress): void {
     this.progressCallbacks.forEach(callback => callback(progress));
-    console.log(`📊 Migration Progress: ${progress.percentage}% - ${progress.currentItem}`);
+    logger.info(`Migration Progress: ${progress.percentage}% - ${progress.currentItem}`);
   }
 
   private calculateTotalItems(): number {
@@ -711,7 +713,7 @@ export class HardcodedValuesMigrationEngine {
    */
   public async rollback(backupId: string): Promise<boolean> {
     try {
-      console.log(`🔄 Starting rollback with backup: ${backupId}`);
+      logger.info(`Starting rollback with backup: ${backupId}`);
 
       const backupDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'migration-backups', backupId));
 
@@ -723,12 +725,12 @@ export class HardcodedValuesMigrationEngine {
 
       // Note: Rollback implementation would restore original hardcoded values
       // This is mainly for demonstration - in practice, rollback might be limited
-      console.log('⚠️ Rollback completed - manual verification required');
+      logger.info('Rollback completed - manual verification required');
 
       return true;
 
     } catch (error) {
-      console.error('❌ Rollback failed:', error);
+      logger.error('Rollback failed', { error });
       return false;
     }
   }

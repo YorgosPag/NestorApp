@@ -17,6 +17,8 @@
 
 import { renderHook } from '@testing-library/react';
 import { useSemanticColors } from '../useSemanticColors';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('background-centralization.test');
 
 // ============================================================================
 // 🔍 CSS VARIABLES FOUNDATION TESTS
@@ -183,10 +185,10 @@ describe('🔍 Hardcoded Pattern Detection', () => {
     const totalMigratedSoFar = hookMigratedInstances;
     const progressPercentage = (totalMigratedSoFar / totalKnownInstances * 100);
 
-    console.log(`🎯 AGENT_B HOOK MIGRATION: 16 patterns completed (100% of hook)`);
-    console.log(`🚨 AGENT_C COMPONENT AUDIT: ${remainingHardcodedCount} hardcoded patterns detected in components`);
-    console.log(`📊 TOTAL Migration Progress: ${progressPercentage.toFixed(1)}% complete (${totalMigratedSoFar}/${totalKnownInstances})`);
-    console.log(`📋 NEXT PHASE: AGENT_C systematic component migration`);
+    logger.info(`AGENT_B HOOK MIGRATION: 16 patterns completed (100% of hook)`);
+    logger.info(`AGENT_C COMPONENT AUDIT: ${remainingHardcodedCount} hardcoded patterns detected in components`);
+    logger.info(`TOTAL Migration Progress: ${progressPercentage.toFixed(1)}% complete (${totalMigratedSoFar}/${totalKnownInstances})`);
+    logger.info(`NEXT PHASE: AGENT_C systematic component migration`);
 
   });
 
@@ -288,7 +290,7 @@ describe('📈 Migration Progress Tracking', () => {
     expect(migratedHookPatterns).toBe(16); // Verify AGENT_B completion
     expect(remainingPatterns).toBe(1436); // Remaining for AGENT_C Phase 3
 
-    console.log(`🎯 AGENT_B COMPLETION: ${completionPercentage.toFixed(1)}% (${migratedHookPatterns}/${totalPatterns})`);
-    console.log(`📋 AGENT_C REMAINING: ${remainingPatterns} patterns in ${totalFiles - migratedFiles} files`);
+    logger.info(`AGENT_B COMPLETION: ${completionPercentage.toFixed(1)}% (${migratedHookPatterns}/${totalPatterns})`);
+    logger.info(`AGENT_C REMAINING: ${remainingPatterns} patterns in ${totalFiles - migratedFiles} files`);
   });
 });

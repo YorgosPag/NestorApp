@@ -453,10 +453,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         this.pendingEmailData = { to: adminEmail, subject, body };
         this.setState({ showEmailOptions: true, isSendingToAdmin: false });
 
-        console.log('📧 Showing email provider options for:', adminEmail);
+        logger.info('Showing email provider options for:', { data: adminEmail });
         return; // Exit early, user will select provider
       } catch (mailtoError) {
-        console.error('Mailto fallback also failed:', mailtoError);
+        logger.error('Mailto fallback also failed:', { error: mailtoError });
 
         // Track failed admin notification
         errorTracker.captureError(

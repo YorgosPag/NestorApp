@@ -37,6 +37,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import type { LinkedSpace } from '@/types/unit';
 import type { SpaceInclusionType } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('LinkedSpacesCard');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type definitions (ZERO any)
@@ -129,7 +131,7 @@ export function LinkedSpacesCard({
       setSelectedStorageId(SELECT_CLEAR_VALUE);
       setSelectedInclusion('included');
       setSaveStatus('idle');
-      console.log('🔄 [LinkedSpacesCard] Edit cancelled - draft reset to props');
+      logger.info('[LinkedSpacesCard] Edit cancelled - draft reset to props');
     }
     prevIsEditingRef.current = isEditing;
   }, [isEditing, currentLinkedSpaces]);
@@ -161,13 +163,13 @@ export function LinkedSpacesCard({
         const availableParking = parkingData.filter(p => p.status === 'available' || !p.status);
 
         setParkingOptions(availableParking);
-        console.log(`✅ [LinkedSpacesCard] Loaded ${availableParking.length} available parking spots`);
+        logger.info(`[LinkedSpacesCard] Loaded ${availableParking.length} available parking spots`);
       } catch (error) {
         // 🏢 ENTERPRISE: 403/404 are expected (tenant isolation / no parking configured)
         if (ApiClientError.isApiClientError(error) && (error.statusCode === 403 || error.statusCode === 404)) {
-          console.log(`ℹ️ [LinkedSpacesCard] No parking data for building (${error.statusCode})`);
+          logger.info(`ℹ[LinkedSpacesCard] No parking data for building (${error.statusCode})`);
         } else {
-          console.warn('⚠️ [LinkedSpacesCard] Unexpected error loading parking:', error);
+          logger.warn('[LinkedSpacesCard] Unexpected error loading parking:', { data: error });
         }
         setParkingOptions([]);
       } finally {
@@ -205,13 +207,13 @@ export function LinkedSpacesCard({
         );
 
         setStorageOptions(buildingStorages);
-        console.log(`✅ [LinkedSpacesCard] Loaded ${buildingStorages.length} available storages for building`);
+        logger.info(`[LinkedSpacesCard] Loaded ${buildingStorages.length} available storages for building`);
       } catch (error) {
         // 🏢 ENTERPRISE: 403/404 are expected (tenant isolation / no storages configured)
         if (ApiClientError.isApiClientError(error) && (error.statusCode === 403 || error.statusCode === 404)) {
-          console.log(`ℹ️ [LinkedSpacesCard] No storage data for building (${error.statusCode})`);
+          logger.info(`ℹ[LinkedSpacesCard] No storage data for building (${error.statusCode})`);
         } else {
-          console.warn('⚠️ [LinkedSpacesCard] Unexpected error loading storages:', error);
+          logger.warn('[LinkedSpacesCard] Unexpected error loading storages:', { data: error });
         }
         setStorageOptions([]);
       } finally {
@@ -238,7 +240,7 @@ export function LinkedSpacesCard({
 
     // Check if already linked
     if (draftLinkedSpaces.some(ls => ls.spaceId === selectedParkingId)) {
-      console.warn('⚠️ [LinkedSpacesCard] Parking already linked');
+      logger.warn('[LinkedSpacesCard] Parking already linked');
       return;
     }
 
@@ -264,7 +266,7 @@ export function LinkedSpacesCard({
 
     // Check if already linked
     if (draftLinkedSpaces.some(ls => ls.spaceId === selectedStorageId)) {
-      console.warn('⚠️ [LinkedSpacesCard] Storage already linked');
+      logger.warn('[LinkedSpacesCard] Storage already linked');
       return;
     }
 
@@ -290,7 +292,7 @@ export function LinkedSpacesCard({
   // 🏢 ENTERPRISE: Save draft to Firestore
   const handleSave = useCallback(async () => {
     if (!unitId) {
-      console.error('❌ [LinkedSpacesCard] No unitId provided');
+      logger.error('[LinkedSpacesCard] No unitId provided');
       return;
     }
 
@@ -306,7 +308,7 @@ export function LinkedSpacesCard({
         updatedAt: new Date().toISOString(),
       });
 
-      console.log(`✅ [LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${draftLinkedSpaces.length} spaces`);
+      logger.info(`[LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${draftLinkedSpaces.length} spaces`);
       setSaveStatus('success');
 
       if (onLinkedSpacesChanged) {
@@ -316,7 +318,7 @@ export function LinkedSpacesCard({
       // Reset success status after 3 seconds
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
-      console.error('❌ [LinkedSpacesCard] Error saving:', error);
+      logger.error('[LinkedSpacesCard] Error saving:', { error: error });
       setSaveStatus('error');
     } finally {
       setSaving(false);

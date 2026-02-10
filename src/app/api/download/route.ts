@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('DownloadRoute');
 
 // ============================================================================
 // 🏢 ENTERPRISE DOWNLOAD API - Force File Downloads
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
 }
 
 async function handleDownload(request: NextRequest, ctx: AuthContext) {
-  console.log(`📁 API: File download request from user ${ctx.email} (company: ${ctx.companyId})`);
+  logger.info('API: File download request', { email: ctx.email, companyId: ctx.companyId });
 
   try {
     const { searchParams } = new URL(request.url);
@@ -81,14 +84,14 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
     }
 
     if (!isValidFirebaseUrl) {
-      console.error('🚨 SECURITY: Blocked non-Firebase URL:', fileUrl);
+      logger.error('SECURITY: Blocked non-Firebase URL', { fileUrl });
       return NextResponse.json(
         { error: 'Only Firebase Storage URLs are allowed' },
         { status: 403 }
       );
     }
 
-    console.log('🔗 DOWNLOAD REQUEST:', {
+    logger.info('DOWNLOAD REQUEST', {
       userId: ctx.uid,
       userEmail: ctx.email,
       companyId: ctx.companyId,
@@ -102,7 +105,7 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
     const response = await fetch(fileUrl);
 
     if (!response.ok) {
-      console.error('❌ Firebase fetch failed:', response.status, response.statusText);
+      logger.error('Firebase fetch failed', { status: response.status, statusText: response.statusText });
       return NextResponse.json(
         { error: 'Failed to fetch file from Firebase Storage' },
         { status: response.status }
@@ -140,19 +143,19 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
       'X-Content-Security': 'validated'
     });
 
-    console.log('✅ DOWNLOAD SUCCESS:', {
-      filename: filename,
-      asciiFilename: asciiFilename,
+    logger.info('DOWNLOAD SUCCESS', {
+      filename,
+      asciiFilename,
       size: blob.length,
       contentType: actualContentType,
-      contentDisposition: contentDisposition
+      contentDisposition,
     });
 
     // 🎯 RETURN: File with force download headers
     return new NextResponse(blob, { headers });
 
   } catch (error) {
-    console.error('❌ DOWNLOAD API ERROR:', error);
+    logger.error('DOWNLOAD API ERROR', { error });
 
     return NextResponse.json(
       {

@@ -9,6 +9,8 @@
  */
 
 import { SelectOption } from '../core/field-types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('currencies');
 
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
 import { getCurrencyOptions } from '../../../subapps/dxf-viewer/config/modal-select';
@@ -49,7 +51,7 @@ export const CURRENCY_OPTIONS: SelectOption[] = (() => {
       }
     }
   } catch (error) {
-    console.warn('Failed to parse currency configuration, using defaults');
+    logger.warn('Failed to parse currency configuration, using defaults');
   }
   return getDefaultCurrencies();
 })();

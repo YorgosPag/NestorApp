@@ -24,6 +24,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ToolbarMainActions');
 
 interface ToolbarMainActionsProps {
   selectedItemsCount: number;
@@ -34,9 +36,9 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const handleNew = () => console.log('Creating new unit...');
-  const handleEdit = () => console.log('Editing unit...');
-  const handleDelete = () => console.log('Deleting unit...');
+  const handleNew = () => logger.info('Creating new unit...');
+  const handleEdit = () => logger.info('Editing unit...');
+  const handleDelete = () => logger.info('Deleting unit...');
 
   return (
     <div className="flex items-center gap-1 mr-3">

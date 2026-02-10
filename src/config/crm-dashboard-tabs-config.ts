@@ -9,6 +9,9 @@
  * @version 1.0.0
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('crm-dashboard-tabs-config');
+
 
 // ============================================================================
 // INTERFACES & TYPES
@@ -259,12 +262,12 @@ export function validateCRMDashboardTabsConfiguration(): {
  */
 export function debugCRMDashboardTabs(): void {
   if (process.env.NODE_ENV === 'development') {
-    console.group('💼 CRM Dashboard Tabs Configuration Debug');
-    console.log('📊 Stats:', getCRMDashboardTabsStats());
-    console.log('✅ Validation:', validateCRMDashboardTabsConfiguration());
-    console.log('📋 Enabled tabs:', getEnabledCRMDashboardTabs().map(t => t.label));
-    console.log('🎯 All tabs:', CRM_DASHBOARD_TABS.length);
-    console.groupEnd();
+    logger.info('CRM Dashboard Tabs Configuration Debug', {
+      stats: getCRMDashboardTabsStats(),
+      validation: validateCRMDashboardTabsConfiguration(),
+      enabledTabs: getEnabledCRMDashboardTabs().map(t => t.label),
+      allTabsCount: CRM_DASHBOARD_TABS.length
+    });
   }
 }
 

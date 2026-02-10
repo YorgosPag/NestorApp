@@ -5,6 +5,9 @@ import { mapIndividualContactToFormData } from './fieldMappers/individualMapper'
 import { mapCompanyContactToFormData } from './fieldMappers/companyMapper';
 import { mapServiceContactToFormData } from './fieldMappers/serviceMapper';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ContactMapper');
+
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
@@ -68,7 +71,7 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
 
       default:
         const unknownContact = contact as UnknownContact;
-        console.warn('⚠️ MAPPER: Unknown contact type:', unknownContact.type);
+        logger.warn('MAPPER: Unknown contact type:', { type: unknownContact.type });
         warnings.push(`Unknown contact type: ${unknownContact.type}`);
 
         // Fallback to individual mapping
@@ -79,7 +82,7 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
     return { formData, warnings };
 
   } catch (error) {
-    console.error('❌ MAPPER: Contact→FormData mapping failed:', error);
+    logger.error('MAPPER: Contact->FormData mapping failed', { error });
 
     // Return empty form data with error
     return {
@@ -133,7 +136,7 @@ export function validateContactForMapping(contact: Contact): string[] {
   }
 
   if (warnings.length > 0) {
-    console.warn('⚠️ MAPPER: Contact validation warnings:', warnings);
+    logger.warn('MAPPER: Contact validation warnings', { warnings });
   }
 
   return warnings;
@@ -160,7 +163,7 @@ export function getSafeFieldValue<T = SafeFieldValue>(obj: SafeFieldSource | nul
     const value = record?.[field];
     return (value !== undefined && value !== null ? value : fallback) as T;
   } catch (error) {
-    console.warn(`⚠️ MAPPER: Failed to extract field ${field}:`, error);
+    logger.warn(`MAPPER: Failed to extract field ${field}`, { error });
     return fallback;
   }
 }
@@ -191,7 +194,7 @@ export function getSafeNestedValue<T = SafeFieldValue>(obj: SafeFieldSource | nu
 
     return (current !== undefined && current !== null ? current : fallback) as T;
   } catch (error) {
-    console.warn(`⚠️ MAPPER: Failed to extract nested field ${path}:`, error);
+    logger.warn(`MAPPER: Failed to extract nested field ${path}`, { error });
     return fallback;
   }
 }
@@ -210,7 +213,7 @@ export function getSafeArrayValue<T = unknown>(obj: SafeFieldSource | null | und
     const value = record?.[field];
     return Array.isArray(value) ? value : fallback;
   } catch (error) {
-    console.warn(`⚠️ MAPPER: Failed to extract array field ${field}:`, error);
+    logger.warn(`MAPPER: Failed to extract array field ${field}`, { error });
     return fallback;
   }
 }

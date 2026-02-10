@@ -2,6 +2,8 @@
 // 💡 DEVELOPMENT SOLUTION: Uses client Firebase SDK στις API routes
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('firebase-server');
 import { getFirestore, Firestore, collection, doc, getDocs, getDoc as getFirestoreDoc, query, where, WhereFilterOp } from 'firebase/firestore';
 
 let app: FirebaseApp | null = null;
@@ -21,13 +23,13 @@ const firebaseConfig = {
 function initializeFirebaseServer() {
   // Skip initialization during build time or test environment
   if (process.env.NODE_ENV === 'test') {
-    console.log('⚠️ ENTERPRISE: Skipping Firebase initialization (test environment)');
+    logger.info('ENTERPRISE: Skipping Firebase initialization (test environment)');
     return null;
   }
 
   try {
-    console.log('🏢 ENTERPRISE: Starting Firebase initialization...');
-    console.log('🔍 ENTERPRISE DIAGNOSTIC: Environment variables check:', {
+    logger.info('ENTERPRISE: Starting Firebase initialization...');
+    logger.info('ENTERPRISE DIAGNOSTIC: Environment variables check', {
       hasApiKey: !!firebaseConfig.apiKey,
       hasAuthDomain: !!firebaseConfig.authDomain,
       hasProjectId: !!firebaseConfig.projectId,
@@ -37,30 +39,30 @@ function initializeFirebaseServer() {
 
     // Validate critical Firebase configuration
     if (!firebaseConfig.apiKey) {
-      console.error('🚨 ENTERPRISE ERROR: Firebase API Key is missing!');
+      logger.error('ENTERPRISE ERROR: Firebase API Key is missing!');
       return null;
     }
 
     if (!firebaseConfig.projectId) {
-      console.error('🚨 ENTERPRISE ERROR: Firebase Project ID is missing!');
+      logger.error('ENTERPRISE ERROR: Firebase Project ID is missing!');
       return null;
     }
 
     // Initialize Firebase app
     if (getApps().length === 0) {
       app = initializeApp(firebaseConfig);
-      console.log('✅ ENTERPRISE: Firebase Client (for API routes) initialized successfully');
+      logger.info('ENTERPRISE: Firebase Client (for API routes) initialized successfully');
     } else {
       app = getApp();
-      console.log('✅ ENTERPRISE: Firebase Client (for API routes) reusing existing app');
+      logger.info('ENTERPRISE: Firebase Client (for API routes) reusing existing app');
     }
 
     const firestoreDB = getFirestore(app);
-    console.log('✅ ENTERPRISE: Firestore database connection established');
+    logger.info('ENTERPRISE: Firestore database connection established');
     return firestoreDB;
 
   } catch (error) {
-    console.error('🚨 ENTERPRISE ERROR: Critical Firebase initialization failure:', {
+    logger.error('ENTERPRISE ERROR: Critical Firebase initialization failure', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : 'No stack trace',
       config: {

@@ -19,6 +19,8 @@ import { RefreshButton } from './RefreshButton';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
 import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ToolbarFiltersMenu');
 
 // --- UnitFiltersMenu Logic ---
 function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
@@ -87,7 +89,7 @@ export function ToolbarFiltersMenu({
     <div className="flex items-center gap-1">
       <SortToggleButton sortDirection={sortDirection} onToggleSort={onToggleSort} />
       <UnitFiltersMenu activeFilters={activeFilters} onActiveFiltersChange={onActiveFiltersChange} />
-      <RefreshButton onRefresh={() => console.log('Refreshing...')} />
+      <RefreshButton onRefresh={() => logger.info('Refreshing...')} />
     </div>
   );
 }

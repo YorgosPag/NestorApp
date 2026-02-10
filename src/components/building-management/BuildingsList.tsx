@@ -157,8 +157,8 @@ export function BuildingsList({
             onNewItem={() => {}}
             onEditItem={(id) => {}}
             onDeleteItems={(ids) => {}}
-            onExport={() => console.log('Export buildings')}
-            onRefresh={() => console.log('Refresh buildings')}
+            onExport={() => logger.info('Export buildings')}
+            onRefresh={() => logger.info('Refresh buildings')}
           />
         )}
       </div>

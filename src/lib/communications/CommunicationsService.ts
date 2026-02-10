@@ -16,6 +16,8 @@ import {
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BaseMessageInput, SendResult, Channel } from '@/types/communications';
 import { companySettingsService } from '@/services/company/EnterpriseCompanySettingsService';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CommunicationsService');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -109,7 +111,7 @@ class CommunicationsService {
     if (this.isInitialized) return;
     
     try {
-      console.log('Initializing Communications Service...');
+      logger.info('Initializing Communications Service...');
 
       // Καταχώρηση providers
       await this.registerProviders();
@@ -118,11 +120,11 @@ class CommunicationsService {
       await this.checkAvailableChannels();
 
       this.isInitialized = true;
-      console.log('Communications Service initialized successfully');
-      console.log('Available channels:', this.availableChannels);
+      logger.info('Communications Service initialized successfully');
+      logger.info('Available channels:', { channels: this.availableChannels });
 
     } catch (error) {
-      console.error('Failed to initialize Communications Service:', error);
+      logger.error('Failed to initialize Communications Service', { error });
       throw error;
     }
   }
@@ -135,7 +137,7 @@ class CommunicationsService {
     if (isChannelEnabled('telegram') && !messageRouter.providers.has('telegram')) {
       const telegramProvider = new TelegramProvider();
       messageRouter.registerProvider('telegram', telegramProvider);
-      console.log('Telegram provider registered');
+      logger.info('Telegram provider registered');
     }
   }
 
@@ -166,7 +168,7 @@ class CommunicationsService {
       const preparedMessage = await this.prepareMessage(messageData);
       return await messageRouter.sendMessage(preparedMessage);
     } catch (error: unknown) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message', { error });
       throw error;
     }
   }
@@ -257,7 +259,7 @@ class CommunicationsService {
       querySnapshot.forEach((docSnap) => communications.push({ id: docSnap.id, ...docSnap.data() } as CommunicationRecord));
       return communications;
     } catch (error) {
-      console.error('Error fetching lead communications:', error);
+      logger.error('Error fetching lead communications', { error });
       throw error;
     }
   }
@@ -289,7 +291,7 @@ class CommunicationsService {
       querySnapshot.forEach((docSnap) => messages.push({ id: docSnap.id, ...docSnap.data() } as CommunicationRecord));
       return messages;
     } catch (error) {
-      console.error('Error fetching unified inbox:', error);
+      logger.error('Error fetching unified inbox', { error });
       throw error;
     }
   }
@@ -307,7 +309,7 @@ class CommunicationsService {
         period
       };
     } catch (error) {
-      console.error('Error fetching communications stats:', error);
+      logger.error('Error fetching communications stats', { error });
       throw error;
     }
   }
@@ -355,7 +357,7 @@ class CommunicationsService {
         }
       };
     } catch (error) {
-      console.error('Error loading company settings for message preparation:', error);
+      logger.error('Error loading company settings for message preparation', { error });
 
       // Fallback to original content/subject without template processing
       return { ...messageData, metadata };
@@ -416,7 +418,7 @@ class CommunicationsService {
     try {
       return await companySettingsService.getQuickContact();
     } catch (error) {
-      console.error('Error fetching quick company info:', error);
+      logger.error('Error fetching quick company info', { error });
       // Fallback για backward compatibility
       return {
         companyName: 'Company',

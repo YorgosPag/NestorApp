@@ -18,6 +18,9 @@ import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { UserRecord } from 'firebase-admin/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MfaEnrollCompleteRoute');
 
 // ============================================================================
 // TYPES
@@ -103,7 +106,7 @@ async function handlePOST(request: NextRequest): Promise<NextResponse<MfaEnrollC
         { merge: true }
       );
     } catch (firestoreError) {
-      console.warn('⚠️ [MFA] Failed to update Firestore user doc:', firestoreError);
+      logger.warn('[MFA] Failed to update Firestore user doc', { error: firestoreError });
     }
 
     return NextResponse.json({

@@ -28,6 +28,8 @@ import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { EscoSkillPicker } from '@/components/shared/EscoSkillPicker';
 import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('UnifiedContactTabbedSection');
 
 /** Custom renderer field interface */
 interface CustomRendererField {
@@ -133,20 +135,20 @@ export function UnifiedContactTabbedSection({
       }
 
       try {
-        console.log(`[UnifiedContactTabbedSection] Fetching company name for ID: ${companyId}`);
+        logger.info(`[UnifiedContactTabbedSection] Fetching company name for ID: ${companyId}`);
         const company = await getCompanyById(companyId);
 
         if (company && company.type === 'company') {
           // 🏢 ENTERPRISE: Use companyName or tradeName as fallback
           const displayName = company.companyName || company.tradeName || companyId;
-          console.log(`[UnifiedContactTabbedSection] ✅ Company name fetched: ${displayName}`);
+          logger.info(`[UnifiedContactTabbedSection] Company name fetched: ${displayName}`);
           setCompanyDisplayName(displayName);
         } else {
-          console.warn(`[UnifiedContactTabbedSection] ⚠️ Company not found, using ID: ${companyId}`);
+          logger.warn(`[UnifiedContactTabbedSection] Company not found, using ID: ${companyId}`);
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[UnifiedContactTabbedSection] ❌ Failed to fetch company name:', error);
+        logger.error('[UnifiedContactTabbedSection] Failed to fetch company name:', { error: error });
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };
@@ -283,13 +285,13 @@ export function UnifiedContactTabbedSection({
               socialMedia={formData.socialMediaArray || []}
               disabled={fieldDisabled}
               onPhonesChange={(phones) => {
-                console.log('🔄 UnifiedContactTabbedSection: onPhonesChange called with:', phones.length, 'phones');
+                logger.info('UnifiedContactTabbedSection: onPhonesChange called with:', { count: phones.length });
                 if (setFormData) {
                   const newFormData = { ...formData, phones };
-                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with phones:', newFormData.phones?.length);
+                  logger.info('UnifiedContactTabbedSection: Updating formData with phones:', { data: newFormData.phones?.length });
                   setFormData(newFormData);
                 } else {
-                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  logger.warn('UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
                   const syntheticEvent = {
                     target: { name: 'phones', value: JSON.stringify(phones) }
                   } as React.ChangeEvent<HTMLInputElement>;
@@ -297,13 +299,13 @@ export function UnifiedContactTabbedSection({
                 }
               }}
               onEmailsChange={(emails) => {
-                console.log('🔄 UnifiedContactTabbedSection: onEmailsChange called with:', emails.length, 'emails');
+                logger.info('UnifiedContactTabbedSection: onEmailsChange called with:', { count: emails.length });
                 if (setFormData) {
                   const newFormData = { ...formData, emails };
-                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with emails:', newFormData.emails?.length);
+                  logger.info('UnifiedContactTabbedSection: Updating formData with emails:', { data: newFormData.emails?.length });
                   setFormData(newFormData);
                 } else {
-                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  logger.warn('UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
                   const syntheticEvent = {
                     target: { name: 'emails', value: JSON.stringify(emails) }
                   } as React.ChangeEvent<HTMLInputElement>;
@@ -311,13 +313,13 @@ export function UnifiedContactTabbedSection({
                 }
               }}
               onWebsitesChange={(websites) => {
-                console.log('🔄 UnifiedContactTabbedSection: onWebsitesChange called with:', websites.length, 'websites');
+                logger.info('UnifiedContactTabbedSection: onWebsitesChange called with:', { count: websites.length });
                 if (setFormData) {
                   const newFormData = { ...formData, websites };
-                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with websites:', newFormData.websites?.length);
+                  logger.info('UnifiedContactTabbedSection: Updating formData with websites:', { data: newFormData.websites?.length });
                   setFormData(newFormData);
                 } else {
-                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  logger.warn('UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
                   const syntheticEvent = {
                     target: { name: 'websites', value: JSON.stringify(websites) }
                   } as React.ChangeEvent<HTMLInputElement>;
@@ -325,13 +327,13 @@ export function UnifiedContactTabbedSection({
                 }
               }}
               onSocialMediaChange={(socialMedia) => {
-                console.log('🔄 UnifiedContactTabbedSection: onSocialMediaChange called with:', socialMedia.length, 'socialMedia');
+                logger.info('UnifiedContactTabbedSection: onSocialMediaChange called with:', { count: socialMedia.length });
                 if (setFormData) {
                   const newFormData = { ...formData, socialMediaArray: socialMedia };
-                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with socialMediaArray:', newFormData.socialMediaArray?.length);
+                  logger.info('UnifiedContactTabbedSection: Updating formData with socialMediaArray:', { data: newFormData.socialMediaArray?.length });
                   setFormData(newFormData);
                 } else {
-                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  logger.warn('UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
                   const syntheticEvent = {
                     target: { name: 'socialMediaArray', value: JSON.stringify(socialMedia) }
                   } as React.ChangeEvent<HTMLInputElement>;
@@ -372,7 +374,7 @@ export function UnifiedContactTabbedSection({
               contactId={contactId}
               contactType={contactType}
               onRelationshipsChange={(relationships) => {
-                console.log('🏢 Relationships updated:', relationships.length, 'relationships');
+                logger.info('Relationships updated:', { count: relationships.length });
               }}
             >
               {relationshipsMode === 'summary' ? (
@@ -391,7 +393,7 @@ export function UnifiedContactTabbedSection({
                   className="mt-4"
                   onRelationshipsChange={(relationships) => {
                     // Optionally update form data with relationship count for display
-                    console.log('🏢 Relationships updated:', relationships.length, 'relationships');
+                    logger.info('Relationships updated:', { count: relationships.length });
                   }}
                 />
               )}

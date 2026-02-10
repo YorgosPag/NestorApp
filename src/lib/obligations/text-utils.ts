@@ -1,4 +1,6 @@
 import { DEFAULT_READING_SPEED } from '@/core/configuration/business-rules';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('text-utils');
 
 export function truncateText(text: string, maxLength: number = 150): string {
   if (!text) return '';
@@ -18,7 +20,7 @@ export function highlightSearchTerm(
     const regex = new RegExp(`(${escapedTerm})`, 'gi');
     return text.replace(regex, `<mark class="${className}">$1</mark>`);
   } catch (error) {
-    console.warn('Error highlighting search term:', error);
+    logger.warn('Error highlighting search term', { error });
     return text;
   }
 }

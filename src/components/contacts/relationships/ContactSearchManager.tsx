@@ -116,7 +116,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
    */
   const handleContactSearch = useCallback(async (query: string) => {
     const DEBUG = finalSearchConfig.debug;
-    if (DEBUG) console.log('🔍 STARTING CONTACT SEARCH - Query:', query);
+    if (DEBUG) logger.info('STARTING CONTACT SEARCH - Query:', { data: query });
     setIsSearching(true);
     setSearchError(null);
 
@@ -131,7 +131,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         contacts = allContactsResult.contacts || [];
 
         if (DEBUG) {
-          console.log('🔍 DEBUG: All contacts loaded:', contacts.length);
+          logger.info('DEBUG: All contacts loaded:', { data: contacts.length });
         }
       } else {
         // Search with query
@@ -141,7 +141,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         contacts = searchResults;
 
         if (DEBUG) {
-          console.log('🔍 DEBUG: Search results for query "' + query + '":', contacts.length);
+          logger.info('DEBUG: Search results for query', { query, count: contacts.length });
         }
       }
 
@@ -155,20 +155,20 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         }
       );
 
-      if (DEBUG) console.log('📊 AFTER CONTACTNAMERESOLVER MAPPING:', contactSummaries.length);
+      if (DEBUG) logger.info('AFTER CONTACTNAMERESOLVER MAPPING:', { data: contactSummaries.length });
 
       // Filter based on configuration
       const filteredContacts = contactSummaries
         .filter(contact => {
           // Exclude specified contact IDs
           if (excludeContactIds.includes(contact.id)) {
-            if (DEBUG) console.log('🔍 DEBUG: Excluding contact by ID:', contact.id, contact.name);
+            if (DEBUG) logger.info('DEBUG: Excluding contact by ID:', { id: contact.id, name: contact.name });
             return false;
           }
 
           // Filter by allowed contact types
           if (allowedContactTypes.length > 0 && !allowedContactTypes.includes(contact.type)) {
-            if (DEBUG) console.log('🔍 DEBUG: Excluding contact by type:', contact.type, contact.name);
+            if (DEBUG) logger.info('DEBUG: Excluding contact by type:', { type: contact.type, name: contact.name });
             return false;
           }
 
@@ -176,7 +176,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         })
         .slice(0, finalSearchConfig.maxResults);
 
-      if (DEBUG) console.log('📊 FINAL FILTERED CONTACTS:', filteredContacts.length);
+      if (DEBUG) logger.info('FINAL FILTERED CONTACTS:', { data: filteredContacts.length });
 
       setSearchResults(filteredContacts);
 
@@ -194,11 +194,11 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
    */
   const handleContactSelect = useCallback((contact: ContactSummary | null) => {
     if (finalSearchConfig.debug) {
-      console.log('🔍 DEBUG: Contact selected:', contact ? {
+      logger.info('DEBUG: Contact selected:', { data: contact ? {
         id: contact.id,
         name: contact.name,
         type: contact.type
-      } : null);
+      } : null });
     }
 
     onContactSelect(contact);

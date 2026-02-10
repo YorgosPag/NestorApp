@@ -4,6 +4,8 @@
  */
 
 import i18n from '@/i18n/config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('intl-utils');
 
 /**
  * Get current locale from i18n instance
@@ -64,7 +66,7 @@ export const formatDateTime = (date: Date | string | number, options?: Intl.Date
   try {
     return new Intl.DateTimeFormat(locale, finalOptions).format(dateObj);
   } catch (error) {
-    console.warn('formatDateTime error:', error);
+    logger.warn('formatDateTime error', { error });
     return '-';
   }
 };

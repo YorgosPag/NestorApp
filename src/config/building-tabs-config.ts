@@ -21,6 +21,8 @@ import {
   validateTabConfig,
   type UnifiedTabConfig
 } from './unified-tabs-factory';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('building-tabs-config');
 
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports (DEPRECATED but maintained)
 
@@ -183,13 +185,13 @@ export function validateBuildingTabsConfiguration(): {
  */
 export function debugBuildingTabs(): void {
   if (process.env.NODE_ENV === 'development') {
-    console.group('🏢 Building Tabs Configuration Debug (Factory-based)');
-    console.log('📊 Stats:', getBuildingTabsStats());
-    console.log('✅ Validation:', validateBuildingTabsConfiguration());
-    console.log('📋 Enabled tabs:', getEnabledBuildingTabs().map(t => t.label));
-    console.log('🎯 All tabs:', BUILDING_TABS.length);
-    console.log('🏭 Factory:', 'unified-tabs-factory.ts');
-    console.groupEnd();
+    logger.info('Building Tabs Configuration Debug (Factory-based)', {
+      stats: getBuildingTabsStats(),
+      validation: validateBuildingTabsConfiguration(),
+      enabledTabs: getEnabledBuildingTabs().map(t => t.label),
+      allTabsCount: BUILDING_TABS.length,
+      factory: 'unified-tabs-factory.ts'
+    });
   }
 }
 

@@ -55,6 +55,8 @@ export {
 } from './platform-config';
 
 export { SOCIAL_BRAND_COLORS, type SocialBrandKey } from './brand-colors';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('social-platform-system');
 
 // ============================================================================
 // SHARING SERVICE EXPORTS
@@ -205,7 +207,7 @@ import {
 export const SOCIAL_SHARING_PLATFORMS = getSharingPlatforms();
 export const generatePlatformButtonStyles = (platform: string, variant: string) => {
   // Legacy function - would need actual implementation
-  console.warn('generatePlatformButtonStyles is deprecated, use unified platform system');
+  logger.warn('generatePlatformButtonStyles is deprecated, use unified platform system');
   return '';
 };
 
@@ -276,7 +278,7 @@ export const MigrationHelpers = {
         typeof analytics.trackShareEvent === 'function'
       );
     } catch (error) {
-      console.error('Migration validation failed:', error);
+      logger.error('Migration validation failed', { error });
       return false;
     }
   }

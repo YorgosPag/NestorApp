@@ -9,6 +9,8 @@
  */
 
 import { SelectOption, EnterpriseOptions } from '../core/field-types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('gemi-statuses');
 
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
 import {
@@ -53,7 +55,7 @@ export async function loadCompanyStatuses(
       environment
     );
   } catch (error) {
-    console.warn('Failed to load company statuses from service, using fallback:', error);
+    logger.warn('Failed to load company statuses from service, using fallback', { error });
 
     // Fallback to existing centralized values
     return GEMI_STATUS_OPTIONS;
@@ -101,7 +103,7 @@ export async function getEnterpriseCompanyStatuses(options: EnterpriseOptions = 
       );
     }
   } catch (error) {
-    console.warn('Failed to load enterprise company statuses, using fallback:', error);
+    logger.warn('Failed to load enterprise company statuses, using fallback', { error });
 
     // Enhanced fallback
     return GEMI_STATUS_OPTIONS.map(option => ({

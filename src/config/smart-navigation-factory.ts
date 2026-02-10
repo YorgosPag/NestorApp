@@ -64,6 +64,8 @@ import {
   FileBarChart,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('smart-navigation-factory');
 
 // 🏢 ENTERPRISE: i18n translation keys for navigation labels
 // These keys are translated by SidebarMenuItem component using the 'navigation' namespace
@@ -917,23 +919,16 @@ export function createSettingsMenuItems(
  */
 export function debugNavigationFactory(): void {
   if (process.env.NODE_ENV === 'development') {
-    console.group('🏭 Navigation Smart Factory Debug');
-
     const menus = ['main', 'tools', 'settings'] as const;
+    const menuDebug: Record<string, { stats: ReturnType<typeof getNavigationStats>; validation: ReturnType<typeof validateNavigationConfig> }> = {};
     menus.forEach(menuType => {
-      console.group(`📋 ${menuType.toUpperCase()} Menu`);
-
       const stats = getNavigationStats(menuType);
-      console.log('📊 Stats:', stats);
-
       const items = createNavigationConfig(menuType);
       const validation = validateNavigationConfig(items);
-      console.log('✅ Validation:', validation);
-
-      console.groupEnd();
+      menuDebug[menuType] = { stats, validation };
     });
 
-    console.groupEnd();
+    logger.info('Navigation Smart Factory Debug', { menus: menuDebug });
   }
 }
 

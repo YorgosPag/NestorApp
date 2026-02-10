@@ -17,6 +17,9 @@ import {
   PerformanceSeverity
 } from '../types/performance.types';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CachePerformanceIntegration');
+
 export class CachePerformanceIntegration {
   private static instance: CachePerformanceIntegration | null = null;
   private performanceManager: EnterprisePerformanceManager;
@@ -38,7 +41,7 @@ export class CachePerformanceIntegration {
    */
   public integrate(): void {
     if (this.isIntegrated) {
-      console.warn('🔗 Cache Performance Integration already active');
+      logger.warn('Cache Performance Integration already active');
       return;
     }
 
@@ -49,7 +52,7 @@ export class CachePerformanceIntegration {
     this.patchCacheCleanup();
 
     this.isIntegrated = true;
-    console.log('🔗 Cache Performance Integration activated');
+    logger.info('Cache Performance Integration activated');
   }
 
   /**
@@ -57,7 +60,7 @@ export class CachePerformanceIntegration {
    */
   public disconnect(): void {
     this.isIntegrated = false;
-    console.log('🔗 Cache Performance Integration deactivated');
+    logger.info('Cache Performance Integration deactivated');
   }
 
   /**

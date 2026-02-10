@@ -34,6 +34,9 @@ import {
   type SearchAuditMetadata,
 } from '@/types/search';
 import { getSearchIndexConfig, extractStats } from '@/config/search-index-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SearchRoute');
 
 // =============================================================================
 // TYPES
@@ -198,7 +201,7 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
     const limit = parseLimit(limitParam);
     const tenantId = ctx.companyId;
 
-    console.log(`🔍 [Search] Query: "${normalizedQuery}" | Tenant: ${tenantId} | Types: ${entityTypes?.join(',') || 'all'}`);
+    logger.info('[Search] Query', { normalizedQuery, tenantId, types: entityTypes?.join(',') || 'all' });
 
     // === Generate Search Prefixes ===
     const searchPrefixes = generateSearchPrefixes(normalizedQuery);
@@ -253,17 +256,14 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
         const errorMessage = error instanceof Error ? error.message : String(error);
 
         if (errorMessage.includes('index') || errorMessage.includes('FAILED_PRECONDITION')) {
-          console.error(
-            `🔍 [Search] Missing Firestore index for ${entityType}. ` +
-            `Run: firebase deploy --only firestore:indexes`
-          );
+          logger.error('[Search] Missing Firestore index. Run: firebase deploy --only firestore:indexes', { entityType });
         } else {
-          console.error(`🔍 [Search] Error searching ${entityType}:`, error);
+          logger.error('[Search] Error searching entity type', { entityType, error });
         }
       }
     }
 
-    console.log(`✅ [Search] Found ${allResults.length} results for tenant ${tenantId}`);
+    logger.info('[Search] Found results', { count: allResults.length, tenantId });
 
     // === Audit Logging (Privacy-Conscious) ===
     const auditMetadata: SearchAuditMetadata = {

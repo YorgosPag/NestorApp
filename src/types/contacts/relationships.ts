@@ -50,26 +50,8 @@ export * from './relationships';
 // DEPRECATION WARNING
 // ============================================================================
 
-console.warn(`
-🚨 DEPRECATION WARNING: Direct import from 'relationships.ts'
-
-This file has been refactored into Enterprise modular architecture:
-
-📁 NEW STRUCTURE:
-├── relationships/
-│   ├── core/           - Basic types & enums
-│   ├── interfaces/     - Interface definitions
-│   ├── structures/     - Complex data structures
-│   └── utils/          - Helper functions & type guards
-
-✅ BENEFITS:
-- Better tree-shaking & performance
-- Enhanced maintainability
-- Focused modules with clear responsibilities
-- Improved developer experience
-
-📖 See migration guide above for import examples.
-`);
+// NOTE: Deprecation warning removed as part of enterprise logger migration.
+// This file is kept for backward compatibility - see relationships/ directory for modular imports.
 
 // Note: This file provides full backward compatibility while encouraging migration to the new modular structure
 

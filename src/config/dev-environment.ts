@@ -14,9 +14,8 @@
 
 import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-
- 
-const warn = (message: string) => console.warn(message);
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('dev-environment');
 
 // =============================================================================
 // MODULE-LEVEL CACHE (avoid repeated Firestore queries)
@@ -75,12 +74,12 @@ export async function getDevCompanyId(): Promise<string> {
           const companyId = docData.companyId as string | undefined;
           if (companyId) {
             _cachedDevCompanyId = companyId;
-            console.log(`[DEV_ENV] Resolved companyId from ${collectionName}: ${companyId}`);
+            logger.info(`[DEV_ENV] Resolved companyId from ${collectionName}: ${companyId}`);
             return companyId;
           }
         }
       } catch (error) {
-        warn(
+        logger.warn(
           `[DEV_ENV] Firestore lookup in ${collectionName} failed: ${error instanceof Error ? error.message : String(error)}`
         );
       }
@@ -102,11 +101,11 @@ export async function getDevCompanyId(): Promise<string> {
         if (!snapshot.empty) {
           const companyId = snapshot.docs[0].id;
           _cachedDevCompanyId = companyId;
-          console.log(`[DEV_ENV] Resolved companyId (doc ID) from ${collectionName}: ${companyId}`);
+          logger.info(`[DEV_ENV] Resolved companyId (doc ID) from ${collectionName}: ${companyId}`);
           return companyId;
         }
       } catch (error) {
-        warn(
+        logger.warn(
           `[DEV_ENV] Firestore lookup in ${collectionName} failed: ${error instanceof Error ? error.message : String(error)}`
         );
       }

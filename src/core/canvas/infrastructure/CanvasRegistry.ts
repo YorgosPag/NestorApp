@@ -18,6 +18,9 @@ import type {
 } from '../interfaces/ICanvasProvider';
 import type { CanvasInstance } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CanvasRegistry');
+
 /**
  * 🔺 GLOBAL CANVAS REGISTRY
  * Central coordinator για όλους τους canvas providers
@@ -63,13 +66,13 @@ export class CanvasRegistry implements ICanvasRegistry {
   unregisterProvider(providerId: string): void {
     const provider = this.providers.get(providerId);
     if (!provider) {
-      console.warn(`Canvas provider '${providerId}' not found for unregistration`);
+      logger.warn(`Canvas provider '${providerId}' not found for unregistration`);
       return;
     }
 
     // Cleanup provider
     provider.cleanup().catch(error => {
-      console.error(`Error cleaning up provider '${providerId}':`, error);
+      logger.error(`Error cleaning up provider '${providerId}'`, { error });
     });
 
     this.providers.delete(providerId);
@@ -133,7 +136,7 @@ export class CanvasRegistry implements ICanvasRegistry {
       try {
         listener(event, data);
       } catch (error) {
-        console.error(`Global event listener error for '${event}':`, error);
+        logger.error(`Global event listener error for '${event}'`, { error });
       }
     });
 
@@ -142,7 +145,7 @@ export class CanvasRegistry implements ICanvasRegistry {
       try {
         provider.emit(event, data);
       } catch (error) {
-        console.error(`Provider event broadcast error for '${event}':`, error);
+        logger.error(`Provider event broadcast error for '${event}'`, { error });
       }
     }
 
@@ -252,7 +255,7 @@ export class CanvasRegistry implements ICanvasRegistry {
     // Cleanup all providers
     const cleanupPromises = Array.from(this.providers.values()).map(
       provider => provider.cleanup().catch(error => {
-        console.error(`Error cleaning up provider '${provider.id}':`, error);
+        logger.error(`Error cleaning up provider '${provider.id}'`, { error });
       })
     );
 
@@ -289,7 +292,7 @@ export class CanvasRegistry implements ICanvasRegistry {
         break;
       case 'error':
         this.updateMetrics('errorCount');
-        console.error(`Provider '${providerId}' error:`, data);
+        logger.error(`Provider '${providerId}' error`, { data });
         break;
     }
 
@@ -298,7 +301,7 @@ export class CanvasRegistry implements ICanvasRegistry {
       try {
         listener(`${providerId}:${event}`, data);
       } catch (error) {
-        console.error(`Global listener error for '${providerId}:${event}':`, error);
+        logger.error(`Global listener error for '${providerId}:${event}'`, { error });
       }
     });
   }
@@ -398,7 +401,7 @@ export class CanvasRegistry implements ICanvasRegistry {
    */
   private logProviderAction(action: string, providerId: string, type: CanvasProviderType): void {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[CanvasRegistry] ${action} provider:`, {
+      logger.info(`[CanvasRegistry] ${action} provider`, {
         providerId,
         type,
         totalProviders: this.providers.size

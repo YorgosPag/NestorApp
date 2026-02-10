@@ -9,6 +9,8 @@
  */
 
 import { SelectOption, EnterpriseOptions } from '../core/field-types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('legal-forms');
 
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
 import { getLegalFormOptions } from '../../../subapps/dxf-viewer/config/modal-select';
@@ -44,7 +46,7 @@ export const LEGAL_FORM_OPTIONS: SelectOption[] = (() => {
       return JSON.parse(envLegalForms);
     }
   } catch (error) {
-    console.warn('Failed to parse NEXT_PUBLIC_LEGAL_FORMS_JSON, using defaults');
+    logger.warn('Failed to parse NEXT_PUBLIC_LEGAL_FORMS_JSON, using defaults');
   }
   return getDefaultLegalForms();
 })();
@@ -71,7 +73,7 @@ export async function loadLegalForms(
       environment
     );
   } catch (error) {
-    console.warn('Failed to load legal forms from service, using fallback:', error);
+    logger.warn('Failed to load legal forms from service, using fallback', { error });
 
     // Fallback to hardcoded values
     return LEGAL_FORM_OPTIONS;
@@ -119,7 +121,7 @@ export async function getEnterpriseLegalForms(options: EnterpriseOptions = {}): 
       );
     }
   } catch (error) {
-    console.warn('Failed to load enterprise legal forms, using fallback:', error);
+    logger.warn('Failed to load enterprise legal forms, using fallback', { error });
 
     // Enhanced fallback
     return LEGAL_FORM_OPTIONS.map(option => ({

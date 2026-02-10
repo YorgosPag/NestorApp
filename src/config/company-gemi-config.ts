@@ -19,6 +19,8 @@ import {
 } from '../subapps/dxf-viewer/config/modal-select';
 
 import { getSortedSections, getAllCompanyFields, getCompanyField, type FieldConfig } from './company-gemi';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('company-gemi-config');
 
 const companyLabels = MODAL_SELECT_COMPANY_FIELD_LABELS;
 const gemiHelps = {
@@ -123,7 +125,7 @@ export async function loadLegalForms(
       environment
     );
   } catch (error) {
-    console.warn('Failed to load legal forms from service, using fallback:', error);
+    logger.warn('Failed to load legal forms from service, using fallback', { error });
 
     // Fallback to centralized values
     return getDefaultLegalForms();
@@ -151,7 +153,7 @@ export async function loadCompanyStatuses(
       environment
     );
   } catch (error) {
-    console.warn('Failed to load company statuses from service, using fallback:', error);
+    logger.warn('Failed to load company statuses from service, using fallback', { error });
 
     // Fallback to centralized values
     return getGemiStatusOptions().map(option => ({
@@ -209,7 +211,7 @@ export async function getEnterpriseLegalForms(options: {
       );
     }
   } catch (error) {
-    console.warn('Failed to load enterprise legal forms, using fallback:', error);
+    logger.warn('Failed to load enterprise legal forms, using fallback', { error });
 
     // Enhanced fallback
     return getDefaultLegalForms().map(option => ({
@@ -267,7 +269,7 @@ export async function getEnterpriseCompanyStatuses(options: {
       );
     }
   } catch (error) {
-    console.warn('Failed to load enterprise company statuses, using fallback:', error);
+    logger.warn('Failed to load enterprise company statuses, using fallback', { error });
 
     // Enhanced fallback
     return getGemiStatusOptions().map(option => ({

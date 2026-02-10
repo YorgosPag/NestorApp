@@ -1,5 +1,8 @@
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('PhotoValidation');
+
 // ============================================================================
 // 🏢 ENTERPRISE CENTRALIZED PHOTO VALIDATION SYSTEM
 // ============================================================================
@@ -129,7 +132,7 @@ export function validateSinglePhoto(
 
   // 🔍 DEBUG: Photo validation details (only in dev mode)
   if (process.env.NODE_ENV === 'development' && photoType === 'representative') {
-    console.log('🔍 VALIDATION DEBUG: Representative photo check', {
+    logger.info(' VALIDATION DEBUG: Representative photo check', {
       photoType,
       hasPhotoFile: !!photoFile,
       primaryURLType: primaryURL?.includes('firebasestorage.googleapis.com') ? 'FIREBASE' : 'OTHER',
@@ -155,7 +158,7 @@ export function validateSinglePhoto(
 
   // 🔍 DEBUG: URL validation results (dev only)
   if (process.env.NODE_ENV === 'development' && photoType === 'representative') {
-    console.log('🔍 URL VALIDATION:', { hasPrimaryURL, hasFallbackURL });
+    logger.info(' URL VALIDATION:', { hasPrimaryURL, hasFallbackURL });
   }
 
   // 🎯 UNIFIED RULE: Photo is valid if we have ANY valid URL
@@ -198,7 +201,7 @@ export function validateSinglePhoto(
  * @returns UploadValidationSummary
  */
 export function validateAllPhotos(formData: ContactFormData): UploadValidationSummary {
-  console.log('🏢 CENTRALIZED VALIDATION: Starting photo validation for', formData.type);
+  logger.info('CENTRALIZED VALIDATION: Starting photo validation for', { type: formData.type });
 
   const result: UploadValidationSummary = {
     isValid: true,
@@ -277,7 +280,7 @@ export function validateAllPhotos(formData: ContactFormData): UploadValidationSu
       contactType: 'company'
     }, formData);
 
-    console.log('🏢 CENTRALIZED: Representative photo validation result:', validation);
+    logger.info('CENTRALIZED: Representative photo validation result', { isValid: validation.isValid, isPending: validation.isPending, isFailed: validation.isFailed });
 
     if (validation.isPending) {
       result.pendingUploads++;
@@ -291,7 +294,7 @@ export function validateAllPhotos(formData: ContactFormData): UploadValidationSu
   // Calculate final result
   result.isValid = result.pendingUploads === 0 && result.failedUploads === 0;
 
-  console.log('🏢 CENTRALIZED VALIDATION: Final result:', {
+  logger.info(' CENTRALIZED VALIDATION: Final result:', {
     isValid: result.isValid,
     pendingUploads: result.pendingUploads,
     failedUploads: result.failedUploads,

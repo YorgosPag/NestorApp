@@ -35,6 +35,8 @@ import type { FloorPlanViewerLayoutProps } from './types';
 import { useZoom } from '@/subapps/dxf-viewer/systems/zoom/hooks/useZoom';
 import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
 import { asArray, ensureFloor, safeGetProperty } from './utils/safeProps';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FloorPlanViewer');
 
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
   const { quick } = useBorderTokens();
@@ -70,7 +72,7 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
     initialTransform,
     viewport,
     onTransformChange: (transform) => {
-      console.log('🔍 Transform updated:', transform);
+      logger.info('Transform updated:', { data: transform });
     }
   });
 
@@ -95,11 +97,11 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
       const url = URL.createObjectURL(file);
       setPdfUrl(url);
       
-      console.log('📄 PDF uploaded successfully:', {
+      logger.info('PDF uploaded successfully:', { data: {
         name: file.name,
         size: file.size,
         url: url.substring(0, 50) + '...'
-      });
+      } });
       
       // Update floor data safely
       if (onFloorChange) {
@@ -116,13 +118,13 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
         onFloorChange(updatedFloor);
       }
     } catch (error) {
-      console.error('❌ PDF upload failed:', error);
+      logger.error('PDF upload failed:', { error: error });
     }
   }, [floor, onFloorChange]);
 
   // Safe property selection
   const handlePropertySelect = React.useCallback((propertyId: string | null) => {
-    console.log('🎯 Property selected:', propertyId);
+    logger.info('Property selected:', { data: propertyId });
     if (propertyId) {
       onPropertySelect?.(propertyId);
     }

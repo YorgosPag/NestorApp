@@ -209,12 +209,12 @@ export function OptimizedAppProvider({
 
       // Log optimization status - DISABLED to avoid console noise
       // console.group('🚀 App Optimizations Enabled');
-      // console.log('✅ Performance monitoring');
-      // console.log('✅ Memory leak detection');
-      // console.log('✅ Advanced caching');
-      // console.log('✅ Error boundaries with recovery');
-      // console.log('✅ Progressive loading');
-      // console.log('✅ Lazy route loading');
+      // logger.info('Performance monitoring');
+      // logger.info('Memory leak detection');
+      // logger.info('Advanced caching');
+      // logger.info('Error boundaries with recovery');
+      // logger.info('Progressive loading');
+      // logger.info('Lazy route loading');
       // console.groupEnd();
 
       // 🏢 ENTERPRISE: Add type-safe debug helpers to window

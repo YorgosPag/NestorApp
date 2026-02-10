@@ -10,6 +10,9 @@
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('PhotoUrlExtractor');
+
 /**
  * Extract uploaded photo URLs from form data
  * 🔙 HYBRID SYSTEM: Base64 data URLs support
@@ -18,7 +21,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
  * @returns Multiple photo URLs array (Base64 data URLs)
  */
 export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
-  console.log('🚨 EXTRACT MULTIPLE PHOTOS: Starting extraction with formData.multiplePhotos:', {
+  logger.info(' EXTRACT MULTIPLE PHOTOS: Starting extraction with formData.multiplePhotos:', {
     length: formData.multiplePhotos?.length || 0,
     isEmpty: (formData.multiplePhotos?.length || 0) === 0,
     photos: formData.multiplePhotos?.map((p, i) => ({
@@ -43,7 +46,7 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
     }
   });
 
-  console.log('🚨 EXTRACT MULTIPLE PHOTOS: Final extracted URLs:', {
+  logger.info(' EXTRACT MULTIPLE PHOTOS: Final extracted URLs:', {
     urlCount: urls.length,
     isEmpty: urls.length === 0,
     urls: urls.map((url, i) => `${i}: ${url.substring(0, 50)}...`)
@@ -61,20 +64,20 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
  * @returns Photo URL string (Base64 data URL or empty string)
  */
 export function extractPhotoURL(formData: ContactFormData, contactType: string): string {
-  console.log('🔍 PHOTO EXTRACTOR: extractPhotoURL called for', contactType);
-  console.log('🔍 PHOTO EXTRACTOR: formData.photoURL:', formData.photoURL);
-  console.log('🔍 PHOTO EXTRACTOR: formData.photoPreview:', formData.photoPreview);
-  console.log('🔍 PHOTO EXTRACTOR: formData.multiplePhotos:', formData.multiplePhotos);
+  logger.info('PHOTO EXTRACTOR: extractPhotoURL called for', { contactType });
+  logger.info('PHOTO EXTRACTOR: formData.photoURL:', { photoURL: formData.photoURL });
+  logger.info('PHOTO EXTRACTOR: formData.photoPreview:', { photoPreview: formData.photoPreview });
+  logger.info('PHOTO EXTRACTOR: formData.multiplePhotos:', { multiplePhotos: formData.multiplePhotos });
 
   // 🏢 COMPANY SPECIAL CASE: For company representative photo, check photoURL first
   if (contactType.includes('company') || contactType.includes('representative')) {
-    console.log('🏢 COMPANY MODE: Checking photoURL for representative photo');
+    logger.info(' COMPANY MODE: Checking photoURL for representative photo');
 
     // Check photoURL first (from UnifiedPhotoManager)
     if (formData.photoURL && formData.photoURL.trim() !== '' && !formData.photoURL.startsWith('blob:')) {
       // Accept both Base64 and Firebase Storage URLs
       if (formData.photoURL.startsWith('data:') || formData.photoURL.includes('firebasestorage.googleapis.com')) {
-        console.log('🏢 EXTRACT PHOTO: Using photoURL (company representative):', formData.photoURL.substring(0, 50) + '...');
+        logger.info('EXTRACT PHOTO: Using photoURL (company representative):', { url: formData.photoURL.substring(0, 50) + '...' });
         return formData.photoURL;
       }
     }
@@ -83,12 +86,12 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
     if (formData.photoPreview && formData.photoPreview.trim() !== '' && !formData.photoPreview.startsWith('blob:')) {
       // Accept both Base64 and Firebase Storage URLs
       if (formData.photoPreview.startsWith('data:') || formData.photoPreview.includes('firebasestorage.googleapis.com')) {
-        console.log('🏢 EXTRACT PHOTO: Using photoPreview (company representative fallback):', formData.photoPreview.substring(0, 50) + '...');
+        logger.info('EXTRACT PHOTO: Using photoPreview (company representative fallback):', { url: formData.photoPreview.substring(0, 50) + '...' });
         return formData.photoPreview;
       }
     }
 
-    console.log('🏢 EXTRACT PHOTO: No company representative photo found');
+    logger.info(' EXTRACT PHOTO: No company representative photo found');
     return '';
   }
 
@@ -107,7 +110,7 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   const isIntentionalDeletion = !hasFiles && !hasUploadedUrls &&
                                (!formData.photoPreview || formData.photoPreview.trim() === '');
 
-  console.log('🔍 PHOTO EXTRACTOR: isIntentionalDeletion check:', {
+  logger.info(' PHOTO EXTRACTOR: isIntentionalDeletion check:', {
     isArray: Array.isArray(formData.multiplePhotos),
     length: formData.multiplePhotos?.length,
     hasFiles: hasFiles,
@@ -117,13 +120,13 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   });
 
   if (isIntentionalDeletion) {
-    console.log('🛠️ PHOTO EXTRACTOR: 🔥 DETECTED INTENTIONAL PHOTO DELETION - RETURNING EMPTY STRING! 🔥');
+    logger.info('PHOTO EXTRACTOR: DETECTED INTENTIONAL PHOTO DELETION - RETURNING EMPTY STRING');
     return '';
   }
 
   // 🚀 UPLOAD IN PROGRESS: If we have files but no URLs yet, wait for upload
   if (hasFiles && !hasUploadedUrls) {
-    console.log('⏳ PHOTO EXTRACTOR: Upload in progress - preserving existing photoURL');
+    logger.info('PHOTO EXTRACTOR: Upload in progress - preserving existing photoURL');
     // Return existing photoURL or empty string to preserve state
     return formData.photoURL || '';
   }
@@ -183,15 +186,15 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
  * @returns Logo URL string
  */
 export function extractLogoURL(formData: ContactFormData, contactType: string): string {
-  console.log('🔍 EXTRACT LOGO: contactType:', contactType);
-  console.log('🔍 EXTRACT LOGO: logoURL:', formData.logoURL);
-  console.log('🔍 EXTRACT LOGO: logoPreview:', formData.logoPreview);
+  logger.info('EXTRACT LOGO: contactType:', { contactType });
+  logger.info('EXTRACT LOGO: logoURL:', { logoURL: formData.logoURL });
+  logger.info('EXTRACT LOGO: logoPreview:', { logoPreview: formData.logoPreview });
 
   // 🏢 COMPANY/SERVICE PRIORITY: Check logoURL first (από UnifiedPhotoManager)
   if (formData.logoURL && formData.logoURL.trim() !== '' && !formData.logoURL.startsWith('blob:')) {
     // Accept both Base64 and Firebase Storage URLs
     if (formData.logoURL.startsWith('data:') || formData.logoURL.includes('firebasestorage.googleapis.com')) {
-      console.log('🏢 EXTRACT LOGO: Using logoURL (UnifiedPhotoManager):', formData.logoURL.substring(0, 50) + '...');
+      logger.info('EXTRACT LOGO: Using logoURL (UnifiedPhotoManager):', { url: formData.logoURL.substring(0, 50) + '...' });
       return formData.logoURL;
     }
   }
@@ -200,7 +203,7 @@ export function extractLogoURL(formData: ContactFormData, contactType: string): 
   if (formData.logoPreview && formData.logoPreview.trim() !== '' && !formData.logoPreview.startsWith('blob:')) {
     // Accept both Base64 and Firebase Storage URLs
     if (formData.logoPreview.startsWith('data:') || formData.logoPreview.includes('firebasestorage.googleapis.com')) {
-      console.log('🔙 EXTRACT LOGO: Using legacy logoPreview:', formData.logoPreview.substring(0, 50) + '...');
+      logger.info('EXTRACT LOGO: Using legacy logoPreview', { preview: formData.logoPreview.substring(0, 50) + '...' });
       return formData.logoPreview;
     }
   }
@@ -211,11 +214,11 @@ export function extractLogoURL(formData: ContactFormData, contactType: string): 
     const firstPhoto = multiplePhotoURLs[0];
     // Accept both Base64 and Firebase Storage URLs
     if (firstPhoto.startsWith('data:') || firstPhoto.includes('firebasestorage.googleapis.com')) {
-      console.log('🏢 EXTRACT LOGO: Using centralized multiplePhotos[0] (fallback):', firstPhoto.substring(0, 50) + '...');
+      logger.info('EXTRACT LOGO: Using centralized multiplePhotos[0] (fallback):', { url: firstPhoto.substring(0, 50) + '...' });
       return firstPhoto;
     }
   }
 
-  console.log('🔍 EXTRACT LOGO: No logo found, returning empty string');
+  logger.info(' EXTRACT LOGO: No logo found, returning empty string');
   return '';
 }

@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized typography tokens
 import { useTypography } from '@/hooks/useTypography';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FloorplanViewerTab');
 
 interface FloorplanViewerTabProps {
   title: string;
@@ -56,7 +58,7 @@ export function FloorplanViewerTab({
   const isPdf = fileType === 'pdf';
 
   // 🏢 ENTERPRISE DEBUG: Log what data we're receiving
-  console.log('🖼️ [FloorplanViewerTab] Render:', {
+  logger.info('[FloorplanViewerTab] Render:', { data: {
     hasFloorplanData: !!floorplanData,
     fileType,
     isDxf,
@@ -64,7 +66,7 @@ export function FloorplanViewerTab({
     hasPdfImageUrl: !!floorplanData?.pdfImageUrl,
     pdfImageUrlLength: floorplanData?.pdfImageUrl?.length || 0,
     fileName: floorplanData?.fileName
-  });
+  } });
 
   // 🏢 ENTERPRISE: Render DXF data to canvas (simplified - without grid/rulers)
   useEffect(() => {

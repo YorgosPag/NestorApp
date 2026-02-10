@@ -27,6 +27,9 @@ import {
   PerformanceSubscription
 } from '../types/performance.types';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterprisePerformanceManager');
+
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
@@ -111,7 +114,7 @@ export class EnterprisePerformanceManager {
    */
   public startMonitoring(): void {
     if (this.isMonitoring) {
-      console.warn('⚠️ Performance monitoring already active');
+      logger.warn('Performance monitoring already active');
       return;
     }
 
@@ -260,7 +263,7 @@ export class EnterprisePerformanceManager {
     this.optimization = { ...this.optimization, ...newSettings };
     this.applyOptimizations();
 
-    console.log('⚡ Performance optimization settings updated');
+    logger.info('Performance optimization settings updated');
   }
 
   // 💾 CACHE INTEGRATION
@@ -418,7 +421,7 @@ export class EnterprisePerformanceManager {
         entryTypes: ['navigation', 'resource', 'measure', 'mark']
       });
     } catch (error) {
-      console.warn('⚠️ Performance Observer setup failed:', error);
+      logger.warn('Performance Observer setup failed', { error });
     }
   }
 
@@ -533,7 +536,7 @@ export class EnterprisePerformanceManager {
     threshold: BudgetThreshold,
     severity: PerformanceSeverity
   ): void {
-    console.warn(`🚨 Performance Alert: ${metric.name} = ${metric.value}${metric.unit} (threshold: ${threshold.errorThreshold}${metric.unit})`);
+    logger.warn(`Performance Alert: ${metric.name} = ${metric.value}${metric.unit} (threshold: ${threshold.errorThreshold}${metric.unit})`);
 
     // Notify subscribers about the alert
     this.notifySubscribers({
@@ -557,7 +560,7 @@ export class EnterprisePerformanceManager {
           try {
             subscription.callback(update);
           } catch (error) {
-            console.error(`❌ Error in performance subscription callback: ${subscription.id}`, error);
+            logger.error(`Error in performance subscription callback: ${subscription.id}`, { error });
           }
         }
       }
@@ -602,7 +605,7 @@ export class EnterprisePerformanceManager {
     });
 
     if (cleanedCount > 0) {
-      console.log(`🧹 Cleaned up ${cleanedCount} old performance metrics`);
+      logger.info(`Cleaned up ${cleanedCount} old performance metrics`);
     }
   }
 
@@ -612,7 +615,7 @@ export class EnterprisePerformanceManager {
       this.scheduleGarbageCollection();
     }
 
-    console.log('⚡ Performance optimizations applied');
+    logger.info('Performance optimizations applied');
   }
 
   private scheduleGarbageCollection(): void {
@@ -623,9 +626,9 @@ export class EnterprisePerformanceManager {
         setTimeout(() => {
           try {
             windowWithGC.gc?.();
-            console.log('🗑️ Garbage collection executed');
+            logger.info('Garbage collection executed');
           } catch (error) {
-            console.warn('⚠️ Garbage collection failed:', error);
+            logger.warn('Garbage collection failed', { error });
           }
         }, 1000);
       }
@@ -794,7 +797,7 @@ export class EnterprisePerformanceManager {
     this.subscriptions.clear();
 
     EnterprisePerformanceManager.instance = null;
-    console.log('🧹 Enterprise Performance Manager destroyed');
+    logger.info('Enterprise Performance Manager destroyed');
   }
 }
 

@@ -25,6 +25,8 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EmploymentRecord, ApdStatus, WorkerStampsSummary } from '../contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useEmploymentRecords');
 
 /** Parameters for saving employment records in batch */
 export interface SaveEmploymentRecordsParams {
@@ -126,7 +128,7 @@ export function useEmploymentRecords(
         if (mounted) {
           const message = err instanceof Error ? err.message : 'Failed to load employment records';
           setError(message);
-          console.error('[useEmploymentRecords] Error:', message);
+          logger.error('[useEmploymentRecords] Error:', { error: message });
         }
       } finally {
         if (mounted) {
@@ -203,7 +205,7 @@ export function useEmploymentRecords(
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save employment records';
       setError(message);
-      console.error('[useEmploymentRecords] Save error:', message);
+      logger.error('[useEmploymentRecords] Save error:', { error: message });
       return false;
     }
   }, [records, refetch]);
@@ -237,7 +239,7 @@ export function useEmploymentRecords(
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update APD status';
       setError(message);
-      console.error('[useEmploymentRecords] Update error:', message);
+      logger.error('[useEmploymentRecords] Update error:', { error: message });
       return false;
     }
   }, [refetch]);

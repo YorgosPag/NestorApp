@@ -54,6 +54,9 @@ export {
   type PolygonSystemProviderProps
 } from '@geo-alert/core/polygon-system';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('geo-alert-unified');
+
 // ============================================================================
 // UNIFIED DATABASE SYSTEM (Extracted & Optimized)
 // ============================================================================
@@ -172,8 +175,8 @@ export const SYSTEM_INFO = {
  * Quick start function για testing the unified system
  */
 export function createTestUnifiedSystem() {
-  console.log('🌍 Geo-Alert Unified System initialized');
-  console.log('📊 System Info:', SYSTEM_INFO);
+  logger.info('Geo-Alert Unified System initialized');
+  logger.info('System Info', { systemInfo: SYSTEM_INFO });
 
   return {
     info: SYSTEM_INFO,
@@ -229,5 +232,5 @@ export const CONSOLIDATION_STATUS = {
   ]
 } as const;
 
-console.log('🎯 Geo-Alert Unified System loaded');
-console.log('📋 Consolidation Status:', CONSOLIDATION_STATUS.phase);
+logger.info('Geo-Alert Unified System loaded');
+logger.info('Consolidation Status', { phase: CONSOLIDATION_STATUS.phase });

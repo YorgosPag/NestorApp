@@ -16,6 +16,8 @@
 // ============================================================================
 
 import { type SocialPlatformType } from './platform-config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('analytics-service');
 
 // ============================================================================
 // ANALYTICS SERVICE TYPE DEFINITIONS
@@ -191,7 +193,7 @@ export class AnalyticsService {
       return url.toString();
 
     } catch (error) {
-      console.warn('Failed to generate shareable URL:', error);
+      logger.warn('Failed to generate shareable URL', { error });
       return baseUrl;
     }
   }
@@ -316,7 +318,7 @@ export class AnalyticsService {
     this.sendToGoogleAnalytics(event);
 
     // Debug logging
-    console.log('📊 Share Event Tracked:', event);
+    logger.info('Share Event Tracked', { event });
   }
 
   /**
@@ -341,7 +343,7 @@ export class AnalyticsService {
         localStorage.setItem(storageKey, JSON.stringify(events));
       }
     } catch (error) {
-      console.warn('Failed to store analytics event locally:', error);
+      logger.warn('Failed to store analytics event locally', { error });
     }
   }
 
@@ -360,9 +362,9 @@ export class AnalyticsService {
       // });
 
       // For now, just log
-      console.log('Analytics service event:', event);
+      logger.info('Analytics service event', { event });
     } catch (error) {
-      console.warn('Failed to send event to analytics service:', error);
+      logger.warn('Failed to send event to analytics service', { error });
     }
   }
 
@@ -397,7 +399,7 @@ export class AnalyticsService {
       // Alternative: Check για other analytics providers
       // Facebook Pixel, Google Tag Manager, etc.
     } catch (error) {
-      console.warn('Failed to send event to Google Analytics:', error);
+      logger.warn('Failed to send event to Google Analytics', { error });
     }
   }
 
@@ -467,7 +469,7 @@ export class AnalyticsService {
       }
       return [];
     } catch (error) {
-      console.warn('Failed to retrieve stored events:', error);
+      logger.warn('Failed to retrieve stored events', { error });
       return [];
     }
   }
@@ -483,7 +485,7 @@ export class AnalyticsService {
         localStorage.removeItem('social_platform_analytics');
       }
     } catch (error) {
-      console.warn('Failed to clear stored events:', error);
+      logger.warn('Failed to clear stored events', { error });
     }
   }
 

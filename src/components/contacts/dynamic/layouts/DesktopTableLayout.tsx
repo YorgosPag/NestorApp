@@ -36,6 +36,8 @@ import {
   WebsiteRenderer,
   SocialRenderer
 } from '../communication';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('DesktopTableLayout');
 
 /**
  * Props interface for DesktopTableLayout component
@@ -218,7 +220,7 @@ function DesktopTableRows({
 
       default:
         // 🔒 SAFETY: Fallback for unknown types
-        console.warn(`Unknown communication type: ${config.type}`);
+        logger.warn(`Unknown communication type: ${config.type}`);
         return null;
     }
   };
@@ -270,7 +272,7 @@ export function DesktopTableLayout({
   // 🔒 VALIDATION: Ensure communication type is supported
   const supportedTypes = ['phone', 'email', 'website', 'social'] as const;
   if (!supportedTypes.includes(config.type as typeof supportedTypes[number])) {
-    console.warn(`Desktop table layout not supported for type: ${config.type}`);
+    logger.warn(`Desktop table layout not supported for type: ${config.type}`);
     return null;
   }
 

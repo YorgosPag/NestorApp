@@ -10,6 +10,8 @@ import type {
   ConnectionPair,
   CanvasDimensions
 } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useCanvasInteractions');
 
 interface UseCanvasInteractionsProps {
   canvasRef: RefObject<HTMLCanvasElement>;
@@ -82,7 +84,7 @@ export function useCanvasInteractions({
     const point = getMousePosition(event);
     const snappedPoint = snapToGrid(point);
     
-    console.log('Canvas mouse down:', { point, snappedPoint, mode });
+    logger.info('Canvas mouse down:', { data: { point, snappedPoint, mode } });
     
     // Handle different modes
     switch (mode) {

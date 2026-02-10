@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FloorplanContext');
+
 /** 🏢 ENTERPRISE: File type discriminator */
 type FloorplanFileType = 'dxf' | 'pdf';
 
@@ -41,12 +44,12 @@ export function FloorplanProvider({ children }: { children: React.ReactNode }) {
   const [parkingFloorplans, setParkingFloorplans] = useState<Record<string, FloorplanData>>({});
 
   const setProjectFloorplan = useCallback((projectId: string, data: FloorplanData) => {
-    console.log('🏗️ Setting project floorplan for project:', projectId, data);
+    logger.info('Setting project floorplan for project', { projectId, data });
     setProjectFloorplans(prev => ({ ...prev, [projectId]: data }));
   }, []);
 
   const setParkingFloorplan = useCallback((projectId: string, data: FloorplanData) => {
-    console.log('🏗️ Setting parking floorplan for project:', projectId, data);
+    logger.info('Setting parking floorplan for project', { projectId, data });
     setParkingFloorplans(prev => ({ ...prev, [projectId]: data }));
   }, []);
 

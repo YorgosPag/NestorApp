@@ -3,6 +3,9 @@ import type { TOptions } from 'i18next';
 import { useEffect, useState } from 'react';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useTranslationLazy');
+
 /**
  * Enhanced translation hook with lazy loading support
  */
@@ -28,7 +31,7 @@ export const useTranslationLazy = (namespace?: Namespace) => {
         setIsNamespaceLoaded(true);
       })
       .catch((error) => {
-        console.error(`Failed to load namespace ${namespace}:`, error);
+        logger.error(`Failed to load namespace ${namespace}`, { error });
         setIsNamespaceLoaded(true); // Still mark as loaded to prevent infinite loading
       });
   }, [namespace, i18n.language, i18n]);

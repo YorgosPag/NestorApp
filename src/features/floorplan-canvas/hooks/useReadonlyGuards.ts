@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useReadonlyGuards');
 
 export function useReadonlyGuards(isReadOnly: boolean) {
   
   const preventReadOnlyActions = useCallback((action: string) => {
     if (isReadOnly) {
-      console.warn(`Action '${action}' prevented: Canvas is in read-only mode`);
+      logger.warn(`Action '${action}' prevented: Canvas is in read-only mode`);
       return true;
     }
     return false;

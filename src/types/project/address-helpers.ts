@@ -24,6 +24,9 @@ import type {
 } from './addresses';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('address-helpers');
+
 // =============================================================================
 // PRIMARY ADDRESS EXTRACTION
 // =============================================================================
@@ -360,7 +363,7 @@ export function resolveBuildingPrimaryAddress(
   if (primaryProjectAddressId) {
     const match = projectAddresses.find(addr => addr.id === primaryProjectAddressId);
     if (!match) {
-      console.warn(`Primary project address not found: ${primaryProjectAddressId}`);
+      logger.warn(`Primary project address not found: ${primaryProjectAddressId}`);
       return getPrimaryAddress(projectAddresses);
     }
 

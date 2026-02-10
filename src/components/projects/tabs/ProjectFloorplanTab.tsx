@@ -25,6 +25,8 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import type { Project } from '@/types/project';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ProjectFloorplanTab');
 
 // =============================================================================
 // PROPS
@@ -97,7 +99,7 @@ export function ProjectFloorplanTab({
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[ProjectFloorplanTab] Failed to fetch company name:', error);
+        logger.error('[ProjectFloorplanTab] Failed to fetch company name:', { error: error });
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };

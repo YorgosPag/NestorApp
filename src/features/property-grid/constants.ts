@@ -13,6 +13,8 @@ import { propertyTypesService } from '@/services/property/EnterprisePropertyType
 import { PROPERTY_TYPE_LABELS, PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: Use centralized property type options - NO MORE HARDCODED VALUES
 import { getPropertyTypeOptions } from '@/subapps/dxf-viewer/config/modal-select';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('constants');
 
 // 🗑️ REMOVED: TYPE_OPTIONS - Use EnterprisePropertyTypesService
 //
@@ -42,7 +44,7 @@ export async function loadPropertyTypes(
       includeAll
     );
   } catch (error) {
-    console.warn('🏠 Failed to load property types from service, using fallback:', error);
+    logger.warn('Failed to load property types from service, using fallback:', { data: error });
 
     // Fallback to centralized labels
     return [
@@ -112,7 +114,7 @@ export async function getEnterprisePropertyTypes(options: {
       );
     }
   } catch (error) {
-    console.warn('🏠 Failed to load enterprise property types, using fallback:', error);
+    logger.warn('Failed to load enterprise property types, using fallback:', { data: error });
 
     // ✅ ENTERPRISE: Enhanced fallback using centralized property types - NO MORE HARDCODED VALUES
     const fallbackTypes = getPropertyTypeOptions().map(option => ({

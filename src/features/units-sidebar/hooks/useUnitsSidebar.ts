@@ -4,6 +4,8 @@ import type { Property } from '@/types/property-viewer';
 import type { FloorData, ViewerPassthroughProps } from '../types';
 // 🏢 ENTERPRISE: Firestore persistence for unit updates
 import { updateUnit } from '@/services/units.service';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useUnitsSidebar');
 
 export function useUnitsSidebar(floors: FloorData[]|undefined, viewerProps: ViewerPassthroughProps | null | undefined) {
   const safeFloors = Array.isArray(floors) ? floors : [];
@@ -19,9 +21,9 @@ export function useUnitsSidebar(floors: FloorData[]|undefined, viewerProps: View
   const handleUpdateProperty = React.useCallback(async (propertyId: string, updates: Partial<Property>) => {
     try {
       await updateUnit(propertyId, updates);
-      console.log(`✅ Unit ${propertyId} updated in Firestore:`, Object.keys(updates));
+      logger.info(`Unit ${propertyId} updated in Firestore:`, { data: Object.keys(updates) });
     } catch (error) {
-      console.error('❌ Failed to persist unit update to Firestore:', error);
+      logger.error('Failed to persist unit update to Firestore:', { error: error });
       throw error; // Re-throw so UI can handle error state
     }
   }, []);

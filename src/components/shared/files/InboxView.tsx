@@ -242,7 +242,7 @@ export function InboxView({
         code: (err as { code?: string })?.code,
         fullError: String(err),
       });
-      console.error('📥 INBOX_VIEW Full Error:', err);
+      logger.error('INBOX_VIEW Full Error:', { error: err });
       setError(fetchError);
     } finally {
       setLoading(false);

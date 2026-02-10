@@ -14,6 +14,9 @@
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseContactSaver');
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -50,7 +53,7 @@ export class EnterpriseContactSaver {
    * @returns Enterprise contact data with arrays
    */
   static convertToEnterpriseStructure(formData: Partial<ContactFormData>): EnterpriseContactData {
-    console.log('🏢 ENTERPRISE SAVER: Converting form data to arrays structure');
+    logger.info('ENTERPRISE SAVER: Converting form data to arrays structure');
 
     const enterpriseData: EnterpriseContactData = { ...formData } as EnterpriseContactData;
 
@@ -75,7 +78,7 @@ export class EnterpriseContactSaver {
       };
 
       enterpriseData.addresses = [primaryAddress];
-      console.log('🏠 ENTERPRISE SAVER: Created primary address:', primaryAddress);
+      logger.info('ENTERPRISE SAVER: Created primary address', { street: primaryAddress.street, city: primaryAddress.city, type: primaryAddress.type });
     }
 
     // ========================================================================
@@ -85,7 +88,7 @@ export class EnterpriseContactSaver {
     if (formData.websites && Array.isArray(formData.websites) && formData.websites.length > 0) {
       // Use dynamic arrays if available
       enterpriseData.websites = formData.websites;
-      console.log('🌐 ENTERPRISE SAVER: Using dynamic websites array:', formData.websites.length, 'items');
+      logger.info('ENTERPRISE SAVER: Using dynamic websites array:', { count: formData.websites.length });
     } else if (formData.website && formData.website.trim() !== '') {
       // Fallback to flat field
       const primaryWebsite: WebsiteInfo = {
@@ -95,7 +98,7 @@ export class EnterpriseContactSaver {
       };
 
       enterpriseData.websites = [primaryWebsite];
-      console.log('🌐 ENTERPRISE SAVER: Created primary website from flat field:', primaryWebsite);
+      logger.info('ENTERPRISE SAVER: Created primary website from flat field', { url: primaryWebsite.url, type: primaryWebsite.type });
     }
 
     // ========================================================================
@@ -104,7 +107,7 @@ export class EnterpriseContactSaver {
 
     if (formData.phones && Array.isArray(formData.phones) && formData.phones.length > 0) {
       enterpriseData.phones = formData.phones;
-      console.log('📱 ENTERPRISE SAVER: Using dynamic phones array:', formData.phones.length, 'items');
+      logger.info('ENTERPRISE SAVER: Using dynamic phones array:', { count: formData.phones.length });
     }
 
     // ========================================================================
@@ -113,7 +116,7 @@ export class EnterpriseContactSaver {
 
     if (formData.emails && Array.isArray(formData.emails) && formData.emails.length > 0) {
       enterpriseData.emails = formData.emails;
-      console.log('✉️ ENTERPRISE SAVER: Using dynamic emails array:', formData.emails.length, 'items');
+      logger.info('ENTERPRISE SAVER: Using dynamic emails array:', { count: formData.emails.length });
     }
 
     // ========================================================================
@@ -122,7 +125,7 @@ export class EnterpriseContactSaver {
 
     if (formData.socialMediaArray && Array.isArray(formData.socialMediaArray) && formData.socialMediaArray.length > 0) {
       enterpriseData.socialMedia = formData.socialMediaArray;
-      console.log('🌐 ENTERPRISE SAVER: Using dynamic social media array:', formData.socialMediaArray.length, 'items');
+      logger.info('ENTERPRISE SAVER: Using dynamic social media array:', { count: formData.socialMediaArray.length });
     }
 
     // ========================================================================
@@ -138,7 +141,7 @@ export class EnterpriseContactSaver {
     delete enterpriseData.email;
     delete enterpriseData.phone;
 
-    console.log('✅ ENTERPRISE SAVER: Conversion complete');
+    logger.info('ENTERPRISE SAVER: Conversion complete');
     return enterpriseData as EnterpriseContactData;
   }
 
@@ -197,7 +200,7 @@ export class EnterpriseContactSaver {
    * @returns Updated contact with merged arrays
    */
   static updateExistingContact(existingContact: Contact, formData: Partial<ContactFormData>): EnterpriseContactData {
-    console.log('🔄 ENTERPRISE SAVER: Updating existing contact with new data');
+    logger.info('ENTERPRISE SAVER: Updating existing contact with new data');
 
     const updatedData = { ...existingContact };
     const newData = this.convertToEnterpriseStructure(formData);
@@ -227,7 +230,7 @@ export class EnterpriseContactSaver {
     delete (updatedData as Record<string, unknown>).postalCode;
     delete (updatedData as Record<string, unknown>).website;
 
-    console.log('✅ ENTERPRISE SAVER: Update complete');
+    logger.info('ENTERPRISE SAVER: Update complete');
     return updatedData;
   }
 }

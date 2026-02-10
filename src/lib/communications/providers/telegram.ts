@@ -3,6 +3,8 @@
 import { COMMUNICATION_CHANNELS } from '../../config/communications.config';
 import type { BaseMessageInput, SendResult } from '@/types/communications';
 import type { WebhookData, InboundParsed } from '../core/messageRouter';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('telegram');
 
 // ============================================================================
 // ENTERPRISE TYPES
@@ -168,7 +170,7 @@ class TelegramProvider {
       };
 
     } catch (error: unknown) {
-      console.error('Telegram send error:', error);
+      logger.error('Telegram send error', { error });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
@@ -227,7 +229,7 @@ class TelegramProvider {
 
       throw new Error('Unrecognized Telegram webhook format');
     } catch (error) {
-      console.error('Error parsing Telegram message:', error);
+      logger.error('Error parsing Telegram message', { error });
       throw error;
     }
   }

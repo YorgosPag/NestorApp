@@ -20,6 +20,8 @@ import { getFirestore, FieldValue, Timestamp, FieldPath, type Firestore } from '
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getStorage, type Storage } from 'firebase-admin/storage';
 import { getCurrentRuntimeEnvironment, type RuntimeEnvironment } from '@/config/environment-security-config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('firebaseAdmin');
 
 // ============================================================================
 // TYPES & INTERFACES (Enterprise — zero `any`)
@@ -253,14 +255,14 @@ function initializeWithCredentialChain(): App {
     // Determine credential source from existing app (best effort)
     _credentialSource = _credentialSource !== 'NONE' ? _credentialSource : 'JSON';
     _projectId = projectId;
-    console.log('[Firebase Admin] Reusing existing app instance');
+    logger.info('[Firebase Admin] Reusing existing app instance');
     return app;
   }
 
   // PRIORITY 1: Base64-encoded service account (Vercel-safe)
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64) {
     try {
-      console.log('[Firebase Admin] Trying B64 credential...');
+      logger.info('[Firebase Admin] Trying B64 credential...');
       const rawB64 = sanitizeEnvJson(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64);
       const decoded = Buffer.from(rawB64, 'base64').toString('utf-8');
 
@@ -290,13 +292,12 @@ function initializeWithCredentialChain(): App {
 
       _credentialSource = 'B64';
       _projectId = saProjectId;
-      console.log(`[Firebase Admin] Initialized with B64 credential (project: ${_projectId})`);
+      logger.info(`[Firebase Admin] Initialized with B64 credential (project: ${_projectId})`);
       return app;
     } catch (err) {
-      console.warn(
-        '[Firebase Admin] B64 credential failed:',
-        err instanceof Error ? err.message : String(err)
-      );
+      logger.warn('[Firebase Admin] B64 credential failed', {
+        error: err instanceof Error ? err.message : String(err)
+      });
       // Fall through to next priority
     }
   }
@@ -304,10 +305,10 @@ function initializeWithCredentialChain(): App {
   // PRIORITY 2: Plain JSON service account
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     try {
-      console.log('[Firebase Admin] Trying JSON credential...');
+      logger.info('[Firebase Admin] Trying JSON credential...');
       const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
       const preview = maskedPreview(rawJson);
-      console.log(`[Firebase Admin] JSON value preview: ${preview} (length: ${rawJson.length})`);
+      logger.info(`[Firebase Admin] JSON value preview: ${preview} (length: ${rawJson.length})`);
 
       const { serviceAccount, projectId: saProjectId } = parseServiceAccount(
         rawJson,
@@ -326,13 +327,12 @@ function initializeWithCredentialChain(): App {
 
       _credentialSource = 'JSON';
       _projectId = saProjectId;
-      console.log(`[Firebase Admin] Initialized with JSON credential (project: ${_projectId})`);
+      logger.info(`[Firebase Admin] Initialized with JSON credential (project: ${_projectId})`);
       return app;
     } catch (err) {
-      console.warn(
-        '[Firebase Admin] JSON credential failed:',
-        err instanceof Error ? err.message : String(err)
-      );
+      logger.warn('[Firebase Admin] JSON credential failed', {
+        error: err instanceof Error ? err.message : String(err)
+      });
       // Fall through to next priority
     }
   }
@@ -340,18 +340,17 @@ function initializeWithCredentialChain(): App {
   // PRIORITY 3: Application Default Credentials (development/CI)
   if (projectId) {
     try {
-      console.log('[Firebase Admin] Trying Application Default Credentials...');
+      logger.info('[Firebase Admin] Trying Application Default Credentials...');
       const app = initializeApp({ projectId });
 
       _credentialSource = 'APPLICATION_DEFAULT';
       _projectId = projectId;
-      console.log(`[Firebase Admin] Initialized with default credentials (project: ${_projectId})`);
+      logger.info(`[Firebase Admin] Initialized with default credentials (project: ${_projectId})`);
       return app;
     } catch (err) {
-      console.warn(
-        '[Firebase Admin] Default credentials failed:',
-        err instanceof Error ? err.message : String(err)
-      );
+      logger.warn('[Firebase Admin] Default credentials failed', {
+        error: err instanceof Error ? err.message : String(err)
+      });
     }
   }
 
@@ -399,11 +398,11 @@ function ensureInitialized(): void {
 
     const environment = getCurrentRuntimeEnvironment();
     if (environment === 'production') {
-      console.error('[Firebase Admin] CRITICAL: SDK initialization failed in production');
-      console.error('[Firebase Admin] Error:', _initError.message);
+      logger.error('[Firebase Admin] CRITICAL: SDK initialization failed in production');
+      logger.error('[Firebase Admin] Error:', { error: _initError.message });
     } else {
-      console.warn('[Firebase Admin] SDK initialization failed in', environment);
-      console.warn('[Firebase Admin] Error:', _initError.message);
+      logger.warn('[Firebase Admin] SDK initialization failed in', { environment });
+      logger.warn('[Firebase Admin] Error:', { error: _initError.message });
     }
 
     throw _initError;
@@ -555,7 +554,7 @@ export async function safeFirestoreOperation<T>(
   fallback: T
 ): Promise<T> {
   if (!isFirebaseAdminAvailable()) {
-    console.warn('[Firebase Admin] SDK not available, returning fallback');
+    logger.warn('[Firebase Admin] SDK not available, returning fallback');
     return fallback;
   }
 
@@ -563,10 +562,9 @@ export async function safeFirestoreOperation<T>(
     const db = getAdminFirestore();
     return await operation(db);
   } catch (error) {
-    console.error(
-      '[Firebase Admin] Operation failed:',
-      error instanceof Error ? error.message : String(error)
-    );
+    logger.error('[Firebase Admin] Operation failed', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     return fallback;
   }
 }

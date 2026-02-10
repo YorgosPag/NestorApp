@@ -3,6 +3,9 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../contactMapper';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ServiceMapper');
+
 // ============================================================================
 // SERVICE CONTACT MAPPER
 // ============================================================================
@@ -44,13 +47,12 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
                       (contactRecord.officialWebsite as string) ||
                       (contactRecord.url as string) || '';
 
-  console.log('🔧 QUICK FIX - FOUND DATA:', {
+  logger.info('QUICK FIX - FOUND DATA', {
     contactId: contact.id,
     contactType: contact.type,
     foundEmail,
     foundPhone,
-    foundWebsite,
-    rawContact: JSON.stringify(contactRecord, null, 2)
+    foundWebsite
   });
 
   const formData: ContactFormData = {
@@ -157,8 +159,8 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
       ] : []
   };
 
-  // 🔍 DEBUG: Final formData values for clickable fields
-  console.log('🔍 SERVICE MAPPER FINAL RESULT:', {
+  // DEBUG: Final formData values for clickable fields
+  logger.info('SERVICE MAPPER FINAL RESULT', {
     email: formData.email,
     phone: formData.phone,
     website: formData.website,

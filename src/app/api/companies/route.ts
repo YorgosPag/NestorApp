@@ -262,7 +262,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       logger.info('[Companies/List] Navigation company IDs loaded', { count: navigationCompanyIds.length });
 
       if (navigationCompanyIds.length === 0) {
-        console.warn('⚠️ API: No navigation companies found - admin has no companies configured');
+        logger.warn('API: No navigation companies found - admin has no companies configured');
         return NextResponse.json({
           companies: [],
           count: 0,
@@ -291,21 +291,21 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
         if (company) {
           relevantCompanies.push(company);
         } else {
-          console.log(`⚠️ API: Navigation company ${companyId} not found in active contacts`);
+          logger.warn('API: Navigation company not found in active contacts', { companyId });
         }
       }
 
-      console.log(`🏢 API: Admin loaded ${relevantCompanies.length} companies from navigation_companies`);
+      logger.info('API: Admin loaded companies from navigation_companies', { count: relevantCompanies.length });
 
     } else {
       // =====================================================================
       // 🔒 TENANT ISOLATION: Internal user sees only their company
       // Same logic as /api/audit/bootstrap for non-admins
       // =====================================================================
-      console.log(`🔒 API: Tenant isolation mode (${ctx.globalRole}) - Loading user's company only...`);
+      logger.info('API: Tenant isolation mode - Loading user company only', { globalRole: ctx.globalRole });
 
       if (!ctx.companyId) {
-        console.warn('⚠️ API: User has no companyId in custom claims');
+        logger.warn('API: User has no companyId in custom claims');
         return NextResponse.json({
           companies: [],
           count: 0,
@@ -320,7 +320,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
         .get();
 
       if (!companyDoc.exists) {
-        console.warn(`⚠️ API: User's company ${ctx.companyId} not found in database`);
+        logger.warn('API: User company not found in database', { companyId: ctx.companyId });
         return NextResponse.json({
           companies: [],
           count: 0,
@@ -332,7 +332,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       const company = mapFirestoreToCompanyContact(companyDoc.id, rawData);
       relevantCompanies.push(company);
 
-      console.log(`🏢 API: Tenant isolation - loaded 1 company: ${company.companyName}`);
+      logger.info('API: Tenant isolation - loaded 1 company', { companyName: company.companyName });
     }
 
     // =========================================================================
@@ -340,7 +340,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
     // =========================================================================
     CacheHelpers.cacheCompanies(relevantCompanies, tenantCacheKey);
 
-    console.log(`✅ API: Found ${relevantCompanies.length} companies (cached for 5 minutes)`);
+    logger.info('API: Found companies (cached for 5 minutes)', { count: relevantCompanies.length });
 
     return NextResponse.json({
       companies: relevantCompanies,
@@ -349,7 +349,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
     });
 
   } catch (error: unknown) {
-    console.error('❌ API: Error loading companies:', error);
+    logger.error('API: Error loading companies', { error });
 
     // Enhanced error details for debugging
     const errorDetails = {
@@ -359,7 +359,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       timestamp: new Date().toISOString()
     };
 
-    console.error('❌ API: Detailed error info:', errorDetails);
+    logger.error('API: Detailed error info', { errorDetails });
 
     throw error; // Propagate to withAuth error handler
   }

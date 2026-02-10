@@ -16,6 +16,8 @@
 
 import type { CSSProperties } from 'react';
 import { zIndex } from '@/styles/design-tokens';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FloorPlanCanvas.styles');
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -559,7 +561,7 @@ export const validateFloorPlanConfig = (): boolean => {
   // Ensure proper z-index ordering
   for (let i = 1; i < sortedIndices.length; i++) {
     if (sortedIndices[i] <= sortedIndices[i - 1]) {
-      console.warn('FloorPlan z-index hierarchy issue detected');
+      logger.warn('FloorPlan z-index hierarchy issue detected');
       return false;
     }
   }

@@ -12,6 +12,8 @@ import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import type { UseRelationshipListReturn } from '../types/relationship-manager.types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useRelationshipListOptimized');
 
 // ============================================================================
 // CACHE MANAGEMENT
@@ -39,7 +41,7 @@ class RelationshipCache {
       return null;
     }
 
-    console.log('🚀 CACHE HIT: Using cached relationships for', contactId);
+    logger.info('CACHE HIT: Using cached relationships for', { data: contactId });
     return entry.data;
   }
 
@@ -49,17 +51,17 @@ class RelationshipCache {
       timestamp: Date.now(),
       expires: Date.now() + this.CACHE_TTL
     });
-    console.log('💾 CACHE SET: Cached relationships for', contactId, 'count:', data.length);
+    logger.info('CACHE SET: Cached relationships for', { contactId, count: data.length });
   }
 
   static invalidate(contactId: string): void {
     this.cache.delete(contactId);
-    console.log('🗑️ CACHE INVALIDATED: Cleared cache for', contactId);
+    logger.info('CACHE INVALIDATED: Cleared cache for', { data: contactId });
   }
 
   static invalidateAll(): void {
     this.cache.clear();
-    console.log('🗑️ CACHE CLEARED: All relationship cache cleared');
+    logger.info('CACHE CLEARED: All relationship cache cleared');
   }
 }
 
@@ -74,7 +76,7 @@ class RequestDeduplicator {
     // Check if request is already in progress
     const pending = this.pendingRequests.get(contactId);
     if (pending) {
-      console.log('🔄 DEDUP: Using existing request for', contactId);
+      logger.info('DEDUP: Using existing request for', { data: contactId });
       return pending;
     }
 
@@ -85,7 +87,7 @@ class RequestDeduplicator {
     }
 
     // Create new request
-    console.log('🚀 NEW REQUEST: Loading relationships for', contactId);
+    logger.info('NEW REQUEST: Loading relationships for', { data: contactId });
     const request = ContactRelationshipService.getContactRelationships(contactId);
 
     this.pendingRequests.set(contactId, request);
@@ -159,7 +161,7 @@ export const useRelationshipListOptimized = (
         RequestDeduplicator.invalidate(contactId);
       }
 
-      console.log('📋 Loading relationships for contact:', contactId);
+      logger.info('Loading relationships for contact:', { data: contactId });
       const data = await RequestDeduplicator.get(contactId);
 
       // Only update state if data actually changed (compare by IDs only)
@@ -175,17 +177,17 @@ export const useRelationshipListOptimized = (
         if (hasChanged) {
           lastUpdateTimestamp.current = Date.now();
           callbackRef.current?.(data);
-          console.log('✅ OPTIMIZED: Relationships updated:', data.length);
+          logger.info('OPTIMIZED: Relationships updated:', { data: data.length });
           return data;
         }
-        console.log('ℹ️ OPTIMIZED: Relationships unchanged, skipping update');
+        logger.info('ℹOPTIMIZED: Relationships unchanged, skipping update');
         return prevRelationships;
       });
 
     } catch (err) {
       const errorMessage = 'Σφάλμα φόρτωσης σχέσεων επαφής';
       setError(errorMessage);
-      console.error('❌ Error loading relationships:', err);
+      logger.error('Error loading relationships:', { error: err });
       setRelationships([]);
     } finally {
       setLoading(false);
@@ -204,7 +206,7 @@ export const useRelationshipListOptimized = (
       setLoading(true);
       setError(null);
 
-      console.log('🗑️ Deleting relationship:', relationshipId);
+      logger.info('Deleting relationship:', { data: relationshipId });
       await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
 
       // Invalidate cache για this contact
@@ -224,11 +226,11 @@ export const useRelationshipListOptimized = (
         return newSet;
       });
 
-      console.log('✅ Relationship deleted successfully');
+      logger.info('Relationship deleted successfully');
     } catch (err) {
       const errorMessage = 'Σφάλμα διαγραφής σχέσης';
       setError(errorMessage);
-      console.error('❌ Error deleting relationship:', err);
+      logger.error('Error deleting relationship:', { error: err });
 
       // Force refresh to ensure consistency
       await loadRelationships(true);
@@ -241,7 +243,7 @@ export const useRelationshipListOptimized = (
    * 🔄 Refresh relationships (force reload)
    */
   const refreshRelationships = useCallback(async () => {
-    console.log('🔄 OPTIMIZED: Force refreshing relationships for', contactId);
+    logger.info('OPTIMIZED: Force refreshing relationships for', { data: contactId });
     await loadRelationships(true);
   }, [contactId, loadRelationships]);
 

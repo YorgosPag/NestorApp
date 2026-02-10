@@ -8,6 +8,9 @@
  * @version 1.0.0
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('enterprise-api-cache');
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -80,7 +83,7 @@ export class EnterpriseAPICache {
 
     this.stats.hits++;
     this.updateStats();
-    console.log(`🎯 CACHE HIT: ${key} (age: ${Math.round((now - entry.timestamp) / 1000)}s)`);
+    logger.info(`CACHE HIT: ${key} (age: ${Math.round((now - entry.timestamp) / 1000)}s)`);
     return entry.data as T;
   }
 
@@ -100,7 +103,7 @@ export class EnterpriseAPICache {
     this.cache.set(key, entry);
     this.stats.cacheSize = this.cache.size;
 
-    console.log(`📥 CACHE SET: ${key} (TTL: ${Math.round(ttl / 1000)}s)`);
+    logger.info(`CACHE SET: ${key} (TTL: ${Math.round(ttl / 1000)}s)`);
   }
 
   /**
@@ -111,7 +114,7 @@ export class EnterpriseAPICache {
     this.stats.cacheSize = this.cache.size;
 
     if (deleted) {
-      console.log(`🗑️ CACHE DELETE: ${key}`);
+      logger.info(`CACHE DELETE: ${key}`);
     }
 
     return deleted;
@@ -131,7 +134,7 @@ export class EnterpriseAPICache {
     }
 
     this.stats.cacheSize = this.cache.size;
-    console.log(`🔥 CACHE INVALIDATE: Pattern "${pattern}" (${deletedCount} entries deleted)`);
+    logger.info(`CACHE INVALIDATE: Pattern "${pattern}" (${deletedCount} entries deleted)`);
 
     return deletedCount;
   }
@@ -153,7 +156,7 @@ export class EnterpriseAPICache {
     this.stats.cacheSize = this.cache.size;
 
     if (cleanedCount > 0) {
-      console.log(`🧹 CACHE CLEANUP: ${cleanedCount} expired entries removed`);
+      logger.info(`CACHE CLEANUP: ${cleanedCount} expired entries removed`);
     }
 
     return cleanedCount;
@@ -178,7 +181,7 @@ export class EnterpriseAPICache {
       hitRatio: 0,
       cacheSize: 0
     };
-    console.log('🔄 CACHE CLEARED');
+    logger.info('CACHE CLEARED');
   }
 
   /**
@@ -341,7 +344,7 @@ export class CacheHelpers {
     // Log stats periodically
     const stats = this.cache.getStats();
     if (stats.totalQueries > 0) {
-      console.log(`📊 CACHE STATS: ${stats.hitRatio.toFixed(1)}% hit ratio (${stats.hits}/${stats.totalQueries}), ${stats.cacheSize} entries`);
+      logger.info(`CACHE STATS: ${stats.hitRatio.toFixed(1)}% hit ratio (${stats.hits}/${stats.totalQueries}), ${stats.cacheSize} entries`);
     }
   }
 }

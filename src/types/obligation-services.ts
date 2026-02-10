@@ -10,6 +10,9 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ObligationSection, ObligationDocument } from './obligations';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('obligation-services');
+
 /**
  * 📋 Ανάκτηση obligation templates από Firebase
  * Αντικατέστησε τα MOCK_SECTIONS με πραγματικά δεδομένα από τη βάση
@@ -29,11 +32,11 @@ export async function getObligationTemplates(limitCount: number = 50): Promise<O
       ...doc.data()
     })) as ObligationSection[];
 
-    console.log(`✅ Loaded ${templates.length} real obligation templates from Firebase`);
+    logger.info(`Loaded ${templates.length} real obligation templates from Firebase`);
     return templates;
 
   } catch (error) {
-    console.error('❌ Error fetching obligation templates from Firebase:', error);
+    logger.error('Error fetching obligation templates from Firebase', { error });
     // Fallback to default template
     return DEFAULT_TEMPLATE_SECTIONS;
   }
@@ -65,11 +68,11 @@ export async function getObligations(limitCount: number = 100): Promise<Obligati
       }
     })) as ObligationDocument[];
 
-    console.log(`✅ Loaded ${obligations.length} real obligations from Firebase`);
+    logger.info(`Loaded ${obligations.length} real obligations from Firebase`);
     return obligations;
 
   } catch (error) {
-    console.error('❌ Error fetching obligations from Firebase:', error);
+    logger.error('Error fetching obligations from Firebase', { error });
     return []; // Επιστροφή κενού array αντί για mock data
   }
 }

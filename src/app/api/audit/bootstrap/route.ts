@@ -32,6 +32,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { CompanyContact } from '@/types/contacts';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AuditBootstrapRoute');
 
 // ============================================================================
 // TYPES - Enterprise Bootstrap Response
@@ -155,7 +158,7 @@ export async function GET(request: NextRequest) {
 
 async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ApiSuccessResponse<BootstrapResponse>>> {
   const startTime = Date.now();
-  console.log(`🚀 [Bootstrap] Audit bootstrap load for user ${ctx.email} (company: ${ctx.companyId})...`);
+  logger.info('[Bootstrap] Audit bootstrap load', { email: ctx.email, companyId: ctx.companyId });
 
   // ============================================================================
   // 0. VALIDATE FIREBASE ADMIN SDK - ENTERPRISE REQUIREMENT
@@ -167,9 +170,9 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
     adminDb = getAdminFirestore();
   } catch (error) {
     const diag = getAdminDiagnostics();
-    console.error('❌ [Bootstrap] Firebase Admin SDK not initialized');
-    console.error('📍 [Bootstrap] Environment:', diag.environment);
-    console.error('📋 [Bootstrap] Error:', diag.error);
+    logger.error('[Bootstrap] Firebase Admin SDK not initialized');
+    logger.error('[Bootstrap] Environment', { environment: diag.environment });
+    logger.error('[Bootstrap] Error', { error: diag.error });
 
     throw new Error(
       `Bootstrap failed: Firebase Admin SDK not initialized. ` +
@@ -179,7 +182,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
     );
   }
 
-  console.log('✅ [Bootstrap] Firebase Admin SDK validated');
+  logger.info('[Bootstrap] Firebase Admin SDK validated');
 
   // ============================================================================
   // 1. CHECK CACHE FIRST (ROLE-BASED CACHE KEY)
@@ -198,7 +201,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
 
   if (cachedData) {
     const duration = Date.now() - startTime;
-    console.log(`⚡ [Bootstrap] CACHE HIT (tenant: ${ctx.companyId}) - ${cachedData.companies.length} companies, ${cachedData.projects.length} projects in ${duration}ms`);
+    logger.info('[Bootstrap] CACHE HIT', { tenantId: ctx.companyId, companies: cachedData.companies.length, projects: cachedData.projects.length, durationMs: duration });
 
     // 🏢 ENTERPRISE: Return standard apiSuccess format
     return apiSuccess<BootstrapResponse>(
@@ -211,7 +214,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
     );
   }
 
-  console.log(`🔍 [Bootstrap] Cache miss (tenant: ${ctx.companyId}, role: ${ctx.globalRole}) - Fetching from Firestore...`);
+  logger.info('[Bootstrap] Cache miss - Fetching from Firestore', { tenantId: ctx.companyId, role: ctx.globalRole });
 
   // ============================================================================
   // 2. FETCH COMPANIES - HYBRID APPROACH (ENTERPRISE)
@@ -230,7 +233,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       // =========================================================================
       // 🔓 ADMIN MODE: Load from navigation_companies (multi-company view)
       // =========================================================================
-      console.log(`👑 [Bootstrap] Admin mode (${ctx.globalRole}) - Loading from navigation_companies...`);
+      logger.info('[Bootstrap] Admin mode - Loading from navigation_companies', { globalRole: ctx.globalRole });
 
       // Step 1: Get all navigation company IDs
       const navCompaniesSnapshot = await adminDb
@@ -238,7 +241,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
         .get();
 
       if (navCompaniesSnapshot.empty) {
-        console.warn('⚠️ [Bootstrap] No navigation companies found - admin has no companies configured');
+        logger.warn('[Bootstrap] No navigation companies found - admin has no companies configured');
         return apiSuccess<BootstrapResponse>(
           {
             companies: [],
@@ -260,7 +263,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
         }
       });
 
-      console.log(`📋 [Bootstrap] Found ${navContactIds.length} navigation companies`);
+      logger.info('[Bootstrap] Found navigation companies', { count: navContactIds.length });
 
       // Step 2: Fetch company details from contacts collection
       if (navContactIds.length > 0) {
@@ -285,16 +288,16 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
         }
       }
 
-      console.log(`🏢 [Bootstrap] Admin loaded ${companyIds.length} companies from navigation_companies`);
+      logger.info('[Bootstrap] Admin loaded companies from navigation_companies', { count: companyIds.length });
 
     } else {
       // =========================================================================
       // 🔒 TENANT ISOLATION: Internal user sees only their company
       // =========================================================================
-      console.log(`🔒 [Bootstrap] Tenant isolation mode - Loading user's company only...`);
+      logger.info('[Bootstrap] Tenant isolation mode - Loading user company only');
 
       if (!ctx.companyId) {
-        console.warn('⚠️ [Bootstrap] User has no companyId in custom claims');
+        logger.warn('[Bootstrap] User has no companyId in custom claims');
         return apiSuccess<BootstrapResponse>(
           {
             companies: [],
@@ -314,7 +317,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
         .get();
 
       if (!companyDoc.exists) {
-        console.warn(`⚠️ [Bootstrap] User's company ${ctx.companyId} not found in database`);
+        logger.warn('[Bootstrap] User company not found in database', { companyId: ctx.companyId });
         return apiSuccess<BootstrapResponse>(
           {
             companies: [],
@@ -334,17 +337,15 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       });
       companyIds.push(ctx.companyId);
 
-      console.log(`🏢 [Bootstrap] Tenant isolation - loaded 1 company: ${ctx.companyId}`);
+      logger.info('[Bootstrap] Tenant isolation - loaded 1 company', { companyId: ctx.companyId });
     }
 
   } catch (error) {
-    console.error('❌ [Bootstrap] Failed to fetch companies from Firestore');
-    console.error('📍 [Bootstrap] Mode:', isAdmin ? 'Admin (navigation_companies)' : 'Tenant Isolation');
-    console.error('📋 [Bootstrap] Error details:', error instanceof Error ? error.message : String(error));
-
-    if (error instanceof Error && error.stack) {
-      console.error('📚 [Bootstrap] Stack trace:', error.stack);
-    }
+    logger.error('[Bootstrap] Failed to fetch companies from Firestore', {
+      mode: isAdmin ? 'Admin (navigation_companies)' : 'Tenant Isolation',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
 
     throw new Error(
       `Failed to fetch companies from Firestore: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
@@ -360,7 +361,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   let allProjects: BootstrapProject[] = [];
 
   if (companyIds.length === 0) {
-    console.log('⚠️ [Bootstrap] No companies found - returning empty projects');
+    logger.warn('[Bootstrap] No companies found - returning empty projects');
   } else {
     try {
       if (companyIds.length <= FIRESTORE_IN_LIMIT) {
@@ -374,7 +375,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
 
       } else {
         // 🏢 ENTERPRISE: Chunked queries - over the limit (Admin SDK)
-        console.log(`📦 [Bootstrap] Chunking ${companyIds.length} companies into ${Math.ceil(companyIds.length / FIRESTORE_IN_LIMIT)} queries`);
+        logger.info('[Bootstrap] Chunking companies into queries', { count: companyIds.length, chunks: Math.ceil(companyIds.length / FIRESTORE_IN_LIMIT) });
 
         const chunks = chunkArray(companyIds, FIRESTORE_IN_LIMIT);
 
@@ -391,17 +392,15 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
         allProjects = chunkResults.flat();
       }
 
-      console.log(`🏗️ [Bootstrap] Found ${allProjects.length} total projects`);
+      logger.info('[Bootstrap] Found total projects', { count: allProjects.length });
 
     } catch (error) {
-      console.error('❌ [Bootstrap] Failed to fetch projects from Firestore');
-      console.error('📍 [Bootstrap] Collection:', COLLECTIONS.PROJECTS);
-      console.error('📋 [Bootstrap] Company IDs count:', companyIds.length);
-      console.error('📋 [Bootstrap] Error details:', error instanceof Error ? error.message : String(error));
-
-      if (error instanceof Error && error.stack) {
-        console.error('📚 [Bootstrap] Stack trace:', error.stack);
-      }
+      logger.error('[Bootstrap] Failed to fetch projects from Firestore', {
+        collection: COLLECTIONS.PROJECTS,
+        companyIdsCount: companyIds.length,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
 
       throw new Error(
         `Failed to fetch projects from Firestore: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
@@ -435,7 +434,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       );
 
       const allBuildingDocs = buildingResults.flat();
-      console.log(`🏗️ [Bootstrap] Found ${allBuildingDocs.length} total buildings`);
+      logger.info('[Bootstrap] Found total buildings', { count: allBuildingDocs.length });
 
       // Count buildings per project
       allBuildingDocs.forEach(doc => {
@@ -447,17 +446,15 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       });
 
     } catch (error) {
-      console.error('❌ [Bootstrap] Failed to fetch buildings from Firestore');
-      console.error('📍 [Bootstrap] Collection:', COLLECTIONS.BUILDINGS);
-      console.error('📋 [Bootstrap] Project IDs count:', projectIds.length);
-      console.error('📋 [Bootstrap] Error details:', error instanceof Error ? error.message : String(error));
+      logger.error('[Bootstrap] Failed to fetch buildings from Firestore', {
+        collection: COLLECTIONS.BUILDINGS,
+        projectIdsCount: projectIds.length,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
 
-      if (error instanceof Error && error.stack) {
-        console.error('📚 [Bootstrap] Stack trace:', error.stack);
-      }
-
-      // 🏢 NON-BLOCKING: Buildings are optional - continue with zero counts
-      console.warn('⚠️ [Bootstrap] Continuing with zero building counts (non-critical failure)');
+      // NON-BLOCKING: Buildings are optional - continue with zero counts
+      logger.warn('[Bootstrap] Continuing with zero building counts (non-critical failure)');
     }
   }
 
@@ -506,7 +503,7 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   cache.set(tenantCacheKey, response, CACHE_TTL_MS);
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Bootstrap] Complete (tenant: ${ctx.companyId}): ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (cached for 3min)`);
+  logger.info('[Bootstrap] Complete', { tenantId: ctx.companyId, companies: companies.length, projects: allProjects.length, durationMs: duration });
 
   // 🏢 ENTERPRISE: Return standard apiSuccess format
   return apiSuccess<BootstrapResponse>(

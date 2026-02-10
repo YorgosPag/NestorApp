@@ -22,6 +22,8 @@ import {
   isValidPlatform,
   type SocialPlatformType
 } from './platform-config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('profile-service');
 
 // ============================================================================
 // PROFILE SERVICE TYPE DEFINITIONS
@@ -139,7 +141,7 @@ export class ProfileService {
     // Validate platform
     if (!isValidPlatform(platform)) {
       if (options.returnValidation) return null;
-      console.warn(`[ProfileService] Unsupported platform: ${platform}`);
+      logger.warn(`[ProfileService] Unsupported platform: ${platform}`);
       return null;
     }
 

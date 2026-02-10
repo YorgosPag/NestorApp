@@ -21,6 +21,8 @@ import {
   getPlatformById,
   type SocialPlatformType
 } from './platform-config';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('sharing-service');
 
 // ============================================================================
 // SHARING SERVICE TYPE DEFINITIONS
@@ -380,7 +382,7 @@ export class SharingService {
       return success;
 
     } catch (error) {
-      console.warn('Failed to copy to clipboard:', error);
+      logger.warn('Failed to copy to clipboard', { error });
       return false;
     }
   }
@@ -436,7 +438,7 @@ export class SharingService {
 
       return url.toString();
     } catch (error) {
-      console.warn('Failed to add UTM parameters:', error);
+      logger.warn('Failed to add UTM parameters', { error });
       return baseUrl;
     }
   }

@@ -53,6 +53,10 @@ import {
   PropertyStatusSelector as _PropertyStatusSelector,
 } from '@/components/ui/property-status';
 
+import { createModuleLogger } from '@/lib/telemetry';
+
+const _logger = createModuleLogger('PropertyStatus');
+
 // ============================================================================
 // STATUS TYPES & CONSTANTS
 // ============================================================================
@@ -221,18 +225,16 @@ export const PropertyStatusDev = {
 
   // Validate system integrity
   validateSystem: () => {
-    console.group('🏢 Property Status System Validation');
-
-    console.log('✅ Available statuses:', _getAllEnhancedStatuses().length);
-    console.log('✅ Status categories:', Object.keys(_STATUS_CATEGORIES));
-    console.log('✅ Engine instance:', !!_propertyStatusEngine);
+    _logger.info('Property Status System Validation', {
+      availableStatuses: _getAllEnhancedStatuses().length,
+      statusCategories: Object.keys(_STATUS_CATEGORIES),
+      engineInstance: !!_propertyStatusEngine,
+    });
 
     // Test basic functionality
     const testProperty = PropertyStatusDev.createTestProperty();
     const validation = _validatePropertyStatus(testProperty);
-    console.log('✅ Test validation:', validation);
-
-    console.groupEnd();
+    _logger.info('Test validation result', { validation });
 
     return true;
   }

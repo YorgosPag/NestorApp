@@ -36,6 +36,9 @@ import { WorkspaceService } from '@/services/workspace.service';
 import type { Workspace, ActiveWorkspaceContext } from '@/types/workspace';
 import { useAuth } from '@/auth/contexts/AuthContext';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('WorkspaceContext');
+
 // ============================================================================
 // CONTEXT CREATION
 // ============================================================================
@@ -109,7 +112,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         const savedWorkspace = workspaces.find((w) => w.id === savedWorkspaceId);
         if (savedWorkspace) {
           setActiveWorkspace(savedWorkspace);
-          console.log(`✅ [WorkspaceContext] Restored workspace: ${savedWorkspaceId}`);
+          logger.info(`[WorkspaceContext] Restored workspace: ${savedWorkspaceId}`);
           return;
         }
       }
@@ -118,12 +121,12 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       if (workspaces.length > 0) {
         setActiveWorkspace(workspaces[0]);
         localStorage.setItem(STORAGE_KEY_ACTIVE_WORKSPACE, workspaces[0].id);
-        console.log(`✅ [WorkspaceContext] Auto-selected first workspace: ${workspaces[0].id}`);
+        logger.info(`[WorkspaceContext] Auto-selected first workspace: ${workspaces[0].id}`);
       } else {
-        console.warn('⚠️ [WorkspaceContext] No workspaces available for user');
+        logger.warn('[WorkspaceContext] No workspaces available for user');
       }
     } catch (err) {
-      console.error('[WorkspaceContext] Failed to load workspaces:', err);
+      logger.error('[WorkspaceContext] Failed to load workspaces', { error: err });
       setError(err instanceof Error ? err : new Error('Failed to load workspaces'));
     } finally {
       setLoading(false);
@@ -133,7 +136,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   // ⚡ ENTERPRISE PERFORMANCE: Activate function - called by useWorkspace hook
   const activate = useCallback(() => {
     if (!activated) {
-      console.log('🔌 [WorkspaceContext] Lazy activation triggered');
+      logger.info('[WorkspaceContext] Lazy activation triggered');
       setActivated(true);
     }
   }, [activated]);
@@ -162,7 +165,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       const workspace = availableWorkspaces.find((w) => w.id === workspaceId);
 
       if (!workspace) {
-        console.error(`[WorkspaceContext] Workspace not found: ${workspaceId}`);
+        logger.error(`[WorkspaceContext] Workspace not found: ${workspaceId}`);
         throw new Error(`Workspace not found: ${workspaceId}`);
       }
 
@@ -172,7 +175,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       // Persist to localStorage
       localStorage.setItem(STORAGE_KEY_ACTIVE_WORKSPACE, workspaceId);
 
-      console.log(`✅ [WorkspaceContext] Switched to workspace: ${workspaceId}`);
+      logger.info(`[WorkspaceContext] Switched to workspace: ${workspaceId}`);
 
       // Dispatch custom event for other components to react
       if (typeof window !== 'undefined') {

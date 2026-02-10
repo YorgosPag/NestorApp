@@ -33,6 +33,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FixCompaniesRoute');
 
 /** Result of company fix operation */
 interface CompanyFixResult {
@@ -63,10 +66,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/fix-companies] BLOCKED: Non-super_admin attempted company name fix`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[POST /api/fix-companies] BLOCKED: Non-super_admin attempted company name fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -77,7 +77,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
     );
   }
 
-  console.log('🔧 Starting company fix process...');
+  logger.info('Starting company fix process...');
 
   try {
     // Get all contacts with type 'company'
@@ -87,7 +87,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
     );
 
     const snapshot = await getDocs(companiesQuery);
-    console.log(`📊 Found ${snapshot.size} companies`);
+    logger.info('Found companies', { count: snapshot.size });
 
     const batch = writeBatch(db);
     let changesCount = 0;
@@ -95,7 +95,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
 
     snapshot.docs.forEach((doc, index) => {
       const data = doc.data();
-      console.log(`🏢 Company ${index + 1}: ID=${doc.id}, Name="${data.companyName}"`);
+      logger.info('Company found', { index: index + 1, id: doc.id, name: data.companyName });
 
       results.push({
         id: doc.id,
@@ -108,7 +108,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
       if (data.companyName === 'TechCorp Α.Ε.') {
         // This is the main company - rename it to Pagonis
         const newCompanyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company';
-        console.log(`✅ Updating main company ID ${doc.id} to "${newCompanyName}"`);
+        logger.info('Updating main company', { id: doc.id, newCompanyName });
         batch.update(doc.ref, {
           companyName: newCompanyName,
           industry: 'Κατασκευές & Ανάπτυξη Ακινήτων',
@@ -120,11 +120,11 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
     });
 
     if (changesCount > 0) {
-      console.log(`💾 Committing ${changesCount} changes...`);
+      logger.info('Committing changes', { changesCount });
       await batch.commit();
-      console.log('✅ Company fix completed successfully!');
+      logger.info('Company fix completed successfully!');
     } else {
-      console.log('ℹ️ No changes needed');
+      logger.info('No changes needed');
     }
 
     const duration = Date.now() - startTime;
@@ -149,7 +149,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
       },
       `Company name fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -161,7 +161,7 @@ async function handleFixCompaniesExecute(request: NextRequest, ctx: AuthContext)
     });
 
   } catch (error: unknown) {
-    console.error('❌ Error fixing companies:', error);
+    logger.error('Error fixing companies', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(

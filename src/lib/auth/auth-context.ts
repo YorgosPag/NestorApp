@@ -32,6 +32,8 @@ import type {
 import { isValidGlobalRole } from './types';
 import { getDevCompanyId } from '@/config/dev-environment';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('auth-context');
 
 // =============================================================================
 // CONSTANTS
@@ -101,14 +103,14 @@ function extractSessionCookie(request: NextRequest): string | null {
 async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
   try {
     if (!isFirebaseAdminAvailable()) {
-      console.log('[AUTH_CONTEXT] Cannot verify token - Admin SDK not available');
+      logger.info('[AUTH_CONTEXT] Cannot verify token - Admin SDK not available');
       return null;
     }
 
     const auth = getAdminAuth();
     return await auth.verifyIdToken(token);
   } catch (error) {
-    console.log('[AUTH_CONTEXT] Token verification failed:', (error as Error).message);
+    logger.info('[AUTH_CONTEXT] Token verification failed:', { message: (error as Error).message });
     return null;
   }
 }
@@ -123,14 +125,14 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
 async function verifySessionCookie(sessionCookie: string): Promise<DecodedIdToken | null> {
   try {
     if (!isFirebaseAdminAvailable()) {
-      console.log('[AUTH_CONTEXT] Cannot verify session cookie - Admin SDK not available');
+      logger.info('[AUTH_CONTEXT] Cannot verify session cookie - Admin SDK not available');
       return null;
     }
 
     const auth = getAdminAuth();
     return await auth.verifySessionCookie(sessionCookie, false);
   } catch (error) {
-    console.log('[AUTH_CONTEXT] Session cookie verification failed:', (error as Error).message);
+    logger.info('[AUTH_CONTEXT] Session cookie verification failed:', { message: (error as Error).message });
     return null;
   }
 }
@@ -149,14 +151,14 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
   // Extract companyId (required for multi-tenant)
   const companyId = token.companyId as string | undefined;
   if (!companyId || typeof companyId !== 'string') {
-    console.log('[AUTH_CONTEXT] Missing companyId claim');
+    logger.info('[AUTH_CONTEXT] Missing companyId claim');
     return null;
   }
 
   // Extract globalRole (required)
   const globalRoleRaw = token.globalRole as string | undefined;
   if (!globalRoleRaw || !isValidGlobalRole(globalRoleRaw)) {
-    console.log('[AUTH_CONTEXT] Invalid globalRole claim:', globalRoleRaw);
+    logger.info('[AUTH_CONTEXT] Invalid globalRole claim:', { globalRole: globalRoleRaw });
     return null;
   }
 
@@ -255,7 +257,7 @@ export async function buildRequestContext(
 
   // Step 3: No credentials found — development bypass or reject
   if (process.env.NODE_ENV === 'development') {
-    console.log('[AUTH_CONTEXT] Development mode: bypassing API auth (no token or cookie)');
+    logger.info('[AUTH_CONTEXT] Development mode: bypassing API auth (no token or cookie)');
     return createDevContext();
   }
 

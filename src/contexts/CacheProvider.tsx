@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('CacheProvider');
+
 // Cache entry interface
 interface CacheEntry<T = unknown> {
   data: T;
@@ -177,7 +180,7 @@ export function CacheProvider({
       const data = await fetcher();
       set(key, data, config);
     } catch (error) {
-      console.warn(`Prefetch failed for key ${key}:`, error);
+      logger.warn(`Prefetch failed for key ${key}`, { error });
     }
   }, [set]);
 

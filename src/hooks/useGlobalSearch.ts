@@ -20,6 +20,8 @@ import {
   type SearchResult,
   type SearchEntityType,
 } from '@/types/search';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useGlobalSearch');
 
 // =============================================================================
 // TYPES
@@ -138,7 +140,7 @@ interface SearchApiResponse {
  * const { query, setQuery, results, isLoading, error } = useGlobalSearch({
  *   debounceMs: 300,
  *   limit: 10,
- *   onSuccess: (results) => console.log('Found:', results.length),
+ *   onSuccess: (results) => logger.info('Found:', { data: results.length }),
  * });
  *
  * return (

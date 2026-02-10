@@ -49,31 +49,14 @@ export * from './modular';
 export { mapFormDataToContact } from './modular/orchestrator';
 export type { FormDataMappingResult } from './modular/orchestrator';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('formDataMapper-legacy');
+
 // ============================================================================
 // DEPRECATION WARNING
 // ============================================================================
 
-console.warn(`
-🚨 DEPRECATION WARNING: Direct import from 'formDataMapper.ts'
-
-This file has been refactored into Enterprise modular architecture:
-
-📁 NEW STRUCTURE:
-├── modular/
-│   ├── mappers/        - Individual, company, service mappers
-│   ├── extractors/     - Photo URLs, arrays extraction
-│   ├── validators/     - Upload state validation
-│   ├── utils/          - Data cleaning & utilities
-│   └── orchestrator.ts - Main mapping orchestration
-
-✅ BENEFITS:
-- Better tree-shaking & performance
-- Enhanced maintainability
-- Focused modules with clear responsibilities
-- Improved developer experience
-
-📖 See migration guide above for import examples.
-`);
+logger.warn('DEPRECATION WARNING: Direct import from formDataMapper.ts - use modular structure instead');
 
 // Note: This file provides full backward compatibility while encouraging migration to the new modular structure
 
@@ -99,22 +82,22 @@ const {
 
 // Legacy function exports για backward compatibility
 export function isFirebaseStorageURL(url: string | undefined | null): boolean {
-  console.warn('⚠️ isFirebaseStorageURL is deprecated. Use utils from modular structure instead.');
+  logger.warn(' isFirebaseStorageURL is deprecated. Use utils from modular structure instead.');
   return _isFirebaseStorageURL(url);
 }
 
 export function requiresSpecialDeletion(key: string, value: unknown): boolean {
-  console.warn('⚠️ requiresSpecialDeletion is deprecated. Use utils from modular structure instead.');
+  logger.warn(' requiresSpecialDeletion is deprecated. Use utils from modular structure instead.');
   return _requiresSpecialDeletion(key, value);
 }
 
 export function cleanUndefinedValues(obj: Record<string, unknown>): Record<string, unknown> {
-  console.warn('⚠️ cleanUndefinedValues is deprecated. Use utils from modular structure instead.');
+  logger.warn(' cleanUndefinedValues is deprecated. Use utils from modular structure instead.');
   return _cleanUndefinedValues(obj);
 }
 
 export function extractMultiplePhotoURLs(formData: Record<string, unknown>): string[] {
-  console.warn('⚠️ extractMultiplePhotoURLs is deprecated. Use extractors from modular structure instead.');
+  logger.warn(' extractMultiplePhotoURLs is deprecated. Use extractors from modular structure instead.');
   return _extractMultiplePhotoURLs(formData);
 }
 
@@ -122,42 +105,42 @@ export function extractMultiplePhotoURLs(formData: Record<string, unknown>): str
 import type { UploadValidationResult } from './validators/upload-state';
 
 export function validateUploadState(formData: Record<string, unknown>): UploadValidationResult {
-  console.warn('⚠️ validateUploadState is deprecated. Use validators from modular structure instead.');
+  logger.warn(' validateUploadState is deprecated. Use validators from modular structure instead.');
   return _validateUploadState(formData);
 }
 
 export function extractPhotoURL(formData: Record<string, unknown>, contactType: string): string {
-  console.warn('⚠️ extractPhotoURL is deprecated. Use extractors from modular structure instead.');
+  logger.warn(' extractPhotoURL is deprecated. Use extractors from modular structure instead.');
   return _extractPhotoURL(formData, contactType);
 }
 
 export function extractLogoURL(formData: Record<string, unknown>, contactType: string): string {
-  console.warn('⚠️ extractLogoURL is deprecated. Use extractors from modular structure instead.');
+  logger.warn(' extractLogoURL is deprecated. Use extractors from modular structure instead.');
   return _extractLogoURL(formData, contactType);
 }
 
 export function createEmailsArray(email: string): Array<{ email: string; type: string }> {
-  console.warn('⚠️ createEmailsArray is deprecated. Use extractors from modular structure instead.');
+  logger.warn(' createEmailsArray is deprecated. Use extractors from modular structure instead.');
   return _createEmailsArray(email);
 }
 
 export function createPhonesArray(phone: string, phoneType: 'mobile' | 'work' = 'mobile'): Array<{ phone: string; type: string }> {
-  console.warn('⚠️ createPhonesArray is deprecated. Use extractors from modular structure instead.');
+  logger.warn(' createPhonesArray is deprecated. Use extractors from modular structure instead.');
   return _createPhonesArray(phone, phoneType);
 }
 
 export function mapIndividualFormData(formData: Record<string, unknown>): Record<string, unknown> {
-  console.warn('⚠️ mapIndividualFormData is deprecated. Use mappers from modular structure instead.');
+  logger.warn(' mapIndividualFormData is deprecated. Use mappers from modular structure instead.');
   return _mapIndividualFormData(formData);
 }
 
 export function mapCompanyFormData(formData: Record<string, unknown>): Record<string, unknown> {
-  console.warn('⚠️ mapCompanyFormData is deprecated. Use mappers from modular structure instead.');
+  logger.warn(' mapCompanyFormData is deprecated. Use mappers from modular structure instead.');
   return _mapCompanyFormData(formData);
 }
 
 export function mapServiceFormData(formData: Record<string, unknown>): Record<string, unknown> {
-  console.warn('⚠️ mapServiceFormData is deprecated. Use mappers from modular structure instead.');
+  logger.warn(' mapServiceFormData is deprecated. Use mappers from modular structure instead.');
   return _mapServiceFormData(formData);
 }
 

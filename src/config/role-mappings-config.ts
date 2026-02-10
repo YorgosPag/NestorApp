@@ -4,6 +4,9 @@
  * ZERO HARDCODED LABELS - All labels από environment variables
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('role-mappings-config');
+
 export type RelationshipType =
   | 'employee'
   | 'manager'
@@ -36,7 +39,7 @@ function getRoleMappingsConfig(): RoleMappingsConfig {
       return JSON.parse(envRoleMappings);
     }
   } catch (error) {
-    console.warn('⚠️ Invalid ROLE_MAPPINGS format, using fallback');
+    logger.warn('Invalid ROLE_MAPPINGS format, using fallback');
   }
 
   // 🏢 ENTERPRISE: Fallback mappings με environment variable overrides

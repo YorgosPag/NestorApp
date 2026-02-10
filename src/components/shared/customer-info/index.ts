@@ -266,7 +266,7 @@ export const CustomerInfoSystemMeta = {
  *   context="unit"
  *   variant="card"
  *   showUnitsCount={true}
- *   onClick={() => console.log('Clicked!')}
+ *   onClick={() => logger.info('Clicked!')}
  * />
  * ```
  */

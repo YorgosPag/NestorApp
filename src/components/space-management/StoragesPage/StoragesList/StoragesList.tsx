@@ -171,11 +171,11 @@ export function StoragesList({
               setSortBy(newSortBy);
               setSortOrder(newSortOrder);
             }}
-            onNewItem={() => console.log('New storage')}
-            onEditItem={(id) => console.log('Edit storage:', id)}
-            onDeleteItems={(ids) => console.log('Delete storages:', ids)}
-            onExport={() => console.log('Export storages')}
-            onRefresh={() => console.log('Refresh storages')}
+            onNewItem={() => logger.info('New storage')}
+            onEditItem={(id) => logger.info('Edit storage', { id })}
+            onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
+            onExport={() => logger.info('Export storages')}
+            onRefresh={() => logger.info('Refresh storages')}
           />
         )}
       </div>

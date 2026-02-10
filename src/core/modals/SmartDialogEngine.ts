@@ -39,6 +39,9 @@ import {
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('SmartDialogEngine');
+
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS - SMART DIALOG ARCHITECTURE
 // ============================================================================
@@ -843,7 +846,7 @@ function getContentForEntity(entityType: DialogEntityType, operationType: Dialog
  * Handle primary action based on entity type and operation
  */
 function handlePrimaryAction(entityType: DialogEntityType, operationType: DialogOperationType, props: DialogEntityProps): void {
-  console.log(`🏭 Smart Factory: ${operationType} ${entityType}`);
+  logger.info(`Smart Factory: ${operationType} ${entityType}`);
 
   // Call the appropriate prop callback
   if (props.onSubmit) {

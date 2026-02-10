@@ -24,6 +24,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('PhotoPreviewModal');
+
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
@@ -409,7 +412,7 @@ export function PhotoPreviewModal({
           );
 
         } catch (error) {
-          console.warn('FileNamingService generation failed, using fallback:', error);
+          logger.warn('FileNamingService generation failed, using fallback', { error });
           downloadFilename = `${title}${extension}`;
         }
       }
@@ -420,7 +423,7 @@ export function PhotoPreviewModal({
         filename: downloadFilename
       });
 
-      console.log('📁 ENTERPRISE DOWNLOAD:', {
+      logger.info('ENTERPRISE DOWNLOAD', {
         originalUrl: currentPhoto,
         filename: downloadFilename,
         apiUrl: downloadApiUrl
@@ -437,7 +440,7 @@ export function PhotoPreviewModal({
       document.body.removeChild(link);
 
     } catch (error) {
-      console.error('Download failed:', error);
+      logger.error('Download failed', { error });
       // Fallback: Basic download
       const link = document.createElement('a');
       link.href = currentPhoto;
@@ -569,7 +572,7 @@ export function PhotoPreviewModal({
     });
 
     const finalUrl = `${baseUrl}?${params.toString()}`;
-    console.log('🚨 DEBUG: Generated share URL:', finalUrl);
+    logger.info('Generated share URL', { url: finalUrl });
     return finalUrl;
   };
 
@@ -797,7 +800,7 @@ export function PhotoPreviewModal({
                   height: img.naturalHeight,
                   aspectRatio
                 });
-                console.log('🖼️ Image loaded:', {
+                logger.info('Image loaded', {
                   naturalWidth: img.naturalWidth,
                   naturalHeight: img.naturalHeight,
                   aspectRatio: aspectRatio.toFixed(2),
@@ -805,7 +808,7 @@ export function PhotoPreviewModal({
                 });
               }}
               onError={(e) => {
-                console.error('Failed to load image:', currentPhoto);
+                logger.error('Failed to load image', { photo: currentPhoto });
                 // TODO: Show error state
               }}
             />

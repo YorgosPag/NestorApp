@@ -4,6 +4,9 @@ import i18n from '@/i18n/config';
 import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
 import { formatDateForDisplay as formatDateForDisplayCentral } from '@/lib/intl-utils';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('Validation');
+
 // 🏢 ENTERPRISE: Validation messages config type
 type ValidationMessagesConfig = Record<string, string>;
 
@@ -12,7 +15,7 @@ const getValidationMessagesOnce = (): ValidationMessagesConfig => {
   try {
     return getValidationMessages();
   } catch (error) {
-    console.warn('Failed to load validation messages, using i18n fallback:', error);
+    logger.warn('Failed to load validation messages, using i18n fallback', { error });
     // 🏢 ENTERPRISE: i18n-based fallback for validation messages
     return {
       // Required field messages

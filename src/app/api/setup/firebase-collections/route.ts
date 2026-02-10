@@ -33,6 +33,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FirebaseCollectionsRoute');
 
 /**
  * POST - Initialize Firebase Collections (withAuth protected)
@@ -56,10 +59,7 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/setup/firebase-collections] BLOCKED: Non-super_admin attempted Firebase setup`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[POST /api/setup/firebase-collections] BLOCKED: Non-super_admin attempted Firebase setup', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -71,7 +71,7 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
   }
 
   try {
-    console.log('🔧 Setting up Firebase collections...');
+    logger.info('Setting up Firebase collections...');
 
     // 1. Δημιουργία collection 'contact_relationships' (Admin SDK)
     const testRelationshipRef = getAdminFirestore().collection(COLLECTIONS.RELATIONSHIPS).doc('setup-test-doc');
@@ -90,14 +90,14 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
       lastModifiedBy: 'system-setup'
     };
 
-    console.log('📝 Creating test relationship document...');
+    logger.info('Creating test relationship document...');
     await testRelationshipRef.set(testRelationship);
 
     // 2. Διαγραφή του test document (το collection παραμένει)
-    console.log('🗑️ Removing test document (collection remains)...');
+    logger.info('Removing test document (collection remains)...');
     await testRelationshipRef.delete();
 
-    console.log('✅ Firebase collections setup completed successfully!');
+    logger.info('Firebase collections setup completed successfully!');
 
     const duration = Date.now() - startTime;
 
@@ -115,7 +115,7 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
       },
       `Firebase collections setup by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -132,7 +132,7 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
     });
 
   } catch (error: unknown) {
-    console.error('❌ Firebase collections setup failed:', error);
+    logger.error('Firebase collections setup failed', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

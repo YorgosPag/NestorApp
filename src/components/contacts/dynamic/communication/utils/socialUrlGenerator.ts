@@ -8,6 +8,9 @@
 //
 // ============================================================================
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('socialUrlGenerator');
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -108,7 +111,7 @@ export function generateSocialUrl(platform: string, username: string): string {
   const template = SOCIAL_URL_TEMPLATES[platform as SocialPlatform];
 
   if (!template) {
-    console.warn(`[SocialUrlGenerator] Unsupported platform: ${platform}`);
+    logger.warn(`[SocialUrlGenerator] Unsupported platform: ${platform}`);
     return '';
   }
 
@@ -134,7 +137,7 @@ export function validateSocialUrl(url: string, platform?: SocialPlatform): boole
     // Both types have the same string values, so casting is safe
     return enterpriseValidator(url, platform as string | undefined);
   } catch (error) {
-    console.warn('Enterprise social validator not available, using fallback');
+    logger.warn('Enterprise social validator not available, using fallback');
     if (!url?.trim()) return false;
 
     try {

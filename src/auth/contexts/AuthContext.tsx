@@ -45,6 +45,9 @@ import type {
   UserProfileDocument
 } from '../types/auth.types';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AuthContext');
+
 // =============================================================================
 // CONTEXT TYPES
 // =============================================================================
@@ -237,15 +240,15 @@ function validateSession(firebaseUser: FirebaseUser | null): SessionValidationRe
  * Enterprise pattern: Clean up stale data to prevent issues
  */
 function clearCorruptedUserData(uid: string): void {
-  console.log('🧹 [AuthContext] Clearing corrupted user data for:', uid);
+  logger.info('[AuthContext] Clearing corrupted user data for:', { uid });
 
   try {
     localStorage.removeItem(`givenName_${uid}`);
     localStorage.removeItem(`familyName_${uid}`);
     localStorage.removeItem(`profile_complete_${uid}`);
-    console.log('✅ [AuthContext] Corrupted data cleared');
+    logger.info('[AuthContext] Corrupted data cleared');
   } catch (error) {
-    console.warn('⚠️ [AuthContext] Could not clear localStorage:', error);
+    logger.warn('[AuthContext] Could not clear localStorage', { error });
   }
 }
 
@@ -347,7 +350,7 @@ async function syncUserProfileToFirestore(
 
     if (!userSnapshot.exists()) {
       // CREATE: Full profile with defaults (JIT provisioning - first sign-in)
-      console.log('[ENTERPRISE] [AuthContext] Creating Firestore user profile (JIT):', firebaseUser.uid);
+      logger.info('[AuthContext] Creating Firestore user profile (JIT):', { uid: firebaseUser.uid });
 
       const newProfile: UserProfileDocument = {
         uid: firebaseUser.uid,
@@ -368,10 +371,10 @@ async function syncUserProfileToFirestore(
       };
 
       await setDoc(userDocRef, newProfile);
-      console.log('[ENTERPRISE] [AuthContext] User profile created successfully');
+      logger.info('[AuthContext] User profile created successfully');
     } else {
       // UPDATE: Only system fields (preserve user-edited & admin-managed data)
-      console.log('[ENTERPRISE] [AuthContext] Updating Firestore user profile:', firebaseUser.uid);
+      logger.info('[AuthContext] Updating Firestore user profile:', { uid: firebaseUser.uid });
 
       const existingData = userSnapshot.data();
       const currentLoginCount = typeof existingData.loginCount === 'number'
@@ -398,11 +401,11 @@ async function syncUserProfileToFirestore(
         authProvider,
       }, { merge: true });
 
-      console.log('[ENTERPRISE] [AuthContext] User profile updated successfully');
+      logger.info('[AuthContext] User profile updated successfully');
     }
   } catch (syncError) {
     // NON-BLOCKING: Never prevent login due to profile sync failure
-    console.warn('[AuthContext] User profile sync failed (non-blocking):', syncError);
+    logger.warn('[AuthContext] User profile sync failed (non-blocking)', { error: syncError });
   }
 }
 
@@ -431,11 +434,11 @@ async function ensureDevUserProfile(): Promise<void> {
     if (response.ok) {
       const data = await response.json();
       if (data.created) {
-        console.log('[ENTERPRISE] [AuthContext] Dev-admin user profile created via Admin SDK');
+        logger.info('[AuthContext] Dev-admin user profile created via Admin SDK');
       }
     }
   } catch (devError) {
-    console.warn('[AuthContext] Failed to create dev-admin profile (non-blocking):', devError);
+    logger.warn('[AuthContext] Failed to create dev-admin profile (non-blocking)', { error: devError });
   }
 }
 
@@ -471,16 +474,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     ensureDevUserProfile();
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      console.log('[ENTERPRISE] [AuthContext] Auth state changed:', firebaseUser?.uid || 'No user');
+      logger.info('[AuthContext] Auth state changed:', { uid: firebaseUser?.uid || 'No user' });
 
       // 🛡️ ENTERPRISE: Session Validation
       const validation = validateSession(firebaseUser);
-      console.log('[ENTERPRISE] [AuthContext] Session validation:', validation.status);
+      logger.info('[AuthContext] Session validation:', { status: validation.status });
 
       // Handle invalid sessions with auto-logout
       if (!validation.isValid && validation.recommendation === 'LOGOUT') {
-        console.error('🚨 [AuthContext] INVALID SESSION DETECTED:', validation.status);
-        console.error('🚨 [AuthContext] Issues:', validation.issues);
+        logger.error('[AuthContext] INVALID SESSION DETECTED:', { status: validation.status });
+        logger.error('[AuthContext] Issues:', { issues: validation.issues });
 
         // Clear corrupted data if UID exists
         if (firebaseUser?.uid) {
@@ -489,10 +492,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Auto-logout for security
         try {
-          console.log('🔐 [AuthContext] Auto-logout triggered for security');
+          logger.info('[AuthContext] Auto-logout triggered for security');
           await firebaseSignOut(auth);
         } catch (logoutError) {
-          console.error('⚠️ [AuthContext] Auto-logout failed:', logoutError);
+          logger.error('[AuthContext] Auto-logout failed', { error: logoutError });
         }
 
         setUser(null);
@@ -507,13 +510,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
           const idTokenResult = await firebaseUser.getIdTokenResult(true);
           customClaims = idTokenResult.claims;
-          console.log('🔐 [AuthContext] Custom claims loaded:', {
+          logger.info('[AuthContext] Custom claims loaded:', {
             globalRole: customClaims.globalRole,
             companyId: customClaims.companyId,
             permissions: Array.isArray(customClaims.permissions) ? customClaims.permissions.length : 0
           });
         } catch (claimsError) {
-          console.warn('⚠️ [AuthContext] Failed to load custom claims (non-blocking):', claimsError);
+          logger.warn('[AuthContext] Failed to load custom claims (non-blocking)', { error: claimsError });
         }
 
         const authUser = buildAuthUser(firebaseUser, customClaims);
@@ -522,7 +525,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Sync user profile to Firestore before components render
         await syncUserProfileToFirestore(firebaseUser, customClaims);
 
-        console.log('✅ [AuthContext] Valid session established:', authUser.email);
+        logger.info('[AuthContext] Valid session established:', { email: authUser.email });
         setUser(authUser);
 
         // 🔐 ENTERPRISE: Create/Update session in Firestore for Active Sessions management
@@ -539,7 +542,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (existingSessionId) {
               // Session already exists for this browser tab - just update activity
               await sessionService.updateSessionActivity(firebaseUser.uid, existingSessionId);
-              console.log('🔐 [AuthContext] Session activity updated:', existingSessionId);
+              logger.info('[AuthContext] Session activity updated:', { sessionId: existingSessionId });
             } else {
               // No existing session - create new one
               const loginMethod = firebaseUser.providerData.some(
@@ -550,27 +553,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 userId: firebaseUser.uid,
                 loginMethod
               });
-              console.log('🔐 [AuthContext] New session created for Active Sessions tracking');
+              logger.info('[AuthContext] New session created for Active Sessions tracking');
             }
           }
         } catch (sessionError) {
           // Don't block login if session creation fails - just log
-          console.warn('⚠️ [AuthContext] Failed to manage session (non-blocking):', sessionError);
+          logger.warn('[AuthContext] Failed to manage session (non-blocking)', { error: sessionError });
         }
 
         // 🔐 ENTERPRISE: Sync server-side session cookie for Server Components
         try {
           await syncServerSession(firebaseUser);
-          console.log('🔐 [AuthContext] Server session cookie synced');
+          logger.info('[AuthContext] Server session cookie synced');
         } catch (sessionError) {
-          console.warn('⚠️ [AuthContext] Failed to sync server session cookie (non-blocking):', sessionError);
+          logger.warn('[AuthContext] Failed to sync server session cookie (non-blocking)', { error: sessionError });
         }
       } else {
         try {
           await clearServerSessionCookie();
-          console.log('🔐 [AuthContext] Server session cookie cleared');
+          logger.info('[AuthContext] Server session cookie cleared');
         } catch (sessionError) {
-          console.warn('⚠️ [AuthContext] Failed to clear server session cookie (non-blocking):', sessionError);
+          logger.warn('[AuthContext] Failed to clear server session cookie (non-blocking)', { error: sessionError });
         }
         setUser(null);
       }
@@ -593,13 +596,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         await syncServerSession(auth.currentUser);
-        console.log('🔐 [AuthContext] Server session cookie refreshed (event)');
+        logger.info('[AuthContext] Server session cookie refreshed (event)');
 
         const idTokenResult = await auth.currentUser.getIdTokenResult(true);
         const updatedUser = buildAuthUser(auth.currentUser, idTokenResult.claims);
         setUser(updatedUser);
       } catch (sessionError) {
-        console.warn('⚠️ [AuthContext] Failed to refresh server session cookie (event):', sessionError);
+        logger.warn('[AuthContext] Failed to refresh server session cookie (event)', { error: sessionError });
       }
     };
 
@@ -617,7 +620,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const handleError = (error: unknown) => {
     const message = getErrorMessage(error);
     setError(message);
-    console.error('🔐 [AuthContext] Error:', message);
+    logger.error('[AuthContext] Error', { message });
   };
 
   const clearError = () => {
@@ -635,9 +638,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
 
-      console.log('[ENTERPRISE] [AuthContext] Signing in:', email);
+      logger.info('[AuthContext] Signing in:', { email });
       await signInWithEmailAndPassword(auth, email, password);
-      console.log('[OK] [AuthContext] Sign in successful');
+      logger.info('[AuthContext] Sign in successful');
     } catch (error) {
       handleError(error);
       throw error;
@@ -655,7 +658,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
 
-      console.log('[ENTERPRISE] [AuthContext] Starting Google Sign-In');
+      logger.info('[AuthContext] Starting Google Sign-In');
 
       // Create Google Auth Provider with enterprise settings
       const provider = new GoogleAuthProvider();
@@ -672,13 +675,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Use popup flow (works reliably on localhost)
       await signInWithPopup(auth, provider);
 
-      console.log('[OK] [AuthContext] Google Sign-In successful');
+      logger.info('[AuthContext] Google Sign-In successful');
     } catch (error) {
       // 🔐 ENTERPRISE: Check if MFA is required
       const resolver = twoFactorService.getMfaResolver(error);
 
       if (resolver) {
-        console.log('🔐 [AuthContext] MFA required - showing verification UI');
+        logger.info('[AuthContext] MFA required - showing verification UI');
         setMfaResolver(resolver);
         setMfaRequired(true);
         setLoading(false);
@@ -713,12 +716,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
 
-      console.log('🔐 [AuthContext] Verifying MFA code...');
+      logger.info('[AuthContext] Verifying MFA code...');
 
       const result = await twoFactorService.verifyTotpForSignIn(mfaResolver, code, 0);
 
       if (result.result === 'success') {
-        console.log('✅ [AuthContext] MFA verification successful');
+        logger.info('[AuthContext] MFA verification successful');
         // Clear MFA state - auth state listener will handle the rest
         setMfaResolver(null);
         setMfaRequired(false);
@@ -726,7 +729,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Handle verification errors
         const errorMessage = result.error || 'Μη έγκυρος κωδικός επαλήθευσης';
         setError(errorMessage);
-        console.error('❌ [AuthContext] MFA verification failed:', errorMessage);
+        logger.error('[AuthContext] MFA verification failed', { errorMessage });
       }
     } catch (error) {
       handleError(error);
@@ -739,7 +742,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Cancel MFA verification and return to login screen
    */
   const cancelMfaVerificationFn = (): void => {
-    console.log('🔐 [AuthContext] MFA verification cancelled');
+    logger.info('[AuthContext] MFA verification cancelled');
     setMfaResolver(null);
     setMfaRequired(false);
     setError(null);
@@ -753,7 +756,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const { email, password, givenName, familyName } = data;
 
-      console.log('[ENTERPRISE] [AuthContext] Signing up:', email);
+      logger.info('[AuthContext] Signing up:', { email });
       const result = await createUserWithEmailAndPassword(auth, email, password);
 
       if (result.user) {
@@ -762,7 +765,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Update Firebase profile with displayName
         await updateProfile(result.user, { displayName });
-        console.log('[OK] [AuthContext] Profile updated with display name:', displayName);
+        logger.info('[AuthContext] Profile updated with display name:', { displayName });
 
         // Store givenName and familyName separately in localStorage
         // (Firebase Auth doesn't have separate fields for these)
@@ -772,7 +775,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Send verification email
         await sendEmailVerification(result.user);
-        console.log('[OK] [AuthContext] Verification email sent');
+        logger.info('[AuthContext] Verification email sent');
 
         // Update local state with the new user data
         setUser({
@@ -787,7 +790,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       }
 
-      console.log('[OK] [AuthContext] Sign up successful');
+      logger.info('[AuthContext] Sign up successful');
     } catch (error) {
       handleError(error);
       throw error;
@@ -801,23 +804,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
 
-      console.log('🔐 [AuthContext] Signing out');
+      logger.info('[AuthContext] Signing out');
 
       // 🏢 ENTERPRISE: Dispatch logout event BEFORE signOut
       // This allows other modules (NavigationContext) to cleanup their state
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth:logout'));
-        console.log('📡 [AuthContext] Dispatched auth:logout event');
+        logger.info('[AuthContext] Dispatched auth:logout event');
       }
 
       await firebaseSignOut(auth);
-      console.log('✅ [AuthContext] Sign out successful');
+      logger.info('[AuthContext] Sign out successful');
 
       try {
         await clearServerSessionCookie();
-        console.log('🔐 [AuthContext] Server session cookie cleared on sign-out');
+        logger.info('[AuthContext] Server session cookie cleared on sign-out');
       } catch (sessionError) {
-        console.warn('⚠️ [AuthContext] Failed to clear server session cookie on sign-out:', sessionError);
+        logger.warn('[AuthContext] Failed to clear server session cookie on sign-out', { error: sessionError });
       }
     } catch (error) {
       handleError(error);
@@ -831,15 +834,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setError(null);
 
-      console.log('🔐 [AuthContext] Sending password reset to:', email);
-      console.log('🔐 [AuthContext] Firebase Auth domain:', auth.config.authDomain);
+      logger.info('[AuthContext] Sending password reset to:', { email });
+      logger.info('[AuthContext] Firebase Auth domain:', { authDomain: auth.config.authDomain });
 
       await sendPasswordResetEmail(auth, email);
 
-      console.log('✅ [AuthContext] Password reset email sent successfully!');
-      console.log('📧 [AuthContext] Check your inbox (and spam folder) for:', email);
+      logger.info('[AuthContext] Password reset email sent successfully!');
+      logger.info('[AuthContext] Check your inbox (and spam folder) for:', { email });
     } catch (error) {
-      console.error('❌ [AuthContext] Password reset failed:', error);
+      logger.error('[AuthContext] Password reset failed', { error });
       handleError(error);
       throw error;
     }
@@ -865,7 +868,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem(`familyName_${auth.currentUser.uid}`, familyName);
 
       setUser(prev => prev ? { ...prev, displayName, givenName, familyName } : null);
-      console.log('✅ [AuthContext] Profile updated:', displayName);
+      logger.info('[AuthContext] Profile updated:', { displayName });
     } catch (error) {
       handleError(error);
       throw error;
@@ -901,7 +904,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         profileIncomplete: false
       } : null);
 
-      console.log('✅ [AuthContext] Profile completed for Google user:', displayName);
+      logger.info('[AuthContext] Profile completed for Google user:', { displayName });
     } catch (error) {
       handleError(error);
       throw error;
@@ -917,7 +920,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null);
 
       await sendEmailVerification(auth.currentUser);
-      console.log('✅ [AuthContext] Verification email sent');
+      logger.info('[AuthContext] Verification email sent');
     } catch (error) {
       handleError(error);
       throw error;
@@ -938,15 +941,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       setError(null);
-      console.log('🔄 [AuthContext] Force refreshing ID token...');
+      logger.info('[AuthContext] Force refreshing ID token...');
 
       // Force refresh (getIdToken with forceRefresh=true)
       const idTokenResult = await auth.currentUser.getIdTokenResult(true);
       setUser(buildAuthUser(auth.currentUser, idTokenResult.claims));
 
-      console.log('✅ [AuthContext] Token refreshed successfully - new permissions loaded');
+      logger.info('[AuthContext] Token refreshed successfully - new permissions loaded');
     } catch (error) {
-      console.error('❌ [AuthContext] Token refresh failed:', error);
+      logger.error('[AuthContext] Token refresh failed', { error });
       handleError(error);
       throw error;
     }

@@ -35,6 +35,9 @@ import {
   createUnifiedCanvasSystem
 } from '../../../subapps/dxf-viewer/rendering/canvas';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('DxfCanvasAdapter');
+
 /**
  * 🔺 DXF CANVAS ADAPTER
  * Wraps το υπάρχον enterprise DXF Canvas system για global use
@@ -93,14 +96,14 @@ export class DxfCanvasAdapter implements ICanvasProvider {
       // Apply manager options αν υπάρχουν
       if (config.managerOptions) {
         // Manager options are applied during construction - log for transparency
-        console.log(`[DxfCanvasAdapter] Manager options applied:`, config.managerOptions);
+        logger.info(`[DxfCanvasAdapter] Manager options applied`, { managerOptions: config.managerOptions });
       }
 
       // Initialize middlewares
       if (config.middlewares) {
         this.middlewares = [...config.middlewares];
         this.middlewares.forEach(middleware => {
-          console.log(`[DxfCanvasAdapter] Middleware registered: ${middleware.name}`);
+          logger.info(`[DxfCanvasAdapter] Middleware registered: ${middleware.name}`);
         });
       }
 
@@ -109,7 +112,7 @@ export class DxfCanvasAdapter implements ICanvasProvider {
         this.plugins = [...config.plugins];
         this.plugins.forEach(plugin => {
           plugin.initialize(this);
-          console.log(`[DxfCanvasAdapter] Plugin initialized: ${plugin.name} v${plugin.version}`);
+          logger.info(`[DxfCanvasAdapter] Plugin initialized: ${plugin.name} v${plugin.version}`);
         });
       }
 
@@ -124,10 +127,10 @@ export class DxfCanvasAdapter implements ICanvasProvider {
       this.setupEventForwarding();
 
       this._isInitialized = true;
-      console.log(`[DxfCanvasAdapter] Initialized provider: ${this.id}`);
+      logger.info(`[DxfCanvasAdapter] Initialized provider: ${this.id}`);
 
     } catch (error) {
-      console.error(`[DxfCanvasAdapter] Initialization failed:`, error);
+      logger.error(`[DxfCanvasAdapter] Initialization failed`, { error });
       throw new Error(`Failed to initialize DXF Canvas Provider '${this.id}': ${error}`);
     }
   }
@@ -142,7 +145,7 @@ export class DxfCanvasAdapter implements ICanvasProvider {
         try {
           plugin.cleanup();
         } catch (error) {
-          console.error(`[DxfCanvasAdapter] Plugin cleanup error: ${plugin.name}`, error);
+          logger.error(`[DxfCanvasAdapter] Plugin cleanup error: ${plugin.name}`, { error });
         }
       }
 
@@ -155,11 +158,11 @@ export class DxfCanvasAdapter implements ICanvasProvider {
       // Cleanup settings
       this.settings.cleanup();
 
-      console.log(`[DxfCanvasAdapter] Cleaned up provider: ${this.id}`);
+      logger.info(`[DxfCanvasAdapter] Cleaned up provider: ${this.id}`);
       this._isInitialized = false;
 
     } catch (error) {
-      console.error(`[DxfCanvasAdapter] Cleanup error:`, error);
+      logger.error(`[DxfCanvasAdapter] Cleanup error`, { error });
       throw error;
     }
   }
@@ -214,11 +217,11 @@ export class DxfCanvasAdapter implements ICanvasProvider {
         providerId: this.id
       });
 
-      console.log(`[DxfCanvasAdapter] Created canvas: ${config.canvasId}`);
+      logger.info(`[DxfCanvasAdapter] Created canvas: ${config.canvasId}`);
       return canvasInstance;
 
     } catch (error) {
-      console.error(`[DxfCanvasAdapter] Canvas creation failed:`, error);
+      logger.error(`[DxfCanvasAdapter] Canvas creation failed`, { error });
       throw error;
     }
   }
@@ -234,7 +237,7 @@ export class DxfCanvasAdapter implements ICanvasProvider {
     try {
       const canvas = this.canvasManager.getCanvas(id);
       if (!canvas) {
-        console.warn(`[DxfCanvasAdapter] Canvas '${id}' not found for destruction`);
+        logger.warn(`[DxfCanvasAdapter] Canvas '${id}' not found for destruction`);
         return;
       }
 
@@ -250,10 +253,10 @@ export class DxfCanvasAdapter implements ICanvasProvider {
         providerId: this.id
       });
 
-      console.log(`[DxfCanvasAdapter] Destroyed canvas: ${id}`);
+      logger.info(`[DxfCanvasAdapter] Destroyed canvas: ${id}`);
 
     } catch (error) {
-      console.error(`[DxfCanvasAdapter] Canvas destruction failed:`, error);
+      logger.error(`[DxfCanvasAdapter] Canvas destruction failed`, { error });
       throw error;
     }
   }
@@ -291,7 +294,7 @@ export class DxfCanvasAdapter implements ICanvasProvider {
     const result = this.settings.updateSettings(settings);
 
     if (!result.isValid) {
-      console.warn(`[DxfCanvasAdapter] Settings validation warnings:`, result.warnings);
+      logger.warn(`[DxfCanvasAdapter] Settings validation warnings`, { warnings: result.warnings });
       if (result.errors.length > 0) {
         throw new Error(`Settings validation failed: ${result.errors.join(', ')}`);
       }
@@ -352,7 +355,7 @@ export class DxfCanvasAdapter implements ICanvasProvider {
       try {
         listener(event, data);
       } catch (error) {
-        console.error(`[DxfCanvasAdapter] Event listener error for '${event}':`, error);
+        logger.error(`[DxfCanvasAdapter] Event listener error for '${event}'`, { error });
       }
     });
 
@@ -391,7 +394,7 @@ export class DxfCanvasAdapter implements ICanvasProvider {
           }
         }
       } catch (error) {
-        console.error(`[DxfCanvasAdapter] Middleware '${middleware.name}' hook '${hookName}' error:`, error);
+        logger.error(`[DxfCanvasAdapter] Middleware '${middleware.name}' hook '${hookName}' error`, { error });
       }
     }
   }
@@ -453,7 +456,7 @@ export const createDxfCanvasProvider = (
   // Auto-initialize αν είμαστε σε development mode
   if (process.env.NODE_ENV === 'development' && config?.autoInitialize !== false) {
     adapter.initialize(defaultConfig).catch(error => {
-      console.error('[DxfCanvasAdapter] Auto-initialization failed:', error);
+      logger.error('[DxfCanvasAdapter] Auto-initialization failed', { error });
     });
   }
 

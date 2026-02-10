@@ -48,6 +48,8 @@ import {
 import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
 import { colors } from '@/styles/design-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('AddressMap');
 
 /** Map pin SVG colors — SSoT: design-tokens */
 const PIN_COLORS = {
@@ -186,12 +188,12 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         setGeocodedAddresses(geocodedMap);
 
         // 🐛 DEBUG: Log geocoding results
-        console.log('🗺️ AddressMap: Geocoding complete', {
+        logger.info('AddressMap: Geocoding complete', { data: {
           totalAddresses: addresses.length,
           geocodableAddresses: geocodable.length,
           successCount,
           geocodedMap: Array.from(geocodedMap.entries()),
-        });
+        } });
 
         // Determine status
         if (successCount === 0) {
@@ -207,7 +209,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
           onGeocodingComplete(geocodedMap);
         }
       } catch (error) {
-        console.error('❌ Geocoding failed:', error);
+        logger.error('Geocoding failed:', { error: error });
         setGeocodingStatus('error');
       }
     };
@@ -224,14 +226,14 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
    * Runs when geocoding completes και map is ready
    */
   useEffect(() => {
-    console.log('🎯 fitBounds effect triggered', {
+    logger.info('fitBounds effect triggered', { data: {
       hasMapRef: !!mapRef.current,
       mapReady,
       geocodedCount: geocodedAddresses.size,
-    });
+    } });
 
     if (!mapRef.current || !mapReady || geocodedAddresses.size === 0) {
-      console.warn('⚠️ fitBounds skipped - conditions not met');
+      logger.warn('fitBounds skipped - conditions not met');
       return;
     }
 
@@ -239,23 +241,23 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       const bounds = new LngLatBounds();
 
       geocodedAddresses.forEach(result => {
-        console.log('📍 Adding to bounds:', { lat: result.lat, lng: result.lng });
+        logger.info('Adding to bounds:', { data: { lat: result.lat, lng: result.lng } });
         bounds.extend([result.lng, result.lat]);
       });
 
       // Only fit bounds if we have valid bounds
       if (!bounds.isEmpty()) {
-        console.log('✅ Calling fitBounds', { bounds });
+        logger.info('Calling fitBounds', { data: { bounds } });
         mapRef.current.fitBounds(bounds, {
           padding: ADDRESS_MAP_CONFIG.FIT_BOUNDS_PADDING,
           maxZoom: ADDRESS_MAP_CONFIG.DEFAULT_MAX_ZOOM,
           duration: ADDRESS_MAP_CONFIG.ANIMATION.FIT_BOUNDS
         });
       } else {
-        console.warn('⚠️ Bounds is empty!');
+        logger.warn('Bounds is empty!');
       }
     } catch (error) {
-      console.error('❌ fitBounds failed:', error);
+      logger.error('fitBounds failed:', { error: error });
     }
   }, [geocodedAddresses, mapReady]);
 
@@ -308,7 +310,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
    * Enterprise pattern: Load custom marker icon into map sprite
    */
   const handleMapReady = useCallback((map: MapInstance) => {
-    console.log('🗺️ Map ready!', { map });
+    logger.info('Map ready!', { data: { map } });
     mapRef.current = map;
     setMapReady(true);
 
@@ -330,7 +332,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         map.addImage('address-pin', pinImage);
       }
       setMapLoaded(true);
-      console.log('✅ Map fully loaded - custom pin icon added');
+      logger.info('Map fully loaded - custom pin icon added');
     };
     pinImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(pinSVG)}`;
   }, []);
@@ -390,11 +392,11 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // Success/Partial: Render map (ONLY after geocoding completes)
   const shouldRenderMap = geocodingStatus === 'success' || geocodingStatus === 'partial';
 
-  console.log('🎯 AddressMap render', {
+  logger.info('AddressMap render', { data: {
     geocodingStatus,
     shouldRenderMap,
     geocodedCount: geocodedAddresses.size,
-  });
+  } });
 
   return (
     <div className={`relative ${heightClass} ${className}`}>

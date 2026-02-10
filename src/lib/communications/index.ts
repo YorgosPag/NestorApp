@@ -11,6 +11,8 @@ import {
   isChannelEnabled
 } from '../config/communications.config';
 import type { BaseMessageInput, SendResult, Channel, TemplateSendInput } from '@/types/communications';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('communications');
 
 // ============================================================================
 // ENTERPRISE TYPES
@@ -53,16 +55,16 @@ interface ChannelConfig {
  */
 export const initializeCommunications = async () => {
   try {
-    console.log('🚀 Initializing Communications Infrastructure...');
+    logger.info('Initializing Communications Infrastructure...');
     await communicationsService.initialize();
-    console.log('✅ Communications Infrastructure initialized successfully');
+    logger.info('Communications Infrastructure initialized successfully');
     return {
       success: true,
       availableChannels: communicationsService.availableChannels,
       serviceStatus: communicationsService.getServiceStatus()
     };
   } catch (error) {
-    console.error('❌ Failed to initialize Communications Infrastructure:', error);
+    logger.error('Failed to initialize Communications Infrastructure', { error });
     throw error;
   }
 };
@@ -155,7 +157,7 @@ export const sendAppointmentConfirmation = async (leadData: LeadData, appointmen
     };
     return await communicationsService.sendTemplateMessage(appointmentMessage);
   } catch (error) {
-    console.error('Error sending appointment confirmation:', error);
+    logger.error('Error sending appointment confirmation', { error });
     throw error;
   }
 };
@@ -189,7 +191,7 @@ export const sendCampaignToLeads = async (leads: LeadData[], campaignData: Campa
 
     return await sendBulkMessages(messages);
   } catch (error) {
-    console.error('Error sending campaign:', error);
+    logger.error('Error sending campaign', { error });
     throw error;
   }
 };

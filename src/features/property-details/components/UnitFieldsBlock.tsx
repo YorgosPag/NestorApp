@@ -65,6 +65,8 @@ import type {
   InteriorFeatureCodeType,
   SecurityFeatureCodeType
 } from '@/constants/unit-features-enterprise';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('UnitFieldsBlock');
 
 // =============================================================================
 // 🏢 TYPES
@@ -270,7 +272,7 @@ export function UnitFieldsBlock({
         // Generic error
         toast.error(t('save.error', 'Σφάλμα κατά την αποθήκευση'));
       }
-      console.error('UnitFieldsBlock save error:', error);
+      logger.error('UnitFieldsBlock save error:', { error: error });
     } finally {
       setIsSaving(false);
     }

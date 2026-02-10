@@ -28,6 +28,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('VideosTab');
 
 // =============================================================================
 // PROPS
@@ -98,7 +100,7 @@ export function VideosTab({
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[VideosTab] Failed to fetch company name:', error);
+        logger.error('[VideosTab] Failed to fetch company name:', { error: error });
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };

@@ -30,6 +30,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FixProjectsRoute');
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
@@ -58,10 +61,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/fix-projects] BLOCKED: Non-super_admin attempted project companyId fix`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[POST /api/fix-projects] BLOCKED: Non-super_admin attempted project companyId fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -73,7 +73,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
   }
 
   try {
-    console.log('🔧 FIXING PROJECT COMPANY IDS...');
+    logger.info('FIXING PROJECT COMPANY IDS...');
 
     const adminDb = getAdminFirestore();
 
@@ -87,13 +87,13 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
           .get();
 
         if (companiesQuery.empty) {
-          console.error(`🚨 Company not found: ${companyName}`);
+          logger.error('Company not found', { companyName });
           return null;
         }
 
         return companiesQuery.docs[0].id;
       } catch (error) {
-        console.error(`🚨 Error loading company ID for ${companyName}:`, error);
+        logger.error('Error loading company ID', { companyName, error });
         return null;
       }
     };
@@ -108,11 +108,11 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
       }, { status: 404 });
     }
 
-    console.log(`✅ Using database-driven companyId: ${correctCompanyId}`);
+    logger.info('Using database-driven companyId', { correctCompanyId });
 
     // Παίρνουμε όλα τα projects
     const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
-    console.log(`📊 Found ${projectsSnapshot.size} projects`);
+    logger.info('Found projects', { count: projectsSnapshot.size });
 
     const results = [];
 
@@ -120,10 +120,10 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
       const project = doc.data();
       const projectId = doc.id;
 
-      console.log(`🔍 Project ${projectId}: current companyId="${project.companyId || '(empty)'}"`);
+      logger.info('Project current state', { projectId, currentCompanyId: project.companyId || '(empty)' });
 
       if (project.companyId !== correctCompanyId) {
-        console.log(`🔄 Updating project ${projectId}`);
+        logger.info('Updating project', { projectId });
 
         await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).update({
           companyId: correctCompanyId
@@ -137,7 +137,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
           status: 'UPDATED'
         });
 
-        console.log(`✅ Updated project ${projectId}`);
+        logger.info('Updated project', { projectId });
       } else {
         results.push({
           projectId,
@@ -145,7 +145,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
           companyId: project.companyId,
           status: 'NO_CHANGE'
         });
-        console.log(`✅ Project ${projectId} already correct`);
+        logger.info('Project already correct', { projectId });
       }
     }
 
@@ -165,7 +165,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
 
     const allCorrect = verification.every(p => p.isCorrect);
 
-    console.log(`🎉 COMPLETED! All projects fixed: ${allCorrect}`);
+    logger.info('COMPLETED! All projects fixed', { allCorrect });
 
     const duration = Date.now() - startTime;
 
@@ -187,7 +187,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
       },
       `Project companyIds fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -205,7 +205,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('❌ Fix Projects Error:', errorMessage);
+    logger.error('Fix Projects Error', { error: errorMessage });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

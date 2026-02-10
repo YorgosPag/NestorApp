@@ -28,6 +28,8 @@ import type {
 import { isValidPermission, isValidGrantScope } from './types';
 import { isRoleBypass, getRolePermissions } from './roles';
 import { getPermissionSetPermissions, requiresMfaEnrollment } from './permission-sets';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('permissions');
 
 // =============================================================================
 // TYPES
@@ -174,7 +176,7 @@ async function getProjectMembership(
     cache.memberships.set(cacheKey, membership);
     return membership;
   } catch (error) {
-    console.error('[PERMISSIONS] Failed to get project membership:', error);
+    logger.error('[PERMISSIONS] Failed to get project membership', { error });
     cache.memberships.set(cacheKey, null);
     return null;
   }
@@ -230,7 +232,7 @@ async function getUnitGrant(
     cache.grants.set(cacheKey, grant);
     return grant;
   } catch (error) {
-    console.error('[PERMISSIONS] Failed to get unit grant:', error);
+    logger.error('[PERMISSIONS] Failed to get unit grant', { error });
     cache.grants.set(cacheKey, null);
     return null;
   }

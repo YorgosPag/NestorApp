@@ -10,6 +10,8 @@ import { db } from '@/lib/firebase';
 import type { Contact } from '@/types/contacts';
 import type { Project } from '@/types/project';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('data-services');
 
 /**
  * 📞 Ανάκτηση επαφών από Firebase
@@ -30,11 +32,11 @@ export async function getContacts(limitCount: number = 100): Promise<Contact[]> 
       ...doc.data()
     })) as Contact[];
 
-    console.log(`✅ Loaded ${contacts.length} real contacts from Firebase`);
+    logger.info(`Loaded ${contacts.length} real contacts from Firebase`);
     return contacts;
 
   } catch (error) {
-    console.error('❌ Error fetching contacts from Firebase:', error);
+    logger.error('Error fetching contacts from Firebase', { error });
     return []; // Επιστροφή κενού array αντί για mock data
   }
 }
@@ -58,11 +60,11 @@ export async function getProjects(limitCount: number = 100): Promise<Project[]> 
       ...doc.data()
     })) as Project[];
 
-    console.log(`✅ Loaded ${projects.length} real projects from Firebase`);
+    logger.info(`Loaded ${projects.length} real projects from Firebase`);
     return projects;
 
   } catch (error) {
-    console.error('❌ Error fetching projects from Firebase:', error);
+    logger.error('Error fetching projects from Firebase', { error });
     return []; // Επιστροφή κενού array αντί για mock data
   }
 }

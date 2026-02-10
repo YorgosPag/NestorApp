@@ -8,6 +8,9 @@ import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 import { loadNamespace, type Namespace, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('i18n-config');
+
 // Load essential translations for initial boot
 import commonEl from './locales/el/common.json';
 import commonEn from './locales/en/common.json';
@@ -102,7 +105,7 @@ if (typeof window !== 'undefined') {
         await i18n.changeLanguage(validLang);
       }
     } catch (error) {
-      console.error('❌ Failed to preload namespaces:', error);
+      logger.error('Failed to preload namespaces', { error });
     }
   })();
 }

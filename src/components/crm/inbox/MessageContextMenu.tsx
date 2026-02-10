@@ -144,7 +144,7 @@ export function MessageContextMenu({
     if (onCopy) {
       onCopy(messageText);
     } else {
-      navigator.clipboard.writeText(messageText).catch(console.error);
+      navigator.clipboard.writeText(messageText).catch((err) => logger.error('Clipboard write failed', { error: err }));
     }
   }, [messageText, onCopy]);
 

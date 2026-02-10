@@ -21,6 +21,9 @@ import { EnterpriseSecurityService } from '@/services/security/EnterpriseSecurit
 import { db } from '@/lib/firebase';
 import type { User, FirebaseAuthUser, UserRoleContextType, SignUpData } from '../types/auth.types';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('UserRoleContext');
+
 // =============================================================================
 // CONTEXT
 // =============================================================================
@@ -65,9 +68,9 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
         try {
           await securityService.initialize(db);
           setSecurityInitialized(true);
-          console.log('🔐 [UserRoleContext] Security service initialized');
+          logger.info('[UserRoleContext] Security service initialized');
         } catch (error) {
-          console.error('🔐 [UserRoleContext] Failed to initialize security:', error);
+          logger.error('[UserRoleContext] Failed to initialize security', { error });
           // Continue without security service - will use fallback role
           setSecurityInitialized(true);
         }
@@ -107,9 +110,9 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
           };
 
           setUser(mappedUser);
-          console.log('🔐 [UserRoleContext] User role determined:', role);
+          logger.info('[UserRoleContext] User role determined', { role });
         } catch (error) {
-          console.error('🔐 [UserRoleContext] Role determination failed:', error);
+          logger.error('[UserRoleContext] Role determination failed', { error });
 
           // Secure fallback - NEVER grant admin on error
           const fallbackUser: User = {
@@ -121,7 +124,7 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
           };
 
           setUser(fallbackUser);
-          console.warn('🔐 [UserRoleContext] Using secure fallback role: authenticated');
+          logger.warn('[UserRoleContext] Using secure fallback role: authenticated');
         }
       } else {
         // No Firebase user - clear user state
@@ -141,44 +144,44 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('🔐 [UserRoleContext] Login attempt:', email);
+      logger.info('[UserRoleContext] Login attempt', { email });
       await signIn(email, password);
       return true;
     } catch (error) {
-      console.error('🔐 [UserRoleContext] Login failed:', error);
+      logger.error('[UserRoleContext] Login failed', { error });
       return false;
     }
   };
 
   const signUp = async (data: SignUpData): Promise<boolean> => {
     try {
-      console.log('🔐 [UserRoleContext] Sign up attempt:', data.email);
+      logger.info('[UserRoleContext] Sign up attempt', { email: data.email });
       // 🏢 ENTERPRISE: Pass SignUpData directly to AuthContext
       await authSignUp(data);
       return true;
     } catch (error) {
-      console.error('🔐 [UserRoleContext] Sign up failed:', error);
+      logger.error('[UserRoleContext] Sign up failed', { error });
       return false;
     }
   };
 
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
-      console.log('🔐 [UserRoleContext] Password reset attempt:', email);
+      logger.info('[UserRoleContext] Password reset attempt', { email });
       await authResetPassword(email);
       return true;
     } catch (error) {
-      console.error('🔐 [UserRoleContext] Password reset failed:', error);
+      logger.error('[UserRoleContext] Password reset failed', { error });
       return false;
     }
   };
 
   const logout = async () => {
     try {
-      console.log('🔐 [UserRoleContext] Logout');
+      logger.info('[UserRoleContext] Logout');
       await signOut();
     } catch (error) {
-      console.error('🔐 [UserRoleContext] Logout failed:', error);
+      logger.error('[UserRoleContext] Logout failed', { error });
     }
   };
 
@@ -250,7 +253,7 @@ export function useFirebaseAuthUser(): FirebaseAuthUser | null {
  * @deprecated Use useUserRole instead
  */
 export function useLegacyAuth() {
-  console.warn('⚠️ useLegacyAuth is deprecated. Use useUserRole instead.');
+  logger.warn('useLegacyAuth is deprecated. Use useUserRole instead.');
   return useUserRole();
 }
 

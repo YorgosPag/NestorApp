@@ -11,6 +11,9 @@
 // 🏢 ENTERPRISE: i18n support for validation messages
 import i18n from '@/i18n/config';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('DataCleaning');
+
 // 🏢 ENTERPRISE: Helper function to get translated validation message
 const t = (key: string): string => {
   return i18n.t(`validation.${key}`, { ns: 'contacts' });
@@ -112,7 +115,7 @@ export function cleanUndefinedValues<T extends object>(obj: T): T {
         if (key === 'multiplePhotoURLs' || value.length > 0) {
           cleaned[key] = value;
           if (key === 'multiplePhotoURLs' && value.length === 0) {
-            console.log('🛠️ DATA CLEANING: Preserving empty multiplePhotoURLs array for database deletion');
+            logger.info(' DATA CLEANING: Preserving empty multiplePhotoURLs array for database deletion');
           }
         }
       } else if (typeof value === 'object' && !(value instanceof Date)) {
@@ -128,7 +131,7 @@ export function cleanUndefinedValues<T extends object>(obj: T): T {
         cleaned[key] = value;
         // 🛠️ DEBUG: Log preservation of photoURL empty strings
         if (key === 'photoURL' && value === '') {
-          console.log('🛠️ DATA CLEANING: Preserving empty photoURL string for database deletion');
+          logger.info(' DATA CLEANING: Preserving empty photoURL string for database deletion');
         }
       }
     }
@@ -151,7 +154,7 @@ export function cleanUndefinedValues<T extends object>(obj: T): T {
  * @returns Sanitized contact object με cleaned fields
  */
 export function sanitizeContactData(contactData: ContactDataRecord): ContactDataRecord {
-  console.log('🧹 ENTERPRISE SANITIZER: Starting contact data sanitization...');
+  logger.info('ENTERPRISE SANITIZER: Starting contact data sanitization...');
 
   const sanitized = { ...contactData };
 
@@ -164,13 +167,13 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
 
     // 🚨 ΚΡΙΣΙΜΑ ΠΕΔΙΑ: Δεν αγγίζουμε ποτέ!
     if (requiresSpecialDeletion(key, value)) {
-      console.log(`🛡️ SANITIZER: Preserving critical field "${key}" (special handling)`);
+      logger.info(` SANITIZER: Preserving critical field "${key}" (special handling)`);
       return;
     }
 
     // 🧹 ΚΕΝΑ STRINGS: Αφαίρεση κενών strings που δεν προσφέρουν τιμή
     if (typeof value === 'string' && value.trim() === '') {
-      console.log(`🗑️ SANITIZER: Removing empty string field "${key}"`);
+      logger.info(` SANITIZER: Removing empty string field "${key}"`);
       delete sanitized[key];
       emptyFieldsRemoved++;
       return;
@@ -178,7 +181,7 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
 
     // 🔄 ARRAYS: Καθαρισμός κενών arrays (εκτός από τα critical)
     if (Array.isArray(value) && value.length === 0 && !requiresSpecialDeletion(key, value)) {
-      console.log(`🗑️ SANITIZER: Removing empty array field "${key}"`);
+      logger.info(` SANITIZER: Removing empty array field "${key}"`);
       delete sanitized[key];
       emptyFieldsRemoved++;
       return;
@@ -194,7 +197,7 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
           isPrimary: true
         }];
         fieldsWithDefaults++;
-        console.log(`🔧 SANITIZER: Created emails array from email field`);
+        logger.info(` SANITIZER: Created emails array from email field`);
       }
     }
 
@@ -207,7 +210,7 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
           isPrimary: true
         }];
         fieldsWithDefaults++;
-        console.log(`🔧 SANITIZER: Created phones array from phone field`);
+        logger.info(` SANITIZER: Created phones array from phone field`);
       }
     }
 
@@ -215,7 +218,7 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
     if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date)) {
       const nestedSanitized = sanitizeContactData(value as ContactDataRecord);
       if (Object.keys(nestedSanitized).length === 0) {
-        console.log(`🗑️ SANITIZER: Removing empty object field "${key}"`);
+        logger.info(` SANITIZER: Removing empty object field "${key}"`);
         delete sanitized[key];
         emptyFieldsRemoved++;
       } else {
@@ -227,16 +230,16 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
   // 🎯 ENTERPRISE TIMESTAMPS: Διασφαλίζουμε proper timestamps
   if (!sanitized.createdAt) {
     // Η Firebase θα το θέσει με serverTimestamp(), δεν κάνουμε τίποτα
-    console.log('⏰ SANITIZER: createdAt will be set by Firebase serverTimestamp()');
+    logger.info('SANITIZER: createdAt will be set by Firebase serverTimestamp()');
   }
 
   if (!sanitized.updatedAt) {
     // Η Firebase θα το θέσει με serverTimestamp(), δεν κάνουμε τίποτα
-    console.log('⏰ SANITIZER: updatedAt will be set by Firebase serverTimestamp()');
+    logger.info('SANITIZER: updatedAt will be set by Firebase serverTimestamp()');
   }
 
   // 📊 ΑΝΑΦΟΡΑ ΕΠΕΞΕΡΓΑΣΙΑΣ
-  console.log('✅ ENTERPRISE SANITIZER: Contact sanitization completed', {
+  logger.info('ENTERPRISE SANITIZER: Contact sanitization completed', {
     originalFieldsCount: Object.keys(contactData).length,
     sanitizedFieldsCount: Object.keys(sanitized).length,
     emptyFieldsRemoved,

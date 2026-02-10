@@ -21,6 +21,8 @@ import type {
   RelationshipFormData,
   UseRelationshipFormReturn
 } from '../types/relationship-manager.types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useRelationshipForm');
 
 /**
  * 🏗️ Initial form data factory
@@ -89,11 +91,11 @@ export const useRelationshipForm = (
 
     // 🏢 Business Logic Validation using CENTRALIZED RelationshipValidationService
     try {
-      console.log('🚨 VALIDATION: Starting centralized business rule validation', {
+      logger.info('VALIDATION: Starting centralized business rule validation', { data: {
         targetContactId: formData.targetContactId,
         relationshipType: formData.relationshipType,
         sourceContactId: contactId
-      });
+      } });
 
       // Get both contacts for validation
       const [sourceContact, targetContact] = await Promise.all([
@@ -114,7 +116,7 @@ export const useRelationshipForm = (
       const sourceType = (sourceContact as NonNullable<typeof sourceContact>).type || (sourceContact as NonNullable<typeof sourceContact> & { contactType?: string }).contactType;
       const targetType = (targetContact as NonNullable<typeof targetContact>).type || (targetContact as NonNullable<typeof targetContact> & { contactType?: string }).contactType;
 
-      console.log('🚨 VALIDATION: Contact details for centralized validation:', {
+      logger.info('VALIDATION: Contact details for centralized validation:', { data: {
         source: {
           id: sourceContact.id,
           type: sourceType,
@@ -126,7 +128,7 @@ export const useRelationshipForm = (
           name: targetContact.name || targetContact.companyName
         },
         relationshipType: formData.relationshipType
-      });
+      } });
 
       // For employment relationships, the employee should be source, company should be target
       // So we need to swap the validation parameters
@@ -149,7 +151,7 @@ export const useRelationshipForm = (
       }
 
       // 🔍 DUPLICATE VALIDATION: Check for same contact - same relationship type
-      console.log('🚨 DUPLICATE VALIDATION: Checking for duplicate relationships...');
+      logger.info('DUPLICATE VALIDATION: Checking for duplicate relationships...');
 
       try {
         // Fetch existing relationships for this contact to check for duplicates
@@ -162,9 +164,9 @@ export const useRelationshipForm = (
           editingId ?? undefined // Exclude current relationship if editing
         );
 
-        console.log('✅ DUPLICATE VALIDATION: No duplicates found');
+        logger.info('DUPLICATE VALIDATION: No duplicates found');
       } catch (duplicateError) {
-        console.error('❌ DUPLICATE VALIDATION: Duplicate relationship detected:', duplicateError);
+        logger.error('DUPLICATE VALIDATION: Duplicate relationship detected:', { error: duplicateError });
 
         if (duplicateError instanceof Error) {
           return duplicateError.message;
@@ -174,7 +176,7 @@ export const useRelationshipForm = (
       }
 
     } catch (error) {
-      console.error('❌ CENTRALIZED VALIDATION: Validation failed:', error);
+      logger.error('CENTRALIZED VALIDATION: Validation failed:', { error: error });
 
       if (error instanceof Error) {
         // Return the validation error message directly
@@ -184,7 +186,7 @@ export const useRelationshipForm = (
       return 'relationships.validation.checkError';
     }
 
-    console.log('✅ CENTRALIZED VALIDATION: All business rules passed, relationship is valid');
+    logger.info('CENTRALIZED VALIDATION: All business rules passed, relationship is valid');
     return null; // Valid
   };
 
@@ -196,7 +198,7 @@ export const useRelationshipForm = (
    * 💾 Submit form (create or update relationship)
    */
   const handleSubmit = useCallback(async (e?: React.FormEvent | React.MouseEvent) => {
-    console.log('🔥 RELATIONSHIP FORM: handleSubmit called');
+    logger.info('RELATIONSHIP FORM: handleSubmit called');
 
     if (e) {
       e.preventDefault();
@@ -215,11 +217,11 @@ export const useRelationshipForm = (
         return;
       }
 
-      console.log('🔍 VALIDATION PASSED:', {
+      logger.info('VALIDATION PASSED:', { data: {
         targetContactId: formData.targetContactId,
         relationshipType: formData.relationshipType,
         contactId
-      });
+      } });
 
       // Prepare relationship data
       // 🔧 FIX: For employment relationships (employee, manager, director),
@@ -240,25 +242,25 @@ export const useRelationshipForm = (
           : undefined
       };
 
-      console.log('🔧 RELATIONSHIP DIRECTION FIX:', {
+      logger.info('RELATIONSHIP DIRECTION FIX:', { data: {
         isEmploymentRelation,
         relationshipType: formData.relationshipType,
         source: relationshipData.sourceContactId,
         target: relationshipData.targetContactId,
         'Expected for OrganizationTree': 'source=employee, target=company'
-      });
+      } });
 
       // Create or update relationship
       if (editingId) {
-        console.log('📝 Updating relationship:', editingId);
+        logger.info('Updating relationship:', { data: editingId });
         await ContactRelationshipService.updateRelationship(editingId, relationshipData);
       } else {
-        console.log('➕ Creating new relationship');
+        logger.info('Creating new relationship');
         await ContactRelationshipService.createRelationship(relationshipData);
       }
 
-      console.log('✅ Relationship saved successfully!');
-      console.log('🎯 RELATIONSHIP FORM: About to reset form and show success message...');
+      logger.info('Relationship saved successfully!');
+      logger.info('RELATIONSHIP FORM: About to reset form and show success message...');
 
       // Reset form state
       resetForm();
@@ -269,7 +271,7 @@ export const useRelationshipForm = (
         : 'relationships.status.createSuccess';
 
       setSuccessMessage(message);
-      console.log('✅ SUCCESS:', message);
+      logger.info('SUCCESS:', { data: message });
 
       // Auto-hide success message after 5 seconds
       setTimeout(() => {
@@ -279,28 +281,28 @@ export const useRelationshipForm = (
       // 🔧 FIX: For new relationships, add delay to ensure Firestore consistency
       // before refreshing the cache
       if (!editingId) {
-        console.log('⏱️ RELATIONSHIP FORM: Adding 2500ms delay for Firestore consistency...');
+        logger.info('⏱RELATIONSHIP FORM: Adding 2500ms delay for Firestore consistency...');
         await new Promise(resolve => setTimeout(resolve, 2500));
       }
 
       // Call success callback to refresh data
       if (onSuccess) {
-        console.log('🔄 RELATIONSHIP FORM: Calling onSuccess callback to refresh relationships list...');
+        logger.info('RELATIONSHIP FORM: Calling onSuccess callback to refresh relationships list...');
         try {
           await onSuccess();
-          console.log('✅ RELATIONSHIP FORM: onSuccess callback completed successfully');
+          logger.info('RELATIONSHIP FORM: onSuccess callback completed successfully');
         } catch (callbackError) {
-          console.error('❌ RELATIONSHIP FORM: onSuccess callback failed:', callbackError);
+          logger.error('RELATIONSHIP FORM: onSuccess callback failed:', { error: callbackError });
           // Don't let callback errors affect the form success state
         }
       } else {
-        console.warn('⚠️ RELATIONSHIP FORM: No onSuccess callback provided - relationships list will NOT be refreshed');
+        logger.warn('RELATIONSHIP FORM: No onSuccess callback provided - relationships list will NOT be refreshed');
       }
 
-      console.log('🎯 RELATIONSHIP FORM: Form submission completed successfully!');
+      logger.info('RELATIONSHIP FORM: Form submission completed successfully!');
 
     } catch (err) {
-      console.error('❌ Form submission error:', err);
+      logger.error('Form submission error:', { error: err });
 
       // Check if this is a Firebase index error (should not block the form)
       const isFirebaseIndexError = err instanceof Error && (
@@ -312,7 +314,7 @@ export const useRelationshipForm = (
       // If it's a Firebase index error, the relationship was likely saved successfully
       // so we should treat this as a success with a warning
       if (isFirebaseIndexError) {
-        console.warn('⚠️ Firebase index error detected, but relationship likely saved successfully');
+        logger.warn('Firebase index error detected, but relationship likely saved successfully');
 
         // Show success message instead of error
         const message = editingId
@@ -332,7 +334,7 @@ export const useRelationshipForm = (
           try {
             await onSuccess();
           } catch (refreshErr) {
-            console.warn('⚠️ Error refreshing relationships after successful save:', refreshErr);
+            logger.warn('Error refreshing relationships after successful save:', { data: refreshErr });
           }
         }
 
@@ -356,7 +358,7 @@ export const useRelationshipForm = (
    * ✏️ Start editing an existing relationship
    */
   const handleEdit = useCallback((relationship: ContactRelationship) => {
-    console.log('✏️ Editing relationship:', relationship.id);
+    logger.info('Editing relationship:', { data: relationship.id });
 
     setEditingId(relationship.id!);
     setFormData({
@@ -383,7 +385,7 @@ export const useRelationshipForm = (
    * ❌ Cancel form editing
    */
   const handleCancel = useCallback(() => {
-    console.log('❌ Cancelling form');
+    logger.info('Cancelling form');
     resetForm();
   }, []);
 

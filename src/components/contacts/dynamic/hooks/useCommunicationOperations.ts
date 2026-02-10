@@ -25,6 +25,8 @@ import type {
   CommunicationFieldValue
 } from '../communication/types';
 import { generateSocialUrl } from '../communication/utils';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('useCommunicationOperations');
 
 /**
  * Hook parameters for communication operations
@@ -137,7 +139,7 @@ export function useCommunicationOperations({
   const updateItem = useCallback((index: number, field: string, value: CommunicationFieldValue) => {
     // 🎯 PERFORMANCE: Early return for invalid index
     if (index < 0 || index >= items.length) {
-      console.warn(`Invalid item index: ${index}. Valid range: 0-${items.length - 1}`);
+      logger.warn(`Invalid item index: ${index}. Valid range: 0-${items.length - 1}`);
       return;
     }
 
@@ -175,7 +177,7 @@ export function useCommunicationOperations({
   const removeItem = useCallback((index: number) => {
     // 🎯 PERFORMANCE: Early return for invalid index
     if (index < 0 || index >= items.length) {
-      console.warn(`Invalid item index: ${index}. Valid range: 0-${items.length - 1}`);
+      logger.warn(`Invalid item index: ${index}. Valid range: 0-${items.length - 1}`);
       return;
     }
 
@@ -202,13 +204,13 @@ export function useCommunicationOperations({
   const setPrimary = useCallback((index: number) => {
     // 🔒 BUSINESS RULE: Only operate if config supports primary
     if (!config.supportsPrimary) {
-      console.warn('setPrimary called on configuration that does not support primary items');
+      logger.warn('setPrimary called on configuration that does not support primary items');
       return;
     }
 
     // 🎯 PERFORMANCE: Early return for invalid index
     if (index < 0 || index >= items.length) {
-      console.warn(`Invalid item index: ${index}. Valid range: 0-${items.length - 1}`);
+      logger.warn(`Invalid item index: ${index}. Valid range: 0-${items.length - 1}`);
       return;
     }
 

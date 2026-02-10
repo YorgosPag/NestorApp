@@ -22,6 +22,9 @@ import { db } from '@/lib/firebase';
 import type { Property } from '@/types/property-viewer';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('SharedPropertiesProvider');
+
 interface Floor {
   id: string;
   name: string;
@@ -68,7 +71,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
   // 🏢 ENTERPRISE: Activate function - called by useSharedProperties
   const activate = useCallback(() => {
     if (!activated) {
-      console.log('🔌 [SharedProperties] Lazy activation triggered');
+      logger.info('[SharedProperties] Lazy activation triggered');
       setActivated(true);
     }
   }, [activated]);
@@ -76,7 +79,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
   // Νέα συνάρτηση που αποθηκεύει στο Firestore
   const setProperties = useCallback(async (newProperties: Property[], description: string) => {
     try {
-      if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log(`🔄 Updating Firestore: ${description}`);
+      if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Updating Firestore: ${description}`);
 
       // Βρίσκουμε τις διαφορές μεταξύ παλιών και νέων properties
       const oldIds = new Set(properties.map(p => p.id));
@@ -94,19 +97,19 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       // Διαγραφή
       for (const property of toDelete) {
         await deleteDoc(doc(db, COLLECTIONS.UNITS, property.id));
-        console.log(`❌ Deleted: ${property.id}`);
+        logger.info(`Deleted: ${property.id}`);
       }
 
       // Ενημέρωση/Δημιουργία
       for (const property of toUpdate) {
         const { id, ...propertyData } = property;
         await setDoc(doc(db, COLLECTIONS.UNITS, id), propertyData);
-        if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log(`✅ Updated/Created: ${id}`);
+        if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Updated/Created: ${id}`);
       }
 
-      if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log(`✅ Firestore sync complete: ${description}`);
+      if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info(`Firestore sync complete: ${description}`);
     } catch (err) {
-      console.error('❌ Error syncing to Firestore:', err);
+      logger.error('Error syncing to Firestore', { error: err });
       setError('Failed to sync changes to Firestore');
     }
   }, [properties]);
@@ -122,12 +125,12 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     setError(null);
 
     const unitsCollection = collection(db, COLLECTIONS.UNITS);
-    console.log('🔄 [SharedProperties] Setting up Firestore listener (activated)...');
+    logger.info('[SharedProperties] Setting up Firestore listener (activated)...');
 
     const unsubscribe = onSnapshot(
       unitsCollection,
       (snapshot) => {
-        if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log('✅ Firestore snapshot received:', snapshot.size, 'docs');
+        if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info('Firestore snapshot received', { docsCount: snapshot.size });
 
         const propertiesData: Property[] = [];
         snapshot.forEach((docSnap) => {
@@ -160,7 +163,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
 
           setError(null);
         } else {
-          console.warn("⚠️ No properties found in Firestore snapshot.");
+          logger.warn('No properties found in Firestore snapshot');
           setPropertiesState([]);
           setFloors([]);
         }
@@ -168,7 +171,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         setIsLoading(false);
       },
       (listenerError) => {
-        console.error('❌ Firestore listener error:', listenerError);
+        logger.error('Firestore listener error', { error: listenerError });
         setError('Failed to load data from Firestore.');
         setIsLoading(false);
       }
@@ -177,7 +180,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     unsubscribeRef.current = unsubscribe;
 
     return () => {
-      console.log('🔌 [SharedProperties] Unsubscribing from Firestore listener.');
+      logger.info('[SharedProperties] Unsubscribing from Firestore listener');
       unsubscribe();
       unsubscribeRef.current = null;
     };

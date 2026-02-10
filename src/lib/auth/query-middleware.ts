@@ -35,6 +35,8 @@ import {
 } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('query-middleware');
 
 // ============================================================================
 // ENTERPRISE TYPE DEFINITIONS
@@ -531,7 +533,7 @@ export class AuthorizedQueryService {
     result: AuthorizedQueryResult<T>
   ): void {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 Query Audit Log', {
+      logger.info('Query Audit Log', {
         timestamp: new Date().toISOString(),
         collection: collectionName,
         user: authContext.uid,
@@ -566,7 +568,7 @@ export class AuthorizedQueryService {
     };
 
     if (process.env.NODE_ENV === 'development') {
-      console.error('❌ Query Error', errorContext);
+      logger.error('Query Error', errorContext);
     }
 
     // In production, send to error monitoring service
@@ -669,7 +671,7 @@ export function logQueryContext(
   queryName: string
 ): void {
   if (process.env.NODE_ENV === 'development') {
-    console.log(`🔍 ${queryName}:`, {
+    logger.info(`${queryName}:`, {
       authContext: result.authenticationContext,
       resultCount: result.size,
       fromCache: result.cacheInfo.fromCache,

@@ -12,6 +12,9 @@ import {
   IDLE_ROUTES
 } from '@/services/routes/EnterpriseRouteConfigService';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('RoutePreload');
+
 // Re-export types for backward compatibility
 export type { PreloadableRoute, UserRole };
 
@@ -91,7 +94,7 @@ export async function preloadRoute(route: PreloadableRoute): Promise<void> {
       console.debug(`Preloaded route: ${route}`);
     }
   } catch (error) {
-    console.warn(`Failed to preload route ${route}:`, error);
+    logger.warn(`Failed to preload route ${route}`, { error });
   }
 }
 
@@ -116,7 +119,7 @@ export function preloadUserRoutes(userRole?: UserRole, tenantId?: string): void 
         await preloadRoutes(routes);
 
       } catch (error) {
-        console.warn('[RoutePreload] Database route loading failed, using fallback:', error);
+        logger.warn('[RoutePreload] Database route loading failed, using fallback', { error });
 
         // Fallback to hardcoded routes if database fails
         const commonRoutes: PreloadableRoute[] = CRITICAL_ROUTES;

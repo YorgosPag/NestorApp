@@ -38,7 +38,7 @@ export class NavigationApiService {
     const cache = NavigationApiService.companiesCache;
 
     if (cache.data && (now - cache.timestamp) < cache.ttl) {
-      // console.log(`🏢 CACHE HIT: Returning ${cache.data.length} cached companies`);
+      // logger.info(`CACHE HIT: Returning ${cache.data.length} cached companies`);
       return cache.data;
     }
 
@@ -73,7 +73,7 @@ export class NavigationApiService {
     cache.data = navigationCompanies;
     cache.timestamp = now;
 
-    // console.log(`🏢 CACHED: Returning ${navigationCompanies.length} unique companies`);
+    // logger.info(`CACHED: Returning ${navigationCompanies.length} unique companies`);
     return navigationCompanies;
   }
 

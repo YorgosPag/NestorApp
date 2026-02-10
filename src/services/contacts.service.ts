@@ -22,6 +22,9 @@ import type { Unit } from '@/types/unit';
 import { RealtimeService } from '@/services/realtime';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121) — persona form→Firestore mapping
 import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ContactsService');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions for Firestore Operations
@@ -134,19 +137,19 @@ export class ContactsService {
   static async createContact(contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
       // 🧹 PHASE 1: ENTERPRISE DATA SANITIZATION & VALIDATION
-      console.log('🧹 ENTERPRISE SANITIZER: Starting pre-processing...');
+      logger.info('ENTERPRISE SANITIZER: Starting pre-processing...');
 
       // Validate input data first
       const contactRecord = contactData as unknown as ContactDataRecord;
       const validationResult = validateContactData(contactRecord);
       if (!validationResult.isValid) {
-        console.error('❌ VALIDATION FAILED:', validationResult.errors);
+        logger.error('VALIDATION FAILED', { errors: validationResult.errors });
         throw new Error(`VALIDATION_ERROR: ${validationResult.errors.join(', ')}`);
       }
 
       // Log warnings για potential issues
       if (validationResult.warnings.length > 0) {
-        console.warn('⚠️ VALIDATION WARNINGS:', validationResult.warnings);
+        logger.warn('VALIDATION WARNINGS', { warnings: validationResult.warnings });
       }
 
       // Sanitize data πριν την αποθήκευση
@@ -155,7 +158,7 @@ export class ContactsService {
         'id' | 'createdAt' | 'updatedAt'
       >;
 
-      console.log('✅ SANITIZATION COMPLETED:', {
+      logger.info('SANITIZATION COMPLETED', {
         originalFields: Object.keys(contactData).length,
         sanitizedFields: Object.keys(sanitizedData).length,
         validationErrors: validationResult.errors.length,
@@ -163,14 +166,14 @@ export class ContactsService {
       });
 
       // 🛡️ PHASE 2: ENTERPRISE DUPLICATE PREVENTION
-      console.log('🔍 ENTERPRISE DUPLICATE CHECK: Starting intelligent duplicate detection...');
+      logger.info('ENTERPRISE DUPLICATE CHECK: Starting intelligent duplicate detection...');
 
       const duplicateResult = await DuplicatePreventionService.detectDuplicates(sanitizedData, {
         strictMode: true,
         timeWindow: 5000, // 5 second protection against rapid duplicate clicks
       });
 
-      console.log('🔍 DUPLICATE DETECTION RESULT:', {
+      logger.info('DUPLICATE DETECTION RESULT', {
         isDuplicate: duplicateResult.isDuplicate,
         confidence: duplicateResult.confidence,
         matchingContactsCount: duplicateResult.matchingContacts.length,
@@ -182,7 +185,7 @@ export class ContactsService {
         const topRecommendation = duplicateResult.recommendations[0];
         const matchingContact = duplicateResult.matchingContacts[0];
 
-        console.error('🚨 DUPLICATE CONTACT PREVENTION:', {
+        logger.error('DUPLICATE CONTACT PREVENTION', {
           action: topRecommendation.action,
           reason: topRecommendation.reason,
           confidence: duplicateResult.confidence,
@@ -199,19 +202,19 @@ export class ContactsService {
       }
 
       // 🎯 PHASE 3: SAFE CONTACT CREATION με SANITIZED DATA
-      console.log('✅ DUPLICATE CHECK PASSED: Proceeding με safe contact creation...');
+      logger.info('DUPLICATE CHECK PASSED: Proceeding with safe contact creation...');
 
       // 🏢 ENTERPRISE: Get user's companyId from auth claims for tenant isolation
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        console.error('🚨 CREATE CONTACT ERROR: No authenticated user');
+        logger.error('CREATE CONTACT ERROR: No authenticated user');
         throw new Error('AUTHENTICATION_ERROR: User must be logged in to create contacts');
       }
 
       const tokenResult = await currentUser.getIdTokenResult();
       const userCompanyId = tokenResult.claims?.companyId as string | undefined;
 
-      console.log('🔍 CREATE CONTACT AUTH:', {
+      logger.info('CREATE CONTACT AUTH', {
         userId: currentUser.uid,
         userEmail: currentUser.email,
         companyId: userCompanyId,
@@ -219,7 +222,7 @@ export class ContactsService {
       });
 
       if (!userCompanyId) {
-        console.error('🚨 CREATE CONTACT ERROR: User has no companyId claim');
+        logger.error('CREATE CONTACT ERROR: User has no companyId claim');
         throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
       }
 
@@ -234,7 +237,7 @@ export class ContactsService {
       // Type assertion needed for addDoc compatibility with FieldValue timestamps
       const docRef = await addDoc(colRef, createData as unknown as Contact);
 
-      console.log('✅ CONTACT CREATED SUCCESSFULLY:', {
+      logger.info('CONTACT CREATED SUCCESSFULLY', {
         contactId: docRef.id,
         contactType: sanitizedData.type,
         contactName: this.getContactDisplayName(sanitizedData),
@@ -262,18 +265,18 @@ export class ContactsService {
       if (error instanceof Error) {
         // Validation errors
         if (error.message.startsWith('VALIDATION_ERROR')) {
-          console.error('🚨 ENTERPRISE VALIDATION ERROR:', error.message);
+          logger.error('ENTERPRISE VALIDATION ERROR', { error: error.message });
           throw error; // Re-throw για UI handling
         }
 
         // Duplicate contact errors
         if (error.message.startsWith('DUPLICATE_CONTACT_DETECTED')) {
-          console.error('🚨 ENTERPRISE DUPLICATE PREVENTION:', error.message);
+          logger.error('ENTERPRISE DUPLICATE PREVENTION', { error: error.message });
           throw error; // Re-throw με original message για proper UI handling
         }
       }
 
-      console.error('🚨 CONTACT CREATION ERROR:', error);
+      logger.error('CONTACT CREATION ERROR', { error });
       throw new Error('Failed to create contact - enterprise processing failed');
     }
   }
@@ -335,7 +338,7 @@ export class ContactsService {
       // 🔐 ENTERPRISE: Defense-in-depth — auth guard on read operations
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        console.warn('⚠️ [ContactsService] getAllContacts called without authentication — returning empty');
+        logger.warn('[ContactsService] getAllContacts called without authentication — returning empty');
         return { contacts: [], lastDoc: null, nextCursor: null };
       }
 
@@ -423,7 +426,7 @@ export class ContactsService {
       await this.updateContact(id, enterpriseData);
 
     } catch (error) {
-      console.error('❌ ENTERPRISE UPDATE: Failed to update contact:', error);
+      logger.error('ENTERPRISE UPDATE: Failed to update contact', { error });
       throw new Error('Failed to update contact');
     }
   }
@@ -514,7 +517,7 @@ export class ContactsService {
       });
 
     } catch (error) {
-      console.error('❌ CONTACTS SERVICE: Update failed', error);
+      logger.error('CONTACTS SERVICE: Update failed', { error });
       throw new Error('Failed to update contact');
     }
   }
@@ -723,7 +726,7 @@ export class ContactsService {
       // 🔐 ENTERPRISE: Defense-in-depth — auth guard on read operations
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        console.warn('⚠️ [ContactsService] searchContacts called without authentication — returning empty');
+        logger.warn('[ContactsService] searchContacts called without authentication — returning empty');
         return [];
       }
 

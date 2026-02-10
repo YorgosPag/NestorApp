@@ -33,6 +33,8 @@ import { FloorPlanViewer } from '@/components/property-viewer/FloorPlanViewer';
 // Import types
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '@/features/floorplan-viewer/types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('PropertyViewerWithLayers');
 
 interface PropertyViewerWithLayersProps {
   floorId: string;
@@ -136,7 +138,7 @@ export function PropertyViewerWithLayers({
       }
     } catch (error) {
       // 🏢 ENTERPRISE: i18n-enabled error message
-      console.error(t('viewer.errors.loadingError'), error);
+      logger.error(t('viewer.errors.loadingError'), { error });
       window.print();
     }
   };

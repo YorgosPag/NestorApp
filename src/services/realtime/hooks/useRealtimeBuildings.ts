@@ -14,6 +14,9 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { RealtimeBuilding, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useRealtimeBuildings');
 
 // ============================================================================
 // TYPES
@@ -141,7 +144,7 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
       }
 
       if (!user) {
-        console.log('⏳ [useRealtimeBuildings] Waiting for authentication...');
+        logger.info('[useRealtimeBuildings] Waiting for authentication...');
         setStatus('idle');
         setLoading(false);
         setAllBuildings([]);
@@ -149,7 +152,7 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
         return;
       }
 
-      console.log('🔔 [useRealtimeBuildings] User authenticated, setting up real-time listener');
+      logger.info('[useRealtimeBuildings] User authenticated, setting up real-time listener');
 
       const buildingsRef = collection(db, COLLECTIONS.BUILDINGS);
 
@@ -170,7 +173,7 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
             updatedAt: docSnapshot.data().updatedAt,
           }));
 
-          console.log(`📡 [useRealtimeBuildings] Received ${buildings.length} buildings in real-time`);
+          logger.info('[useRealtimeBuildings] Received buildings in real-time', { count: buildings.length });
 
           // Update state
           setAllBuildings(buildings);
@@ -180,7 +183,7 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
           setStatus('active');
         },
         (err) => {
-          console.error('❌ [useRealtimeBuildings] Firestore error:', err);
+          logger.error('[useRealtimeBuildings] Firestore error', { error: err });
           setError(err.message);
           setLoading(false);
           setStatus('error');
@@ -192,7 +195,7 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
 
     // Cleanup both subscriptions
     return () => {
-      console.log('🔕 [useRealtimeBuildings] Cleaning up subscriptions');
+      logger.info('[useRealtimeBuildings] Cleaning up subscriptions');
       authUnsubscribe();
       if (firestoreUnsubscribe) {
         firestoreUnsubscribe();
@@ -206,7 +209,7 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
 
   useEffect(() => {
     const handleNavigationRefresh = () => {
-      console.log('🔄 [useRealtimeBuildings] Navigation refresh event received');
+      logger.info('[useRealtimeBuildings] Navigation refresh event received');
       // No need to refetch - onSnapshot already handles real-time updates
       // But we can force a re-render if needed
     };

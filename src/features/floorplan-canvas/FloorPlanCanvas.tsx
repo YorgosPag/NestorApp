@@ -16,6 +16,8 @@ import {
 import type {
   FloorPlanCanvasProps
 } from './types';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('FloorPlanCanvas');
 
 export function FloorPlanCanvas({
   floorData,
@@ -53,7 +55,7 @@ export function FloorPlanCanvas({
     setIsPdfReady(true);
     setPdfLoadError(null);
     
-    console.log('✅ PDF loaded for FULLSCREEN test:', { numPages, url: pdfBackgroundUrl });
+    logger.info('PDF loaded for FULLSCREEN test:', { data: { numPages, url: pdfBackgroundUrl } });
   };
 
   const handlePDFLoadError = (error: Error) => {
@@ -61,15 +63,15 @@ export function FloorPlanCanvas({
     setIsPdfReady(false);
     setNumPages(0);
     
-    console.error('❌ PDF load error:', error);
+    logger.error('PDF load error:', { error: error });
   };
 
-  console.log('🎯 FULLSCREEN PDF TEST:', {
+  logger.info('FULLSCREEN PDF TEST:', { data: {
     pdfBackgroundUrl: pdfBackgroundUrl ? 'PROVIDED' : 'NONE',
     isPdfReady,
     testMode,
     pdfLoadError
-  });
+  } });
 
   return (
     <main

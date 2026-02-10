@@ -40,6 +40,8 @@ import {
 import { Plus, Building2, CreditCard, Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import toast from 'react-hot-toast';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ContactBankingTab');
 
 // ============================================================================
 // TYPES
@@ -111,7 +113,7 @@ export function ContactBankingTab({
       const loadedAccounts = await BankAccountsService.getAccounts(contactId);
       setAccounts(loadedAccounts);
     } catch (err) {
-      console.error('[ContactBankingTab] Error loading accounts:', err);
+      logger.error('[ContactBankingTab] Error loading accounts:', { error: err });
       setError('Σφάλμα φόρτωσης λογαριασμών');
     } finally {
       setLoading(false);
@@ -164,7 +166,7 @@ export function ContactBankingTab({
       await BankAccountsService.deleteAccount(contactId, deletingAccount.id);
       toast.success(`Ο λογαριασμός ${deletingAccount.bankName} διαγράφηκε επιτυχώς.`);
     } catch (err) {
-      console.error('[ContactBankingTab] Error deleting account:', err);
+      logger.error('[ContactBankingTab] Error deleting account:', { error: err });
       toast.error('Δεν ήταν δυνατή η διαγραφή του λογαριασμού.');
     } finally {
       setActionLoading(false);
@@ -181,7 +183,7 @@ export function ContactBankingTab({
       await BankAccountsService.setPrimaryAccount(contactId, account.id);
       toast.success(`Ο λογαριασμός ${account.bankName} ορίστηκε ως κύριος.`);
     } catch (err) {
-      console.error('[ContactBankingTab] Error setting primary:', err);
+      logger.error('[ContactBankingTab] Error setting primary:', { error: err });
       toast.error('Δεν ήταν δυνατός ο ορισμός κύριου λογαριασμού.');
     } finally {
       setActionLoading(false);
@@ -208,7 +210,7 @@ export function ContactBankingTab({
       setIsFormOpen(false);
       setEditingAccount(undefined);
     } catch (err) {
-      console.error('[ContactBankingTab] Error saving account:', err);
+      logger.error('[ContactBankingTab] Error saving account:', { error: err });
       throw err; // Let form handle error display
     } finally {
       setActionLoading(false);

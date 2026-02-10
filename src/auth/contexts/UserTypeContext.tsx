@@ -17,6 +17,9 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import type { UserType, UserTypeContextType } from '../types/auth.types';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('UserTypeContext');
+
 // =============================================================================
 // CONTEXT CREATION
 // =============================================================================
@@ -68,7 +71,7 @@ export function UserTypeProvider({
       localStorage.setItem(USER_TYPE_STORAGE_KEY, type);
     } catch {
       // Silently fail if localStorage is not available
-      console.warn('[UserTypeContext] localStorage not available');
+      logger.warn('[UserTypeContext] localStorage not available');
     }
   }, []);
 

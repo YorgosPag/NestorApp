@@ -14,6 +14,8 @@ import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Upload, Download, FileText } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ToolbarExportMenu');
 
 interface ToolbarExportMenuProps {
   onExport: () => void;
@@ -48,7 +50,7 @@ export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
 
       <ToolbarButton
         tooltip={t('toolbar.importData')}
-        onClick={() => console.log('Importing...')}
+        onClick={() => logger.info('Importing...')}
       >
         <Upload className={iconSizes.sm} />
       </ToolbarButton>

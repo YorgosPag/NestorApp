@@ -34,6 +34,8 @@ import { CoordinateUtils as _CoordinateUtils } from './primitives/coordinates';
 import { canvasUI as _canvasUI } from '../../styles/design-tokens/canvas';
 
 import type { CanvasInstance as _CanvasInstance } from '../../subapps/dxf-viewer/rendering/canvas';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('canvas-index');
 
 // Adapters imports for internal use
 import {
@@ -207,7 +209,7 @@ export class EnterpriseCanvasFactory {
     // Register with global registry
     _registerCanvasProvider(provider);
 
-    console.log(`[EnterpriseCanvasFactory] Created and registered ${type} provider: ${providerId}`);
+    logger.info(`[EnterpriseCanvasFactory] Created and registered ${type} provider: ${providerId}`);
     return provider;
   }
 }

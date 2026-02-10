@@ -9,6 +9,9 @@
  * @version 1.0.0
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('period-selector-config');
+
 // ============================================================================
 // INTERFACES & TYPES
 // ============================================================================
@@ -227,12 +230,12 @@ export function validatePeriodConfiguration(): {
  */
 export function debugPeriods(): void {
   if (process.env.NODE_ENV === 'development') {
-    console.group('📅 Period Selector Configuration Debug');
-    console.log('📊 Stats:', getPeriodsStats());
-    console.log('✅ Validation:', validatePeriodConfiguration());
-    console.log('📋 Enabled periods:', getEnabledPeriods().map(p => p.label));
-    console.log('🎯 All periods:', PERIOD_SELECTOR_PERIODS.length);
-    console.groupEnd();
+    logger.info('Period Selector Configuration Debug', {
+      stats: getPeriodsStats(),
+      validation: validatePeriodConfiguration(),
+      enabledPeriods: getEnabledPeriods().map(p => p.label),
+      allPeriodsCount: PERIOD_SELECTOR_PERIODS.length
+    });
   }
 }
 

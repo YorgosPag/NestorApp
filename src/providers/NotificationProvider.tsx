@@ -15,6 +15,9 @@ import type {
   NotificationPosition
 } from '@/types/notifications';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('NotificationProvider');
+
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
 interface NotificationProviderProps {
@@ -135,7 +138,7 @@ export function NotificationProvider({
     // Rate limiting - SKIP για μεγάλα μηνύματα (test results)
     const skipRateLimiting = message.length > 500; // Large messages are likely test results
     if (!skipRateLimiting && !canShowNotification(message)) {
-      console.log('⏭️ RATE LIMITED: Skipping duplicate notification');
+      logger.info('RATE LIMITED: Skipping duplicate notification');
       return ''; // Return empty ID for rate-limited notifications
     }
 

@@ -18,6 +18,9 @@ import type { PersonaData } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { getPersonaFields } from '@/config/persona-config';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('MapIndividual');
+
 /** Mapped individual contact data (partial, without timestamps) */
 interface MappedIndividualContactData {
   type: 'individual';
@@ -109,7 +112,7 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     ? enterpriseData.phones
     : createPhonesArray(formData.phone, 'mobile');
 
-  console.log('🚨 MAP INDIVIDUAL: extractPhotoURL returned:', {
+  logger.info('MAP INDIVIDUAL: extractPhotoURL returned', {
     photoURLValue: photoURL,
     photoURLType: typeof photoURL,
     isEmptyString: photoURL === '',
@@ -117,7 +120,7 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     isNull: photoURL === null
   });
 
-  console.log('🚨 MAP INDIVIDUAL: Final mapped object photoURL:', {
+  logger.info('MAP INDIVIDUAL: Final mapped object photoURL', {
     returnedPhotoURL: photoURL,
     returnedMultiplePhotoURLsCount: multiplePhotoURLs.length
   });

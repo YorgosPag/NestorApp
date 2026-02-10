@@ -16,6 +16,9 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AccountingDocumentsRoute');
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -158,7 +161,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         // Trigger AI analysis (non-blocking — update status when done)
         processDocumentAsync(id, body.fileUrl, body.mimeType, repository, documentAnalyzer)
           .catch((err) => {
-            console.error(`[documents/route] AI processing failed for ${id}:`, err);
+            logger.error('[documents/route] AI processing failed', { id, error: err });
           });
 
         return NextResponse.json(
@@ -206,7 +209,7 @@ async function processDocumentAsync(
       updatedAt: isoNow(),
     });
   } catch (error) {
-    console.error(`[documents/route] processDocumentAsync error for ${documentId}:`, error);
+    logger.error('[documents/route] processDocumentAsync error', { documentId, error });
 
     // Mark as review with low confidence so user can manually process
     await repository.updateExpenseDocument(documentId, {

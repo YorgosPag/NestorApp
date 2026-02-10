@@ -28,6 +28,9 @@ import type {
 } from '@/services/relationships/enterprise-relationship-engine.contracts';
 import { useEnterpriseRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('EnterpriseRelationshipProvider');
+
 // ============================================================================
 // CONTEXT STATE DEFINITION
 // ============================================================================
@@ -334,7 +337,7 @@ export function EnterpriseRelationshipProvider({
           }
         });
       } catch (error) {
-        console.warn('🚨 Periodic integrity check failed:', error);
+        logger.warn('Periodic integrity check failed', { error });
       }
     }, integrityCheckInterval);
 

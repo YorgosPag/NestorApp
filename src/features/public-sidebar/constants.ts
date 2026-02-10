@@ -3,6 +3,8 @@
 
 import { Home, Search, Phone } from 'lucide-react';
 import { useCompanyConfig } from '@/core/configuration';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('constants');
 
 // 🌐 i18n: Navigation items use i18n keys
 export const publicNavItems = [
@@ -35,7 +37,7 @@ export const useCompanyInfo = () => {
 
   // 🚨 ENTERPRISE: Error state handling
   if (error) {
-    console.warn('🚨 Enterprise Configuration Error:', error);
+    logger.warn('Enterprise Configuration Error:', { data: error });
     return {
       city: 'common.notAvailable', // i18n key
       phone: 'common.notAvailable', // i18n key

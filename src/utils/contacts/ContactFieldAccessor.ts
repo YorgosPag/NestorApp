@@ -2,6 +2,9 @@ import type {
   Contact
 } from '../../types/contacts/contracts';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ContactFieldAccessor');
+
 
 
 // Extended contact interface για legacy format support
@@ -221,7 +224,7 @@ export class ContactFieldAccessor {
   static debugFieldAccess(contact: Contact): void {
     const extendedContact = contact as ExtendedContact; // Legacy fields debug only
 
-    console.log('🔍 CONTACT FIELD DEBUG:', {
+    logger.info('CONTACT FIELD DEBUG', {
       contactId: contact.id,
       contactType: contact.type,
       email: ContactFieldAccessor.getEmail(contact),

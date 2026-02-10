@@ -38,6 +38,8 @@ import {
 import { db } from '@/lib/firebase';
 import { designTokens, borderColors } from '@/styles/design-tokens';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('enterprise-config-management');
 
 // ============================================================================
 // 🎯 ENTERPRISE CONFIGURATION TYPES - FULL TYPE SAFETY
@@ -333,7 +335,7 @@ export class EnterpriseConfigurationManager {
       const configDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'configuration'));
 
       if (!configDoc.exists()) {
-        console.warn('🔧 Configuration not found in database, creating defaults...');
+        logger.warn('Configuration not found in database, creating defaults...');
         await this.createDefaultConfiguration();
         return await this.loadConfiguration();
       }
@@ -344,11 +346,11 @@ export class EnterpriseConfigurationManager {
       const configuration = this.parseAndValidateConfiguration(data);
       this.config = configuration;
 
-      console.log('✅ Enterprise configuration loaded successfully');
+      logger.info('Enterprise configuration loaded successfully');
       return configuration;
 
     } catch (error) {
-      console.error('❌ Failed to load configuration:', error);
+      logger.error('Failed to load configuration', { error });
       throw new Error(`Configuration loading failed: ${error}`);
     }
   }
@@ -369,7 +371,7 @@ export class EnterpriseConfigurationManager {
       const configDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'company'));
 
       if (!configDoc.exists()) {
-        console.warn('🏢 Company config not found, using defaults');
+        logger.warn('Company config not found, using defaults');
         return DEFAULT_COMPANY_CONFIG;
       }
 
@@ -382,7 +384,7 @@ export class EnterpriseConfigurationManager {
       return companyConfig;
 
     } catch (error) {
-      console.error('❌ Failed to load company config:', error);
+      logger.error('Failed to load company config', { error });
       return DEFAULT_COMPANY_CONFIG;
     }
   }
@@ -402,7 +404,7 @@ export class EnterpriseConfigurationManager {
       const configDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'settings'));
 
       if (!configDoc.exists()) {
-        console.warn('⚙️ System config not found, using defaults');
+        logger.warn('System config not found, using defaults');
         return DEFAULT_SYSTEM_CONFIG;
       }
 
@@ -414,7 +416,7 @@ export class EnterpriseConfigurationManager {
       return systemConfig;
 
     } catch (error) {
-      console.error('❌ Failed to load system config:', error);
+      logger.error('Failed to load system config', { error });
       return DEFAULT_SYSTEM_CONFIG;
     }
   }
@@ -438,7 +440,7 @@ export class EnterpriseConfigurationManager {
 
       // Validate admin UID is set
       if (!adminConfig.primaryAdminUid) {
-        console.warn('⚠️ Admin UID not configured - using email as fallback');
+        logger.warn('Admin UID not configured - using email as fallback');
       }
 
       this.configCache.set(cacheKey, adminConfig);
@@ -447,7 +449,7 @@ export class EnterpriseConfigurationManager {
       return adminConfig;
 
     } catch (error) {
-      console.error('❌ Failed to load admin config:', error);
+      logger.error('Failed to load admin config', { error });
       return DEFAULT_SYSTEM_CONFIG.admin;
     }
   }
@@ -460,7 +462,7 @@ export class EnterpriseConfigurationManager {
       const snapshot = await getDocs(collection(db, COLLECTIONS.SYSTEM, 'project-templates'));
 
       if (snapshot.empty) {
-        console.warn('📋 No project templates found');
+        logger.warn('No project templates found');
         return [];
       }
 
@@ -475,7 +477,7 @@ export class EnterpriseConfigurationManager {
       return templates;
 
     } catch (error) {
-      console.error('❌ Failed to load project templates:', error);
+      logger.error('Failed to load project templates', { error });
       return [];
     }
   }
@@ -501,10 +503,10 @@ export class EnterpriseConfigurationManager {
       // Clear cache
       this.configCache.delete('company_config');
 
-      console.log('✅ Company configuration updated successfully');
+      logger.info('Company configuration updated successfully');
 
     } catch (error) {
-      console.error('❌ Failed to update company config:', error);
+      logger.error('Failed to update company config', { error });
       throw new Error(`Company config update failed: ${error}`);
     }
   }
@@ -524,10 +526,10 @@ export class EnterpriseConfigurationManager {
 
       this.configCache.delete('system_config');
 
-      console.log('✅ System configuration updated successfully');
+      logger.info('System configuration updated successfully');
 
     } catch (error) {
-      console.error('❌ Failed to update system config:', error);
+      logger.error('Failed to update system config', { error });
       throw new Error(`System config update failed: ${error}`);
     }
   }
@@ -551,12 +553,12 @@ export class EnterpriseConfigurationManager {
             this.config = configuration;
             onUpdate(configuration);
           } catch (error) {
-            console.error('❌ Configuration listener error:', error);
+            logger.error('Configuration listener error', { error });
           }
         }
       },
       (error) => {
-        console.error('❌ Configuration listener failed:', error);
+        logger.error('Configuration listener failed', { error });
       }
     );
 
@@ -800,7 +802,7 @@ export class EnterpriseConfigurationManager {
 
   private validateProjectTemplate(data: unknown): ProjectTemplateConfiguration | null {
     if (!this.isProjectTemplateConfiguration(data)) {
-      console.warn('Invalid project template data');
+      logger.warn('Invalid project template data');
       return null;
     }
     return data;
@@ -844,10 +846,10 @@ export class EnterpriseConfigurationManager {
       };
 
       await setDoc(doc(db, COLLECTIONS.SYSTEM, 'configuration'), defaultConfig);
-      console.log('✅ Default configuration created successfully');
+      logger.info('Default configuration created successfully');
 
     } catch (error) {
-      console.error('❌ Failed to create default configuration:', error);
+      logger.error('Failed to create default configuration', { error });
       throw new Error(`Default configuration creation failed: ${error}`);
     }
   }

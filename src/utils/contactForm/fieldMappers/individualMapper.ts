@@ -8,6 +8,9 @@ import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
 import type { PersonaType, PersonaData } from '@/types/contacts/personas';
 import { getPersonaFields } from '@/config/persona-config';
 
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('IndividualMapper');
+
 // ============================================================================
 // INDIVIDUAL CONTACT MAPPER
 // ============================================================================
@@ -23,11 +26,11 @@ import { getPersonaFields } from '@/config/persona-config';
  */
 export function mapIndividualContactToFormData(contact: Contact): ContactFormData {
 
-  console.log('🔍 INDIVIDUAL MAPPER: Starting mapping for contact', contact.id);
+  logger.info('INDIVIDUAL MAPPER: Starting mapping for contact', { contactId: contact.id });
 
   // 🏢 ENTERPRISE: Type-safe access to individual contact fields
   if (!isIndividualContact(contact)) {
-    console.warn('🔍 INDIVIDUAL MAPPER: Contact is not an individual, returning minimal form data');
+    logger.warn('INDIVIDUAL MAPPER: Contact is not an individual, returning minimal form data');
     return {
       ...initialFormData,
       type: contact.type,
@@ -40,7 +43,7 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   // 📸 MULTIPLE PHOTOS - ENTERPRISE SOLUTION (2025 STANDARD)
   const rawUrls = getSafeArrayValue(individualContact, 'multiplePhotoURLs') || [];
 
-  console.log('🔍 INDIVIDUAL MAPPER: rawUrls from database:', rawUrls);
+  logger.info('INDIVIDUAL MAPPER: rawUrls from database', { rawUrls });
 
   // 🚨 CRITICAL FIX - ΜΗ ΑΛΛΑΞΕΙΣ ΑΥΤΗ ΤΗ ΛΟΓΙΚΗ! 🚨
   // BUG HISTORY: Πριν από αυτή τη διόρθωση, το filtering αφαίρεσε κενά arrays
@@ -53,8 +56,8 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   if (rawUrls.length === 0) {
     // ✅ ΚΕΝΟ ARRAY: Κρατάμε κενό για proper deletion στη βάση
     multiplePhotos = [];
-    console.log('🛠️ INDIVIDUAL MAPPER: Empty photos array - will delete from database');
-    console.log('🛠️ INDIVIDUAL MAPPER: Also clearing photoURL field for complete deletion');
+    logger.info('INDIVIDUAL MAPPER: Empty photos array - will delete from database');
+    logger.info('INDIVIDUAL MAPPER: Also clearing photoURL field for complete deletion');
   } else {
     // ✅ ΥΠΑΡΧΟΥΝ ΦΩΤΟΓΡΑΦΙΕΣ: Normal processing
     multiplePhotos = rawUrls

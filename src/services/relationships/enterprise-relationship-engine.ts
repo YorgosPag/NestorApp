@@ -42,6 +42,9 @@ import type {
   RelationshipError,
   SkippedEntity
 } from './enterprise-relationship-engine.contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EnterpriseRelationshipEngine');
 
 // ============================================================================
 // ENTERPRISE RELATIONSHIP ENGINE IMPLEMENTATION
@@ -377,7 +380,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       // 2️⃣ FALLBACK: If no relationships found, try direct collection lookup
       if (childIds.length === 0) {
         // 🔄 ENTERPRISE FALLBACK STRATEGY for existing data migration
-        console.log(`⚠️ ENTERPRISE: No relationships found in ${this.RELATIONSHIPS_COLLECTION}. Trying fallback for ${parentType}-${childType}`);
+        logger.warn('ENTERPRISE: No relationships found, trying fallback', { collection: this.RELATIONSHIPS_COLLECTION, parentType, childType });
 
         if (parentType === 'company' && childType === 'project') {
           // 📊 FALLBACK: Read directly from projects collection with companyId
@@ -392,7 +395,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
             ...doc.data()
           })) as unknown as readonly TChild[];
 
-          console.log(`✅ ENTERPRISE FALLBACK: Found ${projects.length} projects for company ${parentId} via direct lookup`);
+          logger.info('ENTERPRISE FALLBACK: Found projects via direct lookup', { count: projects.length, parentId });
           return projects;
         }
 
@@ -409,17 +412,17 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
             ...doc.data()
           })) as unknown as readonly TChild[];
 
-          console.log(`✅ ENTERPRISE FALLBACK: Found ${units.length} units for building ${parentId} via direct lookup`);
+          logger.info('ENTERPRISE FALLBACK: Found units via direct lookup', { count: units.length, parentId });
           return units;
         }
 
         // For other relationships, return empty
-        console.log(`❌ ENTERPRISE: No fallback available for ${parentType}-${childType} relationship`);
+        logger.warn('ENTERPRISE: No fallback available for relationship', { parentType, childType });
         return [];
       }
 
       // 3️⃣ BATCH FETCH ENTITIES (original path)
-      console.log(`✅ ENTERPRISE: Found ${childIds.length} relationship records, fetching entities`);
+      logger.info('ENTERPRISE: Found relationship records, fetching entities', { count: childIds.length });
       const entities = await this.batchGetEntities<TChild>(childType, childIds);
       return entities;
     }, fallback);

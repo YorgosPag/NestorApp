@@ -19,6 +19,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { errorTracker, type ErrorSeverity, type ErrorCategory, type ErrorContext } from '@/services/ErrorTracker';
 import { getErrorConfig } from '@/config/error-reporting';
 import { generateRequestId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('ApiErrorHandler');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -311,7 +313,7 @@ export class ApiErrorHandler {
           requestId,
         };
 
-        console.log(`🚨 [API] ${error.statusCode}: ${error.message}`);
+        logger.info(`[API] ${error.statusCode}: ${error.message}`);
 
         return NextResponse.json(errorResponse, {
           status: error.statusCode,
@@ -358,7 +360,7 @@ export class ApiErrorHandler {
           }
         } catch (trackerError) {
           // ErrorTracker unavailable (server-side) - log warning but don't fail
-          console.warn('[ApiErrorHandler] ErrorTracker unavailable:', trackerError instanceof Error ? trackerError.message : trackerError);
+          logger.warn('[ApiErrorHandler] ErrorTracker unavailable', { error: trackerError instanceof Error ? trackerError.message : trackerError });
         }
       }
 
@@ -394,7 +396,7 @@ export class ApiErrorHandler {
 
     } catch (handlerError) {
       // Fallback error handling (για περιπτώσεις που ο handler αποτύχει)
-      console.error('🚨 ApiErrorHandler failed:', handlerError);
+      logger.error('ApiErrorHandler failed', { error: handlerError });
 
       return NextResponse.json({
         success: false,
@@ -608,9 +610,9 @@ export class ApiErrorHandler {
     };
 
     if (logLevel === 'error') {
-      console.error(`🚨 API Error: ${message}`, logData);
+      logger.error(`API Error: ${message}`, logData);
     } else {
-      console.warn(`⚠️ API Warning: ${message}`, logData);
+      logger.warn(`API Warning: ${message}`, logData);
     }
   }
 

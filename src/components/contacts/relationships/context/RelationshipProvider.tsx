@@ -13,6 +13,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
 import { RequestDeduplicator } from '../hooks/useRelationshipListOptimized';
+import { createModuleLogger } from '@/lib/telemetry';
+const logger = createModuleLogger('RelationshipProvider');
 
 // ============================================================================
 // CONTEXT TYPES
@@ -85,7 +87,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
         RequestDeduplicator.invalidate(contactId);
       }
 
-      console.log('📋 PROVIDER: Loading relationships for contact:', contactId);
+      logger.info('PROVIDER: Loading relationships for contact:', { data: contactId });
       const data = await RequestDeduplicator.get(contactId);
 
       setRelationships(prevRelationships => {
@@ -98,17 +100,17 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
 
         if (hasChanged || forceRefresh) {
           onRelationshipsChange?.(data);
-          console.log('✅ PROVIDER: Relationships updated:', data.length);
+          logger.info('PROVIDER: Relationships updated:', { data: data.length });
           return data;
         }
-        console.log('ℹ️ PROVIDER: Relationships unchanged, skipping update');
+        logger.info('ℹPROVIDER: Relationships unchanged, skipping update');
         return prevRelationships;
       });
 
     } catch (err) {
       const errorMessage = 'Σφάλμα φόρτωσης σχέσεων επαφής';
       setError(errorMessage);
-      console.error('❌ PROVIDER: Error loading relationships:', err);
+      logger.error('PROVIDER: Error loading relationships:', { error: err });
       setRelationships([]);
     } finally {
       setLoading(false);
@@ -119,7 +121,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
    * 🔄 Refresh relationships (public API)
    */
   const refreshRelationships = useCallback(async () => {
-    console.log('🔄 PROVIDER: Force refreshing relationships for', contactId);
+    logger.info('PROVIDER: Force refreshing relationships for', { data: contactId });
 
     // 🔧 FIX: Ensure cache is fully invalidated before reload
     RequestDeduplicator.invalidate(contactId);
@@ -127,9 +129,9 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
     // Small delay για Firestore eventual consistency
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    console.log('🔄 PROVIDER: Cache invalidated, now reloading...');
+    logger.info('PROVIDER: Cache invalidated, now reloading...');
     await loadRelationships(true);
-    console.log('🔄 PROVIDER: Refresh completed');
+    logger.info('PROVIDER: Refresh completed');
   }, [contactId, loadRelationships]);
 
   /**
@@ -140,7 +142,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       setLoading(true);
       setError(null);
 
-      console.log('🗑️ PROVIDER: Deleting relationship:', relationshipId);
+      logger.info('PROVIDER: Deleting relationship:', { data: relationshipId });
 
       // Import dynamically to avoid circular dependencies
       const { ContactRelationshipService } = await import('@/services/contact-relationships/ContactRelationshipService');
@@ -163,11 +165,11 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
         return newSet;
       });
 
-      console.log('✅ PROVIDER: Relationship deleted successfully');
+      logger.info('PROVIDER: Relationship deleted successfully');
     } catch (err) {
       const errorMessage = 'Σφάλμα διαγραφής σχέσης';
       setError(errorMessage);
-      console.error('❌ PROVIDER: Error deleting relationship:', err);
+      logger.error('PROVIDER: Error deleting relationship:', { error: err });
 
       // Force refresh to ensure consistency
       await loadRelationships(true);
