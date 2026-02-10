@@ -403,14 +403,37 @@ export async function handleGET(): Promise<NextResponse> {
           }));
         }
 
+        // Step 4: Search ALL construction_phases (no filter) to find Gantt data
+        const allPhasesSnap = await adminDb
+          .collection(COLLECTIONS.CONSTRUCTION_PHASES)
+          .limit(10)
+          .get();
+        const allPhases = allPhasesSnap.docs.map(d => ({
+          id: d.id,
+          buildingId: d.data().buildingId ?? null,
+          companyId: d.data().companyId ?? null,
+          name: d.data().name ?? '?',
+        }));
+
+        // Step 5: Search ALL buildings (no filter) to find "kados"/"1524"
+        const allBuildingsSnap = await adminDb
+          .collection(COLLECTIONS.BUILDINGS)
+          .limit(20)
+          .get();
+        const allBuildings = allBuildingsSnap.docs.map(d => ({
+          id: d.id,
+          name: (d.data().name as string) ?? '?',
+          projectId: d.data().projectId ?? null,
+          companyId: d.data().companyId ?? null,
+        }));
+
         diagnostic = {
           companyId,
-          projectCount: projects.length,
-          projects,
-          buildingCount: buildings.length,
-          buildings,
-          phaseCount: phases.length,
-          phases: phases.slice(0, 10),
+          step1_projects: { count: projects.length, data: projects },
+          step2_buildings_by_projectId: { count: buildings.length, data: buildings },
+          step3_phases_by_buildingId: { count: phases.length, data: phases.slice(0, 10) },
+          global_all_phases: { count: allPhases.length, data: allPhases },
+          global_all_buildings: { count: allBuildings.length, data: allBuildings },
         };
       } catch (err) {
         diagnostic = { error: err instanceof Error ? err.message : String(err) };
