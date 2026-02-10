@@ -329,7 +329,7 @@
     },
     "fiscalYearEnd": "Fiscal Year End",
     "efkaCategory": "EFKA Category",
-    "efkaCategoryLabel": "Category {{number}}",
+    "efkaCategoryLabel": "Category {number}",
     "kadSection": "Activity Codes (KAD)",
     "mainKad": "Main Activity",
     "secondaryKads": "Secondary Activities",

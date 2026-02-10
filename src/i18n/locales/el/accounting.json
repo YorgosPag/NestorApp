@@ -329,7 +329,7 @@
     },
     "fiscalYearEnd": "Λήξη Φορολογικού Έτους",
     "efkaCategory": "Κατηγορία ΕΦΚΑ",
-    "efkaCategoryLabel": "{{number}}η Κατηγορία",
+    "efkaCategoryLabel": "{number}η Κατηγορία",
     "kadSection": "Κωδικοί Δραστηριότητας (ΚΑΔ)",
     "mainKad": "Κύρια Δραστηριότητα",
     "secondaryKads": "Δευτερεύουσες Δραστηριότητες",
