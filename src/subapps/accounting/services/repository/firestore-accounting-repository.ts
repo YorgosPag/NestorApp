@@ -55,6 +55,7 @@ import type {
   EFKAPayment,
   EFKAUserConfig,
 } from '../../types/efka';
+import type { Partner } from '../../types/entity';
 import type { TaxInstallment } from '../../types/tax';
 import type { ReceivedExpenseDocument } from '../../types/documents';
 import type { CompanyProfile, CompanySetupInput } from '../../types/company';
@@ -79,7 +80,12 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     return safeFirestoreOperation(async (db) => {
       const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('company_profile').get();
       if (!snap.exists) return null;
-      return snap.data() as CompanyProfile;
+      const raw = snap.data() as Record<string, unknown>;
+      // Backward compat: docs without entityType → sole_proprietor
+      if (!raw.entityType) {
+        raw.entityType = 'sole_proprietor';
+      }
+      return raw as unknown as CompanyProfile;
     }, null);
   }
 
@@ -99,6 +105,41 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
       await docRef.set(doc);
     }, undefined);
+  }
+
+  // ── Partners (ADR-ACC-012 OE) ─────────────────────────────────────────
+
+  async getPartners(): Promise<Partner[]> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('partners').get();
+      if (!snap.exists) return [];
+      const data = snap.data() as { partners: Partner[] };
+      return data.partners ?? [];
+    }, []);
+  }
+
+  async savePartners(partners: Partner[]): Promise<void> {
+    const now = isoNow();
+    await safeFirestoreOperation(async (db) => {
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('partners');
+      const doc = sanitizeForFirestore({
+        partners,
+        updatedAt: now,
+      } as unknown as Record<string, unknown>);
+      await docRef.set(doc);
+    }, undefined);
+  }
+
+  async getPartnerEFKAPayments(partnerId: string, year: number): Promise<EFKAPayment[]> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db
+        .collection(COLLECTIONS.ACCOUNTING_EFKA_PAYMENTS)
+        .where('partnerId', '==', partnerId)
+        .where('year', '==', year)
+        .orderBy('month', 'asc')
+        .get();
+      return snap.docs.map((d) => d.data() as EFKAPayment);
+    }, []);
   }
 
   // ── Journal Entries ─────────────────────────────────────────────────────

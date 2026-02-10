@@ -37,3 +37,6 @@ export { useExpenseDocument } from './useExpenseDocument';
 
 // ── Service Presets Hooks (ADR-ACC-011) ──────────────────────────────────────
 export { useServicePresets } from './useServicePresets';
+
+// ── Partners Hooks (ADR-ACC-012 OE) ─────────────────────────────────────────
+export { usePartners } from './usePartners';

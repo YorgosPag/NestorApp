@@ -15,12 +15,13 @@ import type {
   IDepreciationEngine,
 } from '../types/interfaces';
 import type { VATQuarterSummary, VATAnnualSummary } from '../types/vat';
-import type { TaxResult, TaxEstimate } from '../types/tax';
-import type { EFKAAnnualSummary, EFKAMonthlyBreakdown } from '../types/efka';
+import type { TaxResult, TaxEstimate, PartnershipTaxResult } from '../types/tax';
+import type { EFKAAnnualSummary, PartnershipEFKASummary, PartnerEFKASummary } from '../types/efka';
 import type { DepreciationRecord } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
-import type { Invoice, CreateInvoiceInput } from '../types/invoice';
-import type { FiscalQuarter, ExpenseCategory } from '../types/common';
+import type { FiscalQuarter } from '../types/common';
+import type { Partner } from '../types/entity';
+import { TaxEngine } from './engines/tax-engine';
 import { getCategoryByCode } from '../config/account-categories';
 import { getEfkaConfigForYear, calculateMonthlyBreakdown } from './config/efka-config';
 
@@ -165,6 +166,105 @@ export class AccountingService {
    */
   async runYearEndDepreciation(fiscalYear: number): Promise<DepreciationRecord[]> {
     return this.depreciationEngine.bookDepreciations(fiscalYear);
+  }
+
+  // ── Partnership Tax (ADR-ACC-012) ──────────────────────────────────────
+
+  /**
+   * Υπολογισμός φόρου ΟΕ (pass-through ανά εταίρο)
+   */
+  async calculatePartnershipTax(fiscalYear: number): Promise<PartnershipTaxResult> {
+    const partners = await this.repository.getPartners();
+    const incomeEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'income' });
+    const expenseEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'expense' });
+
+    const totalIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
+    const totalExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
+
+    // Per-partner EFKA totals
+    const efkaByPartner = new Map<string, number>();
+    for (const p of partners) {
+      const payments = await this.repository.getPartnerEFKAPayments(p.partnerId, fiscalYear);
+      const paid = payments
+        .filter((pay) => pay.status === 'paid')
+        .reduce((sum, pay) => sum + pay.amount, 0);
+      efkaByPartner.set(p.partnerId, paid);
+    }
+
+    // Cast to TaxEngine for partnership method
+    const taxEngine = this.taxEngine as TaxEngine;
+
+    return taxEngine.calculatePartnershipTax(
+      fiscalYear,
+      totalIncome,
+      totalExpenses,
+      efkaByPartner,
+      partners.map((p) => ({
+        partnerId: p.partnerId,
+        partnerName: p.fullName,
+        profitSharePercent: p.profitSharePercent,
+        withholdings: 0,
+        previousPrepayment: 0,
+        isFirstFiveYears: p.isFirstFiveYears,
+      }))
+    );
+  }
+
+  /**
+   * Σύνοψη ΕΦΚΑ ΟΕ (per-partner)
+   */
+  async getPartnershipEfkaSummary(year: number): Promise<PartnershipEFKASummary> {
+    const partners = await this.repository.getPartners();
+    const partnerSummaries: PartnerEFKASummary[] = [];
+    let totalAllPartnersPaid = 0;
+    let totalAllPartnersDue = 0;
+
+    for (const p of partners) {
+      const payments = await this.repository.getPartnerEFKAPayments(p.partnerId, year);
+      const mainCode = p.efkaConfig.selectedMainPensionCode || 'main_1';
+      const suppCode = p.efkaConfig.selectedSupplementaryCode || 'supplementary_1';
+      const lumpCode = p.efkaConfig.selectedLumpSumCode || 'lump_sum_1';
+
+      const monthlyBreakdown = calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode);
+
+      const totalPaid = payments
+        .filter((pay) => pay.status === 'paid')
+        .reduce((sum, pay) => sum + pay.amount, 0);
+      const totalDue = monthlyBreakdown.reduce((sum, m) => sum + m.totalMonthly, 0);
+      const balanceDue = Math.round((totalDue - totalPaid) * 100) / 100;
+      const paidMonths = payments.filter((pay) => pay.status === 'paid').length;
+      const overdueMonths = payments.filter(
+        (pay) => pay.status === 'overdue' || pay.status === 'keao'
+      ).length;
+
+      const summary = {
+        year,
+        monthlyBreakdown,
+        payments,
+        totalPaid,
+        totalDue,
+        balanceDue,
+        taxDeductibleAmount: totalPaid,
+        paidMonths,
+        overdueMonths,
+      };
+
+      partnerSummaries.push({
+        partnerId: p.partnerId,
+        partnerName: p.fullName,
+        summary,
+      });
+
+      totalAllPartnersPaid += totalPaid;
+      totalAllPartnersDue += totalDue;
+    }
+
+    return {
+      year,
+      partnerSummaries,
+      totalAllPartnersPaid,
+      totalAllPartnersDue,
+    };
   }
 
   // ── EFKA ────────────────────────────────────────────────────────────────

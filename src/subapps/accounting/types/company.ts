@@ -134,5 +134,9 @@ export type CompanyProfile = SoleProprietorProfile | OECompanyProfile;
 /**
  * Input για δημιουργία/ενημέρωση company setup
  * Εξαιρεί auto-generated πεδία (timestamps)
+ *
+ * Distributive Omit: διατηρεί discriminated union (entityType discriminant)
  */
-export type CompanySetupInput = Omit<CompanyProfile, 'createdAt' | 'updatedAt'>;
+export type SoleProprietorSetupInput = Omit<SoleProprietorProfile, 'createdAt' | 'updatedAt'>;
+export type OESetupInput = Omit<OECompanyProfile, 'createdAt' | 'updatedAt'>;
+export type CompanySetupInput = SoleProprietorSetupInput | OESetupInput;

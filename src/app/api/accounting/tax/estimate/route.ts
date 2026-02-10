@@ -23,6 +23,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { isPartnership } from '@/subapps/accounting/utils/entity-guards';
 
 // =============================================================================
 // GET — Tax Estimate
@@ -32,7 +33,7 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const { service } = createAccountingServices();
+        const { service, repository } = createAccountingServices();
         const { searchParams } = new URL(req.url);
 
         const fiscalYearParam = searchParams.get('fiscalYear');
@@ -47,9 +48,24 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           );
         }
 
+        // Check entity type for partnership path
+        const profile = await repository.getCompanySetup();
+        if (profile && isPartnership(profile)) {
+          const partnershipResult = await service.calculatePartnershipTax(fiscalYear);
+          return NextResponse.json({
+            success: true,
+            entityType: 'oe',
+            data: partnershipResult,
+          });
+        }
+
         const estimate = await service.getTaxEstimate(fiscalYear);
 
-        return NextResponse.json({ success: true, data: estimate });
+        return NextResponse.json({
+          success: true,
+          entityType: 'sole_proprietor',
+          data: estimate,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to get tax estimate';
         return NextResponse.json(

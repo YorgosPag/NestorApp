@@ -98,7 +98,7 @@ export function FiscalInfoSection({ data, onChange }: FiscalInfoSectionProps) {
             </div>
           </div>
 
-          {/* Row 2: Λήξη Φ.Ε. + Κατηγορία ΕΦΚΑ */}
+          {/* Row 2: Λήξη Φ.Ε. + Κατηγορία ΕΦΚΑ (sole_proprietor μόνο) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="fiscalYearEnd">{t('setup.fiscalYearEnd')}</Label>
@@ -121,26 +121,28 @@ export function FiscalInfoSection({ data, onChange }: FiscalInfoSectionProps) {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="efkaCategory">{t('setup.efkaCategory')}</Label>
-              <Select
-                value={String(data.efkaCategory)}
-                onValueChange={(value) =>
-                  onChange({ efkaCategory: parseInt(value, 10) as 1 | 2 | 3 | 4 | 5 | 6 })
-                }
-              >
-                <SelectTrigger id="efkaCategory">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EFKA_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={String(cat)}>
-                      {t('setup.efkaCategoryLabel', { number: cat })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {data.entityType === 'sole_proprietor' && (
+              <div className="space-y-2">
+                <Label htmlFor="efkaCategory">{t('setup.efkaCategory')}</Label>
+                <Select
+                  value={String(data.efkaCategory)}
+                  onValueChange={(value) =>
+                    onChange({ efkaCategory: parseInt(value, 10) as 1 | 2 | 3 | 4 | 5 | 6 })
+                  }
+                >
+                  <SelectTrigger id="efkaCategory">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EFKA_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={String(cat)}>
+                        {t('setup.efkaCategoryLabel', { number: cat })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </fieldset>
       </CardContent>

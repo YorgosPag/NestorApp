@@ -17,9 +17,11 @@ import type {
   TaxEstimate,
   TaxInstallment,
   TaxInstallmentStatus,
+  PartnershipTaxResult,
+  PartnerTaxResult,
 } from '../../types/tax';
 import type { FiscalQuarter, ExpenseCategory, IncomeCategory } from '../../types/common';
-import { getTaxScaleForYear } from '../config/tax-config';
+import { getTaxScaleForYear, getProfessionalTaxForEntity } from '../config/tax-config';
 
 // ============================================================================
 // TAX ENGINE IMPLEMENTATION
@@ -190,6 +192,62 @@ export class TaxEngine implements ITaxEngine {
    */
   getTaxScale(year: number): TaxScaleConfig {
     return getTaxScaleForYear(year);
+  }
+
+  /**
+   * Υπολογισμός φόρου ΟΕ (pass-through ανά εταίρο)
+   *
+   * Κάθε εταίρος φορολογείται ξεχωριστά στο μερίδιό του (ίδια κλίμακα 9%-44%).
+   */
+  calculatePartnershipTax(
+    fiscalYear: number,
+    totalIncome: number,
+    totalExpenses: number,
+    totalEfkaByPartner: Map<string, number>,
+    partners: Array<{
+      partnerId: string;
+      partnerName: string;
+      profitSharePercent: number;
+      withholdings: number;
+      previousPrepayment: number;
+      isFirstFiveYears: boolean;
+    }>
+  ): PartnershipTaxResult {
+    const totalProfit = Math.max(0, totalIncome - totalExpenses);
+    const entityProfessionalTax = getProfessionalTaxForEntity('oe');
+
+    const partnerResults: PartnerTaxResult[] = partners.map((p) => {
+      const profitShare = roundToTwo(totalProfit * (p.profitSharePercent / 100));
+      const partnerEfka = totalEfkaByPartner.get(p.partnerId) ?? 0;
+
+      const taxResult = this.calculateAnnualTax({
+        fiscalYear,
+        totalIncome: profitShare,
+        totalDeductibleExpenses: 0,
+        totalEfkaContributions: partnerEfka,
+        professionalTax: 0, // Professional tax is at entity level
+        totalWithholdings: p.withholdings,
+        previousYearPrepayment: p.previousPrepayment,
+        isFirstFiveYears: p.isFirstFiveYears,
+      });
+
+      return {
+        partnerId: p.partnerId,
+        partnerName: p.partnerName,
+        profitSharePercent: p.profitSharePercent,
+        profitShare,
+        taxResult,
+      };
+    });
+
+    return {
+      fiscalYear,
+      totalEntityIncome: totalIncome,
+      totalEntityExpenses: totalExpenses,
+      totalEntityProfit: totalProfit,
+      entityProfessionalTax,
+      partnerResults,
+    };
   }
 
   /**

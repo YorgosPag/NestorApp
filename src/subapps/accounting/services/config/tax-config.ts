@@ -110,3 +110,27 @@ export function getTaxScaleForYear(year: number): TaxScaleConfig {
 export function getAvailableTaxYears(): number[] {
   return Array.from(GREEK_TAX_SCALES.keys()).sort((a, b) => a - b);
 }
+
+// ============================================================================
+// PROFESSIONAL TAX BY ENTITY TYPE (Τέλος Επιτηδεύματος)
+// ============================================================================
+
+/**
+ * Τέλος επιτηδεύματος ανά νομική μορφή (Ν.4172/2013 αρ.31)
+ *
+ * - Ατομική: 650€
+ * - ΟΕ/ΕΠΕ/ΑΕ: 1.000€ (νομικό πρόσωπο)
+ */
+const PROFESSIONAL_TAX_BY_ENTITY: Record<EntityType, number> = {
+  sole_proprietor: 650,
+  oe: 1000,
+  epe: 1000,
+  ae: 1000,
+};
+
+/**
+ * Λήψη τέλους επιτηδεύματος ανά νομική μορφή
+ */
+export function getProfessionalTaxForEntity(entityType: EntityType): number {
+  return PROFESSIONAL_TAX_BY_ENTITY[entityType];
+}

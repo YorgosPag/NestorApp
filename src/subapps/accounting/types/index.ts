@@ -20,6 +20,8 @@ export type {
   CompanySetupInput,
   SoleProprietorProfile,
   OECompanyProfile,
+  SoleProprietorSetupInput,
+  OESetupInput,
 } from './company';
 
 // ── Common Types ────────────────────────────────────────────────────────────

@@ -26,12 +26,15 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
-import type { CompanySetupInput, KadEntry } from '../../types';
+import type { CompanySetupInput, KadEntry, EntityType, Partner } from '../../types';
+import { isSoleProprietor, isPartnership } from '../../utils/entity-guards';
 import { BasicInfoSection } from './BasicInfoSection';
 import { FiscalInfoSection } from './FiscalInfoSection';
 import { KadSection } from './KadSection';
 import { InvoiceSeriesSection } from './InvoiceSeriesSection';
 import { ServicePresetsSection } from './ServicePresetsSection';
+import { EntityTypeSelector } from './EntityTypeSelector';
+import { PartnerManagementSection } from './PartnerManagementSection';
 
 // ============================================================================
 // DEFAULTS
@@ -46,6 +49,7 @@ function createDefaultData(): CompanySetupInput {
   };
 
   return {
+    entityType: 'sole_proprietor' as const,
     businessName: '',
     profession: '',
     vatNumber: '',
@@ -113,15 +117,28 @@ export function SetupPageContent() {
     }
   }, [profile]);
 
-  const handleChange = useCallback((updates: Partial<CompanySetupInput>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
-    // Clear validation errors for updated fields
+  const handleChange = useCallback((updates: Record<string, unknown>) => {
+    setFormData((prev) => Object.assign({}, prev, updates) as CompanySetupInput);
     setValidationErrors((prev) => {
       const next = { ...prev };
       for (const key of Object.keys(updates)) {
         delete next[key];
       }
       return next;
+    });
+    setSaveSuccess(false);
+  }, []);
+
+  const handleEntityTypeChange = useCallback((newType: EntityType) => {
+    setFormData((prev) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { entityType: _e, efkaCategory: _ef, gemiNumber: _g, partners: _p, ...common } =
+        prev as Record<string, unknown>;
+
+      if (newType === 'oe') {
+        return { ...common, entityType: 'oe', gemiNumber: null, partners: [] } as unknown as CompanySetupInput;
+      }
+      return { ...common, entityType: 'sole_proprietor', efkaCategory: 1 } as unknown as CompanySetupInput;
     });
     setSaveSuccess(false);
   }, []);
@@ -187,8 +204,12 @@ export function SetupPageContent() {
         loading,
       },
       {
-        title: t('dashboard.efkaCategoryDash'),
-        value: formData.efkaCategory,
+        title: formData.entityType === 'sole_proprietor'
+          ? t('dashboard.efkaCategoryDash')
+          : t('dashboard.entityType'),
+        value: formData.entityType === 'sole_proprietor'
+          ? (formData as { efkaCategory: number }).efkaCategory
+          : t(`setup.entityType.types.${formData.entityType}`),
         icon: Shield,
         color: 'blue' as const,
         loading,
@@ -248,9 +269,26 @@ export function SetupPageContent() {
               </div>
             )}
 
+            {/* Entity Type Selector */}
+            <EntityTypeSelector
+              value={formData.entityType}
+              onChange={handleEntityTypeChange}
+            />
+
             {/* Sections */}
             <BasicInfoSection data={formData} onChange={handleChange} errors={translatedErrors} />
             <FiscalInfoSection data={formData} onChange={handleChange} />
+
+            {/* Partner Management (OE only) */}
+            {formData.entityType === 'oe' && (
+              <PartnerManagementSection
+                partners={formData.partners}
+                gemiNumber={formData.gemiNumber}
+                onPartnersChange={(partners) => handleChange({ partners } as Partial<CompanySetupInput>)}
+                onGemiNumberChange={(gemiNumber) => handleChange({ gemiNumber } as Partial<CompanySetupInput>)}
+              />
+            )}
+
             <KadSection data={formData} onChange={handleChange} errors={translatedErrors} />
             <InvoiceSeriesSection data={formData} onChange={handleChange} />
             <ServicePresetsSection />

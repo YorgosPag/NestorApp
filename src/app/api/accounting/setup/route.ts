@@ -21,6 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { CompanySetupInput } from '@/subapps/accounting/types';
+import type { Partner } from '@/subapps/accounting/types/entity';
 
 // =============================================================================
 // VALIDATION HELPERS
@@ -93,8 +94,9 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
           );
         }
 
-        // Ensure nullability for optional fields (Firestore compliance)
-        const data: CompanySetupInput = {
+        // Common fields (Firestore compliance: nullable)
+        const entityType = (body as Record<string, unknown>).entityType as string ?? 'sole_proprietor';
+        const commonFields = {
           businessName: body.businessName!.trim(),
           profession: body.profession!.trim(),
           vatNumber: body.vatNumber!.trim(),
@@ -104,16 +106,29 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
           postalCode: body.postalCode!.trim(),
           phone: body.phone?.trim() ?? null,
           email: body.email?.trim() ?? null,
-          website: body.website?.trim() ?? null,
+          website: (body as Record<string, unknown>).website as string | null ?? null,
           mainKad: body.mainKad!,
           secondaryKads: body.secondaryKads ?? [],
           bookCategory: body.bookCategory ?? 'simplified',
           vatRegime: body.vatRegime ?? 'normal',
           fiscalYearEnd: body.fiscalYearEnd ?? 12,
-          currency: 'EUR',
-          efkaCategory: body.efkaCategory ?? 1,
+          currency: 'EUR' as const,
           invoiceSeries: body.invoiceSeries ?? [],
         };
+
+        // Build discriminated union based on entityType
+        const data: CompanySetupInput = entityType === 'oe'
+          ? {
+              ...commonFields,
+              entityType: 'oe' as const,
+              gemiNumber: ((body as Record<string, unknown>).gemiNumber as string | null) ?? null,
+              partners: ((body as Record<string, unknown>).partners as Partner[]) ?? [],
+            }
+          : {
+              ...commonFields,
+              entityType: 'sole_proprietor' as const,
+              efkaCategory: ((body as Record<string, unknown>).efkaCategory as 1 | 2 | 3 | 4 | 5 | 6) ?? 1,
+            };
 
         await repository.saveCompanySetup(data);
 
