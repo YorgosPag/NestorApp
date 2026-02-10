@@ -502,6 +502,8 @@ interface AdminSession {
 | 2026-02-09 | Data fix: Set `firebaseUid: "ITjmw0syn7WiYuskqaGtzLPuN852"` in `settings/super_admin_registry` for in-app admin detection | Claude Code |
 | 2026-02-09 | Fix: AI prompt intent detection — "πόσα πεδία κενά στην επαφή X" λανθασμένα πήγαινε σε UC-013 (stats) αντί UC-010 (contact search). Διευκρίνιση ότι ερωτήσεις για πεδία ΣΥΓΚΕΚΡΙΜΕΝΗΣ επαφής → `admin_contact_search`, aggregate stats → `admin_unit_stats` | Claude Code |
 | 2026-02-09 | Feat: UC-010 missing fields mode — `detectMissingFieldsMode()` + `getContactMissingFields()` integration. Δείχνει filled/total πεδία + λίστα κενών πεδίων ανά επαφή | Claude Code |
+| 2026-02-10 | Prompt Upgrade: SEMANTIC UNDERSTANDING — αντικατάσταση keyword-based περιγραφών με σημασιολογικές. Το AI πλέον κατανοεί ΝΟΗΜΑ αντί να ψάχνει λέξεις-κλειδιά. `admin_unit_stats` καλύπτει ΟΠΟΙΑΔΗΠΟΤΕ ερώτηση για ακίνητα (σπίτια, διαμερίσματα, οικόπεδα κτλ.), status, πωλήσεις, ερωτήσεις ναι/όχι. `general_inquiry` ορίστηκε ως LAST RESORT. | Claude Code |
+| 2026-02-10 | UC-013 keywords: Προσθήκη 15+ νέων property/status keywords (σπίτι, κατοικία, οικόπεδο, μεζονέτα, ρετιρέ, πουλημένα, διαθέσιμα, αδιάθετα κτλ.) στο `detectStatsType()` | Claude Code |
 
 ---
 

@@ -100,7 +100,15 @@ export class AdminUnitStatsModule implements IUCModule {
     const text = messageText.toLowerCase();
     const contactKeywords = ['επαφ', 'contact', 'πελάτ', 'φυσικ', 'εταιρ', 'πρόσωπ', 'customer', 'client'];
     const projectKeywords = ['έργ', 'project', 'πρότζεκτ'];
-    const unitKeywords = ['ακίνητ', 'unit', 'μονάδ', 'διαμέρ', 'στούντι', 'πωλημέν', 'πώληση'];
+    const unitKeywords = [
+      // Property types
+      'ακίνητ', 'unit', 'μονάδ', 'διαμέρ', 'στούντι', 'σπίτι', 'σπίτ',
+      'κατοικ', 'οικόπεδ', 'αποθήκ', 'γκαράζ', 'γραφεί', 'κατάστημ',
+      'parking', 'στάθμ', 'μεζονέτ', 'ρετιρέ', 'loft', 'penthouse',
+      // Status & sales
+      'πωλημέν', 'πώληση', 'πουλημέν', 'πουλήθ', 'sold',
+      'διαθέσ', 'available', 'κρατημέν', 'reserved', 'αδιάθετ',
+    ];
 
     const hasContacts = contactKeywords.some(kw => text.includes(kw));
     const hasProjects = projectKeywords.some(kw => text.includes(kw));
