@@ -73,11 +73,14 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
+// 🔐 ENTERPRISE: Defense-in-depth auth guard
+import { useAuth } from '@/auth/hooks/useAuth';
 
 export function ContactsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
+  // 🔐 ENTERPRISE: Defense-in-depth — gate data fetching on auth state
+  const { user, loading: authLoading } = useAuth();
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
   const { getDirectionalBorder, getStatusBorder } = useBorderTokens();
@@ -204,17 +207,21 @@ export function ContactsPageContent() {
   };
 
   // 🚀 ENTERPRISE LOADING STRATEGY: Smart loading based on URL parameters
+  // 🔐 Gated on auth state — prevents Firestore reads before authentication resolves
+  const hasLoadedContacts = React.useRef(false);
+
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+    if (hasLoadedContacts.current) return;
+    hasLoadedContacts.current = true;
+
     const contactIdParam = searchParams.get('contactId');
 
     if (contactIdParam) {
       // 🚀 INSTANT STRATEGY: Direct contact fetch για immediate display
-      console.log('🚀 ENTERPRISE: Using direct contact fetch strategy for:', contactIdParam);
-
-      // First: Load specific contact INSTANTLY
       loadSpecificContact(contactIdParam).then(contact => {
         if (contact) {
-          // Clear search terms to focus on this contact
           setFilters(prev => ({ ...prev, searchTerm: '' }));
           setActiveCardFilter(null);
         }
@@ -222,14 +229,13 @@ export function ContactsPageContent() {
 
       // Second: Load full contacts list in BACKGROUND (for navigation)
       setTimeout(() => {
-        console.log('📋 BACKGROUND: Loading full contacts list...');
         loadContacts();
-      }, 100); // Small delay to prioritize specific contact
+      }, 100);
     } else {
       // Normal strategy: Load all contacts
       loadContacts();
     }
-  }, []); // Load once on mount
+  }, [authLoading, user]); // Re-run when auth state resolves
 
   // 🎯 URL FILTERING: Handle filter parameter (not contactId)
   useEffect(() => {
