@@ -76,8 +76,15 @@ export const ADMIN_TOOL_SYSTEM_PROMPT = `Είσαι ο AI βοηθός του ι
 ΚΑΝΟΝΕΣ:
 1. Business εντολή → κάλεσε το κατάλληλο tool
 2. Πολλαπλές ενέργειες σε μία πρόταση → κάλεσε πολλαπλά tools
-3. Γενική ερώτηση (μετάφραση, συμβουλή, γνώση, casual) → απάντησε σε plain text ελληνικά (2-5 γραμμές, ΜΗΝ καλέσεις tool)
+3. Γενική ερώτηση (μετάφραση, συμβουλή, γνώση, casual, ραντεβού, αγορά) → απάντησε σε plain text ελληνικά (2-5 γραμμές, ΜΗΝ καλέσεις tool)
 4. Δεν καταλαβαίνεις → ρώτα για διευκρίνιση σε plain text
+
+ΚΡΙΣΙΜΟ ΓΙΑ TEXT ΑΠΑΝΤΗΣΕΙΣ (κανόνες 3 & 4):
+- Γράψε ΜΟΝΟ ελληνικό κείμενο, σαν μήνυμα σε φίλο
+- ΑΠΑΓΟΡΕΥΕΤΑΙ JSON, code blocks, backticks, structured format
+- ΑΠΑΓΟΡΕΥΕΤΑΙ {"response": "..."} ή {"error": "..."}
+- ΣΩΣΤΟ: "Ο Γεώργιος μεταφράζεται George στα αγγλικά."
+- ΛΑΘΟΣ: JSON objects όπως {"response": "George"}
 
 FIELD NAMES ΓΙΑ update/remove:
 - phone, email, vatNumber, profession, birthDate, fatherName, taxOffice, address, registrationNumber, legalForm, employer, position, idNumber
@@ -325,6 +332,36 @@ export function mapToolCallToAnalysisResult(
 }
 
 /**
+ * Strip JSON wrapping from AI text reply.
+ * Sometimes the AI returns `{"response": "actual text"}` or `{"error": "text"}`
+ * instead of plain text. This extracts the actual message.
+ */
+function cleanTextReply(rawText: string): string {
+  const trimmed = rawText.trim();
+
+  // Strip markdown code blocks: ```json ... ``` or ``` ... ```
+  const codeBlockMatch = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+  const jsonCandidate = codeBlockMatch ? codeBlockMatch[1].trim() : trimmed;
+
+  // Try parsing as JSON — extract text from common wrapper patterns
+  if (jsonCandidate.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(jsonCandidate) as Record<string, unknown>;
+
+      // Pattern: {"response": "text"} or {"message": "text"} or {"error": "text"}
+      const textValue = parsed.response ?? parsed.message ?? parsed.error ?? parsed.text;
+      if (typeof textValue === 'string' && textValue.length > 0) {
+        return textValue;
+      }
+    } catch {
+      // Not valid JSON — return as-is
+    }
+  }
+
+  return trimmed;
+}
+
+/**
  * Build a conversational fallback AIAnalysisResult when the AI
  * responds with text instead of calling a tool.
  */
@@ -333,6 +370,7 @@ export function buildConversationalFallbackResult(
   model: string
 ): AIAnalysisResult {
   const timestamp = new Date().toISOString();
+  const cleanedReply = cleanTextReply(textReply);
 
   return {
     kind: 'multi_intent',
@@ -341,7 +379,7 @@ export function buildConversationalFallbackResult(
     confidence: 1.0,
     needsTriage: false,
     extractedEntities: {
-      conversationalReply: textReply,
+      conversationalReply: cleanedReply,
     },
     rawMessage: '',
     primaryIntent: {
