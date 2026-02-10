@@ -245,7 +245,7 @@ export function DocumentsPageContent() {
       />
 
       {/* Status Tabs */}
-      <nav className="border-b border-border bg-card px-6 py-3">
+      <nav className="border-b border-border bg-card px-6 py-3 overflow-x-auto">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
           <TabsList>
             <TabsTrigger value="all">{t('common.all')}</TabsTrigger>
