@@ -347,13 +347,84 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
  * Handles GET requests from the main route file.
  */
 export async function handleGET(): Promise<NextResponse> {
-    return NextResponse.json({ 
+    // ── UC-011 Diagnostic: trace project→building→phase chain ──
+    let diagnostic: Record<string, unknown> = {};
+    if (isFirebaseAvailable()) {
+      try {
+        const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+        const { COLLECTIONS } = await import('@/config/firestore-collections');
+        const adminDb = getAdminFirestore();
+
+        const companyId = (process.env.DEFAULT_COMPANY_ID
+          ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
+          ?? 'default').trim();
+
+        // Step 1: Projects
+        const projectsSnap = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .where('companyId', '==', companyId)
+          .limit(10)
+          .get();
+
+        const projects = projectsSnap.docs.map(d => ({
+          id: d.id,
+          name: d.data().name ?? d.data().title ?? '?',
+          companyId: d.data().companyId ?? null,
+        }));
+
+        // Step 2: Buildings by projectId
+        const projectIds = projects.map(p => p.id);
+        let buildings: Array<{ id: string; name: string; projectId: string }> = [];
+        if (projectIds.length > 0) {
+          const buildSnap = await adminDb
+            .collection(COLLECTIONS.BUILDINGS)
+            .where('projectId', 'in', projectIds.slice(0, 30))
+            .get();
+          buildings = buildSnap.docs.map(d => ({
+            id: d.id,
+            name: (d.data().name as string) ?? '?',
+            projectId: (d.data().projectId as string) ?? '?',
+          }));
+        }
+
+        // Step 3: Construction phases by buildingId
+        const buildingIds = buildings.map(b => b.id);
+        let phases: Array<{ id: string; buildingId: string; name: string }> = [];
+        if (buildingIds.length > 0) {
+          const phaseSnap = await adminDb
+            .collection(COLLECTIONS.CONSTRUCTION_PHASES)
+            .where('buildingId', 'in', buildingIds.slice(0, 30))
+            .limit(50)
+            .get();
+          phases = phaseSnap.docs.map(d => ({
+            id: d.id,
+            buildingId: (d.data().buildingId as string) ?? '?',
+            name: (d.data().name as string) ?? '?',
+          }));
+        }
+
+        diagnostic = {
+          companyId,
+          projectCount: projects.length,
+          projects,
+          buildingCount: buildings.length,
+          buildings,
+          phaseCount: phases.length,
+          phases: phases.slice(0, 10),
+        };
+      } catch (err) {
+        diagnostic = { error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+
+    return NextResponse.json({
         status: 'Telegram webhook endpoint is working',
         timestamp: new Date().toISOString(),
         firebase_available: isFirebaseAvailable(),
+        uc011_diagnostic: diagnostic,
         features: [
           'Real property search',
-          'Smart natural language processing', 
+          'Smart natural language processing',
           'Security controls',
           'CRM integration',
           'Build-safe operation'
