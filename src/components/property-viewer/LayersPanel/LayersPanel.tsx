@@ -18,6 +18,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { colors as tokenColors, borderColors } from '@/styles/design-tokens';
 
 interface Layer {
   id: string;
@@ -35,12 +36,21 @@ interface LayersPanelProps {
   className?: string;
 }
 
+/** Layer default colors — SSoT: design-tokens where exact match exists */
+const LAYER_COLORS = {
+  pdf: '#000000',                          // Pure black — PDF content standard
+  grid: '#cccccc',                         // Light gray — grid background
+  properties: tokenColors.blue['500'],     // #3b82f6 — blue-500
+  measurements: tokenColors.red['500'],    // #ef4444 — red-500
+  annotations: borderColors.success.light, // #10b981 — emerald-500
+} as const;
+
 const DEFAULT_LAYERS: Layer[] = [
-  { id: 'pdf', name: 'PDF Background', visible: true, locked: false, opacity: 100, color: '#000000', type: 'pdf' },
-  { id: 'grid', name: 'Grid', visible: true, locked: false, opacity: 50, color: '#cccccc', type: 'grid' },
-  { id: 'properties', name: 'Properties', visible: true, locked: false, opacity: 100, color: '#3b82f6', type: 'properties' },
-  { id: 'measurements', name: 'Measurements', visible: true, locked: false, opacity: 100, color: '#ef4444', type: 'measurements' },
-  { id: 'annotations', name: 'Annotations', visible: true, locked: false, opacity: 100, color: '#10b981', type: 'annotations' }
+  { id: 'pdf', name: 'PDF Background', visible: true, locked: false, opacity: 100, color: LAYER_COLORS.pdf, type: 'pdf' },
+  { id: 'grid', name: 'Grid', visible: true, locked: false, opacity: 50, color: LAYER_COLORS.grid, type: 'grid' },
+  { id: 'properties', name: 'Properties', visible: true, locked: false, opacity: 100, color: LAYER_COLORS.properties, type: 'properties' },
+  { id: 'measurements', name: 'Measurements', visible: true, locked: false, opacity: 100, color: LAYER_COLORS.measurements, type: 'measurements' },
+  { id: 'annotations', name: 'Annotations', visible: true, locked: false, opacity: 100, color: LAYER_COLORS.annotations, type: 'annotations' }
 ];
 
 export function LayersPanel({

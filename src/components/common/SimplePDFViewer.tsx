@@ -5,6 +5,7 @@ import { FileText, ExternalLink } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { colors as tokenColors } from '@/styles/design-tokens';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -27,7 +28,7 @@ export function SimplePDFViewer({
   const { t } = useTranslation('files');
 
   return (
-    <div className={`${colors.bg.secondary} ${quick.card} ${createBorder('medium', 'rgb(209 213 219)', 'dashed')} p-6 ${className}`}>
+    <div className={`${colors.bg.secondary} ${quick.card} ${createBorder('medium', tokenColors.gray['300'], 'dashed')} p-6 ${className}`}>
       <div className="text-center space-y-3">
         <FileText className={`${iconSizes.xl3} ${colors.text.muted} mx-auto`} />
         <div>

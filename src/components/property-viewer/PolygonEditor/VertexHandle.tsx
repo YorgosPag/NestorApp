@@ -4,6 +4,15 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { HOVER_COLOR_EFFECTS } from '@/components/ui/effects';
+import { colors } from '@/styles/design-tokens';
+
+/** Vertex handle colors by interaction state — SSoT: design-tokens */
+const VERTEX_COLORS = {
+  default: colors.purple['600'],          // #7c3aed — violet
+  shiftDown: colors.purple['400'],        // #a78bfa — lighter violet
+  hover: colors.yellow['400'],            // #facc15 — yellow highlight
+  shiftHover: colors.red['500'],          // #ef4444 — red (delete hint)
+} as const;
 
 interface VertexHandleProps {
   vertex: { x: number; y: number };
@@ -29,13 +38,13 @@ export function VertexHandle({
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
-  
+
   const getFillColor = () => {
-      if (isHovered) {
-          return isShiftDown ? "#ef4444" : "#facc15"; // red on shift-hover, yellow on hover
-      }
-      return isShiftDown ? "#a78bfa" : "#7c3aed"; // lighter violet on shift, default violet
-  }
+    if (isHovered) {
+      return isShiftDown ? VERTEX_COLORS.shiftHover : VERTEX_COLORS.hover;
+    }
+    return isShiftDown ? VERTEX_COLORS.shiftDown : VERTEX_COLORS.default;
+  };
 
   return (
     <circle

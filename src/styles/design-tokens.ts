@@ -32,7 +32,8 @@ const colors = {
     "500": "#3b82f6"
   },
   blue: {
-    "300": "#93c5fd", // ✅ ENTERPRISE FIX: Added missing 300 shade for design-tokens.ts usage
+    "200": "#bfdbfe",
+    "300": "#93c5fd",
     "400": "#60a5fa",
     "500": "#3b82f6",
     "600": "#2563eb"
@@ -52,9 +53,13 @@ const colors = {
     "500": "#ef4444",
     "600": "#dc2626"
   },
+  indigo: {
+    "600": "#4f46e5"
+  },
   purple: {
     "400": "#a78bfa",
-    "500": "#8b5cf6"
+    "500": "#8b5cf6",
+    "600": "#7c3aed"
   },
   // ✅ ENTERPRISE FIX: Added error color palette (alias of red) for semantic usage
   error: {
@@ -71,7 +76,13 @@ const colors = {
   gray: {
     "50": "#f9fafb",
     "100": "#f3f4f6",
-    "500": "#6b7280"
+    "200": "#e5e7eb",
+    "300": "#d1d5db",
+    "400": "#9ca3af",
+    "500": "#6b7280",
+    "700": "#374151",
+    "800": "#1f2937",
+    "900": "#111827"
   },
   // ✅ ENTERPRISE: Alert severity colors for AlertMonitoringDashboard.tsx
   severity: {
@@ -145,7 +156,9 @@ const typography = {
     xl: "1.25rem",
     "2xl": "1.5rem",
     "3xl": "1.875rem", // ✅ ENTERPRISE FIX: Added missing 3xl size for useTypography.ts
-    "4xl": "2.25rem"   // ✅ ENTERPRISE FIX: Added missing 4xl size for useTypography.ts
+    "4xl": "2.25rem",  // ✅ ENTERPRISE FIX: Added missing 4xl size for useTypography.ts
+    "5xl": "3rem",    // 🏢 ENTERPRISE: Display size for error/hero headings
+    "6xl": "3.75rem"  // 🏢 ENTERPRISE: Extra display size for 404/error headings
   },
   fontWeight: {
     normal: "400",
@@ -3672,6 +3685,7 @@ export const bg = {
   zinc: 'bg-zinc-100',
   magenta: 'bg-pink-100'
 } as const;
+
 
 
 

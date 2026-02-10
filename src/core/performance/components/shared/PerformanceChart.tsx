@@ -119,8 +119,7 @@ const ChartBar: React.FC<ChartBarProps> = ({ value, maxValue }) => {
 
   return (
     <div
-      className={`flex-1 rounded-sm ${colorClass}`}
-      style={{ height: `${heightPercent}%` }}
+      className={`flex-1 rounded-sm ${colorClass} ${heightClass}`}
       title={`${value.toFixed(0)} FPS`}
       role="img"
       aria-label={`${value.toFixed(0)} FPS`}
@@ -129,6 +128,7 @@ const ChartBar: React.FC<ChartBarProps> = ({ value, maxValue }) => {
 };
 
 export default PerformanceChart;
+
 
 
 

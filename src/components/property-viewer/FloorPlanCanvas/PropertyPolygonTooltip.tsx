@@ -2,9 +2,29 @@
 
 'use client';
 
+import { colors, coreBorderRadius } from '@/styles/design-tokens';
 import type { Property } from '@/types/property-viewer';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+/** SVG tooltip layout — component-specific positioning */
+const TOOLTIP_LAYOUT = {
+  offsetX: 40,
+  offsetY: -25,
+  width: 120,
+  height: 50,
+  textPaddingX: 10,
+  lineHeight: 10,
+} as const;
+
+/** SVG tooltip visual style — SSoT: design-tokens */
+const TOOLTIP_STYLE = {
+  background: colors.background.primary,  // white
+  border: colors.gray['300'],             // #d1d5db
+  titleColor: colors.gray['900'],         // #111827
+  textColor: colors.gray['500'],          // #6b7280
+  rx: 4,
+  fontSize: { title: 10, subtitle: 9, detail: 8 },
+} as const;
 
 interface PropertyPolygonTooltipProps {
   property: Property;
@@ -12,50 +32,49 @@ interface PropertyPolygonTooltipProps {
 }
 
 export function PropertyPolygonTooltip({ property, centroid }: PropertyPolygonTooltipProps) {
-  // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
+  const boxX = centroid.x + TOOLTIP_LAYOUT.offsetX;
+  const boxY = centroid.y + TOOLTIP_LAYOUT.offsetY;
+  const textX = boxX + TOOLTIP_LAYOUT.textPaddingX;
 
   return (
     <g className="hover-tooltip">
       <rect
-        x={centroid.x + 40}
-        y={centroid.y - 25}
-        width={120}
-        height={50}
-        fill="white"
+        x={boxX}
+        y={boxY}
+        width={TOOLTIP_LAYOUT.width}
+        height={TOOLTIP_LAYOUT.height}
+        fill={TOOLTIP_STYLE.background}
         fillOpacity={0.95}
-        stroke="#d1d5db"
+        stroke={TOOLTIP_STYLE.border}
         strokeWidth={1}
-        rx={4}
+        rx={TOOLTIP_STYLE.rx}
         className="pointer-events-none drop-shadow-md"
       />
       <text
-        x={centroid.x + 50}
-        y={centroid.y - 15}
-        fontSize="10"
-        fill="#111827"
+        x={textX}
+        y={boxY + TOOLTIP_LAYOUT.lineHeight}
+        fontSize={TOOLTIP_STYLE.fontSize.title}
+        fill={TOOLTIP_STYLE.titleColor}
         className="pointer-events-none select-none font-semibold"
       >
         {property.name}
       </text>
       <text
-        x={centroid.x + 50}
-        y={centroid.y - 5}
-        fontSize="9"
-        fill="#6b7280"
+        x={textX}
+        y={boxY + TOOLTIP_LAYOUT.lineHeight * 2}
+        fontSize={TOOLTIP_STYLE.fontSize.subtitle}
+        fill={TOOLTIP_STYLE.textColor}
         className="pointer-events-none select-none"
       >
         {property.type}
       </text>
-      {/* ❌ REMOVED: Price display (commercial data - domain separation)
-      Migration: PR1.1 - Units Tooltip Cleanup - Price moved to /sales
-      */}
       {property.area && (
         <text
-          x={centroid.x + 50}
-          y={centroid.y + 5}
-          fontSize="8"
-          fill="#6b7280"
+          x={textX}
+          y={boxY + TOOLTIP_LAYOUT.lineHeight * 3}
+          fontSize={TOOLTIP_STYLE.fontSize.detail}
+          fill={TOOLTIP_STYLE.textColor}
           className="pointer-events-none select-none"
         >
           {property.area}{t('tooltip.sqm')}

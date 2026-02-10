@@ -1,6 +1,11 @@
 
 'use client';
 
+import { colors } from '@/styles/design-tokens';
+
+/** Polyline stroke color — SSoT: design-tokens indigo-600 */
+const POLYLINE_STROKE = colors.indigo['600']; // #4f46e5
+
 interface Point {
   x: number;
   y: number;
@@ -27,7 +32,7 @@ export function PolylineOverlay({
           key={`p-${index}`}
           points={points.map(p => `${p.x},${p.y}`).join(' ')}
           fill="none"
-          stroke="#4f46e5"
+          stroke={POLYLINE_STROKE}
           strokeWidth="2"
         />
       ))}
@@ -40,7 +45,7 @@ export function PolylineOverlay({
             `${mousePosition.x},${mousePosition.y}`
           ].join(' ')}
           fill="none"
-          stroke="#4f46e5"
+          stroke={POLYLINE_STROKE}
           strokeWidth="2"
           strokeDasharray="4 4"
         />

@@ -59,6 +59,12 @@ import { typography } from '../styles/design-tokens';
  * για χρήση σε bridge systems και low-level utilities
  */
 export const SEMANTIC_TYPOGRAPHY_TOKENS = {
+  display: {
+    fontSize: typography.fontSize['6xl'],
+    tailwind: 'text-6xl font-bold leading-none',
+    role: 'heading' as const,
+    fullClass: 'text-6xl font-bold leading-none tracking-tight',
+  },
   h1: {
     fontSize: typography.fontSize['4xl'],
     tailwind: 'text-4xl font-bold',
@@ -117,6 +123,8 @@ export function getSemanticTypographyToken(semanticSize: keyof typeof SEMANTIC_T
 export interface UseTypographyReturn {
   // 📝 HEADING PATTERNS - Σύστημα τίτλων
   readonly heading: {
+    /** "text-6xl font-bold" - Display headings */
+    readonly xl: string;
     /** "text-xl font-semibold" - Main headings */
     readonly lg: string;
     /** "text-lg font-semibold" - Section headings */
@@ -180,7 +188,7 @@ export interface UseTypographyReturn {
   };
 
   // 🔧 UTILITY METHODS
-  readonly getHeading: (size: 'lg' | 'md' | 'sm' | 'xs') => string;
+  readonly getHeading: (size: 'xl' | 'lg' | 'md' | 'sm' | 'xs') => string;
   readonly getBody: (size: 'base' | 'sm' | 'xs') => string;
   readonly getLabel: (size: 'sm' | 'xs', style?: 'medium' | 'simple') => string;
   readonly getCardTitle: (compact?: boolean) => string;
@@ -210,6 +218,7 @@ export function useTypography(): UseTypographyReturn {
   // ============================================================================
 
   // Use centralized semantic tokens (no external dependencies)
+  const displayToken = SEMANTIC_TYPOGRAPHY_TOKENS.display; // text-6xl font-bold
   const h4Token = SEMANTIC_TYPOGRAPHY_TOKENS.h4; // text-xl font-semibold
   const captionToken = SEMANTIC_TYPOGRAPHY_TOKENS.caption; // text-sm
   const bodyToken = SEMANTIC_TYPOGRAPHY_TOKENS.body; // text-base
@@ -217,6 +226,7 @@ export function useTypography(): UseTypographyReturn {
   return useMemo(() => ({
     // 📝 HEADING PATTERNS - Using centralized semantic tokens
     heading: {
+      xl: displayToken.tailwind,
       lg: h4Token.tailwind,                 // "text-xl font-semibold" (from semantic tokens)
       md: "text-lg font-semibold",          // Custom size (h4.5 - not in tokens yet)
       sm: "text-sm font-semibold",          // "text-sm font-semibold" (caption size + semibold)
@@ -261,6 +271,7 @@ export function useTypography(): UseTypographyReturn {
     // 🔧 UTILITY METHODS - Using centralized semantic tokens
     getHeading: (size) => {
       const headingMap = {
+        xl: displayToken.tailwind,
         lg: h4Token.tailwind,                 // "text-xl font-semibold" (from semantic tokens)
         md: "text-lg font-semibold",          // Custom size
         sm: "text-sm font-semibold",          // "text-sm font-semibold" (semantic tokens + custom)
@@ -294,7 +305,7 @@ export function useTypography(): UseTypographyReturn {
       return compact ? "text-xs" : "text-sm";
     },
 
-  } as const), [h4Token, captionToken, bodyToken]); // Dependencies: semantic tokens
+  } as const), [displayToken, h4Token, captionToken, bodyToken]); // Dependencies: semantic tokens
 }
 
 // ============================================================================

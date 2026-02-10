@@ -3,9 +3,19 @@
 'use client';
 
 import { cn } from "@/lib/utils";
+import { colors } from '@/styles/design-tokens';
 import type { Property } from '@/types/property-viewer';
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
+
+/** Polygon path interaction colors — SSoT: design-tokens */
+const POLYGON_COLORS = {
+  fallback: '#cccccc',                        // Neutral gray fallback (non-standard)
+  editStroke: colors.purple['600'],           // #7c3aed — edit mode
+  defaultStroke: colors.gray['800'],          // #1f2937 — selected default
+  connectionFirst: colors.blue['500'],        // #3b82f6 — first connection point
+  connectionHover: colors.purple['500'],      // #8b5cf6 — connection hover
+} as const;
 
 interface PropertyPolygonPathProps {
   property: Property;
@@ -39,7 +49,7 @@ export function PropertyPolygonPath({
 
   // 🏠 Phase 2.5: Use centralized color mapping for consistent status colors
   const statusMapping = STATUS_COLORS_MAPPING[property.status as PropertyStatus];
-  const fillColor = statusMapping?.stroke || '#cccccc'; // Fallback to gray if status not found
+  const fillColor = statusMapping?.stroke || POLYGON_COLORS.fallback;
 
   let fillOpacity = opacity;
   let strokeWidth = 1;
@@ -49,7 +59,7 @@ export function PropertyPolygonPath({
   if (isSelected) {
     fillOpacity = Math.min(1, opacity + 0.2);
     strokeWidth = 3;
-    strokeColor = isNodeEditMode ? '#7c3aed' : '#1f2937';
+    strokeColor = isNodeEditMode ? POLYGON_COLORS.editStroke : POLYGON_COLORS.defaultStroke;
   } else if (isHovered) {
     fillOpacity = Math.min(1, opacity + 0.15);
     strokeWidth = 2;
@@ -57,7 +67,7 @@ export function PropertyPolygonPath({
   
   if(isConnecting) {
       strokeWidth = isFirstConnectionPoint ? 4 : (isHovered ? 4 : 2);
-      strokeColor = isFirstConnectionPoint ? '#3B82F6' : (isHovered ? '#8B5CF6' : strokeColor);
+      strokeColor = isFirstConnectionPoint ? POLYGON_COLORS.connectionFirst : (isHovered ? POLYGON_COLORS.connectionHover : strokeColor);
       strokeDasharray = isFirstConnectionPoint ? "none" : (isHovered ? "4 4" : "none");
   } else {
       strokeDasharray = isNodeEditMode && isSelected ? "5,5" : "none";

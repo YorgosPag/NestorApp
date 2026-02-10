@@ -4,13 +4,7 @@ import React from 'react';
 import { getCentroid } from '@/lib/geometry';
 import type { Property } from '@/types/property-viewer';
 import type { ConnectionType } from '@/types/connections';
-
-const connectionColors: Record<ConnectionType, string> = {
-  sameBuilding: '#3B82F6',
-  sameFloor: '#10B981',
-  related: '#8B5CF6',
-  parking: '#F59E0B',
-};
+import { CONNECTION_COLORS, CONNECTION_FALLBACK_COLOR } from '@/config/connection-config';
 
 interface Props {
   prop1: Property;
@@ -21,7 +15,7 @@ interface Props {
 export function ConnectionLine({ prop1, prop2, type }: Props) {
   const start = getCentroid(prop1.vertices);
   const end = getCentroid(prop2.vertices);
-  const color = connectionColors[type] || '#6B7280';
+  const color = CONNECTION_COLORS[type] || CONNECTION_FALLBACK_COLOR;
   const isDashed = type === 'parking';
 
   return (

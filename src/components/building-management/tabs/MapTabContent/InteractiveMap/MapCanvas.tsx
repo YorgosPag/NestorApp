@@ -8,6 +8,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { colors as tokenColors } from '@/styles/design-tokens';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
 import { NearbyProjectMarker } from './NearbyProjectMarker';
@@ -85,8 +86,8 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
 
                     {/* Distance circles */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className={`${iconSizes.xl8} ${createBorder('medium', 'rgb(147 197 253)', 'dashed')} rounded-full opacity-30`}></div>
-                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${iconSizes.xl12} ${createBorder('medium', 'rgb(191 219 254)', 'dashed')} rounded-full opacity-20`}></div>
+                        <div className={`${iconSizes.xl8} ${createBorder('medium', tokenColors.blue['300'], 'dashed')} rounded-full opacity-30`}></div>
+                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${iconSizes.xl12} ${createBorder('medium', tokenColors.blue['200'], 'dashed')} rounded-full opacity-20`}></div>
                     </div>
 
                     {/* Scale indicator */}

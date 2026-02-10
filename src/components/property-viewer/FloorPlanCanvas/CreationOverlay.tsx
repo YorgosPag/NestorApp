@@ -1,8 +1,15 @@
 'use client';
 
 import React from 'react';
-// 🏢 ENTERPRISE: i18n support
+import { colors } from '@/styles/design-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+/** Creation overlay colors — SSoT: design-tokens */
+const CREATION_STYLE = {
+  stroke: colors.blue['500'],        // #3b82f6 — polyline/points
+  textColor: colors.gray['700'],     // #374151 — labels
+  mouseIndicator: colors.red['500'], // #ef4444 — mouse position
+} as const;
 
 interface Point {
   x: number;
@@ -59,7 +66,7 @@ export function CreationOverlay({
           <polyline
             points={points.map(p => `${p.x},${p.y}`).join(' ')}
             fill="none"
-            stroke="#3b82f6"
+            stroke={CREATION_STYLE.stroke}
             strokeWidth="2"
             strokeDasharray="5,5"
             opacity="0.7"
@@ -73,7 +80,7 @@ export function CreationOverlay({
             y1={points[points.length - 1].y}
             x2={mousePosition.x}
             y2={mousePosition.y}
-            stroke="#3b82f6"
+            stroke={CREATION_STYLE.stroke}
             strokeWidth="2"
             strokeDasharray="3,3"
             opacity="0.5"
@@ -88,7 +95,7 @@ export function CreationOverlay({
               cx={point.x}
               cy={point.y}
               r="4"
-              fill="#3b82f6"
+              fill={CREATION_STYLE.stroke}
               stroke="white"
               strokeWidth="2"
             />
@@ -98,7 +105,7 @@ export function CreationOverlay({
               x={point.x + 8}
               y={point.y - 8}
               fontSize="12"
-              fill="#374151"
+              fill={CREATION_STYLE.textColor}
               className="font-medium"
             >
               {index + 1}
@@ -112,7 +119,7 @@ export function CreationOverlay({
             cx={mousePosition.x}
             cy={mousePosition.y}
             r="3"
-            fill="#ef4444"
+            fill={CREATION_STYLE.mouseIndicator}
             opacity="0.6"
           />
         )}
@@ -123,7 +130,7 @@ export function CreationOverlay({
             x="10"
             y="30"
             fontSize="14"
-            fill="#374151"
+            fill={CREATION_STYLE.textColor}
             className="font-medium"
           >
             {instructionText}

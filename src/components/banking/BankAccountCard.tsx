@@ -28,6 +28,7 @@ import {
   Check
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { colors } from '@/styles/design-tokens';
 
 // ============================================================================
 // TYPES
@@ -86,7 +87,7 @@ export function BankAccountCard({
 
   // Get bank info for color
   const bankInfo = account.bankCode ? getBankByCode(account.bankCode) : null;
-  const brandColor = bankInfo?.brandColor || '#6B7280';
+  const brandColor = bankInfo?.brandColor || colors.gray['500'];
 
   // Format IBAN for display
   const formattedIban = formatIBAN(account.iban);

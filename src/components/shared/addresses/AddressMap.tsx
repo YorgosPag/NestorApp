@@ -47,7 +47,22 @@ import {
   type GeocodingResult
 } from '@/services/real-estate-monitor/AddressResolver';
 import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
+import { colors } from '@/styles/design-tokens';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+
+/** Map pin SVG colors — SSoT: design-tokens */
+const PIN_COLORS = {
+  body: colors.blue['500'],          // #3b82f6 — primary brand
+  stroke: colors.background.primary, // white
+  innerCircle: colors.background.primary, // white
+  shadow: 'rgba(0,0,0,0.3)',         // subtle shadow
+} as const;
+
+/** Map text layer colors — SSoT: design-tokens */
+const MAP_TEXT_COLORS = {
+  label: colors.text.primary,        // #1e293b — slate-800
+  halo: colors.background.primary,   // white
+} as const;
 
 // =============================================================================
 // COMPONENT INTERFACE
@@ -298,20 +313,15 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     mapRef.current = map;
     setMapReady(true);
 
-    // 🏢 ENTERPRISE: Load custom pin marker icon
-    // SVG data URL for a professional map pin (teardrop shape)
-    // Uses primary blue color (#3b82f6) for brand consistency
+    // 🏢 ENTERPRISE: Load custom pin marker icon — colors from design-tokens
     const pinSVG = `
       <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-        <!-- Pin shadow -->
-        <ellipse cx="20" cy="47" rx="8" ry="3" fill="rgba(0,0,0,0.3)"/>
-        <!-- Pin body (teardrop) -->
+        <ellipse cx="20" cy="47" rx="8" ry="3" fill="${PIN_COLORS.shadow}"/>
         <path d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
-              fill="#3b82f6"
-              stroke="#fff"
+              fill="${PIN_COLORS.body}"
+              stroke="${PIN_COLORS.stroke}"
               stroke-width="2"/>
-        <!-- Inner circle -->
-        <circle cx="20" cy="16" r="6" fill="#fff"/>
+        <circle cx="20" cy="16" r="6" fill="${PIN_COLORS.innerCircle}"/>
       </svg>
     `.trim();
 
@@ -429,8 +439,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                     'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
                   }}
                   paint={{
-                    'text-color': '#1e293b', // slate-800 for readability
-                    'text-halo-color': '#ffffff',
+                    'text-color': MAP_TEXT_COLORS.label,
+                    'text-halo-color': MAP_TEXT_COLORS.halo,
                     'text-halo-width': 2
                   }}
                 />

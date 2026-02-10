@@ -51,7 +51,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { typography as designTypography, zIndex, colors } from '@/styles/design-tokens';
+import { typography as designTypography, zIndex, colors as tokenColors } from '@/styles/design-tokens';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -180,7 +180,7 @@ export function GanttView({ building }: GanttViewProps) {
   const [contextMenu, setContextMenu] = useState<GanttContextMenuState | null>(null);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [colorPickerTarget, setColorPickerTarget] = useState<ColorPickerTarget | null>(null);
-  const [pendingColor, setPendingColor] = useState('#3b82f6');
+  const [pendingColor, setPendingColor] = useState<string>(tokenColors.blue['500']);
   const contextMenuRef = useRef<HTMLElement>(null);
 
   // ─── Export State ─────────────────────────────────────────────────────
@@ -346,7 +346,7 @@ export function GanttView({ building }: GanttViewProps) {
       : contextMenu.taskId;
 
     // Find current color
-    let currentColor = '#3b82f6';
+    let currentColor: string = tokenColors.blue['500'];
     if (isPhase) {
       const phase = phases.find((p) => p.id === targetId);
       if (phase?.barColor) currentColor = phase.barColor;

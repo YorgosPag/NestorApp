@@ -3,7 +3,7 @@
 'use client';
 
 import type { Property } from '@/types/property-viewer';
-import { svgUtilities } from '@/styles/design-tokens';
+import { svgUtilities, colors } from '@/styles/design-tokens';
 
 interface PolygonMeasurementInfoProps {
   polygon: Property;
@@ -48,7 +48,7 @@ export function PolygonMeasurementInfo({ polygon, scale }: PolygonMeasurementInf
         y={centroid.y + 25}
         textAnchor="middle"
         fontSize="10"
-        fill="#1f2937"
+        fill={colors.gray['800']}
         className="font-mono"
         style={svgUtilities.text.withStroke('white', 3)}
       >

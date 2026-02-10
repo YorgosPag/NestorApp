@@ -41,6 +41,8 @@ import { TableOfContents } from "@/components/obligations/table-of-contents";
 import StructureEditor from "@/components/obligations/structure-editor";
 import LivePreview from "@/components/obligations/live-preview";
 import { RichTextEditor } from "@/components/obligations/rich-text-editor";
+import { getDynamicHeightClass } from "@/components/ui/utils/dynamic-styles";
+import { OBLIGATION_PREVIEW_LAYOUT } from "@/components/obligations/config/preview-layout";
 import Link from "next/link";
 
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
@@ -113,8 +115,9 @@ export default function NewObligationPage() {
   const [viewMode, setViewMode] = useState<'split' | 'edit-only'>('split');
   const [activeItem, setActiveItem] = useState<{type: 'section' | 'article' | 'paragraph', id: string} | null>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  const [dynamicHeight, setDynamicHeight] = useState('calc(100vh-120px)');
+  const [dynamicHeight, setDynamicHeight] = useState(OBLIGATION_PREVIEW_LAYOUT.initialPreviewHeight);
   const previewContentRef = useRef<HTMLDivElement>(null);
+  const previewHeightClass = getDynamicHeightClass(dynamicHeight);
   const calculateHeightRef = useRef<() => void>();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const textareaTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -125,11 +128,11 @@ export default function NewObligationPage() {
     if (previewContentRef.current) {
       const scrollHeight = previewContentRef.current.scrollHeight;
       const viewportHeight = window.innerHeight;
-      const headerHeight = 120;
-      const minHeight = 400;
+      const headerHeight = OBLIGATION_PREVIEW_LAYOUT.headerHeightPx;
+      const minHeight = OBLIGATION_PREVIEW_LAYOUT.minHeightPx;
 
       // ΓΙΩΡΓΟΣ: Κόκκινο container να είναι 2300px
-      const neededHeight = 2300;
+      const neededHeight = OBLIGATION_PREVIEW_LAYOUT.fixedPreviewHeightPx;
 
       // Debug logging για το ύψος του κίτρινου container
       console.log('🟨 ΚΙΤΡΙΝΟ CONTAINER HEIGHT:', {
@@ -781,8 +784,7 @@ export default function NewObligationPage() {
           {viewMode === 'split' && (
             <aside className="space-y-6 relative" aria-label={t('aria.preview')}>
               <Card
-                className="flex flex-col relative"
-                style={{ height: dynamicHeight }}
+                className={`flex flex-col relative ${previewHeightClass}`}
               >
                 <CardHeader className="relative z-10 bg-card">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -824,3 +826,4 @@ export default function NewObligationPage() {
     </PageLayout>
   );
 }
+

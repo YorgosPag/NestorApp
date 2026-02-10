@@ -4,6 +4,13 @@
 
 import { svgUtilities } from '@/styles/design-tokens';
 
+/** Property polygon label layout — component-specific positioning */
+const LABEL_LAYOUT = {
+  nameOffsetY: 3,
+  typeOffsetY: 15,
+  fontSize: { name: 10, type: 8 },
+} as const;
+
 interface PropertyPolygonLabelsProps {
   name: string;
   type: string;
@@ -15,23 +22,23 @@ export function PropertyPolygonLabels({ name, type, centroid }: PropertyPolygonL
     <g className="property-label pointer-events-none">
       <text
         x={centroid.x}
-        y={centroid.y + 3}
+        y={centroid.y + LABEL_LAYOUT.nameOffsetY}
         textAnchor="middle"
-        fontSize="10"
+        fontSize={LABEL_LAYOUT.fontSize.name}
         fill="black"
         className="select-none font-medium"
-        style={svgUtilities.text.withStroke('hsl(var(--background) / 0.8)', 3)} // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
+        style={svgUtilities.text.withStroke('hsl(var(--background) / 0.8)', 3)}
       >
         {name.replace(/ - .*/, '')}
       </text>
       <text
         x={centroid.x}
-        y={centroid.y + 15}
+        y={centroid.y + LABEL_LAYOUT.typeOffsetY}
         textAnchor="middle"
-        fontSize="8"
+        fontSize={LABEL_LAYOUT.fontSize.type}
         fill="black"
         className="select-none"
-        style={svgUtilities.text.outlined('hsl(var(--background) / 0.7)', 2)} // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
+        style={svgUtilities.text.outlined('hsl(var(--background) / 0.7)', 2)}
       >
         {type}
       </text>

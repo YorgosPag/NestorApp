@@ -1,6 +1,15 @@
 
 'use client';
 
+import { colors } from '@/styles/design-tokens';
+
+/** Grid line visual configuration — SSoT: design-tokens */
+const GRID_STYLE = {
+  stroke: colors.gray['200'],   // #e5e7eb — Tailwind gray-200
+  strokeWidth: 0.5,
+  opacity: 0.5,
+} as const;
+
 interface GridOverlayProps {
   showGrid: boolean;
   width: number;
@@ -22,9 +31,9 @@ export function GridOverlay({ showGrid, width, height, gridSize }: GridOverlayPr
         y1={0}
         x2={x}
         y2={height}
-        stroke="#e5e7eb"
-        strokeWidth={0.5}
-        opacity={0.5}
+        stroke={GRID_STYLE.stroke}
+        strokeWidth={GRID_STYLE.strokeWidth}
+        opacity={GRID_STYLE.opacity}
       />
     );
   }
@@ -38,9 +47,9 @@ export function GridOverlay({ showGrid, width, height, gridSize }: GridOverlayPr
         y1={y}
         x2={width}
         y2={y}
-        stroke="#e5e7eb"
-        strokeWidth={0.5}
-        opacity={0.5}
+        stroke={GRID_STYLE.stroke}
+        strokeWidth={GRID_STYLE.strokeWidth}
+        opacity={GRID_STYLE.opacity}
       />
     );
   }

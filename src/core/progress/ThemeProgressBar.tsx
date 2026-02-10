@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { getDynamicWidthClass } from '@/components/ui/utils/dynamic-styles';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +31,8 @@ export function ThemeProgressBar({
   const { t } = useTranslation('common');
   const displayLabel = label ?? t('progress.label');
   const colors = useSemanticColors();
+  const progressWidth = layoutUtilities.percentage(Math.min(100, Math.max(0, progress)));
+  const progressWidthClass = getDynamicWidthClass(progressWidth);
 
   // ✅ ENTERPRISE: Theme-aware progress bar colors using semantic system
   const getProgressColorClass = (value: number) => {
@@ -81,13 +83,12 @@ export function ThemeProgressBar({
         <div
           className={cn(
             "h-full transition-all duration-300 ease-in-out rounded-full",
-            getProgressBarColorClass(progress)
+            getProgressBarColorClass(progress),
+            progressWidthClass
           )}
-          style={{
-            width: layoutUtilities.percentage(Math.min(100, Math.max(0, progress)))
-          }}
         />
       </div>
     </div>
   );
 }
+

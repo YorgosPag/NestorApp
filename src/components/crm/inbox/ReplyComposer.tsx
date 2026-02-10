@@ -60,6 +60,12 @@ const MAX_ATTACHMENTS = 5;
 /** Accepted file types for attachments */
 const ACCEPTED_FILE_TYPES = 'image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,audio/*,video/*';
 
+/** Composer textarea sizing — ADR-030 Zero Hardcoded Values */
+const TEXTAREA_SIZE = {
+  minHeight: 44,
+  maxHeight: 150,
+} as const;
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -488,7 +494,7 @@ export function ReplyComposer({
       // Auto-resize
       const textarea = e.target;
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 150); // Max 150px
+      const newHeight = Math.min(textarea.scrollHeight, TEXTAREA_SIZE.maxHeight);
       textarea.style.height = `${newHeight}px`;
     },
     [isEditMode, onUpdateEditText]
@@ -720,7 +726,7 @@ export function ReplyComposer({
               ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
               focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
             `}
-            style={{ minHeight: '44px', maxHeight: '150px' }}
+            style={{ minHeight: `${TEXTAREA_SIZE.minHeight}px`, maxHeight: `${TEXTAREA_SIZE.maxHeight}px` }}
             aria-label={t('inbox.composer.placeholder')}
           />
         </div>

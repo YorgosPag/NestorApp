@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { formatAddressLine } from '@/types/project/address-helpers';
 import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
+import { zIndex } from '@/styles/design-tokens';
 
 // =============================================================================
 // COMPONENT INTERFACE
@@ -72,22 +73,22 @@ export const AddressMarker: React.FC<AddressMarkerProps> = memo(({
     <div
       className={cn(
         'rounded-full border-4 flex items-center justify-center',
-        'transition-all cursor-pointer shadow-xl',
-        isSelected && 'ring-4 ring-blue-500/50'
+        'transition-all duration-300 ease-in-out cursor-pointer shadow-xl',
+        isSelected && 'ring-4 ring-blue-500/50',
+        isPrimary
+          ? 'bg-blue-500 border-blue-800'
+          : 'bg-orange-500 border-orange-600'
       )}
       style={{
         width: size,
         height: size,
-        backgroundColor: isPrimary ? '#3b82f6' : '#f97316', // Blue for primary, Orange for secondary
-        borderColor: isPrimary ? '#1e40af' : '#ea580c',
-        transition: `all ${ADDRESS_MAP_CONFIG.ANIMATION.MARKER_HIGHLIGHT}ms ease-in-out`,
-        zIndex: 1000 // Ensure marker is on top
+        zIndex: zIndex.dropdown,
       }}
       onClick={onClick}
       role="button"
       tabIndex={0}
       aria-label={`Marker: ${formatAddressLine(address)}`}
-      title={formatAddressLine(address)} // Simple tooltip
+      title={formatAddressLine(address)}
     >
       <MapPin
         className="text-white"

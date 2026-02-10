@@ -1,7 +1,10 @@
 
 'use client';
 
-import { svgUtilities } from '@/styles/design-tokens';
+import { svgUtilities, colors } from '@/styles/design-tokens';
+
+/** Measurement tool color — SSoT: design-tokens red-500 */
+const MEASUREMENT_COLOR = colors.red['500']; // #ef4444
 
 interface Point {
   x: number;
@@ -36,7 +39,7 @@ export function MeasurementOverlay({ startPoint, endPoint, scale }: MeasurementO
         y1={startPoint.y}
         x2={endPoint.x}
         y2={endPoint.y}
-        stroke="#ef4444"
+        stroke={MEASUREMENT_COLOR}
         strokeWidth="2"
         strokeDasharray="5 5"
       />
@@ -45,7 +48,7 @@ export function MeasurementOverlay({ startPoint, endPoint, scale }: MeasurementO
         y={midPoint.y - 10}
         textAnchor="middle"
         fontSize="12"
-        fill="#ef4444"
+        fill={MEASUREMENT_COLOR}
         style={svgUtilities.text.withStroke('white', 3)}
       >
         {realDist}m
