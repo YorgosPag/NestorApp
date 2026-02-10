@@ -28,6 +28,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useAuth } from '@/hooks/useAuth';
+import { formatCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -43,10 +44,6 @@ interface DashboardStats {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 // ============================================================================
 // COMPONENT
@@ -66,7 +63,10 @@ export function AccountingDashboard() {
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const token = await user.getIdToken();

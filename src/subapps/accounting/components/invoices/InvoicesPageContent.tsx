@@ -127,7 +127,10 @@ export function InvoicesPageContent() {
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
   const fetchInvoices = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
 

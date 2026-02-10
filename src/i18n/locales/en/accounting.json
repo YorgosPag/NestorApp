@@ -124,7 +124,12 @@
       "matched": "Matched",
       "manual": "Manual Match",
       "excluded": "Excluded"
-    }
+    },
+    "importCSVTitle": "Import Bank Transactions",
+    "selectBank": "Select Bank",
+    "selectBankPlaceholder": "Choose your bank...",
+    "selectFile": "CSV File",
+    "chooseFile": "Choose File"
   },
   "efka": {
     "title": "EFKA Contributions",
@@ -146,7 +151,19 @@
       "paid": "Paid",
       "overdue": "Overdue",
       "keao": "KEAO Referred"
-    }
+    },
+    "totalMonthly": "Monthly Total",
+    "annualTotal": "Annual Total",
+    "noPayments": "No payments recorded",
+    "amount": "Amount",
+    "dueDate": "Due Date",
+    "paidDate": "Paid Date",
+    "status": "Status",
+    "noData": "No EFKA data available",
+    "noDataDescription": "EFKA contribution data will appear here once configured",
+    "monthlyBreakdownTitle": "Monthly Breakdown",
+    "paymentsTitle": "Payments",
+    "healthcare": "Healthcare"
   },
   "assets": {
     "title": "Fixed Assets",
@@ -225,7 +242,9 @@
       "pending": "Pending",
       "paid": "Paid",
       "overdue": "Overdue"
-    }
+    },
+    "noVATData": "No VAT data available for this period",
+    "noTaxData": "No tax data available for this period"
   },
   "forms": {
     "save": "Save",

@@ -23,7 +23,10 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const [loading, setLoading] = useState(true);
 
   const fetchInvoice = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const token = await user.getIdToken();
