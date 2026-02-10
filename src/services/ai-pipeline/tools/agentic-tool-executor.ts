@@ -226,11 +226,12 @@ export class AgenticToolExecutor {
     const db = getAdminFirestore();
     let query: FirebaseFirestore.Query = db.collection(collection);
 
-    // Apply filters
+    // Apply filters with value type coercion
     for (const filter of filters) {
       const op = this.mapOperator(filter.operator);
       if (op) {
-        query = query.where(filter.field, op, filter.value);
+        const coercedValue = this.coerceFilterValue(filter.value);
+        query = query.where(filter.field, op, coercedValue);
       }
     }
 
@@ -316,7 +317,8 @@ export class AgenticToolExecutor {
     for (const filter of filters) {
       const op = this.mapOperator(filter.operator);
       if (op) {
-        query = query.where(filter.field, op, filter.value);
+        const coercedValue = this.coerceFilterValue(filter.value);
+        query = query.where(filter.field, op, coercedValue);
       }
     }
 
@@ -340,9 +342,21 @@ export class AgenticToolExecutor {
     const collection = String(args.collection ?? '');
     const documentId = typeof args.documentId === 'string' ? args.documentId : null;
     const mode = String(args.mode ?? 'create');
-    const data = (typeof args.data === 'object' && args.data !== null)
-      ? args.data as Record<string, unknown>
-      : {};
+
+    // Tool definition sends data as JSON string (strict mode); parse it
+    let data: Record<string, unknown> = {};
+    if (typeof args.data === 'string') {
+      try {
+        const parsed = JSON.parse(args.data) as Record<string, unknown>;
+        if (typeof parsed === 'object' && parsed !== null) {
+          data = parsed;
+        }
+      } catch {
+        return { success: false, error: 'Invalid JSON in data field' };
+      }
+    } else if (typeof args.data === 'object' && args.data !== null) {
+      data = args.data as Record<string, unknown>;
+    }
 
     if (!ALLOWED_WRITE_COLLECTIONS.has(collection)) {
       return { success: false, error: `Write to "${collection}" is not allowed` };
@@ -616,6 +630,34 @@ export class AgenticToolExecutor {
       { field: 'companyId', operator: '==', value: companyId },
       ...filters,
     ];
+  }
+
+  /**
+   * Coerce string values to their appropriate Firestore types.
+   * OpenAI strict mode requires all values as strings, but Firestore
+   * does strict type matching. This converts:
+   *   "true"/"false" → boolean
+   *   numeric strings → number
+   *   "null" → null
+   *   everything else → string
+   */
+  private coerceFilterValue(value: string | number | boolean | null): string | number | boolean | null {
+    if (typeof value !== 'string') return value;
+
+    // Boolean coercion
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+
+    // Null coercion
+    if (value === 'null') return null;
+
+    // Number coercion (only if the entire string is a valid number)
+    if (/^-?\d+(\.\d+)?$/.test(value)) {
+      const num = Number(value);
+      if (!Number.isNaN(num) && Number.isFinite(num)) return num;
+    }
+
+    return value;
   }
 
   /**
