@@ -336,7 +336,8 @@ export class PipelineOrchestrator {
       const now = new Date().toISOString();
       const isFailedResponse = agenticResult.answer.includes('Ξεπέρασα το μέγιστο')
         || agenticResult.answer.includes('πολύ χρόνο')
-        || agenticResult.iterations >= 5;
+        || agenticResult.answer.includes('Δεν μπόρεσα')
+        || agenticResult.iterations >= 7;
 
       if (!isFailedResponse) {
         await chatHistoryService.addMessage(channelSenderId, {

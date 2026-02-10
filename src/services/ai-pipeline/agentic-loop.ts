@@ -98,7 +98,7 @@ interface ChatCompletionChoice {
 }
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {
-  maxIterations: 5,
+  maxIterations: 7,
   totalTimeoutMs: 50_000,
   perCallTimeoutMs: 15_000,
   maxToolResultChars: 8000,
@@ -138,13 +138,23 @@ ${schema}
 
 ΥΠΟΧΡΕΩΤΙΚΑ JOINS — ΣΧΕΣΕΙΣ ΔΕΔΟΜΕΝΩΝ:
 Τα δεδομένα είναι οργανωμένα σε ιεραρχία: projects → buildings → construction_phases → construction_tasks.
-Όταν επιστρέφεις αποτελέσματα, ΠΑΝΤΑ κάνε resolve τα parent names:
+Όταν επιστρέφεις αποτελέσματα ΑΠΟ ΚΑΤΑΣΚΕΥΑΣΤΙΚΑ COLLECTIONS, ΠΑΝΤΑ κάνε resolve τα parent names:
 - construction_phases: πάρε το buildingId → firestore_get_document("buildings", buildingId) → πάρε building.name + building.projectId → firestore_get_document("projects", projectId) → πάρε project.name
 - construction_tasks: πάρε phaseId → resolve phase → resolve building → resolve project
 - buildings: πάρε projectId → firestore_get_document("projects", projectId) → πάρε project.name
 - units: πάρε buildingId → resolve building → resolve project
 - Ποτέ μην δείχνεις φάσεις/κτήρια/μονάδες χωρίς να αναφέρεις ΣΕ ΠΟΙΟ ΕΡΓΟ και ΚΤΗΡΙΟ ανήκουν!
-- Η τελική απάντηση ΠΡΕΠΕΙ να περιλαμβάνει: όνομα έργου, όνομα κτηρίου, και μετά τα στοιχεία
+
+COLLECTIONS ΠΟΥ ΔΕΝ ΧΡΕΙΑΖΟΝΤΑΙ JOINS (απάντα κατευθείαν):
+- contacts, leads, appointments, tasks, obligations, invoices, payments, messages
+- Για αυτά: ΜΙΑ query αρκεί. ΜΗΝ κάνεις get_document για κάθε εγγραφή.
+- Παράδειγμα: "ποιες επαφές υπάρχουν" → firestore_query("contacts") → μορφοποίηση → τέλος!
+
+ΠΟΤΕ ΝΑ ΣΤΑΜΑΤΑΣ ΝΑ ΚΑΛΕΙΣ TOOLS:
+- Αν έχεις ΗΔΗ τα δεδομένα που χρειάζεσαι → ΣΤΑΜΑΤΑ, δώσε απάντηση
+- Αν μια query επέστρεψε αποτελέσματα → μορφοποίησέ τα αμέσως (εκτός αν χρειάζονται joins)
+- ΜΗΝ ξανα-καλείς tool για δεδομένα που ήδη έχεις
+- Μέγιστο 2-3 tool calls για απλές ερωτήσεις, 4-5 μόνο για σύνθετες με joins
 
 ΣΗΜΑΝΤΙΚΟ ΓΙΑ DOCUMENT IDs:
 - Κάθε αποτέλεσμα query επιστρέφει "id" (document ID)

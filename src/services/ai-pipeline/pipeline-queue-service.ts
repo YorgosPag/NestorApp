@@ -72,21 +72,7 @@ export async function enqueuePipelineItem(
   const adminDb = getAdminFirestore();
   const requestId = generateRequestId();
   const now = new Date().toISOString();
-
-  // ── ADR-171: Deduplication — prevent same message from being enqueued twice ──
   const intakeMessageId = params.intakeMessage.id;
-  const existingSnapshot = await adminDb
-    .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-    .where('intakeMessageId', '==', intakeMessageId)
-    .where('status', 'in', ['pending', 'processing'])
-    .limit(1)
-    .get();
-
-  if (!existingSnapshot.empty) {
-    const existingDoc = existingSnapshot.docs[0];
-    const existingData = existingDoc.data() as PipelineQueueItem;
-    return { queueId: existingDoc.id, requestId: existingData.requestId };
-  }
 
   const context: PipelineContext = {
     requestId,
@@ -104,7 +90,7 @@ export async function enqueuePipelineItem(
     requestId,
     companyId: params.companyId,
     channel: params.channel,
-    intakeMessageId: params.intakeMessage.id,
+    intakeMessageId,
     status: 'pending',
     pipelineState: PipelineState.RECEIVED,
     context,
@@ -113,11 +99,31 @@ export async function enqueuePipelineItem(
     createdAt: now,
   };
 
-  const docRef = await adminDb
-    .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-    .add(queueItem);
+  // ── ADR-171: Atomic deduplication via Firestore Transaction ──
+  // Prevents race condition where two concurrent webhook calls could both
+  // pass a non-atomic query check and enqueue the same message twice.
+  const result = await adminDb.runTransaction(async (tx) => {
+    const existingSnapshot = await tx.get(
+      adminDb
+        .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
+        .where('intakeMessageId', '==', intakeMessageId)
+        .where('status', 'in', ['pending', 'processing'])
+        .limit(1)
+    );
 
-  return { queueId: docRef.id, requestId };
+    if (!existingSnapshot.empty) {
+      const existingDoc = existingSnapshot.docs[0];
+      const existingData = existingDoc.data() as PipelineQueueItem;
+      return { queueId: existingDoc.id, requestId: existingData.requestId };
+    }
+
+    // Not found — create atomically within the same transaction
+    const newDocRef = adminDb.collection(COLLECTIONS.AI_PIPELINE_QUEUE).doc();
+    tx.set(newDocRef, queueItem);
+    return { queueId: newDocRef.id, requestId };
+  });
+
+  return result;
 }
 
 // ============================================================================
