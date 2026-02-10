@@ -24,7 +24,9 @@ import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { normalizeUnit } from '@/utils/unit-normalizer';
+import { createModuleLogger } from '@/lib/telemetry';
 
+const logger = createModuleLogger('UnitsService');
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
 /**
@@ -99,7 +101,7 @@ export async function createUnit(
   unitData: Record<string, unknown>
 ): Promise<{ success: boolean; unitId?: string; error?: string }> {
   try {
-    console.log('🏢 [createUnit] Creating new unit via API...');
+    logger.info('Creating new unit via API');
 
     interface UnitCreateResult {
       unitId: string;
@@ -107,7 +109,7 @@ export async function createUnit(
     const result = await apiClient.post<UnitCreateResult>('/api/units/create', unitData);
 
     const unitId = result?.unitId;
-    console.log(`✅ [createUnit] Unit created with ID: ${unitId}`);
+    logger.info(`Unit created with ID: ${unitId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchUnitCreated({
@@ -123,7 +125,7 @@ export async function createUnit(
     return { success: true, unitId };
 
   } catch (error) {
-    console.error('❌ [createUnit] Error:', error);
+    logger.error('Error creating unit', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

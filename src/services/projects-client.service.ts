@@ -21,6 +21,9 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectsClientService');
 
 /**
  * 🏢 ENTERPRISE: Project create payload type
@@ -76,7 +79,7 @@ export async function createProject(
   data: ProjectCreatePayload
 ): Promise<{ success: boolean; projectId?: string; error?: string }> {
   try {
-    console.log(`🎯 [createProject] Creating new project via API...`);
+    logger.info('Creating new project via API');
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
@@ -86,7 +89,7 @@ export async function createProject(
     const result = await apiClient.post<ProjectCreateResult>('/api/projects/list', data);
 
     const projectId = result?.projectId;
-    console.log(`✅ [createProject] Project created with ID: ${projectId}`);
+    logger.info('Project created', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchProjectCreated({
@@ -103,7 +106,7 @@ export async function createProject(
     return { success: true, projectId };
 
   } catch (error) {
-    console.error('❌ [createProject] Error:', error);
+    logger.error('Error creating project', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -124,13 +127,13 @@ export async function updateProjectClient(
   updates: ProjectUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [updateProjectClient] Updating project ${projectId} via API...`);
+    logger.info('Updating project via API', { projectId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
     await apiClient.patch(`/api/projects/${projectId}`, updates);
 
-    console.log(`✅ [updateProjectClient] Project ${projectId} updated successfully`);
+    logger.info('Project updated successfully', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchProjectUpdated({
@@ -146,7 +149,7 @@ export async function updateProjectClient(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [updateProjectClient] Error:', error);
+    logger.error('Error updating project', { projectId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -166,13 +169,13 @@ export async function deleteProject(
   projectId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [deleteProject] Deleting project ${projectId} via API...`);
+    logger.info('Deleting project via API', { projectId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
     await apiClient.delete(`/api/projects/${projectId}`);
 
-    console.log(`✅ [deleteProject] Project ${projectId} deleted successfully`);
+    logger.info('Project deleted successfully', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchProjectDeleted({
@@ -183,7 +186,7 @@ export async function deleteProject(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [deleteProject] Error:', error);
+    logger.error('Error deleting project', { projectId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -197,7 +200,7 @@ export async function deleteProject(
  */
 export async function getProjectsClient(limitCount: number = 100): Promise<Project[]> {
   try {
-    console.log('🔍 [getProjectsClient] Starting Firestore query...');
+    logger.info('Starting Firestore query');
 
     const projectsQuery = query(
       collection(db, COLLECTIONS.PROJECTS),
@@ -211,11 +214,11 @@ export async function getProjectsClient(limitCount: number = 100): Promise<Proje
       ...docSnap.data()
     })) as Project[];
 
-    console.log(`✅ [getProjectsClient] Loaded ${projects.length} projects from Firebase`);
+    logger.info('Loaded projects from Firebase', { count: projects.length });
     return projects;
 
   } catch (error) {
-    console.error('❌ [getProjectsClient] Error:', error);
+    logger.error('Error loading projects', { error });
     return [];
   }
 }

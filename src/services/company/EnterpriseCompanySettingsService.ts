@@ -20,6 +20,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { designTokens } from '@/styles/design-tokens';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EnterpriseCompanySettingsService');
 
 // ============================================================================
 // ENTERPRISE COMPANY TYPES
@@ -288,11 +291,11 @@ export class EnterpriseCompanySettingsService {
 
       // Check cache first
       if (this.isCacheValid(cacheKey)) {
-        console.debug('🚀 Using cached company settings:', cacheKey);
+        logger.debug('Using cached company settings', { cacheKey });
         return this.settingsCache.get(cacheKey)!;
       }
 
-      console.log('🏢 Loading company settings from Firebase...', { tenantId, environment });
+      logger.info('Loading company settings from Firebase', { tenantId, environment });
 
       // Try to load από system collection
       let settings = await this.loadFromSystemCollection(tenantId, environment);
@@ -304,7 +307,7 @@ export class EnterpriseCompanySettingsService {
 
       // If still not found, initialize default settings
       if (!settings) {
-        console.warn('⚠️ No company settings found, initializing defaults');
+        logger.warn('No company settings found, initializing defaults');
         settings = await this.initializeDefaultSettings(tenantId, environment);
       }
 
@@ -312,11 +315,11 @@ export class EnterpriseCompanySettingsService {
       this.settingsCache.set(cacheKey, settings);
       this.cacheTimestamp.set(cacheKey, Date.now());
 
-      console.log(`✅ Loaded company settings for tenant: ${tenantId || 'default'}`);
+      logger.info('Loaded company settings', { tenantId: tenantId || 'default' });
       return settings;
 
     } catch (error) {
-      console.error('❌ Error loading company settings:', error);
+      logger.error('Error loading company settings', { error });
       return this.getFallbackSettings(tenantId);
     }
   }
@@ -357,7 +360,7 @@ export class EnterpriseCompanySettingsService {
 
       return null;
     } catch (error) {
-      console.error('❌ Error loading από system collection:', error);
+      logger.error('Error loading from system collection', { error });
       return null;
     }
   }
@@ -387,7 +390,7 @@ export class EnterpriseCompanySettingsService {
 
       return null;
     } catch (error) {
-      console.error('❌ Error loading από contacts collection:', error);
+      logger.error('Error loading from contacts collection', { error });
       return null;
     }
   }
@@ -640,10 +643,10 @@ export class EnterpriseCompanySettingsService {
         timestamp: Date.now(),
       });
 
-      console.log(`✅ Updated company settings: ${docId}`);
+      logger.info('Updated company settings', { docId });
       return true;
     } catch (error) {
-      console.error(`❌ Error updating company settings:`, error);
+      logger.error('Error updating company settings', { error });
       return false;
     }
   }
@@ -656,7 +659,7 @@ export class EnterpriseCompanySettingsService {
     environment?: string
   ): Promise<EnterpriseCompanySettings> {
     try {
-      console.log('🏗️ Initializing default company settings in Firebase...');
+      logger.info('Initializing default company settings in Firebase');
 
       const settings = {
         ...FALLBACK_COMPANY_SETTINGS,
@@ -674,10 +677,10 @@ export class EnterpriseCompanySettingsService {
 
       await setDoc(docRef, settings, { merge: true });
 
-      console.log('✅ Default company settings initialized in Firebase');
+      logger.info('Default company settings initialized in Firebase');
       return settings;
     } catch (error) {
-      console.error('❌ Error initializing default settings:', error);
+      logger.error('Error initializing default settings', { error });
       return this.getFallbackSettings(tenantId);
     }
   }
@@ -690,7 +693,7 @@ export class EnterpriseCompanySettingsService {
    * 🔄 Get fallback settings
    */
   getFallbackSettings(tenantId?: string): EnterpriseCompanySettings {
-    console.log('📋 Using fallback company settings');
+    logger.info('Using fallback company settings');
     return {
       ...FALLBACK_COMPANY_SETTINGS,
       tenantId
@@ -734,7 +737,7 @@ export class EnterpriseCompanySettingsService {
       this.cacheTimestamp.clear();
     }
 
-    console.log(`🗑️ Company settings cache invalidated ${tenantId ? `για tenant: ${tenantId}` : '(all)'}`);
+    logger.info('Company settings cache invalidated', { tenantId: tenantId || 'all' });
   }
 }
 

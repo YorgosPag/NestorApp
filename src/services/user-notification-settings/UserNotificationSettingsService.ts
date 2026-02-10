@@ -37,6 +37,9 @@ import {
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UserNotificationSettingsService');
 
 // ============================================================================
 // FIRESTORE COLLECTION
@@ -80,7 +83,7 @@ class UserNotificationSettingsService {
    */
   public initialize(firestore: Firestore): void {
     this.db = firestore;
-    console.log('✅ [NotificationSettings] Service initialized');
+    logger.info('Service initialized');
   }
 
   // ==========================================================================
@@ -110,7 +113,7 @@ class UserNotificationSettingsService {
       await this.saveSettings(defaultSettings);
       return defaultSettings;
     } catch (error) {
-      console.error('❌ [NotificationSettings] Error getting settings:', error);
+      logger.error('Error getting settings', { error });
       throw error;
     }
   }
@@ -127,7 +130,7 @@ class UserNotificationSettingsService {
       const docRef = doc(this.db, COLLECTION_NAME, settings.userId);
       const data = this.transformToFirestore(settings);
       await setDoc(docRef, data, { merge: true });
-      console.log('✅ [NotificationSettings] Settings saved for user:', settings.userId);
+      logger.info('Settings saved for user', { userId: settings.userId });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchUserSettingsUpdated({
@@ -145,7 +148,7 @@ class UserNotificationSettingsService {
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error('❌ [NotificationSettings] Error saving settings:', error);
+      logger.error('Error saving settings', { error });
       throw error;
     }
   }
@@ -168,7 +171,7 @@ class UserNotificationSettingsService {
         updatedAt: Timestamp.now(),
       };
       await updateDoc(docRef, updateData);
-      console.log('✅ [NotificationSettings] Settings updated for user:', userId);
+      logger.info('Settings updated for user', { userId });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchUserSettingsUpdated({
@@ -180,7 +183,7 @@ class UserNotificationSettingsService {
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error('❌ [NotificationSettings] Error updating settings:', error);
+      logger.error('Error updating settings', { error });
       throw error;
     }
   }
@@ -209,11 +212,9 @@ class UserNotificationSettingsService {
         updatedAt: Timestamp.now(),
       });
 
-      console.log(
-        `✅ [NotificationSettings] Toggled ${update.category}.${update.setting} = ${update.enabled}`
-      );
+      logger.info('Toggled category setting', { category: update.category, setting: update.setting, enabled: update.enabled });
     } catch (error) {
-      console.error('❌ [NotificationSettings] Error toggling setting:', error);
+      logger.error('Error toggling setting', { error });
       throw error;
     }
   }
@@ -249,9 +250,9 @@ class UserNotificationSettingsService {
         updatedAt: Timestamp.now(),
       });
 
-      console.log(`✅ [NotificationSettings] Toggled entire ${category} = ${enabled}`);
+      logger.info('Toggled entire category', { category, enabled });
     } catch (error) {
-      console.error('❌ [NotificationSettings] Error toggling category:', error);
+      logger.error('Error toggling category', { error });
       throw error;
     }
   }
@@ -352,7 +353,7 @@ class UserNotificationSettingsService {
         }
       },
       (error) => {
-        console.error('❌ [NotificationSettings] Subscription error:', error);
+        logger.error('Subscription error', { error });
         onError?.(error);
       }
     );

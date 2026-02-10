@@ -39,6 +39,9 @@ import { imageProcessor, ImageProcessor } from './processors/ImageProcessor';
 import { pdfProcessor, PDFProcessor } from './processors/PDFProcessor';
 import { cadProcessor, CADProcessor } from './processors/CADProcessor';
 import { PhotoUploadService } from '@/services/photo-upload.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnifiedUploadService');
 
 // ============================================================================
 // FILE TYPE ROUTER
@@ -154,7 +157,7 @@ export class UnifiedUploadService {
   ): Promise<UnifiedUploadResult> {
     const startTime = Date.now();
 
-    console.log('📤 UNIFIED_UPLOAD: Starting upload', {
+    logger.info('Starting upload', {
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,

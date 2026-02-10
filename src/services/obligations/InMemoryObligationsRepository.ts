@@ -11,6 +11,9 @@ import type { ObligationDocument, ObligationTemplate, ObligationStatus } from '@
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import type { IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FirestoreObligationsRepository');
 
 
 const toDateValue = (value: unknown): Date => {
@@ -51,7 +54,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       // console.log(`✅ Loaded ${obligations.length} real obligations from Firebase`);
       return obligations;
     } catch (error) {
-      console.error('❌ Error fetching obligations from Firebase:', error);
+      logger.error('Error fetching obligations from Firebase', { error });
       return [];
     }
   }
@@ -78,7 +81,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         }
       } as ObligationDocument;
     } catch (error) {
-      console.error('❌ Error fetching obligation by ID from Firebase:', error);
+      logger.error('Error fetching obligation by ID from Firebase', { error });
       return null;
     }
   }
@@ -105,7 +108,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         ...newObligation
       };
     } catch (error) {
-      console.error('❌ Error creating obligation in Firebase:', error);
+      logger.error('Error creating obligation in Firebase', { error });
       throw error;
     }
   }
@@ -123,7 +126,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       // Return the updated document
       return await this.getById(id);
     } catch (error) {
-      console.error('❌ Error updating obligation in Firebase:', error);
+      logger.error('Error updating obligation in Firebase', { error });
       return null;
     }
   }
@@ -134,7 +137,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       await deleteDoc(docRef);
       return true;
     } catch (error) {
-      console.error('❌ Error deleting obligation from Firebase:', error);
+      logger.error('Error deleting obligation from Firebase', { error });
       return false;
     }
   }
@@ -148,7 +151,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       }
       return deletedCount;
     } catch (error) {
-      console.error('❌ Error bulk deleting obligations from Firebase:', error);
+      logger.error('Error bulk deleting obligations from Firebase', { error });
       return 0;
     }
   }
@@ -174,7 +177,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       const { id: _removedId, ...duplicateWithoutId } = duplicate;
       return await this.create(duplicateWithoutId);
     } catch (error) {
-      console.error('❌ Error duplicating obligation in Firebase:', error);
+      logger.error('Error duplicating obligation in Firebase', { error });
       return null;
     }
   }
@@ -188,7 +191,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       });
       return true;
     } catch (error) {
-      console.error('❌ Error updating obligation status in Firebase:', error);
+      logger.error('Error updating obligation status in Firebase', { error });
       return false;
     }
   }
@@ -217,7 +220,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
       return templates;
     } catch (error) {
-      console.error('❌ Error fetching templates from Firebase:', error);
+      logger.error('Error fetching templates from Firebase', { error });
       return [
         { id: "default", name: `Βασικό Πρότυπο ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company'}`, description: "Βασικές ενότητες συγγραφής υποχρεώσεων.", sections: DEFAULT_TEMPLATE_SECTIONS, isDefault: true }
       ];
@@ -282,7 +285,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
       return results;
     } catch (error) {
-      console.error('❌ Error searching obligations in Firebase:', error);
+      logger.error('Error searching obligations in Firebase', { error });
       return [];
     }
   }
@@ -303,7 +306,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         thisMonth: allObligations.filter(o => o.createdAt >= thisMonth).length
       };
     } catch (error) {
-      console.error('❌ Error getting statistics from Firebase:', error);
+      logger.error('Error getting statistics from Firebase', { error });
       return {
         total: 0,
         draft: 0,

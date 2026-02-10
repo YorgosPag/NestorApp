@@ -7,6 +7,9 @@ import { FirestoreProjectsRepository } from './projects/repositories/FirestorePr
 import { FirestoreProjectsRepository as NewFirestoreRepo } from './projects/repositories/projects-repository';
 import { ProjectsService } from './projects/services/ProjectsService';
 import type { ProjectStatus } from '@/types/project';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectsServerAction');
 
 // Initialize repositories and service
 const firestoreRepo = new FirestoreProjectsRepository();
@@ -15,9 +18,9 @@ const service = new ProjectsService(firestoreRepo, productionRepo);
 
 // Server Actions - must be async functions
 export async function getProjectsByCompanyId(companyId: string) {
-    console.log(`🏗️ SERVER ACTION: getProjectsByCompanyId called with: "${companyId}"`);
+    logger.info(`getProjectsByCompanyId called`, { companyId });
     const result = await service.getProjectsByCompanyId(companyId);
-    console.log(`🏗️ SERVER ACTION: returning ${result.length} projects for companyId "${companyId}"`);
+    logger.info(`Returning projects for companyId`, { companyId, count: result.length });
     return result;
 }
 
@@ -56,16 +59,16 @@ export async function updateProject(
     updates: { name?: string; title?: string; status?: ProjectStatus }
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        console.log(`🏗️ SERVER ACTION: updateProject called for: "${projectId}"`);
+        logger.info(`updateProject called`, { projectId });
 
         // 🏢 ENTERPRISE: Use the Firestore repository with validation
         await firestoreRepo.updateProject(projectId, updates);
 
-        console.log(`✅ SERVER ACTION: Project "${projectId}" updated successfully`);
+        logger.info(`Project updated successfully`, { projectId });
         return { success: true };
 
     } catch (error) {
-        console.error(`❌ SERVER ACTION: Failed to update project "${projectId}":`, error);
+        logger.error(`Failed to update project`, { projectId, error });
 
         // 🏢 ENTERPRISE: Return descriptive error message
         const errorMessage = error instanceof Error

@@ -19,6 +19,10 @@
  * ```
  */
 
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('RetryLogic');
+
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Types
 // ============================================================================
@@ -203,9 +207,7 @@ export async function withRetry<T>(
     try {
       const data = await operation();
 
-      console.log(
-        `✅ [Retry] Operation succeeded on attempt ${attempt}/${fullConfig.maxAttempts}`
-      );
+      logger.info('Operation succeeded', { attempt, maxAttempts: fullConfig.maxAttempts });
 
       return {
         success: true,
@@ -216,20 +218,17 @@ export async function withRetry<T>(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
-      console.warn(
-        `⚠️ [Retry] Attempt ${attempt}/${fullConfig.maxAttempts} failed:`,
-        lastError.message
-      );
+      logger.warn('Attempt failed', { attempt, maxAttempts: fullConfig.maxAttempts, error: lastError.message });
 
       // Check if this is the last attempt
       if (attempt === fullConfig.maxAttempts) {
-        console.error(`❌ [Retry] All ${fullConfig.maxAttempts} attempts exhausted`);
+        logger.error('All attempts exhausted', { maxAttempts: fullConfig.maxAttempts });
         break;
       }
 
       // Check if error is retryable
       if (!isRetryableError(lastError, fullConfig)) {
-        console.error(`❌ [Retry] Non-retryable error:`, lastError.message);
+        logger.error('Non-retryable error', { error: lastError.message });
         break;
       }
 
@@ -241,7 +240,7 @@ export async function withRetry<T>(
         fullConfig.onRetry(attempt, lastError, delayMs);
       }
 
-      console.log(`⏳ [Retry] Waiting ${delayMs}ms before attempt ${attempt + 1}...`);
+      logger.info('Waiting before next attempt', { delayMs, nextAttempt: attempt + 1 });
 
       // Wait before next attempt
       await sleep(delayMs);

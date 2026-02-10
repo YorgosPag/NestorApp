@@ -19,6 +19,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Communication } from '@/types/crm';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CommunicationsClientService');
 
 /**
  * 🏢 ENTERPRISE: Communication create payload type
@@ -56,7 +59,7 @@ export async function createCommunicationClient(
   data: CommunicationCreatePayload
 ): Promise<{ success: boolean; communicationId?: string; error?: string }> {
   try {
-    console.log(`🎯 [createCommunicationClient] Creating new communication...`);
+    logger.info('Creating new communication');
 
     const communicationsRef = collection(db, COLLECTIONS.MESSAGES);
     const docRef = await addDoc(communicationsRef, {
@@ -65,7 +68,7 @@ export async function createCommunicationClient(
       updatedAt: serverTimestamp()
     });
 
-    console.log(`✅ [createCommunicationClient] Communication created with ID: ${docRef.id}`);
+    logger.info('Communication created', { communicationId: docRef.id });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchCommunicationCreated({
@@ -83,7 +86,7 @@ export async function createCommunicationClient(
     return { success: true, communicationId: docRef.id };
 
   } catch (error) {
-    console.error('❌ [createCommunicationClient] Error:', error);
+    logger.error('Error creating communication', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -103,7 +106,7 @@ export async function updateCommunicationClient(
   updates: CommunicationUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [updateCommunicationClient] Updating communication ${communicationId}...`);
+    logger.info('Updating communication', { communicationId });
 
     const communicationRef = doc(db, COLLECTIONS.MESSAGES, communicationId);
     await updateDoc(communicationRef, {
@@ -111,7 +114,7 @@ export async function updateCommunicationClient(
       updatedAt: serverTimestamp()
     });
 
-    console.log(`✅ [updateCommunicationClient] Communication ${communicationId} updated successfully`);
+    logger.info('Communication updated successfully', { communicationId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchCommunicationUpdated({
@@ -129,7 +132,7 @@ export async function updateCommunicationClient(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [updateCommunicationClient] Error:', error);
+    logger.error('Error updating communication', { communicationId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -145,12 +148,12 @@ export async function deleteCommunicationClient(
   communicationId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [deleteCommunicationClient] Deleting communication ${communicationId}...`);
+    logger.info('Deleting communication', { communicationId });
 
     const communicationRef = doc(db, COLLECTIONS.MESSAGES, communicationId);
     await deleteDoc(communicationRef);
 
-    console.log(`✅ [deleteCommunicationClient] Communication ${communicationId} deleted successfully`);
+    logger.info('Communication deleted successfully', { communicationId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchCommunicationDeleted({
@@ -161,7 +164,7 @@ export async function deleteCommunicationClient(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [deleteCommunicationClient] Error:', error);
+    logger.error('Error deleting communication', { communicationId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -175,7 +178,7 @@ export async function deleteCommunicationClient(
  */
 export async function getCommunicationsClient(limitCount: number = 100): Promise<Communication[]> {
   try {
-    console.log('🔍 [getCommunicationsClient] Starting Firestore query...');
+    logger.info('Starting Firestore query');
 
     const communicationsQuery = query(
       collection(db, COLLECTIONS.MESSAGES),
@@ -189,11 +192,11 @@ export async function getCommunicationsClient(limitCount: number = 100): Promise
       ...docSnap.data()
     })) as Communication[];
 
-    console.log(`✅ [getCommunicationsClient] Loaded ${communications.length} communications from Firebase`);
+    logger.info('Loaded communications from Firebase', { count: communications.length });
     return communications;
 
   } catch (error) {
-    console.error('❌ [getCommunicationsClient] Error:', error);
+    logger.error('Error loading communications', { error });
     return [];
   }
 }
@@ -206,7 +209,7 @@ export async function getCommunicationsByContactClient(
   limitCount: number = 50
 ): Promise<Communication[]> {
   try {
-    console.log(`🔍 [getCommunicationsByContactClient] Fetching communications for contact ${contactId}...`);
+    logger.info('Fetching communications for contact', { contactId });
 
     const communicationsQuery = query(
       collection(db, COLLECTIONS.MESSAGES),
@@ -221,11 +224,11 @@ export async function getCommunicationsByContactClient(
       ...docSnap.data()
     })) as Communication[];
 
-    console.log(`✅ [getCommunicationsByContactClient] Loaded ${communications.length} communications for contact`);
+    logger.info('Loaded communications for contact', { contactId, count: communications.length });
     return communications;
 
   } catch (error) {
-    console.error('❌ [getCommunicationsByContactClient] Error:', error);
+    logger.error('Error loading communications for contact', { contactId, error });
     return [];
   }
 }

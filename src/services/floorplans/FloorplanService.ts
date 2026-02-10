@@ -8,6 +8,9 @@ import pako from 'pako';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorplanService');
 
 // 🏢 ENTERPRISE: Floorplan file types
 export type FloorplanFileType = 'dxf' | 'pdf';
@@ -126,7 +129,7 @@ export class FloorplanService {
       const fileType = data.fileType || 'dxf'; // Default to DXF for backward compatibility
 
       // ✅ ENTERPRISE DEBUG: Verify floorplan save operation
-      console.log('💾 FloorplanService.saveFloorplan called:', {
+      logger.info('saveFloorplan called', {
         projectId,
         type,
         docId,
@@ -191,7 +194,7 @@ export class FloorplanService {
       await setDoc(doc(db, this.COLLECTION, docId), docData);
 
       // ✅ ENTERPRISE DEBUG: Confirm successful save
-      console.log('✅ FloorplanService: Successfully saved floorplan to Firestore:', {
+      logger.info('Successfully saved floorplan to Firestore', {
         docId,
         collection: this.COLLECTION,
         fileType,
@@ -212,7 +215,7 @@ export class FloorplanService {
       return true;
     } catch (error) {
       // ✅ ENTERPRISE DEBUG: Log error details
-      console.error('❌ FloorplanService.saveFloorplan FAILED:', {
+      logger.error('saveFloorplan FAILED', {
         projectId,
         type,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -229,7 +232,7 @@ export class FloorplanService {
     try {
       const docId = `${projectId}_${type}`;
       // ✅ ENTERPRISE DEBUG: Log load attempt
-      console.log('📖 FloorplanService.loadFloorplan called:', { projectId, type, docId });
+      logger.info('loadFloorplan called', { projectId, type, docId });
 
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
 
@@ -251,7 +254,7 @@ export class FloorplanService {
             fileName: pdfData.fileName,
             timestamp: pdfData.timestamp
           };
-          console.log('✅ FloorplanService: Loaded PDF floorplan:', { docId, fileName: data.fileName });
+          logger.info('Loaded PDF floorplan', { docId, fileName: data.fileName });
           return data;
         }
 
@@ -292,17 +295,17 @@ export class FloorplanService {
             fileName: legacyData.fileName || 'unknown.dxf',
             timestamp: legacyData.timestamp || Date.now()
           };
-          console.log('✅ FloorplanService: Loaded legacy uncompressed floorplan:', { docId });
+          logger.info('Loaded legacy uncompressed floorplan', { docId });
           return data;
         }
       } else {
         // ✅ ENTERPRISE DEBUG: Document not found
-        console.log('⚠️ FloorplanService: No floorplan found:', { projectId, type, docId });
+        logger.warn('No floorplan found', { projectId, type, docId });
         return null;
       }
     } catch (error) {
       // ✅ ENTERPRISE DEBUG: Log load error
-      console.error('❌ FloorplanService.loadFloorplan FAILED:', {
+      logger.error('loadFloorplan FAILED', {
         projectId,
         type,
         error: error instanceof Error ? error.message : 'Unknown error'

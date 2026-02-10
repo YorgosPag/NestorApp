@@ -21,6 +21,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { createModuleLogger } from '@/lib/telemetry';
 import {
   type RealtimeCollection,
   type RealtimeQueryOptions,
@@ -96,6 +97,8 @@ import {
   type EntityUnlinkedPayload,
 } from './types';
 
+const logger = createModuleLogger('RealtimeService');
+
 // ============================================================================
 // SUBSCRIPTION REGISTRY
 // ============================================================================
@@ -123,7 +126,7 @@ class RealtimeServiceCore {
 
   private constructor() {
     // Private constructor for singleton
-    console.log('🔔 [RealtimeService] Initialized');
+    logger.info('Initialized');
   }
 
   static getInstance(): RealtimeServiceCore {
@@ -155,11 +158,11 @@ class RealtimeServiceCore {
 
     // Check for existing subscription
     if (this.subscriptions.has(subscriptionId)) {
-      console.log(`🔄 [RealtimeService] Reusing existing subscription: ${subscriptionId}`);
+      logger.debug(`Reusing existing subscription: ${subscriptionId}`);
       return () => this.unsubscribe(subscriptionId);
     }
 
-    console.log(`🔔 [RealtimeService] Creating subscription: ${subscriptionId}`);
+    logger.debug(`Creating subscription: ${subscriptionId}`);
 
     const collectionRef = collection(db, collectionName);
     const q = constraints.length > 0 ? query(collectionRef, ...constraints) : collectionRef;
@@ -172,11 +175,11 @@ class RealtimeServiceCore {
           ...docSnapshot.data(),
         }));
 
-        console.log(`📡 [RealtimeService] ${collectionName}: Received ${data.length} documents`);
+        logger.debug(`${collectionName}: Received ${data.length} documents`);
         onData(data);
       },
       (error) => {
-        console.error(`❌ [RealtimeService] ${collectionName} error:`, error);
+        logger.error(`${collectionName} error`, { error });
         this.updateSubscriptionStatus(subscriptionId, 'error');
         onError?.(error);
       }
@@ -216,11 +219,11 @@ class RealtimeServiceCore {
 
     // Check for existing subscription
     if (this.subscriptions.has(subscriptionId)) {
-      console.log(`🔄 [RealtimeService] Reusing existing doc subscription: ${subscriptionId}`);
+      logger.debug(`Reusing existing doc subscription: ${subscriptionId}`);
       return () => this.unsubscribe(subscriptionId);
     }
 
-    console.log(`🔔 [RealtimeService] Creating doc subscription: ${subscriptionId}`);
+    logger.debug(`Creating doc subscription: ${subscriptionId}`);
 
     const docRef = doc(db, collectionName, documentId);
 
@@ -229,15 +232,15 @@ class RealtimeServiceCore {
       (snapshot) => {
         if (snapshot.exists()) {
           const data: RealtimeDocument = { id: snapshot.id, ...snapshot.data() };
-          console.log(`📡 [RealtimeService] ${collectionName}/${documentId}: Updated`);
+          logger.debug(`${collectionName}/${documentId}: Updated`);
           onData(data);
         } else {
-          console.log(`📡 [RealtimeService] ${collectionName}/${documentId}: Does not exist`);
+          logger.debug(`${collectionName}/${documentId}: Does not exist`);
           onData(null);
         }
       },
       (error) => {
-        console.error(`❌ [RealtimeService] ${collectionName}/${documentId} error:`, error);
+        logger.error(`${collectionName}/${documentId} error`, { error });
         this.updateSubscriptionStatus(subscriptionId, 'error');
         onError?.(error);
       }
@@ -263,7 +266,7 @@ class RealtimeServiceCore {
    * 🏢 ENTERPRISE: Dispatch real-time event for cross-component communication
    */
   dispatchEvent<T>(eventType: string, payload: T): void {
-    console.log(`📤 [RealtimeService] Dispatching event: ${eventType}`, payload);
+    logger.debug(`Dispatching event: ${eventType}`);
 
     const event = new CustomEvent(eventType, {
       detail: payload,
@@ -306,7 +309,7 @@ class RealtimeServiceCore {
    * 3. Pending update check for page loads
    */
   dispatchProjectUpdated(payload: ProjectUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching PROJECT_UPDATED:', payload.projectId);
+    logger.debug('Dispatching PROJECT_UPDATED', { projectId: payload.projectId });
 
     // 1. Same-page real-time update via CustomEvent
     this.dispatchEvent(REALTIME_EVENTS.PROJECT_UPDATED, payload);
@@ -320,7 +323,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage write failed:', error);
+        logger.warn('localStorage write failed', { error });
       }
     }
   }
@@ -344,7 +347,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<ProjectUpdatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page project update:', customEvent.detail.projectId);
+        logger.debug('Same-page project update', { projectId: customEvent.detail.projectId });
         onUpdate(customEvent.detail);
       }
     };
@@ -355,10 +358,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as ProjectUpdatedPayload;
-        console.log('📡 [RealtimeService] Cross-page project update:', payload.projectId);
+        logger.debug('Cross-page project update', { projectId: payload.projectId });
         onUpdate(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse storage event:', error);
+        logger.error('Failed to parse storage event', { error });
       }
     };
 
@@ -370,14 +373,14 @@ class RealtimeServiceCore {
           const payload = JSON.parse(pendingUpdate) as ProjectUpdatedPayload;
           // Only apply if update was recent (within last 5 seconds)
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending project update:', payload.projectId);
+            logger.debug('Applying pending project update', { projectId: payload.projectId });
             onUpdate(payload);
           }
           // Clear after processing
           localStorage.removeItem(REALTIME_STORAGE_KEYS.PROJECT_UPDATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending update:', error);
+        logger.error('Failed to process pending update', { error });
       }
     }
 
@@ -405,7 +408,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new project was created
    */
   dispatchProjectCreated(payload: ProjectCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching PROJECT_CREATED:', payload.projectId);
+    logger.debug('Dispatching PROJECT_CREATED', { projectId: payload.projectId });
 
     this.dispatchEvent(REALTIME_EVENTS.PROJECT_CREATED, payload);
 
@@ -416,7 +419,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -433,7 +436,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<ProjectCreatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page project created:', customEvent.detail.projectId);
+        logger.debug('Same-page project created', { projectId: customEvent.detail.projectId });
         onCreated(customEvent.detail);
       }
     };
@@ -443,10 +446,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as ProjectCreatedPayload;
-        console.log('📡 [RealtimeService] Cross-page project created:', payload.projectId);
+        logger.debug('Cross-page project created', { projectId: payload.projectId });
         onCreated(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse project created event:', error);
+        logger.error('Failed to parse project created event', { error });
       }
     };
 
@@ -456,13 +459,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as ProjectCreatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending project created:', payload.projectId);
+            logger.debug('Applying pending project created', { projectId: payload.projectId });
             onCreated(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.PROJECT_CREATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending project created:', error);
+        logger.error('Failed to process pending project created', { error });
       }
     }
 
@@ -484,7 +487,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a project was deleted
    */
   dispatchProjectDeleted(payload: ProjectDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching PROJECT_DELETED:', payload.projectId);
+    logger.debug('Dispatching PROJECT_DELETED', { projectId: payload.projectId });
 
     this.dispatchEvent(REALTIME_EVENTS.PROJECT_DELETED, payload);
 
@@ -495,7 +498,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -512,7 +515,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<ProjectDeletedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page project deleted:', customEvent.detail.projectId);
+        logger.debug('Same-page project deleted', { projectId: customEvent.detail.projectId });
         onDeleted(customEvent.detail);
       }
     };
@@ -522,10 +525,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as ProjectDeletedPayload;
-        console.log('📡 [RealtimeService] Cross-page project deleted:', payload.projectId);
+        logger.debug('Cross-page project deleted', { projectId: payload.projectId });
         onDeleted(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse project deleted event:', error);
+        logger.error('Failed to parse project deleted event', { error });
       }
     };
 
@@ -535,13 +538,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as ProjectDeletedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending project deleted:', payload.projectId);
+            logger.debug('Applying pending project deleted', { projectId: payload.projectId });
             onDeleted(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.PROJECT_DELETED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending project deleted:', error);
+        logger.error('Failed to process pending project deleted', { error });
       }
     }
 
@@ -569,7 +572,7 @@ class RealtimeServiceCore {
    * NOTE: Data is saved to Firestore, localStorage is ONLY for cross-tab notification.
    */
   dispatchBuildingUpdated(payload: BuildingUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching BUILDING_UPDATED:', payload.buildingId);
+    logger.debug('Dispatching BUILDING_UPDATED', { buildingId: payload.buildingId });
 
     // 1. Same-page real-time update via CustomEvent
     this.dispatchEvent(REALTIME_EVENTS.BUILDING_UPDATED, payload);
@@ -583,7 +586,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -600,7 +603,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<BuildingUpdatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page building update:', customEvent.detail.buildingId);
+        logger.debug('Same-page building update', { buildingId: customEvent.detail.buildingId });
         onUpdate(customEvent.detail);
       }
     };
@@ -610,10 +613,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as BuildingUpdatedPayload;
-        console.log('📡 [RealtimeService] Cross-page building update:', payload.buildingId);
+        logger.debug('Cross-page building update', { buildingId: payload.buildingId });
         onUpdate(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse building storage event:', error);
+        logger.error('Failed to parse building storage event', { error });
       }
     };
 
@@ -623,13 +626,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as BuildingUpdatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending building update:', payload.buildingId);
+            logger.debug('Applying pending building update', { buildingId: payload.buildingId });
             onUpdate(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.BUILDING_UPDATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending building update:', error);
+        logger.error('Failed to process pending building update', { error });
       }
     }
 
@@ -655,7 +658,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new building was created
    */
   dispatchBuildingCreated(payload: BuildingCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching BUILDING_CREATED:', payload.buildingId);
+    logger.debug('Dispatching BUILDING_CREATED', { buildingId: payload.buildingId });
 
     this.dispatchEvent(REALTIME_EVENTS.BUILDING_CREATED, payload);
 
@@ -666,7 +669,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -683,7 +686,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<BuildingCreatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page building created:', customEvent.detail.buildingId);
+        logger.debug('Same-page building created', { buildingId: customEvent.detail.buildingId });
         onCreated(customEvent.detail);
       }
     };
@@ -693,10 +696,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as BuildingCreatedPayload;
-        console.log('📡 [RealtimeService] Cross-page building created:', payload.buildingId);
+        logger.debug('Cross-page building created', { buildingId: payload.buildingId });
         onCreated(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse building created event:', error);
+        logger.error('Failed to parse building created event', { error });
       }
     };
 
@@ -706,13 +709,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as BuildingCreatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending building created:', payload.buildingId);
+            logger.debug('Applying pending building created', { buildingId: payload.buildingId });
             onCreated(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.BUILDING_CREATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending building created:', error);
+        logger.error('Failed to process pending building created', { error });
       }
     }
 
@@ -734,7 +737,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a building was deleted
    */
   dispatchBuildingDeleted(payload: BuildingDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching BUILDING_DELETED:', payload.buildingId);
+    logger.debug('Dispatching BUILDING_DELETED', { buildingId: payload.buildingId });
 
     this.dispatchEvent(REALTIME_EVENTS.BUILDING_DELETED, payload);
 
@@ -745,7 +748,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -762,7 +765,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<BuildingDeletedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page building deleted:', customEvent.detail.buildingId);
+        logger.debug('Same-page building deleted', { buildingId: customEvent.detail.buildingId });
         onDeleted(customEvent.detail);
       }
     };
@@ -772,10 +775,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as BuildingDeletedPayload;
-        console.log('📡 [RealtimeService] Cross-page building deleted:', payload.buildingId);
+        logger.debug('Cross-page building deleted', { buildingId: payload.buildingId });
         onDeleted(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse building deleted event:', error);
+        logger.error('Failed to parse building deleted event', { error });
       }
     };
 
@@ -785,13 +788,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as BuildingDeletedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending building deleted:', payload.buildingId);
+            logger.debug('Applying pending building deleted', { buildingId: payload.buildingId });
             onDeleted(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.BUILDING_DELETED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending building deleted:', error);
+        logger.error('Failed to process pending building deleted', { error });
       }
     }
 
@@ -819,7 +822,7 @@ class RealtimeServiceCore {
    * NOTE: Data is saved to Firestore, localStorage is ONLY for cross-tab notification.
    */
   dispatchUnitUpdated(payload: UnitUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching UNIT_UPDATED:', payload.unitId);
+    logger.debug('Dispatching UNIT_UPDATED', { unitId: payload.unitId });
 
     // 1. Same-page real-time update via CustomEvent
     this.dispatchEvent(REALTIME_EVENTS.UNIT_UPDATED, payload);
@@ -832,7 +835,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -849,7 +852,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<UnitUpdatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page unit update:', customEvent.detail.unitId);
+        logger.debug('Same-page unit update', { unitId: customEvent.detail.unitId });
         onUpdate(customEvent.detail);
       }
     };
@@ -859,10 +862,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as UnitUpdatedPayload;
-        console.log('📡 [RealtimeService] Cross-page unit update:', payload.unitId);
+        logger.debug('Cross-page unit update', { unitId: payload.unitId });
         onUpdate(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse unit storage event:', error);
+        logger.error('Failed to parse unit storage event', { error });
       }
     };
 
@@ -872,13 +875,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as UnitUpdatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending unit update:', payload.unitId);
+            logger.debug('Applying pending unit update', { unitId: payload.unitId });
             onUpdate(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.UNIT_UPDATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending unit update:', error);
+        logger.error('Failed to process pending unit update', { error });
       }
     }
 
@@ -906,7 +909,7 @@ class RealtimeServiceCore {
    * NOTE: Data is saved to Firestore, localStorage is ONLY for cross-tab notification.
    */
   dispatchContactUpdated(payload: ContactUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching CONTACT_UPDATED:', payload.contactId);
+    logger.debug('Dispatching CONTACT_UPDATED', { contactId: payload.contactId });
 
     // 1. Same-page real-time update via CustomEvent
     this.dispatchEvent(REALTIME_EVENTS.CONTACT_UPDATED, payload);
@@ -919,7 +922,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -936,7 +939,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<ContactUpdatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page contact update:', customEvent.detail.contactId);
+        logger.debug('Same-page contact update', { contactId: customEvent.detail.contactId });
         onUpdate(customEvent.detail);
       }
     };
@@ -946,10 +949,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as ContactUpdatedPayload;
-        console.log('📡 [RealtimeService] Cross-page contact update:', payload.contactId);
+        logger.debug('Cross-page contact update', { contactId: payload.contactId });
         onUpdate(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse contact storage event:', error);
+        logger.error('Failed to parse contact storage event', { error });
       }
     };
 
@@ -959,13 +962,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as ContactUpdatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending contact update:', payload.contactId);
+            logger.debug('Applying pending contact update', { contactId: payload.contactId });
             onUpdate(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.CONTACT_UPDATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending contact update:', error);
+        logger.error('Failed to process pending contact update', { error });
       }
     }
 
@@ -991,7 +994,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new contact was created
    */
   dispatchContactCreated(payload: ContactCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching CONTACT_CREATED:', payload.contactId);
+    logger.debug('Dispatching CONTACT_CREATED', { contactId: payload.contactId });
 
     this.dispatchEvent(REALTIME_EVENTS.CONTACT_CREATED, payload);
 
@@ -1002,7 +1005,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1019,7 +1022,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<ContactCreatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page contact created:', customEvent.detail.contactId);
+        logger.debug('Same-page contact created', { contactId: customEvent.detail.contactId });
         onCreated(customEvent.detail);
       }
     };
@@ -1029,10 +1032,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as ContactCreatedPayload;
-        console.log('📡 [RealtimeService] Cross-page contact created:', payload.contactId);
+        logger.debug('Cross-page contact created', { contactId: payload.contactId });
         onCreated(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse contact created event:', error);
+        logger.error('Failed to parse contact created event', { error });
       }
     };
 
@@ -1042,13 +1045,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as ContactCreatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending contact created:', payload.contactId);
+            logger.debug('Applying pending contact created', { contactId: payload.contactId });
             onCreated(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.CONTACT_CREATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending contact created:', error);
+        logger.error('Failed to process pending contact created', { error });
       }
     }
 
@@ -1070,7 +1073,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a contact was deleted
    */
   dispatchContactDeleted(payload: ContactDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching CONTACT_DELETED:', payload.contactId);
+    logger.debug('Dispatching CONTACT_DELETED', { contactId: payload.contactId });
 
     this.dispatchEvent(REALTIME_EVENTS.CONTACT_DELETED, payload);
 
@@ -1081,7 +1084,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1098,7 +1101,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<ContactDeletedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page contact deleted:', customEvent.detail.contactId);
+        logger.debug('Same-page contact deleted', { contactId: customEvent.detail.contactId });
         onDeleted(customEvent.detail);
       }
     };
@@ -1108,10 +1111,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as ContactDeletedPayload;
-        console.log('📡 [RealtimeService] Cross-page contact deleted:', payload.contactId);
+        logger.debug('Cross-page contact deleted', { contactId: payload.contactId });
         onDeleted(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse contact deleted event:', error);
+        logger.error('Failed to parse contact deleted event', { error });
       }
     };
 
@@ -1121,13 +1124,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as ContactDeletedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending contact deleted:', payload.contactId);
+            logger.debug('Applying pending contact deleted', { contactId: payload.contactId });
             onDeleted(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.CONTACT_DELETED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending contact deleted:', error);
+        logger.error('Failed to process pending contact deleted', { error });
       }
     }
 
@@ -1153,7 +1156,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new unit was created
    */
   dispatchUnitCreated(payload: UnitCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching UNIT_CREATED:', payload.unitId);
+    logger.debug('Dispatching UNIT_CREATED', { unitId: payload.unitId });
 
     this.dispatchEvent(REALTIME_EVENTS.UNIT_CREATED, payload);
 
@@ -1164,7 +1167,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1181,7 +1184,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<UnitCreatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page unit created:', customEvent.detail.unitId);
+        logger.debug('Same-page unit created', { unitId: customEvent.detail.unitId });
         onCreated(customEvent.detail);
       }
     };
@@ -1191,10 +1194,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as UnitCreatedPayload;
-        console.log('📡 [RealtimeService] Cross-page unit created:', payload.unitId);
+        logger.debug('Cross-page unit created', { unitId: payload.unitId });
         onCreated(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse unit created event:', error);
+        logger.error('Failed to parse unit created event', { error });
       }
     };
 
@@ -1204,13 +1207,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as UnitCreatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending unit created:', payload.unitId);
+            logger.debug('Applying pending unit created', { unitId: payload.unitId });
             onCreated(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.UNIT_CREATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending unit created:', error);
+        logger.error('Failed to process pending unit created', { error });
       }
     }
 
@@ -1232,7 +1235,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a unit was deleted
    */
   dispatchUnitDeleted(payload: UnitDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching UNIT_DELETED:', payload.unitId);
+    logger.debug('Dispatching UNIT_DELETED', { unitId: payload.unitId });
 
     this.dispatchEvent(REALTIME_EVENTS.UNIT_DELETED, payload);
 
@@ -1243,7 +1246,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1260,7 +1263,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<UnitDeletedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page unit deleted:', customEvent.detail.unitId);
+        logger.debug('Same-page unit deleted', { unitId: customEvent.detail.unitId });
         onDeleted(customEvent.detail);
       }
     };
@@ -1270,10 +1273,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as UnitDeletedPayload;
-        console.log('📡 [RealtimeService] Cross-page unit deleted:', payload.unitId);
+        logger.debug('Cross-page unit deleted', { unitId: payload.unitId });
         onDeleted(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse unit deleted event:', error);
+        logger.error('Failed to parse unit deleted event', { error });
       }
     };
 
@@ -1283,13 +1286,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as UnitDeletedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending unit deleted:', payload.unitId);
+            logger.debug('Applying pending unit deleted', { unitId: payload.unitId });
             onDeleted(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.UNIT_DELETED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending unit deleted:', error);
+        logger.error('Failed to process pending unit deleted', { error });
       }
     }
 
@@ -1315,7 +1318,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new CRM task was created
    */
   dispatchTaskCreated(payload: TaskCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching TASK_CREATED:', payload.taskId);
+    logger.debug('Dispatching TASK_CREATED', { taskId: payload.taskId });
 
     this.dispatchEvent(REALTIME_EVENTS.TASK_CREATED, payload);
 
@@ -1326,7 +1329,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1343,7 +1346,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<TaskCreatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page task created:', customEvent.detail.taskId);
+        logger.debug('Same-page task created', { taskId: customEvent.detail.taskId });
         onCreated(customEvent.detail);
       }
     };
@@ -1353,10 +1356,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as TaskCreatedPayload;
-        console.log('📡 [RealtimeService] Cross-page task created:', payload.taskId);
+        logger.debug('Cross-page task created', { taskId: payload.taskId });
         onCreated(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse task created event:', error);
+        logger.error('Failed to parse task created event', { error });
       }
     };
 
@@ -1366,13 +1369,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as TaskCreatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending task created:', payload.taskId);
+            logger.debug('Applying pending task created', { taskId: payload.taskId });
             onCreated(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.TASK_CREATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending task created:', error);
+        logger.error('Failed to process pending task created', { error });
       }
     }
 
@@ -1394,7 +1397,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a CRM task was updated
    */
   dispatchTaskUpdated(payload: TaskUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching TASK_UPDATED:', payload.taskId);
+    logger.debug('Dispatching TASK_UPDATED', { taskId: payload.taskId });
 
     this.dispatchEvent(REALTIME_EVENTS.TASK_UPDATED, payload);
 
@@ -1405,7 +1408,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1422,7 +1425,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<TaskUpdatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page task update:', customEvent.detail.taskId);
+        logger.debug('Same-page task update', { taskId: customEvent.detail.taskId });
         onUpdate(customEvent.detail);
       }
     };
@@ -1432,10 +1435,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as TaskUpdatedPayload;
-        console.log('📡 [RealtimeService] Cross-page task update:', payload.taskId);
+        logger.debug('Cross-page task update', { taskId: payload.taskId });
         onUpdate(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse task update event:', error);
+        logger.error('Failed to parse task update event', { error });
       }
     };
 
@@ -1445,13 +1448,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as TaskUpdatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending task update:', payload.taskId);
+            logger.debug('Applying pending task update', { taskId: payload.taskId });
             onUpdate(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.TASK_UPDATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending task update:', error);
+        logger.error('Failed to process pending task update', { error });
       }
     }
 
@@ -1473,7 +1476,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a CRM task was deleted
    */
   dispatchTaskDeleted(payload: TaskDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching TASK_DELETED:', payload.taskId);
+    logger.debug('Dispatching TASK_DELETED', { taskId: payload.taskId });
 
     this.dispatchEvent(REALTIME_EVENTS.TASK_DELETED, payload);
 
@@ -1484,7 +1487,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1501,7 +1504,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<TaskDeletedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page task deleted:', customEvent.detail.taskId);
+        logger.debug('Same-page task deleted', { taskId: customEvent.detail.taskId });
         onDeleted(customEvent.detail);
       }
     };
@@ -1511,10 +1514,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as TaskDeletedPayload;
-        console.log('📡 [RealtimeService] Cross-page task deleted:', payload.taskId);
+        logger.debug('Cross-page task deleted', { taskId: payload.taskId });
         onDeleted(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse task deleted event:', error);
+        logger.error('Failed to parse task deleted event', { error });
       }
     };
 
@@ -1524,13 +1527,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as TaskDeletedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending task deleted:', payload.taskId);
+            logger.debug('Applying pending task deleted', { taskId: payload.taskId });
             onDeleted(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.TASK_DELETED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending task deleted:', error);
+        logger.error('Failed to process pending task deleted', { error });
       }
     }
 
@@ -1556,7 +1559,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new opportunity was created
    */
   dispatchOpportunityCreated(payload: OpportunityCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching OPPORTUNITY_CREATED:', payload.opportunityId);
+    logger.debug('Dispatching OPPORTUNITY_CREATED', { opportunityId: payload.opportunityId });
 
     this.dispatchEvent(REALTIME_EVENTS.OPPORTUNITY_CREATED, payload);
 
@@ -1567,7 +1570,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1584,7 +1587,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<OpportunityCreatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page opportunity created:', customEvent.detail.opportunityId);
+        logger.debug('Same-page opportunity created', { opportunityId: customEvent.detail.opportunityId });
         onCreated(customEvent.detail);
       }
     };
@@ -1594,10 +1597,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as OpportunityCreatedPayload;
-        console.log('📡 [RealtimeService] Cross-page opportunity created:', payload.opportunityId);
+        logger.debug('Cross-page opportunity created', { opportunityId: payload.opportunityId });
         onCreated(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse opportunity created event:', error);
+        logger.error('Failed to parse opportunity created event', { error });
       }
     };
 
@@ -1607,13 +1610,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as OpportunityCreatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending opportunity created:', payload.opportunityId);
+            logger.debug('Applying pending opportunity created', { opportunityId: payload.opportunityId });
             onCreated(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.OPPORTUNITY_CREATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending opportunity created:', error);
+        logger.error('Failed to process pending opportunity created', { error });
       }
     }
 
@@ -1635,7 +1638,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that an opportunity was updated
    */
   dispatchOpportunityUpdated(payload: OpportunityUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching OPPORTUNITY_UPDATED:', payload.opportunityId);
+    logger.debug('Dispatching OPPORTUNITY_UPDATED', { opportunityId: payload.opportunityId });
 
     this.dispatchEvent(REALTIME_EVENTS.OPPORTUNITY_UPDATED, payload);
 
@@ -1646,7 +1649,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1663,7 +1666,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<OpportunityUpdatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page opportunity update:', customEvent.detail.opportunityId);
+        logger.debug('Same-page opportunity update', { opportunityId: customEvent.detail.opportunityId });
         onUpdate(customEvent.detail);
       }
     };
@@ -1673,10 +1676,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as OpportunityUpdatedPayload;
-        console.log('📡 [RealtimeService] Cross-page opportunity update:', payload.opportunityId);
+        logger.debug('Cross-page opportunity update', { opportunityId: payload.opportunityId });
         onUpdate(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse opportunity update event:', error);
+        logger.error('Failed to parse opportunity update event', { error });
       }
     };
 
@@ -1686,13 +1689,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as OpportunityUpdatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending opportunity update:', payload.opportunityId);
+            logger.debug('Applying pending opportunity update', { opportunityId: payload.opportunityId });
             onUpdate(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.OPPORTUNITY_UPDATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending opportunity update:', error);
+        logger.error('Failed to process pending opportunity update', { error });
       }
     }
 
@@ -1714,7 +1717,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that an opportunity was deleted
    */
   dispatchOpportunityDeleted(payload: OpportunityDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching OPPORTUNITY_DELETED:', payload.opportunityId);
+    logger.debug('Dispatching OPPORTUNITY_DELETED', { opportunityId: payload.opportunityId });
 
     this.dispatchEvent(REALTIME_EVENTS.OPPORTUNITY_DELETED, payload);
 
@@ -1725,7 +1728,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1742,7 +1745,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<OpportunityDeletedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page opportunity deleted:', customEvent.detail.opportunityId);
+        logger.debug('Same-page opportunity deleted', { opportunityId: customEvent.detail.opportunityId });
         onDeleted(customEvent.detail);
       }
     };
@@ -1752,10 +1755,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as OpportunityDeletedPayload;
-        console.log('📡 [RealtimeService] Cross-page opportunity deleted:', payload.opportunityId);
+        logger.debug('Cross-page opportunity deleted', { opportunityId: payload.opportunityId });
         onDeleted(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse opportunity deleted event:', error);
+        logger.error('Failed to parse opportunity deleted event', { error });
       }
     };
 
@@ -1765,13 +1768,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as OpportunityDeletedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending opportunity deleted:', payload.opportunityId);
+            logger.debug('Applying pending opportunity deleted', { opportunityId: payload.opportunityId });
             onDeleted(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.OPPORTUNITY_DELETED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending opportunity deleted:', error);
+        logger.error('Failed to process pending opportunity deleted', { error });
       }
     }
 
@@ -1797,7 +1800,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new communication was logged
    */
   dispatchCommunicationCreated(payload: CommunicationCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching COMMUNICATION_CREATED:', payload.communicationId);
+    logger.debug('Dispatching COMMUNICATION_CREATED', { communicationId: payload.communicationId });
 
     this.dispatchEvent(REALTIME_EVENTS.COMMUNICATION_CREATED, payload);
 
@@ -1808,7 +1811,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1825,7 +1828,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<CommunicationCreatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page communication created:', customEvent.detail.communicationId);
+        logger.debug('Same-page communication created', { communicationId: customEvent.detail.communicationId });
         onCreated(customEvent.detail);
       }
     };
@@ -1835,10 +1838,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as CommunicationCreatedPayload;
-        console.log('📡 [RealtimeService] Cross-page communication created:', payload.communicationId);
+        logger.debug('Cross-page communication created', { communicationId: payload.communicationId });
         onCreated(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse communication created event:', error);
+        logger.error('Failed to parse communication created event', { error });
       }
     };
 
@@ -1848,13 +1851,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as CommunicationCreatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending communication created:', payload.communicationId);
+            logger.debug('Applying pending communication created', { communicationId: payload.communicationId });
             onCreated(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.COMMUNICATION_CREATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending communication created:', error);
+        logger.error('Failed to process pending communication created', { error });
       }
     }
 
@@ -1876,7 +1879,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a communication was updated
    */
   dispatchCommunicationUpdated(payload: CommunicationUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching COMMUNICATION_UPDATED:', payload.communicationId);
+    logger.debug('Dispatching COMMUNICATION_UPDATED', { communicationId: payload.communicationId });
 
     this.dispatchEvent(REALTIME_EVENTS.COMMUNICATION_UPDATED, payload);
 
@@ -1887,7 +1890,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1904,7 +1907,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<CommunicationUpdatedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page communication update:', customEvent.detail.communicationId);
+        logger.debug('Same-page communication update', { communicationId: customEvent.detail.communicationId });
         onUpdate(customEvent.detail);
       }
     };
@@ -1914,10 +1917,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as CommunicationUpdatedPayload;
-        console.log('📡 [RealtimeService] Cross-page communication update:', payload.communicationId);
+        logger.debug('Cross-page communication update', { communicationId: payload.communicationId });
         onUpdate(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse communication update event:', error);
+        logger.error('Failed to parse communication update event', { error });
       }
     };
 
@@ -1927,13 +1930,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as CommunicationUpdatedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending communication update:', payload.communicationId);
+            logger.debug('Applying pending communication update', { communicationId: payload.communicationId });
             onUpdate(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.COMMUNICATION_UPDATED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending communication update:', error);
+        logger.error('Failed to process pending communication update', { error });
       }
     }
 
@@ -1955,7 +1958,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a communication was deleted
    */
   dispatchCommunicationDeleted(payload: CommunicationDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching COMMUNICATION_DELETED:', payload.communicationId);
+    logger.debug('Dispatching COMMUNICATION_DELETED', { communicationId: payload.communicationId });
 
     this.dispatchEvent(REALTIME_EVENTS.COMMUNICATION_DELETED, payload);
 
@@ -1966,7 +1969,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -1983,7 +1986,7 @@ class RealtimeServiceCore {
     const handleCustomEvent = (event: Event) => {
       const customEvent = event as CustomEvent<CommunicationDeletedPayload>;
       if (customEvent.detail) {
-        console.log('📡 [RealtimeService] Same-page communication deleted:', customEvent.detail.communicationId);
+        logger.debug('Same-page communication deleted', { communicationId: customEvent.detail.communicationId });
         onDeleted(customEvent.detail);
       }
     };
@@ -1993,10 +1996,10 @@ class RealtimeServiceCore {
 
       try {
         const payload = JSON.parse(event.newValue) as CommunicationDeletedPayload;
-        console.log('📡 [RealtimeService] Cross-page communication deleted:', payload.communicationId);
+        logger.debug('Cross-page communication deleted', { communicationId: payload.communicationId });
         onDeleted(payload);
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to parse communication deleted event:', error);
+        logger.error('Failed to parse communication deleted event', { error });
       }
     };
 
@@ -2006,13 +2009,13 @@ class RealtimeServiceCore {
         if (pendingUpdate) {
           const payload = JSON.parse(pendingUpdate) as CommunicationDeletedPayload;
           if (Date.now() - payload.timestamp < 5000) {
-            console.log('📡 [RealtimeService] Applying pending communication deleted:', payload.communicationId);
+            logger.debug('Applying pending communication deleted', { communicationId: payload.communicationId });
             onDeleted(payload);
           }
           localStorage.removeItem(REALTIME_STORAGE_KEYS.COMMUNICATION_DELETED);
         }
       } catch (error) {
-        console.error('❌ [RealtimeService] Failed to process pending communication deleted:', error);
+        logger.error('Failed to process pending communication deleted', { error });
       }
     }
 
@@ -2038,7 +2041,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new file record was created
    */
   dispatchFileCreated(payload: FileCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FILE_CREATED:', payload.fileId);
+    logger.debug('Dispatching FILE_CREATED', { fileId: payload.fileId });
 
     this.dispatchEvent(REALTIME_EVENTS.FILE_CREATED, payload);
 
@@ -2049,7 +2052,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2059,7 +2062,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a file record was updated
    */
   dispatchFileUpdated(payload: FileUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FILE_UPDATED:', payload.fileId);
+    logger.debug('Dispatching FILE_UPDATED', { fileId: payload.fileId });
 
     this.dispatchEvent(REALTIME_EVENTS.FILE_UPDATED, payload);
 
@@ -2070,7 +2073,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2080,7 +2083,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a file was moved to trash
    */
   dispatchFileTrashed(payload: FileTrashedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FILE_TRASHED:', payload.fileId);
+    logger.debug('Dispatching FILE_TRASHED', { fileId: payload.fileId });
 
     this.dispatchEvent(REALTIME_EVENTS.FILE_TRASHED, payload);
 
@@ -2091,7 +2094,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2101,7 +2104,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a file was restored from trash
    */
   dispatchFileRestored(payload: FileRestoredPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FILE_RESTORED:', payload.fileId);
+    logger.debug('Dispatching FILE_RESTORED', { fileId: payload.fileId });
 
     this.dispatchEvent(REALTIME_EVENTS.FILE_RESTORED, payload);
 
@@ -2112,7 +2115,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2122,7 +2125,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a file was permanently deleted
    */
   dispatchFileDeleted(payload: FileDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FILE_DELETED:', payload.fileId);
+    logger.debug('Dispatching FILE_DELETED', { fileId: payload.fileId });
 
     this.dispatchEvent(REALTIME_EVENTS.FILE_DELETED, payload);
 
@@ -2133,7 +2136,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2147,7 +2150,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new notification was created
    */
   dispatchNotificationCreated(payload: NotificationCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching NOTIFICATION_CREATED:', payload.notificationId);
+    logger.debug('Dispatching NOTIFICATION_CREATED', { notificationId: payload.notificationId });
 
     this.dispatchEvent(REALTIME_EVENTS.NOTIFICATION_CREATED, payload);
 
@@ -2158,7 +2161,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2168,7 +2171,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a notification was updated (e.g., marked as read)
    */
   dispatchNotificationUpdated(payload: NotificationUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching NOTIFICATION_UPDATED:', payload.notificationId);
+    logger.debug('Dispatching NOTIFICATION_UPDATED', { notificationId: payload.notificationId });
 
     this.dispatchEvent(REALTIME_EVENTS.NOTIFICATION_UPDATED, payload);
 
@@ -2179,7 +2182,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2189,7 +2192,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a notification was deleted
    */
   dispatchNotificationDeleted(payload: NotificationDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching NOTIFICATION_DELETED:', payload.notificationId);
+    logger.debug('Dispatching NOTIFICATION_DELETED', { notificationId: payload.notificationId });
 
     this.dispatchEvent(REALTIME_EVENTS.NOTIFICATION_DELETED, payload);
 
@@ -2200,7 +2203,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2214,7 +2217,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new obligation was created
    */
   dispatchObligationCreated(payload: ObligationCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching OBLIGATION_CREATED:', payload.obligationId);
+    logger.debug('Dispatching OBLIGATION_CREATED', { obligationId: payload.obligationId });
 
     this.dispatchEvent(REALTIME_EVENTS.OBLIGATION_CREATED, payload);
 
@@ -2225,7 +2228,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2235,7 +2238,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that an obligation was updated
    */
   dispatchObligationUpdated(payload: ObligationUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching OBLIGATION_UPDATED:', payload.obligationId);
+    logger.debug('Dispatching OBLIGATION_UPDATED', { obligationId: payload.obligationId });
 
     this.dispatchEvent(REALTIME_EVENTS.OBLIGATION_UPDATED, payload);
 
@@ -2246,7 +2249,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2256,7 +2259,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that an obligation was deleted
    */
   dispatchObligationDeleted(payload: ObligationDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching OBLIGATION_DELETED:', payload.obligationId);
+    logger.debug('Dispatching OBLIGATION_DELETED', { obligationId: payload.obligationId });
 
     this.dispatchEvent(REALTIME_EVENTS.OBLIGATION_DELETED, payload);
 
@@ -2267,7 +2270,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2281,7 +2284,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new workspace was created
    */
   dispatchWorkspaceCreated(payload: WorkspaceCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching WORKSPACE_CREATED:', payload.workspaceId);
+    logger.debug('Dispatching WORKSPACE_CREATED', { workspaceId: payload.workspaceId });
 
     this.dispatchEvent(REALTIME_EVENTS.WORKSPACE_CREATED, payload);
 
@@ -2292,7 +2295,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2302,7 +2305,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a workspace was updated
    */
   dispatchWorkspaceUpdated(payload: WorkspaceUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching WORKSPACE_UPDATED:', payload.workspaceId);
+    logger.debug('Dispatching WORKSPACE_UPDATED', { workspaceId: payload.workspaceId });
 
     this.dispatchEvent(REALTIME_EVENTS.WORKSPACE_UPDATED, payload);
 
@@ -2313,7 +2316,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2323,7 +2326,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a workspace was deleted
    */
   dispatchWorkspaceDeleted(payload: WorkspaceDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching WORKSPACE_DELETED:', payload.workspaceId);
+    logger.debug('Dispatching WORKSPACE_DELETED', { workspaceId: payload.workspaceId });
 
     this.dispatchEvent(REALTIME_EVENTS.WORKSPACE_DELETED, payload);
 
@@ -2334,7 +2337,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2348,7 +2351,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new relationship was created
    */
   dispatchRelationshipCreated(payload: RelationshipCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching RELATIONSHIP_CREATED:', payload.relationshipId);
+    logger.debug('Dispatching RELATIONSHIP_CREATED', { relationshipId: payload.relationshipId });
 
     this.dispatchEvent(REALTIME_EVENTS.RELATIONSHIP_CREATED, payload);
 
@@ -2359,7 +2362,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2369,7 +2372,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a relationship was updated
    */
   dispatchRelationshipUpdated(payload: RelationshipUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching RELATIONSHIP_UPDATED:', payload.relationshipId);
+    logger.debug('Dispatching RELATIONSHIP_UPDATED', { relationshipId: payload.relationshipId });
 
     this.dispatchEvent(REALTIME_EVENTS.RELATIONSHIP_UPDATED, payload);
 
@@ -2380,7 +2383,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2390,7 +2393,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a relationship was deleted
    */
   dispatchRelationshipDeleted(payload: RelationshipDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching RELATIONSHIP_DELETED:', payload.relationshipId);
+    logger.debug('Dispatching RELATIONSHIP_DELETED', { relationshipId: payload.relationshipId });
 
     this.dispatchEvent(REALTIME_EVENTS.RELATIONSHIP_DELETED, payload);
 
@@ -2401,7 +2404,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2415,7 +2418,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new session was created
    */
   dispatchSessionCreated(payload: SessionCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching SESSION_CREATED:', payload.sessionId);
+    logger.debug('Dispatching SESSION_CREATED', { sessionId: payload.sessionId });
 
     this.dispatchEvent(REALTIME_EVENTS.SESSION_CREATED, payload);
 
@@ -2426,7 +2429,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2436,7 +2439,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a session was updated
    */
   dispatchSessionUpdated(payload: SessionUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching SESSION_UPDATED:', payload.sessionId);
+    logger.debug('Dispatching SESSION_UPDATED', { sessionId: payload.sessionId });
 
     this.dispatchEvent(REALTIME_EVENTS.SESSION_UPDATED, payload);
 
@@ -2447,7 +2450,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2457,7 +2460,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a session was terminated
    */
   dispatchSessionDeleted(payload: SessionDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching SESSION_DELETED:', payload.sessionId);
+    logger.debug('Dispatching SESSION_DELETED', { sessionId: payload.sessionId });
 
     this.dispatchEvent(REALTIME_EVENTS.SESSION_DELETED, payload);
 
@@ -2468,7 +2471,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2482,7 +2485,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that user settings were updated
    */
   dispatchUserSettingsUpdated(payload: UserSettingsUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching USER_SETTINGS_UPDATED:', payload.userId);
+    logger.debug('Dispatching USER_SETTINGS_UPDATED', { userId: payload.userId });
 
     this.dispatchEvent(REALTIME_EVENTS.USER_SETTINGS_UPDATED, payload);
 
@@ -2493,7 +2496,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2507,7 +2510,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a new floorplan was created
    */
   dispatchFloorplanCreated(payload: FloorplanCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FLOORPLAN_CREATED:', payload.floorplanId);
+    logger.debug('Dispatching FLOORPLAN_CREATED', { floorplanId: payload.floorplanId });
 
     this.dispatchEvent(REALTIME_EVENTS.FLOORPLAN_CREATED, payload);
 
@@ -2518,7 +2521,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2528,7 +2531,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a floorplan was updated
    */
   dispatchFloorplanUpdated(payload: FloorplanUpdatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FLOORPLAN_UPDATED:', payload.floorplanId);
+    logger.debug('Dispatching FLOORPLAN_UPDATED', { floorplanId: payload.floorplanId });
 
     this.dispatchEvent(REALTIME_EVENTS.FLOORPLAN_UPDATED, payload);
 
@@ -2539,7 +2542,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2549,7 +2552,7 @@ class RealtimeServiceCore {
    * Notifies all listening components that a floorplan was deleted
    */
   dispatchFloorplanDeleted(payload: FloorplanDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FLOORPLAN_DELETED:', payload.floorplanId);
+    logger.debug('Dispatching FLOORPLAN_DELETED', { floorplanId: payload.floorplanId });
 
     this.dispatchEvent(REALTIME_EVENTS.FLOORPLAN_DELETED, payload);
 
@@ -2560,7 +2563,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2574,7 +2577,7 @@ class RealtimeServiceCore {
    * Used when a contact is linked to an entity via AssociationService
    */
   dispatchContactLinkCreated(payload: ContactLinkCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching CONTACT_LINK_CREATED:', payload.linkId);
+    logger.debug('Dispatching CONTACT_LINK_CREATED', { linkId: payload.linkId });
 
     this.dispatchEvent(REALTIME_EVENTS.CONTACT_LINK_CREATED, payload);
 
@@ -2585,7 +2588,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2594,7 +2597,7 @@ class RealtimeServiceCore {
    * 🏢 ENTERPRISE: Dispatch contact link deleted event
    */
   dispatchContactLinkDeleted(payload: ContactLinkDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching CONTACT_LINK_DELETED:', payload.linkId);
+    logger.debug('Dispatching CONTACT_LINK_DELETED', { linkId: payload.linkId });
 
     this.dispatchEvent(REALTIME_EVENTS.CONTACT_LINK_DELETED, payload);
 
@@ -2605,7 +2608,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2615,7 +2618,7 @@ class RealtimeServiceCore {
    * Used when a file is linked to an entity via AssociationService
    */
   dispatchFileLinkCreated(payload: FileLinkCreatedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FILE_LINK_CREATED:', payload.linkId);
+    logger.debug('Dispatching FILE_LINK_CREATED', { linkId: payload.linkId });
 
     this.dispatchEvent(REALTIME_EVENTS.FILE_LINK_CREATED, payload);
 
@@ -2626,7 +2629,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2635,7 +2638,7 @@ class RealtimeServiceCore {
    * 🏢 ENTERPRISE: Dispatch file link deleted event
    */
   dispatchFileLinkDeleted(payload: FileLinkDeletedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching FILE_LINK_DELETED:', payload.linkId);
+    logger.debug('Dispatching FILE_LINK_DELETED', { linkId: payload.linkId });
 
     this.dispatchEvent(REALTIME_EVENTS.FILE_LINK_DELETED, payload);
 
@@ -2646,7 +2649,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2660,7 +2663,7 @@ class RealtimeServiceCore {
    * Used by EntityLinkingService for centralized real-time sync
    */
   dispatchEntityLinked(payload: EntityLinkedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching ENTITY_LINKED:', payload.entityType, payload.entityId, '→', payload.parentType, payload.parentId);
+    logger.debug('Dispatching ENTITY_LINKED', { entityType: payload.entityType, entityId: payload.entityId, parentType: payload.parentType, parentId: payload.parentId });
 
     this.dispatchEvent(REALTIME_EVENTS.ENTITY_LINKED, payload);
 
@@ -2671,7 +2674,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2680,7 +2683,7 @@ class RealtimeServiceCore {
    * 🏢 ENTERPRISE: Dispatch entity unlinked event
    */
   dispatchEntityUnlinked(payload: EntityUnlinkedPayload): void {
-    console.log('📤 [RealtimeService] Dispatching ENTITY_UNLINKED:', payload.entityType, payload.entityId);
+    logger.debug('Dispatching ENTITY_UNLINKED', { entityType: payload.entityType, entityId: payload.entityId });
 
     this.dispatchEvent(REALTIME_EVENTS.ENTITY_UNLINKED, payload);
 
@@ -2691,7 +2694,7 @@ class RealtimeServiceCore {
           JSON.stringify(payload)
         );
       } catch (error) {
-        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+        logger.warn('localStorage notification failed', { error });
       }
     }
   }
@@ -2706,7 +2709,7 @@ class RealtimeServiceCore {
   private unsubscribe(subscriptionId: string): void {
     const entry = this.subscriptions.get(subscriptionId);
     if (entry) {
-      console.log(`🔕 [RealtimeService] Unsubscribing: ${subscriptionId}`);
+      logger.debug(`Unsubscribing: ${subscriptionId}`);
       entry.unsubscribe();
       this.subscriptions.delete(subscriptionId);
     }
@@ -2727,7 +2730,7 @@ class RealtimeServiceCore {
    * 🏢 ENTERPRISE: Unsubscribe from all subscriptions
    */
   unsubscribeAll(): void {
-    console.log(`🔕 [RealtimeService] Unsubscribing from all (${this.subscriptions.size} subscriptions)`);
+    logger.debug(`Unsubscribing from all (${this.subscriptions.size} subscriptions)`);
     for (const [id] of this.subscriptions) {
       this.unsubscribe(id);
     }

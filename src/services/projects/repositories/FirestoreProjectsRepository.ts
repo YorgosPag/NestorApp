@@ -7,6 +7,9 @@ import type { Building } from '@/types/building/contracts';
 import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FirestoreProjectsRepository');
 
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const PROJECTS_COLLECTION = COLLECTIONS.PROJECTS;
@@ -168,7 +171,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
       // 🏢 ENTERPRISE: Perform the update
       await docRef.update(updateData);
 
-      console.log(`✅ PROJECT UPDATED: ${projectId}`, {
+      logger.info(`Project updated: ${projectId}`, {
         updatedFields: Object.keys(updateData).filter(k => k !== 'updatedAt')
       });
 

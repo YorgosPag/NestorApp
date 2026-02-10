@@ -23,6 +23,9 @@
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const notifLogger = createModuleLogger('EnterpriseNotificationService');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -303,9 +306,9 @@ class EnterpriseNotificationService {
       });
 
       this.db = getFirestore(app);
-      console.log('✅ Enterprise Notification Service: Firebase connection established');
+      notifLogger.info('Firebase connection established');
     } catch (error) {
-      console.warn('⚠️ Enterprise Notification Service: Firebase connection failed, using fallback mode', error);
+      notifLogger.warn('Firebase connection failed, using fallback mode', { error });
     }
   }
 
@@ -346,11 +349,11 @@ class EnterpriseNotificationService {
           ttl: this.cacheTtl.fullConfig
         });
 
-        console.log(`✅ Enterprise notification configuration loaded from database: ${environment}${tenantId ? ` (tenant: ${tenantId})` : ''}`);
+        notifLogger.info('Configuration loaded from database', { environment, tenantId });
         return config;
       }
     } catch (error) {
-      console.warn('⚠️ Enterprise Notification Service: Database load failed, using fallback', error);
+      notifLogger.warn('Database load failed, using fallback', { error });
     }
 
     // Fallback to default configuration
@@ -446,7 +449,7 @@ class EnterpriseNotificationService {
         return priorities;
       }
     } catch (error) {
-      console.warn('⚠️ Priority loading failed, using fallback', error);
+      notifLogger.warn('Priority loading failed, using fallback', { error });
     }
 
     // Fallback to default priorities
@@ -528,7 +531,7 @@ class EnterpriseNotificationService {
         return channels;
       }
     } catch (error) {
-      console.warn('⚠️ Channel loading failed, using fallback', error);
+      notifLogger.warn('Channel loading failed, using fallback', { error });
     }
 
     // Fallback to default channels
@@ -609,7 +612,7 @@ class EnterpriseNotificationService {
         return mappings;
       }
     } catch (error) {
-      console.warn('⚠️ Severity mapping loading failed, using fallback', error);
+      notifLogger.warn('Severity mapping loading failed, using fallback', { error });
     }
 
     // Fallback to default mappings
@@ -665,7 +668,7 @@ class EnterpriseNotificationService {
 
     const mapping = mappings.find(m => m.severity === severity);
     if (!mapping) {
-      console.warn(`⚠️ No mapping found for severity: ${severity}, using default`);
+      notifLogger.warn('No mapping found for severity, using default', { severity });
       return 'normal';
     }
 
@@ -738,14 +741,14 @@ class EnterpriseNotificationService {
     this.prioritiesCache.clear();
     this.channelsCache.clear();
     this.mappingsCache.clear();
-    console.log('✅ Enterprise notification service cache cleared');
+    notifLogger.info('Enterprise notification service cache cleared');
   }
 
   /**
    * Warm up cache για specific environment/tenant
    */
   async warmCache(environment: string, tenantId?: string): Promise<void> {
-    console.log(`🔥 Warming notification cache για ${environment}${tenantId ? ` (tenant: ${tenantId})` : ''}`);
+    notifLogger.info('Warming notification cache', { environment, tenantId });
 
     // Load all configurations in parallel
     await Promise.allSettled([
@@ -755,7 +758,7 @@ class EnterpriseNotificationService {
       this.loadNotificationConfiguration(environment, tenantId)
     ]);
 
-    console.log('✅ Notification cache warmed successfully');
+    notifLogger.info('Notification cache warmed successfully');
   }
 
   // ========================================================================

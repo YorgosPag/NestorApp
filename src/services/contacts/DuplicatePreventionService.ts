@@ -19,6 +19,9 @@ import {
 import { db } from '@/lib/firebase';
 import type { Contact, ContactType } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('DuplicatePreventionService');
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -242,7 +245,7 @@ export class DuplicatePreventionService {
       };
 
     } catch (error) {
-      console.error('🚨 DUPLICATE DETECTION ERROR:', error);
+      logger.error('Duplicate detection error', { error });
 
       // Fail-safe: Allow creation αλλά με warning
       return {
@@ -291,7 +294,7 @@ export class DuplicatePreventionService {
         matches.push(...fieldMatches);
       } catch (error) {
         // Ignore query errors και continue
-        console.warn(`Query error για field ${field}:`, error);
+        logger.warn(`Query error for field ${field}`, { error });
       }
     }
 
@@ -335,7 +338,7 @@ export class DuplicatePreventionService {
         ...doc.data()
       }));
     } catch (error) {
-      console.warn('Rapid duplicate detection error:', error);
+      logger.warn('Rapid duplicate detection error', { error });
       return [];
     }
   }

@@ -11,6 +11,9 @@
 // ============================================================================
 
 import { ContactRelationship } from '@/types/contacts/relationships';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('RelationshipCacheAdapter');
 
 // ============================================================================
 // CACHE TYPES
@@ -102,7 +105,7 @@ export class RelationshipCacheAdapter {
     }
 
     this.startCleanupTimer();
-    console.log('💾 CACHE: Initialized με config:', this.config);
+    logger.info('Cache initialized', { config: this.config });
   }
 
   /**
@@ -110,7 +113,7 @@ export class RelationshipCacheAdapter {
    */
   static configure(newConfig: Partial<CacheConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('⚙️ CACHE: Configuration updated:', this.config);
+    logger.info('Cache configuration updated', { config: this.config });
   }
 
   /**
@@ -154,7 +157,7 @@ export class RelationshipCacheAdapter {
     entry.lastAccessed = Date.now();
     this.stats.totalHits++;
 
-    console.log('🎯 CACHE HIT:', keyString);
+    logger.debug('Cache hit', { key: keyString });
     return entry.data as T;
   }
 
@@ -181,7 +184,7 @@ export class RelationshipCacheAdapter {
     this.cache.set(keyString, entry);
     this.stats.totalSets++;
 
-    console.log('💾 CACHE SET:', keyString, 'TTL:', actualTTL);
+    logger.debug('Cache set', { key: keyString, ttl: actualTTL });
   }
 
   /**
@@ -193,7 +196,7 @@ export class RelationshipCacheAdapter {
 
     if (deleted) {
       this.stats.totalDeletes++;
-      console.log('🗑️ CACHE DELETE:', keyString);
+      logger.debug('Cache delete', { key: keyString });
     }
 
     return deleted;
@@ -205,7 +208,7 @@ export class RelationshipCacheAdapter {
   static clear(): void {
     const size = this.cache.size;
     this.cache.clear();
-    console.log('🧹 CACHE CLEARED:', size, 'entries removed');
+    logger.info('Cache cleared', { entriesRemoved: size });
   }
 
   // ========================================================================
@@ -327,7 +330,7 @@ export class RelationshipCacheAdapter {
    * ❌ Invalidate Contact Cache
    */
   static invalidateContact(contactId: string): void {
-    console.log('❌ CACHE INVALIDATION: Contact', contactId);
+    logger.info('Cache invalidation: Contact', { contactId });
 
     // Delete direct contact cache
     this.delete({ type: 'contact', id: contactId });
@@ -343,7 +346,7 @@ export class RelationshipCacheAdapter {
    * ❌ Invalidate Organization Cache
    */
   static invalidateOrganization(organizationId: string): void {
-    console.log('❌ CACHE INVALIDATION: Organization', organizationId);
+    logger.info('Cache invalidation: Organization', { organizationId });
 
     // Delete all organization-related caches
     this.invalidatePattern(`organization:${organizationId}*`);
@@ -356,7 +359,7 @@ export class RelationshipCacheAdapter {
    * ❌ Invalidate Department Cache
    */
   static invalidateDepartment(organizationId: string, departmentName: string): void {
-    console.log('❌ CACHE INVALIDATION: Department', departmentName);
+    logger.info('Cache invalidation: Department', { departmentName });
 
     const key: CacheKey = {
       type: 'department',
@@ -384,7 +387,7 @@ export class RelationshipCacheAdapter {
     }
 
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log('❌ CACHE PATTERN INVALIDATION:', pattern, 'deleted:', keysToDelete.length);
+    logger.debug('Cache pattern invalidation', { pattern, deletedCount: keysToDelete.length });
   }
 
   // ========================================================================
@@ -407,7 +410,7 @@ export class RelationshipCacheAdapter {
     keysToDelete.forEach(key => this.cache.delete(key));
 
     if (keysToDelete.length > 0) {
-      console.log('🧹 CACHE CLEANUP:', keysToDelete.length, 'expired entries removed');
+      logger.debug('Cache cleanup', { expiredEntriesRemoved: keysToDelete.length });
     }
   }
 
@@ -427,7 +430,7 @@ export class RelationshipCacheAdapter {
 
     if (oldestKey) {
       this.cache.delete(oldestKey);
-      console.log('🔄 CACHE EVICTION: Removed oldest entry:', oldestKey);
+      logger.debug('Cache eviction: Removed oldest entry', { key: oldestKey });
     }
   }
 
@@ -475,10 +478,10 @@ export class RelationshipCacheAdapter {
    */
   static logStatus(): void {
     const stats = this.getStatistics();
-    console.log('📊 CACHE STATUS:', {
+    logger.info('Cache status', {
       entries: stats.totalEntries,
       hitRate: `${stats.hitRate}%`,
-      memoryUsage: `${Math.round(stats.memoryUsage / 1024)}KB`,
+      memoryUsageKB: Math.round(stats.memoryUsage / 1024),
       hits: stats.totalHits,
       misses: stats.totalMisses
     });

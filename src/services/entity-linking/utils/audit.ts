@@ -24,6 +24,9 @@
 
 import type { EntityType } from '../types';
 import { generateAuditId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const auditModuleLogger = createModuleLogger('AuditLogger');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Audit Types
@@ -174,7 +177,7 @@ export class AuditLogger {
    */
   static configure(config: Partial<AuditConfig>): void {
     this.config = { ...this.config, ...config };
-    console.log('📋 [AuditLogger] Configuration updated:', this.config);
+    auditModuleLogger.info('Configuration updated', { config: this.config });
   }
 
   /**
@@ -385,7 +388,7 @@ export class AuditLogger {
    */
   static clearBuffer(): void {
     this.buffer = [];
-    console.log('📋 [AuditLogger] Buffer cleared');
+    auditModuleLogger.info('Buffer cleared');
   }
 
   /**
@@ -486,16 +489,16 @@ export class AuditLogger {
 
     switch (severity) {
       case 'ERROR':
-        console.error(prefix, message, entry);
+        auditModuleLogger.error(`${prefix} ${message}`, { entry });
         break;
       case 'WARN':
-        console.warn(prefix, message, entry);
+        auditModuleLogger.warn(`${prefix} ${message}`, { entry });
         break;
       case 'DEBUG':
-        console.debug(prefix, message);
+        auditModuleLogger.debug(`${prefix} ${message}`);
         break;
       default:
-        console.log(prefix, message);
+        auditModuleLogger.info(`${prefix} ${message}`);
     }
   }
 

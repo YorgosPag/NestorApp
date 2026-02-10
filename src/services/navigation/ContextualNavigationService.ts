@@ -11,6 +11,9 @@
  */
 
 import { ParsedUrlQuery } from 'querystring';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ContextualNavigationService');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -164,7 +167,7 @@ export class ContextualNavigationService {
     const config = ENTITY_ROUTES[entityType];
 
     if (!config) {
-      console.error(`[ContextualNavigation] Unknown entity type: ${entityType}`);
+      logger.error(`Unknown entity type: ${entityType}`);
       return '/';
     }
 

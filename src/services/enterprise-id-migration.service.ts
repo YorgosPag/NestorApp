@@ -20,6 +20,9 @@
  */
 
 import { enterpriseIdService, isLegacyId, validateEnterpriseId } from './enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EnterpriseIdMigrationService');
 
 /**
  * Migration phase definitions
@@ -95,7 +98,7 @@ export class EnterpriseIdMigrationService {
   setMigrationPhase(phase: MigrationPhase): void {
     // Allow idempotent operations (setting same phase)
     if (this.config.currentPhase === phase) {
-      console.log(`✅ Migration phase already set to: ${phase}`);
+      logger.info(`Migration phase already set to: ${phase}`);
       return;
     }
 
@@ -110,7 +113,7 @@ export class EnterpriseIdMigrationService {
     // Update configuration based on phase
     this.updateConfigForPhase(phase);
 
-    console.log(`🚀 Migration phase changed: ${previousPhase} → ${phase}`);
+    logger.info(`Migration phase changed`, { from: previousPhase, to: phase });
   }
 
   /**
@@ -210,7 +213,7 @@ export class EnterpriseIdMigrationService {
 
     this.idMappings.set(legacyId, mapping);
 
-    console.log(`🔄 Created ID mapping: ${legacyId} → ${enterpriseId}`);
+    logger.info(`Created ID mapping`, { legacyId, enterpriseId });
 
     return enterpriseId;
   }
@@ -303,7 +306,7 @@ export class EnterpriseIdMigrationService {
       this.idMappings.set(mapping.legacyId, mapping);
     });
 
-    console.log(`🔄 Imported ${mappings.length} ID mappings`);
+    logger.info(`Imported ID mappings`, { count: mappings.length });
   }
 
   /**
@@ -332,7 +335,7 @@ export function resolveSafeId(id: string, entityType: string, migrationService: 
   try {
     return migrationService.resolveId(id, entityType);
   } catch (error) {
-    console.warn(`⚠️ ID resolution failed for ${id}, using original ID`);
+    logger.warn(`ID resolution failed, using original ID`, { id });
     return id;
   }
 }

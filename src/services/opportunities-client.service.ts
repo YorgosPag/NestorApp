@@ -17,6 +17,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Opportunity } from '@/types/crm';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('OpportunitiesClientService');
 
 /**
  * 🏢 ENTERPRISE: Opportunity create payload type
@@ -56,7 +59,7 @@ export async function createOpportunityClient(
   data: OpportunityCreatePayload
 ): Promise<{ success: boolean; opportunityId?: string; error?: string }> {
   try {
-    console.log(`🎯 [createOpportunityClient] Creating new opportunity...`);
+    logger.info('Creating new opportunity');
 
     const opportunitiesRef = collection(db, COLLECTIONS.OPPORTUNITIES);
     const docRef = await addDoc(opportunitiesRef, {
@@ -65,7 +68,7 @@ export async function createOpportunityClient(
       updatedAt: serverTimestamp()
     });
 
-    console.log(`✅ [createOpportunityClient] Opportunity created with ID: ${docRef.id}`);
+    logger.info('Opportunity created', { opportunityId: docRef.id });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchOpportunityCreated({
@@ -83,7 +86,7 @@ export async function createOpportunityClient(
     return { success: true, opportunityId: docRef.id };
 
   } catch (error) {
-    console.error('❌ [createOpportunityClient] Error:', error);
+    logger.error('Error creating opportunity', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -103,7 +106,7 @@ export async function updateOpportunityClient(
   updates: OpportunityUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [updateOpportunityClient] Updating opportunity ${opportunityId}...`);
+    logger.info('Updating opportunity', { opportunityId });
 
     const opportunityRef = doc(db, COLLECTIONS.OPPORTUNITIES, opportunityId);
     await updateDoc(opportunityRef, {
@@ -111,7 +114,7 @@ export async function updateOpportunityClient(
       updatedAt: serverTimestamp()
     });
 
-    console.log(`✅ [updateOpportunityClient] Opportunity ${opportunityId} updated successfully`);
+    logger.info('Opportunity updated successfully', { opportunityId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchOpportunityUpdated({
@@ -131,7 +134,7 @@ export async function updateOpportunityClient(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [updateOpportunityClient] Error:', error);
+    logger.error('Error updating opportunity', { opportunityId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -147,12 +150,12 @@ export async function deleteOpportunityClient(
   opportunityId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [deleteOpportunityClient] Deleting opportunity ${opportunityId}...`);
+    logger.info('Deleting opportunity', { opportunityId });
 
     const opportunityRef = doc(db, COLLECTIONS.OPPORTUNITIES, opportunityId);
     await deleteDoc(opportunityRef);
 
-    console.log(`✅ [deleteOpportunityClient] Opportunity ${opportunityId} deleted successfully`);
+    logger.info('Opportunity deleted successfully', { opportunityId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchOpportunityDeleted({
@@ -163,7 +166,7 @@ export async function deleteOpportunityClient(
     return { success: true };
 
   } catch (error) {
-    console.error('❌ [deleteOpportunityClient] Error:', error);
+    logger.error('Error deleting opportunity', { opportunityId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -177,7 +180,7 @@ export async function deleteOpportunityClient(
  */
 export async function getOpportunitiesClient(limitCount: number = 100): Promise<Opportunity[]> {
   try {
-    console.log('🔍 [getOpportunitiesClient] Starting Firestore query...');
+    logger.info('Starting Firestore query');
 
     const opportunitiesQuery = query(
       collection(db, COLLECTIONS.OPPORTUNITIES),
@@ -191,11 +194,11 @@ export async function getOpportunitiesClient(limitCount: number = 100): Promise<
       ...docSnap.data()
     })) as Opportunity[];
 
-    console.log(`✅ [getOpportunitiesClient] Loaded ${opportunities.length} opportunities from Firebase`);
+    logger.info('Loaded opportunities from Firebase', { count: opportunities.length });
     return opportunities;
 
   } catch (error) {
-    console.error('❌ [getOpportunitiesClient] Error:', error);
+    logger.error('Error loading opportunities', { error });
     return [];
   }
 }

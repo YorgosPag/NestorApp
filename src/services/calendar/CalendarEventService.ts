@@ -20,6 +20,9 @@ import { AppointmentsRepository } from './AppointmentsRepository';
 import { taskToCalendarEvent, appointmentToCalendarEvent } from './mappers';
 import type { CalendarEvent } from '@/types/calendar-event';
 import type { ICalendarEventService } from './contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CalendarEventService');
 
 // ============================================================================
 // SINGLETON REPOSITORIES
@@ -72,10 +75,10 @@ export async function getCalendarEvents(
   const appointmentList = appointmentResult.status === 'fulfilled' ? appointmentResult.value : [];
 
   if (taskResult.status === 'rejected') {
-    console.warn('[CalendarEventService] Tasks fetch failed:', taskResult.reason);
+    logger.warn('Tasks fetch failed', { reason: taskResult.reason });
   }
   if (appointmentResult.status === 'rejected') {
-    console.warn('[CalendarEventService] Appointments fetch failed:', appointmentResult.reason);
+    logger.warn('Appointments fetch failed', { reason: appointmentResult.reason });
   }
 
   // Map to CalendarEvent, filtering out entries without dates

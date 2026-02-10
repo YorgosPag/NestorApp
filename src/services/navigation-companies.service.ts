@@ -3,6 +3,9 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationCompaniesService');
 
 /**
  * Service για διαχείριση των εταιρειών που εμφανίζονται στην πλοήγηση
@@ -163,7 +166,7 @@ export class NavigationCompaniesService {
 
       return contactIds;
     } catch (error) {
-      console.error('❌ Error fetching navigation company IDs:', error);
+      logger.error('Error fetching navigation company IDs', { error });
       return [];
     }
   }

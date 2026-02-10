@@ -19,6 +19,9 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { RealtimeUnit, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useRealtimeUnits');
 
 // ============================================================================
 // TYPES
@@ -146,7 +149,7 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
       }
 
       if (!user) {
-        console.log('⏳ [useRealtimeUnits] Waiting for authentication...');
+        logger.info('Waiting for authentication');
         setStatus('idle');
         setLoading(false);
         setAllUnits([]);
@@ -154,7 +157,7 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
         return;
       }
 
-      console.log('🔔 [useRealtimeUnits] User authenticated, setting up real-time listener');
+      logger.info('User authenticated, setting up real-time listener');
 
       const unitsRef = collection(db, COLLECTIONS.UNITS);
 
@@ -173,7 +176,7 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
             updatedAt: docSnapshot.data().updatedAt,
           }));
 
-          console.log(`📡 [useRealtimeUnits] Received ${units.length} units in real-time`);
+          logger.debug('Received units in real-time', { count: units.length });
 
           // Update state
           setAllUnits(units);
@@ -183,7 +186,7 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
           setStatus('active');
         },
         (err) => {
-          console.error('❌ [useRealtimeUnits] Firestore error:', err);
+          logger.error('Firestore error', { error: err.message });
           setError(err.message);
           setLoading(false);
           setStatus('error');
@@ -195,7 +198,7 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
 
     // Cleanup both subscriptions
     return () => {
-      console.log('🔕 [useRealtimeUnits] Cleaning up subscriptions');
+      logger.debug('Cleaning up subscriptions');
       authUnsubscribe();
       if (firestoreUnsubscribe) {
         firestoreUnsubscribe();
@@ -209,7 +212,7 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
 
   useEffect(() => {
     const handleNavigationRefresh = () => {
-      console.log('🔄 [useRealtimeUnits] Navigation refresh event received');
+      logger.debug('Navigation refresh event received');
       // No need to refetch - onSnapshot already handles real-time updates
     };
 

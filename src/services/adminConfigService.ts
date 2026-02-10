@@ -18,6 +18,9 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AdminConfigService');
 
 // =============================================================================
 // TYPES
@@ -75,7 +78,7 @@ function isCacheValid<T>(cache: CacheEntry<T> | null): cache is CacheEntry<T> {
 export async function getAdminConfiguration(): Promise<AdminConfiguration> {
   // Check cache first
   if (isCacheValid(adminConfigCache)) {
-    console.log('📋 [AdminConfig] Using cached configuration');
+    logger.debug('Using cached configuration');
     return adminConfigCache.data;
   }
 
@@ -84,7 +87,7 @@ export async function getAdminConfiguration(): Promise<AdminConfiguration> {
     const docSnap = await docRef.get();
 
     if (!docSnap.exists) {
-      console.warn('⚠️ [AdminConfig] Settings document not found, using defaults');
+      logger.warn('Settings document not found, using defaults');
       return DEFAULT_ADMIN_CONFIG;
     }
 
@@ -103,7 +106,7 @@ export async function getAdminConfiguration(): Promise<AdminConfiguration> {
       timestamp: Date.now()
     };
 
-    console.log('✅ [AdminConfig] Loaded from Firestore:', {
+    logger.info('Loaded from Firestore', {
       hasUid: !!adminConfig.primaryAdminUid,
       email: adminConfig.adminEmail
     });
@@ -111,7 +114,7 @@ export async function getAdminConfiguration(): Promise<AdminConfiguration> {
     return adminConfig;
 
   } catch (error) {
-    console.error('❌ [AdminConfig] Failed to load:', error);
+    logger.error('Failed to load', { error });
     return DEFAULT_ADMIN_CONFIG;
   }
 }
@@ -126,7 +129,7 @@ export async function getAdminUid(): Promise<string> {
   if (!config.primaryAdminUid) {
     // In production, this is a critical error
     const errorMsg = 'CRITICAL: Admin UID not configured. Set NEXT_PUBLIC_ADMIN_UID or configure in Firestore.';
-    console.error(`🚨 ${errorMsg}`);
+    logger.error(errorMsg);
     throw new Error(errorMsg);
   }
 
@@ -177,10 +180,10 @@ export async function updateAdminConfiguration(
     // Invalidate cache
     adminConfigCache = null;
 
-    console.log('✅ [AdminConfig] Updated successfully');
+    logger.info('Updated successfully');
 
   } catch (error) {
-    console.error('❌ [AdminConfig] Update failed:', error);
+    logger.error('Update failed', { error });
     throw new Error(`Failed to update admin configuration: ${error}`);
   }
 }
@@ -197,7 +200,7 @@ export async function initializeAdminConfig(adminUid: string, adminEmail: string
     enableErrorReporting: true
   });
 
-  console.log(`✅ [AdminConfig] Initialized for: ${adminEmail} (${adminUid})`);
+  logger.info('Initialized for admin', { adminEmail, adminUid });
 }
 
 // =============================================================================

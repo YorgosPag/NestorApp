@@ -22,6 +22,9 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { designTokens } from '@/styles/design-tokens';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EnterpriseLayerStyleService');
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -148,7 +151,7 @@ class EnterpriseLayerStyleService {
     this.styleCache.clear();
     this.categoryCache.clear();
     this.cacheTimestamps.clear();
-    console.log('🗑️ Layer style caches invalidated');
+    logger.info('Layer style caches invalidated');
   }
 
   /**
@@ -171,7 +174,7 @@ class EnterpriseLayerStyleService {
       this.cacheTimestamps.delete(key);
     });
 
-    console.log(`🗑️ Cleared layer style cache for tenant: ${tenantId}`);
+    logger.info('Cleared layer style cache for tenant', { tenantId });
   }
 
   // ========================================================================
@@ -192,13 +195,13 @@ class EnterpriseLayerStyleService {
     if (this.isCacheValid(cacheKey)) {
       const cached = this.styleCache.get(cacheKey);
       if (cached) {
-        console.log('✅ Layer styles loaded from cache:', cacheKey);
+        logger.debug('Layer styles loaded from cache', { cacheKey });
         return cached;
       }
     }
 
     try {
-      console.log('🔄 Loading layer styles from Firebase:', { theme, tenantId, environment });
+      logger.info('Loading layer styles from Firebase', { theme, tenantId, environment });
 
       // Build query constraints
       const constraints = [
@@ -234,7 +237,7 @@ class EnterpriseLayerStyleService {
       // Cache the results
       this.setCache(this.styleCache, cacheKey, completeStyles);
 
-      console.log('✅ Layer styles loaded successfully:', {
+      logger.info('Layer styles loaded successfully', {
         theme,
         tenantId,
         stylesCount: Object.keys(completeStyles).length
@@ -243,10 +246,10 @@ class EnterpriseLayerStyleService {
       return completeStyles;
 
     } catch (error) {
-      console.error('❌ Error loading layer styles:', error);
+      logger.error('Error loading layer styles', { error });
 
       // Return fallback styles
-      console.log('🔄 Using fallback layer styles for theme:', theme);
+      logger.info('Using fallback layer styles', { theme });
       return this.getFallbackStyles(theme);
     }
   }
@@ -264,7 +267,7 @@ class EnterpriseLayerStyleService {
       const styles = await this.loadLayerStyles(theme, tenantId, environment);
       return styles[layerElementType] || null;
     } catch (error) {
-      console.error(`❌ Error getting style for ${layerElementType}:`, error);
+      logger.error('Error getting style', { layerElementType, error });
       return null;
     }
   }
@@ -283,13 +286,13 @@ class EnterpriseLayerStyleService {
     if (this.isCacheValid(cacheKey)) {
       const cached = this.categoryCache.get(cacheKey);
       if (cached) {
-        console.log('✅ Layer categories loaded from cache:', cacheKey);
+        logger.debug('Layer categories loaded from cache', { cacheKey });
         return cached;
       }
     }
 
     try {
-      console.log('🔄 Loading layer categories from Firebase:', { theme, tenantId, environment });
+      logger.info('Loading layer categories from Firebase', { theme, tenantId, environment });
 
       // Build query constraints
       const constraints = [
@@ -325,7 +328,7 @@ class EnterpriseLayerStyleService {
       // Cache the results
       this.setCache(this.categoryCache, cacheKey, completeCategories);
 
-      console.log('✅ Layer categories loaded successfully:', {
+      logger.info('Layer categories loaded successfully', {
         theme,
         tenantId,
         categoriesCount: Object.keys(completeCategories).length
@@ -334,10 +337,10 @@ class EnterpriseLayerStyleService {
       return completeCategories;
 
     } catch (error) {
-      console.error('❌ Error loading layer categories:', error);
+      logger.error('Error loading layer categories', { error });
 
       // Return fallback categories
-      console.log('🔄 Using fallback layer categories for theme:', theme);
+      logger.info('Using fallback layer categories', { theme });
       return this.getFallbackCategories(theme);
     }
   }
@@ -368,10 +371,10 @@ class EnterpriseLayerStyleService {
       // Invalidate relevant caches
       this.clearCacheForTenant(config.tenantId || 'default');
 
-      console.log('✅ Layer style configuration added:', id);
+      logger.info('Layer style configuration added', { id });
       return id;
     } catch (error) {
-      console.error('❌ Error adding layer style configuration:', error);
+      logger.error('Error adding layer style configuration', { error });
       throw error;
     }
   }
@@ -391,9 +394,9 @@ class EnterpriseLayerStyleService {
       // Invalidate all caches (we don't know which tenant this affects)
       this.invalidateCache();
 
-      console.log('✅ Layer style configuration updated:', configId);
+      logger.info('Layer style configuration updated', { configId });
     } catch (error) {
-      console.error('❌ Error updating layer style configuration:', error);
+      logger.error('Error updating layer style configuration', { error });
       throw error;
     }
   }
@@ -420,10 +423,10 @@ class EnterpriseLayerStyleService {
       // Invalidate relevant caches
       this.clearCacheForTenant(config.tenantId || 'default');
 
-      console.log('✅ Layer category configuration added:', id);
+      logger.info('Layer category configuration added', { id });
       return id;
     } catch (error) {
-      console.error('❌ Error adding layer category configuration:', error);
+      logger.error('Error adding layer category configuration', { error });
       throw error;
     }
   }
@@ -461,7 +464,7 @@ class EnterpriseLayerStyleService {
 
       return themesArray;
     } catch (error) {
-      console.error('❌ Error getting available themes:', error);
+      logger.error('Error getting available themes', { error });
       return ['default', 'dark', 'high-contrast'];
     }
   }

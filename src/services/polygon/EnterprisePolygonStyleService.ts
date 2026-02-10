@@ -17,6 +17,9 @@
 import { collection, doc, getDocs, setDoc, updateDoc, query, where, orderBy, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EnterprisePolygonStyleService');
 
 // Re-export types from core package (canonical path alias)
 export type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
@@ -310,17 +313,17 @@ export class EnterprisePolygonStyleService {
 
       // Check cache first
       if (this.isCacheValid(cacheKey)) {
-        console.debug('🚀 Using cached polygon styles:', cacheKey);
+        logger.debug('Using cached polygon styles', { cacheKey });
         return this.styleCache.get(cacheKey)!;
       }
 
-      console.log('🎨 Loading polygon styles from Firebase...', { theme, tenantId, environment });
+      logger.info('Loading polygon styles from Firebase', { theme, tenantId, environment });
 
       // Load style configurations from Firebase
       const configs = await this.loadStyleConfigurations(tenantId, environment);
 
       if (configs.length === 0) {
-        console.warn('⚠️ No style configurations found, initializing defaults');
+        logger.warn('No style configurations found, initializing defaults');
         await this.initializeDefaultStyles(tenantId, environment);
         return this.getFallbackStyles(theme);
       }
@@ -332,11 +335,11 @@ export class EnterprisePolygonStyleService {
       this.styleCache.set(cacheKey, styles);
       this.cacheTimestamp.set(cacheKey, Date.now());
 
-      console.log(`✅ Loaded polygon styles for theme: ${theme}`);
+      logger.info('Loaded polygon styles for theme', { theme });
       return styles;
 
     } catch (error) {
-      console.error('❌ Error loading polygon styles:', error);
+      logger.error('Error loading polygon styles', { error });
       return this.getFallbackStyles(theme);
     }
   }
@@ -469,7 +472,7 @@ export class EnterprisePolygonStyleService {
 
       return Array.from(themes).sort();
     } catch (error) {
-      console.error('❌ Error loading available themes:', error);
+      logger.error('Error loading available themes', { error });
       return ['default', 'dark', 'high-contrast'];
     }
   }
@@ -495,10 +498,10 @@ export class EnterprisePolygonStyleService {
       // Invalidate cache
       this.invalidateCache();
 
-      console.log(`✅ Updated polygon style config: ${configId}`);
+      logger.info('Updated polygon style config', { configId });
       return true;
     } catch (error) {
-      console.error(`❌ Error updating style config ${configId}:`, error);
+      logger.error('Error updating style config', { configId, error });
       return false;
     }
   }
@@ -526,10 +529,10 @@ export class EnterprisePolygonStyleService {
       // Invalidate cache
       this.invalidateCache();
 
-      console.log(`✅ Added new polygon style config: ${docRef.id}`);
+      logger.info('Added new polygon style config', { configId: docRef.id });
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error adding style config:', error);
+      logger.error('Error adding style config', { error });
       return null;
     }
   }
@@ -539,7 +542,7 @@ export class EnterprisePolygonStyleService {
    */
   async initializeDefaultStyles(tenantId?: string, environment?: string): Promise<void> {
     try {
-      console.log('🏗️ Initializing default polygon styles in Firebase...');
+      logger.info('Initializing default polygon styles in Firebase');
 
       const configs: Omit<EnterprisePolygonStyleConfig, 'id'>[] = [];
 
@@ -616,9 +619,9 @@ export class EnterprisePolygonStyleService {
       const promises = configs.map(config => this.addStyleConfig(config));
       await Promise.all(promises);
 
-      console.log('✅ Default polygon styles initialized in Firebase');
+      logger.info('Default polygon styles initialized in Firebase');
     } catch (error) {
-      console.error('❌ Error initializing default styles:', error);
+      logger.error('Error initializing default styles', { error });
     }
   }
 
@@ -643,7 +646,7 @@ export class EnterprisePolygonStyleService {
     this.styleCache.clear();
     this.configCache.clear();
     this.cacheTimestamp.clear();
-    console.log('🗑️ Polygon style cache invalidated');
+    logger.info('Polygon style cache invalidated');
   }
 
   /**
@@ -664,7 +667,7 @@ export class EnterprisePolygonStyleService {
       this.cacheTimestamp.delete(key);
     });
 
-    console.log(`🧹 Cleared polygon style cache for tenant: ${tenantId}`);
+    logger.info('Cleared polygon style cache for tenant', { tenantId });
   }
 }
 

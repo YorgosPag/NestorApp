@@ -16,6 +16,9 @@ import {
 } from '@/types/contacts/relationships';
 import { RelationshipCRUDService } from '../core/RelationshipCRUDService';
 import { RelationshipValidationService } from '../core/RelationshipValidationService';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BulkRelationshipService');
 
 // ============================================================================
 // BULK OPERATION TYPES
@@ -88,10 +91,7 @@ export class BulkRelationshipService {
     relationships: Partial<ContactRelationship>[],
     options: BulkOperationOptions = {}
   ): Promise<BulkOperationResult> {
-    console.log('📦 BULK: Creating relationships in bulk', {
-      count: relationships.length,
-      options
-    });
+    logger.info('Creating relationships in bulk', { count: relationships.length, options });
 
     const startTime = Date.now();
 
@@ -106,11 +106,11 @@ export class BulkRelationshipService {
     try {
       // Pre-validation αν requested
       if (validateBeforeProcessing) {
-        console.log('🔍 BULK: Pre-validating relationships...');
+        logger.info('Pre-validating relationships');
         const validationResult = await this.bulkValidateRelationships(relationships);
 
         if (validationResult.summary.invalidCount > 0) {
-          console.warn('⚠️ BULK: Found validation errors:', validationResult.summary.invalidCount);
+          logger.warn('Found validation errors', { invalidCount: validationResult.summary.invalidCount });
 
           if (!continueOnError) {
             throw new Error(`Validation failed για ${validationResult.summary.invalidCount} relationships`);
@@ -144,11 +144,11 @@ export class BulkRelationshipService {
       result.summary.successCount = result.success.length;
       result.summary.errorCount = result.errors.length;
 
-      console.log('✅ BULK: Bulk creation completed', result.summary);
+      logger.info('Bulk creation completed', { summary: result.summary });
       return result;
 
     } catch (error) {
-      console.error('❌ BULK: Bulk creation failed:', error);
+      logger.error('Bulk creation failed', { error });
       throw error;
     }
   }
@@ -160,7 +160,7 @@ export class BulkRelationshipService {
     updates: Array<{ id: string; updates: Partial<ContactRelationship> }>,
     options: BulkOperationOptions = {}
   ): Promise<BulkOperationResult> {
-    console.log('🔄 BULK: Updating relationships in bulk', { count: updates.length });
+    logger.info('Updating relationships in bulk', { count: updates.length });
 
     const startTime = Date.now();
     const { continueOnError = true, maxRetries = 3 } = options;
@@ -205,7 +205,7 @@ export class BulkRelationshipService {
     result.summary.successCount = result.success.length;
     result.summary.errorCount = result.errors.length;
 
-    console.log('✅ BULK: Bulk update completed', result.summary);
+    logger.info('Bulk update completed', { summary: result.summary });
     return result;
   }
 
@@ -217,7 +217,7 @@ export class BulkRelationshipService {
     deletedBy: string,
     options: BulkOperationOptions = {}
   ): Promise<{ deleted: number; errors: number; failedIds: string[] }> {
-    console.log('🗑️ BULK: Deleting relationships in bulk', { count: relationshipIds.length });
+    logger.info('Deleting relationships in bulk', { count: relationshipIds.length });
 
     const { continueOnError = true, maxRetries = 3 } = options;
     let deleted = 0;
@@ -248,7 +248,7 @@ export class BulkRelationshipService {
       }
     }
 
-    console.log('✅ BULK: Bulk deletion completed', { deleted, errors });
+    logger.info('Bulk deletion completed', { deleted, errors });
     return { deleted, errors, failedIds };
   }
 
@@ -262,7 +262,7 @@ export class BulkRelationshipService {
   static async bulkValidateRelationships(
     relationships: Partial<ContactRelationship>[]
   ): Promise<BulkValidationResult> {
-    console.log('🔍 BULK: Validating relationships in bulk', { count: relationships.length });
+    logger.info('Validating relationships in bulk', { count: relationships.length });
 
     const valid: Partial<ContactRelationship>[] = [];
     const invalid: Array<{
@@ -305,7 +305,7 @@ export class BulkRelationshipService {
       }
     };
 
-    console.log('✅ BULK: Validation completed', result.summary);
+    logger.info('Validation completed', { summary: result.summary });
     return result;
   }
 
@@ -334,10 +334,7 @@ export class BulkRelationshipService {
     }>,
     options: BulkOperationOptions = {}
   ): Promise<BulkOperationResult> {
-    console.log('🏢 BULK: Importing organization structure', {
-      organization: organizationId,
-      employeeCount: employeeData.length
-    });
+    logger.info('Importing organization structure', { organizationId, employeeCount: employeeData.length });
 
     // Convert employee data to relationship format
     const relationships: Partial<ContactRelationship>[] = employeeData.map(emp => ({
@@ -362,11 +359,7 @@ export class BulkRelationshipService {
     toDepartment: string,
     reason: string
   ): Promise<BulkOperationResult> {
-    console.log('🔄 BULK: Transferring department employees', {
-      employeeCount: employeeIds.length,
-      fromDepartment,
-      toDepartment
-    });
+    logger.info('Transferring department employees', { employeeCount: employeeIds.length, fromDepartment, toDepartment });
 
     // Create update operations
     const updates = employeeIds.map(employeeId => ({
@@ -486,7 +479,7 @@ export class BulkRelationshipService {
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
         await new Promise(resolve => setTimeout(resolve, delay));
 
-        console.warn(`⚠️ BULK: Retry attempt ${attempt}/${maxRetries} after ${delay}ms delay`);
+        logger.warn('Retry attempt', { attempt, maxRetries, delayMs: delay });
       }
     }
 

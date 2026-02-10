@@ -22,6 +22,9 @@
 
 import { EnterpriseAPICache, apiCache } from '@/lib/cache/enterprise-api-cache';
 import type { EntityType, EntityWithMetadata } from '../types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('EntityLinkingCache');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Cache Configuration
@@ -211,9 +214,7 @@ export class EntityLinkingCache {
     // Invalidate relationship status
     this.cache.delete(buildRelationshipStatusKey(entityId, parentId));
 
-    console.log(
-      `🔥 [EntityLinkingCache] Invalidated cache for ${entityType}:${entityId} → ${parentId}`
-    );
+    logger.info('Invalidated cache on link', { entityType, entityId, parentId });
   }
 
   /**
@@ -258,12 +259,12 @@ export class EntityLinkingCache {
     // Try cache first
     const cached = this.cache.get<T>(key);
     if (cached !== null) {
-      console.log(`🎯 [EntityLinkingCache] Cache hit: ${key}`);
+      logger.debug('Cache hit', { key });
       return cached;
     }
 
     // Cache miss - fetch from source
-    console.log(`📥 [EntityLinkingCache] Cache miss, fetching: ${key}`);
+    logger.debug('Cache miss, fetching', { key });
     const data = await fetchFn();
 
     // Store in cache

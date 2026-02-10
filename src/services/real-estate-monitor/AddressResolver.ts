@@ -14,6 +14,9 @@
 'use client';
 
 import { GEOGRAPHIC_CONFIG, GeographicUtils } from '@/config/geographic-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AddressResolver');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -229,7 +232,7 @@ export class AddressResolver {
           return JSON.parse(envMappings);
         }
       } catch (error) {
-        console.warn('⚠️ Invalid MUNICIPALITY_MAPPINGS format, using fallback');
+        logger.warn('Invalid MUNICIPALITY_MAPPINGS format, using fallback');
       }
 
       // 🏢 ENTERPRISE: Fallback mapping με configurable default region

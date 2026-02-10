@@ -25,6 +25,9 @@ import type {
   ProgressCallback,
 } from '../types/upload.types';
 import { UPLOAD_DEFAULTS } from '../types/upload.types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CADProcessor');
 
 // ============================================================================
 // CONSTANTS
@@ -172,7 +175,7 @@ export class CADProcessor implements FileProcessor {
         detectedType: 'dxf',
       };
     } catch (error) {
-      console.error('❌ CAD_PROCESSOR: Content validation error:', error);
+      logger.error('Content validation error', { error });
       return {
         isValid: false,
         error: 'Σφάλμα κατά την ανάγνωση του αρχείου',
@@ -192,7 +195,7 @@ export class CADProcessor implements FileProcessor {
     options: DXFUploadOptions,
     onProgress?: ProgressCallback
   ): Promise<DXFUploadResult> {
-    console.log('📐 CAD_PROCESSOR: Starting DXF upload', {
+    logger.info('Starting DXF upload', {
       fileName: file.name,
       fileSize: file.size,
     });
@@ -200,7 +203,7 @@ export class CADProcessor implements FileProcessor {
     // Validate file
     const validation = this.validate(file);
     if (!validation.isValid) {
-      console.error('❌ CAD_PROCESSOR: Validation failed:', validation.error);
+      logger.error('Validation failed', { error: validation.error });
       throw new Error(validation.error || 'DXF validation failed');
     }
 
@@ -213,7 +216,7 @@ export class CADProcessor implements FileProcessor {
     // Validate content
     const contentValidation = await this.validateDXFContent(file);
     if (!contentValidation.isValid) {
-      console.error('❌ CAD_PROCESSOR: Content validation failed:', contentValidation.error);
+      logger.error('Content validation failed', { error: contentValidation.error });
       throw new Error(contentValidation.error || 'DXF content validation failed');
     }
 
@@ -263,7 +266,7 @@ export class CADProcessor implements FileProcessor {
         message: 'DXF αποθηκεύτηκε επιτυχώς!',
       });
 
-      console.log('✅ CAD_PROCESSOR: Upload completed');
+      logger.info('Upload completed');
 
       return {
         url: '', // DXF scenes don't have a direct URL
@@ -276,7 +279,7 @@ export class CADProcessor implements FileProcessor {
         },
       };
     } catch (error) {
-      console.error('❌ CAD_PROCESSOR: Upload failed:', error);
+      logger.error('Upload failed', { error });
       throw new Error('Σφάλμα κατά την αποθήκευση του DXF');
     }
   }

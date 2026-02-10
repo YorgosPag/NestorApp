@@ -30,6 +30,9 @@ import type {
   DxfSceneEntity,
   FloorplanFileType,
 } from '@/types/file-record';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorplanProcessor');
 
 // ============================================================================
 // TYPES
@@ -138,7 +141,7 @@ export class FloorplanProcessor {
   ): Promise<FloorplanProcessResult> {
     const { skipIfProcessed = true, forceReprocess = false } = options;
 
-    console.log('🏭 [FloorplanProcessor] Starting processing via Server API:', {
+    logger.info('Starting processing via Server API', {
       fileId: fileRecord.id,
       contentType: fileRecord.contentType,
       ext: fileRecord.ext,
@@ -147,7 +150,7 @@ export class FloorplanProcessor {
 
     // Check if already processed
     if (skipIfProcessed && !forceReprocess && fileRecord.processedData) {
-      console.log('✅ [FloorplanProcessor] Already processed, skipping');
+      logger.info('Already processed, skipping');
       return {
         success: true,
         processedData: fileRecord.processedData,
@@ -161,7 +164,7 @@ export class FloorplanProcessor {
     );
 
     if (!fileType) {
-      console.error('❌ [FloorplanProcessor] Unsupported file type:', {
+      logger.error('Unsupported file type', {
         contentType: fileRecord.contentType,
         ext: fileRecord.ext,
       });
@@ -173,7 +176,7 @@ export class FloorplanProcessor {
 
     try {
       // 🏢 ENTERPRISE V2: Call server-side API route (bypasses CORS!)
-      console.log('📡 [FloorplanProcessor] Calling server API...');
+      logger.info('Calling server API');
 
       // 🔒 Get ID token for API authentication (same pattern as useFloorplanFiles)
       const auth = getAuth();
@@ -203,7 +206,7 @@ export class FloorplanProcessor {
         throw new Error(result.error || result.details || `Server returned ${response.status}`);
       }
 
-      console.log('✅ [FloorplanProcessor] Server processing complete:', {
+      logger.info('Server processing complete', {
         fileId: result.fileId,
         fileType: result.fileType,
         stats: result.stats,
@@ -222,7 +225,7 @@ export class FloorplanProcessor {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown processing error';
-      console.error('❌ [FloorplanProcessor] Processing failed:', errorMessage);
+      logger.error('Processing failed', { error: errorMessage });
       return {
         success: false,
         error: errorMessage,
@@ -238,7 +241,7 @@ export class FloorplanProcessor {
   private static async processDxfFile(
     file: File
   ): Promise<FloorplanProcessedData> {
-    console.log('📐 [FloorplanProcessor] Processing DXF file:', file.name);
+    logger.info('Processing DXF file', { fileName: file.name });
 
     // Dynamic import to avoid loading DXF module on initial page load
     const { dxfImportService } = await import(
@@ -252,7 +255,7 @@ export class FloorplanProcessor {
       throw new Error(result.error || 'DXF parsing failed');
     }
 
-    console.log('✅ [FloorplanProcessor] DXF parsed:', {
+    logger.info('DXF parsed', {
       entities: result.scene.entities.length,
       layers: Object.keys(result.scene.layers).length,
     });
@@ -293,7 +296,7 @@ export class FloorplanProcessor {
   private static async processPdfFile(
     file: File
   ): Promise<FloorplanProcessedData> {
-    console.log('📄 [FloorplanProcessor] Processing PDF file:', file.name);
+    logger.info('Processing PDF file', { fileName: file.name });
 
     // Dynamic import existing PdfRenderer service
     const { PdfRenderer } = await import(
@@ -316,7 +319,7 @@ export class FloorplanProcessor {
       throw new Error(renderResult.error || 'Failed to render PDF page');
     }
 
-    console.log('✅ [FloorplanProcessor] PDF rendered:', {
+    logger.info('PDF rendered', {
       width: renderResult.dimensions?.width,
       height: renderResult.dimensions?.height,
       previewSize: renderResult.imageUrl.length,
@@ -341,7 +344,7 @@ export class FloorplanProcessor {
     fileId: string,
     processedData: FloorplanProcessedData
   ): Promise<void> {
-    console.log('💾 [FloorplanProcessor] Saving processed data to Firestore...');
+    logger.info('Saving processed data to Firestore');
 
     const docRef = doc(db, FILES_COLLECTION, fileId);
 
@@ -350,7 +353,7 @@ export class FloorplanProcessor {
       updatedAt: new Date().toISOString(),
     });
 
-    console.log('✅ [FloorplanProcessor] Processed data saved');
+    logger.info('Processed data saved');
   }
 
   /**
@@ -368,7 +371,7 @@ export class FloorplanProcessor {
 
     // Need to process - requires downloadUrl
     if (!fileRecord.downloadUrl) {
-      console.warn('[FloorplanProcessor] No downloadUrl, cannot process');
+      logger.warn('No downloadUrl, cannot process');
       return null;
     }
 

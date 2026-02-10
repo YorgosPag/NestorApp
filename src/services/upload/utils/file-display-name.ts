@@ -32,6 +32,9 @@ import {
   FILE_DOMAINS,
   FILE_CATEGORIES,
 } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FileDisplayName');
 
 // ============================================================================
 // 🏢 ENTERPRISE: SERVER-SAFE I18N INTEGRATION
@@ -73,7 +76,7 @@ async function getI18nInstance(): Promise<typeof import('i18next').default | nul
     i18nInstance = i18nModule.default;
     return i18nInstance;
   } catch {
-    console.warn('⚠️ i18n not available, using fallbacks');
+    logger.warn('i18n not available, using fallbacks');
     return null;
   }
 }

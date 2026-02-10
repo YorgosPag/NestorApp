@@ -29,6 +29,9 @@
 
 import type { EntityType } from '../types';
 import { generateOptimisticId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('OptimisticUpdate');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Optimistic Update Types
@@ -164,9 +167,7 @@ export class OptimisticUpdateManager {
       params.onApply(params.optimisticState);
     }
 
-    console.log(
-      `🚀 [OptimisticUpdate] Applied: ${params.entityType}:${params.entityId} (${updateId})`
-    );
+    logger.info('Applied', { entityType: params.entityType, entityId: params.entityId, updateId });
 
     // Return control object
     return {
@@ -188,17 +189,17 @@ export class OptimisticUpdateManager {
     const snapshot = this.snapshots.get(updateId) as StateSnapshot<T> | undefined;
 
     if (!snapshot) {
-      console.warn(`⚠️ [OptimisticUpdate] Snapshot not found: ${updateId}`);
+      logger.warn('Snapshot not found', { updateId });
       return false;
     }
 
     if (snapshot.confirmed) {
-      console.warn(`⚠️ [OptimisticUpdate] Cannot rollback confirmed update: ${updateId}`);
+      logger.warn('Cannot rollback confirmed update', { updateId });
       return false;
     }
 
     if (snapshot.rolledBack) {
-      console.warn(`⚠️ [OptimisticUpdate] Already rolled back: ${updateId}`);
+      logger.warn('Already rolled back', { updateId });
       return false;
     }
 
@@ -211,9 +212,7 @@ export class OptimisticUpdateManager {
       callback(snapshot.previousState);
     }
 
-    console.log(
-      `🔙 [OptimisticUpdate] Rolled back: ${snapshot.entityType}:${snapshot.entityId} (${updateId})`
-    );
+    logger.info('Rolled back', { entityType: snapshot.entityType, entityId: snapshot.entityId, updateId });
 
     // Clean up after short delay
     setTimeout(() => {
@@ -233,17 +232,17 @@ export class OptimisticUpdateManager {
     const snapshot = this.snapshots.get(updateId) as StateSnapshot<T> | undefined;
 
     if (!snapshot) {
-      console.warn(`⚠️ [OptimisticUpdate] Snapshot not found: ${updateId}`);
+      logger.warn('Snapshot not found', { updateId });
       return false;
     }
 
     if (snapshot.rolledBack) {
-      console.warn(`⚠️ [OptimisticUpdate] Cannot confirm rolled back update: ${updateId}`);
+      logger.warn('Cannot confirm rolled back update', { updateId });
       return false;
     }
 
     if (snapshot.confirmed) {
-      console.warn(`⚠️ [OptimisticUpdate] Already confirmed: ${updateId}`);
+      logger.warn('Already confirmed', { updateId });
       return true;
     }
 
@@ -256,9 +255,7 @@ export class OptimisticUpdateManager {
       callback(snapshot.optimisticState);
     }
 
-    console.log(
-      `✅ [OptimisticUpdate] Confirmed: ${snapshot.entityType}:${snapshot.entityId} (${updateId})`
-    );
+    logger.info('Confirmed', { entityType: snapshot.entityType, entityId: snapshot.entityId, updateId });
 
     // Clean up after short delay
     setTimeout(() => {
@@ -304,7 +301,7 @@ export class OptimisticUpdateManager {
       }
     }
 
-    console.log(`🔙 [OptimisticUpdate] Rolled back all: ${rolledBackCount} updates`);
+    logger.info('Rolled back all', { rolledBackCount });
     return rolledBackCount;
   }
 
@@ -314,7 +311,7 @@ export class OptimisticUpdateManager {
   clear(): void {
     this.snapshots.clear();
     this.pendingCount = 0;
-    console.log('🧹 [OptimisticUpdate] Cleared all snapshots');
+    logger.info('Cleared all snapshots');
   }
 
   // ==========================================================================
