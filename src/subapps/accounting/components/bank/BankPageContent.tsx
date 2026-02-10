@@ -2,11 +2,10 @@
 
 /**
  * @fileoverview Bank Page Content — Συμφωνία Τράπεζας
- * @description UnifiedDashboard stats + AdvancedFiltersPanel + TransactionsList + CSV import
+ * @description AccountingPageHeader + UnifiedDashboard toggle + AdvancedFiltersPanel + TransactionsList + CSV import
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @updated 2026-02-10 — Migrated to UnifiedDashboard + AdvancedFiltersPanel
- * @see ADR-ACC-008 Bank Reconciliation
+ * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
@@ -26,6 +25,8 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { TransactionDirection, MatchStatus } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
+import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useBankTransactions } from '../../hooks/useBankTransactions';
 import { TransactionsList } from './TransactionsList';
 import { ImportCSVDialog } from './ImportCSVDialog';
@@ -51,10 +52,6 @@ const DEFAULT_FILTERS: BankFilterState = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
   return {
@@ -105,6 +102,7 @@ export function BankPageContent() {
 
   const [filters, setFilters] = useState<BankFilterState>({ ...DEFAULT_FILTERS });
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
@@ -163,21 +161,22 @@ export function BankPageContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('bank.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('bank.description')}</p>
-          </div>
-          <Button onClick={() => setImportDialogOpen(true)}>
+      <AccountingPageHeader
+        icon={Landmark}
+        titleKey="bank.title"
+        descriptionKey="bank.description"
+        showDashboard={showDashboard}
+        onDashboardToggle={() => setShowDashboard(!showDashboard)}
+        actions={[
+          <Button key="import-csv" onClick={() => setImportDialogOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
             {t('bank.importCSV')}
-          </Button>
-        </div>
-      </header>
+          </Button>,
+        ]}
+      />
 
       {/* Stats Dashboard */}
-      <UnifiedDashboard stats={dashboardStats} columns={4} />
+      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
 
       {/* Filters */}
       <AdvancedFiltersPanel

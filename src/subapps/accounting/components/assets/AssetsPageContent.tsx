@@ -2,11 +2,10 @@
 
 /**
  * @fileoverview Fixed Assets Page Content — Πάγια Στοιχεία
- * @description UnifiedDashboard stats + AdvancedFiltersPanel + AssetsList + AddAssetForm
+ * @description AccountingPageHeader + UnifiedDashboard toggle + AdvancedFiltersPanel + AssetsList + AddAssetForm
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @updated 2026-02-10 — Migrated to UnifiedDashboard + AdvancedFiltersPanel
- * @see ADR-ACC-007 Fixed Assets & Depreciation
+ * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
@@ -14,6 +13,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Plus,
+  HardDrive,
   Package,
   DollarSign,
   TrendingDown,
@@ -26,6 +26,8 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { AssetCategory, AssetStatus, CreateFixedAssetInput } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
+import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useFixedAssets } from '../../hooks/useFixedAssets';
 import { AssetsList } from './AssetsList';
 import { AddAssetForm } from './AddAssetForm';
@@ -51,10 +53,6 @@ const DEFAULT_FILTERS: AssetFilterState = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
   return {
@@ -110,6 +108,7 @@ export function AssetsPageContent() {
 
   const [filters, setFilters] = useState<AssetFilterState>({ ...DEFAULT_FILTERS });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
@@ -170,21 +169,22 @@ export function AssetsPageContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('assets.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('assets.description')}</p>
-          </div>
-          <Button onClick={() => setAddDialogOpen(true)}>
+      <AccountingPageHeader
+        icon={HardDrive}
+        titleKey="assets.title"
+        descriptionKey="assets.description"
+        showDashboard={showDashboard}
+        onDashboardToggle={() => setShowDashboard(!showDashboard)}
+        actions={[
+          <Button key="add-asset" onClick={() => setAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             {t('assets.addAsset')}
-          </Button>
-        </div>
-      </header>
+          </Button>,
+        ]}
+      />
 
       {/* Stats Dashboard */}
-      <UnifiedDashboard stats={dashboardStats} columns={4} />
+      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
 
       {/* Filters */}
       <AdvancedFiltersPanel

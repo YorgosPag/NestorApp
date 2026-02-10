@@ -457,7 +457,9 @@
     "allStatuses": "All Statuses",
     "allCategories": "All Categories",
     "allDirections": "All Directions",
-    "allQuarters": "All Quarters"
+    "allQuarters": "All Quarters",
+    "allDocTypes": "All Document Types",
+    "allPaymentStatuses": "All Payment Statuses"
   },
   "filterLabels": {
     "search": "Search",
@@ -468,8 +470,24 @@
     "paymentStatus": "Payment",
     "direction": "Direction",
     "matchStatus": "Match Status",
-    "fiscalYear": "Fiscal Year"
+    "fiscalYear": "Fiscal Year",
+    "documentType": "Document Type"
   },
-  "quarterCard": "Quarter {quarter}"
+  "quarterCard": "Quarter {quarter}",
+  "servicePresets": {
+    "title": "Service Presets",
+    "description": "Manage predefined service descriptions for quick invoice line item completion",
+    "addPreset": "New Service",
+    "newPreset": "Add New Service",
+    "presetDescription": "Service Description",
+    "presetDescriptionPlaceholder": "e.g. Energy Performance Certificate",
+    "loadDefaults": "Load Defaults",
+    "resetDefaults": "Reset to Defaults",
+    "noPresets": "No service presets configured. Click \"Load Defaults\" to get started.",
+    "noResults": "No services found",
+    "variablePrice": "Variable price",
+    "saveSuccess": "Service presets saved successfully",
+    "saveError": "Error saving presets"
+  }
 }
 

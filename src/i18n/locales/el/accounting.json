@@ -457,7 +457,9 @@
     "allStatuses": "Όλες οι Καταστάσεις",
     "allCategories": "Όλες οι Κατηγορίες",
     "allDirections": "Όλες οι Κατευθύνσεις",
-    "allQuarters": "Όλα τα Τρίμηνα"
+    "allQuarters": "Όλα τα Τρίμηνα",
+    "allDocTypes": "Όλοι οι Τύποι Εγγράφων",
+    "allPaymentStatuses": "Όλες οι Καταστάσεις Πληρωμής"
   },
   "filterLabels": {
     "search": "Αναζήτηση",
@@ -468,8 +470,24 @@
     "paymentStatus": "Πληρωμή",
     "direction": "Κατεύθυνση",
     "matchStatus": "Αντιστοίχιση",
-    "fiscalYear": "Οικ. Έτος"
+    "fiscalYear": "Οικ. Έτος",
+    "documentType": "Τύπος Εγγράφου"
   },
-  "quarterCard": "Τρίμηνο {quarter}"
+  "quarterCard": "Τρίμηνο {quarter}",
+  "servicePresets": {
+    "title": "Προκαθορισμένες Υπηρεσίες",
+    "description": "Διαχείριση προκαθορισμένων περιγραφών υπηρεσιών για γρήγορη συμπλήρωση γραμμών τιμολογίου",
+    "addPreset": "Νέα Υπηρεσία",
+    "newPreset": "Προσθήκη Νέας Υπηρεσίας",
+    "presetDescription": "Περιγραφή Υπηρεσίας",
+    "presetDescriptionPlaceholder": "π.χ. ΠΕΑ — Πιστοποιητικό Ενεργειακής Απόδοσης",
+    "loadDefaults": "Φόρτωση Προεπιλογών",
+    "resetDefaults": "Επαναφορά Προεπιλογών",
+    "noPresets": "Δεν υπάρχουν προκαθορισμένες υπηρεσίες. Πατήστε «Φόρτωση Προεπιλογών» για να ξεκινήσετε.",
+    "noResults": "Δεν βρέθηκαν υπηρεσίες",
+    "variablePrice": "Μεταβλητή τιμή",
+    "saveSuccess": "Οι υπηρεσίες αποθηκεύτηκαν επιτυχώς",
+    "saveError": "Σφάλμα αποθήκευσης υπηρεσιών"
+  }
 }
 

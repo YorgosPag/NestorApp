@@ -34,3 +34,6 @@ export { useEFKASummary } from './useEFKASummary';
 // ── Document Hooks ───────────────────────────────────────────────────────────
 export { useExpenseDocuments } from './useExpenseDocuments';
 export { useExpenseDocument } from './useExpenseDocument';
+
+// ── Service Presets Hooks (ADR-ACC-011) ──────────────────────────────────────
+export { useServicePresets } from './useServicePresets';

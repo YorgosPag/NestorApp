@@ -159,6 +159,9 @@ export const COLLECTIONS = {
   AI_PIPELINE_QUEUE: process.env.NEXT_PUBLIC_AI_PIPELINE_QUEUE_COLLECTION || 'ai_pipeline_queue',
   AI_PIPELINE_AUDIT: process.env.NEXT_PUBLIC_AI_PIPELINE_AUDIT_COLLECTION || 'ai_pipeline_audit',
 
+  // 🧠 AI CHAT HISTORY (ADR-171: Autonomous AI Agent — conversation memory)
+  AI_CHAT_HISTORY: process.env.NEXT_PUBLIC_AI_CHAT_HISTORY_COLLECTION || 'ai_chat_history',
+
   // 📋 SYSTEM AUDIT LOGS (Webhook/system-level audit events)
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
 

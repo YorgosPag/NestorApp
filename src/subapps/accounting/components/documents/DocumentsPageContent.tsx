@@ -2,10 +2,10 @@
 
 /**
  * @fileoverview Documents Page Content — Παραστατικά AI
- * @description UnifiedDashboard stats + status tabs + document list with review
+ * @description AccountingPageHeader + UnifiedDashboard toggle + AdvancedFiltersPanel + status tabs + document list with review
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-10
- * @updated 2026-02-10 — Added UnifiedDashboard stats
+ * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader + document type filter
  * @see ADR-ACC-005 AI Document Processing
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
@@ -26,6 +26,10 @@ import {
 } from 'lucide-react';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
+import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
+import { formatCurrencyOrDash } from '../../utils/format';
+import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { DocumentReviewCard } from './DocumentReviewCard';
 import { UploadDocumentDialog } from './UploadDocumentDialog';
@@ -39,14 +43,17 @@ import type { DocumentProcessingStatus, ReceivedExpenseDocument } from '../../ty
 
 type TabValue = 'all' | DocumentProcessingStatus;
 
+interface DocumentFilterState extends GenericFilterState {
+  documentType: string;
+}
+
 // ============================================================================
-// HELPERS
+// CONSTANTS
 // ============================================================================
 
-function formatCurrency(amount: number | null): string {
-  if (amount === null) return '—';
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
+const DEFAULT_FILTERS: DocumentFilterState = {
+  documentType: 'all',
+};
 
 const STATUS_VARIANT_MAP: Record<DocumentProcessingStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   processing: 'secondary',
@@ -54,6 +61,39 @@ const STATUS_VARIANT_MAP: Record<DocumentProcessingStatus, 'default' | 'secondar
   confirmed: 'default',
   rejected: 'destructive',
 };
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
+  return {
+    title: 'filters.title',
+    i18nNamespace: 'accounting',
+    rows: [
+      {
+        id: 'documents-main',
+        fields: [
+          {
+            id: 'documentType',
+            type: 'select',
+            label: 'filterLabels.documentType',
+            ariaLabel: 'Document type',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allDocTypes') },
+              { value: 'purchase_invoice', label: t('documentTypes.purchase_invoice') },
+              { value: 'receipt', label: t('documentTypes.receipt') },
+              { value: 'utility_bill', label: t('documentTypes.utility_bill') },
+              { value: 'telecom_bill', label: t('documentTypes.telecom_bill') },
+              { value: 'other', label: t('documentTypes.other') },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
 
 // ============================================================================
 // COMPONENT
@@ -66,6 +106,10 @@ export function DocumentsPageContent() {
   const [activeTab, setActiveTab] = useState<TabValue>('all');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [filters, setFilters] = useState<DocumentFilterState>({ ...DEFAULT_FILTERS });
+
+  const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
   const statusFilter = activeTab === 'all' ? undefined : activeTab;
   const { documents, loading, error, refetch } = useExpenseDocuments({
@@ -125,6 +169,12 @@ export function DocumentsPageContent() {
     [rejectDocument, refetch]
   );
 
+  // Filter documents by document type (client-side)
+  const filteredDocuments = useMemo(() => {
+    if (filters.documentType === 'all') return documents;
+    return documents.filter((d) => d.type === filters.documentType);
+  }, [documents, filters.documentType]);
+
   // Compute dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => {
     const processingCount = documents.filter((d) => d.status === 'processing').length;
@@ -166,26 +216,33 @@ export function DocumentsPageContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('documents.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('documents.description')}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-32">
-              <FiscalYearPicker value={selectedYear} onValueChange={setSelectedYear} />
-            </div>
-            <Button onClick={() => setUploadOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('documents.newDocument')}
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AccountingPageHeader
+        icon={FileText}
+        titleKey="documents.title"
+        descriptionKey="documents.description"
+        showDashboard={showDashboard}
+        onDashboardToggle={() => setShowDashboard(!showDashboard)}
+        actions={[
+          <div key="fiscal-year" className="w-32">
+            <FiscalYearPicker value={selectedYear} onValueChange={setSelectedYear} />
+          </div>,
+          <Button key="new-doc" onClick={() => setUploadOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('documents.newDocument')}
+          </Button>,
+        ]}
+      />
 
       {/* Stats Dashboard */}
-      <UnifiedDashboard stats={dashboardStats} columns={4} />
+      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
+
+      {/* Document Type Filter */}
+      <AdvancedFiltersPanel
+        config={filterConfig}
+        filters={filters}
+        onFiltersChange={setFilters}
+        defaultFilters={DEFAULT_FILTERS}
+      />
 
       {/* Status Tabs */}
       <nav className="border-b border-border bg-card px-6 py-3">
@@ -215,7 +272,7 @@ export function DocumentsPageContent() {
               </Button>
             </CardContent>
           </Card>
-        ) : documents.length === 0 ? (
+        ) : filteredDocuments.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -227,58 +284,55 @@ export function DocumentsPageContent() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {/* Document List */}
-            <ul className="space-y-3">
-              {documents.map((doc) => {
-                const statusVariant = STATUS_VARIANT_MAP[doc.status];
-                const statusLabel = t(`documents.statuses.${doc.status}`);
-                const isSelected = selectedDocId === doc.documentId;
+          <ul className="space-y-3">
+            {filteredDocuments.map((doc) => {
+              const statusVariant = STATUS_VARIANT_MAP[doc.status];
+              const statusLabel = t(`documents.statuses.${doc.status}`);
+              const isSelected = selectedDocId === doc.documentId;
 
-                return (
-                  <li key={doc.documentId}>
-                    <Card
-                      className={`cursor-pointer transition-colors hover:bg-accent/50 ${isSelected ? 'ring-2 ring-primary' : ''}`}
-                      onClick={() => handleDocumentClick(doc.documentId)}
-                    >
-                      <CardHeader className="py-3 px-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <CardTitle className="text-sm">{doc.fileName}</CardTitle>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {doc.extractedData.issuerName ?? t('documents.unknownIssuer')}
-                                {doc.extractedData.issueDate ? ` — ${doc.extractedData.issueDate}` : ''}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium">
-                              {formatCurrency(doc.extractedData.grossAmount)}
-                            </span>
-                            <Badge variant={statusVariant}>{statusLabel}</Badge>
+              return (
+                <li key={doc.documentId}>
+                  <Card
+                    className={`cursor-pointer transition-colors hover:bg-accent/50 ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => handleDocumentClick(doc.documentId)}
+                  >
+                    <CardHeader className="py-3 px-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <CardTitle className="text-sm">{doc.fileName}</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {doc.extractedData.issuerName ?? t('documents.unknownIssuer')}
+                              {doc.extractedData.issueDate ? ` — ${doc.extractedData.issueDate}` : ''}
+                            </p>
                           </div>
                         </div>
-                      </CardHeader>
-                    </Card>
-
-                    {/* Expanded Review Card */}
-                    {isSelected && selectedDocument && (
-                      <div className="mt-2">
-                        <DocumentReviewCard
-                          document={selectedDocument}
-                          onConfirm={handleConfirm}
-                          onReject={handleReject}
-                          confirming={confirming}
-                        />
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium">
+                            {formatCurrencyOrDash(doc.extractedData.grossAmount)}
+                          </span>
+                          <Badge variant={statusVariant}>{statusLabel}</Badge>
+                        </div>
                       </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                    </CardHeader>
+                  </Card>
+
+                  {/* Expanded Review Card */}
+                  {isSelected && selectedDocument && (
+                    <div className="mt-2">
+                      <DocumentReviewCard
+                        document={selectedDocument}
+                        onConfirm={handleConfirm}
+                        onReject={handleReject}
+                        confirming={confirming}
+                      />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
 

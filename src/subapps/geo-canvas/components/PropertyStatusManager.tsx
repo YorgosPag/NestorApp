@@ -230,9 +230,7 @@ export function PropertyStatusManager({
                 >
                   {/* Color Indicator */}
                   <div
-                    className={`${iconSizes.sm} rounded border border-white shadow-sm`}
-                    style={{ backgroundColor: statusColor }}
-                  />
+                    className={`${iconSizes.sm} rounded border border-white shadow-sm`}                  />
 
                   {/* Status Label */}
                   <span className={`flex-1 text-sm font-medium ${isVisible ? colors.text.primary : colors.text.secondary}`}>
@@ -289,6 +287,7 @@ export function PropertyStatusManager({
     </div>
   );
 }
+
 
 
 

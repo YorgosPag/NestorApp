@@ -22,6 +22,7 @@ import { PaymentMethodSelector } from '../../shared/PaymentMethodSelector';
 import { CustomerSelector } from './CustomerSelector';
 import { LineItemsEditor } from './LineItemsEditor';
 import { InvoicePreview } from './InvoicePreview';
+import { useServicePresets } from '@/subapps/accounting/hooks';
 import type {
   InvoiceType,
   InvoiceLineItem,
@@ -79,6 +80,7 @@ function calculateTotals(lineItems: InvoiceLineItem[]) {
 export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
   const { t } = useTranslation('accounting');
   const { user } = useAuth();
+  const { presets } = useServicePresets();
 
   const DEFAULT_LINE_ITEM: InvoiceLineItem = {
     lineNumber: 1,
@@ -328,6 +330,7 @@ export function InvoiceForm({ onSuccess, onCancel }: InvoiceFormProps) {
           <LineItemsEditor
             lineItems={form.lineItems}
             onLineItemsChange={handleLineItemsChange}
+            presets={presets}
           />
         </CardContent>
       </Card>

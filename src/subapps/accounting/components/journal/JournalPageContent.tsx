@@ -2,11 +2,10 @@
 
 /**
  * @fileoverview Journal Page Content — Βιβλίο Εσόδων-Εξόδων
- * @description UnifiedDashboard stats + AdvancedFiltersPanel + JournalEntriesTable + inline form
+ * @description AccountingPageHeader + UnifiedDashboard toggle + AdvancedFiltersPanel + JournalEntriesTable + inline form
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @updated 2026-02-10 — Migrated to UnifiedDashboard + AdvancedFiltersPanel
- * @see ADR-ACC-001 Chart of Accounts
+ * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles
  */
 
@@ -14,6 +13,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Plus,
+  BookOpen,
   ArrowUpRight,
   ArrowDownRight,
   TrendingUp,
@@ -25,6 +25,8 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
+import { formatCurrency } from '../../utils/format';
+import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useJournalEntries } from '../../hooks/useJournalEntries';
 import type { EntryType, FiscalQuarter } from '@/subapps/accounting/types';
 import { JournalEntriesTable } from './JournalEntriesTable';
@@ -53,10 +55,6 @@ const DEFAULT_FILTERS: JournalFilterState = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
   return {
@@ -119,6 +117,7 @@ export function JournalPageContent() {
 
   const [showForm, setShowForm] = useState(false);
   const [filters, setFilters] = useState<JournalFilterState>({ ...DEFAULT_FILTERS });
+  const [showDashboard, setShowDashboard] = useState(true);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
@@ -185,23 +184,26 @@ export function JournalPageContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Page Header */}
-      <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('journal.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('journal.description')}</p>
-          </div>
-          {!showForm && (
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('journal.newEntry')}
-            </Button>
-          )}
-        </div>
-      </header>
+      <AccountingPageHeader
+        icon={BookOpen}
+        titleKey="journal.title"
+        descriptionKey="journal.description"
+        showDashboard={showDashboard}
+        onDashboardToggle={() => setShowDashboard(!showDashboard)}
+        actions={
+          !showForm
+            ? [
+                <Button key="new-entry" onClick={() => setShowForm(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('journal.newEntry')}
+                </Button>,
+              ]
+            : undefined
+        }
+      />
 
       {/* Stats Dashboard */}
-      {!showForm && <UnifiedDashboard stats={dashboardStats} columns={4} />}
+      {!showForm && showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
 
       {/* Filters */}
       {!showForm && (

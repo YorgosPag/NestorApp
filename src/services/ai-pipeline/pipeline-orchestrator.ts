@@ -48,6 +48,16 @@ import {
   PIPELINE_TIMEOUT_CONFIG,
   PIPELINE_PROTOCOL_CONFIG,
 } from '@/config/ai-pipeline-config';
+// ADR-171: Agentic Loop imports
+import { executeAgenticLoop } from './agentic-loop';
+import type { ChatMessage } from './agentic-loop';
+import { getChatHistoryService } from './chat-history-service';
+import { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';
+import type { AgenticContext } from './tools/agentic-tool-executor';
+import { sendChannelReply } from './shared/channel-reply-dispatcher';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
+
+const orchestratorLogger = createModuleLogger('PIPELINE_ORCHESTRATOR');
 
 // ============================================================================
 // ORCHESTRATOR
@@ -151,16 +161,11 @@ export class PipelineOrchestrator {
       };
     }
 
-    // ── ADR-145: Admin Fallback Override ──
-    // If sender is admin and no admin module matched (unknown/general_inquiry),
-    // OR if intent is admin_general_question (conversational AI),
-    // substitute with AdminFallbackModule for a helpful/conversational response.
-    const adminIntent = ctx.understanding!.intent;
-    const isAdminWithUnknownIntent = ctx.adminCommandMeta?.isAdminCommand === true
-      && (!adminIntent.startsWith('admin_') || adminIntent === 'admin_general_question');
-
-    if (isAdminWithUnknownIntent) {
-      return this.executeAdminFallback(ctx);
+    // ── ADR-171: Agentic path for ALL admin commands ──
+    // Instead of routing to individual UC modules, the agentic loop
+    // handles ALL admin commands autonomously with tool calling.
+    if (ctx.adminCommandMeta?.isAdminCommand === true) {
+      return this.executeAgenticPath(ctx);
     }
 
     // ── Multi-Intent Route ──
@@ -262,7 +267,175 @@ export class PipelineOrchestrator {
   }
 
   // ==========================================================================
-  // ADR-145: ADMIN FALLBACK EXECUTION
+  // ADR-156: AGENTIC PATH — AUTONOMOUS AI AGENT
+  // ==========================================================================
+
+  /**
+   * Execute the agentic path for admin commands.
+   * Uses multi-step tool calling instead of hardcoded UC modules.
+   *
+   * Flow:
+   * 1. Fetch chat history for context
+   * 2. Build agentic context (companyId, permissions)
+   * 3. Execute agentic loop (AI + tools iteratively)
+   * 4. Save messages to chat history
+   * 5. Send reply via channel dispatcher
+   * 6. Audit the execution
+   *
+   * @see ADR-156 (Autonomous AI Agent)
+   */
+  private async executeAgenticPath(ctx: PipelineContext): Promise<PipelineExecutionResult> {
+    const chatHistoryService = getChatHistoryService();
+
+    try {
+      const channelSenderId = this.buildChannelSenderId(ctx);
+      const userMessage = ctx.intake.normalized.contentText || ctx.intake.normalized.subject || '';
+
+      // 1. Fetch chat history
+      const history: ChatMessage[] = await chatHistoryService.getRecentHistory(channelSenderId);
+
+      // 2. Build agentic context
+      const agenticCtx: AgenticContext = {
+        companyId: ctx.companyId,
+        isAdmin: true,
+        channelSenderId,
+        requestId: ctx.requestId,
+        telegramChatId: ctx.intake.normalized.sender.telegramId
+          ?? ctx.intake.rawPayload?.chatId as string
+          ?? undefined,
+      };
+
+      // 3. Execute agentic loop
+      orchestratorLogger.info('Starting agentic path', {
+        requestId: ctx.requestId,
+        channelSenderId,
+        messageLength: userMessage.length,
+        historyCount: history.length,
+      });
+
+      const agenticResult = await executeAgenticLoop(
+        userMessage,
+        history,
+        AGENTIC_TOOL_DEFINITIONS,
+        agenticCtx
+      );
+
+      // 4. Save to chat history (user message + assistant response)
+      const now = new Date().toISOString();
+      await chatHistoryService.addMessage(channelSenderId, {
+        role: 'user',
+        content: userMessage,
+        timestamp: now,
+      });
+      await chatHistoryService.addMessage(channelSenderId, {
+        role: 'assistant',
+        content: agenticResult.answer,
+        timestamp: now,
+        toolCalls: agenticResult.toolCalls,
+      });
+
+      // 5. Send reply via channel dispatcher
+      const telegramChatId = ctx.intake.normalized.sender.telegramId
+        ?? (ctx.intake.rawPayload?.chatId as string | undefined)
+        ?? undefined;
+
+      await sendChannelReply({
+        channel: ctx.intake.channel,
+        recipientEmail: ctx.intake.normalized.sender.email,
+        telegramChatId,
+        textBody: agenticResult.answer,
+        requestId: ctx.requestId,
+      });
+
+      // 6. Update pipeline context
+      ctx.executionResult = { success: true, sideEffects: ['agentic_loop_completed'] };
+      ctx = this.transitionState(ctx, PipelineState.PROPOSED);
+      ctx.approval = {
+        decision: 'approved',
+        approvedBy: `super_admin:${ctx.adminCommandMeta?.adminIdentity.displayName ?? 'admin'}`,
+        decidedAt: now,
+      };
+      ctx = this.transitionState(ctx, PipelineState.APPROVED);
+      ctx = this.transitionState(ctx, PipelineState.EXECUTED);
+      ctx = this.transitionState(ctx, PipelineState.AUDITED);
+
+      // 7. Audit
+      const auditId = await this.auditService.record(ctx, 'auto_processed', 'ADR-171-agentic');
+
+      orchestratorLogger.info('Agentic path completed', {
+        requestId: ctx.requestId,
+        iterations: agenticResult.iterations,
+        toolCalls: agenticResult.toolCalls.length,
+        durationMs: agenticResult.totalDurationMs,
+        auditId,
+      });
+
+      return {
+        success: true,
+        requestId: ctx.requestId,
+        finalState: ctx.state,
+        context: ctx,
+        auditId,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      orchestratorLogger.error('Agentic path failed', {
+        requestId: ctx.requestId,
+        error: errorMessage,
+      });
+
+      ctx.errors.push({
+        step: 'agentic_path',
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+        retryable: false,
+      });
+      ctx = this.transitionState(ctx, PipelineState.FAILED);
+      const auditId = await this.auditService.record(ctx, 'failed', 'ADR-171-agentic');
+
+      // Send error reply to user
+      try {
+        const telegramChatId = ctx.intake.normalized.sender.telegramId
+          ?? (ctx.intake.rawPayload?.chatId as string | undefined)
+          ?? undefined;
+
+        await sendChannelReply({
+          channel: ctx.intake.channel,
+          recipientEmail: ctx.intake.normalized.sender.email,
+          telegramChatId,
+          textBody: 'Συγγνώμη, αντιμετώπισα ένα πρόβλημα κατά την επεξεργασία. Δοκίμασε ξανά.',
+          requestId: ctx.requestId,
+        });
+      } catch {
+        // Non-fatal — don't let error reply failure mask the original error
+      }
+
+      return {
+        success: false,
+        requestId: ctx.requestId,
+        finalState: ctx.state,
+        context: ctx,
+        auditId,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Build channel+sender ID for chat history keying
+   */
+  private buildChannelSenderId(ctx: PipelineContext): string {
+    const channel = ctx.intake.channel;
+    const senderId = ctx.intake.normalized.sender.telegramId
+      ?? ctx.intake.normalized.sender.email
+      ?? ctx.intake.normalized.sender.phone
+      ?? 'unknown';
+    return `${channel}_${senderId}`;
+  }
+
+  // ==========================================================================
+  // ADR-145: ADMIN FALLBACK EXECUTION (LEGACY — kept for fallback)
   // ==========================================================================
 
   /**
@@ -270,6 +443,7 @@ export class PipelineOrchestrator {
    * Dynamically imports AdminFallbackModule to avoid coupling.
    *
    * @see ADR-145 (Super Admin AI Assistant)
+   * @deprecated ADR-156 replaces this with agentic path — kept as safety net
    */
   private async executeAdminFallback(ctx: PipelineContext): Promise<PipelineExecutionResult> {
     try {

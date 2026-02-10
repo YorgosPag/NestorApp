@@ -2,10 +2,10 @@
 
 /**
  * @fileoverview Company Setup — Main Page Content
- * @description Κεντρική σελίδα ρύθμισης επιχείρησης (M-001 Company Setup)
+ * @description AccountingPageHeader + UnifiedDashboard toggle + company profile sections
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @version 1.0.0
+ * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader
  * @see ADR-ACC-000 §2 Company Data
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Save,
+  Settings,
   ClipboardCheck,
   FileText,
   Layers,
@@ -23,12 +24,14 @@ import {
 } from 'lucide-react';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
 import type { CompanySetupInput, KadEntry } from '../../types';
 import { BasicInfoSection } from './BasicInfoSection';
 import { FiscalInfoSection } from './FiscalInfoSection';
 import { KadSection } from './KadSection';
 import { InvoiceSeriesSection } from './InvoiceSeriesSection';
+import { ServicePresetsSection } from './ServicePresetsSection';
 
 // ============================================================================
 // DEFAULTS
@@ -100,6 +103,7 @@ export function SetupPageContent() {
   const [formData, setFormData] = useState<CompanySetupInput>(createDefaultData);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
 
   // Sync profile → formData when loaded
   useEffect(() => {
@@ -195,25 +199,26 @@ export function SetupPageContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('setup.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('setup.description')}</p>
-          </div>
-          <Button onClick={handleSave} disabled={saving || loading}>
+      <AccountingPageHeader
+        icon={Settings}
+        titleKey="setup.title"
+        descriptionKey="setup.description"
+        showDashboard={showDashboard}
+        onDashboardToggle={() => setShowDashboard(!showDashboard)}
+        actions={[
+          <Button key="save" onClick={handleSave} disabled={saving || loading}>
             {saving ? (
               <Spinner size="small" className="mr-2" />
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
             {t('setup.save')}
-          </Button>
-        </div>
-      </header>
+          </Button>,
+        ]}
+      />
 
       {/* Stats Dashboard */}
-      <UnifiedDashboard stats={dashboardStats} columns={4} />
+      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
 
       {/* Content */}
       <section className="p-6 space-y-6 max-w-4xl">
@@ -248,6 +253,7 @@ export function SetupPageContent() {
             <FiscalInfoSection data={formData} onChange={handleChange} />
             <KadSection data={formData} onChange={handleChange} errors={translatedErrors} />
             <InvoiceSeriesSection data={formData} onChange={handleChange} />
+            <ServicePresetsSection />
 
             {/* Footer Save Button */}
             <footer className="flex justify-end pt-4">
@@ -266,5 +272,3 @@ export function SetupPageContent() {
     </main>
   );
 }
-
-

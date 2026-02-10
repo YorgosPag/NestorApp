@@ -50,6 +50,8 @@ export type {
   InvoiceFilters,
   CreateInvoiceInput,
   UpdateInvoiceInput,
+  ServicePreset,
+  ServicePresetsDocument,
 } from './invoice';
 
 // ── VAT Types (ADR-ACC-004) ─────────────────────────────────────────────────

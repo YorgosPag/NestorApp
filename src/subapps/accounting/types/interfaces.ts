@@ -27,6 +27,7 @@ import type {
   UpdateInvoiceInput,
   InvoiceFilters,
   InvoiceSeries,
+  ServicePreset,
 } from './invoice';
 
 // ── Phase 2 Types ───────────────────────────────────────────────────────────
@@ -104,6 +105,10 @@ export interface IAccountingRepository {
   listInvoices(filters: InvoiceFilters, pageSize?: number): Promise<PaginatedResult<Invoice>>;
   getNextInvoiceNumber(seriesCode: string): Promise<number>;
   getInvoiceSeries(): Promise<InvoiceSeries[]>;
+
+  // ── Service Presets (ADR-ACC-011) ───────────────────────────────────────
+  getServicePresets(): Promise<ServicePreset[]>;
+  saveServicePresets(presets: ServicePreset[]): Promise<void>;
 
   // ── Bank Transactions ───────────────────────────────────────────────────
   createBankTransaction(data: Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>): Promise<{ id: string }>;

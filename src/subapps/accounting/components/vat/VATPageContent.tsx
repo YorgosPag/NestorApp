@@ -2,10 +2,10 @@
 
 /**
  * @fileoverview VAT Page Content — Διαχείριση ΦΠΑ
- * @description UnifiedDashboard stats + quarterly cards + annual summary + deductibility
+ * @description AccountingPageHeader + UnifiedDashboard toggle + AdvancedFiltersPanel (quarter) + quarterly cards + annual summary + deductibility
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @updated 2026-02-10 — Added UnifiedDashboard for annual VAT stats
+ * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader + quarter filter
  * @see ADR-ACC-004 VAT Engine
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles
  */
@@ -23,12 +23,32 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
+import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
+import { formatCurrency } from '../../utils/format';
+import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useVATSummary } from '../../hooks/useVATSummary';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { VATQuarterCards } from './VATQuarterCards';
 import { VATSummaryCard } from './VATSummaryCard';
 import { VATDeductibilityTable } from './VATDeductibilityTable';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface VATFilterState extends GenericFilterState {
+  quarter: string;
+}
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const DEFAULT_FILTERS: VATFilterState = {
+  quarter: 'all',
+};
 
 // ============================================================================
 // TYPE GUARD
@@ -47,8 +67,32 @@ function isAnnualSummary(data: unknown): data is VATAnnualSummary {
 // HELPERS
 // ============================================================================
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
+  return {
+    title: 'filters.title',
+    i18nNamespace: 'accounting',
+    rows: [
+      {
+        id: 'vat-main',
+        fields: [
+          {
+            id: 'quarter',
+            type: 'select',
+            label: 'filterLabels.quarter',
+            ariaLabel: 'Quarter',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allQuarters') },
+              { value: 'Q1', label: 'Q1 — ' + t('common.months.1') + '-' + t('common.months.3') },
+              { value: 'Q2', label: 'Q2 — ' + t('common.months.4') + '-' + t('common.months.6') },
+              { value: 'Q3', label: 'Q3 — ' + t('common.months.7') + '-' + t('common.months.9') },
+              { value: 'Q4', label: 'Q4 — ' + t('common.months.10') + '-' + t('common.months.12') },
+            ],
+          },
+        ],
+      },
+    ],
+  };
 }
 
 // ============================================================================
@@ -59,6 +103,10 @@ export function VATPageContent() {
   const { t } = useTranslation('accounting');
 
   const [fiscalYear, setFiscalYear] = useState<number>(new Date().getFullYear());
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [filters, setFilters] = useState<VATFilterState>({ ...DEFAULT_FILTERS });
+
+  const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
   const { summary, loading, error, refetch } = useVATSummary({ fiscalYear });
 
@@ -67,6 +115,14 @@ export function VATPageContent() {
   }, []);
 
   const annualSummary = isAnnualSummary(summary) ? summary : null;
+
+  // Filter quarters based on selected quarter filter
+  const filteredQuarters = useMemo(() => {
+    if (!annualSummary) return [];
+    if (filters.quarter === 'all') return annualSummary.quarters;
+    const quarterNumber = parseInt(filters.quarter.replace('Q', ''), 10);
+    return annualSummary.quarters.filter((q) => q.quarter === quarterNumber);
+  }, [annualSummary, filters.quarter]);
 
   // Compute dashboard stats from VAT summary
   const dashboardStats: DashboardStat[] = useMemo(() => {
@@ -119,20 +175,29 @@ export function VATPageContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Page Header */}
-      <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('vat.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('vat.description')}</p>
-          </div>
-          <div className="w-32">
+      <AccountingPageHeader
+        icon={DollarSign}
+        titleKey="vat.title"
+        descriptionKey="vat.description"
+        showDashboard={showDashboard}
+        onDashboardToggle={() => setShowDashboard(!showDashboard)}
+        actions={[
+          <div key="fiscal-year" className="w-32">
             <FiscalYearPicker value={fiscalYear} onValueChange={handleYearChange} />
-          </div>
-        </div>
-      </header>
+          </div>,
+        ]}
+      />
 
       {/* Stats Dashboard */}
-      <UnifiedDashboard stats={dashboardStats} columns={4} />
+      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
+
+      {/* Quarter Filter */}
+      <AdvancedFiltersPanel
+        config={filterConfig}
+        filters={filters}
+        onFiltersChange={setFilters}
+        defaultFilters={DEFAULT_FILTERS}
+      />
 
       {/* Content Area */}
       <section className="p-6 space-y-8">
@@ -155,7 +220,7 @@ export function VATPageContent() {
                 {t('vat.quarterlyReturns')}
               </h2>
               <VATQuarterCards
-                quarters={annualSummary?.quarters ?? []}
+                quarters={filteredQuarters}
                 fiscalYear={fiscalYear}
               />
             </section>

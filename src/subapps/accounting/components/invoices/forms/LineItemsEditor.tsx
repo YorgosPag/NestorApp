@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { VATRateSelector } from '../../shared/VATRateSelector';
-import type { InvoiceLineItem, MyDataIncomeType } from '@/subapps/accounting/types';
+import { ServicePresetCombobox } from '../../shared/ServicePresetCombobox';
+import type { InvoiceLineItem, MyDataIncomeType, ServicePreset } from '@/subapps/accounting/types';
 
 interface LineItemsEditorProps {
   lineItems: InvoiceLineItem[];
   onLineItemsChange: (items: InvoiceLineItem[]) => void;
+  presets: ServicePreset[];
 }
 
-export function LineItemsEditor({ lineItems, onLineItemsChange }: LineItemsEditorProps) {
+export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineItemsEditorProps) {
   const { t } = useTranslation('accounting');
 
   const DEFAULT_LINE_ITEM: InvoiceLineItem = {
@@ -58,6 +60,26 @@ export function LineItemsEditor({ lineItems, onLineItemsChange }: LineItemsEdito
     [lineItems, onLineItemsChange]
   );
 
+  const applyPreset = useCallback(
+    (index: number, preset: ServicePreset) => {
+      const updated = lineItems.map((item, i) => {
+        if (i !== index) return item;
+        const newItem: InvoiceLineItem = {
+          ...item,
+          description: preset.description,
+          unit: preset.unit,
+          unitPrice: preset.unitPrice,
+          vatRate: preset.vatRate,
+          mydataCode: preset.mydataCode,
+        };
+        newItem.netAmount = Math.round(newItem.quantity * newItem.unitPrice * 100) / 100;
+        return newItem;
+      });
+      onLineItemsChange(updated);
+    },
+    [lineItems, onLineItemsChange]
+  );
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
@@ -92,10 +114,11 @@ export function LineItemsEditor({ lineItems, onLineItemsChange }: LineItemsEdito
             <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <fieldset className="md:col-span-3">
                 <Label>{t('forms.lineDescription')}</Label>
-                <Input
+                <ServicePresetCombobox
                   value={item.description}
-                  onChange={(e) => updateItem(index, 'description', e.target.value)}
-                  placeholder={t('forms.lineDescription')}
+                  onDescriptionChange={(desc) => updateItem(index, 'description', desc)}
+                  onPresetSelect={(preset) => applyPreset(index, preset)}
+                  presets={presets}
                 />
               </fieldset>
 

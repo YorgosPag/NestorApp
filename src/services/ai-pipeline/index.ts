@@ -61,3 +61,14 @@ export type {
   FeedToPipelineParams,
   FeedToPipelineResult,
 } from './channel-adapters/email-channel-adapter';
+
+// ADR-171: Agentic Loop
+export { executeAgenticLoop } from './agentic-loop';
+export type { AgenticResult, ChatMessage, AgenticLoopConfig } from './agentic-loop';
+
+// ADR-171: Chat History Service
+export { ChatHistoryService, getChatHistoryService } from './chat-history-service';
+
+// ADR-171: Agentic Tools
+export { getAgenticToolExecutor } from './tools/agentic-tool-executor';
+export { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';

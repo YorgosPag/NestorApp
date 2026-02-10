@@ -330,3 +330,43 @@ export type CreateInvoiceInput = Omit<
 export type UpdateInvoiceInput = Partial<
   Omit<Invoice, 'invoiceId' | 'series' | 'number' | 'createdAt'>
 >;
+
+// ============================================================================
+// SERVICE PRESETS (ADR-ACC-011)
+// ============================================================================
+
+/**
+ * Προκαθορισμένη περιγραφή υπηρεσίας — auto-fill σε γραμμές τιμολογίου
+ *
+ * Firestore path: `accounting_settings/service_presets` (array μέσα σε single doc)
+ */
+export interface ServicePreset {
+  /** Μοναδικό ID preset (format: 'sp_xxxxx') */
+  presetId: string;
+  /** Περιγραφή υπηρεσίας (π.χ. "ΠΕΑ — Πιστοποιητικό Ενεργειακής Απόδοσης") */
+  description: string;
+  /** Μονάδα μέτρησης (π.χ. 'τεμ', 'ώρες', 'τ.μ.') */
+  unit: string;
+  /** Τιμή μονάδας (0 = variable — ο χρήστης συμπληρώνει) */
+  unitPrice: number;
+  /** Συντελεστής ΦΠΑ (24, 13, 6 ή 0) */
+  vatRate: number;
+  /** myDATA classification code */
+  mydataCode: MyDataIncomeType;
+  /** Ενεργό preset */
+  isActive: boolean;
+  /** Σειρά ταξινόμησης */
+  sortOrder: number;
+}
+
+/**
+ * Single Firestore document που αποθηκεύει όλα τα presets
+ *
+ * Firestore path: `accounting_settings/service_presets`
+ */
+export interface ServicePresetsDocument {
+  /** Array με τα presets */
+  presets: ServicePreset[];
+  /** Timestamp τελευταίας ενημέρωσης (ISO 8601) */
+  updatedAt: string;
+}

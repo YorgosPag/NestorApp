@@ -36,6 +36,8 @@ import type {
   UpdateInvoiceInput,
   InvoiceFilters,
   InvoiceSeries,
+  ServicePreset,
+  ServicePresetsDocument,
 } from '../../types/invoice';
 import type {
   BankTransaction,
@@ -256,6 +258,34 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
       const snap = await db.collection(COLLECTIONS.ACCOUNTING_INVOICE_COUNTERS).get();
       return snap.docs.map((d) => d.data() as InvoiceSeries);
     }, []);
+  }
+
+  // ── Service Presets (ADR-ACC-011) ──────────────────────────────────────
+
+  async getServicePresets(): Promise<ServicePreset[]> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db
+        .collection(COLLECTIONS.ACCOUNTING_SETTINGS)
+        .doc('service_presets')
+        .get();
+      if (!snap.exists) return [];
+      const doc = snap.data() as ServicePresetsDocument;
+      return doc.presets.filter((p) => p.isActive);
+    }, []);
+  }
+
+  async saveServicePresets(presets: ServicePreset[]): Promise<void> {
+    const now = isoNow();
+    await safeFirestoreOperation(async (db) => {
+      const docRef = db
+        .collection(COLLECTIONS.ACCOUNTING_SETTINGS)
+        .doc('service_presets');
+      const doc = sanitizeForFirestore({
+        presets,
+        updatedAt: now,
+      } as unknown as Record<string, unknown>);
+      await docRef.set(doc);
+    }, undefined);
   }
 
   // ── Bank Transactions ───────────────────────────────────────────────────

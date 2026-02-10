@@ -2,10 +2,10 @@
 
 /**
  * @fileoverview Invoices Page Content — Σελίδα Τιμολογίων
- * @description UnifiedDashboard stats + AdvancedFiltersPanel + InvoicesTable
+ * @description AccountingPageHeader + UnifiedDashboard toggle + AdvancedFiltersPanel + InvoicesTable
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @updated 2026-02-10 — Migrated to UnifiedDashboard + AdvancedFiltersPanel
+ * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
@@ -26,7 +26,9 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import { useAuth } from '@/hooks/useAuth';
-import type { Invoice, InvoiceType } from '@/subapps/accounting/types';
+import type { Invoice } from '@/subapps/accounting/types';
+import { formatCurrency } from '../../utils/format';
+import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { InvoicesTable } from './InvoicesTable';
 
 // ============================================================================
@@ -52,10 +54,6 @@ const DEFAULT_FILTERS: InvoiceFilterState = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
   return {
@@ -124,6 +122,7 @@ export function InvoicesPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<InvoiceFilterState>({ ...DEFAULT_FILTERS });
+  const [showDashboard, setShowDashboard] = useState(true);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
@@ -208,21 +207,22 @@ export function InvoicesPageContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Page Header */}
-      <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('invoices.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('invoices.description')}</p>
-          </div>
-          <Button onClick={() => router.push('/accounting/invoices/new')}>
+      <AccountingPageHeader
+        icon={Receipt}
+        titleKey="invoices.title"
+        descriptionKey="invoices.description"
+        showDashboard={showDashboard}
+        onDashboardToggle={() => setShowDashboard(!showDashboard)}
+        actions={[
+          <Button key="new-invoice" onClick={() => router.push('/accounting/invoices/new')}>
             <Plus className="mr-2 h-4 w-4" />
             {t('invoices.newInvoice')}
-          </Button>
-        </div>
-      </header>
+          </Button>,
+        ]}
+      />
 
       {/* Stats Dashboard */}
-      <UnifiedDashboard stats={dashboardStats} columns={4} />
+      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
 
       {/* Filters */}
       <AdvancedFiltersPanel

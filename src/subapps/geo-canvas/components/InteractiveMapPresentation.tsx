@@ -154,7 +154,7 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         {...viewState}
         onMove={(evt) => onViewStateChange(evt.viewState as ViewState)}
         onLoad={onLoad}
-        style={{ width: '100%', height: '100%' }}
+        className="w-full h-full"
         mapStyle={mapStyle}
         onClick={onClick}
         onMouseMove={onMouseMove}
@@ -280,4 +280,5 @@ InteractiveMapPresentation.displayName = 'InteractiveMapPresentation';
  * Receives ALL data and handlers από το InteractiveMapContainer.
  * Zero business logic - μόνο UI rendering responsibility.
  */
+
 
