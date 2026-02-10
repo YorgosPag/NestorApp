@@ -33,6 +33,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePhotoCapture } from '@/hooks/usePhotoCapture';
+import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import type { QrCheckInResponse } from '@/components/projects/ika/contracts';
 
 // =============================================================================
@@ -447,7 +448,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
 function formatDateGreek(dateStr: string): string {
   try {
     const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('el-GR', {
+    return formatDate(date, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',

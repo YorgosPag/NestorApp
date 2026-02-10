@@ -56,6 +56,7 @@ import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
 import { FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { formatDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
 
 // 🏢 ENTERPRISE: Error handling delegated to ComponentErrorBoundary wrapper
 // See FileManagerPageContent.tsx where InboxView is wrapped with ComponentErrorBoundary
@@ -116,25 +117,6 @@ interface ChatGroup {
 function formatFileSize(bytes: number | undefined): string {
   if (!bytes || bytes === 0) return formatFileSizeUtil(0);
   return formatFileSizeUtil(bytes);
-}
-
-/**
- * Format date
- */
-function formatDate(dateString: string | Date | undefined): string {
-  if (!dateString) return 'N/A';
-  try {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return new Intl.DateTimeFormat('el-GR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return 'N/A';
-  }
 }
 
 /**
@@ -465,7 +447,7 @@ export function InboxView({
                   </Badge>
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <Clock className={iconSizes.xs} />
-                    {formatDate(group.latestTimestamp)}
+                    {formatDateTime(group.latestTimestamp)}
                   </span>
                 </div>
               </button>
@@ -520,7 +502,7 @@ export function InboxView({
                             {/* Received at */}
                             <span className="flex items-center gap-1">
                               <Calendar className={iconSizes.xs} />
-                              {formatDate(file.source?.receivedAt || file.createdAt)}
+                              {formatDateTime(file.source?.receivedAt || file.createdAt)}
                             </span>
                           </div>
                         </div>

@@ -144,7 +144,14 @@ export class PipelineOrchestrator {
     ctx = this.transitionState(ctx, PipelineState.ACKED);
     ctx.stepDurations['intake'] = 0; // Already processed
 
-    // ── Step 2: UNDERSTAND ──
+    // ── ADR-171: Agentic path for ALL admin commands ──
+    // Skip UNDERSTAND step entirely for admin — the agentic loop does its
+    // own AI analysis with tool calling. Saves ~3-5s per admin message.
+    if (ctx.adminCommandMeta?.isAdminCommand === true) {
+      return this.executeAgenticPath(ctx);
+    }
+
+    // ── Step 2: UNDERSTAND (non-admin messages only) ──
     const understandStart = Date.now();
     ctx = await this.stepUnderstand(ctx);
     ctx.stepDurations['understand'] = Date.now() - understandStart;
@@ -159,13 +166,6 @@ export class PipelineOrchestrator {
         context: ctx,
         auditId,
       };
-    }
-
-    // ── ADR-171: Agentic path for ALL admin commands ──
-    // Instead of routing to individual UC modules, the agentic loop
-    // handles ALL admin commands autonomously with tool calling.
-    if (ctx.adminCommandMeta?.isAdminCommand === true) {
-      return this.executeAgenticPath(ctx);
     }
 
     // ── Multi-Intent Route ──

@@ -1,33 +1,38 @@
 /**
- * @fileoverview Accounting Subapp — Centralized Format Utilities
- * @description Single source of truth for currency formatting across the accounting subapp.
- *   Previously duplicated in 29+ files — now centralized here.
+ * @fileoverview Accounting Subapp — Format Utilities
+ * @description Thin wrappers over centralized intl-utils with accounting-specific defaults
+ *   (e.g. always 2 decimal places for currency).
  * @author Claude Code (Anthropic AI) + Georgios Pagonis
  * @created 2026-02-10
+ * @updated 2026-02-10 — Delegated to @/lib/intl-utils (zero duplicates)
  * @compliance CLAUDE.md Enterprise Standards — zero duplicates, centralized utilities
  */
 
+import {
+  formatCurrency as centralFormatCurrency,
+  formatDate as centralFormatDate,
+} from '@/lib/intl-utils';
+
 /**
- * Format a number as EUR currency using Greek locale.
+ * Format a number as EUR currency — accounting standard (always 2 decimals).
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+  return centralFormatCurrency(amount, 'EUR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 /**
- * Format an ISO date string as DD/MM/YYYY using Greek locale.
+ * Format an ISO date string as DD/MM/YYYY.
+ * Delegates to centralized formatDate from intl-utils.
  */
 export function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
+  return centralFormatDate(iso);
 }
 
 /**
  * Format a nullable currency amount, returning '—' for null values.
- * Used by Documents page for extracted data that may be null.
  */
 export function formatCurrencyOrDash(amount: number | null): string {
   if (amount === null) return '—';

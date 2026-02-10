@@ -11,7 +11,7 @@ import { DetailsCard } from './dashboard/DetailsCard';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/subapps/accounting/utils/format';
+import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
 
 interface PropertyDashboardProps {
   stats: PropertyStats;

@@ -169,40 +169,6 @@ export const getStatusIcon = (status: ObligationStatus | string): string => {
   return icons[status] || 'File';
 };
 
-/**
- * Format date in Greek locale (full format)
- */
-export const formatDate = (date: Date | string | number): string => {
-  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-  return d.toLocaleDateString('el-GR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-/**
- * Format date in short format (DD/MM/YYYY)
- */
-export const formatShortDate = (date: Date | string | number): string => {
-  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-  return d.toLocaleDateString('el-GR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-};
-
-/**
- * Format date with time
- */
-export const formatDateTime = (date: Date | string | number): string => {
-  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-  return d.toLocaleDateString('el-GR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
+// 🏢 ENTERPRISE: formatDate, formatShortDate, formatDateTime REMOVED
+// Use centralized versions from '@/lib/intl-utils' instead
+// Removed 2026-02-10 — zero imports were using these functions from this module

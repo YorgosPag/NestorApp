@@ -38,6 +38,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
 import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
 import { copyToClipboard } from '@/lib/share-utils'; // 🏢 ENTERPRISE: Centralized clipboard utility
+import { formatDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notifications
 import {
   Sheet,
@@ -105,36 +106,18 @@ export function FileInspector({
     }
   }, [file.storagePath, success, error, t]);
 
-  /**
-   * Format date for display
-   */
+  // 🏢 ENTERPRISE: Format timestamp using centralized formatDateTime
   const formatDate = (timestamp: unknown): string => {
     if (!timestamp) return t('technical.unavailable', { defaultValue: 'N/A' });
-
     try {
       // Handle Firestore Timestamp
-      if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
-        const date = (timestamp as { toDate: () => Date }).toDate();
-        return new Intl.DateTimeFormat('el-GR', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }).format(date);
+      if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
+        return formatDateTime((timestamp as { toDate: () => Date }).toDate());
       }
-
       // Handle Date object
       if (timestamp instanceof Date) {
-        return new Intl.DateTimeFormat('el-GR', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }).format(timestamp);
+        return formatDateTime(timestamp);
       }
-
       return t('technical.unavailable', { defaultValue: 'N/A' });
     } catch {
       return t('technical.unavailable', { defaultValue: 'N/A' });

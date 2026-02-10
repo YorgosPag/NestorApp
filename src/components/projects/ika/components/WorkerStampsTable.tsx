@@ -32,7 +32,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { InsuranceClassBadge } from './InsuranceClassBadge';
 import type { StampsMonthSummary, WorkerStampsSummary } from '../contracts';
-import { formatCurrency } from '@/subapps/accounting/utils/format';
+import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
 
 interface WorkerStampsTableProps {
   /** Monthly stamps summary */

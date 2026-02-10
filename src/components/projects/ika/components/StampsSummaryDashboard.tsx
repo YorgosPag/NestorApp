@@ -22,7 +22,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { StampsMonthSummary } from '../contracts';
-import { formatCurrency } from '@/subapps/accounting/utils/format';
+import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
 
 interface StampsSummaryDashboardProps {
   /** Monthly stamps summary */

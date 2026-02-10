@@ -1,14 +1,11 @@
 // Design system utilities για consistent styling
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { designTokens } from '@/styles/design-tokens';
 import { borders } from '@/styles/design-tokens';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
-// Enhanced cn function με design system support
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+// ✅ CENTRALIZED: Import + re-export cn from canonical source (@/lib/utils)
+import { cn } from '@/lib/utils';
+export { cn };
 
 // Status color utilities
 export const getStatusColor = (status: string, variant: 'bg' | 'text' | 'border' = 'text') => {

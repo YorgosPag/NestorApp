@@ -33,7 +33,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useEmploymentRecords } from './hooks/useEmploymentRecords';
 import type { EmploymentRecord, ApdStatus } from './contracts';
-import { formatCurrency } from '@/subapps/accounting/utils/format';
+import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
 
 interface ApdPaymentsTabContentProps {
   /** Project ID from parent IKA tab */

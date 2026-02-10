@@ -29,6 +29,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects/hover-effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFileSize } from '@/utils/file-validation';
+import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import type { FileRecord } from '@/types/file-record';
 
 // ============================================================================
@@ -86,22 +87,6 @@ const CARD_SIZES = {
  */
 function isVideoFile(file: FileRecord): boolean {
   return file.contentType?.startsWith('video/') ?? false;
-}
-
-/**
- * Format date for display
- */
-function formatDate(dateString: string | Date): string {
-  try {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return new Intl.DateTimeFormat('el-GR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    }).format(date);
-  } catch {
-    return '';
-  }
 }
 
 // ============================================================================

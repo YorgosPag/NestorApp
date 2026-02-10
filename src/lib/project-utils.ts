@@ -10,18 +10,6 @@ import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 // 🏢 ENTERPRISE: i18n support for project status labels
 import i18n from '@/i18n/config';
 
-// ⚠️ DEPRECATED: Use formatCurrency from intl-utils.ts for enterprise currency formatting
-// 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
-// 📍 MIGRATION: import { formatCurrency } from '@/lib/intl-utils'
-export const formatCurrency = (amount: number) => {
-    // Re-export centralized function for backward compatibility
-    const { formatCurrency: centralizedFormatter } = require('./intl-utils');
-    return centralizedFormatter(amount, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-};
-
-// ✅ ENTERPRISE MIGRATION COMPLETE: formatDate fully migrated to intl-utils.ts
-// All imports have been updated to use @/lib/intl-utils
-
 export const getProgressColor = (progress: number) => {
     if (progress < 25) return COLOR_BRIDGE.text.error;      // ✅ SEMANTIC: text-red-500 -> error
     if (progress < 50) return COLOR_BRIDGE.text.warning;    // ✅ SEMANTIC: text-yellow-500 -> warning
@@ -29,7 +17,7 @@ export const getProgressColor = (progress: number) => {
     return brandClasses.primary.text;
 };
 
-// ✅ ENTERPRISE MIGRATION: Using centralized getDaysUntilCompletion
+// ✅ ENTERPRISE MIGRATION: Re-export centralized getDaysUntilCompletion
 export const getDaysUntilCompletion = (completionDate?: string) => {
     return getDaysUntilCompletionI18n(completionDate);
 };

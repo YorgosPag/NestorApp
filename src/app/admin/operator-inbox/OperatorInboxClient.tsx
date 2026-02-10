@@ -59,6 +59,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
 import { ProposalReviewCard } from '@/components/admin/operator-inbox/ProposalReviewCard';
 import type {
   PipelineQueueItem,
@@ -358,20 +359,10 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
     });
   }, [items, filters]);
 
-  // ── Format date ──
+  // 🏢 ENTERPRISE: formatDate wrapper using centralized formatDateTime
   const formatDate = (isoString?: string): string => {
     if (!isoString) return '-';
-    try {
-      return new Date(isoString).toLocaleString('el-GR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoString;
-    }
+    return formatDateTime(isoString);
   };
 
   // ── Loading ──

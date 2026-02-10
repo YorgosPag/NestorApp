@@ -73,6 +73,21 @@ export async function enqueuePipelineItem(
   const requestId = generateRequestId();
   const now = new Date().toISOString();
 
+  // ── ADR-171: Deduplication — prevent same message from being enqueued twice ──
+  const intakeMessageId = params.intakeMessage.id;
+  const existingSnapshot = await adminDb
+    .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
+    .where('intakeMessageId', '==', intakeMessageId)
+    .where('status', 'in', ['pending', 'processing'])
+    .limit(1)
+    .get();
+
+  if (!existingSnapshot.empty) {
+    const existingDoc = existingSnapshot.docs[0];
+    const existingData = existingDoc.data() as PipelineQueueItem;
+    return { queueId: existingDoc.id, requestId: existingData.requestId };
+  }
+
   const context: PipelineContext = {
     requestId,
     companyId: params.companyId,

@@ -6,22 +6,23 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber, getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
+import { formatFloorLabel, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber, getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+// ✅ CENTRALIZED: Re-export from intl-utils for backward compatibility
+export { formatFloorLabel };
 
-
-export const formatFloorLabel = (floor: number): string => {
-    return formatFloorLabelI18n(floor);
-}
+// 🏢 ENTERPRISE: Wrapper exports using centralized intl-utils
+export const getCategoryLabel = getCategoryLabelI18n;
+export const getStatusLabel = getStatusLabelI18n;
+export const getDaysUntilCompletion = getDaysUntilCompletionI18n;
 
 export const formatPricePerSqm = (price?: number, area?: number): string => {
     if (!price || !area || area === 0) return '-';
     const value = Math.round(price / area);
     return formatNumber(value) + getPricePerSqmUnit();
-}
-
+};
 
 export const getProgressColor = (progress: number) => {
     if (progress < 25) return 'text-red-500';
@@ -41,14 +42,6 @@ export const getCategoryIcon = (category: string) => {
     }
 };
 
-export const getCategoryLabel = (category: string) => {
-    return getCategoryLabelI18n(category);
-};
-
-// ✅ ENTERPRISE MIGRATION: Using centralized getDaysUntilCompletion
-export const getDaysUntilCompletion = (completionDate?: string) => {
-    return getDaysUntilCompletionI18n(completionDate);
-};
 
 export const getStatusColor = (status: string, colors?: ReturnType<typeof useSemanticColors>) => {
     if (!colors) {
@@ -71,6 +64,3 @@ export const getStatusColor = (status: string, colors?: ReturnType<typeof useSem
     }
 };
 
-export const getStatusLabel = (status: string) => {
-    return getStatusLabelI18n(status);
-};

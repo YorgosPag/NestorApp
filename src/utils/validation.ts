@@ -2,6 +2,7 @@ import { z } from 'zod';
 import i18n from '@/i18n/config';
 // ✅ ENTERPRISE: Import centralized validation messages
 import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
+import { formatDateForDisplay as formatDateForDisplayCentral } from '@/lib/intl-utils';
 
 // 🏢 ENTERPRISE: Validation messages config type
 type ValidationMessagesConfig = Record<string, string>;
@@ -306,14 +307,8 @@ export const isDatePastOrToday = (dateStr?: string): boolean => {
 /**
  * Format date for user display (ΗΗ/ΜΜ/ΕΕΕΕ)
  */
-// ⚠️ DEPRECATED: Use formatDateForDisplay from intl-utils.ts for enterprise date formatting
-// 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
-// 📍 MIGRATION: import { formatDateForDisplay } from '@/lib/intl-utils'
-export const formatDateForDisplay = (dateStr?: string): string => {
-  // Re-export centralized function for backward compatibility
-  const { formatDateForDisplay: centralizedFormatter } = require('../lib/intl-utils');
-  return centralizedFormatter(dateStr);
-};
+// ✅ CENTRALIZED: Re-export from intl-utils (replaced require() wrapper)
+export const formatDateForDisplay = formatDateForDisplayCentral;
 
 // Common validation schemas
 export const commonSchemas = {

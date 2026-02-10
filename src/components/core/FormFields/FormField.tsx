@@ -26,6 +26,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import { formatCurrency, formatNumber, formatPercentage } from '@/lib/intl-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -204,18 +205,15 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
 
     if (type === 'number' && typeof val === 'number') {
       if (currency) {
-        return new Intl.NumberFormat('el-GR', {
-          style: 'currency',
-          currency: 'EUR'
-        }).format(val);
+        return formatCurrency(val, 'EUR');
       }
       
       if (percentage) {
-        return `${val}%`;
+        return formatPercentage(val, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       }
       
       if (thousandsSeparator) {
-        return val.toLocaleString('el-GR');
+        return formatNumber(val);
       }
     }
 

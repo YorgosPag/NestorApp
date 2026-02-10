@@ -4,7 +4,7 @@ import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
 import { getIconComponent } from './utils/IconMapping';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { formatDate } from '@/lib/intl-utils';
+import { formatCurrency, formatDate, formatNumber } from '@/lib/intl-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -65,10 +65,10 @@ function formatNumberValue(value: FieldValue, field: FieldConfig): string {
 
   // Special formatting for currency amounts
   if (field.id.includes('capital') || field.id.includes('amount')) {
-    return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(numValue);
+    return formatCurrency(numValue, 'EUR');
   }
 
-  return numValue.toLocaleString('el-GR');
+  return formatNumber(numValue);
 }
 
 /**
