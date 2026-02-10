@@ -30,6 +30,9 @@ import {
 } from '@/config/notification-events';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationsDispatchRoute');
 
 // ============================================================================
 // TYPES (Protocol: ZERO any)
@@ -108,8 +111,7 @@ export const POST = withStandardRateLimit(basePOST);
 
 async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<NextResponse<DispatchNotificationResponse>> {
   try {
-    console.log(`🔔 [Notifications/Dispatch] Starting dispatch...`);
-    console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+    logger.info('[Notifications/Dispatch] Starting dispatch', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
     // Parse request body
     const body = await request.json();
@@ -143,7 +145,7 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
         contactName = conversationData?.contactName || contactName;
       }
     } catch (error) {
-      console.error('[Notification/Dispatch] Failed to fetch contact name:', error);
+      logger.error('[Notifications/Dispatch] Failed to fetch contact name', { error: error instanceof Error ? error.message : String(error) });
       // Continue with default name
     }
 
@@ -166,7 +168,7 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
     });
 
     if (!result.success) {
-      console.error('[Notification/Dispatch] Failed:', result.reason);
+      logger.error('[Notifications/Dispatch] Failed', { reason: result.reason });
       return NextResponse.json(
         { success: false, error: result.reason },
         { status: 500 }
@@ -178,7 +180,7 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
       notificationId: result.notificationId,
     });
   } catch (error) {
-    console.error('[Notification/Dispatch] Unexpected error:', error);
+    logger.error('[Notifications/Dispatch] Unexpected error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -20,6 +20,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationsActionRoute');
 
 // Response types for type-safe withAuth
 type ActionSuccess = {
@@ -49,7 +52,7 @@ const basePOST = async (request: NextRequest) => {
           }, { status: 400 });
         }
 
-        console.log(`🔔 [Notifications/Action] User ${ctx.uid} executing action ${actionId} on notification ${id}...`);
+        logger.info('[Notifications/Action] Executing action', { userId: ctx.uid, actionId, notificationId: id });
 
         // CRITICAL: Ownership validation - verify notification belongs to this user
         const notificationRef = getAdminFirestore().collection(COLLECTIONS.NOTIFICATIONS).doc(id);
@@ -64,7 +67,7 @@ const basePOST = async (request: NextRequest) => {
 
         const notificationData = notificationDoc.data();
         if (notificationData?.userId !== ctx.uid) {
-          console.warn(`⚠️ [Notifications/Action] Unauthorized attempt to execute action:`, {
+          logger.warn('[Notifications/Action] Unauthorized attempt to execute action', {
             userId: ctx.uid,
             notificationId: id,
             notificationOwnerId: notificationData?.userId
@@ -82,15 +85,15 @@ const basePOST = async (request: NextRequest) => {
           actionTakenAt: new Date().toISOString()
         });
 
-        console.log(`✅ [Notifications/Action] Action recorded successfully`);
+        logger.info('[Notifications/Action] Action recorded successfully');
 
         return NextResponse.json({
           success: true,
           message: 'Notification action recorded successfully'
         });
       } catch (error) {
-        console.error('❌ [Notifications/Action] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Notifications/Action] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid
         });
 

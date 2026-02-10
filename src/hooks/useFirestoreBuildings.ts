@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Building } from '@/types/building/contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFirestoreBuildings');
 
 interface UseFirestoreBuildingsReturn {
   buildings: Building[];
@@ -37,7 +40,7 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
       // 🔐 AUTH-READY GATING - Wait for authentication
       if (authLoading) {
         // Auth state is still loading - wait for it
-        console.log('⏳ [Buildings] Waiting for auth state...');
+        logger.info('Waiting for auth state');
         return; // Will retry via useEffect when authLoading changes
       }
 
@@ -51,7 +54,7 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
       setLoading(true);
       setError(null);
 
-      console.log('🏢 [Buildings] Fetching buildings...');
+      logger.info('Fetching buildings');
 
       // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
       // apiClient.get() returns unwrapped data (not { success, data })
@@ -63,11 +66,11 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
       }
 
       setBuildings(data.buildings);
-      console.log(`✅ [Buildings] Loaded ${data.count} buildings`);
+      logger.info(`Loaded ${data.count} buildings`);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('[ERROR] Error fetching buildings:', err);
+      logger.error('Error fetching buildings', { error: err });
       setError(errorMessage);
     } finally {
       setLoading(false);

@@ -3,6 +3,9 @@
 import { useState, useMemo } from 'react';
 import type { ParkingSpot, ParkingFilters, ParkingStats } from '@/types/parking';
 import { parkingSpots as mockParkingSpots } from '@/components/projects/parking/data';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useParkingData');
 
 export function useParkingData(initialSpots: ParkingSpot[] = mockParkingSpots) {
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>(initialSpots);
@@ -82,15 +85,15 @@ export function useParkingData(initialSpots: ParkingSpot[] = mockParkingSpots) {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
-  const handleExport = () => console.log('Εξαγωγή δεδομένων θέσεων στάθμευσης');
-  const handleImport = () => console.log('Εισαγωγή δεδομένων θέσεων στάθμευσης');
-  const handleAdd = () => console.log('Προσθήκη νέας θέσης στάθμευσης');
-  const handleDelete = () => console.log('Διαγραφή επιλεγμένων θέσεων:', selectedSpots);
-  const handleSave = () => console.log('Αποθήκευση αλλαγών');
-  const handleRefresh = () => console.log('Ανανέωση δεδομένων');
-  const handleEdit = (spot: ParkingSpot) => console.log('Επεξεργασία θέσης:', spot);
-  const handleView = (spot: ParkingSpot) => console.log('Προβολή θέσης:', spot);
-  const handleViewFloorPlan = (spot: ParkingSpot) => console.log('Προβολή κάτοψης για θέση:', spot);
+  const handleExport = () => logger.info('Exporting parking spots data');
+  const handleImport = () => logger.info('Importing parking spots data');
+  const handleAdd = () => logger.info('Adding new parking spot');
+  const handleDelete = () => logger.info('Deleting selected spots', { selectedSpots });
+  const handleSave = () => logger.info('Saving changes');
+  const handleRefresh = () => logger.info('Refreshing data');
+  const handleEdit = (spot: ParkingSpot) => logger.info('Editing spot', { spotId: spot.id });
+  const handleView = (spot: ParkingSpot) => logger.info('Viewing spot', { spotId: spot.id });
+  const handleViewFloorPlan = (spot: ParkingSpot) => logger.info('Viewing floor plan for spot', { spotId: spot.id });
   
   return {
       parkingSpots: filteredSpots,

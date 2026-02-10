@@ -162,6 +162,10 @@ export const COLLECTIONS = {
   // 🧠 AI CHAT HISTORY (ADR-171: Autonomous AI Agent — conversation memory)
   AI_CHAT_HISTORY: process.env.NEXT_PUBLIC_AI_CHAT_HISTORY_COLLECTION || 'ai_chat_history',
 
+  // 🧠 AI SELF-IMPROVEMENT (ADR-173: Feedback + Learning)
+  AI_AGENT_FEEDBACK: process.env.NEXT_PUBLIC_AI_AGENT_FEEDBACK_COLLECTION || 'ai_agent_feedback',
+  AI_LEARNED_PATTERNS: process.env.NEXT_PUBLIC_AI_LEARNED_PATTERNS_COLLECTION || 'ai_learned_patterns',
+
   // 📋 SYSTEM AUDIT LOGS (Webhook/system-level audit events)
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
 

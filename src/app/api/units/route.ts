@@ -18,6 +18,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitsRoute');
 
 // Response types for type-safe withAuth
 type UnitsListSuccess = {
@@ -47,9 +50,7 @@ export const GET = withStandardRateLimit(
         const buildingId = searchParams.get('buildingId');
         const floorId = searchParams.get('floorId');
 
-        console.log(`🏠 [Units/List] Fetching units for tenant ${ctx.companyId}...`);
-        console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
-        console.log(`📋 Filters: buildingId=${buildingId || 'all'}, floorId=${floorId || 'all'}`);
+        logger.info('[Units/List] Fetching units', { companyId: ctx.companyId, userId: ctx.uid, buildingId: buildingId || 'all', floorId: floorId || 'all' });
 
         // ============================================================================
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
@@ -66,7 +67,7 @@ export const GET = withStandardRateLimit(
           ...doc.data()
         }));
 
-        console.log(`🏠 Found ${units.length} units for tenant ${ctx.companyId}`);
+        logger.info('[Units/List] Found units for tenant', { count: units.length, companyId: ctx.companyId });
 
         // 🏢 ENTERPRISE: Filter by buildingId if provided
         if (buildingId) {
@@ -74,7 +75,7 @@ export const GET = withStandardRateLimit(
             const unitData = unit as Record<string, unknown> & { buildingId?: string };
             return unitData.buildingId === buildingId;
           });
-          console.log(`🔍 Filtered by buildingId=${buildingId}: ${units.length} units`);
+          logger.info('[Units/List] Filtered by buildingId', { buildingId, count: units.length });
         }
 
         // 🏢 ENTERPRISE: Filter by floorId if provided
@@ -83,10 +84,10 @@ export const GET = withStandardRateLimit(
             const unitData = unit as Record<string, unknown> & { floorId?: string };
             return unitData.floorId === floorId;
           });
-          console.log(`🔍 Filtered by floorId=${floorId}: ${units.length} units`);
+          logger.info('[Units/List] Filtered by floorId', { floorId, count: units.length });
         }
 
-        console.log(`✅ [Units/List] Complete: ${units.length} units returned`);
+        logger.info('[Units/List] Complete', { count: units.length });
 
         return NextResponse.json({
           success: true,
@@ -95,8 +96,8 @@ export const GET = withStandardRateLimit(
         });
 
       } catch (error) {
-        console.error('❌ [Units/List] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Units/List] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });
@@ -143,14 +144,13 @@ export const POST = withStandardRateLimit(
   const handler = withAuth<LinkUnitsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<LinkUnitsResponse>> => {
       try {
-        console.log('🔗 [Units/LinkSold] Linking sold units to contacts...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Units/LinkSold] Linking sold units to contacts', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         // ============================================================================
         // STEP 1: GET CONTACTS (Admin SDK)
         // ============================================================================
 
-        console.log('👤 Getting contacts...');
+        logger.info('[Units/LinkSold] Getting contacts');
         const contactsSnapshot = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).get();
 
         const contacts: Array<{ id: string; name: string }> = [];
@@ -164,7 +164,7 @@ export const POST = withStandardRateLimit(
           }
         });
 
-        console.log(`Found ${contacts.length} contacts with names`);
+        logger.info('[Units/LinkSold] Found contacts with names', { count: contacts.length });
 
         if (contacts.length === 0) {
           return NextResponse.json({
@@ -178,7 +178,7 @@ export const POST = withStandardRateLimit(
         // STEP 2: GET SOLD UNITS (Admin SDK)
         // ============================================================================
 
-        console.log('🏠 Getting sold units...');
+        logger.info('[Units/LinkSold] Getting sold units');
         const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const soldUnitsToLink: Array<{ id: string; buildingId?: unknown }> = [];
@@ -192,7 +192,7 @@ export const POST = withStandardRateLimit(
           }
         });
 
-        console.log(`Found ${soldUnitsToLink.length} sold units without contacts`);
+        logger.info('[Units/LinkSold] Found sold units without contacts', { count: soldUnitsToLink.length });
 
         if (soldUnitsToLink.length === 0) {
           return NextResponse.json({
@@ -219,7 +219,7 @@ export const POST = withStandardRateLimit(
           });
         }
 
-        console.log(`🔗 Linking ${updates.length} units to contacts...`);
+        logger.info('[Units/LinkSold] Linking units to contacts', { count: updates.length });
 
         // Perform updates using Admin SDK
         for (const update of updates) {
@@ -227,10 +227,10 @@ export const POST = withStandardRateLimit(
             soldTo: update.contactId
           });
 
-          console.log(`✅ Unit ${update.unitId} → Contact ${update.contactName} (${update.contactId})`);
+          logger.info('[Units/LinkSold] Unit linked to contact', { unitId: update.unitId, contactName: update.contactName, contactId: update.contactId });
         }
 
-        console.log(`✅ [Units/LinkSold] Complete: Linked ${updates.length} units`);
+        logger.info('[Units/LinkSold] Complete', { linkedCount: updates.length });
 
         return NextResponse.json({
           success: true,
@@ -240,8 +240,8 @@ export const POST = withStandardRateLimit(
         });
 
       } catch (error) {
-        console.error('❌ [Units/LinkSold] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Units/LinkSold] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

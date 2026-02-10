@@ -21,6 +21,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitsTestConnectionRoute');
 
 // Response types for type-safe withAuth
 type TestConnectionSuccess = {
@@ -52,14 +55,13 @@ const getHandler = async (request: NextRequest) => {
   const handler = withAuth<TestConnectionResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<TestConnectionResponse>> => {
       try {
-        console.log('🔍 [Units/TestConnection] Starting Admin SDK operations...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Units/TestConnection] Starting Admin SDK operations', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         // ============================================================================
         // STEP 1: GET BUILDINGS FOR CONFIGURED PROJECT (Admin SDK)
         // ============================================================================
 
-        console.log(`🏢 Getting buildings for project ${BUILDING_IDS.PROJECT_ID}...`);
+        logger.info('[Units/TestConnection] Getting buildings for project', { projectId: BUILDING_IDS.PROJECT_ID });
         const buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
@@ -74,13 +76,13 @@ const getHandler = async (request: NextRequest) => {
           };
         });
 
-        console.log(`Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
+        logger.info('[Units/TestConnection] Found buildings', { count: buildings.length, projectId: BUILDING_IDS.PROJECT_ID });
 
         // ============================================================================
         // STEP 2: GET SAMPLE UNITS (Admin SDK)
         // ============================================================================
 
-        console.log('🏠 Getting sample units...');
+        logger.info('[Units/TestConnection] Getting sample units');
         const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const allUnits = unitsSnapshot.docs.map(doc => {
@@ -108,7 +110,7 @@ const getHandler = async (request: NextRequest) => {
           unitsWithLegacyIds: allUnits.filter(u => BuildingIdUtils.isLegacyBuildingId(u.buildingId)).length
         };
 
-        console.log(`✅ [Units/TestConnection] Complete: ${stats.totalUnits} units analyzed`);
+        logger.info('[Units/TestConnection] Complete', { totalUnits: stats.totalUnits });
 
         return NextResponse.json({
           success: true,
@@ -122,8 +124,8 @@ const getHandler = async (request: NextRequest) => {
         });
 
       } catch (error) {
-        console.error('❌ [Units/TestConnection] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Units/TestConnection] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

@@ -20,6 +20,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorsEnterpriseAuditRoute');
 
 interface EnterpriseDatabaseAudit {
   auditTimestamp: string;
@@ -62,8 +65,8 @@ const getHandler = async (request: NextRequest) => {
   const handler = withAuth<EnterpriseDatabaseAudit | { error: string }>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<EnterpriseDatabaseAudit | { error: string }>> => {
       try {
-        console.log('[AUDIT] [Floors/EnterpriseAudit] Starting Admin SDK operations...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Floors/EnterpriseAudit] Starting Admin SDK operations');
+        logger.info('Auth context', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         const audit: EnterpriseDatabaseAudit = {
           auditTimestamp: new Date().toISOString(),
@@ -83,7 +86,7 @@ const getHandler = async (request: NextRequest) => {
         // AUDIT 1: NORMALIZED FLOORS (Admin SDK)
         // ============================================================================
 
-        console.log('[AUDIT 1] Checking normalized floors collection...');
+        logger.info('[AUDIT 1] Checking normalized floors collection');
         try {
           const floorsSnapshot = await getAdminFirestore().collection(COLLECTIONS.FLOORS).limit(50).get();
           audit.collections.normalizedFloors.exists = true;
@@ -110,16 +113,16 @@ const getHandler = async (request: NextRequest) => {
               }
             });
           }
-          console.log(`   Normalized floors: ${audit.collections.normalizedFloors.documentCount} documents`);
+          logger.info('Normalized floors count', { documentCount: audit.collections.normalizedFloors.documentCount });
         } catch (error) {
-          console.log(`   [ERROR] Normalized floors error: ${error}`);
+          logger.error('Normalized floors error', { error: error instanceof Error ? error.message : String(error) });
         }
 
         // ============================================================================
         // AUDIT 2: SUBCOLLECTIONS (Admin SDK)
         // ============================================================================
 
-        console.log('[AUDIT 2] Checking subcollections...');
+        logger.info('[AUDIT 2] Checking subcollections');
         try {
           const buildingsSnapshot = await getAdminFirestore().collection(COLLECTIONS.BUILDINGS).limit(10).get();
           const buildingsToCheck = buildingsSnapshot.docs.slice(0, 5);
@@ -142,12 +145,12 @@ const getHandler = async (request: NextRequest) => {
                 });
               }
             } catch (error) {
-              console.log(`     Error checking ${buildingDoc.id}`);
+              logger.error('Error checking building subcollection', { buildingId: buildingDoc.id });
             }
           }
-          console.log(`   Subcollection floors: ${audit.collections.subcollectionFloors.totalSubcollectionFloors}`);
+          logger.info('Subcollection floors count', { total: audit.collections.subcollectionFloors.totalSubcollectionFloors });
         } catch (error) {
-          console.log(`   [ERROR] Subcollections error: ${error}`);
+          logger.error('Subcollections error', { error: error instanceof Error ? error.message : String(error) });
         }
 
         // ============================================================================
@@ -203,12 +206,12 @@ const getHandler = async (request: NextRequest) => {
           audit.recommendations.immediate.push('CREATE floors data with enterprise architecture');
         }
 
-        console.log(`✅ [Floors/EnterpriseAudit] Complete: ${audit.compliance.level} (${audit.compliance.score}/100)`);
+        logger.info('[Floors/EnterpriseAudit] Complete', { level: audit.compliance.level, score: audit.compliance.score });
 
         return NextResponse.json(audit);
 
       } catch (error) {
-        console.error('❌ [Floors/EnterpriseAudit] Error:', {
+        logger.error('[Floors/EnterpriseAudit] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

@@ -2,6 +2,9 @@
 
 import { ADMIN_CONFIG } from './config';
 import type { InlineKeyboardMarkup, TelegramResponse } from './types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramAdminClient');
 
 /**
  * Sends a prepared message to the Telegram API.
@@ -38,7 +41,7 @@ export async function sendMessageToTelegram(
         const json = await response.json();
 
         if (!json.ok) {
-            console.error('Telegram API Error:', json.description);
+            logger.error('Telegram API Error', { description: json.description });
             return { success: false, error: json.description || 'Unknown Telegram API error' };
         }
 
@@ -47,10 +50,10 @@ export async function sendMessageToTelegram(
     } catch (error) {
         clearTimeout(timeoutId);
         if (error instanceof Error && error.name === 'AbortError') {
-            console.error('Telegram API request timed out');
+            logger.error('Telegram API request timed out');
             return { success: false, error: 'Request timed out' };
         }
-        console.error('Error sending message to Telegram:', error);
+        logger.error('Error sending message to Telegram', { error });
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
 }

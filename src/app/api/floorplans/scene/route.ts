@@ -25,6 +25,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorplanSceneRoute');
 
 // ============================================================================
 // TYPES
@@ -103,7 +106,7 @@ async function handleGetScene(
   const { searchParams } = new URL(request.url);
   const fileId = searchParams.get('fileId');
 
-  console.log(`📡 [FloorplanScene] Request from ${ctx.email} for file: ${fileId}`);
+  logger.info('[FloorplanScene] Request', { email: ctx.email, fileId });
 
   // =========================================================================
   // 1. VALIDATE REQUEST
@@ -133,7 +136,7 @@ async function handleGetScene(
       process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
     if (!storageBucket) {
-      console.error('❌ [FloorplanScene] FIREBASE_STORAGE_BUCKET not configured');
+      logger.error('[FloorplanScene] FIREBASE_STORAGE_BUCKET not configured');
       return NextResponse.json(
         {
           success: false,
@@ -170,9 +173,7 @@ async function handleGetScene(
     // =========================================================================
 
     if (fileData.companyId && fileData.companyId !== ctx.companyId) {
-      console.warn(
-        `🚨 [FloorplanScene] Tenant mismatch: ${fileData.companyId} !== ${ctx.companyId}`
-      );
+      logger.warn('[FloorplanScene] Tenant mismatch', { fileCompanyId: fileData.companyId, userCompanyId: ctx.companyId });
       return NextResponse.json(
         {
           success: false,
@@ -205,14 +206,14 @@ async function handleGetScene(
     // 6. DOWNLOAD SCENE JSON FROM STORAGE
     // =========================================================================
 
-    console.log(`📥 [FloorplanScene] Downloading from: ${processedDataPath}`);
+    logger.info('[FloorplanScene] Downloading from storage', { processedDataPath });
 
     const fileRef = bucket.file(processedDataPath);
 
     // Check if file exists
     const [exists] = await fileRef.exists();
     if (!exists) {
-      console.error(`❌ [FloorplanScene] Processed file not found in Storage: ${processedDataPath}`);
+      logger.error('[FloorplanScene] Processed file not found in Storage', { processedDataPath });
       return NextResponse.json(
         {
           success: false,
@@ -225,7 +226,7 @@ async function handleGetScene(
 
     const [fileBuffer] = await fileRef.download();
 
-    console.log(`✅ [FloorplanScene] Downloaded ${fileBuffer.length} bytes`);
+    logger.info('[FloorplanScene] Downloaded', { bytes: fileBuffer.length });
 
     // =========================================================================
     // 7. RETURN JSON WITH CACHING HEADERS
@@ -254,7 +255,7 @@ async function handleGetScene(
     });
 
   } catch (error) {
-    console.error('❌ [FloorplanScene] Error:', error);
+    logger.error('[FloorplanScene] Error', { error: error instanceof Error ? error.message : String(error) });
 
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';

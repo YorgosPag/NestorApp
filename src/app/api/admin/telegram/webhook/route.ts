@@ -35,6 +35,9 @@ import { generateRequestId } from '@/services/enterprise-id.service';
 import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withTelegramRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramWebhookAdminRoute');
 
 // ============================================================================
 // CONFIGURATION
@@ -116,10 +119,7 @@ async function handleGetWebhookInfo(request: NextRequest, ctx: AuthContext): Pro
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [GET /api/admin/telegram/webhook] BLOCKED: Non-super_admin attempted webhook info`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted webhook info', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId });
     return NextResponse.json(
       {
         success: false,
@@ -130,7 +130,7 @@ async function handleGetWebhookInfo(request: NextRequest, ctx: AuthContext): Pro
     );
   }
 
-  console.log('📡 Admin: Getting Telegram webhook info...', { email: ctx.email, operationId });
+  logger.info('Getting Telegram webhook info', { email: ctx.email, operationId });
 
   const result = await callTelegramApi<WebhookInfo>('getWebhookInfo');
 
@@ -179,7 +179,7 @@ async function handleGetWebhookInfo(request: NextRequest, ctx: AuthContext): Pro
     status.recommendations.push(`Recent errors detected: ${status.health.lastErrorMessage}`);
   }
 
-  console.log('✅ Webhook info retrieved:', status.webhook.url);
+  logger.info('Webhook info retrieved', { url: status.webhook.url });
   return NextResponse.json(status);
 }
 
@@ -219,10 +219,7 @@ async function handleSetWebhook(request: NextRequest, ctx: AuthContext): Promise
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/admin/telegram/webhook] BLOCKED: Non-super_admin attempted webhook configuration`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted webhook configuration', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId });
     return NextResponse.json(
       {
         success: false,
@@ -233,7 +230,7 @@ async function handleSetWebhook(request: NextRequest, ctx: AuthContext): Promise
     );
   }
 
-  console.log('📡 Admin: Setting Telegram webhook...', { email: ctx.email, operationId });
+  logger.info('Setting Telegram webhook', { email: ctx.email, operationId });
 
   let body: SetWebhookRequest = {};
 
@@ -279,13 +276,12 @@ async function handleSetWebhook(request: NextRequest, ctx: AuthContext): Promise
     params.max_connections = body.max_connections;
   }
 
-  console.log(`🔧 Setting webhook to: ${webhookUrl}`);
-  console.log(`🔒 Secret token: ${secretToken.substring(0, 4)}...${secretToken.substring(secretToken.length - 4)}`);
+  logger.info('Setting webhook', { webhookUrl, secretTokenPreview: `${secretToken.substring(0, 4)}...${secretToken.substring(secretToken.length - 4)}` });
 
   const result = await callTelegramApi<boolean>('setWebhook', params);
 
   if (!result.ok) {
-    console.error('❌ setWebhook failed:', result.description);
+    logger.error('setWebhook failed', { description: result.description });
     return NextResponse.json({
       success: false,
       error: result.description || 'Failed to set webhook',
@@ -293,7 +289,7 @@ async function handleSetWebhook(request: NextRequest, ctx: AuthContext): Promise
     }, { status: 500 });
   }
 
-  console.log('✅ Webhook configured successfully');
+  logger.info('Webhook configured successfully');
 
   // Get updated webhook info to confirm
   const verifyResult = await callTelegramApi<WebhookInfo>('getWebhookInfo');
@@ -320,7 +316,7 @@ async function handleSetWebhook(request: NextRequest, ctx: AuthContext): Promise
     },
     `Telegram webhook configured by ${ctx.globalRole} ${ctx.email}`
   ).catch((err: unknown) => {
-    console.error('⚠️ Audit logging failed (non-blocking):', err);
+    logger.warn('Audit logging failed (non-blocking)', { error: err });
   });
 
   return NextResponse.json({
@@ -390,10 +386,7 @@ async function handleDeleteWebhook(request: NextRequest, ctx: AuthContext): Prom
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [DELETE /api/admin/telegram/webhook] BLOCKED: Non-super_admin attempted webhook deletion`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted webhook deletion', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId });
     return NextResponse.json(
       {
         success: false,
@@ -404,7 +397,7 @@ async function handleDeleteWebhook(request: NextRequest, ctx: AuthContext): Prom
     );
   }
 
-  console.log('📡 Admin: Removing Telegram webhook...', { email: ctx.email, operationId });
+  logger.info('Removing Telegram webhook', { email: ctx.email, operationId });
 
   const result = await callTelegramApi<boolean>('deleteWebhook', {
     drop_pending_updates: false,  // Keep pending updates by default
@@ -417,7 +410,7 @@ async function handleDeleteWebhook(request: NextRequest, ctx: AuthContext): Prom
     }, { status: 500 });
   }
 
-  console.log('✅ Webhook removed');
+  logger.info('Webhook removed');
 
   const duration = Date.now() - startTime;
 
@@ -434,7 +427,7 @@ async function handleDeleteWebhook(request: NextRequest, ctx: AuthContext): Prom
     },
     `Telegram webhook deleted by ${ctx.globalRole} ${ctx.email}`
   ).catch((err: unknown) => {
-    console.error('⚠️ Audit logging failed (non-blocking):', err);
+    logger.warn('Audit logging failed (non-blocking)', { error: err });
   });
 
   return NextResponse.json({

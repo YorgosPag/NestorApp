@@ -29,6 +29,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ExecuteAdminMigrationRoute');
 
 interface MigrationResult {
   success: boolean;
@@ -68,10 +71,7 @@ async function handleAdminSdkMigration(
 
   // 🔐 ENTERPRISE: Admin SDK migrations are SYSTEM-LEVEL (cross-tenant)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [MIGRATION_ADMIN] BLOCKED: Non-super_admin attempted Admin SDK migration: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted Admin SDK migration', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -82,15 +82,15 @@ async function handleAdminSdkMigration(
     );
   }
 
-  console.log(`🔐 [MIGRATION_ADMIN] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Admin SDK migration request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
-    console.log('🏢 ENTERPRISE ADMIN MIGRATION STARTING...');
+    logger.info('ENTERPRISE ADMIN MIGRATION STARTING...');
 
     const adminDb = getAdminFirestore();
 
     // Step 1: Fetch all companies
-    console.log('📋 Step 1: Fetching companies...');
+    logger.info('Step 1: Fetching companies...');
     const companiesSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS)
       .where('type', '==', 'company')
       .where('status', '==', 'active')
@@ -105,10 +105,10 @@ async function handleAdminSdkMigration(
       companyName: doc.data().companyName as string | undefined
     }));
 
-    console.log(`   Found ${companies.length} active companies`);
+    logger.info('Found active companies', { count: companies.length });
 
     // Step 2: Fetch all projects
-    console.log('📋 Step 2: Fetching projects...');
+    logger.info('Step 2: Fetching projects...');
     const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     const projects: ProjectData[] = projectsSnapshot.docs.map(doc => ({
       id: doc.id,
@@ -117,10 +117,10 @@ async function handleAdminSdkMigration(
       companyId: doc.data().companyId as string | undefined
     }));
 
-    console.log(`   Found ${projects.length} projects`);
+    logger.info('Found projects', { count: projects.length });
 
     // Step 3: Analyze and create mappings
-    console.log('📋 Step 3: Analyzing project-company mappings...');
+    logger.info('Step 3: Analyzing project-company mappings...');
     const mappings = [];
 
     for (const project of projects) {
@@ -139,10 +139,10 @@ async function handleAdminSdkMigration(
       }
     }
 
-    console.log(`   Found ${mappings.length} projects requiring updates`);
+    logger.info('Found projects requiring updates', { count: mappings.length });
 
     // Step 4: Execute updates using Admin SDK (batch operation)
-    console.log('📋 Step 4: Executing batch updates...');
+    logger.info('Step 4: Executing batch updates...');
     const batch = adminDb.batch();
     let updateCount = 0;
 
@@ -161,20 +161,20 @@ async function handleAdminSdkMigration(
         }
       });
 
-      console.log(`   📝 Queued update: ${mapping.projectName} → ${mapping.companyName}`);
+      logger.info('Queued update', { projectName: mapping.projectName, companyName: mapping.companyName });
       updateCount++;
     }
 
     // Commit the batch
     if (updateCount > 0) {
       await batch.commit();
-      console.log(`✅ Successfully updated ${updateCount} projects`);
+      logger.info('Successfully updated projects', { count: updateCount });
     } else {
-      console.log('ℹ️ No projects required updates');
+      logger.info('No projects required updates');
     }
 
     // Step 5: Verification
-    console.log('📋 Step 5: Verifying migration results...');
+    logger.info('Step 5: Verifying migration results...');
     const verificationSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     const updatedProjects: ProjectData[] = verificationSnapshot.docs.map(doc => ({
       id: doc.id,
@@ -197,11 +197,7 @@ async function handleAdminSdkMigration(
 
     const integrityScore = (validProjects / updatedProjects.length) * 100;
 
-    console.log(`📊 Final Results:`);
-    console.log(`   - Total projects: ${updatedProjects.length}`);
-    console.log(`   - Projects with valid company IDs: ${validProjects}`);
-    console.log(`   - Orphan projects: ${orphanProjects}`);
-    console.log(`   - Data integrity: ${integrityScore.toFixed(1)}%`);
+    logger.info('Final Results', { totalProjects: updatedProjects.length, validProjects, orphanProjects, integrityScore: integrityScore.toFixed(1) });
 
     const executionTime = Date.now() - startTime;
 
@@ -224,7 +220,7 @@ async function handleAdminSdkMigration(
       },
       `Admin SDK migration executed by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [MIGRATION_ADMIN] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -264,7 +260,7 @@ async function handleAdminSdkMigration(
     const executionTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    console.error(`❌ ADMIN MIGRATION FAILED: ${errorMessage}`);
+    logger.error('ADMIN MIGRATION FAILED', { error: errorMessage });
 
     return NextResponse.json(
       {

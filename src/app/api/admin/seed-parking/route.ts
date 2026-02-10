@@ -37,6 +37,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateParkingId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SeedParkingRoute');
 
 // =============================================================================
 // 🏢 ENTERPRISE CONFIGURATION
@@ -251,10 +254,7 @@ async function handleSeedParkingPreview(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [SEED_PARKING_PREVIEW] BLOCKED: Non-super_admin attempted seeding preview: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted seeding preview', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -265,7 +265,7 @@ async function handleSeedParkingPreview(
     );
   }
 
-  console.log(`🔐 [SEED_PARKING_PREVIEW] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Seed parking preview request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
@@ -287,7 +287,7 @@ async function handleSeedParkingPreview(
       status: template.status,
     }));
 
-    console.log(`📊 Preview: ${existingSpots.length} existing spots, ${PARKING_TEMPLATES.length} to create`);
+    logger.info('Preview', { existingSpots: existingSpots.length, toCreate: PARKING_TEMPLATES.length });
 
     return NextResponse.json({
       success: true,
@@ -310,7 +310,7 @@ async function handleSeedParkingPreview(
     });
 
   } catch (error) {
-    console.error('Error in GET /api/admin/seed-parking:', error);
+    logger.error('Error in seed-parking preview', { error });
     return NextResponse.json({
       success: false,
       error: 'Failed to preview parking spots',
@@ -330,10 +330,7 @@ async function handleSeedParkingExecute(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [SEED_PARKING_EXECUTE] BLOCKED: Non-super_admin attempted seeding execution: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted seeding execution', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -344,7 +341,7 @@ async function handleSeedParkingExecute(
     );
   }
 
-  console.log(`🔐 [SEED_PARKING_EXECUTE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Seed parking execute request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
@@ -353,7 +350,7 @@ async function handleSeedParkingExecute(
     // =======================================================================
     // STEP 1: Διαγραφή υπαρχόντων parking spots
     // =======================================================================
-    console.log('🗑️ Διαγραφή υπαρχόντων parking spots...');
+    logger.info('Deleting existing parking spots...');
 
     const existingSnapshot = await parkingRef.get();
     const deletedIds: string[] = [];
@@ -361,15 +358,15 @@ async function handleSeedParkingExecute(
     for (const docSnapshot of existingSnapshot.docs) {
       await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
       deletedIds.push(docSnapshot.id);
-      console.log(`  ✓ Διαγράφηκε: ${docSnapshot.id}`);
+      logger.info('Deleted parking spot', { id: docSnapshot.id });
     }
 
-    console.log(`✅ Διαγράφηκαν ${deletedIds.length} parking spots`);
+    logger.info('Deleted parking spots', { count: deletedIds.length });
 
     // =======================================================================
     // STEP 2: Δημιουργία νέων parking spots με enterprise IDs
     // =======================================================================
-    console.log('🅿️ Δημιουργία νέων parking spots...');
+    logger.info('Creating new parking spots with enterprise IDs...');
 
     const createdSpots: Array<{ id: string; number: string }> = [];
     const now = FieldValue.serverTimestamp();
@@ -400,10 +397,10 @@ async function handleSeedParkingExecute(
       await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(parkingId).set(parkingDoc);
 
       createdSpots.push({ id: parkingId, number: template.number });
-      console.log(`  ✓ Δημιουργήθηκε: ${parkingId} (${template.number})`);
+      logger.info('Created parking spot', { parkingId, number: template.number });
     }
 
-    console.log(`✅ Δημιουργήθηκαν ${createdSpots.length} parking spots`);
+    logger.info('Created parking spots', { count: createdSpots.length });
 
     const duration = Date.now() - startTime;
 
@@ -425,7 +422,7 @@ async function handleSeedParkingExecute(
       },
       `Parking spots seeding by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [SEED_PARKING_EXECUTE] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -444,7 +441,7 @@ async function handleSeedParkingExecute(
     });
 
   } catch (error) {
-    console.error('Error in POST /api/admin/seed-parking:', error);
+    logger.error('Error in seed-parking execute', { error });
     return NextResponse.json({
       success: false,
       error: 'Failed to seed parking spots',
@@ -464,10 +461,7 @@ async function handleSeedParkingDelete(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [SEED_PARKING_DELETE] BLOCKED: Non-super_admin attempted mass deletion: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted mass deletion', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -478,7 +472,7 @@ async function handleSeedParkingDelete(
     );
   }
 
-  console.log(`🔐 [SEED_PARKING_DELETE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Seed parking delete request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
@@ -494,7 +488,7 @@ async function handleSeedParkingDelete(
 
     const duration = Date.now() - startTime;
 
-    console.log(`✅ Διαγράφηκαν ${deletedIds.length} parking spots`);
+    logger.info('Deleted all parking spots', { count: deletedIds.length });
 
     // 🏢 ENTERPRISE: Audit logging (non-blocking)
     const metadata = extractRequestMetadata(request);
@@ -511,7 +505,7 @@ async function handleSeedParkingDelete(
       },
       `Mass deletion of all parking spots by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [SEED_PARKING_DELETE] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -525,7 +519,7 @@ async function handleSeedParkingDelete(
     });
 
   } catch (error) {
-    console.error('Error in DELETE /api/admin/seed-parking:', error);
+    logger.error('Error in seed-parking delete', { error });
     return NextResponse.json({
       success: false,
       error: 'Failed to delete parking spots',
@@ -640,10 +634,7 @@ async function handleForeignKeyValidation(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [PARKING_FK_VALIDATION] BLOCKED: Non-super_admin attempted validation: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted validation', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -654,18 +645,14 @@ async function handleForeignKeyValidation(
     );
   }
 
-  console.log(`🔐 [PARKING_FK_VALIDATION] Request from ${ctx.email} (${ctx.globalRole})`);
+  logger.info('Parking FK validation request', { email: ctx.email, globalRole: ctx.globalRole });
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
     const body = await request.json() as { dryRun?: boolean };
     const { dryRun = true } = body;
 
-    console.log(`\n🏢 PARKING FOREIGN KEY VALIDATION (NO-OP Mode)`);
-    console.log(`   Validation ID: ${migrationId}`);
-    console.log(`   Mode: ${dryRun ? 'DRY-RUN' : 'EXECUTE'} (both are NO-OP)`);
-    console.log(`   Purpose: Validate that IDs are NON-prefixed (correct format)`);
-    console.log(`   Note: Prefixed IDs break tenant resolution!`);
+    logger.info('PARKING FOREIGN KEY VALIDATION (NO-OP Mode)', { migrationId, mode: dryRun ? 'DRY-RUN' : 'EXECUTE', purpose: 'Validate non-prefixed IDs' });
 
     const stats: ForeignKeyMigrationStats = {
       total: 0,
@@ -679,13 +666,13 @@ async function handleForeignKeyValidation(
     // ========================================================================
     // PHASE 1: VALIDATION ONLY (No writes)
     // ========================================================================
-    console.log(`\n📊 PHASE 1: Validation (NO-OP)`);
+    logger.info('PHASE 1: Validation (NO-OP)');
 
     const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
     const snapshot = await parkingRef.get();
     stats.total = snapshot.size;
 
-    console.log(`   Found ${stats.total} parking spots to validate`);
+    logger.info('Found parking spots to validate', { count: stats.total });
 
     for (const docSnapshot of snapshot.docs) {
       const data = docSnapshot.data() as Record<string, unknown>;
@@ -704,9 +691,7 @@ async function handleForeignKeyValidation(
           action: 'error',
           error: `Has prefixed IDs (breaks tenant resolution): buildingId=${currentBuildingId}, projectId=${currentProjectId}. Run Re-seed to fix.`,
         });
-        console.log(`   ❌ ${docSnapshot.id}: HAS PREFIXES (WRONG!)`);
-        console.log(`      buildingId: ${currentBuildingId}`);
-        console.log(`      projectId: ${currentProjectId}`);
+        logger.warn('Parking spot has prefixed IDs (WRONG)', { id: docSnapshot.id, buildingId: currentBuildingId, projectId: currentProjectId });
       } else if (currentBuildingId && currentProjectId) {
         // Correct format - non-prefixed
         stats.alreadyCorrect++;
@@ -714,7 +699,7 @@ async function handleForeignKeyValidation(
           id: docSnapshot.id,
           action: 'already_correct',
         });
-        console.log(`   ✅ ${docSnapshot.id}: Correct (non-prefixed)`);
+        logger.info('Parking spot correct (non-prefixed)', { id: docSnapshot.id });
       } else {
         // Missing required fields
         stats.skipped++;
@@ -723,20 +708,13 @@ async function handleForeignKeyValidation(
           action: 'skipped',
           error: `Missing buildingId or projectId`,
         });
-        console.log(`   ⏭️ ${docSnapshot.id}: Missing buildingId/projectId`);
+        logger.info('Parking spot missing buildingId/projectId', { id: docSnapshot.id });
       }
     }
 
     const duration = Date.now() - startTime;
 
-    console.log(`\n📊 VALIDATION SUMMARY`);
-    console.log(`   Validation ID:    ${migrationId}`);
-    console.log(`   Total:            ${stats.total}`);
-    console.log(`   Correct:          ${stats.alreadyCorrect} (non-prefixed - GOOD)`);
-    console.log(`   Errors:           ${stats.errors} (prefixed - BAD, run Re-seed)`);
-    console.log(`   Skipped:          ${stats.skipped} (missing fields)`);
-    console.log(`   Duration:         ${duration}ms`);
-    console.log(`   Migration:        NO-OP (disabled to prevent breaking changes)`);
+    logger.info('VALIDATION SUMMARY', { migrationId, total: stats.total, correct: stats.alreadyCorrect, errors: stats.errors, skipped: stats.skipped, durationMs: duration, migration: 'NO-OP' });
 
     // 🏢 ENTERPRISE: Audit logging
     const metadata = extractRequestMetadata(request);
@@ -760,7 +738,7 @@ async function handleForeignKeyValidation(
       },
       `Parking FK validation by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [PARKING_FK_VALIDATION] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -786,7 +764,7 @@ async function handleForeignKeyValidation(
     });
 
   } catch (error) {
-    console.error('Error in PATCH /api/admin/seed-parking:', error);
+    logger.error('Error in seed-parking FK validation', { error });
     return NextResponse.json({
       success: false,
       error: 'Failed to validate FK',

@@ -45,6 +45,9 @@ import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectRoute');
 
 // =============================================================================
 // TYPES
@@ -145,7 +148,7 @@ async function handleGet(
         throw new ApiError(403, 'Access denied - Project not found');
       }
       if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-        console.log(`🔓 [SUPER_ADMIN] Cross-tenant project view: ${ctx.email} → project ${projectId} (company: ${projectData?.companyId})`);
+        logger.info('[SUPER_ADMIN] Cross-tenant project view', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
       }
 
       return apiSuccess<ProjectGetResponse>(
@@ -211,7 +214,7 @@ async function handleUpdateProject(
 ): Promise<ReturnType<typeof apiSuccess<ProjectUpdateResponse>>> {
   const startTime = Date.now();
 
-  console.log(`🔧 [Projects/Update] User ${ctx.email} updating project ${projectId}...`);
+  logger.info('[Projects/Update] User updating project', { email: ctx.email, projectId });
 
   // 1. Parse request body
   const body: ProjectUpdatePayload = await request.json();
@@ -225,7 +228,7 @@ async function handleUpdateProject(
   const projectDoc = await projectRef.get();
 
   if (!projectDoc.exists) {
-    console.log(`⚠️ [Projects/Update] Project not found: ${projectId}`);
+    logger.info('[Projects/Update] Project not found', { projectId });
     throw new ApiError(404, 'Project not found');
   }
 
@@ -234,14 +237,11 @@ async function handleUpdateProject(
   // 3. Validate tenant isolation: bypass for Super Admin, enforce for regular users
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
   if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    console.warn(
-      `🚫 [Projects/Update] TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) ` +
-      `attempted to update project ${projectId} (company ${projectData?.companyId})`
-    );
+    logger.warn('[Projects/Update] TENANT ISOLATION VIOLATION: attempted to update project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
     throw new ApiError(403, 'Access denied - Project not found');
   }
   if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    console.log(`🔓 [SUPER_ADMIN] Cross-tenant project update: ${ctx.email} → project ${projectId} (company: ${projectData?.companyId})`);
+    logger.info('[SUPER_ADMIN] Cross-tenant project update', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
   }
 
   // 4. Build update payload
@@ -256,19 +256,19 @@ async function handleUpdateProject(
     Object.entries(updateData).filter(([, value]) => value !== undefined)
   );
 
-  console.log(`🔧 [Projects/Update] Updating ${Object.keys(cleanData).length} fields...`);
+  logger.info('[Projects/Update] Updating fields', { fieldsCount: Object.keys(cleanData).length });
 
   // 5. Update project using Admin SDK
   await projectRef.update(cleanData);
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Projects/Update] Project ${projectId} updated successfully in ${duration}ms`);
+  logger.info('[Projects/Update] Project updated successfully', { projectId, durationMs: duration });
 
   // 6. Invalidate caches
   const cache = EnterpriseAPICache.getInstance();
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
-  console.log(`🗑️ [Projects/Update] Cache invalidated for tenant ${ctx.companyId}`);
+  logger.info('[Projects/Update] Cache invalidated for tenant', { companyId: ctx.companyId });
 
   // 7. Audit log
   await logAuditEvent(ctx, 'data_updated', 'projects', 'api', {
@@ -343,16 +343,14 @@ async function handleDeleteProject(
   const url = new URL(request.url);
   const hardDelete = url.searchParams.get('hard') === 'true';
 
-  console.log(
-    `🗑️ [Projects/Delete] User ${ctx.email} deleting project ${projectId} (hard: ${hardDelete})...`
-  );
+  logger.info('[Projects/Delete] User deleting project', { email: ctx.email, projectId, hardDelete });
 
   // 1. Get project document and verify ownership (tenant isolation)
   const projectRef = getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectId);
   const projectDoc = await projectRef.get();
 
   if (!projectDoc.exists) {
-    console.log(`⚠️ [Projects/Delete] Project not found: ${projectId}`);
+    logger.info('[Projects/Delete] Project not found', { projectId });
     throw new ApiError(404, 'Project not found');
   }
 
@@ -361,21 +359,18 @@ async function handleDeleteProject(
   // 2. Validate tenant isolation: bypass for Super Admin, enforce for regular users
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
   if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    console.warn(
-      `🚫 [Projects/Delete] TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) ` +
-      `attempted to delete project ${projectId} (company ${projectData?.companyId})`
-    );
+    logger.warn('[Projects/Delete] TENANT ISOLATION VIOLATION: attempted to delete project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
     throw new ApiError(403, 'Access denied - Project not found');
   }
   if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    console.log(`🔓 [SUPER_ADMIN] Cross-tenant project delete: ${ctx.email} → project ${projectId} (company: ${projectData?.companyId})`);
+    logger.info('[SUPER_ADMIN] Cross-tenant project delete', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
   }
 
   // 3. Delete project
   if (hardDelete) {
     // Hard delete - permanently remove document
     await projectRef.delete();
-    console.log(`🗑️ [Projects/Delete] Project ${projectId} HARD DELETED`);
+    logger.info('[Projects/Delete] Project HARD DELETED', { projectId });
   } else {
     // Soft delete - archive project
     await projectRef.update({
@@ -385,7 +380,7 @@ async function handleDeleteProject(
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: ctx.uid,
     });
-    console.log(`📦 [Projects/Delete] Project ${projectId} ARCHIVED (soft delete)`);
+    logger.info('[Projects/Delete] Project ARCHIVED (soft delete)', { projectId });
   }
 
   const duration = Date.now() - startTime;
@@ -394,7 +389,7 @@ async function handleDeleteProject(
   const cache = EnterpriseAPICache.getInstance();
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
-  console.log(`🗑️ [Projects/Delete] Cache invalidated for tenant ${ctx.companyId}`);
+  logger.info('[Projects/Delete] Cache invalidated for tenant', { companyId: ctx.companyId });
 
   // 5. Audit log
   await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {

@@ -31,6 +31,8 @@ import { getCompressedSchema } from '@/config/firestore-schema-map';
 import { getAgenticToolExecutor } from './tools/agentic-tool-executor';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import type { AgenticToolDefinition } from './tools/agentic-tool-definitions';
+// ADR-173: Prompt enhancement with learned patterns
+import { enhanceSystemPrompt } from './prompt-enhancer';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AGENTIC_LOOP');
@@ -108,7 +110,7 @@ const DEFAULT_CONFIG: AgenticLoopConfig = {
 // AGENTIC SYSTEM PROMPT BUILDER
 // ============================================================================
 
-function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatMessage[]): string {
+function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatMessage[], learnedPatterns: string = ''): string {
   const schema = getCompressedSchema();
 
   // Format recent chat for context
@@ -178,7 +180,7 @@ COLLECTIONS ΠΟΥ ΔΕΝ ΧΡΕΙΑΖΟΝΤΑΙ JOINS (απάντα κατευ�
 - Για "στατιστικά": χρήσε firestore_count αντί πλήρες query
 - Αν query επιστρέφει 0 αποτελέσματα, δοκίμασε χωρίς φίλτρα ή με search_text
 - ΠΟΤΕ μην δίνεις "δεν βρέθηκαν" αν δεν δοκίμασες τουλάχιστον 2 διαφορετικές αναζητήσεις
-
+${learnedPatterns}
 ΙΣΤΟΡΙΚΟ ΣΥΝΟΜΙΛΙΑΣ:
 ${historyStr}`;
 }
@@ -286,11 +288,14 @@ export async function executeAgenticLoop(
   const executor = getAgenticToolExecutor();
   const allToolCalls: AgenticResult['toolCalls'] = [];
 
+  // ADR-173: Fetch learned patterns for dynamic prompt enhancement
+  const learnedPatterns = await enhanceSystemPrompt(userMessage);
+
   // Build message history for OpenAI Chat Completions
   const messages: ChatCompletionMessage[] = [
     {
       role: 'system',
-      content: buildAgenticSystemPrompt(context, chatHistory),
+      content: buildAgenticSystemPrompt(context, chatHistory, learnedPatterns),
     },
   ];
 

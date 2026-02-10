@@ -5,6 +5,9 @@ import { useEffect } from 'react';
 import { subscribeToNotifications } from '@/services/notificationService';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import type { Notification } from '@/types/notification';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFirestoreNotifications');
 
 export interface FirestoreNotificationOptions {
   userId: string;
@@ -32,7 +35,7 @@ export function useFirestoreNotifications(opts: FirestoreNotificationOptions) {
         setStatus('ready');
       },
       (error: Error) => {
-        console.error('🔥 Firestore listener error:', error);
+        logger.error('Firestore listener error', { error });
         setError(error.message);
         setStatus('error');
       }

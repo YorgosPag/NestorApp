@@ -55,6 +55,9 @@ import { getChatHistoryService } from './chat-history-service';
 import { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';
 import type { AgenticContext } from './tools/agentic-tool-executor';
 import { sendChannelReply } from './shared/channel-reply-dispatcher';
+// ADR-173: AI Self-Improvement imports
+import { getFeedbackService } from './feedback-service';
+import { createFeedbackKeyboard } from './feedback-keyboard';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const orchestratorLogger = createModuleLogger('PIPELINE_ORCHESTRATOR');
@@ -366,6 +369,34 @@ export class PipelineOrchestrator {
         textBody: agenticResult.answer,
         requestId: ctx.requestId,
       });
+
+      // 5b. ADR-173: Send feedback keyboard + save snapshot (Telegram only, non-fatal)
+      if (ctx.intake.channel === 'telegram' && telegramChatId && !isFailedResponse) {
+        try {
+          const feedbackDocId = await getFeedbackService().saveFeedbackSnapshot({
+            requestId: ctx.requestId,
+            channelSenderId,
+            userQuery: userMessage,
+            aiAnswer: agenticResult.answer,
+            toolCalls: agenticResult.toolCalls,
+            iterations: agenticResult.iterations,
+            durationMs: agenticResult.totalDurationMs,
+          });
+
+          if (feedbackDocId) {
+            const { sendTelegramMessage } = await import(
+              '@/app/api/communications/webhooks/telegram/telegram/client'
+            );
+            await sendTelegramMessage({
+              chat_id: Number(telegramChatId),
+              text: '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7;',
+              reply_markup: createFeedbackKeyboard(feedbackDocId),
+            });
+          }
+        } catch {
+          // Non-fatal: feedback failure must never break the pipeline
+        }
+      }
 
       // 6. Update pipeline context
       ctx.executionResult = { success: true, sideEffects: ['agentic_loop_completed'] };

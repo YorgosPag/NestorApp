@@ -23,6 +23,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectStructureRoute');
 
 export const dynamic = 'force-dynamic';
 
@@ -67,8 +70,7 @@ export const GET = withStandardRateLimit(async function GET(
 
   const handler = withAuth<StructureResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<StructureResponse>> => {
-      console.log(`🏗️ [Projects/Structure] Loading structure for projectId: ${projectId}`);
-      console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+      logger.info('[Projects/Structure] Loading structure', { projectId, uid: ctx.uid, companyId: ctx.companyId });
 
       try {
         // ============================================================================
@@ -81,7 +83,7 @@ export const GET = withStandardRateLimit(async function GET(
           .get();
 
         if (!projectDoc.exists) {
-          console.log(`⚠️ Project not found: ${projectId}`);
+          logger.info('Project not found', { projectId });
           return NextResponse.json({
             success: false,
             error: 'Project not found',
@@ -91,7 +93,7 @@ export const GET = withStandardRateLimit(async function GET(
 
         const projectData = projectDoc.data();
         if (projectData?.companyId !== ctx.companyId) {
-          console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to access project ${projectId} (company ${projectData?.companyId})`);
+          logger.warn('TENANT ISOLATION VIOLATION: attempted to access project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
           return NextResponse.json({
             success: false,
             error: 'Access denied - Project not found',
@@ -100,13 +102,13 @@ export const GET = withStandardRateLimit(async function GET(
         }
 
         const project = { id: projectDoc.id, ...projectData } as Record<string, unknown> & { id: string; name?: string };
-        console.log(`✅ Project found and ownership verified: ${project.name || 'Unnamed Project'}`);
+        logger.info('Project found and ownership verified', { projectName: project.name || 'Unnamed Project' });
 
         // ============================================================================
         // STEP 2: GET BUILDINGS (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
+        logger.info('Fetching buildings for project', { projectId });
 
         // Try with string projectId first
         let buildingsSnapshot = await getAdminFirestore()
@@ -117,7 +119,7 @@ export const GET = withStandardRateLimit(async function GET(
 
         // If no results, try with number projectId
         if (buildingsSnapshot.docs.length === 0) {
-          console.log(`🔄 Trying numeric projectId: ${parseInt(projectId)}`);
+          logger.info('Trying numeric projectId', { numericProjectId: parseInt(projectId) });
           buildingsSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.BUILDINGS)
             .where('projectId', '==', parseInt(projectId))
@@ -125,7 +127,7 @@ export const GET = withStandardRateLimit(async function GET(
             .get();
         }
 
-        console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings (tenant-scoped)`);
+        logger.info('Found buildings (tenant-scoped)', { count: buildingsSnapshot.docs.length });
 
         const buildings = [];
 
@@ -137,7 +139,7 @@ export const GET = withStandardRateLimit(async function GET(
           const building = { id: buildingDoc.id, ...buildingDoc.data() } as Record<string, unknown> & { id: string; name?: string };
 
           // 🏠 UNITS
-          console.log(`🏠 Fetching units for buildingId: ${building.id}`);
+          logger.info('Fetching units for building', { buildingId: building.id });
           const unitsSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.UNITS)
             .where('buildingId', '==', building.id)
@@ -150,7 +152,7 @@ export const GET = withStandardRateLimit(async function GET(
           }));
 
           // 📦 STORAGE - Query by buildingId (from migration 006)
-          console.log(`📦 Fetching storage for buildingId: ${building.id}`);
+          logger.info('Fetching storage for building', { buildingId: building.id });
           const storageSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.STORAGE)
             .where('buildingId', '==', building.id)
@@ -169,7 +171,7 @@ export const GET = withStandardRateLimit(async function GET(
           });
 
           // 🚗 PARKING - Query by buildingId
-          console.log(`🚗 Fetching parking for buildingId: ${building.id}`);
+          logger.info('Fetching parking for building', { buildingId: building.id });
           const parkingSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.PARKING_SPACES)
             .where('buildingId', '==', building.id)
@@ -187,7 +189,7 @@ export const GET = withStandardRateLimit(async function GET(
             };
           });
 
-          console.log(`🏢 Building ${building.id}: ${units.length} units, ${storages.length} storages, ${parkingSpots.length} parking`);
+          logger.info('Building summary', { buildingId: building.id, unitsCount: units.length, storagesCount: storages.length, parkingCount: parkingSpots.length });
           buildings.push({ ...building, units, storages, parkingSpots });
         }
 
@@ -199,7 +201,7 @@ export const GET = withStandardRateLimit(async function GET(
         const totalUnits = buildings.reduce((sum, b) => sum + b.units.length, 0);
         const totalStorages = buildings.reduce((sum, b) => sum + b.storages.length, 0);
         const totalParkingSpots = buildings.reduce((sum, b) => sum + b.parkingSpots.length, 0);
-        console.log(`✅ [Projects/Structure] Complete: ${buildings.length} buildings, ${totalUnits} units, ${totalStorages} storages, ${totalParkingSpots} parking`);
+        logger.info('[Projects/Structure] Complete', { buildingsCount: buildings.length, totalUnits, totalStorages, totalParkingSpots });
 
         return NextResponse.json({
           success: true,
@@ -214,7 +216,7 @@ export const GET = withStandardRateLimit(async function GET(
         });
 
       } catch (error) {
-        console.error('❌ [Projects/Structure] Error:', {
+        logger.error('[Projects/Structure] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           projectId,
           userId: ctx.uid,

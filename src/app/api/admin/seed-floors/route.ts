@@ -37,6 +37,9 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateFloorId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SeedFloorsRoute');
 
 // =============================================================================
 // 🏢 ENTERPRISE CONFIGURATION
@@ -173,10 +176,7 @@ async function handleSeedFloorsPreview(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [SEED_FLOORS_PREVIEW] BLOCKED: Non-super_admin attempted seeding preview: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted seeding preview', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -187,7 +187,7 @@ async function handleSeedFloorsPreview(
     );
   }
 
-  console.log(`🔐 [SEED_FLOORS_PREVIEW] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Seed floors preview request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
@@ -210,7 +210,7 @@ async function handleSeedFloorsPreview(
       units: template.units,
     }));
 
-    console.log(`📊 Preview: ${existingFloors.length} existing floors, ${FLOOR_TEMPLATES.length} to create`);
+    logger.info('Preview', { existingFloors: existingFloors.length, toCreate: FLOOR_TEMPLATES.length });
 
     return NextResponse.json({
       success: true,
@@ -234,7 +234,7 @@ async function handleSeedFloorsPreview(
     });
 
   } catch (error) {
-    console.error('Error in GET /api/admin/seed-floors:', error);
+    logger.error('Error in seed-floors preview', { error });
     return NextResponse.json({
       success: false,
       error: 'Failed to preview floors',
@@ -254,10 +254,7 @@ async function handleSeedFloorsExecute(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [SEED_FLOORS_EXECUTE] BLOCKED: Non-super_admin attempted seeding execution: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted seeding execution', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -268,7 +265,7 @@ async function handleSeedFloorsExecute(
     );
   }
 
-  console.log(`🔐 [SEED_FLOORS_EXECUTE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Seed floors execute request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
@@ -278,7 +275,7 @@ async function handleSeedFloorsExecute(
     // =======================================================================
     // STEP 1: Διαγραφή υπαρχόντων floors
     // =======================================================================
-    console.log('🗑️ Διαγραφή υπαρχόντων floors...');
+    logger.info('Deleting existing floors...');
 
     const existingSnapshot = await floorsRef.get();
     const deletedIds: string[] = [];
@@ -286,15 +283,15 @@ async function handleSeedFloorsExecute(
     for (const docSnapshot of existingSnapshot.docs) {
       await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
       deletedIds.push(docSnapshot.id);
-      console.log(`  ✓ Διαγράφηκε: ${docSnapshot.id}`);
+      logger.info('Deleted floor', { id: docSnapshot.id });
     }
 
-    console.log(`✅ Διαγράφηκαν ${deletedIds.length} floors`);
+    logger.info('Deleted floors', { count: deletedIds.length });
 
     // =======================================================================
     // STEP 2: Δημιουργία νέων floors με enterprise IDs
     // =======================================================================
-    console.log('🏢 Δημιουργία νέων floors...');
+    logger.info('Creating new floors with enterprise IDs...');
 
     const createdFloors: Array<{ id: string; number: number; name: string }> = [];
     const now = FieldValue.serverTimestamp();
@@ -331,10 +328,10 @@ async function handleSeedFloorsExecute(
       await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(floorId).set(floorDoc);
 
       createdFloors.push({ id: floorId, number: template.number, name: template.name });
-      console.log(`  ✓ Δημιουργήθηκε: ${floorId} (${template.name})`);
+      logger.info('Created floor', { floorId, floorName: template.name });
     }
 
-    console.log(`✅ Δημιουργήθηκαν ${createdFloors.length} floors`);
+    logger.info('Created floors', { count: createdFloors.length });
 
     const duration = Date.now() - startTime;
 
@@ -357,7 +354,7 @@ async function handleSeedFloorsExecute(
       },
       `Floors seeding by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [SEED_FLOORS_EXECUTE] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -377,7 +374,7 @@ async function handleSeedFloorsExecute(
     });
 
   } catch (error) {
-    console.error('Error in POST /api/admin/seed-floors:', error);
+    logger.error('Error in seed-floors execute', { error });
     return NextResponse.json({
       success: false,
       error: 'Failed to seed floors',
@@ -397,10 +394,7 @@ async function handleSeedFloorsDelete(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [SEED_FLOORS_DELETE] BLOCKED: Non-super_admin attempted mass deletion: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted mass deletion', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -411,7 +405,7 @@ async function handleSeedFloorsDelete(
     );
   }
 
-  console.log(`🔐 [SEED_FLOORS_DELETE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Seed floors delete request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
@@ -428,7 +422,7 @@ async function handleSeedFloorsDelete(
 
     const duration = Date.now() - startTime;
 
-    console.log(`✅ Διαγράφηκαν ${deletedIds.length} floors`);
+    logger.info('Deleted all floors', { count: deletedIds.length });
 
     // 🏢 ENTERPRISE: Audit logging (non-blocking)
     const metadata = extractRequestMetadata(request);
@@ -445,7 +439,7 @@ async function handleSeedFloorsDelete(
       },
       `Mass deletion of all floors by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [SEED_FLOORS_DELETE] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -459,7 +453,7 @@ async function handleSeedFloorsDelete(
     });
 
   } catch (error) {
-    console.error('Error in DELETE /api/admin/seed-floors:', error);
+    logger.error('Error in seed-floors delete', { error });
     return NextResponse.json({
       success: false,
       error: 'Failed to delete floors',

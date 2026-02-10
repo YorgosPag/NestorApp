@@ -19,6 +19,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FixCompanyIdsRoute');
 
 // Response types for type-safe withAuth
 type FixCompanyIdsSuccess = {
@@ -55,8 +58,7 @@ type FixCompanyIdsResponse = FixCompanyIdsSuccess | FixCompanyIdsError;
 export const POST = withStandardRateLimit(async (request: NextRequest) => {
   const handler = withAuth<FixCompanyIdsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FixCompanyIdsResponse>> => {
-      console.log('🔧 [Projects/FixCompanyIds] Starting company ID correction...');
-      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+      logger.info('[Projects/FixCompanyIds] Starting company ID correction', { uid: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
       try {
         // ============================================================================
@@ -69,12 +71,12 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           .where('status', '==', 'active')
           .get();
 
-        console.log(`📁 Found ${contactsSnapshot.docs.length} companies`);
+        logger.info('Found companies', { count: contactsSnapshot.docs.length });
 
         const companyMapping: Record<string, string> = {};
         contactsSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          console.log(`🏢 Company: ${data.companyName} -> ID: ${doc.id}`);
+          logger.info('Company mapping', { companyName: data.companyName, companyId: doc.id });
           companyMapping[data.companyName] = doc.id;
         });
 
@@ -86,7 +88,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           .collection(COLLECTIONS.PROJECTS)
           .get();
 
-        console.log(`🏗️ Found ${projectsSnapshot.docs.length} projects`);
+        logger.info('Found projects', { count: projectsSnapshot.docs.length });
 
         // ============================================================================
         // STEP 3: FIX COMPANY IDs WITH BATCH UPDATE (Admin SDK)
@@ -109,10 +111,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           const correctCompanyId = companyMapping[companyName];
 
           if (correctCompanyId && currentCompanyId !== correctCompanyId) {
-            console.log(`🔄 Updating project "${projectData.name}"`);
-            console.log(`   Company: ${companyName}`);
-            console.log(`   Old companyId: ${currentCompanyId}`);
-            console.log(`   New companyId: ${correctCompanyId}`);
+            logger.info('Updating project companyId', { projectName: projectData.name, companyName, oldCompanyId: currentCompanyId, newCompanyId: correctCompanyId });
 
             const projectRef = getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectDoc.id);
             batch.update(projectRef, {
@@ -130,22 +129,22 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
 
             updatedCount++;
           } else if (!correctCompanyId) {
-            console.log(`⚠️ No matching company found for: ${companyName}`);
+            logger.warn('No matching company found', { companyName });
           } else {
-            console.log(`✅ Project "${projectData.name}" already has correct companyId`);
+            logger.info('Project already has correct companyId', { projectName: projectData.name });
           }
         }
 
         if (updatedCount > 0) {
           await batch.commit();
-          console.log(`✅ [Projects/FixCompanyIds] Batch committed: ${updatedCount} projects updated`);
+          logger.info('[Projects/FixCompanyIds] Batch committed', { updatedCount });
         }
 
         // ============================================================================
         // STEP 4: VERIFICATION
         // ============================================================================
 
-        console.log('📊 Verification...');
+        logger.info('Verification...');
         const finalProjectsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .get();
@@ -160,7 +159,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           };
         });
 
-        console.log(`✅ [Projects/FixCompanyIds] Complete: Fixed ${updatedCount} project company IDs`);
+        logger.info('[Projects/FixCompanyIds] Complete', { updatedCount });
 
         return NextResponse.json({
           success: true,
@@ -176,7 +175,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         });
 
       } catch (error) {
-        console.error('❌ [Projects/FixCompanyIds] Error:', {
+        logger.error('[Projects/FixCompanyIds] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

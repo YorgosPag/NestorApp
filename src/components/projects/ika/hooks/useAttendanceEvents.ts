@@ -24,6 +24,9 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useAttendanceEvents');
 
 /** Parameters for creating a new attendance event */
 export interface CreateAttendanceEventParams {
@@ -141,7 +144,7 @@ export function useAttendanceEvents(
         if (mounted) {
           const message = err instanceof Error ? err.message : 'Failed to load attendance events';
           setError(message);
-          console.error('[useAttendanceEvents] Error:', message);
+          logger.error('Failed to load attendance events', { error: message });
         }
       } finally {
         if (mounted) {
@@ -181,7 +184,7 @@ export function useAttendanceEvents(
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create attendance event';
       setError(message);
-      console.error('[useAttendanceEvents] Create error:', message);
+      logger.error('Failed to create attendance event', { error: message });
       return false;
     }
   }, [refetch]);

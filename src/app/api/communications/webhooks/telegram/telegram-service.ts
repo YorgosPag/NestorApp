@@ -4,6 +4,9 @@ import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin
 import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { TelegramSendPayload, TelegramSendResult } from './telegram/types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramService');
 
 /**
  * Sends a message to the Telegram API.
@@ -12,14 +15,14 @@ export async function sendTelegramMessage(messageData: TelegramSendPayload): Pro
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
-      console.error('❌ TELEGRAM_BOT_TOKEN not configured');
+      logger.error('TELEGRAM_BOT_TOKEN not configured');
       return { success: false, error: 'Bot token not configured' };
     }
 
     const { method = 'sendMessage', ...telegramPayload } = messageData;
     const telegramApiUrl = `https://api.telegram.org/bot${botToken}/${method}`;
 
-    console.log(`📤 Sending to Telegram API (${method})...`);
+    logger.info('Sending to Telegram API', { method });
 
     const response = await fetch(telegramApiUrl, {
       method: 'POST',
@@ -30,15 +33,15 @@ export async function sendTelegramMessage(messageData: TelegramSendPayload): Pro
     const result = await response.json();
     
     if (!response.ok || !result.ok) {
-      console.error('❌ Telegram API Error:', result);
+      logger.error('Telegram API Error', { error: result });
       return { success: false, error: result.description || 'Unknown error' };
     }
 
-    console.log('✅ Telegram message sent successfully');
+    logger.info('Telegram message sent successfully');
     return { success: true, result };
 
   } catch (error) {
-    console.error('❌ Error sending Telegram message:', error);
+    logger.error('Error sending Telegram message', { error });
     return { success: false, error: (error as Error).message };
   }
 }
@@ -59,14 +62,14 @@ interface CRMMessageInput {
  */
 export async function storeMessageInCRM(message: CRMMessageInput, direction: 'inbound' | 'outbound') {
   if (!isFirebaseAdminAvailable()) {
-    console.warn('⚠️ Firebase not available, skipping CRM storage');
+    logger.warn('Firebase not available, skipping CRM storage');
     return null;
   }
 
   // 🏢 ENTERPRISE: Get database instance
   const database = getAdminFirestore();
   if (!database) {
-    console.warn('⚠️ Database not available');
+    logger.warn('Database not available');
     return null;
   }
 
@@ -97,11 +100,11 @@ export async function storeMessageInCRM(message: CRMMessageInput, direction: 'in
 
     // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
     const docRef = await database.collection(COLLECTIONS.MESSAGES).add(messageRecord);
-    console.log(`✅ Message stored in CRM with ID: ${docRef.id}`);
+    logger.info('Message stored in CRM', { id: docRef.id });
     return docRef;
 
   } catch (error) {
-    console.error('❌ Error storing message in CRM:', error);
+    logger.error('Error storing message in CRM', { error });
     return null;
   }
 }

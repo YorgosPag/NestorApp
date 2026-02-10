@@ -30,6 +30,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Import from centralized search types (ADR-029 - ZERO duplicates)
 import {
   SEARCH_ENTITY_TYPES,
@@ -363,6 +364,8 @@ function extractSearchableText(doc: Record<string, unknown>, config: SearchIndex
   return parts.join(' ');
 }
 
+const logger = createModuleLogger('SearchBackfillRoute');
+
 // 🏢 ENTERPRISE: User cache for createdBy lookup (performance optimization)
 const userCompanyCache = new Map<string, string | null>();
 
@@ -387,13 +390,13 @@ async function resolveTenantId(
   // Strategy 2: CreatedBy lookup (for contacts without companyId)
   // 🏢 ENTERPRISE: Google/Microsoft pattern - inherit tenant from creator
   const createdBy = data.createdBy as string | undefined;
-  console.log(`   🔍 [DEBUG] Strategy 2 (CreatedBy): createdBy=${createdBy || 'NONE'}, entityType=${entityType}`);
+  logger.info(`[DEBUG] Strategy 2 (CreatedBy): createdBy=${createdBy || 'NONE'}, entityType=${entityType}`);
   if (createdBy) {
     // Check cache first - but only return if we found a valid companyId
     // 🏢 FIX: If cache has null, continue to next strategies instead of returning null
     if (userCompanyCache.has(createdBy)) {
       const cachedCompanyId = userCompanyCache.get(createdBy);
-      console.log(`   🔍 [DEBUG] Strategy 2: Cache HIT for ${createdBy} → companyId=${cachedCompanyId || 'NULL'}`);
+      logger.info(`[DEBUG] Strategy 2: Cache HIT for ${createdBy} → companyId=${cachedCompanyId || 'NULL'}`);
       if (cachedCompanyId) {
         return cachedCompanyId; // Only return if we have a valid companyId
       }
@@ -407,14 +410,14 @@ async function resolveTenantId(
           const userData = userDoc.data();
           const userCompanyId = userData?.companyId as string | undefined;
           userCompanyCache.set(createdBy, userCompanyId || null);
-          console.log(`   🔍 [DEBUG] Strategy 2: User lookup ${createdBy} → companyId=${userCompanyId || 'NULL'}`);
+          logger.info(`[DEBUG] Strategy 2: User lookup ${createdBy} → companyId=${userCompanyId || 'NULL'}`);
           if (userCompanyId) return userCompanyId;
         } else {
-          console.log(`   🔍 [DEBUG] Strategy 2: User ${createdBy} NOT FOUND`);
+          logger.info(`[DEBUG] Strategy 2: User ${createdBy} NOT FOUND`);
           userCompanyCache.set(createdBy, null);
         }
       } catch (error) {
-        console.warn(`   ⚠️ Failed to lookup user ${createdBy}:`, error);
+        logger.warn('Failed to lookup user', { userId: createdBy, error });
         userCompanyCache.set(createdBy, null);
       }
     }
@@ -423,14 +426,14 @@ async function resolveTenantId(
   // Strategy 2.5: AssignedTo lookup (for CRM entities like opportunities, tasks)
   // 🏢 ENTERPRISE ADR-029 Phase 2: CRM entities may use assignedTo instead of createdBy
   const assignedTo = data.assignedTo as string | undefined;
-  console.log(`   🔍 [DEBUG] Strategy 2.5 (AssignedTo): assignedTo=${assignedTo || 'NONE'}, entityType=${entityType}`);
+  logger.info(`[DEBUG] Strategy 2.5 (AssignedTo): assignedTo=${assignedTo || 'NONE'}, entityType=${entityType}`);
   if (assignedTo) {
     // Check cache first
     if (userCompanyCache.has(assignedTo)) {
       const cachedCompanyId = userCompanyCache.get(assignedTo);
-      console.log(`   🔍 [DEBUG] Strategy 2.5: Cache HIT for ${assignedTo} → companyId=${cachedCompanyId || 'NULL'}`);
+      logger.info(`[DEBUG] Strategy 2.5: Cache HIT for ${assignedTo} → companyId=${cachedCompanyId || 'NULL'}`);
       if (cachedCompanyId) {
-        console.log(`   📌 Entity resolved via assignedTo: userId=${assignedTo} → companyId=${cachedCompanyId}`);
+        logger.info(` Entity resolved via assignedTo: userId=${assignedTo} → companyId=${cachedCompanyId}`);
         return cachedCompanyId;
       }
     } else {
@@ -441,17 +444,17 @@ async function resolveTenantId(
           const userData = userDoc.data();
           const userCompanyId = userData?.companyId as string | undefined;
           userCompanyCache.set(assignedTo, userCompanyId || null);
-          console.log(`   🔍 [DEBUG] Strategy 2.5: User lookup ${assignedTo} → companyId=${userCompanyId || 'NULL'}`);
+          logger.info(`[DEBUG] Strategy 2.5: User lookup ${assignedTo} → companyId=${userCompanyId || 'NULL'}`);
           if (userCompanyId) {
-            console.log(`   📌 Entity resolved via assignedTo: userId=${assignedTo} → companyId=${userCompanyId}`);
+            logger.info(` Entity resolved via assignedTo: userId=${assignedTo} → companyId=${userCompanyId}`);
             return userCompanyId;
           }
         } else {
-          console.log(`   🔍 [DEBUG] Strategy 2.5: User ${assignedTo} NOT FOUND`);
+          logger.info(`[DEBUG] Strategy 2.5: User ${assignedTo} NOT FOUND`);
           userCompanyCache.set(assignedTo, null);
         }
       } catch (error) {
-        console.warn(`   ⚠️ Failed to lookup assignedTo user ${assignedTo}:`, error);
+        logger.warn('Failed to lookup assignedTo user', { userId: assignedTo, error });
         userCompanyCache.set(assignedTo, null);
       }
     }
@@ -460,7 +463,7 @@ async function resolveTenantId(
   // Strategy 3: Contact lookup (for opportunities, communications, tasks)
   // 🏢 ENTERPRISE ADR-029 Phase 2: CRM entities inherit tenant from contact
   const contactId = data.contactId as string | undefined;
-  console.log(`   🔍 [DEBUG] Strategy 3 (Contact): contactId=${contactId || 'NONE'}, entityType=${entityType}`);
+  logger.info(`[DEBUG] Strategy 3 (Contact): contactId=${contactId || 'NONE'}, entityType=${entityType}`);
   if (contactId) {
     try {
       const contactDoc = await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
@@ -468,16 +471,16 @@ async function resolveTenantId(
         const contactData = contactDoc.data();
         const contactCompanyId = contactData?.companyId as string | undefined;
         if (contactCompanyId) {
-          console.log(`   📌 Entity resolved via contact: contactId=${contactId} → companyId=${contactCompanyId}`);
+          logger.info(` Entity resolved via contact: contactId=${contactId} → companyId=${contactCompanyId}`);
           return contactCompanyId;
         } else {
-          console.log(`   ⚠️ Contact "${contactId}" exists but has NO companyId - falling through`);
+          logger.warn(` Contact "${contactId}" exists but has NO companyId - falling through`);
         }
       } else {
-        console.log(`   ⚠️ Contact "${contactId}" NOT FOUND`);
+        logger.warn(` Contact "${contactId}" NOT FOUND`);
       }
     } catch (error) {
-      console.warn(`   ⚠️ Failed to lookup contact ${contactId}:`, error);
+      logger.warn('Failed to lookup contact', { contactId, error });
     }
   }
 
@@ -485,51 +488,51 @@ async function resolveTenantId(
   // Supports both 'project' field (units) and 'projectId' field (parking/storage)
   // 🏢 ENTERPRISE: Handles both prefixed (project_xxx) and non-prefixed (xxx) IDs
   const projectRef = (data.project as string | undefined) || (data.projectId as string | undefined);
-  console.log(`   🔍 [DEBUG] Strategy 4 (Project): projectRef=${projectRef || 'NONE'}, entityType=${entityType}`);
+  logger.info(`[DEBUG] Strategy 4 (Project): projectRef=${projectRef || 'NONE'}, entityType=${entityType}`);
   if (projectRef) {
     try {
       // Try with original ID first
-      console.log(`   🔍 [DEBUG] Looking up project: ${COLLECTIONS.PROJECTS}/${projectRef}`);
+      logger.info(`[DEBUG] Looking up project: ${COLLECTIONS.PROJECTS}/${projectRef}`);
       let projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectRef).get();
-      console.log(`   🔍 [DEBUG] Project lookup result: exists=${projectDoc.exists}`);
+      logger.info(`[DEBUG] Project lookup result: exists=${projectDoc.exists}`);
 
       // 🏢 ENTERPRISE: If not found and has prefix, try without prefix (legacy support)
       if (!projectDoc.exists && projectRef.startsWith('project_')) {
         const unprefixedId = projectRef.replace('project_', '');
-        console.log(`   🔄 [LEGACY] Trying unprefixed project ID: ${unprefixedId}`);
+        logger.info('[LEGACY] Trying unprefixed project ID', { unprefixedId });
         projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(unprefixedId).get();
-        console.log(`   🔍 [DEBUG] Unprefixed lookup result: exists=${projectDoc.exists}`);
+        logger.info(`[DEBUG] Unprefixed lookup result: exists=${projectDoc.exists}`);
         if (projectDoc.exists) {
-          console.warn(`   ⚠️ [MIGRATION NEEDED] Project "${unprefixedId}" should be migrated to "${projectRef}"`);
+          logger.warn(` [MIGRATION NEEDED] Project "${unprefixedId}" should be migrated to "${projectRef}"`);
         }
       }
 
       // 🏢 ENTERPRISE: If not found and doesn't have prefix, try with prefix
       if (!projectDoc.exists && !projectRef.startsWith('project_')) {
         const prefixedId = `project_${projectRef}`;
-        console.log(`   🔄 [LEGACY] Trying prefixed project ID: ${prefixedId}`);
+        logger.info('[LEGACY] Trying prefixed project ID', { prefixedId });
         projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(prefixedId).get();
-        console.log(`   🔍 [DEBUG] Prefixed lookup result: exists=${projectDoc.exists}`);
+        logger.info(`[DEBUG] Prefixed lookup result: exists=${projectDoc.exists}`);
       }
 
       if (projectDoc.exists) {
         const projectData = projectDoc.data();
         const projectCompanyId = projectData?.companyId as string | undefined;
         // 🔍 DEBUG: Log project data for troubleshooting
-        console.log(`   🔍 [DEBUG] Project found: ${projectDoc.id}`);
-        console.log(`   🔍 [DEBUG] Project data keys: ${Object.keys(projectData || {}).join(', ')}`);
-        console.log(`   🔍 [DEBUG] Project companyId: ${projectCompanyId || 'MISSING'}`);
+        logger.info(`[DEBUG] Project found: ${projectDoc.id}`);
+        logger.info(`[DEBUG] Project data keys: ${Object.keys(projectData || {}).join(', ')}`);
+        logger.info(`[DEBUG] Project companyId: ${projectCompanyId || 'MISSING'}`);
         if (projectCompanyId) {
-          console.log(`   📌 Entity resolved via project: projectId=${projectDoc.id} → companyId=${projectCompanyId}`);
+          logger.info(` Entity resolved via project: projectId=${projectDoc.id} → companyId=${projectCompanyId}`);
           return projectCompanyId;
         } else {
-          console.log(`   ⚠️ Project "${projectDoc.id}" exists but has NO companyId - falling through to Strategy 4`);
+          logger.warn(` Project "${projectDoc.id}" exists but has NO companyId - falling through to Strategy 4`);
         }
       } else {
-        console.log(`   ⚠️ [DEBUG] Project NOT FOUND with any ID variant: ${projectRef}`);
+        logger.warn(` [DEBUG] Project NOT FOUND with any ID variant: ${projectRef}`);
       }
     } catch (error) {
-      console.warn(`   ⚠️ Failed to lookup project ${projectRef}:`, error);
+      logger.warn('Failed to lookup project', { projectRef, error });
     }
   }
 
@@ -537,7 +540,7 @@ async function resolveTenantId(
   // Chain: unit.buildingId → building.projectId → project.companyId
   // 🏢 ENTERPRISE: Handles both prefixed (building_xxx) and non-prefixed (xxx) IDs
   const buildingId = data.buildingId as string | undefined;
-  console.log(`   🔍 [DEBUG] Strategy 5 (Building): buildingId=${buildingId || 'NONE'}`);
+  logger.info(`[DEBUG] Strategy 5 (Building): buildingId=${buildingId || 'NONE'}`);
   if (buildingId) {
     try {
       // Try with original ID first
@@ -546,17 +549,17 @@ async function resolveTenantId(
       // 🏢 ENTERPRISE: If not found and has prefix, try without prefix (legacy support)
       if (!buildingDoc.exists && buildingId.startsWith('building_')) {
         const unprefixedId = buildingId.replace('building_', '');
-        console.log(`   🔄 [LEGACY] Trying unprefixed building ID: ${unprefixedId}`);
+        logger.info('[LEGACY] Trying unprefixed building ID', { unprefixedId });
         buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(unprefixedId).get();
         if (buildingDoc.exists) {
-          console.warn(`   ⚠️ [MIGRATION NEEDED] Building "${unprefixedId}" should be migrated to "${buildingId}"`);
+          logger.warn(` [MIGRATION NEEDED] Building "${unprefixedId}" should be migrated to "${buildingId}"`);
         }
       }
 
       // 🏢 ENTERPRISE: If not found and doesn't have prefix, try with prefix
       if (!buildingDoc.exists && !buildingId.startsWith('building_')) {
         const prefixedId = `building_${buildingId}`;
-        console.log(`   🔄 [LEGACY] Trying prefixed building ID: ${prefixedId}`);
+        logger.info('[LEGACY] Trying prefixed building ID', { prefixedId });
         buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(prefixedId).get();
       }
 
@@ -583,14 +586,14 @@ async function resolveTenantId(
             const projectData = projectDoc.data();
             const projectCompanyId = projectData?.companyId as string | undefined;
             if (projectCompanyId) {
-              console.log(`   📌 Entity resolved via building chain: buildingId=${buildingId} → projectId=${buildingProjectId} → companyId=${projectCompanyId}`);
+              logger.info(` Entity resolved via building chain: buildingId=${buildingId} → projectId=${buildingProjectId} → companyId=${projectCompanyId}`);
               return projectCompanyId;
             }
           }
         }
       }
     } catch (error) {
-      console.warn(`   ⚠️ Failed to lookup building ${buildingId}:`, error);
+      logger.warn('Failed to lookup building', { buildingId, error });
     }
   }
 
@@ -694,7 +697,7 @@ async function backfillEntityType(
   const config = SEARCH_INDEX_CONFIG[entityType];
   const stats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0, skippedDetails: [] };
 
-  console.log(`📦 [Search Backfill] Processing ${entityType}...`);
+  logger.info('Processing entity type', { entityType });
 
   // Build query
   let query: Query<DocumentData> = adminDb.collection(config.collection);
@@ -708,7 +711,7 @@ async function backfillEntityType(
   }
 
   const snapshot = await query.get();
-  console.log(`   Found ${snapshot.size} documents`);
+  logger.info('Found documents', { count: snapshot.size });
 
   // 🏢 ENTERPRISE: Use shared BulkWriter or create new one
   // BulkWriter automatically handles batching, retries, and rate limiting
@@ -750,7 +753,7 @@ async function backfillEntityType(
           contactId: data.contactId || null,    // 🏢 ADR-029: CRM entities
         },
       });
-      console.log(`   ⏭️ Skipped ${doc.id}: projectId="${data.projectId}", buildingId="${data.buildingId}"`);
+      logger.info('Skipped document', { docId: doc.id, projectId: data.projectId, buildingId: data.buildingId });
       continue;
     }
 
@@ -758,7 +761,7 @@ async function backfillEntityType(
     const searchDocRef = adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(searchDocId);
 
     if (options.dryRun) {
-      console.log(`   [DRY-RUN] Would index: ${searchDoc.title} (${searchDocId})`);
+      logger.info('[DRY-RUN] Would index', { title: searchDoc.title, searchDocId });
       stats.indexed++;
     } else {
       // 🏢 ENTERPRISE: Remove undefined values recursively for Firestore compatibility
@@ -777,7 +780,7 @@ async function backfillEntityType(
         })
         .then(() => undefined)
         .catch((error) => {
-          console.error(`   ❌ Write failed for ${searchDocId}:`, error);
+          logger.error('Write failed', { searchDocId, error });
           // Revert optimistic count on error
           stats.indexed--;
           stats.errors++;
@@ -798,7 +801,7 @@ async function backfillEntityType(
     }
   }
 
-  console.log(`   📊 ${entityType}: processed=${stats.processed}, indexed=${stats.indexed}, skipped=${stats.skipped}, errors=${stats.errors}`);
+  logger.info('Entity type stats', { entityType, processed: stats.processed, indexed: stats.indexed, skipped: stats.skipped, errors: stats.errors });
 
   return stats;
 }
@@ -816,7 +819,7 @@ async function backfillAllTypesParallel(
     throw new Error('Firebase Admin not initialized');
   }
 
-  console.log(`🚀 [Search Backfill] PARALLEL MODE - Processing ${types.length} entity types concurrently`);
+  logger.info('PARALLEL MODE - Processing entity types concurrently', { count: types.length });
 
   // 🏢 ENTERPRISE: Shared BulkWriter for all entity types
   // This maximizes throughput by allowing cross-type batching
@@ -834,9 +837,9 @@ async function backfillAllTypesParallel(
 
   // 🏢 ENTERPRISE: Close BulkWriter and wait for all writes
   if (!options.dryRun) {
-    console.log(`   ⏳ Flushing all pending writes...`);
+    logger.info('Flushing all pending writes...');
     await bulkWriter.close();
-    console.log(`   ✅ All writes completed`);
+    logger.info('All writes completed');
   }
 
   // Aggregate results
@@ -873,24 +876,17 @@ export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
 
     // 🔐 ENTERPRISE: Only super_admin can execute backfill
     if (ctx.globalRole !== 'super_admin') {
-      console.warn(
-        `🚫 [Search Backfill] BLOCKED: Non-super_admin attempted backfill: ` +
-        `${ctx.email} (${ctx.globalRole})`
-      );
+      logger.warn('BLOCKED: Non-super_admin attempted backfill', { email: ctx.email, globalRole: ctx.globalRole });
       return createErrorResponse('Forbidden: Only super_admin can execute search backfill', 403);
     }
 
-    console.log(`🔐 [Search Backfill] Request from ${ctx.email} (${ctx.globalRole})`);
+    logger.info('Search Backfill request', { email: ctx.email, globalRole: ctx.globalRole });
 
     try {
       const body = await request.json() as BackfillRequest;
       const { dryRun = true, type, companyId, limit } = body;
 
-      console.log(`🔍 SEARCH INDEX BACKFILL`);
-      console.log(`   Mode: ${dryRun ? 'DRY-RUN' : 'EXECUTE'}`);
-      if (type) console.log(`   Type filter: ${type}`);
-      if (companyId) console.log(`   Company filter: ${companyId}`);
-      if (limit) console.log(`   Limit: ${limit}`);
+      logger.info('SEARCH INDEX BACKFILL', { mode: dryRun ? 'DRY-RUN' : 'EXECUTE', type: type || 'all', companyId: companyId || 'all', limit: limit || 'none' });
 
       // Determine which types to process
       const typesToProcess = type
@@ -898,7 +894,7 @@ export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
         : Object.values(SEARCH_ENTITY_TYPES);
 
       // 🏢 ENTERPRISE: Use parallel processing for maximum throughput
-      console.log(`🚀 Processing ${typesToProcess.length} entity types in PARALLEL mode`);
+      logger.info('Processing entity types in PARALLEL mode', { count: typesToProcess.length });
 
       const { statsByType, totalStats } = await backfillAllTypesParallel(
         typesToProcess,
@@ -907,12 +903,7 @@ export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
 
       const duration = Date.now() - startTime;
 
-      console.log(`\n📊 FINAL SUMMARY`);
-      console.log(`   Total processed: ${totalStats.processed}`);
-      console.log(`   Total indexed:   ${totalStats.indexed}`);
-      console.log(`   Total skipped:   ${totalStats.skipped}`);
-      console.log(`   Total errors:    ${totalStats.errors}`);
-      console.log(`   Duration:        ${duration}ms`);
+      logger.info('FINAL SUMMARY', { processed: totalStats.processed, indexed: totalStats.indexed, skipped: totalStats.skipped, errors: totalStats.errors, durationMs: duration });
 
       const response: BackfillResponse = {
         mode: dryRun ? 'DRY_RUN' : 'EXECUTE',
@@ -929,7 +920,7 @@ export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`❌ [Search Backfill] Error:`, errorMessage);
+      logger.error('Search Backfill error', { error: errorMessage });
       return createErrorResponse(errorMessage, 500);
     }
   },
@@ -1017,14 +1008,11 @@ export const PATCH = withAuth<MigrationApiResponse>(
 
     // 🔐 ENTERPRISE: Only super_admin can execute migration
     if (ctx.globalRole !== 'super_admin') {
-      console.warn(
-        `🚫 [Contact Migration] BLOCKED: Non-super_admin attempted migration: ` +
-        `${ctx.email} (${ctx.globalRole})`
-      );
+      logger.warn('BLOCKED: Non-super_admin attempted contact migration', { email: ctx.email, globalRole: ctx.globalRole });
       return createErrorResponse('Forbidden: Only super_admin can execute contact migration', 403);
     }
 
-    console.log(`🔐 [Contact Migration] Request from ${ctx.email} (${ctx.globalRole})`);
+    logger.info('Contact Migration request', { email: ctx.email, globalRole: ctx.globalRole });
 
     const adminDb = getAdminFirestore();
     if (!adminDb) {
@@ -1035,10 +1023,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
       const body = await request.json() as { dryRun?: boolean; limit?: number; defaultCompanyId?: string };
       const { dryRun = true, limit, defaultCompanyId } = body;
 
-      console.log(`\n🏢 CONTACT TENANT MIGRATION`);
-      console.log(`   Mode: ${dryRun ? 'DRY-RUN' : 'EXECUTE'}`);
-      if (limit) console.log(`   Limit: ${limit}`);
-      if (defaultCompanyId) console.log(`   Default companyId: ${defaultCompanyId}`);
+      logger.info('CONTACT TENANT MIGRATION', { mode: dryRun ? 'DRY-RUN' : 'EXECUTE', limit: limit || 'none', defaultCompanyId: defaultCompanyId || 'none' });
 
       const stats: MigrationStats = {
         total: 0,
@@ -1058,7 +1043,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
       const snapshot = await query.get();
       stats.total = snapshot.size;
 
-      console.log(`   Found ${stats.total} contacts to process`);
+      logger.info('Found contacts to process', { total: stats.total });
 
       // Clear user cache for fresh lookups
       userCompanyCache.clear();
@@ -1095,7 +1080,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
               }
               userCompanyCache.set(createdBy, resolvedCompanyId);
             } catch (error) {
-              console.warn(`   ⚠️ Failed to lookup user ${createdBy}:`, error);
+              logger.warn('Failed to lookup user', { userId: createdBy, error });
               userCompanyCache.set(createdBy, null);
             }
           }
@@ -1104,19 +1089,19 @@ export const PATCH = withAuth<MigrationApiResponse>(
         // Fallback to defaultCompanyId if no creator or creator has no companyId
         if (!resolvedCompanyId && defaultCompanyId) {
           resolvedCompanyId = defaultCompanyId;
-          console.log(`   📌 Contact ${doc.id} using default companyId`);
+          logger.info(` Contact ${doc.id} using default companyId`);
         }
 
         if (!resolvedCompanyId) {
           stats.noCreator++;
-          console.log(`   ⚠️ Contact ${doc.id} has no createdBy and no defaultCompanyId - skipping`);
+          logger.warn(` Contact ${doc.id} has no createdBy and no defaultCompanyId - skipping`);
           continue;
         }
 
         const userCompanyId = resolvedCompanyId;
 
         if (dryRun) {
-          console.log(`   [DRY-RUN] Would set companyId=${userCompanyId} for contact ${doc.id}`);
+          logger.info('[DRY-RUN] Would set companyId for contact', { companyId: userCompanyId, contactId: doc.id });
           stats.migrated++;
         } else {
           batch.update(doc.ref, {
@@ -1130,11 +1115,11 @@ export const PATCH = withAuth<MigrationApiResponse>(
           if (batchCount >= BATCH_SIZE) {
             try {
               await batch.commit();
-              console.log(`   ✅ Committed batch of ${batchCount} contacts`);
+              logger.info('Committed batch of contacts', { batchCount });
               batch = adminDb.batch();
               batchCount = 0;
             } catch (error) {
-              console.error(`   ❌ Batch commit failed:`, error);
+              logger.error('Batch commit failed', { error });
               stats.errors += batchCount;
               stats.migrated -= batchCount;
               batch = adminDb.batch();
@@ -1148,9 +1133,9 @@ export const PATCH = withAuth<MigrationApiResponse>(
       if (!dryRun && batchCount > 0) {
         try {
           await batch.commit();
-          console.log(`   ✅ Committed final batch of ${batchCount} contacts`);
+          logger.info('Committed final batch of contacts', { batchCount });
         } catch (error) {
-          console.error(`   ❌ Final batch commit failed:`, error);
+          logger.error('Final batch commit failed', { error });
           stats.errors += batchCount;
           stats.migrated -= batchCount;
         }
@@ -1158,13 +1143,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
 
       const duration = Date.now() - startTime;
 
-      console.log(`\n📊 MIGRATION SUMMARY`);
-      console.log(`   Total contacts: ${stats.total}`);
-      console.log(`   Migrated:       ${stats.migrated}`);
-      console.log(`   Skipped:        ${stats.skipped} (already have companyId)`);
-      console.log(`   No creator:     ${stats.noCreator}`);
-      console.log(`   Errors:         ${stats.errors}`);
-      console.log(`   Duration:       ${duration}ms`);
+      logger.info('MIGRATION SUMMARY', { total: stats.total, migrated: stats.migrated, skipped: stats.skipped, noCreator: stats.noCreator, errors: stats.errors, durationMs: duration });
 
       return apiSuccess({
         mode: dryRun ? 'DRY_RUN' : 'EXECUTE',
@@ -1178,7 +1157,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`❌ [Contact Migration] Error:`, errorMessage);
+      logger.error('Contact Migration error', { error: errorMessage });
       return createErrorResponse(errorMessage, 500);
     }
   },

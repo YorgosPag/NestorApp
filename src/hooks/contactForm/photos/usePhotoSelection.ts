@@ -10,6 +10,7 @@
 
 import { useCallback } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -23,6 +24,8 @@ export interface UsePhotoSelectionReturn {
     setFormData: (data: ContactFormData) => void
   ) => void;
 }
+
+const logger = createModuleLogger('usePhotoSelection');
 
 // ============================================================================
 // PHOTO SELECTION HOOK
@@ -52,7 +55,7 @@ export function usePhotoSelection(): UsePhotoSelectionReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('👤 PHOTO SELECTION: Profile photo selected at index:', index);
+    logger.info('Profile photo selected at index', { index });
 
     setFormData({
       ...formData,

@@ -1534,8 +1534,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
         <div
           ref={containerRef}
-          className={`canvas-stack relative w-full h-full ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
-          style={{ cursor: 'none' }} // ✅ ADR-008 CAD-GRADE: ALWAYS hide CSS cursor - crosshair is the only cursor
+          className={`canvas-stack relative w-full h-full cursor-none ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`} // ADR-008 CAD-GRADE: cursor-none hides CSS cursor
           onMouseMove={handleContainerMouseMove}
           onMouseDown={handleContainerMouseDown}
           onMouseUp={handleContainerMouseUp}

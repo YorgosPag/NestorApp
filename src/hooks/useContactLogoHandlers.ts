@@ -1,5 +1,8 @@
 import { useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useContactLogoHandlers');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -66,7 +69,7 @@ export function useContactLogoHandlers({
     // Check file type
     if (!file.type.startsWith('image/')) {
       notifications.error('🖼️ Επιλέξτε μόνο αρχεία εικόνας (JPG, PNG, κλπ.)');
-      console.warn('❌ LOGO HANDLER: Invalid file type:', file.type);
+      logger.warn('Invalid file type', { fileType: file.type });
       return false;
     }
 
@@ -74,7 +77,7 @@ export function useContactLogoHandlers({
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       notifications.error('📏 Το αρχείο πρέπει να είναι μικρότερο από 5MB');
-      console.warn('❌ LOGO HANDLER: File too large:', file.size);
+      logger.warn('File too large', { fileSize: file.size });
       return false;
     }
 
@@ -82,7 +85,7 @@ export function useContactLogoHandlers({
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
     if (!allowedTypes.includes(file.type)) {
       notifications.error('🎨 Επιλέξτε JPG, PNG ή SVG αρχείο για το λογότυπο');
-      console.warn('❌ LOGO HANDLER: Invalid logo file type:', file.type);
+      logger.warn('Invalid logo file type', { fileType: file.type });
       return false;
     }
 
@@ -127,7 +130,7 @@ export function useContactLogoHandlers({
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('📥 LOGO HANDLER: Logo drop event');
+    logger.info('Logo drop event');
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) {

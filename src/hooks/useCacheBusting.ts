@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useCacheBusting');
 
 // ============================================================================
 // CACHE BUSTING HOOK
@@ -39,18 +42,18 @@ export function useCacheBusting() {
   // Listen για force re-render events
   useEffect(() => {
     const handleForceRerender = (event: CustomEvent) => {
-      console.log('🔄 CACHE BUSTING: Force re-rendering photos due to cache invalidation');
+      logger.info('Force re-rendering photos due to cache invalidation');
 
       // 🔥 NUCLEAR CACHE CLEAR: Εξαναγκασμένη εκκαθάριση browser image cache
       // Αυτό καλύπτει περιπτώσεις όπου το cache buster δεν επαρκεί
       if (typeof window !== 'undefined') {
         // ΔΙΑΓΝΩΣΤΙΚΑ: Δες όλες τις εικόνες στη σελίδα
         const allImages = document.querySelectorAll('img');
-        console.log('🔍 DEBUG: Found', allImages.length, 'total images in page');
+        logger.info('Found total images in page', { count: allImages.length });
 
         allImages.forEach((img, index) => {
           const imgElement = img as HTMLImageElement;
-          console.log(`🔍 Image ${index}:`, {
+          logger.info(`Image ${index}`, {
             src: imgElement.src,
             isFirebase: imgElement.src.includes('firebasestorage'),
             isBlob: imgElement.src.startsWith('blob:'),
@@ -63,9 +66,11 @@ export function useCacheBusting() {
         const blobImages = document.querySelectorAll('img[src^="blob:"]');
         const dataImages = document.querySelectorAll('img[src^="data:"]');
 
-        console.log('🔍 DEBUG: Firebase images:', firebaseImages.length);
-        console.log('🔍 DEBUG: Blob images:', blobImages.length);
-        console.log('🔍 DEBUG: Data images:', dataImages.length);
+        logger.info('Image cache stats', {
+          firebaseImages: firebaseImages.length,
+          blobImages: blobImages.length,
+          dataImages: dataImages.length
+        });
 
         // Clear ΜΟΝΟ τις εικόνες που είναι ΜΕΣΑ στο MultiplePhotosUpload grid
         const gridContainer = document.querySelector('[class*="grid-cols-3"]');
@@ -74,7 +79,7 @@ export function useCacheBusting() {
           gridImages.forEach((img) => {
             const imgElement = img as HTMLImageElement;
             const originalSrc = imgElement.src;
-            console.log('🔥 Clearing grid image:', originalSrc.substring(0, 50));
+            logger.info('Clearing grid image');
 
             // NUCLEAR CLEAR: Διαγραφή όλων των attributes
             imgElement.removeAttribute('src');
@@ -89,12 +94,12 @@ export function useCacheBusting() {
               // ΜΗΝ reload - αφήνε άδειο!
             }, 50);
           });
-          console.log('🔥 NUCLEAR CACHE: TOTAL CLEAR of', gridImages.length, 'grid images (no reload)');
+          logger.info('NUCLEAR CACHE: TOTAL CLEAR of grid images (no reload)', { count: gridImages.length });
         } else {
-          console.log('🔥 NUCLEAR CACHE: Grid container not found - no clearing done');
+          logger.info('NUCLEAR CACHE: Grid container not found - no clearing done');
         }
 
-        console.log('🔥 NUCLEAR CACHE: Force reloaded', firebaseImages.length + blobImages.length + dataImages.length, 'images total');
+        logger.info('NUCLEAR CACHE: Force reloaded images total', { count: firebaseImages.length + blobImages.length + dataImages.length });
       }
 
       setPhotosKey(prev => prev + 1); // Force re-render με νέο key

@@ -30,6 +30,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FixBuildingProjectRoute');
 
 /**
  * POST - Execute Building ProjectId Fix (withAuth protected)
@@ -53,10 +56,7 @@ async function handleFixBuildingProjectExecute(request: NextRequest, ctx: AuthCo
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/admin/fix-building-project] BLOCKED: Non-super_admin attempted building projectId fix`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted building projectId fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -77,7 +77,7 @@ async function handleFixBuildingProjectExecute(request: NextRequest, ctx: AuthCo
       );
     }
 
-    console.log(`🔧 Updating building ${buildingId} with projectId: ${newProjectId}`);
+    logger.info('Updating building projectId', { buildingId, newProjectId });
 
     const buildingRef = doc(db, COLLECTIONS.BUILDINGS, buildingId);
     await updateDoc(buildingRef, {
@@ -85,7 +85,7 @@ async function handleFixBuildingProjectExecute(request: NextRequest, ctx: AuthCo
       updatedAt: new Date().toISOString(),
     });
 
-    console.log(`✅ Building ${buildingId} updated successfully`);
+    logger.info('Building updated successfully', { buildingId });
 
     const duration = Date.now() - startTime;
 
@@ -104,7 +104,7 @@ async function handleFixBuildingProjectExecute(request: NextRequest, ctx: AuthCo
       },
       `Building projectId fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -115,7 +115,7 @@ async function handleFixBuildingProjectExecute(request: NextRequest, ctx: AuthCo
       executionTimeMs: duration,
     });
   } catch (error: unknown) {
-    console.error('❌ Error updating building:', error);
+    logger.error('Error updating building', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(

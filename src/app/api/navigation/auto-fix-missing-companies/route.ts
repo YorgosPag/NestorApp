@@ -38,6 +38,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationAutoFixRoute');
 
 interface AutoFixResult {
   success: boolean;
@@ -82,10 +85,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/navigation/auto-fix-missing-companies] BLOCKED: Non-super_admin attempted navigation auto-fix`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[Navigation/AutoFix] BLOCKED: Non-super_admin attempted navigation auto-fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
 
     const errorResult: AutoFixResult = {
       success: false,
@@ -103,7 +103,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
   }
 
   try {
-    console.log('🔧 ENTERPRISE AUTO-FIX: Starting navigation companies repair...');
+    logger.info('[Navigation/AutoFix] Starting navigation companies repair');
 
     const result: AutoFixResult = {
       success: false,
@@ -118,7 +118,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
     };
 
     // STEP 1: Get all companies from contacts collection
-    console.log('📊 Step 1: Fetching all companies from contacts...');
+    logger.info('[Navigation/AutoFix] Step 1: Fetching all companies from contacts');
     const companiesQuery = query(
       collection(db, COLLECTIONS.CONTACTS),
       where('type', '==', 'company'),
@@ -126,11 +126,11 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
     );
     const companiesSnapshot = await getDocs(companiesQuery);
 
-    console.log(`   Found ${companiesSnapshot.docs.length} active companies in contacts`);
+    logger.info('[Navigation/AutoFix] Found active companies', { count: companiesSnapshot.docs.length });
     result.stats.companiesChecked = companiesSnapshot.docs.length;
 
     // STEP 2: Get all projects and group by companyId
-    console.log('📊 Step 2: Analyzing projects distribution...');
+    logger.info('[Navigation/AutoFix] Step 2: Analyzing projects distribution');
     const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
 
     // Group projects by companyId
@@ -146,20 +146,19 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
       }
     });
 
-    console.log(`   Found ${projectsSnapshot.docs.length} total projects`);
-    console.log(`   Projects distributed across ${Object.keys(projectsByCompany).length} companies`);
+    logger.info('[Navigation/AutoFix] Projects analysis', { totalProjects: projectsSnapshot.docs.length, companiesWithProjects: Object.keys(projectsByCompany).length });
 
     // STEP 3: Get existing navigation companies
-    console.log('📊 Step 3: Checking existing navigation companies...');
+    logger.info('[Navigation/AutoFix] Step 3: Checking existing navigation companies');
     const navigationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
     const existingNavigationCompanyIds = new Set(
       navigationSnapshot.docs.map(doc => doc.data().contactId)
     );
 
-    console.log(`   Found ${existingNavigationCompanyIds.size} companies already in navigation`);
+    logger.info('[Navigation/AutoFix] Existing navigation companies', { count: existingNavigationCompanyIds.size });
 
     // STEP 4: Process each company
-    console.log('🔧 Step 4: Processing companies for auto-fix...');
+    logger.info('[Navigation/AutoFix] Step 4: Processing companies for auto-fix');
 
     for (const companyDoc of companiesSnapshot.docs) {
       const companyId = companyDoc.id;
@@ -177,7 +176,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
         if (!existingNavigationCompanyIds.has(companyId)) {
           result.stats.companiesMissingFromNavigation++;
 
-          console.log(`   🚨 MISSING: Company "${companyName}" (ID: ${companyId}) has ${projectCount} projects but is not in navigation`);
+          logger.warn('[Navigation/AutoFix] MISSING: Company not in navigation', { companyName, companyId, projectCount });
 
           // Add to navigation_companies collection
           try {
@@ -195,10 +194,10 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
               action: 'added_to_navigation'
             });
 
-            console.log(`   ✅ FIXED: Added "${companyName}" to navigation (${projectCount} projects)`);
+            logger.info('[Navigation/AutoFix] FIXED: Added company to navigation', { companyName, projectCount });
 
           } catch (error) {
-            console.error(`   ❌ FAILED: Could not add "${companyName}" to navigation:`, error);
+            logger.error('[Navigation/AutoFix] Failed to add company to navigation', { companyName, error: error instanceof Error ? error.message : String(error) });
             result.fixes.push({
               companyId,
               companyName,
@@ -235,30 +234,30 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
                       `${stats.companiesWithProjects} companies have projects, ` +
                       `${stats.companiesMissingFromNavigation} were missing from navigation.`;
 
-      console.log('🎉 ENTERPRISE AUTO-FIX COMPLETED SUCCESSFULLY:');
-      console.log(`   - Companies checked: ${stats.companiesChecked}`);
-      console.log(`   - Companies with projects: ${stats.companiesWithProjects}`);
-      console.log(`   - Companies missing from navigation: ${stats.companiesMissingFromNavigation}`);
-      console.log(`   - Companies added to navigation: ${stats.companiesAdded}`);
+      logger.info('[Navigation/AutoFix] COMPLETED SUCCESSFULLY', {
+        companiesChecked: stats.companiesChecked,
+        companiesWithProjects: stats.companiesWithProjects,
+        companiesMissingFromNavigation: stats.companiesMissingFromNavigation,
+        companiesAdded: stats.companiesAdded
+      });
 
     } else if (stats.companiesMissingFromNavigation === 0) {
       result.success = true;
       result.message = `Navigation is already up-to-date. All ${stats.companiesWithProjects} companies with projects are present in navigation.`;
 
-      console.log('✅ ENTERPRISE AUTO-FIX: No action needed, navigation is up-to-date');
+      logger.info('[Navigation/AutoFix] No action needed, navigation is up-to-date');
 
     } else {
       result.success = false;
       result.message = `Failed to add companies to navigation. Found ${stats.companiesMissingFromNavigation} companies that need fixing.`;
 
-      console.log('❌ ENTERPRISE AUTO-FIX: Completed with errors');
+      logger.error('[Navigation/AutoFix] Completed with errors');
     }
 
     // STEP 6: Log sample fixes for transparency
     if (result.fixes.length > 0) {
-      console.log('📋 Sample fixes applied:');
-      result.fixes.slice(0, 3).forEach(fix => {
-        console.log(`   - ${fix.companyName}: ${fix.action} (${fix.projectCount} projects)`);
+      logger.info('[Navigation/AutoFix] Sample fixes applied', {
+        fixes: result.fixes.slice(0, 3).map(fix => ({ companyName: fix.companyName, action: fix.action, projectCount: fix.projectCount }))
       });
     }
 
@@ -281,13 +280,13 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
       },
       `Navigation auto-fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('[Navigation/AutoFix] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
     });
 
     return NextResponse.json({ ...result, executionTimeMs: duration });
 
   } catch (error: unknown) {
-    console.error('❌ ENTERPRISE AUTO-FIX FAILED:', error);
+    logger.error('[Navigation/AutoFix] Enterprise auto-fix failed', { error: error instanceof Error ? error.message : String(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

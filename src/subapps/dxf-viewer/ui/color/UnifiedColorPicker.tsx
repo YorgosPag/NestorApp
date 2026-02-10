@@ -170,8 +170,7 @@ function InlineColorPicker({
           onChange={handleTextChange}
           disabled={disabled}
           placeholder={UI_COLORS.WHITE}
-          className={`${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.muted} rounded ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`}
-          style={{ width: '6rem' }}
+          className={`w-24 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.muted} rounded ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`}
         />
       )}
     </div>

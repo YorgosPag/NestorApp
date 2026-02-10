@@ -22,6 +22,9 @@ import type {
   CreateRelationshipOptions,
   RelationshipOperationResult
 } from '@/services/relationships/enterprise-relationship-engine.contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('RelationshipsCreateRoute');
 
 // ============================================================================
 // CREATE RELATIONSHIP ENDPOINT
@@ -48,7 +51,7 @@ const postHandler = async (request: NextRequest) => {
 export const POST = withStandardRateLimit(postHandler);
 
 async function handleCreateRelationship(request: NextRequest, ctx: AuthContext): Promise<NextResponse<RelationshipOperationResult>> {
-  console.log(`🔗 API: Create relationship request from user ${ctx.email} (company: ${ctx.companyId})`);
+  logger.info('[Relationships/Create] Create relationship request', { email: ctx.email, companyId: ctx.companyId });
 
   try {
     // 1️⃣ PARSE & VALIDATE REQUEST
@@ -107,7 +110,7 @@ async function handleCreateRelationship(request: NextRequest, ctx: AuthContext):
     );
 
     if (!parentAccess) {
-      console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized parent ${parentType} ${parentId}`);
+      logger.warn('[Relationships/Create] TENANT ISOLATION: Unauthorized parent access', { userId: ctx.uid, parentType, parentId });
       return NextResponse.json({
         success: false,
         entityId: parentId,
@@ -134,7 +137,7 @@ async function handleCreateRelationship(request: NextRequest, ctx: AuthContext):
     );
 
     if (!childAccess) {
-      console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized child ${childType} ${childId}`);
+      logger.warn('[Relationships/Create] TENANT ISOLATION: Unauthorized child access', { userId: ctx.uid, childType, childId });
       return NextResponse.json({
         success: false,
         entityId: childId,
@@ -191,7 +194,7 @@ async function handleCreateRelationship(request: NextRequest, ctx: AuthContext):
       }]
     };
 
-    console.error('🚨 Enterprise Relationship API Error:', error);
+    logger.error('[Relationships/Create] Enterprise Relationship API Error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(errorResult, { status: 500 });
   }
 }
@@ -242,17 +245,17 @@ async function validateEntityOwnership(
       case 'unit':
       case 'contact':
         // TODO: Implement multi-level validation for these entity types
-        console.warn(`⚠️ PARTIAL VALIDATION: ${entityType} ownership validation not yet implemented`);
+        logger.warn('[Relationships/Create] PARTIAL VALIDATION: ownership validation not yet implemented', { entityType });
         // For now, allow these (relationships engine will handle basic validation)
         // This should be hardened before production use
         return true;
 
       default:
-        console.error(`❌ UNKNOWN ENTITY TYPE: ${entityType}`);
+        logger.error('[Relationships/Create] Unknown entity type', { entityType });
         return false;
     }
   } catch (error) {
-    console.error(`❌ Error validating entity ownership for ${entityType} ${entityId}:`, error);
+    logger.error('[Relationships/Create] Error validating entity ownership', { entityType, entityId, error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

@@ -20,6 +20,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ParkingRoute');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Admin SDK Parking Endpoint
@@ -98,7 +101,7 @@ const getHandler = async (request: NextRequest) => {
 export const GET = withStandardRateLimit(getHandler);
 
 async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ParkingAPIResponse>> {
-  console.log(`🅿️ API: Loading parking spots for user ${ctx.email} (company: ${ctx.companyId})...`);
+  logger.info('Loading parking spots', { email: ctx.email, companyId: ctx.companyId });
 
   try {
     // 🏗️ ENTERPRISE: Extract buildingId parameter for filtering
@@ -108,7 +111,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     // =========================================================================
     // STEP 0: Get authorized buildings (TENANT ISOLATION)
     // =========================================================================
-    console.log('🔍 API: Getting authorized buildings for user\'s company...');
+    logger.info('Getting authorized buildings for company');
 
     // Get all projects belonging to user's company
     const projectsSnapshot = await getAdminFirestore()
@@ -117,10 +120,10 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       .get();
 
     const projectIds = projectsSnapshot.docs.map(doc => doc.id);
-    console.log(`🏗️ API: Found ${projectIds.length} projects for company ${ctx.companyId}`);
+    logger.info('Found projects for company', { projectCount: projectIds.length, companyId: ctx.companyId });
 
     if (projectIds.length === 0) {
-      console.log('⚠️ API: No projects found for user\'s company - returning empty result');
+      logger.info('No projects found for company - returning empty result');
       return NextResponse.json({
         success: true,
         data: {
@@ -138,25 +141,25 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       .get();
 
     const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
-    console.log(`🏢 API: Found ${authorizedBuildingIds.size} authorized buildings for user`);
+    logger.info('Found authorized buildings', { buildingCount: authorizedBuildingIds.size });
 
     // If buildingId parameter provided, verify it's authorized
     if (requestedBuildingId) {
       if (!authorizedBuildingIds.has(requestedBuildingId)) {
-        console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized building ${requestedBuildingId}`);
+        logger.warn('TENANT ISOLATION: Unauthorized building access attempt', { userId: ctx.uid, buildingId: requestedBuildingId });
         return NextResponse.json({
           success: false,
           error: 'Building not found or access denied',
           details: 'The requested building does not belong to your organization'
         }, { status: 403 });
       }
-      console.log(`✅ API: Building ${requestedBuildingId} is authorized - proceeding with query`);
+      logger.info('Building authorized - proceeding with query', { buildingId: requestedBuildingId });
     }
 
     // =========================================================================
     // STEP 1: Check cache (skip for now - tenant-specific caching needed)
     // =========================================================================
-    console.log('🔍 API: Fetching from Firestore with Admin SDK (tenant-filtered)...');
+    logger.info('Fetching from Firestore with Admin SDK (tenant-filtered)');
 
     // =========================================================================
     // STEP 2: Query Firestore using Admin SDK (TENANT FILTERED)
@@ -169,14 +172,14 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
         .collection(COLLECTIONS.PARKING_SPACES)
         .where('buildingId', '==', requestedBuildingId)
         .get();
-      console.log(`🔍 API: Querying parking spots for building ${requestedBuildingId}`);
+      logger.info('Querying parking spots for building', { buildingId: requestedBuildingId });
     } else {
       // Multiple buildings query - get all and filter in-memory
       // (Firestore 'in' operator limited to 10 items)
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.PARKING_SPACES)
         .get();
-      console.log(`🔍 API: Querying all parking spots (will filter by ${authorizedBuildingIds.size} authorized buildings)`);
+      logger.info('Querying all parking spots', { authorizedBuildingCount: authorizedBuildingIds.size });
     }
 
     // =========================================================================
@@ -205,11 +208,11 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       ? allParkingSpots // Already filtered by Firestore query
       : allParkingSpots.filter(spot => authorizedBuildingIds.has(spot.buildingId));
 
-    console.log(`✅ API: Found ${parkingSpots.length} parking spots for user's authorized buildings`);
+    logger.info('Found parking spots for authorized buildings', { count: parkingSpots.length });
     if (!requestedBuildingId) {
       const filteredOut = allParkingSpots.length - parkingSpots.length;
       if (filteredOut > 0) {
-        console.log(`🔒 TENANT ISOLATION: Filtered out ${filteredOut} parking spots from unauthorized buildings`);
+        logger.info('TENANT ISOLATION: Filtered out parking spots from unauthorized buildings', { filteredOut });
       }
     }
 
@@ -227,7 +230,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     });
 
   } catch (error) {
-    console.error('❌ Error fetching parking spots:', error);
+    logger.error('Error fetching parking spots', { error: error instanceof Error ? error.message : String(error) });
 
     return NextResponse.json({
       success: false,

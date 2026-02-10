@@ -2,10 +2,13 @@ import { useEffect } from 'react';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
+
+const logger = createModuleLogger('useContactDataLoader');
 
 /** Photo slot structure for multiple photos */
 interface PhotoSlotData {
@@ -71,7 +74,7 @@ export function useContactDataLoader({
         const mappingResult = mapContactToFormData(editContact);
 
         if (mappingResult.warnings.length > 0) {
-          console.warn('⚠️ DATA LOADER: Contact mapping warnings:', mappingResult.warnings);
+          logger.warn('Contact mapping warnings', { warnings: mappingResult.warnings });
         }
 
         setFormData({
@@ -87,7 +90,7 @@ export function useContactDataLoader({
         setTimeout(() => {
           if (Array.isArray(mappingResult.formData.multiplePhotos) &&
               mappingResult.formData.multiplePhotos.length === 0) {
-            console.log('🛠️ DATA LOADER: Database has empty photos array - forcing UI update');
+            logger.info('Database has empty photos array - forcing UI update');
             // Καλεί την συνάρτηση που ενημερώνει τα photos στο UI
             if (typeof handleMultiplePhotosChange === 'function') {
               handleMultiplePhotosChange([]);
@@ -96,7 +99,7 @@ export function useContactDataLoader({
         }, 50);
 
       } catch (error) {
-        console.error('❌ DATA LOADER: Failed to load contact data:', error);
+        logger.error('Failed to load contact data', { error });
         resetForm();
       }
 
@@ -105,7 +108,7 @@ export function useContactDataLoader({
       // NEW CONTACT MODE: Reset form
       // ========================================================================
 
-      console.log('🆕 DATA LOADER: New contact mode, resetting form (modal opened)');
+      logger.info('New contact mode, resetting form (modal opened)');
       resetForm();
     }
   }, [

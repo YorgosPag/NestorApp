@@ -16,6 +16,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
 import { defaultParkingFilters, type ParkingFilterState } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useParkingPageState');
 
 export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
   // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
@@ -37,7 +40,7 @@ export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
       // URL parameter has priority - find and select the parking spot
       const found = initialParkingSpots.find(p => p.id === parkingIdFromUrl);
       if (found) {
-        console.log('🅿️ [useParkingPageState] Auto-selecting parking from URL:', found.number);
+        logger.info('Auto-selecting parking from URL', { parkingNumber: found.number });
         setSelectedParking(found);
         return;
       }

@@ -6,6 +6,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitsCreateRoute');
 
 // =============================================================================
 // TYPES
@@ -54,7 +57,7 @@ export const POST = withStandardRateLimit(
       // 🔐 ADMIN SDK: Get server-side Firestore instance
       const adminDb = getAdminFirestore();
       if (!adminDb) {
-        console.error('❌ Firebase Admin not initialized');
+        logger.error('Firebase Admin not initialized');
         throw new ApiError(503, 'Database unavailable');
       }
 
@@ -83,12 +86,12 @@ export const POST = withStandardRateLimit(
           Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
         );
 
-        console.log(`🏢 [Units] Creating new unit "${body.name}" for tenant ${ctx.companyId}...`);
+        logger.info('[Units] Creating new unit', { name: body.name, companyId: ctx.companyId });
 
         // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
         const docRef = await adminDb.collection(COLLECTIONS.UNITS).add(cleanData);
 
-        console.log(`✅ [Units] Unit created with ID: ${docRef.id}`);
+        logger.info('[Units] Unit created', { unitId: docRef.id });
 
         // 📊 Audit log
         await logAuditEvent(ctx, 'data_created', 'unit', 'api', {
@@ -111,7 +114,7 @@ export const POST = withStandardRateLimit(
 
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        console.error('❌ [Units] Error creating unit:', error);
+        logger.error('[Units] Error creating unit', { error: error instanceof Error ? error.message : String(error) });
         throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create unit');
       }
     },

@@ -1,6 +1,9 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/firebase/helpers-lazy.ts
 
 import { isFirebaseAvailable } from './availability';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FirestoreHelpersLazy');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Firestore Helper Types (ADR-compliant - NO any)
@@ -114,7 +117,7 @@ export async function getFirestoreHelpers(): Promise<FirestoreHelpers | null> {
       Timestamp
     };
   } catch (error) {
-    console.error('❌ Failed to import Firestore helpers:', error);
+    logger.error('Failed to import Firestore helpers', { error });
     return null;
   }
 }

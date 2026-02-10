@@ -30,6 +30,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectsListRoute');
 
 // ============================================================================
 // TYPES - Project List Response
@@ -167,7 +170,7 @@ export const GET = withHighRateLimit(
 
       // 🏢 ENTERPRISE: Check if user is Super Admin for cross-tenant access
       const isSuperAdmin = ctx.globalRole === 'super_admin';
-      console.log(`🏗️ [Projects/List] Starting projects list load... (Super Admin: ${isSuperAdmin})`);
+      logger.info('[Projects/List] Starting projects list load', { isSuperAdmin });
 
       // ============================================================================
       // 1. CHECK TENANT-SPECIFIC CACHE FIRST
@@ -179,7 +182,7 @@ export const GET = withHighRateLimit(
 
   if (cachedData) {
     const duration = Date.now() - startTime;
-    console.log(`⚡ [Projects/List] CACHE HIT - ${cachedData.count} projects in ${duration}ms`);
+    logger.info('[Projects/List] CACHE HIT', { count: cachedData.count, durationMs: duration });
 
     // Audit event for cache hit
     await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
@@ -195,7 +198,7 @@ export const GET = withHighRateLimit(
     }, `Projects loaded from cache in ${duration}ms`);
   }
 
-      console.log('🔍 [Projects/List] Cache miss - Fetching from Firestore...');
+      logger.info('[Projects/List] Cache miss - Fetching from Firestore');
 
       // ============================================================================
       // 2. FETCH PROJECTS (Admin SDK)
@@ -205,7 +208,7 @@ export const GET = withHighRateLimit(
       let projectsSnapshot;
       if (isSuperAdmin) {
         // 🏢 Super Admin: Fetch ALL projects across all companies
-        console.log('👑 [Projects/List] Super Admin - Fetching ALL projects...');
+        logger.info('[Projects/List] Super Admin - Fetching ALL projects');
         projectsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .get();
@@ -217,7 +220,7 @@ export const GET = withHighRateLimit(
           .get();
       }
 
-      console.log(`🏗️ [Projects/List] Found ${projectsSnapshot.docs.length} projects`);
+      logger.info('[Projects/List] Found projects', { count: projectsSnapshot.docs.length });
 
   // ============================================================================
   // 3. MAP TO ProjectListItem (type-safe)
@@ -264,7 +267,7 @@ export const GET = withHighRateLimit(
   cache.set(tenantCacheKey, response);
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Projects/List] Complete: ${projects.length} projects in ${duration}ms`);
+  logger.info('[Projects/List] Complete', { count: projects.length, durationMs: duration });
 
   // ============================================================================
   // 6. AUDIT EVENT (Enterprise compliance)
@@ -336,12 +339,12 @@ export const POST = withHighRateLimit(
           Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
         );
 
-        console.log(`🎯 [Projects] Creating new project for tenant ${ctx.companyId}...`);
+        logger.info('[Projects] Creating new project for tenant', { companyId: ctx.companyId });
 
         // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
         const docRef = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).add(cleanData);
 
-        console.log(`✅ [Projects] Project created with ID: ${docRef.id}`);
+        logger.info('[Projects] Project created', { projectId: docRef.id });
 
         // 📊 Audit log
         await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
@@ -369,7 +372,7 @@ export const POST = withHighRateLimit(
         );
 
       } catch (error) {
-        console.error('❌ [Projects] Error creating project:', error);
+        logger.error('[Projects] Error creating project', { error });
         throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create project');
       }
     },

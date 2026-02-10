@@ -25,6 +25,9 @@ import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIRESTORE_LIMITS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectCustomersRoute');
 
 export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
@@ -73,7 +76,7 @@ export const GET = withStandardRateLimit(async function GET(
         // STEP 2: GET BUILDINGS FOR THIS PROJECT (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        console.log(`🏢 Fetching buildings for project`);
+        logger.info('Fetching buildings for project');
 
         let buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
@@ -83,7 +86,7 @@ export const GET = withStandardRateLimit(async function GET(
 
         // If no results, try with number projectId
         if (buildingsSnapshot.docs.length === 0) {
-          console.log(`🔄 Trying numeric projectId`);
+          logger.info('Trying numeric projectId');
           buildingsSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.BUILDINGS)
             .where('projectId', '==', parseInt(projectId))
@@ -92,7 +95,7 @@ export const GET = withStandardRateLimit(async function GET(
         }
 
         if (buildingsSnapshot.docs.length === 0) {
-          console.log(`⚠️ No buildings found for project`);
+          logger.info('No buildings found for project');
           return NextResponse.json({
             success: true,
             customers: [],
@@ -102,7 +105,7 @@ export const GET = withStandardRateLimit(async function GET(
           }, { status: 200 });
         }
 
-        console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings`);
+        logger.info('Found buildings', { count: buildingsSnapshot.docs.length });
 
         // ============================================================================
         // STEP 3: GET ALL UNITS FROM ALL BUILDINGS (Admin SDK + Tenant Filter)
@@ -126,17 +129,17 @@ export const GET = withStandardRateLimit(async function GET(
           allUnits.push(...units);
         }
 
-        console.log(`🏠 Total units found: ${allUnits.length}`);
+        logger.info('Total units found', { count: allUnits.length });
 
         // ============================================================================
         // STEP 4: FILTER SOLD UNITS AND EXTRACT CUSTOMER IDs
         // ============================================================================
 
         const soldUnits = allUnits.filter(u => u.status === 'sold' && u.soldTo);
-        console.log(`💰 Sold units: ${soldUnits.length}`);
+        logger.info('Sold units', { count: soldUnits.length });
 
         if (soldUnits.length === 0) {
-          console.log(`⚠️ No sold units found`);
+          logger.info('No sold units found');
           return NextResponse.json({
             success: true,
             customers: [],
@@ -158,7 +161,7 @@ export const GET = withStandardRateLimit(async function GET(
         });
 
         const customerIds = Object.keys(customerUnitCount);
-        console.log(`👥 Unique customers: ${customerIds.length}`);
+        logger.info('Unique customers', { count: customerIds.length });
 
         if (customerIds.length === 0) {
           return NextResponse.json({
@@ -174,7 +177,7 @@ export const GET = withStandardRateLimit(async function GET(
         // STEP 6: GET CONTACT DETAILS (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        console.log(`📇 Fetching contact details`);
+        logger.info('Fetching contact details');
 
         // Use centralized Firestore IN limit constant
         const limitedCustomerIds = customerIds.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
@@ -190,10 +193,10 @@ export const GET = withStandardRateLimit(async function GET(
           return data.companyId === ctx.companyId;
         });
 
-        console.log(`📇 Contacts found: ${tenantContacts.length}`);
+        logger.info('Contacts found', { count: tenantContacts.length });
 
         if (tenantContacts.length < contactsSnapshot.docs.length) {
-          console.warn(`🚫 Filtered out ${contactsSnapshot.docs.length - tenantContacts.length} contacts`);
+          logger.warn('Filtered out cross-tenant contacts', { filteredCount: contactsSnapshot.docs.length - tenantContacts.length });
         }
 
         // ============================================================================
@@ -213,7 +216,7 @@ export const GET = withStandardRateLimit(async function GET(
           };
         });
 
-        console.log(`✅ [Projects/Customers] Complete: ${customers.length} customers with ${soldUnits.length} sold units`);
+        logger.info('[Projects/Customers] Complete', { customersCount: customers.length, soldUnitsCount: soldUnits.length });
 
         // Audit successful access
         await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
@@ -234,7 +237,7 @@ export const GET = withStandardRateLimit(async function GET(
         }, { status: 200 });
 
       } catch (error) {
-        console.error('❌ [Projects/Customers] Error:', {
+        logger.error('[Projects/Customers] Error', {
           errorType: error instanceof Error ? error.constructor.name : typeof error,
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : 'No stack trace'

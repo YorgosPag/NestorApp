@@ -20,6 +20,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CreateForCompaniesRoute');
 
 // 🏢 ENTERPRISE: Load project templates from environment or use fallbacks
 const getProjectTemplates = () => {
@@ -29,7 +32,7 @@ const getProjectTemplates = () => {
       return JSON.parse(envTemplates);
     }
   } catch (error) {
-    console.warn('⚠️ Invalid PROJECT_TEMPLATES_JSON, using fallbacks');
+    logger.warn('Invalid PROJECT_TEMPLATES_JSON, using fallbacks');
   }
 
   return [
@@ -127,8 +130,7 @@ type CreateForCompaniesResponse = CreateForCompaniesSuccess | CreateForCompanies
 export const POST = withStandardRateLimit(async (request: NextRequest) => {
   const handler = withAuth<CreateForCompaniesResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<CreateForCompaniesResponse>> => {
-      console.log('🏗️ [Projects/CreateForCompanies] Starting bulk project creation...');
-      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+      logger.info('[Projects/CreateForCompanies] Starting bulk project creation', { uid: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
       try {
         // ============================================================================
@@ -148,7 +150,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           });
         }
 
-        console.log(`🏢 Found ${contactsSnapshot.docs.length} companies`);
+        logger.info('Found companies', { count: contactsSnapshot.docs.length });
 
         const companies = contactsSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -169,7 +171,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         const createdProjects: CreatedProject[] = [];
 
         for (const company of companies) {
-          console.log(`🏢 Creating project for: ${company.companyName}`);
+          logger.info('Creating project for company', { companyName: company.companyName });
 
           const template = projectTemplates[createdProjects.length % projectTemplates.length];
           const projectId = `${projectIndex}`;
@@ -190,7 +192,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
               .doc(projectId)
               .set(project);
 
-            console.log(`✅ Created project: ${project.name} (ID: ${projectId})`);
+            logger.info('Created project', { projectName: project.name, projectId });
 
             createdProjects.push({
               id: projectId,
@@ -201,7 +203,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
 
             projectIndex++;
           } catch (error) {
-            console.error(`❌ Failed to create project for ${company.companyName}:`, error);
+            logger.error('Failed to create project for company', { companyName: company.companyName, error });
           }
         }
 
@@ -209,7 +211,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         // STEP 3: VERIFICATION
         // ============================================================================
 
-        console.log('📊 Verification...');
+        logger.info('Verification...');
         const allProjectsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .get();
@@ -221,8 +223,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           companyId: doc.data().companyId
         }));
 
-        console.log(`✅ [Projects/CreateForCompanies] Complete: Created ${createdProjects.length}/${companies.length} projects`);
-        console.log(`📊 Total projects in database: ${allProjects.length}`);
+        logger.info('[Projects/CreateForCompanies] Complete', { created: createdProjects.length, total: companies.length, totalInDb: allProjects.length });
 
         return NextResponse.json({
           success: true,
@@ -237,7 +238,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         });
 
       } catch (error) {
-        console.error('❌ [Projects/CreateForCompanies] Error:', {
+        logger.error('[Projects/CreateForCompanies] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

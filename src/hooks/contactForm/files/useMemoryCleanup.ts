@@ -10,6 +10,7 @@
 
 import { useCallback } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -22,6 +23,8 @@ export interface UseMemoryCleanupReturn {
   revokeMultiplePhotoPreviews: (formData: ContactFormData) => void;
   revokeAllBlobUrls: (formData: ContactFormData) => void;
 }
+
+const logger = createModuleLogger('useMemoryCleanup');
 
 // ============================================================================
 // MEMORY CLEANUP HOOK
@@ -49,7 +52,7 @@ export function useMemoryCleanup(): UseMemoryCleanupReturn {
    */
   const revokePhotoPreview = useCallback((formData: ContactFormData) => {
     if (formData.photoPreview && formData.photoPreview.startsWith('blob:')) {
-      console.log('🧹 MEMORY: Revoking photo preview blob URL:', formData.photoPreview.substring(0, 50));
+      logger.info('Revoking photo preview blob URL');
       URL.revokeObjectURL(formData.photoPreview);
     }
   }, []);
@@ -59,7 +62,7 @@ export function useMemoryCleanup(): UseMemoryCleanupReturn {
    */
   const revokeLogoPreview = useCallback((formData: ContactFormData) => {
     if (formData.logoPreview && formData.logoPreview.startsWith('blob:')) {
-      console.log('🧹 MEMORY: Revoking logo preview blob URL:', formData.logoPreview.substring(0, 50));
+      logger.info('Revoking logo preview blob URL');
       URL.revokeObjectURL(formData.logoPreview);
     }
   }, []);
@@ -70,7 +73,7 @@ export function useMemoryCleanup(): UseMemoryCleanupReturn {
   const revokeMultiplePhotoPreviews = useCallback((formData: ContactFormData) => {
     formData.multiplePhotos.forEach((photo, index) => {
       if (photo.preview && photo.preview.startsWith('blob:')) {
-        console.log(`🧹 MEMORY: Revoking multiple photo[${index}] blob URL:`, photo.preview.substring(0, 50));
+        logger.info(`Revoking multiple photo[${index}] blob URL`);
         URL.revokeObjectURL(photo.preview);
       }
     });
@@ -80,11 +83,11 @@ export function useMemoryCleanup(): UseMemoryCleanupReturn {
    * Revoke all blob URLs in form data
    */
   const revokeAllBlobUrls = useCallback((formData: ContactFormData) => {
-    console.log('🧹 MEMORY: Starting complete blob URL cleanup');
+    logger.info('Starting complete blob URL cleanup');
     revokePhotoPreview(formData);
     revokeLogoPreview(formData);
     revokeMultiplePhotoPreviews(formData);
-    console.log('🧹 MEMORY: Complete blob URL cleanup finished');
+    logger.info('Complete blob URL cleanup finished');
   }, [revokePhotoPreview, revokeLogoPreview, revokeMultiplePhotoPreviews]);
 
   // ========================================================================

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Property } from '@/types/property-viewer';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // Units filter state interface
 export interface UnitsFilterState {
@@ -14,6 +15,8 @@ export interface UnitsFilterState {
 }
 
 // Default filter state
+const logger = createModuleLogger('useUnitsPageState');
+
 export const defaultUnitsFilters: UnitsFilterState = {
   searchTerm: '',
   status: [],
@@ -42,7 +45,7 @@ export function useUnitsPageState(initialUnits: Property[]) {
       // URL parameter has priority - find and select the unit
       const found = initialUnits.find(u => u.id === unitIdFromUrl);
       if (found) {
-        console.log('🏠 [useUnitsPageState] Auto-selecting unit from URL:', found.name);
+        logger.info('Auto-selecting unit from URL', { unitName: found.name });
         setSelectedUnit(found);
         return;
       }

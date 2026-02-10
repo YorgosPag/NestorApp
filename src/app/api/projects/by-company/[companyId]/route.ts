@@ -25,9 +25,12 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
-// 🏢 ENTERPRISE: Role bypass check for super_admin cross-tenant access
+// Role bypass check for super_admin cross-tenant access
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ProjectsByCompanyRoute');
 
 export const dynamic = 'force-dynamic';
 
@@ -76,9 +79,9 @@ export const GET = withStandardRateLimit(async function GET(
       // 🚨 SECURITY: Log cross-tenant access by super_admin
       if (urlCompanyId !== ctx.companyId) {
         if (isSuperAdmin) {
-          console.log(`🔓 [SUPER_ADMIN] Cross-tenant access: ${ctx.email} accessing companyId=${urlCompanyId}`);
+          logger.info('[SUPER_ADMIN] Cross-tenant access', { email: ctx.email, targetCompanyId: urlCompanyId });
         } else {
-          console.warn(`🚫 URL param mismatch detected (using authenticated scope)`);
+          logger.warn('URL param mismatch detected (using authenticated scope)');
         }
       }
 
@@ -90,7 +93,7 @@ export const GET = withStandardRateLimit(async function GET(
         const cachedProjects = CacheHelpers.getCachedProjectsByCompany(companyId);
         if (cachedProjects) {
           const duration = Date.now() - startTime;
-          console.log(`⚡ Cache hit: ${cachedProjects.length} projects (${duration}ms)`);
+          logger.info('Cache hit', { projectsCount: cachedProjects.length, durationMs: duration });
 
           // 📊 Audit: Cache hit
           await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
@@ -108,7 +111,7 @@ export const GET = withStandardRateLimit(async function GET(
           }, `Found ${cachedProjects.length} cached projects`);
         }
 
-        console.log('🔍 Cache miss - querying Firestore');
+        logger.info('Cache miss - querying Firestore');
 
         // ============================================================================
         // 2. FETCH FROM FIRESTORE (Admin SDK + Tenant Isolation)
@@ -124,7 +127,7 @@ export const GET = withStandardRateLimit(async function GET(
           ...doc.data()
         }));
 
-        console.log(`🏗️ Loaded ${snapshot.docs.length} projects from Firestore`);
+        logger.info('Loaded projects from Firestore', { count: snapshot.docs.length });
 
         // ============================================================================
         // 3. CACHE FOR FUTURE REQUESTS
@@ -133,7 +136,7 @@ export const GET = withStandardRateLimit(async function GET(
         CacheHelpers.cacheProjectsByCompany(companyId, projects);
 
         const duration = Date.now() - startTime;
-        console.log(`✅ Complete: ${projects.length} projects cached (${duration}ms)`);
+        logger.info('Complete: projects cached', { count: projects.length, durationMs: duration });
 
         // 📊 Audit: Firestore load
         await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
@@ -151,7 +154,7 @@ export const GET = withStandardRateLimit(async function GET(
         }, `Found ${projects.length} projects`);
 
       } catch (error: unknown) {
-        console.error('❌ Error loading projects:', {
+        logger.error('Error loading projects', {
           error: error instanceof Error ? {
             name: error.name,
             message: error.message,

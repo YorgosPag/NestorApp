@@ -4,20 +4,25 @@ import { createSearchMenuResponse, createContactResponse } from './responses';
 import { handleEnhancedPropertySearch } from '../search/service';
 import { createStatsResponse } from '../stats/service';
 import type { TelegramSendPayload, TelegramCallbackQuery } from '../telegram/types';
+import { isFeedbackCallback, parseFeedbackCallback } from '@/services/ai-pipeline/feedback-keyboard';
+import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramCallbackQuery');
 
 export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promise<TelegramSendPayload | null> {
   const data = callbackQuery.data;
 
   // 🏢 ENTERPRISE: Safe access with undefined checks
   if (!callbackQuery.message) {
-    console.warn('⚠️ Callback query without message');
+    logger.warn('Callback query without message');
     return null;
   }
 
   const chatId = callbackQuery.message.chat.id;
   const userId = callbackQuery.from.id.toString();
 
-  console.log(`🎯 Callback query: ${data} from user ${userId}`);
+  logger.info('Callback query received', { data, userId });
   
   // Acknowledge the callback query first
   await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
@@ -48,7 +53,24 @@ export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery):
       return createContactResponse(chatId);
 
     default:
-        // This is handled by the ack above, we return null to signify no further message to send
+        // ADR-173: Check if this is a feedback callback (thumbs up/down)
+        if (data && isFeedbackCallback(data)) {
+          const parsed = parseFeedbackCallback(data);
+          if (parsed) {
+            try {
+              await getFeedbackService().updateRating(parsed.feedbackDocId, parsed.rating);
+              const ackText = parsed.rating === 'positive'
+                ? '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!'
+                : '\u{1F44E} \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE!';
+              return {
+                chat_id: chatId,
+                text: ackText,
+              };
+            } catch {
+              // Non-fatal: feedback failure handled silently
+            }
+          }
+        }
         return null;
   }
 }

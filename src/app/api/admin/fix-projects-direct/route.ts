@@ -32,6 +32,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FixProjectsDirectRoute');
 
 /**
  * POST - Execute Direct Project Fix (withAuth protected)
@@ -55,10 +58,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/admin/fix-projects-direct] BLOCKED: Non-super_admin attempted direct project fix`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted direct project fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -72,18 +72,17 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
   try {
     const adminDb = getAdminFirestore();
 
-    console.log('🔧 ENTERPRISE DIRECT FIX: Project CompanyIDs');
-    console.log('⏰ Started at:', new Date().toISOString());
+    logger.info('ENTERPRISE DIRECT FIX: Project CompanyIDs', { startedAt: new Date().toISOString() });
 
     // 🏢 ENTERPRISE: Load target company ID from environment
     const correctCompanyId = process.env.NEXT_PUBLIC_MAIN_COMPANY_ID || 'default-company-id';
 
     // Get all projects using Admin SDK
-    console.log('📋 Loading all projects...');
+    logger.info('Loading all projects...');
     const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
 
     if (projectsSnapshot.empty) {
-      console.log('⚠️ No projects found in database');
+      logger.warn('No projects found in database');
       return NextResponse.json({
         success: false,
         error: 'No projects found in database',
@@ -91,7 +90,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
       }, { status: 404 });
     }
 
-    console.log(`📊 Found ${projectsSnapshot.size} projects`);
+    logger.info('Found projects', { count: projectsSnapshot.size });
 
     // Process each project
     const updates = [];
@@ -101,16 +100,11 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
       const project = doc.data();
       const projectId = doc.id;
 
-      console.log(`🔍 Project ${projectId}:`);
-      console.log(`   Current companyId: "${project.companyId || '(empty)'}"`);
-      console.log(`   Project name: "${project.name}"`);
-      console.log(`   Company: "${project.company}"`);
+      logger.info('Inspecting project', { projectId, currentCompanyId: project.companyId || '(empty)', projectName: project.name, company: project.company });
 
       // Check if update is needed
       if (project.companyId !== correctCompanyId) {
-        console.log(`🔄 Updating project ${projectId} companyId`);
-        console.log(`   From: "${project.companyId || '(empty)'}"`);
-        console.log(`   To: "${correctCompanyId}"`);
+        logger.info('Updating project companyId', { projectId, from: project.companyId || '(empty)', to: correctCompanyId });
 
         try {
           // Direct Admin SDK update - bypasses all permissions
@@ -126,11 +120,11 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
             status: 'SUCCESS'
           });
 
-          console.log(`✅ Successfully updated project ${projectId}`);
+          logger.info('Successfully updated project', { projectId });
 
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          console.error(`❌ Failed to update project ${projectId}:`, errorMessage);
+          logger.error('Failed to update project', { projectId, error: errorMessage });
 
           errors.push({
             projectId,
@@ -139,7 +133,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
           });
         }
       } else {
-        console.log(`✅ Project ${projectId} already has correct companyId`);
+        logger.info('Project already has correct companyId', { projectId });
         updates.push({
           projectId,
           projectName: project.name,
@@ -151,7 +145,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
     }
 
     // Verification: Re-read all projects to confirm updates
-    console.log('🔍 Verifying updates...');
+    logger.info('Verifying updates...');
     const verificationSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     const verificationResults = [];
 
@@ -170,12 +164,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
     const totalProjects = projectsSnapshot.size;
     const correctProjects = verificationResults.filter(p => p.isCorrect).length;
 
-    console.log('📊 FINAL RESULTS:');
-    console.log(`   Total projects: ${totalProjects}`);
-    console.log(`   Successful updates: ${successfulUpdates}`);
-    console.log(`   Projects with correct companyId: ${correctProjects}/${totalProjects}`);
-    console.log(`   Errors: ${errors.length}`);
-    console.log(`   Total execution time: ${totalExecutionTime}ms`);
+    logger.info('FINAL RESULTS', { totalProjects, successfulUpdates, correctProjects, totalProjects_count: totalProjects, errors: errors.length, executionTimeMs: totalExecutionTime });
 
     const response = {
       success: errors.length === 0,
@@ -207,9 +196,9 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
     };
 
     if (response.success && response.summary.allProjectsFixed) {
-      console.log('🎉 ALL PROJECTS SUCCESSFULLY FIXED!');
+      logger.info('ALL PROJECTS SUCCESSFULLY FIXED');
     } else {
-      console.log('⚠️ Fix completed with issues');
+      logger.warn('Fix completed with issues');
     }
 
     // 🏢 ENTERPRISE: Audit logging (non-blocking)
@@ -231,7 +220,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
       },
       `Direct project companyId fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json(response, {
@@ -242,7 +231,7 @@ async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthCon
     const totalExecutionTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    console.error('❌ DIRECT FIX SYSTEM ERROR:', errorMessage);
+    logger.error('DIRECT FIX SYSTEM ERROR', { error: errorMessage });
 
     return NextResponse.json({
       success: false,

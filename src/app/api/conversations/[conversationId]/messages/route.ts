@@ -26,6 +26,9 @@ import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
 import { type CommunicationChannel } from '@/types/communications';
 import { type SenderType } from '@/config/domain-constants';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ConversationMessagesRoute');
 
 // ============================================================================
 // TYPES
@@ -168,7 +171,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
     throw new ApiError(400, 'Conversation ID is required');
   }
 
-  console.log(`📨 [Messages/List] Loading messages for ${conversationId} (user: ${ctx.email}, company: ${ctx.companyId})`);
+  logger.info('[Messages/List] Loading messages', { conversationId, email: ctx.email, companyId: ctx.companyId });
 
   // Parse query parameters
   const searchParams = request.nextUrl.searchParams;
@@ -185,12 +188,12 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
 
   if (cachedData) {
     const duration = Date.now() - startTime;
-    console.log(`⚡ [Messages/List] CACHE HIT - ${cachedData.count} messages in ${duration}ms`);
+    logger.info('[Messages/List] CACHE HIT', { count: cachedData.count, durationMs: duration });
     // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }
     return apiSuccess<MessagesListResponse>({ ...cachedData, source: 'cache' });
   }
 
-  console.log('🔍 [Messages/List] Cache miss - Fetching from Firestore...');
+  logger.info('[Messages/List] Cache miss - Fetching from Firestore');
 
   // CRITICAL: Ownership validation - verify conversation belongs to user's company
   const convDoc = await getAdminFirestore()
@@ -204,7 +207,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
 
   const convData = convDoc.data();
   if (convData?.companyId !== ctx.companyId) {
-    console.warn(`⚠️ [Messages/List] Unauthorized attempt:`, {
+    logger.warn('[Messages/List] Unauthorized attempt', {
       userId: ctx.uid,
       userCompany: ctx.companyId,
       conversationId,
@@ -229,7 +232,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
 
   // Execute query
   const snapshot = await paginatedQuery.get();
-  console.log(`📨 [Messages/List] Found ${snapshot.docs.length} messages (total: ${totalCount})`);
+  logger.info('[Messages/List] Found messages', { count: snapshot.docs.length, totalCount });
 
   // Map to response type
   const messages: MessageListItem[] = snapshot.docs.map(doc => {
@@ -279,7 +282,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
   cache.set(cacheKey, response, CACHE_TTL_MS);
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Messages/List] Complete: ${messages.length} messages in ${duration}ms`);
+  logger.info('[Messages/List] Complete', { messageCount: messages.length, durationMs: duration });
 
   // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }
   return apiSuccess<MessagesListResponse>(response);

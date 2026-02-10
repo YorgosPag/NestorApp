@@ -5,6 +5,9 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { FileNamingService } from '@/services/FileNamingService';
 import { generateTempId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UploadPhotoRoute');
 
 // 🏢 ENTERPRISE: Type-safe error interface for Firebase Admin errors
 interface FirebaseAdminError {
@@ -62,10 +65,10 @@ const postHandler = async (request: NextRequest) => {
 export const POST = withStandardRateLimit(postHandler);
 
 async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
-  console.log(`📁 API: Photo upload request from user ${ctx.email} (company: ${ctx.companyId})`);
+  logger.info('[Upload/Photo] Photo upload request', { email: ctx.email, companyId: ctx.companyId });
 
   try {
-    console.log('🚀 SERVER: Starting Firebase Admin server-side upload...');
+    logger.info('[Upload/Photo] Starting Firebase Admin server-side upload');
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -80,7 +83,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    console.log('📁 SERVER: File received:', {
+    logger.info('[Upload/Photo] File received', {
       userId: ctx.uid,
       userEmail: ctx.email,
       companyId: ctx.companyId,
@@ -123,7 +126,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
 
         fileName = renamedFile.name;
 
-        console.log('🏷️ SERVER: FileNamingService applied:', {
+        logger.info('[Upload/Photo] FileNamingService applied', {
           original: file.name,
           renamed: fileName,
           purpose: servicePurpose,
@@ -131,7 +134,7 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
         });
 
       } catch (error) {
-        console.error('❌ SERVER: FileNamingService failed, using fallback:', error);
+        logger.error('[Upload/Photo] FileNamingService failed, using fallback', { error: error instanceof Error ? error.message : String(error) });
 
         // 🏢 ENTERPRISE: Fallback with crypto-secure ID generation
         const timestamp = Date.now();
@@ -146,18 +149,18 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
       const extension = file.name.split('.').pop();
       fileName = `${timestamp}_${uniqueId}.${extension}`;
 
-      console.log('⚠️ SERVER: No contact data provided, using fallback naming');
+      logger.warn('[Upload/Photo] No contact data provided, using fallback naming');
     }
 
     const storagePath = `${folderPath}/${fileName}`;
-    console.log('📍 SERVER: Upload path:', storagePath);
+    logger.info('[Upload/Photo] Upload path', { storagePath });
 
     // 🏢 ENTERPRISE: Upload using Firebase Admin Storage (ADR-077: Centralized)
     const adminStorage = getAdminStorage();
     const bucket = adminStorage.bucket();
     const fileRef = bucket.file(storagePath);
 
-    console.log('🔧 ADMIN STORAGE: Uploading to bucket:', bucket.name);
+    logger.info('[Upload/Photo] Uploading to bucket', { bucketName: bucket.name });
 
     // Upload buffer to Firebase Admin Storage
     await fileRef.save(buffer, {
@@ -167,19 +170,19 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
       }
     });
 
-    console.log('✅ ADMIN STORAGE: Upload completed:', storagePath);
+    logger.info('[Upload/Photo] Upload completed', { storagePath });
 
     // Make the file publicly readable and get download URL
     await fileRef.makePublic();
     const downloadURL = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
-    console.log('✅ UPLOAD SUCCESS:', {
+    logger.info('[Upload/Photo] Upload success', {
       userId: ctx.uid,
       userEmail: ctx.email,
       companyId: ctx.companyId,
-      fileName: fileName,
+      fileName,
       fileSize: file.size,
-      storagePath: storagePath,
+      storagePath,
       url: downloadURL
     });
 
@@ -195,13 +198,13 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
     });
 
   } catch (error) {
-    console.error('❌ ADMIN STORAGE: Upload failed:', error);
+    logger.error('[Upload/Photo] Upload failed', { error: error instanceof Error ? error.message : String(error) });
 
-    // 🔍 DETAILED ERROR LOGGING for Firebase Admin Storage debugging
-    // 🏢 ENTERPRISE: Type-safe error handling
+    // DETAILED ERROR LOGGING for Firebase Admin Storage debugging
+    // ENTERPRISE: Type-safe error handling
     const firebaseError = error as FirebaseAdminError | null;
     if (firebaseError && typeof firebaseError === 'object') {
-      console.error('📋 ADMIN ERROR DETAILS:', {
+      logger.error('[Upload/Photo] Admin error details', {
         message: firebaseError.message,
         code: firebaseError.code,
         details: firebaseError.details,

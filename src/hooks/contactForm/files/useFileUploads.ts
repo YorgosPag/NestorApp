@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import { useMemoryCleanup } from './useMemoryCleanup';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -35,6 +36,8 @@ export interface UseFileUploadsReturn {
     setFormData: (data: ContactFormData) => void
   ) => void;
 }
+
+const logger = createModuleLogger('useFileUploads');
 
 // ============================================================================
 // FILE UPLOADS HOOK
@@ -68,7 +71,7 @@ export function useFileUploads(): UseFileUploadsReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('📁 FILE UPLOADS: handleFileChange called with file:', file?.name);
+    logger.info('handleFileChange called', { fileName: file?.name });
 
     setFormData({
       ...formData,
@@ -90,7 +93,7 @@ export function useFileUploads(): UseFileUploadsReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('📁 FILE UPLOADS: handleLogoChange called with file:', file?.name);
+    logger.info('handleLogoChange called', { fileName: file?.name });
 
     // 🧹 CLEANUP: Revoke old blob URL if exists
     revokeLogoPreview(formData);
@@ -121,14 +124,9 @@ export function useFileUploads(): UseFileUploadsReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('📁 FILE UPLOADS: handleMultiplePhotosChange called with:', {
+    logger.info('handleMultiplePhotosChange called', {
       length: photos.length,
-      isEmpty: photos.length === 0,
-      photos: photos.map((p, i) => ({
-        index: i,
-        hasUploadUrl: !!p.uploadUrl,
-        uploadUrl: p.uploadUrl?.substring(0, 50) + '...'
-      }))
+      isEmpty: photos.length === 0
     });
 
     const newFormData = {
@@ -138,11 +136,9 @@ export function useFileUploads(): UseFileUploadsReturn {
       photoPreview: photos.length === 0 ? '' : formData.photoPreview
     };
 
-    console.log('📁 FILE UPLOADS: Updated formData:', {
+    logger.info('Updated formData', {
       multiplePhotosLength: newFormData.multiplePhotos.length,
-      multiplePhotosEmpty: newFormData.multiplePhotos.length === 0,
-      photoPreviewCleared: photos.length === 0 ? 'YES' : 'NO',
-      photoPreviewValue: newFormData.photoPreview
+      photoPreviewCleared: photos.length === 0
     });
 
     setFormData(newFormData);

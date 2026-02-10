@@ -34,6 +34,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CleanupDuplicatesRoute');
 
 interface UnitRecord {
   id: string;
@@ -66,10 +69,7 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [GET /api/admin/cleanup-duplicates] BLOCKED: Non-super_admin attempted duplicates preview`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted duplicates preview', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -81,7 +81,7 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
   }
 
   try {
-    console.log('🔍 Analyzing duplicate units...');
+    logger.info('Analyzing duplicate units...');
 
     const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
     const snapshot = await getDocs(unitsQuery);
@@ -138,7 +138,7 @@ async function handleCleanupDuplicatesPreview(request: NextRequest, ctx: AuthCon
       message: `Found ${totalToDelete} duplicate units to delete. Use DELETE method to execute cleanup.`,
     });
   } catch (error: unknown) {
-    console.error('❌ Error analyzing duplicates:', error);
+    logger.error('Error analyzing duplicates', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(
@@ -177,10 +177,7 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [DELETE /api/admin/cleanup-duplicates] BLOCKED: Non-super_admin attempted duplicate cleanup`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted duplicate cleanup', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -192,7 +189,7 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
   }
 
   try {
-    console.log('🧹 Starting duplicate cleanup...');
+    logger.info('Starting duplicate cleanup...');
 
     const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
     const snapshot = await getDocs(unitsQuery);
@@ -239,7 +236,7 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
     }
 
     // Delete duplicates
-    console.log(`🗑️ Deleting ${idsToDelete.length} duplicate units...`);
+    logger.info('Deleting duplicate units', { count: idsToDelete.length });
 
     let deletedCount = 0;
     const errors: string[] = [];
@@ -248,9 +245,9 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
       try {
         await deleteDoc(doc(db, COLLECTIONS.UNITS, id));
         deletedCount++;
-        console.log(`✅ Deleted: ${id}`);
+        logger.info('Deleted duplicate unit', { unitId: id });
       } catch (err) {
-        console.error(`❌ Failed to delete ${id}:`, err);
+        logger.error('Failed to delete duplicate unit', { unitId: id, error: err });
         errors.push(id);
       }
     }
@@ -279,7 +276,7 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
       },
       `Duplicate units cleanup by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -293,7 +290,7 @@ async function handleCleanupDuplicatesExecute(request: NextRequest, ctx: AuthCon
       executionTimeMs: duration,
     });
   } catch (error: unknown) {
-    console.error('❌ Error during cleanup:', error);
+    logger.error('Error during cleanup', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(

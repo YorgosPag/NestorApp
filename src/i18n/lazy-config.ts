@@ -43,7 +43,9 @@ export const SUPPORTED_NAMESPACES = [
   'parking',   // 🏢 Parking management module - added 2026-01-24
   'admin',     // 🏢 Admin tools (units, claims repair)
   'tool-hints', // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
-  'accounting' // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
+  'accounting', // 🏢 Accounting subapp (invoices, journal, VAT, tax, assets, documents)
+  'banking',    // 🏢 Banking module — bank accounts, IBAN, selectors (ADR-172)
+  'addresses'   // 🏢 Shared address system — forms, cards, maps (ADR-172)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -154,6 +156,12 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
         case 'accounting':
           translations = await import('./locales/el/accounting.json');
           break;
+        case 'banking':
+          translations = await import('./locales/el/banking.json');
+          break;
+        case 'addresses':
+          translations = await import('./locales/el/addresses.json');
+          break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -244,6 +252,12 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
           break;
         case 'accounting':
           translations = await import('./locales/en/accounting.json');
+          break;
+        case 'banking':
+          translations = await import('./locales/en/banking.json');
+          break;
+        case 'addresses':
+          translations = await import('./locales/en/addresses.json');
           break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);

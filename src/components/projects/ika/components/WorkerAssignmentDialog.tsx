@@ -27,6 +27,9 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { IndividualContact } from '@/types/contacts/contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('WorkerAssignmentDialog');
 
 interface WorkerAssignmentDialogProps {
   open: boolean;
@@ -101,7 +104,7 @@ export function WorkerAssignmentDialog({
 
       setResults(filtered);
     } catch (err) {
-      console.error('[WorkerAssignmentDialog] Search error:', err);
+      logger.error('Worker search failed', { error: err });
     } finally {
       setIsSearching(false);
     }
@@ -130,7 +133,7 @@ export function WorkerAssignmentDialog({
         setSelectedContact(null);
       }
     } catch (err) {
-      console.error('[WorkerAssignmentDialog] Assignment error:', err);
+      logger.error('Worker assignment failed', { error: err });
     } finally {
       setIsAssigning(false);
     }

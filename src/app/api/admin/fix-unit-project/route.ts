@@ -30,6 +30,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FixUnitProjectRoute');
 
 /**
  * POST - Execute Unit ProjectId Fix (withAuth protected)
@@ -53,10 +56,7 @@ async function handleFixUnitProjectExecute(request: NextRequest, ctx: AuthContex
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/admin/fix-unit-project] BLOCKED: Non-super_admin attempted unit projectId fix`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted unit projectId fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -77,7 +77,7 @@ async function handleFixUnitProjectExecute(request: NextRequest, ctx: AuthContex
       );
     }
 
-    console.log(`🔧 Updating unit ${unitId} with projectId: ${newProjectId}`);
+    logger.info('Updating unit projectId', { unitId, newProjectId });
 
     const unitRef = doc(db, COLLECTIONS.UNITS, unitId);
     await updateDoc(unitRef, {
@@ -85,7 +85,7 @@ async function handleFixUnitProjectExecute(request: NextRequest, ctx: AuthContex
       updatedAt: new Date().toISOString(),
     });
 
-    console.log(`✅ Unit ${unitId} updated successfully`);
+    logger.info('Unit updated successfully', { unitId });
 
     const duration = Date.now() - startTime;
 
@@ -104,7 +104,7 @@ async function handleFixUnitProjectExecute(request: NextRequest, ctx: AuthContex
       },
       `Unit projectId fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -115,7 +115,7 @@ async function handleFixUnitProjectExecute(request: NextRequest, ctx: AuthContex
       executionTimeMs: duration,
     });
   } catch (error: unknown) {
-    console.error('❌ Error updating unit:', error);
+    logger.error('Error updating unit', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(

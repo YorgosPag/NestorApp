@@ -23,12 +23,15 @@ import { useBorderTokens } from './useBorderTokens';
 import { useSemanticColors } from './useSemanticColors';
 import { useTypography } from './useTypography';
 import { useLayoutClasses } from './useLayoutClasses';
+import { createModuleLogger } from '@/lib/telemetry';
 import {
   AGENT_COORDINATION_API,
   type ColorTokenBridge,
   type SpacingTokenBridge,
   type TypographyTokenBridge
 } from './internal/enterprise-token-bridge';
+
+const logger = createModuleLogger('useDesignSystem');
 
 // =============================================================================
 // 🎯 UNIFIED DESIGN SYSTEM TYPES
@@ -130,11 +133,11 @@ export interface DesignSystemValidationReport {
 export function useDesignSystem(): DesignSystemAPI {
   // 🚨 DEPRECATION WARNING - Enterprise standard console warning
   if (process.env.NODE_ENV === 'development') {
-    console.warn(
-      '🚨 DEPRECATION WARNING: useDesignSystem() is deprecated.\n' +
-      '→ Replace with: useSemanticColors() and useBorderTokens()\n' +
-      '→ Removal date: January 15, 2026\n' +
-      '→ Reason: Over-engineered complexity for simple needs'
+    logger.warn(
+      'DEPRECATION WARNING: useDesignSystem() is deprecated. ' +
+      'Replace with: useSemanticColors() and useBorderTokens(). ' +
+      'Removal date: January 15, 2026. ' +
+      'Reason: Over-engineered complexity for simple needs'
     );
   }
   // Existing proven hooks (maintained for backward compatibility)
@@ -167,11 +170,11 @@ export function useDesignSystem(): DesignSystemAPI {
       // ❌ REMOVED: getTypographyBridge (was duplicate)
       // ✅ USE: Direct import from useTypography instead
       get: () => {
-        console.warn('⚠️ DEPRECATED: typography.bridge.get() - Use SEMANTIC_TYPOGRAPHY_TOKENS from useTypography.ts');
+        logger.warn('DEPRECATED: typography.bridge.get() - Use SEMANTIC_TYPOGRAPHY_TOKENS from useTypography.ts');
         return {} as TypographyTokenBridge; // Placeholder to prevent crashes
       },
       fullClass: () => {
-        console.warn('⚠️ DEPRECATED: typography.bridge.fullClass() - Use SEMANTIC_TYPOGRAPHY_TOKENS from useTypography.ts');
+        logger.warn('DEPRECATED: typography.bridge.fullClass() - Use SEMANTIC_TYPOGRAPHY_TOKENS from useTypography.ts');
         return 'text-base'; // Safe fallback
       }
     }
@@ -284,11 +287,11 @@ export function useDesignSystemDev() {
 
     // Log warnings in development console
     if (!validation.isValid) {
-      console.warn('🚨 Design System Issues Detected:', validation.recommendations);
+      logger.warn('Design System Issues Detected', { recommendations: validation.recommendations });
     }
 
     if (!health.isHealthy) {
-      console.warn('🏥 Design System Health Issues:', health.issues);
+      logger.warn('Design System Health Issues', { issues: health.issues });
     }
 
     return { validation, health };

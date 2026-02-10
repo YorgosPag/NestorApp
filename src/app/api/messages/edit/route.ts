@@ -20,6 +20,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MessagesEditRoute');
 
 // ============================================================================
 // TYPES
@@ -76,7 +79,7 @@ async function handleEditMessage(
 ): Promise<ReturnType<typeof apiSuccess<EditMessageResponse>>> {
   const operationId = generateRequestId();
 
-  console.log(`✏️ [Messages/Edit] User ${ctx.email} (company: ${ctx.companyId}) editing message`);
+  logger.info('[Messages/Edit] User editing message', { email: ctx.email, companyId: ctx.companyId });
 
   // 1. Parse request
   const body: EditMessageRequest = await request.json();
@@ -123,7 +126,7 @@ async function handleEditMessage(
     updatedAt: new Date(),
   });
 
-  console.log(`✅ [Messages/Edit] Message ${messageId} edited by ${ctx.uid} [${operationId}]`);
+  logger.info('[Messages/Edit] Message edited', { messageId, userId: ctx.uid, operationId });
 
   return apiSuccess<EditMessageResponse>({
     edited: true,

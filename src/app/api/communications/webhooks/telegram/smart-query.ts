@@ -19,6 +19,9 @@ import {
   type TelegramLocale
 } from './templates/template-resolver';
 import { getPropertyTypeLabel } from './search/format';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramSmartQuery');
 
 // ============================================================================
 // INTERFACES
@@ -90,9 +93,9 @@ export async function executeSmartSearch(
   }
 
   try {
-    console.log('🔍 Smart search input:', text);
+    logger.info('Smart search input', { text });
     const criteria = extractCriteriaFromText(text);
-    console.log('📋 Extracted criteria:', criteria);
+    logger.info('Extracted criteria', { criteria });
 
     const results: Property[] = [];
     const { collection, getDocs } = firestoreHelpers;
@@ -113,7 +116,7 @@ export async function executeSmartSearch(
       const data = doc.data();
       results.push({ id: doc.id, ...data } as Property);
     });
-    console.log(`✅ Found ${results.length} results`);
+    logger.info('Search results found', { count: results.length });
 
     const countText = results.length === 1
       ? t.getText('search.results.foundOne')
@@ -127,7 +130,7 @@ export async function executeSmartSearch(
       criteria: criteria as SearchCriteria
     };
   } catch (error) {
-    console.error('❌ Smart search error:', error);
+    logger.error('Smart search error', { error });
     return {
       success: false,
       results: [],

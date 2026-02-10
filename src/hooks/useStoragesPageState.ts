@@ -4,6 +4,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Storage } from '@/types/storage/contracts';
 import { defaultStorageFilters, type StorageFilterState } from '@/components/core/AdvancedFilters/configs/storageFiltersConfig';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useStoragesPageState');
 
 export function useStoragesPageState(initialStorages: Storage[]) {
   // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
@@ -25,7 +28,7 @@ export function useStoragesPageState(initialStorages: Storage[]) {
       // URL parameter has priority - find and select the storage
       const found = initialStorages.find(s => s.id === storageIdFromUrl);
       if (found) {
-        console.log('📦 [useStoragesPageState] Auto-selecting storage from URL:', found.name);
+        logger.info('Auto-selecting storage from URL', { storageName: found.name });
         setSelectedStorage(found);
         return;
       }

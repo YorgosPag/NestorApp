@@ -3,6 +3,9 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ContactUnitsRoute');
 
 // 🏢 ENTERPRISE: Firestore data types (includes legacy fields for backward compatibility)
 type FirestoreContactData = Record<string, unknown> & {
@@ -85,14 +88,14 @@ export async function GET(
   const handler = withAuth<unknown>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        console.log(`🏠 API: Loading units for contactId: ${contactId}`);
+        logger.info('Loading units for contact', { contactId });
 
     // ========================================================================
     // VALIDATION
     // ========================================================================
 
     if (!contactId) {
-      console.error('❌ No contactId provided');
+      logger.error('No contactId provided');
       return NextResponse.json({
         success: false,
         error: 'Contact ID is required'
@@ -100,7 +103,7 @@ export async function GET(
     }
 
     if (typeof contactId !== 'string' || contactId.trim().length === 0) {
-      console.error('❌ Invalid contactId format');
+      logger.error('Invalid contactId format');
       return NextResponse.json({
         success: false,
         error: 'Invalid contact ID format'
@@ -111,12 +114,12 @@ export async function GET(
     // VERIFY CONTACT EXISTS (ADMIN SDK)
     // ========================================================================
 
-    console.log(`🔍 Verifying contact exists: ${contactId}`);
-    console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+    logger.info('Verifying contact exists', { contactId });
+    logger.info('Auth Context', { uid: ctx.uid, companyId: ctx.companyId });
 
     const adminDb = getAdminFirestore();
     if (!adminDb) {
-      console.error('❌ Firebase Admin not initialized');
+      logger.error('Firebase Admin not initialized');
       return NextResponse.json({
         success: false,
         error: 'Database connection not available - Firebase Admin not initialized',
@@ -130,7 +133,7 @@ export async function GET(
       .get();
 
     if (!contactDoc.exists) {
-      console.log(`⚠️ Contact not found: ${contactId}`);
+      logger.warn('Contact not found', { contactId });
       return NextResponse.json({
         success: false,
         error: 'Contact not found',
@@ -145,7 +148,7 @@ export async function GET(
     // ========================================================================
 
     if (contactData.companyId !== ctx.companyId) {
-      console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to access contact ${contactId} (company ${contactData.companyId})`);
+      logger.warn('TENANT ISOLATION VIOLATION: attempted to access contact from another company', { uid: ctx.uid, userCompanyId: ctx.companyId, contactId, contactCompanyId: contactData.companyId });
       return NextResponse.json({
         success: false,
         error: 'Access denied - Contact not found',
@@ -153,13 +156,13 @@ export async function GET(
       }, { status: 403 });
     }
 
-    console.log(`✅ Tenant isolation check passed for contact: contact.companyId === ctx.companyId (${ctx.companyId})`);
+    logger.info('Tenant isolation check passed for contact', { companyId: ctx.companyId });
 
     // ========================================================================
     // FETCH UNITS OWNED BY CONTACT (ADMIN SDK)
     // ========================================================================
 
-    console.log(`🏠 Fetching units where soldTo === ${contactId} AND companyId === ${ctx.companyId}`);
+    logger.info('Fetching units', { soldTo: contactId, companyId: ctx.companyId });
 
     const unitsSnapshot = await adminDb
       .collection(COLLECTIONS.UNITS)
@@ -172,8 +175,8 @@ export async function GET(
       ...unitDoc.data()
     }) as FirestoreUnitData);
 
-    console.log(`🏠 Found ${units.length} units for contact ${contactId}`);
-    console.log(`✅ Tenant isolation enforced in units query: all units.companyId === ${ctx.companyId}`);
+    logger.info('Found units for contact', { count: units.length, contactId });
+    logger.info('Tenant isolation enforced in units query', { companyId: ctx.companyId });
 
     // ========================================================================
     // PROCESS UNITS DATA & CALCULATE STATISTICS
@@ -288,13 +291,13 @@ export async function GET(
       dataSource: 'firestore'
     };
 
-    console.log(`✅ Contact units loaded successfully for: ${contactId}`);
-    console.log(`📊 Statistics: ${units.length} units, €${totalValue.toLocaleString()} total value, ${totalArea}m² total area`);
+    logger.info('Contact units loaded successfully', { contactId });
+    logger.info('Statistics', { unitsCount: units.length, totalValue, totalArea });
 
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('❌ API: Error loading contact units:', error);
+    logger.error('Error loading contact units', { error });
 
     // Enterprise error handling με detailed error information
     const isFirebaseError = error instanceof Error && error.message.includes('Firebase');

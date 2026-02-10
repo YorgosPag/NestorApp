@@ -4,6 +4,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ListCompaniesRoute');
 
 /** 🏢 ENTERPRISE: Discriminated union response types */
 interface CompanyItem {
@@ -44,12 +47,12 @@ export const GET = withHighRateLimit(
   withAuth<ListCompaniesResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        console.log(`📋 Listing companies for companyId: ${ctx.companyId}`);
-        console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+        logger.info('Listing companies', { companyId: ctx.companyId });
+        logger.info('Auth Context', { uid: ctx.uid, companyId: ctx.companyId });
 
         const adminDb = getAdminFirestore();
         if (!adminDb) {
-          console.error('❌ Firebase Admin not initialized');
+          logger.error('Firebase Admin not initialized');
           return NextResponse.json({
             success: false,
             error: 'Database connection not available'
@@ -71,11 +74,8 @@ export const GET = withHighRateLimit(
       companyId: doc.data().companyId
     }));
 
-    console.log(`🏢 Found ${companies.length} companies for tenant ${ctx.companyId}`);
-    companies.forEach(company => {
-      console.log(`  - ${company.companyName} (ID: ${company.id})`);
-    });
-    console.log(`✅ Tenant isolation enforced: all companies.companyId === ${ctx.companyId}`);
+    logger.info('Found companies for tenant', { count: companies.length, companyId: ctx.companyId });
+    logger.info('Tenant isolation enforced', { companyId: ctx.companyId });
 
     return NextResponse.json({
       success: true,
@@ -85,7 +85,7 @@ export const GET = withHighRateLimit(
     });
 
       } catch (error) {
-        console.error('❌ Error listing companies:', error);
+        logger.error('Error listing companies', { error });
         return NextResponse.json(
           {
             success: false,

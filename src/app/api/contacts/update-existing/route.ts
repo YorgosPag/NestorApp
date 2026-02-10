@@ -4,6 +4,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UpdateExistingContactsRoute');
 
 // 🏢 ENTERPRISE: Type-safe interface for contact assignments
 interface ContactAssignment {
@@ -43,9 +46,9 @@ export const POST = withStandardRateLimit(
       try {
         const { contactAssignments } = await req.json();
 
-        console.log('🔄 Starting existing contacts update via API...');
-        console.log(`📝 Processing ${Object.keys(contactAssignments).length} contacts`);
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
+        logger.info('Starting existing contacts update via API');
+        logger.info('Processing contacts', { count: Object.keys(contactAssignments).length });
+        logger.info('Auth Context', { uid: ctx.uid, globalRole: ctx.globalRole || 'none', companyId: ctx.companyId });
 
     if (!getAdminFirestore()) {
       return NextResponse.json({
@@ -68,7 +71,7 @@ export const POST = withStandardRateLimit(
 
         const contactData = contactDoc.data();
         if (contactData?.companyId !== ctx.companyId) {
-          console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to update contact ${contactId} (company ${contactData?.companyId})`);
+          logger.warn('TENANT ISOLATION VIOLATION: attempted to update contact from another company', { uid: ctx.uid, userCompanyId: ctx.companyId, contactId, contactCompanyId: contactData?.companyId });
           throw new Error('Access denied - Contact not found');
         }
 
@@ -83,11 +86,11 @@ export const POST = withStandardRateLimit(
         await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
         updatedContacts.push(contactId);
 
-        console.log(`✅ Updated contact: ${contactId} → ${typedAssignment.role} (${typedAssignment.tags.join(', ')})`);
+        logger.info('Updated contact', { contactId, role: typedAssignment.role, tags: typedAssignment.tags });
 
       } catch (contactError) {
         const errorMessage = contactError instanceof Error ? contactError.message : 'Unknown error';
-        console.error(`❌ Error updating contact ${contactId}:`, errorMessage);
+        logger.error(`Error updating contact ${contactId}`, { error: errorMessage });
 
         errors.push({
           contactId,
@@ -96,8 +99,8 @@ export const POST = withStandardRateLimit(
       }
     }
 
-    console.log(`✅ Successfully updated ${updatedContacts.length}/${Object.keys(contactAssignments).length} contacts`);
-    console.log(`✅ Tenant isolation enforced: all updated contacts verified to belong to company ${ctx.companyId}`);
+    logger.info('Successfully updated contacts', { updated: updatedContacts.length, total: Object.keys(contactAssignments).length });
+    logger.info('Tenant isolation enforced', { companyId: ctx.companyId });
 
     return NextResponse.json({
       success: true,
@@ -110,7 +113,7 @@ export const POST = withStandardRateLimit(
     });
 
       } catch (error) {
-        console.error('❌ Error in update-existing API:', error);
+        logger.error('Error in update-existing API', { error });
         return NextResponse.json({
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',

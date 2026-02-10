@@ -2,12 +2,15 @@ import { useCallback, useRef } from 'react';
 import React from 'react';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { createModuleLogger } from '@/lib/telemetry';
 import { useContactFormState } from './useContactFormState';
 import { useContactSubmission } from './useContactSubmission';
 import { useMultiplePhotosHandlers } from './useMultiplePhotosHandlers';
 import { useContactLivePreview } from './useContactLivePreview';
 import { useContactDataLoader } from './useContactDataLoader';
 import { useContactFormHandlers } from './useContactFormHandlers';
+
+const logger = createModuleLogger('useContactForm');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -139,12 +142,8 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
    */
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🔥 HANDLE SUBMIT: Using fresh formData via ref:', {
-      refValue: formDataRef.current.photoURL?.substring(0, 50) + '...',
-      refPhotoPreview: formDataRef.current.photoPreview?.substring(0, 50) + '...',
-      formDataInClosure: formData.photoURL?.substring(0, 50) + '...',
-      areTheSame: formDataRef.current === formData,
-      timestamp: new Date().toISOString()
+    logger.info('HANDLE SUBMIT: Using fresh formData via ref', {
+      areTheSame: formDataRef.current === formData
     });
     await submitFormData(formDataRef.current); // 🔥 Use ref instead of closure variable!
   }, [submitFormData]); // 🔥 Remove formData from dependencies to prevent stale closure

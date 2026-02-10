@@ -21,6 +21,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MessagesPinRoute');
 
 // ============================================================================
 // TYPES
@@ -77,7 +80,7 @@ async function handlePinMessage(
 ): Promise<ReturnType<typeof apiSuccess<PinMessageResponse>>> {
   const operationId = generateRequestId();
 
-  console.log(`📌 [Messages/Pin] User ${ctx.email} (company: ${ctx.companyId}) pin operation`);
+  logger.info('[Messages/Pin] User pin operation', { email: ctx.email, companyId: ctx.companyId });
 
   // 1. Parse request
   const body: PinMessageRequest = await request.json();
@@ -133,7 +136,7 @@ async function handlePinMessage(
       pinnedBy: ctx.uid,
     });
 
-    console.log(`✅ [Messages/Pin] Message ${messageId} pinned by ${ctx.uid} [${operationId}]`);
+    logger.info('[Messages/Pin] Message pinned', { messageId, userId: ctx.uid, operationId });
 
     return apiSuccess<PinMessageResponse>({
       pinned: true,
@@ -163,7 +166,7 @@ async function handlePinMessage(
       pinnedBy: FieldValue.delete(),
     });
 
-    console.log(`✅ [Messages/Pin] Message ${messageId} unpinned by ${ctx.uid} [${operationId}]`);
+    logger.info('[Messages/Pin] Message unpinned', { messageId, userId: ctx.uid, operationId });
 
     return apiSuccess<PinMessageResponse>({
       pinned: false,

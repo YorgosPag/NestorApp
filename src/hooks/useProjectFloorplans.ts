@@ -5,9 +5,12 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { type FloorplanData } from '@/services/floorplans/FloorplanService';
 import { useAuth } from '@/hooks/useAuth';
+import { createModuleLogger } from '@/lib/telemetry';
 // ✅ ENTERPRISE: Import pako for decompression (same as FloorplanService)
 // @ts-ignore - Pako module lacks TypeScript definitions
 import pako from 'pako';
+
+const logger = createModuleLogger('useProjectFloorplans');
 
 /** 🏢 ENTERPRISE: Firestore collection name - Single source of truth */
 const FLOORPLANS_COLLECTION = 'project_floorplans';
@@ -60,7 +63,7 @@ function decompressScene(compressedData: string): unknown {
     const decompressed = pako.ungzip(bytes, { to: 'string' }) as unknown as string;
     return JSON.parse(decompressed);
   } catch (error) {
-    console.error('❌ Decompression error:', error);
+    logger.error('Decompression error', { error });
     throw error;
   }
 }
@@ -79,11 +82,9 @@ function processFloorplanData(rawData: Record<string, unknown>): FloorplanData |
 
   // 🏢 ENTERPRISE: Handle PDF floorplan
   if (fileType === 'pdf') {
-    console.log('📄 [useProjectFloorplans] Processing PDF floorplan from Firestore:', {
+    logger.info('Processing PDF floorplan from Firestore', {
       fileName: firestoreData.fileName,
       hasPdfImageUrl: !!firestoreData.pdfImageUrl,
-      pdfImageUrlLength: firestoreData.pdfImageUrl?.length || 0,
-      dimensions: firestoreData.pdfDimensions,
       projectId: firestoreData.projectId
     });
 
@@ -180,7 +181,7 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
     setLoading(true);
     const docId = `${projectIdStr}_project`;
 
-    console.log('🔔 Setting up real-time listener for project floorplan:', docId);
+    logger.info('Setting up real-time listener for project floorplan', { docId });
 
     const unsubscribe = onSnapshot(
       doc(db, FLOORPLANS_COLLECTION, docId),
@@ -188,7 +189,7 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
         if (snapshot.exists()) {
           try {
             const rawData = snapshot.data();
-            console.log('📡 [useProjectFloorplans] Raw Firestore data received:', {
+            logger.info('Raw Firestore data received', {
               docId,
               fileType: rawData.fileType,
               hasCompressedScene: !!rawData.compressedScene,
@@ -197,7 +198,7 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
               compressed: rawData.compressed
             });
             const data = processFloorplanData(rawData);
-            console.log('📡 [useProjectFloorplans] Processed data:', {
+            logger.info('Processed data', {
               docId,
               hasData: !!data,
               fileType: data?.fileType,
@@ -206,24 +207,24 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
             });
             setProjectFloorplan(data);
           } catch (err) {
-            console.error('❌ Error processing project floorplan:', err);
+            logger.error('Error processing project floorplan', { error: err });
             setProjectFloorplan(null);
           }
         } else {
-          console.log('📡 Project floorplan document does not exist:', docId);
+          logger.info('Project floorplan document does not exist', { docId });
           setProjectFloorplan(null);
         }
         setLoading(false);
       },
       (err) => {
-        console.error('❌ Firestore listener error (project):', err);
+        logger.error('Firestore listener error (project)', { error: err });
         setError(err.message);
         setLoading(false);
       }
     );
 
     return () => {
-      console.log('🔕 Unsubscribing from project floorplan listener:', docId);
+      logger.info('Unsubscribing from project floorplan listener', { docId });
       unsubscribe();
     };
   }, [projectIdStr, refreshTrigger, user, authLoading]);
@@ -246,7 +247,7 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
 
     const docId = `${projectIdStr}_parking`;
 
-    console.log('🔔 Setting up real-time listener for parking floorplan:', docId);
+    logger.info('Setting up real-time listener for parking floorplan', { docId });
 
     const unsubscribe = onSnapshot(
       doc(db, FLOORPLANS_COLLECTION, docId),
@@ -254,29 +255,29 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
         if (snapshot.exists()) {
           try {
             const data = processFloorplanData(snapshot.data());
-            console.log('📡 Real-time update received for parking floorplan:', {
+            logger.info('Real-time update received for parking floorplan', {
               docId,
               hasData: !!data,
               timestamp: data?.timestamp
             });
             setParkingFloorplan(data);
           } catch (err) {
-            console.error('❌ Error processing parking floorplan:', err);
+            logger.error('Error processing parking floorplan', { error: err });
             setParkingFloorplan(null);
           }
         } else {
-          console.log('📡 Parking floorplan document does not exist:', docId);
+          logger.info('Parking floorplan document does not exist', { docId });
           setParkingFloorplan(null);
         }
       },
       (err) => {
-        console.error('❌ Firestore listener error (parking):', err);
+        logger.error('Firestore listener error (parking)', { error: err });
         setError(err.message);
       }
     );
 
     return () => {
-      console.log('🔕 Unsubscribing from parking floorplan listener:', docId);
+      logger.info('Unsubscribing from parking floorplan listener', { docId });
       unsubscribe();
     };
   }, [projectIdStr, refreshTrigger, user, authLoading]);

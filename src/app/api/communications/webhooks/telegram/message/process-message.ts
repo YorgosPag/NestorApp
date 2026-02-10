@@ -11,6 +11,9 @@ import { createStatsResponse } from '../stats/service';
 import { isFirebaseAvailable } from '../firebase/availability';
 // 🏢 ADR-055: Media download for Telegram attachments
 import { hasMedia, processTelegramMedia } from '../telegram/media-download';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramProcessMessage');
 
 export async function processMessage(
   message: TelegramMessageObject,
@@ -24,7 +27,7 @@ export async function processMessage(
   const userId = message.from?.id?.toString() || 'unknown';
   const userName = message.from?.first_name || 'User';
 
-  console.log(`💬 Processing message from ${userName} (${userId}): "${originalText}"`);
+  logger.info('Processing message', { userName, userId, text: originalText });
 
   // Store inbound message if Firebase is available
   if (isFirebaseAvailable() && message.from) {
@@ -32,15 +35,15 @@ export async function processMessage(
       // 🏢 ADR-055: Process media attachments if present
       let attachments;
       const messageHasMedia = hasMedia(message);
-      console.log(`📎 ADR-055 Media check: hasMedia=${messageHasMedia}, photo=${!!message.photo}, document=${!!message.document}`);
+      logger.info('ADR-055 Media check', { hasMedia: messageHasMedia, photo: !!message.photo, document: !!message.document });
 
       if (messageHasMedia) {
-        console.log('📎 Message contains media, processing...');
+        logger.info('Message contains media, processing');
         try {
           attachments = await processTelegramMedia(message);
-          console.log(`📎 Processed ${attachments.length} attachment(s):`, JSON.stringify(attachments));
+          logger.debug('Processed attachments', { count: attachments.length, data: attachments });
         } catch (mediaError) {
-          console.error('❌ Media processing failed:', mediaError);
+          logger.error('Media processing failed', { error: mediaError });
         }
       }
 
@@ -63,9 +66,9 @@ export async function processMessage(
         ...(isVoiceTranscription ? { isVoiceTranscription: true } : {}),
       };
       await storeMessageInCRM(crmMessage, 'inbound');
-      console.log('✅ Inbound message stored in CRM');
+      logger.info('Inbound message stored in CRM');
     } catch (error) {
-      console.error('⚠️ Failed to store inbound message:', error);
+      logger.error('Failed to store inbound message', { error });
     }
   }
 

@@ -21,6 +21,9 @@ import { storeMessageInCRM } from './crm/store';
 import { BOT_IDENTITY } from '@/config/domain-constants';
 import type { TelegramMessage, TelegramSendPayload } from './telegram/types';
 import { transcribeVoiceMessage } from './telegram/whisper-transcription';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramHandler');
 
 // ============================================================================
 // SECURITY: SECRET TOKEN VALIDATION (B5 - Enterprise Policy Documentation)
@@ -98,24 +101,24 @@ function validateSecretToken(request: NextRequest): { valid: boolean; error?: st
   // Development mode bypass (if not enforced)
   if (!ENFORCE_SECRET_VALIDATION) {
     if (!secretHeader) {
-      console.warn('⚠️ [DEV] No secret token provided, allowing (enforcement disabled)');
+      logger.warn('[DEV] No secret token provided, allowing (enforcement disabled)');
     }
     return { valid: true };
   }
 
   // Production: FAIL-CLOSED
   if (!TELEGRAM_WEBHOOK_SECRET) {
-    console.error('🚨 SECURITY: TELEGRAM_WEBHOOK_SECRET not configured - rejecting request');
+    logger.error('SECURITY: TELEGRAM_WEBHOOK_SECRET not configured - rejecting request');
     return { valid: false, error: 'webhook_secret_not_configured' };
   }
 
   if (!secretHeader) {
-    console.warn('🔒 Security: Missing X-Telegram-Bot-Api-Secret-Token header');
+    logger.warn('Security: Missing X-Telegram-Bot-Api-Secret-Token header');
     return { valid: false, error: 'missing_secret_token' };
   }
 
   if (secretHeader !== TELEGRAM_WEBHOOK_SECRET) {
-    console.warn('🔒 Security: Invalid secret token');
+    logger.warn('Security: Invalid secret token');
     return { valid: false, error: 'invalid_secret_token' };
   }
 
@@ -136,17 +139,17 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
     let isVoiceTranscription = false;
 
     if (!effectiveMessageText && webhookData.message.voice) {
-      console.log('🎤 Voice message detected — attempting Whisper transcription...');
+      logger.info('Voice message detected - attempting Whisper transcription');
       const transcription = await transcribeVoiceMessage(
         webhookData.message.voice.file_id
       );
       if (transcription.success && transcription.text) {
         effectiveMessageText = transcription.text;
         isVoiceTranscription = true;
-        console.log(`🎤 Transcription OK: "${effectiveMessageText.substring(0, 80)}..."`);
+        logger.info('Transcription OK', { preview: effectiveMessageText.substring(0, 80) });
       } else {
         effectiveMessageText = '[Voice message]';
-        console.warn(`🎤 Transcription failed: ${transcription.error}`);
+        logger.warn('Transcription failed', { error: transcription.error });
       }
     }
 
@@ -178,13 +181,13 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
     if (isAdminSender) {
       // Admin message: Send immediate ack, skip generic bot response
       // The pipeline will handle the response via UC modules
-      console.log('🛡️ Super admin detected — skipping bot response, pipeline will handle');
+      logger.info('Super admin detected - skipping bot response, pipeline will handle');
       await sendTelegramMessage({
         chat_id: webhookData.message.chat.id,
         text: '⏳ Επεξεργάζομαι την εντολή σας...',
       });
     } else {
-      console.log('💬 Processing regular message');
+      logger.info('Processing regular message');
       telegramResponse = await processMessage(webhookData.message, effectiveMessageText);
     }
 
@@ -198,14 +201,14 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
   }
 
   if (webhookData.callback_query) {
-    console.log('🎯 Processing callback query');
+    logger.info('Processing callback query');
     telegramResponse = await handleCallbackQuery(webhookData.callback_query);
   }
 
   // Send response to Telegram if we have one
   if (telegramResponse) {
     const sentResult = await sendTelegramMessage(telegramResponse);
-    console.log('📤 Telegram response sent:', sentResult.success);
+    logger.info('Telegram response sent', { success: sentResult.success });
 
     // Store outbound message if Firebase is available - using domain constants (B3 fix)
     // B6 FIX: Use REAL provider message_id from Telegram response, not Date.now()
@@ -226,7 +229,7 @@ async function processTelegramUpdate(webhookData: TelegramMessage): Promise<void
           message_id: providerMessageId
         }, 'outbound');
       } else {
-        console.warn('⚠️ Outbound message not stored: no provider message_id in response');
+        logger.warn('Outbound message not stored: no provider message_id in response');
       }
     }
   }
@@ -272,13 +275,13 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
     });
 
     if (result.enqueued) {
-      console.log(`🤖 [Telegram→Pipeline] Enqueued: ${result.requestId}`);
+      logger.info('[Telegram->Pipeline] Enqueued', { requestId: result.requestId });
     } else {
-      console.warn(`⚠️ [Telegram→Pipeline] Failed: ${result.error}`);
+      logger.warn('[Telegram->Pipeline] Failed', { error: result.error });
     }
   } catch (error) {
     // Non-fatal: pipeline failure should never break the Telegram bot
-    console.warn('[Telegram→Pipeline] Non-fatal error:', error instanceof Error ? error.message : String(error));
+    logger.warn('[Telegram->Pipeline] Non-fatal error', { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -288,13 +291,13 @@ async function feedTelegramToPipeline(message: TelegramMessage['message'], overr
  */
 export async function handlePOST(request: NextRequest): Promise<NextResponse> {
   try {
-    console.log('🔄 Telegram webhook received');
+    logger.info('Telegram webhook received');
 
     // 1. SECURITY: Validate secret token (FAIL-CLOSED in production)
     const secretValidation = validateSecretToken(request);
     if (!secretValidation.valid) {
       // AUDIT LOG: Security rejection event
-      console.error(`🚫 Webhook rejected: ${secretValidation.error} | IP: ${request.headers.get('x-forwarded-for') || 'unknown'}`);
+      logger.error('Webhook rejected', { error: secretValidation.error, ip: request.headers.get('x-forwarded-for') || 'unknown' });
       // B7 FIX: Return 200 to stop Telegram retries, with rejection metadata for audit
       // Enterprise policy: Acknowledge receipt but indicate rejection in body
       return NextResponse.json({ ok: true, rejected: true, error: secretValidation.error }, { status: 200 });
@@ -302,13 +305,13 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
 
     // 2. Check Firebase availability
     if (!isFirebaseAvailable()) {
-      console.warn('⚠️ Firebase not available, returning minimal response');
+      logger.warn('Firebase not available, returning minimal response');
       return NextResponse.json({ ok: true, status: 'firebase_unavailable' });
     }
 
     // 3. Parse and process webhook data
     const webhookData = await request.json();
-    console.log('📦 Processing webhook data...');
+    logger.info('Processing webhook data');
 
     await processTelegramUpdate(webhookData);
 
@@ -326,11 +329,12 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
             '@/server/ai/workers/ai-pipeline-worker'
           );
           const result = await processAIPipelineBatch();
-          console.log(`🤖 [Telegram→Pipeline] after(): batch processed=${result.processed}, failed=${result.failed}`);
+          logger.info('[Telegram->Pipeline] after(): batch complete', { processed: result.processed, failed: result.failed });
         } catch (error) {
           // Non-fatal: daily cron will retry pipeline items
-          console.warn('[Telegram→Pipeline] after(): pipeline batch failed (cron will retry)',
-            error instanceof Error ? error.message : String(error));
+          logger.warn('[Telegram->Pipeline] after(): pipeline batch failed (cron will retry)', {
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       });
     }
@@ -338,7 +342,7 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true });
 
   } catch (error) {
-    console.error('❌ Telegram webhook error:', error);
+    logger.error('Telegram webhook error', { error });
     return NextResponse.json({ ok: true, error: 'internal_error' });
   }
 }

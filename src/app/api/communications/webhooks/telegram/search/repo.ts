@@ -18,6 +18,9 @@ import {
   getTemplateResolver,
   type TelegramLocale
 } from '../templates/template-resolver';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramSearchRepo');
 
 export async function searchProperties(
   searchText: string,
@@ -50,7 +53,7 @@ export async function searchProperties(
     const { collection, getDocs } = firestoreHelpers;
 
     const criteria = extractSearchCriteria(searchText);
-    console.log('📋 Extracted criteria:', criteria);
+    logger.info('Extracted criteria', { criteria });
 
     let properties: TelegramProperty[] = [];
 
@@ -71,7 +74,7 @@ export async function searchProperties(
         properties.push({ id: doc.id, ...doc.data() });
       });
 
-      console.log(`✅ Firebase query returned ${properties.length} properties`);
+      logger.info('Firebase query returned properties', { count: properties.length });
 
       properties = applyAdvancedFilters(properties, criteria);
 
@@ -88,7 +91,7 @@ export async function searchProperties(
       };
 
     } catch (error) {
-      console.error('❌ Property search error:', error);
+      logger.error('Property search error', { error });
       return {
         success: false,
         properties: [],

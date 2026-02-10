@@ -34,6 +34,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MigrateUnitsRoute');
 
 // 🏢 ENTERPRISE: Enterprise building για τις νέες μονάδες
 const TARGET_ENTERPRISE_BUILDING = {
@@ -145,10 +148,7 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [GET /api/admin/migrate-units] BLOCKED: Non-super_admin attempted unit migration preview`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted unit migration preview', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -160,7 +160,7 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
   }
 
   try {
-    console.log('🔍 Analyzing units for migration...');
+    logger.info('Analyzing units for migration...');
 
     const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
     const snapshot = await getDocs(unitsQuery);
@@ -207,7 +207,7 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
       executionTimeMs: duration,
     });
   } catch (error: unknown) {
-    console.error('❌ Error analyzing units:', error);
+    logger.error('Error analyzing units', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(
@@ -244,10 +244,7 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/admin/migrate-units] BLOCKED: Non-super_admin attempted unit migration execution`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted unit migration execution', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -259,7 +256,7 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
   }
 
   try {
-    console.log('🚀 Starting unit migration...');
+    logger.info('Starting unit migration...');
 
     // Step 1: Get all units
     const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
@@ -282,21 +279,21 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
       return bid.startsWith('building_');
     });
 
-    console.log(`🗑️ Deleting ${legacyUnits.length} legacy units...`);
+    logger.info('Deleting legacy units', { count: legacyUnits.length });
 
     let deletedCount = 0;
     for (const unit of legacyUnits) {
       try {
         await deleteDoc(doc(db, COLLECTIONS.UNITS, unit.id));
         deletedCount++;
-        console.log(`✅ Deleted: ${unit.id} (${unit.name})`);
+        logger.info('Deleted unit', { unitId: unit.id, unitName: unit.name });
       } catch (err) {
-        console.error(`❌ Failed to delete ${unit.id}:`, err);
+        logger.error('Failed to delete unit', { unitId: unit.id, error: err });
       }
     }
 
     // Step 3: Create new enterprise units
-    console.log(`🏗️ Creating ${UNIT_TEMPLATES.length} new enterprise units...`);
+    logger.info('Creating new enterprise units', { count: UNIT_TEMPLATES.length });
 
     const createdUnits: Array<{ id: string; name: string }> = [];
 
@@ -314,9 +311,9 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
         // 🏢 ENTERPRISE: addDoc creates auto-generated Firebase ID (20 chars)
         const docRef = await addDoc(collection(db, COLLECTIONS.UNITS), newUnit);
         createdUnits.push({ id: docRef.id, name: template.name });
-        console.log(`✅ Created: ${docRef.id} (${template.name})`);
+        logger.info('Created unit', { unitId: docRef.id, unitName: template.name });
       } catch (err) {
-        console.error(`❌ Failed to create ${template.name}:`, err);
+        logger.error('Failed to create unit', { unitName: template.name, error: err });
       }
     }
 
@@ -339,7 +336,7 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
       },
       `Unit migration by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -352,7 +349,7 @@ async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext)
       executionTimeMs: duration,
     });
   } catch (error: unknown) {
-    console.error('❌ Error during migration:', error);
+    logger.error('Error during migration', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(

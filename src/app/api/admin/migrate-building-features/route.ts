@@ -34,6 +34,9 @@ import { isBuildingFeatureKey, type BuildingFeatureKey } from '@/types/building/
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MigrateBuildingFeaturesRoute');
 
 // ============================================================================
 // LEGACY MAPPING - REMOVE AFTER MIGRATION - DO NOT IMPORT IN UI
@@ -262,10 +265,7 @@ async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: A
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [GET /api/admin/migrate-building-features] BLOCKED: Non-super_admin attempted building features preview`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted building features preview', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -277,7 +277,7 @@ async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: A
   }
 
   try {
-    console.log('[MIGRATE] Analyzing buildings for feature migration...');
+    logger.info('Analyzing buildings for feature migration...');
 
     const buildingsQuery = query(collection(db, COLLECTIONS.BUILDINGS));
     const snapshot = await getDocs(buildingsQuery);
@@ -320,7 +320,7 @@ async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: A
         : undefined,
     });
   } catch (error: unknown) {
-    console.error('[MIGRATE] Error analyzing buildings:', error);
+    logger.error('Error analyzing buildings', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(
@@ -357,10 +357,7 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/admin/migrate-building-features] BLOCKED: Non-super_admin attempted building features migration`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted building features migration', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -372,7 +369,7 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
   }
 
   try {
-    console.log('[MIGRATE] Starting building features migration...');
+    logger.info('Starting building features migration...');
 
     // Check for force flag (migrates even with unmapped features)
     const { searchParams } = new URL(request.url);
@@ -438,9 +435,9 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
           newFeatures: preview.migratedFeatures,
         });
 
-        console.log(`[MIGRATE] Migrated: ${preview.id} (${preview.name}) - ${preview.migratedFeatures.length} features`);
+        logger.info('Migrated building features', { buildingId: preview.id, buildingName: preview.name, featuresCount: preview.migratedFeatures.length });
       } catch (err) {
-        console.error(`[MIGRATE] Failed to migrate ${preview.id}:`, err);
+        logger.error('Failed to migrate building features', { buildingId: preview.id, error: err });
         results.push({
           id: preview.id,
           name: preview.name,
@@ -481,7 +478,7 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
       },
       `Building features migration (Greek→Keys) by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -501,7 +498,7 @@ async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: A
         : undefined,
     });
   } catch (error: unknown) {
-    console.error('[MIGRATE] Error during migration:', error);
+    logger.error('Error during migration', { error });
     const duration = Date.now() - startTime;
 
     return NextResponse.json(

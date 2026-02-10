@@ -23,6 +23,9 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorplanProcessRoute');
 import type {
   FloorplanProcessedData,
   DxfSceneData,
@@ -150,9 +153,7 @@ async function handleProcessFloorplan(
   // 🏢 ENTERPRISE: Track fileId for mutex cleanup
   let currentFileId: string | null = null;
 
-  console.log(
-    `🏭 [FloorplanProcess] Request from ${ctx.email} (company: ${ctx.companyId})`
-  );
+  logger.info('[FloorplanProcess] Request', { email: ctx.email, companyId: ctx.companyId });
 
   try {
     // =========================================================================
@@ -178,7 +179,7 @@ async function handleProcessFloorplan(
 
     // 🏢 ENTERPRISE: Check if this file is already being processed (mutex)
     if (processingInProgress.has(fileId)) {
-      console.log(`⏳ [FloorplanProcess] File ${fileId} is already being processed, returning`);
+      logger.info('[FloorplanProcess] File already being processed', { fileId });
       currentFileId = null; // Don't cleanup - we didn't add it
       return NextResponse.json(
         {
@@ -192,7 +193,7 @@ async function handleProcessFloorplan(
 
     // Add to processing set
     processingInProgress.add(fileId);
-    console.log(`🏭 [FloorplanProcess] Processing file: ${fileId}`);
+    logger.info('[FloorplanProcess] Processing file', { fileId });
 
     // =========================================================================
     // 2. FIREBASE ADMIN (ADR-077: Centralized via @/lib/firebaseAdmin)
@@ -207,7 +208,7 @@ async function handleProcessFloorplan(
       process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
     if (!storageBucket) {
-      console.error('❌ [FloorplanProcess] FIREBASE_STORAGE_BUCKET not configured');
+      logger.error('[FloorplanProcess] FIREBASE_STORAGE_BUCKET not configured');
       return NextResponse.json(
         {
           success: false,
@@ -220,7 +221,7 @@ async function handleProcessFloorplan(
 
     const bucket = adminStorage.bucket(storageBucket);
 
-    console.log(`🗄️ [FloorplanProcess] Using bucket: ${bucket.name}`);
+    logger.info('[FloorplanProcess] Using bucket', { bucketName: bucket.name });
 
     // =========================================================================
     // 3. FETCH FILE RECORD FROM FIRESTORE
@@ -246,9 +247,7 @@ async function handleProcessFloorplan(
     // =========================================================================
 
     if (fileData.companyId && fileData.companyId !== ctx.companyId) {
-      console.warn(
-        `🚨 [FloorplanProcess] Tenant mismatch: ${fileData.companyId} !== ${ctx.companyId}`
-      );
+      logger.warn('[FloorplanProcess] Tenant mismatch', { fileCompanyId: fileData.companyId, userCompanyId: ctx.companyId });
       return NextResponse.json(
         {
           success: false,
@@ -264,7 +263,7 @@ async function handleProcessFloorplan(
     // =========================================================================
 
     if (fileData.processedData && !forceReprocess) {
-      console.log(`✅ [FloorplanProcess] Already processed, returning cached`);
+      logger.info('[FloorplanProcess] Already processed, returning cached');
       return NextResponse.json({
         success: true,
         fileId,
@@ -303,14 +302,12 @@ async function handleProcessFloorplan(
     // 7. DOWNLOAD FILE FROM STORAGE (SERVER-SIDE - NO CORS!)
     // =========================================================================
 
-    console.log(`📥 [FloorplanProcess] Downloading from: ${fileData.storagePath}`);
+    logger.info('[FloorplanProcess] Downloading from storage', { storagePath: fileData.storagePath });
 
     const fileRef = bucket.file(fileData.storagePath);
     const [fileBuffer] = await fileRef.download();
 
-    console.log(
-      `✅ [FloorplanProcess] Downloaded ${fileBuffer.length} bytes`
-    );
+    logger.info('[FloorplanProcess] Downloaded', { bytes: fileBuffer.length });
 
     // =========================================================================
     // 8. PROCESS BASED ON FILE TYPE
@@ -329,7 +326,7 @@ async function handleProcessFloorplan(
       );
       const { content, encoding } = encodingService.decodeBufferWithAutoDetect(fileBuffer);
 
-      console.log(`📝 [FloorplanProcess] Decoded with encoding: ${encoding}`);
+      logger.info('[FloorplanProcess] Decoded', { encoding });
 
       // 🏢 ENTERPRISE: Use centralized DxfSceneBuilder (NO duplicates!)
       const { DxfSceneBuilder } = await import(
@@ -370,7 +367,7 @@ async function handleProcessFloorplan(
       const processedDataPath = `${fileData.storagePath}.processed.json`;
       const processedJsonBuffer = Buffer.from(JSON.stringify(dxfSceneData), 'utf-8');
 
-      console.log(`📤 [FloorplanProcess] Uploading processed JSON to Storage: ${processedDataPath}`);
+      logger.info('[FloorplanProcess] Uploading processed JSON to Storage', { processedDataPath });
 
       const processedFileRef = bucket.file(processedDataPath);
       await processedFileRef.save(processedJsonBuffer, {
@@ -389,7 +386,7 @@ async function handleProcessFloorplan(
       // - Downloads from Storage using Admin SDK
       // - Returns JSON with proper caching headers
 
-      console.log(`✅ [FloorplanProcess] Processed JSON saved (${processedJsonBuffer.length} bytes)`);
+      logger.info('[FloorplanProcess] Processed JSON saved', { bytes: processedJsonBuffer.length });
 
       // 🏢 ENTERPRISE: Firestore gets METADATA ONLY (not the huge scene)
       // NOTE: processedDataUrl is NOT stored - client uses /api/floorplans/scene
@@ -406,7 +403,7 @@ async function handleProcessFloorplan(
         // NOTE: processedDataUrl removed - client uses authenticated API
       };
 
-      console.log(`✅ [FloorplanProcess] DXF parsed:`, stats);
+      logger.info('[FloorplanProcess] DXF parsed', { stats });
     } else {
       // PDF Processing - For now, just mark as processed
       // Full PDF rendering would require server-side PDF library
@@ -416,7 +413,7 @@ async function handleProcessFloorplan(
         originalSize: fileBuffer.length,
       };
 
-      console.log(`✅ [FloorplanProcess] PDF marked as processed`);
+      logger.info('[FloorplanProcess] PDF marked as processed');
     }
 
     // =========================================================================
@@ -428,7 +425,7 @@ async function handleProcessFloorplan(
       updatedAt: new Date().toISOString(),
     });
 
-    console.log(`💾 [FloorplanProcess] Saved metadata to Firestore (scene in Storage)`);
+    logger.info('[FloorplanProcess] Saved metadata to Firestore (scene in Storage)');
 
     // =========================================================================
     // 10. AUDIT LOG
@@ -443,10 +440,7 @@ async function handleProcessFloorplan(
       },
     });
 
-    console.log(
-      `✅ [FloorplanProcess] Complete in ${duration}ms:`,
-      fileData.displayName
-    );
+    logger.info('[FloorplanProcess] Complete', { durationMs: duration, displayName: fileData.displayName });
 
     // =========================================================================
     // 11. RETURN SUCCESS RESPONSE
@@ -469,15 +463,13 @@ async function handleProcessFloorplan(
     }
 
     // 🔍 ENTERPRISE: Detailed error logging for debugging
-    console.error('❌ [FloorplanProcess] Error:', error);
-
     const firebaseError = error as FirebaseAdminError | null;
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
     const errorStack =
       error instanceof Error ? error.stack : undefined;
 
-    console.error('📋 [FloorplanProcess] Error details:', {
+    logger.error('[FloorplanProcess] Error', {
       message: errorMessage,
       code: firebaseError?.code,
       stack: errorStack?.substring(0, 500),

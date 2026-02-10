@@ -6,6 +6,9 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ContactRoute');
 
 // 🏢 ENTERPRISE: Firestore contact data type (includes legacy fields for backward compatibility)
 type FirestoreContactData = Contact & Record<string, unknown> & {
@@ -75,14 +78,14 @@ export async function GET(
   const handler = withStandardRateLimit(withAuth<unknown>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        console.log(`📇 API: Loading contact for contactId: ${contactId}`);
+        logger.info('Loading contact', { contactId });
 
     // ========================================================================
     // VALIDATION
     // ========================================================================
 
     if (!contactId) {
-      console.error('❌ No contactId provided');
+      logger.error('No contactId provided');
       return NextResponse.json({
         success: false,
         error: 'Contact ID is required'
@@ -90,7 +93,7 @@ export async function GET(
     }
 
     if (typeof contactId !== 'string' || contactId.trim().length === 0) {
-      console.error('❌ Invalid contactId format');
+      logger.error('Invalid contactId format');
       return NextResponse.json({
         success: false,
         error: 'Invalid contact ID format'
@@ -101,12 +104,12 @@ export async function GET(
     // FETCH CONTACT FROM FIRESTORE (ADMIN SDK)
     // ========================================================================
 
-    console.log(`🔍 Fetching contact document: ${contactId}`);
-    console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+    logger.info('Fetching contact document', { contactId });
+    logger.info('Auth Context', { uid: ctx.uid, companyId: ctx.companyId });
 
     const adminDb = getAdminFirestore();
     if (!adminDb) {
-      console.error('❌ Firebase Admin not initialized');
+      logger.error('Firebase Admin not initialized');
       return NextResponse.json({
         success: false,
         error: 'Database connection not available - Firebase Admin not initialized',
@@ -120,7 +123,7 @@ export async function GET(
       .get();
 
     if (!contactDoc.exists) {
-      console.log(`⚠️ Contact not found: ${contactId}`);
+      logger.warn('Contact not found', { contactId });
       return NextResponse.json({
         success: false,
         error: 'Contact not found',
@@ -135,7 +138,7 @@ export async function GET(
     // ========================================================================
 
     if (contactData.companyId !== ctx.companyId) {
-      console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to access contact ${contactId} (company ${contactData.companyId})`);
+      logger.warn('TENANT ISOLATION VIOLATION: attempted to access contact from another company', { uid: ctx.uid, userCompanyId: ctx.companyId, contactId, contactCompanyId: contactData.companyId });
       return NextResponse.json({
         success: false,
         error: 'Access denied - Contact not found',
@@ -143,7 +146,7 @@ export async function GET(
       }, { status: 403 });
     }
 
-    console.log(`✅ Tenant isolation check passed: contact.companyId === ctx.companyId (${ctx.companyId})`);
+    logger.info('Tenant isolation check passed', { companyId: ctx.companyId });
 
     // ========================================================================
     // PROCESS CONTACT DATA
@@ -227,13 +230,13 @@ export async function GET(
       timestamp: new Date().toISOString()
     };
 
-    console.log(`✅ Contact loaded successfully: ${displayName} (${contactId})`);
-    console.log(`📊 Contact type: ${response.contact.serviceType}, Status: ${response.contact.status}`);
+    logger.info('Contact loaded successfully', { displayName, contactId });
+    logger.info('Contact details', { serviceType: response.contact.serviceType, status: response.contact.status });
 
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('❌ API: Error loading contact:', error);
+    logger.error('Error loading contact', { error });
 
     // Enterprise error handling με proper error categorization
     const isFirebaseError = error instanceof Error && error.message.includes('Firebase');

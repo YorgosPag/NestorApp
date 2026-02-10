@@ -4,9 +4,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getRequiredEmailFunctionUrl } from '@/config/admin-env';
+import { createModuleLogger } from '@/lib/telemetry';
 // Ensure Firebase Admin is initialized
 import '@/server/admin/admin-guards';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+
+const logger = createModuleLogger('EmailRoute');
 
 interface EmailPayload {
   to: string;
@@ -65,7 +68,7 @@ export const POST = withStandardRateLimit(
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Firebase Function error:', errorData);
+        logger.error('Firebase Function error', { error: errorData });
         return NextResponse.json(
           { status: 'error', message: 'Failed to send email', error: errorData.error || 'Failed to send email' },
           { status: response.status }
@@ -75,7 +78,7 @@ export const POST = withStandardRateLimit(
       const result = await response.json();
 
       // Log successful send with tenant context
-      console.log('✅ PRODUCTION Email sent via Mailgun:', {
+      logger.info('PRODUCTION Email sent via Mailgun', {
         to: payload.to,
         messageId: result.messageId,
         status: result.status,
@@ -103,7 +106,7 @@ export const POST = withStandardRateLimit(
         messageId: result.messageId,
       });
     } catch (error) {
-      console.error('❌ Error in email API:', error);
+      logger.error('Error in email API', { error });
       return NextResponse.json(
         { status: 'error', message: 'Internal server error', error: 'Internal server error' },
         { status: 500 }

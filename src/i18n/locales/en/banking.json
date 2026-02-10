@@ -1,0 +1,47 @@
+{
+  "bank": {
+    "label": "Bank",
+    "placeholder": "Select bank...",
+    "groups": {
+      "systemic": "Systemic Banks",
+      "other": "Other Banks"
+    },
+    "otherForeign": "Other bank (foreign)"
+  },
+  "iban": {
+    "label": "IBAN",
+    "valid": "Valid IBAN",
+    "invalid": "Invalid IBAN",
+    "copySuccess": "IBAN copied"
+  },
+  "account": {
+    "primary": "Primary",
+    "inactive": "Inactive",
+    "holder": "Holder",
+    "type": "Account Type",
+    "currency": "Currency",
+    "setPrimary": "Set as primary",
+    "copyIban": "Copy IBAN",
+    "edit": "Edit",
+    "delete": "Delete",
+    "primaryAccount": "Primary account",
+    "activeAccount": "Active account"
+  },
+  "form": {
+    "bankName": "Bank Name",
+    "bankNamePlaceholder": "e.g. Deutsche Bank",
+    "holderName": "Holder",
+    "holderPlaceholder": "For joint accounts or different holder",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional information...",
+    "optional": "(optional)",
+    "submit": "Save",
+    "add": "Add",
+    "cancel": "Cancel",
+    "validation": {
+      "ibanRequired": "IBAN is required",
+      "ibanInvalid": "Invalid IBAN",
+      "bankNameRequired": "Bank name is required"
+    }
+  }
+}

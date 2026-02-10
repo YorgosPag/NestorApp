@@ -27,6 +27,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // =============================================================================
 // 🅿️ TYPE DEFINITIONS
@@ -106,6 +107,8 @@ interface ParkingApiResponse {
   cached?: boolean;
 }
 
+const logger = createModuleLogger('useFirestoreParkingSpots');
+
 // =============================================================================
 // 🅿️ HOOK IMPLEMENTATION
 // =============================================================================
@@ -134,12 +137,12 @@ export function useFirestoreParkingSpots(
   const fetchParkingSpots = useCallback(async () => {
     // 🔐 ENTERPRISE: Wait for auth before fetching
     if (authLoading) {
-      console.log('⏳ [ParkingSpots] Waiting for auth state...');
+      logger.info('Waiting for auth state');
       return;
     }
 
     if (!user) {
-      console.log('⏳ [ParkingSpots] User not authenticated, skipping fetch');
+      logger.info('User not authenticated, skipping fetch');
       setLoading(false);
       return;
     }
@@ -148,7 +151,7 @@ export function useFirestoreParkingSpots(
       setLoading(true);
       setError(null);
 
-      console.log(`🅿️ [ParkingSpots] Fetching parking spots...`);
+      logger.info('Fetching parking spots');
 
       // Build API URL με optional buildingId filter
       const url = buildingId
@@ -161,15 +164,11 @@ export function useFirestoreParkingSpots(
       setParkingSpots(data?.parkingSpots || []);
       setCached(data?.cached ?? false);
 
-      if (buildingId) {
-        console.log(`✅ [ParkingSpots] Loaded ${data?.parkingSpots?.length || 0} parking spots for building ${buildingId}`);
-      } else {
-        console.log(`✅ [ParkingSpots] Loaded ${data?.parkingSpots?.length || 0} parking spots`);
-      }
+      logger.info(`Loaded ${data?.parkingSpots?.length || 0} parking spots`, { buildingId });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ [ParkingSpots] Error fetching parking spots:', err);
+      logger.error('Error fetching parking spots', { error: err });
       setError(errorMessage);
     } finally {
       setLoading(false);

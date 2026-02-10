@@ -29,6 +29,9 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MigrateDxfRoute');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -102,8 +105,7 @@ class DxfMigrationAPI {
    * 🔍 Analyze existing DXF data
    */
   async analyzeLegacyData() {
-    console.log('🔍 [API] Analyzing DXF data in Firestore...');
-    console.log(`Collection: ${COLLECTIONS.CAD_FILES}`);
+    logger.info('Analyzing DXF data in Firestore', { collection: COLLECTIONS.CAD_FILES });
 
     const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
     const snapshot = await getDocs(cadFilesRef);
@@ -316,10 +318,7 @@ async function handleMigrateDxfPreview(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [MIGRATE_DXF_PREVIEW] BLOCKED: Non-super_admin attempted DXF migration preview: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted DXF migration preview', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -330,10 +329,10 @@ async function handleMigrateDxfPreview(
     );
   }
 
-  console.log(`🔐 [MIGRATE_DXF_PREVIEW] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('DXF migration preview request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
-    console.log('🔍 [API] DXF Migration - DRY RUN Analysis');
+    logger.info('DXF Migration - DRY RUN Analysis');
 
     const migrator = new DxfMigrationAPI(true);
     const analysis = await migrator.analyzeLegacyData();
@@ -362,7 +361,7 @@ async function handleMigrateDxfPreview(
       ]
     };
 
-    console.log(`📊 DRY RUN: ${analysis.legacyFiles.length} legacy files, ${analysis.properFiles.length} proper files`);
+    logger.info('DRY RUN result', { legacyFiles: analysis.legacyFiles.length, properFiles: analysis.properFiles.length });
 
     return NextResponse.json({
       success: true,
@@ -370,7 +369,7 @@ async function handleMigrateDxfPreview(
     });
 
   } catch (error: unknown) {
-    console.error('❌ [API] DRY RUN Analysis failed:', error);
+    logger.error('DRY RUN Analysis failed', { error });
 
     return NextResponse.json({
       success: false,
@@ -391,10 +390,7 @@ async function handleMigrateDxfExecute(
   // ========================================================================
 
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [MIGRATE_DXF_EXECUTE] BLOCKED: Non-super_admin attempted DXF migration execution: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted DXF migration execution', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -405,17 +401,17 @@ async function handleMigrateDxfExecute(
     );
   }
 
-  console.log(`🔐 [MIGRATE_DXF_EXECUTE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('DXF migration execute request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
-    console.log('🚀 [API] DXF Migration - LIVE MIGRATION');
+    logger.info('DXF Migration - LIVE MIGRATION');
 
     // First analyze to get the data
     const analysisMigrator = new DxfMigrationAPI(true);
     const analysis = await analysisMigrator.analyzeLegacyData();
 
     if (analysis.legacyFiles.length === 0) {
-      console.log('ℹ️ No legacy files to migrate');
+      logger.info('No legacy files to migrate');
       return NextResponse.json({
         success: true,
         mode: 'LIVE_MIGRATION',
@@ -456,7 +452,7 @@ async function handleMigrateDxfExecute(
       executionTimeMs: duration,
     };
 
-    console.log(`📊 Migration completed: ${migrationResult.migratedCount} migrated, ${migrationResult.failedCount} failed`);
+    logger.info('Migration completed', { migratedCount: migrationResult.migratedCount, failedCount: migrationResult.failedCount });
 
     // 🏢 ENTERPRISE: Audit logging (non-blocking)
     const metadata = extractRequestMetadata(request);
@@ -476,7 +472,7 @@ async function handleMigrateDxfExecute(
       },
       `DXF migration (Firestore→Storage) by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [MIGRATE_DXF_EXECUTE] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     if (migrationResult.errors.length > 0) {
@@ -492,7 +488,7 @@ async function handleMigrateDxfExecute(
     });
 
   } catch (error: unknown) {
-    console.error('❌ [API] LIVE Migration failed:', error);
+    logger.error('LIVE Migration failed', { error });
 
     return NextResponse.json({
       success: false,

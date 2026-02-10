@@ -4,8 +4,11 @@ import type { EmailRequest } from '@/services/email.service';
 import type { EmailTemplateType } from '@/types/email-templates';
 import { withAuth, logAuditEvent, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { createModuleLogger } from '@/lib/telemetry';
 // Ensure Firebase Admin is initialized
 import '@/server/admin/admin-guards';
+
+const logger = createModuleLogger('PropertyShareRoute');
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -242,9 +245,9 @@ function logEmailAttempt(
   };
 
   if (success) {
-    console.log('✅ Email API success:', JSON.stringify(logEntry));
+    logger.info('Email API success', { logEntry });
   } else {
-    console.error('❌ Email API error:', JSON.stringify(logEntry));
+    logger.error('Email API error', { logEntry });
   }
 }
 
@@ -291,7 +294,7 @@ export const POST = withAuth<PropertyShareResponse>(
 
       // Check EmailService status
       const emailServiceStatus = EmailService.getStatus();
-      console.log('📧 EmailService status:', emailServiceStatus);
+      logger.info('EmailService status', { status: emailServiceStatus });
 
       // Enhanced validation
       const { isValid, errors, sanitizedData } = validateEmailRequest(requestData);
@@ -308,7 +311,7 @@ export const POST = withAuth<PropertyShareResponse>(
       }
 
       const data = sanitizedData!;
-      console.log('📧 Property Share Email API called:', {
+      logger.info('Property Share Email API called', {
         ip: clientIP,
         recipientCount: data.recipients!.length,
         templateType: data.templateType,

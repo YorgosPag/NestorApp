@@ -20,6 +20,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { EnterpriseConfigurationManager } from '@/core/configuration/enterprise-config-management';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('QuickFixRoute');
 
 // Response types for type-safe withAuth
 type QuickFixSuccess = {
@@ -53,13 +56,13 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
       .get();
 
     if (snapshot.empty) {
-      console.warn(`⚠️  Company not found in database: ${companyName}`);
+      logger.warn('Company not found in database', { companyName });
       return null;
     }
 
     return snapshot.docs[0].id;
   } catch (error) {
-    console.error(`🚨 Error loading company ID for ${companyName}:`, error);
+    logger.error('Error loading company ID', { companyName, error });
     return null;
   }
 }
@@ -67,8 +70,7 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
 export const POST = withStandardRateLimit(async (request: NextRequest) => {
   const handler = withAuth<QuickFixResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<QuickFixResponse>> => {
-      console.log('🔧 [Projects/QuickFix] Starting quick fix operations...');
-      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+      logger.info('[Projects/QuickFix] Starting quick fix operations', { uid: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
       try {
 
@@ -150,7 +152,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
       }] : [])
     ];
 
-        console.log(`🏗️ Enterprise fixes prepared: ${fixes.length} database-driven operations`);
+        logger.info('Enterprise fixes prepared', { fixesCount: fixes.length });
 
         // ============================================================================
         // STEP 3: EXECUTE FIX OPERATIONS (Admin SDK)
@@ -170,7 +172,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
                   updatedAt: new Date().toISOString()
                 });
 
-              console.log(`✅ Updated project ${fix.projectId} with companyId ${fix.companyId}`);
+              logger.info('Updated project', { projectId: fix.projectId, companyId: fix.companyId });
               results.push({
                 projectId: fix.projectId,
                 action: 'updated',
@@ -226,7 +228,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
                 .doc(fix.projectId)
                 .set(newProject);
 
-              console.log(`✅ Created project ${fix.projectId} for ${fix.companyName}`);
+              logger.info('Created project', { projectId: fix.projectId, companyName: fix.companyName });
               results.push({
                 projectId: fix.projectId,
                 action: 'created',
@@ -236,7 +238,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
             }
 
           } catch (error) {
-            console.error(`❌ Failed to process ${fix.action} for project ${fix.projectId}:`, error);
+            logger.error('Failed to process fix for project', { action: fix.action, projectId: fix.projectId, error });
             results.push({
               projectId: fix.projectId,
               action: 'failed',
@@ -245,7 +247,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           }
         }
 
-        console.log(`✅ [Projects/QuickFix] Complete: Processed ${results.length} operations`);
+        logger.info('[Projects/QuickFix] Complete', { operationsProcessed: results.length });
 
         return NextResponse.json({
           success: true,
@@ -254,7 +256,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         });
 
       } catch (error) {
-        console.error('❌ [Projects/QuickFix] Error:', {
+        logger.error('[Projects/QuickFix] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

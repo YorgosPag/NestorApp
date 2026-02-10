@@ -22,6 +22,9 @@ import type { IndividualContact } from '@/types/contacts/contracts';
 import type { ContactRelationship } from '@/types/contacts/relationships/interfaces/relationship';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121) — enrich workers from persona data
 import { isConstructionWorkerPersona } from '@/types/contacts/personas';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useProjectWorkers');
 
 interface UseProjectWorkersReturn {
   workers: ProjectWorker[];
@@ -155,7 +158,7 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
             });
           } catch {
             // Skip individual worker errors — continue with others
-            console.warn(`[useProjectWorkers] Failed to enrich worker ${link.sourceContactId}`);
+            logger.warn('Failed to enrich worker', { contactId: link.sourceContactId });
           }
         }
 
@@ -166,7 +169,7 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
         if (mounted) {
           const message = err instanceof Error ? err.message : 'Failed to load workers';
           setError(message);
-          console.error('[useProjectWorkers] Error:', message);
+          logger.error('Failed to load workers', { error: message });
         }
       } finally {
         if (mounted) {

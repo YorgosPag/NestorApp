@@ -32,6 +32,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CreateCleanProjectsRoute');
 
 /**
  * POST - Execute Clean Project Creation (withAuth protected)
@@ -55,10 +58,7 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/admin/create-clean-projects] BLOCKED: Non-super_admin attempted clean project creation`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted clean project creation', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -72,8 +72,7 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
   try {
     const adminDb = getAdminFirestore();
 
-    console.log('🏗️ CREATING CLEAN PROJECTS FOR DEVELOPMENT');
-    console.log('⏰ Started at:', new Date().toISOString());
+    logger.info('CREATING CLEAN PROJECTS FOR DEVELOPMENT', { startedAt: new Date().toISOString() });
 
     // 🏢 ENTERPRISE: Load company ID from environment configuration
     const correctCompanyId = process.env.NEXT_PUBLIC_MAIN_COMPANY_ID || 'default-company-id';
@@ -158,11 +157,11 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
       }
     ];
 
-    console.log(`🏗️ Creating ${cleanProjects.length} clean projects...`);
+    logger.info('Creating clean projects', { count: cleanProjects.length });
 
     const results = [];
     for (const project of cleanProjects) {
-      console.log(`🔄 Creating project: ${project.name}`);
+      logger.info('Creating project', { projectName: project.name });
 
       const projectData = {
         ...project,
@@ -206,10 +205,10 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
           };
 
           await adminDb.collection(COLLECTIONS.FLOORS).doc(`${building.id}_${floor.id}`).set(floorData);
-          console.log(`   ✅ Created floor: ${floor.name} (Building: ${building.name})`);
+          logger.info('Created floor', { floorName: floor.name, buildingName: building.name });
         }
 
-        console.log(`  ✅ Created building: ${building.name} with ${floors?.length || 0} floors`);
+        logger.info('Created building', { buildingName: building.name, floorsCount: floors?.length || 0 });
       }
 
       results.push({
@@ -221,11 +220,11 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
         status: 'SUCCESS'
       });
 
-      console.log(`✅ Successfully created project ${project.id}: ${project.name}`);
+      logger.info('Successfully created project', { projectId: project.id, projectName: project.name });
     }
 
     // Verification: Count all created documents
-    console.log('🔍 Verifying created documents...');
+    logger.info('Verifying created documents...');
     const [projectsSnapshot, buildingsSnapshot, floorsSnapshot] = await Promise.all([
       adminDb.collection(COLLECTIONS.PROJECTS).get(),
       adminDb.collection(COLLECTIONS.BUILDINGS).get(),
@@ -262,11 +261,7 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
       }
     };
 
-    console.log('📊 CLEAN PROJECT CREATION COMPLETED!');
-    console.log(`   Projects: ${response.summary.projectsCreated}`);
-    console.log(`   Buildings: ${response.summary.buildingsCreated}`);
-    console.log(`   Floors: ${response.summary.floorsCreated}`);
-    console.log(`   Total execution time: ${totalExecutionTime}ms`);
+    logger.info('CLEAN PROJECT CREATION COMPLETED', { projectsCreated: response.summary.projectsCreated, buildingsCreated: response.summary.buildingsCreated, floorsCreated: response.summary.floorsCreated, executionTimeMs: totalExecutionTime });
 
     // 🏢 ENTERPRISE: Audit logging (non-blocking)
     const metadata = extractRequestMetadata(request);
@@ -291,7 +286,7 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
       },
       `Clean projects creation by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json(response, { status: 200 });
@@ -300,7 +295,7 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
     const totalExecutionTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    console.error('❌ CLEAN PROJECT CREATION ERROR:', errorMessage);
+    logger.error('CLEAN PROJECT CREATION ERROR', { error: errorMessage });
 
     return NextResponse.json({
       success: false,

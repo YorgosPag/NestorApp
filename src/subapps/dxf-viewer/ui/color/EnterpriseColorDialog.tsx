@@ -181,17 +181,12 @@ export function EnterpriseColorDialog({
   return typeof window !== 'undefined'
     ? createPortal(
         <div
-          className={`fixed ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center`}
-          style={{
-            zIndex: 2147483646, // Just below max to allow stacking
-            cursor: 'default',
-            pointerEvents: 'none' // ✅ FIX: Container doesn't capture events, only dialog does
-          }}
+          className={`fixed ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center cursor-default pointer-events-none`}
+          style={{ zIndex: 2147483646 }} // Just below max to allow stacking
         >
           {/* Backdrop - ✅ FIX: No click handlers, just visual overlay */}
           <div
-            className={`absolute ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop}`}
-            style={{ pointerEvents: 'none' }}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} pointer-events-none`}
           />
 
           {/* Dialog - ✅ ENTERPRISE: Draggable + Cursor fix + Max z-index */}
@@ -251,7 +246,7 @@ export function EnterpriseColorDialog({
               </div>
 
               {/* Content - ✅ FIX: Ensure pointer events work */}
-              <div className={PANEL_LAYOUT.SPACING.NONE} style={{ cursor: 'default', pointerEvents: 'auto' }}>
+              <div className={`${PANEL_LAYOUT.SPACING.NONE} cursor-default pointer-events-auto`}>
                 <EnterpriseColorPicker
                   {...pickerProps}
                   value={value}

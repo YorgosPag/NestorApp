@@ -5,13 +5,16 @@ import { formatAdminMessage } from './format';
 import { getAdminKeyboard } from './keyboard';
 import { sendMessageToTelegram } from './client';
 import type { AdminNotification, UserMessage, Priority } from './types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramAdminService');
 
 /**
  * Main function to orchestrate sending a notification to the admin.
  */
 export async function sendAdminNotification(notification: AdminNotification): Promise<boolean> {
     if (!isConfigured()) {
-        console.log('Admin notifications disabled or not configured.');
+        logger.info('Admin notifications disabled or not configured');
         return false;
     }
 
@@ -22,15 +25,15 @@ export async function sendAdminNotification(notification: AdminNotification): Pr
         const result = await sendMessageToTelegram(ADMIN_CONFIG.adminChatId, text, reply_markup);
 
         if (result.success) {
-            console.log('✅ Admin notification sent successfully.');
+            logger.info('Admin notification sent successfully');
         } else {
-            console.error('Failed to send admin notification:', result.error);
+            logger.error('Failed to send admin notification', { error: result.error });
         }
         
         return result.success;
 
     } catch (error) {
-        console.error('Error sending admin notification:', error);
+        logger.error('Error sending admin notification', { error });
         return false;
     }
 }
@@ -104,7 +107,7 @@ export async function sendDailySummary(stats: {
  * Sends a test message to the admin chat to verify configuration.
  */
 export async function testAdminNotifications(): Promise<boolean> {
-    console.log('Sending test admin notification...');
+    logger.info('Sending test admin notification');
     const testMessage: UserMessage = {
         userId: process.env.NEXT_PUBLIC_TELEGRAM_TEST_USER_ID || '123456789',
         username: process.env.NEXT_PUBLIC_TELEGRAM_TEST_USERNAME || 'test_user',

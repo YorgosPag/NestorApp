@@ -16,6 +16,9 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseRelationshipEngine } from '@/services/relationships/enterprise-relationship-engine';
 import type { EntityType } from '@/services/relationships/enterprise-relationship-engine.contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('RelationshipsChildrenRoute');
 
 // ============================================================================
 // GET CHILDREN ENDPOINT
@@ -40,7 +43,7 @@ export async function GET(request: NextRequest) {
 }
 
 async function handleGetChildren(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
-  console.log(`🔗 API: Relationship query from user ${ctx.email} (company: ${ctx.companyId})`);
+  logger.info('[Relationships/Children] Relationship query', { email: ctx.email, companyId: ctx.companyId });
 
   try {
     // 1️⃣ PARSE QUERY PARAMETERS
@@ -73,7 +76,7 @@ async function handleGetChildren(request: NextRequest, ctx: AuthContext): Promis
     );
 
     if (!hasAccess) {
-      console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized ${parentType} ${parentId}`);
+      logger.warn('[Relationships/Children] TENANT ISOLATION: Unauthorized access attempt', { userId: ctx.uid, parentType, parentId });
       return NextResponse.json({
         error: 'Entity not found or access denied',
         code: 'FORBIDDEN'
@@ -103,7 +106,7 @@ async function handleGetChildren(request: NextRequest, ctx: AuthContext): Promis
     // 🚨 ENTERPRISE ERROR HANDLING
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
-    console.error('🚨 Enterprise Relationship API Error (Children):', error);
+    logger.error('[Relationships/Children] Enterprise Relationship API Error', { error: error instanceof Error ? error.message : String(error) });
 
     return NextResponse.json({
       error: errorMessage,
@@ -158,17 +161,17 @@ async function validateEntityOwnership(
       case 'unit':
       case 'contact':
         // TODO: Implement multi-level validation for these entity types
-        console.warn(`⚠️ PARTIAL VALIDATION: ${entityType} ownership validation not yet implemented`);
+        logger.warn('[Relationships/Children] PARTIAL VALIDATION: ownership validation not yet implemented', { entityType });
         // For now, allow these (relationships engine will handle basic validation)
         // This should be hardened before production use
         return true;
 
       default:
-        console.error(`❌ UNKNOWN ENTITY TYPE: ${entityType}`);
+        logger.error('[Relationships/Children] Unknown entity type', { entityType });
         return false;
     }
   } catch (error) {
-    console.error(`❌ Error validating entity ownership for ${entityType} ${entityId}:`, error);
+    logger.error('[Relationships/Children] Error validating entity ownership', { entityType, entityId, error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

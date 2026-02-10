@@ -4,6 +4,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { Pool } from 'pg';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('V2ProjectCustomersRoute');
 
 // 🏢 ENTERPRISE API V2 - PostgreSQL Version
 // ============================================
@@ -256,7 +259,7 @@ async function handleGetCustomers(
     const processingStartTime = Date.now();
 
     if (result.rows.length === 0) {
-      console.log(`⚠️ [${requestId}] Project not found: ${projectId}`);
+      logger.info('Project not found', { requestId, projectId });
       return NextResponse.json({
         success: false,
         error: 'Project not found'
@@ -291,10 +294,14 @@ async function handleGetCustomers(
     };
 
     // 🎯 Performance Logging
-    console.log(`✅ [${requestId}] Enterprise API completed successfully`);
-    console.log(`📊 [${requestId}] Performance: ${totalTime}ms total (${queryEndTime - queryStartTime}ms query)`);
-    console.log(`👥 [${requestId}] Results: ${response.summary.totalCustomers} customers, ${response.summary.totalUnitsSold} units`);
-    console.log(`💰 [${requestId}] Sales: €${response.summary.totalSalesValue.toLocaleString()}`);
+    logger.info('Enterprise API completed successfully', {
+      requestId,
+      totalTimeMs: totalTime,
+      queryTimeMs: queryEndTime - queryStartTime,
+      totalCustomers: response.summary.totalCustomers,
+      totalUnitsSold: response.summary.totalUnitsSold,
+      totalSalesValue: response.summary.totalSalesValue
+    });
 
     // Audit successful access
     await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
@@ -308,7 +315,7 @@ async function handleGetCustomers(
 
   } catch (error) {
     const totalTime = Date.now() - startTime;
-    console.error(`❌ [${requestId}] Enterprise API Error (${totalTime}ms):`, error);
+    logger.error('Enterprise API Error', { requestId, totalTimeMs: totalTime, error });
 
     // 🚨 Enterprise Error Handling
     let errorMessage = 'Internal server error';

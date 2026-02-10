@@ -18,6 +18,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorsAdminRoute');
 
 /** Floor document from Firestore */
 interface AdminFloorDocument {
@@ -62,8 +65,7 @@ export async function GET(request: NextRequest) {
         const buildingId = searchParams.get('buildingId');
         const projectId = searchParams.get('projectId');
 
-        console.log(`🛠️ [Floors/Admin] Starting Admin SDK operations...`);
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Floors/Admin] Starting Admin SDK operations', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         // Validate required parameters
         if (!buildingId && !projectId) {
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
           }, { status: 400 });
         }
 
-        console.log(`📋 [Admin] Loading floors for: ${buildingId ? `building ${buildingId}` : `project ${projectId}`}`);
+        logger.info('[Admin] Loading floors', { buildingId, projectId });
 
         // ============================================================================
         // ADMIN SDK QUERY (No tenant isolation - super_admin has full access)
@@ -116,7 +118,7 @@ export async function GET(request: NextRequest) {
           });
         }
 
-        console.log(`✅ [Floors/Admin] Complete: Found ${floors.length} floors`);
+        logger.info('[Floors/Admin] Complete', { floorCount: floors.length });
 
         // Group floors by building if querying by projectId
         if (projectId) {
@@ -151,7 +153,7 @@ export async function GET(request: NextRequest) {
         }
 
       } catch (error) {
-        console.error('❌ [Floors/Admin] Error:', {
+        logger.error('[Floors/Admin] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

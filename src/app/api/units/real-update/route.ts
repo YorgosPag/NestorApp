@@ -23,6 +23,9 @@ import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { CONTACT_INFO, ContactInfoUtils } from '@/config/contact-info-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitsRealUpdateRoute');
 
 // Response types for type-safe withAuth
 type RealUpdateSuccess = {
@@ -51,14 +54,13 @@ const postHandler = async (request: NextRequest) => {
   const handler = withAuth<RealUpdateResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<RealUpdateResponse>> => {
       try {
-        console.log('🔥 [Units/RealUpdate] Starting Admin SDK operations...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Units/RealUpdate] Starting Admin SDK operations', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         // ============================================================================
         // STEP 1: FIND SOLD UNITS WITHOUT CUSTOMERS (Admin SDK)
         // ============================================================================
 
-        console.log('🔍 Finding sold units without customers...');
+        logger.info('[Units/RealUpdate] Finding sold units without customers');
         const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const soldUnitsToUpdate: Array<{ id: string; name: string }> = [];
@@ -76,7 +78,7 @@ const postHandler = async (request: NextRequest) => {
           }
         });
 
-        console.log(`🎯 Found ${soldUnitsToUpdate.length} sold units to update`);
+        logger.info('[Units/RealUpdate] Found sold units to update', { count: soldUnitsToUpdate.length });
 
         if (soldUnitsToUpdate.length === 0) {
           return NextResponse.json({
@@ -93,7 +95,7 @@ const postHandler = async (request: NextRequest) => {
         // STEP 2: GENERATE AND CREATE CONTACTS (Admin SDK)
         // ============================================================================
 
-        console.log('👥 Creating real contacts in database...');
+        logger.info('[Units/RealUpdate] Creating real contacts in database');
         const contacts = ContactInfoUtils.generateSampleContacts(8).map((contact, index) => ({
           id: `real_contact_${index + 1}`,
           name: contact.fullName,
@@ -115,26 +117,26 @@ const postHandler = async (request: NextRequest) => {
             });
 
             createdContacts.push(contact);
-            console.log(`✅ Contact created: ${contact.name}`);
+            logger.info('[Units/RealUpdate] Contact created', { contactName: contact.name });
 
           } catch (error) {
             // If contact already exists (409), that's OK
             if (error && typeof error === 'object' && 'code' in error && error.code === 6) {
               createdContacts.push(contact);
-              console.log(`✅ Contact already exists: ${contact.name}`);
+              logger.info('[Units/RealUpdate] Contact already exists', { contactName: contact.name });
             } else {
-              console.error(`❌ Error creating contact ${contact.name}:`, error);
+              logger.error('[Units/RealUpdate] Error creating contact', { contactName: contact.name, error: error instanceof Error ? error.message : String(error) });
             }
           }
         }
 
-        console.log(`✅ Created/verified ${createdContacts.length} contacts`);
+        logger.info('[Units/RealUpdate] Created/verified contacts', { count: createdContacts.length });
 
         // ============================================================================
         // STEP 3: UPDATE UNITS WITH CONTACT IDS (Admin SDK)
         // ============================================================================
 
-        console.log('🏠 Updating units with real contact IDs...');
+        logger.info('[Units/RealUpdate] Updating units with real contact IDs');
         const updatedUnits = [];
 
         for (let i = 0; i < soldUnitsToUpdate.length; i++) {
@@ -155,14 +157,14 @@ const postHandler = async (request: NextRequest) => {
               contactName: contact.name
             });
 
-            console.log(`✅ REAL UPDATE: Unit "${unit.name}" → Contact "${contact.name}"`);
+            logger.info('[Units/RealUpdate] Unit linked to contact', { unitName: unit.name, contactName: contact.name });
 
           } catch (error) {
-            console.error(`❌ Error updating unit ${unit.name}:`, error);
+            logger.error('[Units/RealUpdate] Error updating unit', { unitName: unit.name, error: error instanceof Error ? error.message : String(error) });
           }
         }
 
-        console.log(`✅ [Units/RealUpdate] Complete: Updated ${updatedUnits.length} units`);
+        logger.info('[Units/RealUpdate] Complete', { updatedCount: updatedUnits.length });
 
         return NextResponse.json({
           success: true,
@@ -174,8 +176,8 @@ const postHandler = async (request: NextRequest) => {
         });
 
       } catch (error) {
-        console.error('❌ [Units/RealUpdate] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Units/RealUpdate] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

@@ -39,6 +39,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationRadicalCleanRoute');
 
 /** Firestore Timestamp type */
 type FirestoreTimestamp = Timestamp | FieldValue | Date;
@@ -101,10 +104,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/navigation/radical-clean-schema] BLOCKED: Non-super_admin attempted TOTAL schema cleanup`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[Navigation/RadicalClean] BLOCKED: Non-super_admin attempted total schema cleanup', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
 
     const duration = Date.now() - startTime;
     const errorResult: RadicalCleanupResult = {
@@ -122,9 +122,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
   }
 
   try {
-    console.log('🚨 RADICAL ENTERPRISE CLEANUP: STARTING TOTAL SCHEMA CLEANUP...');
-    console.log('💥 WARNING: This will DELETE and RECREATE all navigation documents');
-    console.log('🎯 Target: EXACTLY 10 fields per document - NO EXCEPTIONS');
+    logger.info('[Navigation/RadicalClean] Starting total schema cleanup - DELETE and RECREATE all documents');
 
     const result: RadicalCleanupResult = {
       success: false,
@@ -138,10 +136,10 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
     };
 
     // STEP 1: Get all navigation documents
-    console.log('📊 Step 1: Loading ALL navigation documents for radical cleanup...');
+    logger.info('[Navigation/RadicalClean] Step 1: Loading all navigation documents');
     const navigationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
 
-    console.log(`   Found ${navigationSnapshot.docs.length} documents to RECREATE`);
+    logger.info('[Navigation/RadicalClean] Found documents to recreate', { count: navigationSnapshot.docs.length });
     result.stats.documentsProcessed = navigationSnapshot.docs.length;
 
     if (navigationSnapshot.docs.length === 0) {
@@ -151,7 +149,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
     }
 
     // STEP 2: RADICAL CLEANUP - DELETE και RECREATE
-    console.log('💥 Step 2: RADICAL CLEANUP - DELETE and RECREATE all documents...');
+    logger.info('[Navigation/RadicalClean] Step 2: Radical cleanup - delete and recreate all documents');
 
     for (const navDoc of navigationSnapshot.docs) {
       try {
@@ -160,13 +158,11 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
         const originalContactId = currentData.contactId;
         const beforeFieldCount = Object.keys(currentData).length;
 
-        console.log(`   💥 RECREATING document ${docId}:`);
-        console.log(`      Original contactId: ${originalContactId}`);
-        console.log(`      Before: ${beforeFieldCount} fields (will be deleted)`);
+        logger.info('[Navigation/RadicalClean] Recreating document', { docId, originalContactId, beforeFieldCount });
 
         // STEP 2A: DELETE the entire document
         await deleteDoc(doc(db, COLLECTIONS.NAVIGATION, docId));
-        console.log(`   🗑️  Document ${docId} DELETED`);
+        logger.info('[Navigation/RadicalClean] Document deleted', { docId });
 
         // STEP 2B: CREATE brand new document with PURE enterprise schema
         const pureSchema: PureEnterpriseNavigationSchema = {
@@ -201,11 +197,10 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
           afterFieldCount
         });
 
-        console.log(`   ✅ Document ${docId} RECREATED: ${beforeFieldCount} → ${afterFieldCount} fields`);
-        console.log(`      New fields: [${Object.keys(pureSchema).join(', ')}]`);
+        logger.info('[Navigation/RadicalClean] Document recreated', { docId, beforeFieldCount, afterFieldCount, newFields: Object.keys(pureSchema) });
 
       } catch (error) {
-        console.error(`   ❌ FAILED to recreate document ${navDoc.id}:`, error);
+        logger.error('[Navigation/RadicalClean] Failed to recreate document', { docId: navDoc.id, error: error instanceof Error ? error.message : String(error) });
         result.stats.errors++;
         result.operations.push({
           documentId: navDoc.id,
@@ -218,7 +213,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
     }
 
     // STEP 3: FINAL VALIDATION - Check uniformity
-    console.log('✅ Step 3: FINAL VALIDATION - Checking schema uniformity...');
+    logger.info('[Navigation/RadicalClean] Step 3: Final validation - checking schema uniformity');
     const validationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
 
     let allFieldCounts: number[] = [];
@@ -240,10 +235,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
     const firstFieldSet = allFieldSets[0]?.join(',');
     const allIdentical = allFieldSets.every(fieldSet => fieldSet.join(',') === firstFieldSet);
 
-    console.log(`   📊 Field counts: [${allFieldCounts.join(', ')}]`);
-    console.log(`   🔢 Unique counts: [${uniqueFieldCounts.join(', ')}]`);
-    console.log(`   ${isUniformCount ? '✅' : '❌'} Count uniformity: ${isUniformCount ? 'ACHIEVED' : 'FAILED'}`);
-    console.log(`   ${allIdentical ? '✅' : '❌'} Field name uniformity: ${allIdentical ? 'ACHIEVED' : 'FAILED'}`);
+    logger.info('[Navigation/RadicalClean] Validation results', { fieldCounts: allFieldCounts, uniqueFieldCounts, isUniformCount, allIdentical });
 
     // STEP 4: Generate final result
     const { stats } = result;
@@ -254,12 +246,7 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
       result.message = `🎉 RADICAL CLEANUP SUCCESS: ALL ${stats.documentsRecreated} documents RECREATED with IDENTICAL schema. ` +
                       `Every document has exactly ${uniqueFieldCounts[0]} fields. TOTAL schema uniformity achieved!`;
 
-      console.log('🎉 RADICAL ENTERPRISE CLEANUP: TOTAL SUCCESS');
-      console.log(`   - Documents recreated: ${stats.documentsRecreated}`);
-      console.log(`   - Uniform field count: ${uniqueFieldCounts[0]}`);
-      console.log(`   - Field name uniformity: ✅`);
-      console.log(`   - Legacy data eliminated: 100%`);
-      console.log('   - Status: PURE ENTERPRISE SCHEMA ✅');
+      logger.info('[Navigation/RadicalClean] COMPLETED SUCCESSFULLY', { documentsRecreated: stats.documentsRecreated, uniformFieldCount: uniqueFieldCounts[0] });
 
     } else if (!isFullyCompliant) {
       result.success = false;
@@ -292,13 +279,13 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
       },
       `CRITICAL: Radical schema cleanup by ${ctx.globalRole} ${ctx.email} - DELETED ALL documents`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('[Navigation/RadicalClean] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
     });
 
     return NextResponse.json(result);
 
   } catch (error: unknown) {
-    console.error('❌ RADICAL ENTERPRISE CLEANUP FAILED:', error);
+    logger.error('[Navigation/RadicalClean] Radical enterprise cleanup failed', { error: error instanceof Error ? error.message : String(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

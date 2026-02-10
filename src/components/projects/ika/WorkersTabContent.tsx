@@ -30,6 +30,9 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { ProjectWorker } from './contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('WorkersTabContent');
 
 interface WorkersTabContentProps {
   projectId?: string;
@@ -62,7 +65,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
       await updateDoc(linkRef, { status: 'inactive' });
       refetch();
     } catch (err) {
-      console.error('[WorkersTabContent] Remove error:', err);
+      logger.error('Failed to remove worker', { error: err });
     } finally {
       setIsRemoving(null);
     }

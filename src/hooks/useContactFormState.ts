@@ -3,6 +3,9 @@ import { flushSync } from 'react-dom';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useContactFormState');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -195,14 +198,9 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle multiple photos changes
    */
   const handleMultiplePhotosChange = useCallback((photos: PhotoSlot[]) => {
-    console.log('🚨 FORM STATE: handleMultiplePhotosChange called with:', {
+    logger.info('handleMultiplePhotosChange called', {
       length: photos.length,
-      isEmpty: photos.length === 0,
-      photos: photos.map((p, i) => ({
-        index: i,
-        hasUploadUrl: !!p.uploadUrl,
-        uploadUrl: p.uploadUrl?.substring(0, 50) + '...'
-      }))
+      isEmpty: photos.length === 0
     });
 
     // 🔥 CRITICAL FIX: Use flushSync for synchronous state update
@@ -214,17 +212,15 @@ export function useContactFormState(): UseContactFormStateReturn {
           // 🔥 CRITICAL FIX: Clear photoPreview when no photos remain
           photoPreview: photos.length === 0 ? '' : prev.photoPreview
         };
-        console.log('🚨 FORM STATE: SYNCHRONOUSLY Updated formData:', {
+        logger.info('SYNCHRONOUSLY Updated formData', {
           multiplePhotosLength: newFormData.multiplePhotos.length,
-          multiplePhotosEmpty: newFormData.multiplePhotos.length === 0,
-          photoPreviewCleared: photos.length === 0 ? 'YES' : 'NO',
-          photoPreviewValue: newFormData.photoPreview
+          photoPreviewCleared: photos.length === 0
         });
         return newFormData;
       });
     });
 
-    console.log('🚨 FORM STATE: Synchronous update completed');
+    logger.info('Synchronous update completed');
   }, []);
 
   // ========================================================================
@@ -235,29 +231,23 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle uploaded photo URL update (after enterprise upload)
    */
   const handleUploadedPhotoURL = useCallback((photoURL: string) => {
-    console.log('🔥🔥🔥 FORM STATE: handleUploadedPhotoURL called!', {
-      photoURL: photoURL?.substring(0, 80) + '...',
-      fullPhotoURL: photoURL,
+    logger.info('handleUploadedPhotoURL called', {
       isEmpty: photoURL === '' || photoURL == null,
       isFirebase: photoURL?.includes('firebasestorage.googleapis.com'),
-      isBlobURL: photoURL?.startsWith('blob:'),
-      photoURLLength: photoURL?.length,
-      timestamp: new Date().toISOString()
+      photoURLLength: photoURL?.length
     });
 
     // 🔥 CRITICAL FIX: Use flushSync for synchronous state update (same as handleMultiplePhotosChange)
     flushSync(() => {
       setFormData(prev => {
-        console.log('🔥🔥🔥 FORM STATE: Before update - previous formData:', {
+        logger.info('Before update - previous formData', {
           prevPhotoFile: !!prev.photoFile,
-          prevPhotoPreview: prev.photoPreview?.substring(0, 50) + '...',
-          prevPhotoURL: prev.photoURL?.substring(0, 50) + '...',
           prevPhotoPreviewType: prev.photoPreview?.startsWith('blob:') ? 'BLOB' : 'OTHER'
         });
 
         // 🧹 CLEANUP: Revoke old blob URL if exists
         if (prev.photoPreview && prev.photoPreview.startsWith('blob:')) {
-          console.log('🧹 FORM STATE: Revoking old blob URL:', prev.photoPreview.substring(0, 50));
+          logger.info('Revoking old blob URL');
           URL.revokeObjectURL(prev.photoPreview);
         }
 
@@ -268,11 +258,8 @@ export function useContactFormState(): UseContactFormStateReturn {
           photoURL: photoURL // 🔥 FIX: Also update photoURL field for UnifiedPhotoManager validation
         };
 
-        console.log('🔥🔥🔥 FORM STATE: SYNCHRONOUSLY Updated formData:', {
+        logger.info('SYNCHRONOUSLY Updated formData', {
           newPhotoFile: !!newFormData.photoFile,
-          newPhotoPreview: newFormData.photoPreview?.substring(0, 50) + '...',
-          newPhotoURL: newFormData.photoURL?.substring(0, 50) + '...',
-          bothFieldsSet: !!newFormData.photoPreview && !!newFormData.photoURL,
           bothFieldsMatch: newFormData.photoPreview === newFormData.photoURL,
           isFirebaseURL: newFormData.photoURL?.includes('firebasestorage.googleapis.com')
         });
@@ -281,18 +268,18 @@ export function useContactFormState(): UseContactFormStateReturn {
       });
     });
 
-    console.log('✅ FORM STATE: handleUploadedPhotoURL SYNCHRONOUS update completed successfully');
+    logger.info('handleUploadedPhotoURL SYNCHRONOUS update completed successfully');
   }, []);
 
   /**
    * Handle uploaded logo URL update (after enterprise upload)
    */
   const handleUploadedLogoURL = useCallback((logoURL: string) => {
-    console.log('🔍 DEBUG: handleUploadedLogoURL called with:', { logoURL, isEmpty: logoURL === '' || logoURL == null });
+    logger.info('handleUploadedLogoURL called', { logoURL, isEmpty: logoURL === '' || logoURL == null });
 
     setFormData(prev => {
       if (logoURL === '' || logoURL == null) {
-        console.log('🧹 DEBUG: Clearing logo URL');
+        logger.info('Clearing logo URL');
         return {
           ...prev,
           logoFile: null,
@@ -301,7 +288,7 @@ export function useContactFormState(): UseContactFormStateReturn {
         };
       }
 
-      console.log('✅ DEBUG: Setting logo URL in formData:', logoURL.substring(0, 50) + '...');
+      logger.info('Setting logo URL in formData');
       return {
         ...prev,
         logoFile: null,

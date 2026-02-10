@@ -29,9 +29,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+// ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationAddCompaniesRoute');
 
 /**
  * POST - Add Companies (withAuth protected)
@@ -52,12 +55,9 @@ export const POST = withAuth(
 async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
 
-  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  // ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/navigation/add-companies] BLOCKED: Non-super_admin attempted bulk company add`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[Navigation/AddCompanies] BLOCKED: Non-super_admin attempted bulk company add', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -71,8 +71,7 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
   try {
     const { companyIds } = await request.json();
 
-    console.log('🧭 Starting navigation companies addition via API...');
-    console.log(`📝 Processing ${companyIds.length} company IDs`);
+    logger.info('[Navigation/AddCompanies] Starting navigation companies addition', { count: companyIds.length });
 
     if (!getAdminFirestore()) {
       return NextResponse.json({
@@ -96,19 +95,19 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
         const docRef = await getAdminFirestore().collection(COLLECTIONS.NAVIGATION).add(navigationEntry);
         addedNavigationIds.push(docRef.id);
 
-        console.log(`✅ Added to navigation: Company ${contactId} (Entry ID: ${docRef.id})`);
+        logger.info('[Navigation/AddCompanies] Added to navigation', { contactId, entryId: docRef.id });
 
       } catch (navigationError) {
-        console.error(`❌ Error adding company ${contactId} to navigation:`, navigationError);
-        // Συνεχίζουμε με τις επόμενες εταιρείες ακόμα κι αν μία αποτύχει
+        logger.error('[Navigation/AddCompanies] Error adding company to navigation', { contactId, error: navigationError instanceof Error ? navigationError.message : String(navigationError) });
+        // Continue with the next companies even if one fails
       }
     }
 
-    console.log(`✅ Successfully added ${addedNavigationIds.length}/${companyIds.length} companies to navigation`);
+    logger.info('[Navigation/AddCompanies] Completed', { addedCount: addedNavigationIds.length, requestedCount: companyIds.length });
 
     const duration = Date.now() - startTime;
 
-    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    // ENTERPRISE: Audit logging (non-blocking)
     const metadata = extractRequestMetadata(request);
     await logDataFix(
       ctx,
@@ -124,7 +123,7 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
       },
       `Bulk company add by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('[Navigation/AddCompanies] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
     });
 
     return NextResponse.json({
@@ -137,7 +136,7 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
     });
 
   } catch (error: unknown) {
-    console.error('❌ Error in add-companies API:', error);
+    logger.error('[Navigation/AddCompanies] Error in add-companies API', { error: error instanceof Error ? error.message : String(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

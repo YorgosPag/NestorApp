@@ -32,6 +32,9 @@ import { createFloorsNormalizationMigration } from '@/database/migrations/002_no
 import { createEnterpriseArchitectureConsolidationMigration } from '@/database/migrations/003_enterprise_database_architecture_consolidation';
 import { migration as projectCodesMigration, executeDryRun as projectCodesDryRun, executeMigration as projectCodesExecute } from '@/database/migrations/005_assign_project_codes';
 import { migration as storageBuildingMigration, dryRun as storageBuildingDryRun, execute as storageBuildingExecute } from '@/database/migrations/006_normalize_storage_building_references';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MigrationExecuteRoute');
 
 /**
  * POST /api/admin/migrations/execute
@@ -65,10 +68,7 @@ async function handleMigrationExecution(
   // 🔐 ENTERPRISE: Migrations are SYSTEM-LEVEL operations (NOT tenant-scoped)
   // Only super_admin can execute migrations (company_admin does NOT have access)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [MIGRATION] BLOCKED: Non-super_admin attempted migration execution: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted migration execution', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -79,15 +79,12 @@ async function handleMigrationExecution(
     );
   }
 
-  console.log(`🔐 [MIGRATION] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Migration request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
     const { migrationId, dryRun = false } = await request.json();
 
-    console.log(`🏢 ENTERPRISE MIGRATION SYSTEM`);
-    console.log(`📋 Migration ID: ${migrationId}`);
-    console.log(`🧪 Dry Run: ${dryRun ? 'YES' : 'NO'}`);
-    console.log(`⏰ Started at: ${new Date().toISOString()}`);
+    logger.info('ENTERPRISE MIGRATION SYSTEM', { migrationId, dryRun, startedAt: new Date().toISOString() });
 
     // Initialize enterprise migration engine
     const migrationEngine = new MigrationEngine({
@@ -156,7 +153,7 @@ async function handleMigrationExecution(
             },
             `Migration executed by ${ctx.globalRole} ${ctx.email}`
           ).catch((err: unknown) => {
-            console.error('⚠️ [MIGRATION] Audit logging failed (non-blocking):', err);
+            logger.warn('Audit logging failed (non-blocking)', { error: err });
           });
         }
 
@@ -207,7 +204,7 @@ async function handleMigrationExecution(
             },
             `Migration executed by ${ctx.globalRole} ${ctx.email}`
           ).catch((err: unknown) => {
-            console.error('⚠️ [MIGRATION] Audit logging failed (non-blocking):', err);
+            logger.warn('Audit logging failed (non-blocking)', { error: err });
           });
         }
 
@@ -270,10 +267,7 @@ async function handleMigrationExecution(
 
     // Log final status
     if (result.success) {
-      console.log(`🎉 MIGRATION COMPLETED SUCCESSFULLY`);
-      console.log(`📊 Affected Records: ${result.affectedRecords}`);
-      console.log(`⏱️ Execution Time: ${result.executionTimeMs}ms`);
-      console.log(`⏱️ Total Time: ${totalExecutionTime}ms`);
+      logger.info('MIGRATION COMPLETED SUCCESSFULLY', { affectedRecords: result.affectedRecords, executionTimeMs: result.executionTimeMs, totalTimeMs: totalExecutionTime });
 
       // 🏢 ENTERPRISE: Audit logging (non-blocking, ONLY for successful production migrations)
       if (!dryRun) {
@@ -292,13 +286,11 @@ async function handleMigrationExecution(
           },
           `Migration executed by ${ctx.globalRole} ${ctx.email}`
         ).catch((err: unknown) => {
-          console.error('⚠️ [MIGRATION] Audit logging failed (non-blocking):', err);
+          logger.warn('Audit logging failed (non-blocking)', { error: err });
         });
       }
     } else {
-      console.log(`❌ MIGRATION FAILED`);
-      console.log(`🔍 Errors: ${result.errors?.length || 0}`);
-      console.log(`⚠️ Warnings: ${result.warnings?.length || 0}`);
+      logger.error('MIGRATION FAILED', { errors: result.errors?.length || 0, warnings: result.warnings?.length || 0 });
     }
 
     return NextResponse.json(response, {
@@ -309,7 +301,7 @@ async function handleMigrationExecution(
     const totalExecutionTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    console.error(`❌ MIGRATION SYSTEM ERROR: ${errorMessage}`);
+    logger.error('MIGRATION SYSTEM ERROR', { error: errorMessage });
 
     return NextResponse.json(
       {

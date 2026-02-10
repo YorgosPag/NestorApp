@@ -4,6 +4,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FixProjectIdsRoute');
 
 /** Response type for fix-project-ids API */
 interface FixProjectIdsResponse {
@@ -61,7 +64,7 @@ export const POST = withHeavyRateLimit(
       // 🔐 ADMIN SDK: Get server-side Firestore instance
       const adminDb = getAdminFirestore();
       if (!adminDb) {
-        console.error('❌ Firebase Admin not initialized');
+        logger.error('Firebase Admin not initialized');
         return NextResponse.json({
           success: false,
           error: 'Database unavailable',
@@ -74,7 +77,7 @@ export const POST = withHeavyRateLimit(
       try {
         config = getRequiredConfig();
       } catch (configError) {
-        console.error('❌ Configuration error:', configError);
+        logger.error('Configuration error', { error: configError });
         return NextResponse.json({
           success: false,
           error: 'Misconfigured environment',
@@ -82,14 +85,12 @@ export const POST = withHeavyRateLimit(
         }, { status: 500 });
       }
 
-      console.log(`🔧 [super_admin: ${ctx.uid}] Fixing building project IDs...`);
-      console.log(`🔧 Target project ID: ${config.targetProjectId}`);
-      console.log(`🔧 Buildings to update: ${config.buildingIds.join(', ')}`);
+      logger.info('Fixing building project IDs', { superAdminUid: ctx.uid, targetProjectId: config.targetProjectId, buildingIds: config.buildingIds });
 
       const results: Array<{ buildingId: string; newProjectId: string; status: string }> = [];
 
       for (const buildingId of config.buildingIds) {
-        console.log(`🔧 Updating building ${buildingId} to project ${config.targetProjectId}`);
+        logger.info('Updating building to project', { buildingId, targetProjectId: config.targetProjectId });
 
         // Admin SDK: Use doc().update()
         await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).update({
@@ -98,7 +99,7 @@ export const POST = withHeavyRateLimit(
           updatedBy: ctx.uid,
         });
 
-        console.log(`✅ Successfully updated building ${buildingId}`);
+        logger.info('Successfully updated building', { buildingId });
         results.push({
           buildingId,
           newProjectId: config.targetProjectId,
@@ -106,7 +107,7 @@ export const POST = withHeavyRateLimit(
         });
       }
 
-      console.log('🎉 All building project IDs have been fixed!');
+      logger.info('All building project IDs have been fixed');
 
       return NextResponse.json({
         success: true,
@@ -119,7 +120,7 @@ export const POST = withHeavyRateLimit(
       });
 
     } catch (error) {
-      console.error('❌ Error fixing building project IDs:', error);
+      logger.error('Error fixing building project IDs', { error });
 
       return NextResponse.json({
         success: false,

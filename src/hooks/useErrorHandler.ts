@@ -2,6 +2,9 @@ import { useCallback } from 'react';
 import { useTranslation } from '@/i18n';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { mapErrorToI18n, mapHttpStatusToError, type DomainError } from '@/lib/error-mapping';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useErrorHandler');
 
 /**
  * Centralized error handling hook
@@ -42,9 +45,9 @@ export function useErrorHandler() {
 
     // Log for debugging in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('Domain Error:', domainError);
-      console.log('i18n Mapping:', mapping);
-      console.log('Localized Message:', message);
+      logger.error('Domain Error', { domainError });
+      logger.info('i18n Mapping', { mapping });
+      logger.info('Localized Message', { message });
     }
   }, [t, notifications]);
 

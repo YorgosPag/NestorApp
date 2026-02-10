@@ -6,10 +6,13 @@ import { security } from '../message/security-adapter';
 import { searchProperties } from './repo';
 import { formatSearchResultsForTelegram } from './format';
 import type { TelegramSendPayload } from '../telegram/types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramSearchService');
 
 export async function handleEnhancedPropertySearch(text: string, chatId: string | number, userId: string): Promise<TelegramSendPayload> {
   try {
-    console.log('🔍 Processing property search:', text);
+    logger.info('Processing property search', { text });
 
     if (!isFirebaseAvailable()) {
       return createDatabaseUnavailableResponse(chatId);
@@ -21,7 +24,7 @@ export async function handleEnhancedPropertySearch(text: string, chatId: string 
       return createNoResultsResponse(chatId);
     }
 
-    console.log(`✅ Found ${searchResult.properties.length} properties`);
+    logger.info('Found properties', { count: searchResult.properties.length });
 
     // Security checks
     if (security.isTooGeneric(searchResult.criteria)) {
@@ -50,7 +53,7 @@ export async function handleEnhancedPropertySearch(text: string, chatId: string 
     };
 
   } catch (error) {
-    console.error('❌ Error in property search:', error);
+    logger.error('Error in property search', { error });
     return createErrorResponse(chatId);
   }
 }

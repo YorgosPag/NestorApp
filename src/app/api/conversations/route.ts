@@ -30,6 +30,9 @@ import {
   type MessageDirection,
 } from '@/types/conversations';
 import { COMMUNICATION_CHANNELS, type CommunicationChannel } from '@/types/communications';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ConversationsListRoute');
 
 // ============================================================================
 // TYPES
@@ -181,7 +184,7 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   const startTime = Date.now();
   const operationId = generateRequestId();
 
-  console.log(`💬 [Conversations/List] Starting load for user: ${ctx.email} (company: ${ctx.companyId})...`);
+  logger.info('[Conversations/List] Starting load', { email: ctx.email, companyId: ctx.companyId });
 
   // Parse query parameters
   const searchParams = request.nextUrl.searchParams;
@@ -199,12 +202,12 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
 
   if (cachedData) {
     const duration = Date.now() - startTime;
-    console.log(`⚡ [Conversations/List] CACHE HIT - ${cachedData.count} conversations in ${duration}ms`);
+    logger.info('[Conversations/List] CACHE HIT', { count: cachedData.count, durationMs: duration });
     // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }
     return apiSuccess<ConversationsListResponse>({ ...cachedData, source: 'cache' });
   }
 
-  console.log('🔍 [Conversations/List] Cache miss - Fetching from Firestore...');
+  logger.info('[Conversations/List] Cache miss - Fetching from Firestore');
 
   // Build query with TENANT ISOLATION (AUTHZ Phase 2)
   let query = getAdminFirestore().collection(COLLECTIONS.CONVERSATIONS)
@@ -230,7 +233,7 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
 
   // Execute query
   const snapshot = await query.get();
-  console.log(`💬 [Conversations/List] Found ${snapshot.docs.length} conversations (total: ${totalCount})`);
+  logger.info('[Conversations/List] Found conversations', { count: snapshot.docs.length, totalCount });
 
   // Map to response type
   const conversations: ConversationListItem[] = snapshot.docs.map(doc => {
@@ -285,7 +288,7 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   cache.set(cacheKey, response, CACHE_TTL_MS);
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Conversations/List] Complete: ${conversations.length} conversations in ${duration}ms`);
+  logger.info('[Conversations/List] Complete', { conversationCount: conversations.length, durationMs: duration });
 
   // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }
   return apiSuccess<ConversationsListResponse>(response);

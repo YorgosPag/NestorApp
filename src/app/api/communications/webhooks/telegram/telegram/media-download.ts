@@ -33,6 +33,9 @@ import {
   buildIngestionFileRecordData,
   type FileSourceMetadata,
 } from '@/services/file-record';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramMediaDownload');
 
 // ============================================================================
 // TYPES
@@ -153,7 +156,7 @@ function resolveCompanyIdFromTelegramWebhook(): TenantResolutionResult {
   const companyId = process.env.TELEGRAM_COMPANY_ID;
 
   if (!companyId) {
-    console.error('❌ TELEGRAM_COMPANY_ID not configured - tenant resolution failed (fail-closed)');
+    logger.error('TELEGRAM_COMPANY_ID not configured - tenant resolution failed (fail-closed)');
     return {
       companyId: null,
       error: 'Tenant resolution failed: TELEGRAM_COMPANY_ID not configured',
@@ -204,14 +207,14 @@ async function checkExistingFileRecord(params: {
 
     if (!snapshot.empty) {
       const existingId = snapshot.docs[0].id;
-      console.log(`⏭️ Duplicate detected (tenant-scoped) - FileRecord already exists: ${existingId}`);
+      logger.info('Duplicate detected (tenant-scoped) - FileRecord already exists', { existingId });
       return existingId;
     }
 
     return null;
   } catch (error) {
     // On query failure, proceed with upload (fail-open for idempotency check only)
-    console.warn('⚠️ Idempotency check failed, proceeding with upload:', error);
+    logger.warn('Idempotency check failed, proceeding with upload', { error });
     return null;
   }
 }
@@ -279,7 +282,7 @@ async function createIngestionFileRecord(params: {
     // Write to Firestore
     await firestore.collection(COLLECTIONS.FILES).doc(fileId).set(fileRecord);
 
-    console.log(`✅ FileRecord created (PENDING/quarantine): ${fileId}`);
+    logger.info('FileRecord created (PENDING/quarantine)', { fileId });
 
     return {
       fileRecordId: fileId,
@@ -287,7 +290,7 @@ async function createIngestionFileRecord(params: {
       displayName: displayNameResult.displayName,
     };
   } catch (error) {
-    console.error('❌ Failed to create FileRecord:', error);
+    logger.error('Failed to create FileRecord', { error });
     return null;
   }
 }
@@ -303,7 +306,7 @@ async function createIngestionFileRecord(params: {
 export async function getTelegramFile(fileId: string): Promise<TelegramFile | null> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
-    console.error('❌ TELEGRAM_BOT_TOKEN not configured');
+    logger.error('TELEGRAM_BOT_TOKEN not configured');
     return null;
   }
 
@@ -314,13 +317,13 @@ export async function getTelegramFile(fileId: string): Promise<TelegramFile | nu
     const result = await response.json();
 
     if (!result.ok || !result.result) {
-      console.error('❌ Telegram getFile failed:', result.description);
+      logger.error('Telegram getFile failed', { description: result.description });
       return null;
     }
 
     return result.result as TelegramFile;
   } catch (error) {
-    console.error('❌ Error calling Telegram getFile:', error);
+    logger.error('Error calling Telegram getFile', { error });
     return null;
   }
 }
@@ -331,24 +334,24 @@ export async function getTelegramFile(fileId: string): Promise<TelegramFile | nu
 export async function downloadTelegramFile(filePath: string): Promise<Buffer | null> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
-    console.error('❌ TELEGRAM_BOT_TOKEN not configured');
+    logger.error('TELEGRAM_BOT_TOKEN not configured');
     return null;
   }
 
   try {
     const downloadUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
-    console.log(`📥 Downloading from Telegram: ${filePath}`);
+    logger.info('Downloading from Telegram', { filePath });
 
     const response = await fetch(downloadUrl);
     if (!response.ok) {
-      console.error(`❌ Download failed: ${response.status} ${response.statusText}`);
+      logger.error('Download failed', { status: response.status, statusText: response.statusText });
       return null;
     }
 
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
   } catch (error) {
-    console.error('❌ Error downloading Telegram file:', error);
+    logger.error('Error downloading Telegram file', { error });
     return null;
   }
 }
@@ -380,7 +383,7 @@ async function uploadToFirebaseStorage(
                           process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
     if (!storageBucket) {
-      console.error('❌ FIREBASE_STORAGE_BUCKET not configured');
+      logger.error('FIREBASE_STORAGE_BUCKET not configured');
       return null;
     }
 
@@ -407,10 +410,10 @@ async function uploadToFirebaseStorage(
     await file.makePublic();
     const publicUrl = `https://storage.googleapis.com/${storageBucket}/${storagePath}`;
 
-    console.log(`✅ Uploaded to Firebase Storage: ${storagePath}`);
+    logger.info('Uploaded to Firebase Storage', { storagePath });
     return publicUrl;
   } catch (error) {
-    console.error('❌ Firebase Storage upload failed:', error);
+    logger.error('Firebase Storage upload failed', { error });
     return null;
   }
 }
@@ -623,7 +626,7 @@ async function downloadAndUploadMedia(
 
   // Need to download file
   if (!mediaInfo.fileId) {
-    console.warn('⚠️ No file_id for media, skipping download');
+    logger.warn('No file_id for media, skipping download');
     return null;
   }
 
@@ -632,14 +635,14 @@ async function downloadAndUploadMedia(
   const maxAllowedSize = getMaxAllowedSize(mediaInfo.type);
   if (mediaInfo.fileSize && mediaInfo.fileSize > maxAllowedSize) {
     const fileType = mapAttachmentTypeToFileType(mediaInfo.type);
-    console.warn(`⚠️ File too large: ${mediaInfo.fileSize} bytes > ${maxAllowedSize} (type: ${fileType}), skipping`);
+    logger.warn('File too large, skipping', { fileSize: mediaInfo.fileSize, maxAllowedSize, fileType });
     return null;
   }
 
   // 1. 🏢 ENTERPRISE: Tenant resolution (FAIL-CLOSED - no fallback!)
   const tenantResult = resolveCompanyIdFromTelegramWebhook();
   if (!tenantResult.companyId) {
-    console.error(`❌ Tenant resolution failed: ${tenantResult.error}`);
+    logger.error('Tenant resolution failed', { error: tenantResult.error });
     return null; // Fail-closed: do not process without valid company
   }
   const companyId = tenantResult.companyId;
@@ -653,7 +656,7 @@ async function downloadAndUploadMedia(
     fileUniqueId: mediaInfo.fileUniqueId,
   });
   if (existingFileRecordId) {
-    console.log(`⏭️ Skipping duplicate - using existing FileRecord: ${existingFileRecordId}`);
+    logger.info('Skipping duplicate - using existing FileRecord', { fileRecordId: existingFileRecordId });
     // Return minimal attachment with existing fileRecordId
     return {
       type: mediaInfo.type,
@@ -668,14 +671,14 @@ async function downloadAndUploadMedia(
   // 3. Get file info from Telegram
   const fileInfo = await getTelegramFile(mediaInfo.fileId);
   if (!fileInfo || !fileInfo.file_path) {
-    console.error('❌ Could not get file path from Telegram');
+    logger.error('Could not get file path from Telegram');
     return null;
   }
 
   // 4. Download file from Telegram
   const buffer = await downloadTelegramFile(fileInfo.file_path);
   if (!buffer) {
-    console.error('❌ Could not download file from Telegram');
+    logger.error('Could not download file from Telegram');
     return null;
   }
 
@@ -702,7 +705,7 @@ async function downloadAndUploadMedia(
   });
 
   if (!fileRecordResult) {
-    console.error('❌ Failed to create FileRecord, aborting upload');
+    logger.error('Failed to create FileRecord, aborting upload');
     return null;
   }
 
@@ -720,7 +723,7 @@ async function downloadAndUploadMedia(
   );
 
   if (!downloadUrl) {
-    console.error('❌ Could not upload to Firebase Storage');
+    logger.error('Could not upload to Firebase Storage');
     // TODO: Mark FileRecord as failed
     return null;
   }
@@ -739,9 +742,9 @@ async function downloadAndUploadMedia(
       // status: FILE_STATUS.READY, // <-- NOT setting this!
     });
 
-    console.log(`📋 FileRecord updated (still PENDING/quarantine): ${fileRecordResult.fileRecordId}`);
+    logger.info('FileRecord updated (still PENDING/quarantine)', { fileRecordId: fileRecordResult.fileRecordId });
   } catch (updateError) {
-    console.warn('⚠️ Failed to update FileRecord with URL:', updateError);
+    logger.warn('Failed to update FileRecord with URL', { error: updateError });
   }
 
   // 9. Build MessageAttachment - 🏢 CRITICAL: Remove undefined values (Firestore rejects them)
@@ -768,8 +771,7 @@ async function downloadAndUploadMedia(
     quarantined: true, // Indicates file is in quarantine
   };
 
-  console.log(`✅ Media processed (quarantined): ${mediaInfo.type} -> ${downloadUrl}`);
-  console.log(`   FileRecord: ${fileRecordResult.fileRecordId} (PENDING)`);
+  logger.info('Media processed (quarantined)', { type: mediaInfo.type, downloadUrl, fileRecordId: fileRecordResult.fileRecordId });
   return attachment;
 }
 
@@ -790,8 +792,8 @@ export async function processTelegramMedia(
     return [];
   }
 
-  console.log(`📎 Processing ${mediaList.length} media item(s) from message ${message.message_id}`);
-  console.log(`🏢 QUARANTINE: Files will be stored with PENDING status (Inbox view)`);
+  logger.info('Processing media items from message', { count: mediaList.length, messageId: message.message_id });
+  logger.info('QUARANTINE: Files will be stored with PENDING status (Inbox view)');
 
   const attachments: MessageAttachment[] = [];
   const chatId = String(message.chat.id);
@@ -813,11 +815,11 @@ export async function processTelegramMedia(
         attachments.push(attachment);
       }
     } catch (error) {
-      console.error(`❌ Failed to process media ${media.type}:`, error);
+      logger.error('Failed to process media', { type: media.type, error });
     }
   }
 
-  console.log(`✅ Processed ${attachments.length}/${mediaList.length} media items (all quarantined)`);
+  logger.info('Processed media items (all quarantined)', { processed: attachments.length, total: mediaList.length });
   return attachments;
 }
 

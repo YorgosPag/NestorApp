@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { UnitFloorplanService, type UnitFloorplanData } from '@/services/floorplans/UnitFloorplanService';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useUnitFloorplans');
 
 interface UseUnitFloorplansReturn {
   unitFloorplan: UnitFloorplanData | null;
@@ -22,19 +25,17 @@ export function useUnitFloorplans(unitId: string | number): UseUnitFloorplansRet
       setLoading(true);
       setError(null);
       
-      console.log('🏠 Fetching unit floorplan from Firestore for unit:', unitIdStr);
+      logger.info('Fetching unit floorplan from Firestore', { unitId: unitIdStr });
       
       // Load unit floorplan
       const unitData = await UnitFloorplanService.loadFloorplan(unitIdStr);
       setUnitFloorplan(unitData);
       
-      console.log('✅ Unit floorplan loaded:', {
-        hasUnitFloorplan: !!unitData
-      });
+      logger.info('Unit floorplan loaded', { hasUnitFloorplan: !!unitData });
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Error fetching unit floorplan:', err);
+      logger.error('Error fetching unit floorplan', { error: err });
       setError(errorMessage);
     } finally {
       setLoading(false);

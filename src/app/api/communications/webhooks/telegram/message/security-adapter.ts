@@ -1,6 +1,9 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/message/security-adapter.ts
 
 import type { SearchCriteria } from '../shared/types';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramSecurityAdapter');
 
 interface SecurityCheckResult {
   forbidden: boolean;
@@ -28,9 +31,9 @@ interface SecurityModule {
 let securityModule: SecurityModule | null = null;
 try {
   securityModule = require('../bot-security') as SecurityModule;
-  console.log('✅ Security module loaded successfully.');
+  logger.info('Security module loaded successfully');
 } catch (error) {
-  console.warn('⚠️ Security module not found, using safe defaults.');
+  logger.warn('Security module not found, using safe defaults');
 }
 
 export const security = {

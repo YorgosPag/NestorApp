@@ -38,6 +38,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationFixContactIdRoute');
 
 interface ContactIdFixResult {
   success: boolean;
@@ -77,10 +80,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/navigation/fix-contact-id] BLOCKED: Non-super_admin attempted contactId fix`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[Navigation/FixContactId] BLOCKED: Non-super_admin attempted contactId fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
 
     const errorResult: ContactIdFixResult = {
       success: false,
@@ -97,7 +97,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
   }
 
   try {
-    console.log('🛠️ ENTERPRISE CRITICAL FIX: Starting contactId correction...');
+    logger.info('[Navigation/FixContactId] Starting contactId correction');
 
     const result: ContactIdFixResult = {
       success: false,
@@ -111,14 +111,14 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
     };
 
     // STEP 1: Find navigation_companies με λάθος contactId "pagonis"
-    console.log('📊 Step 1: Searching for wrong contactId entries...');
+    logger.info('[Navigation/FixContactId] Step 1: Searching for wrong contactId entries');
     const navigationQuery = query(
       collection(db, COLLECTIONS.NAVIGATION),
       where('contactId', '==', 'pagonis')
     );
     const navigationSnapshot = await getDocs(navigationQuery);
 
-    console.log(`   Found ${navigationSnapshot.docs.length} documents with contactId "pagonis"`);
+    logger.info('[Navigation/FixContactId] Found documents with wrong contactId', { count: navigationSnapshot.docs.length });
     result.stats.documentsChecked = navigationSnapshot.docs.length;
 
     if (navigationSnapshot.docs.length === 0) {
@@ -128,7 +128,7 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
     }
 
     // STEP 2: Verify that the target company exists
-    console.log('🔍 Step 2: Verifying target company exists...');
+    logger.info('[Navigation/FixContactId] Step 2: Verifying target company exists');
     const targetContactId = 'pzNUy8ksddGCtcQMqumR';
 
     const contactsQuery = query(
@@ -146,17 +146,17 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
     const targetCompany = contactsSnapshot.docs[0].data();
     const companyName = targetCompany.companyName || 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.';
 
-    console.log(`   ✅ Target company "${companyName}" verified in contacts`);
+    logger.info('[Navigation/FixContactId] Target company verified', { companyName });
 
     // STEP 3: Fix each navigation document
-    console.log('🔧 Step 3: Fixing navigation documents...');
+    logger.info('[Navigation/FixContactId] Step 3: Fixing navigation documents');
 
     for (const navDoc of navigationSnapshot.docs) {
       try {
         const docId = navDoc.id;
         const docData = navDoc.data();
 
-        console.log(`   🔄 Fixing document ${docId}: "${docData.contactId}" → "${targetContactId}"`);
+        logger.info('[Navigation/FixContactId] Fixing document', { docId, oldContactId: docData.contactId, newContactId: targetContactId });
 
         // Update the document
         await updateDoc(doc(db, COLLECTIONS.NAVIGATION, docId), {
@@ -176,10 +176,10 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
           action: 'fixed'
         });
 
-        console.log(`   ✅ Successfully fixed document ${docId}`);
+        logger.info('[Navigation/FixContactId] Successfully fixed document', { docId });
 
       } catch (error) {
-        console.error(`   ❌ Failed to fix document ${navDoc.id}:`, error);
+        logger.error('[Navigation/FixContactId] Failed to fix document', { docId: navDoc.id, error: error instanceof Error ? error.message : String(error) });
         result.stats.errors++;
         result.fixes.push({
           documentId: navDoc.id,
@@ -199,31 +199,26 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
       result.message = `Successfully fixed ${stats.documentsFixed} navigation documents. ` +
                       `Company "${companyName}" projects should now appear in navigation.`;
 
-      console.log('🎉 ENTERPRISE CRITICAL FIX COMPLETED SUCCESSFULLY:');
-      console.log(`   - Documents checked: ${stats.documentsChecked}`);
-      console.log(`   - Documents fixed: ${stats.documentsFixed}`);
-      console.log(`   - Company: ${companyName}`);
-      console.log(`   - ContactId: "pagonis" → "${targetContactId}"`);
+      logger.info('[Navigation/FixContactId] COMPLETED SUCCESSFULLY', { documentsChecked: stats.documentsChecked, documentsFixed: stats.documentsFixed, companyName, targetContactId });
 
     } else if (stats.documentsFixed > 0 && stats.errors > 0) {
       result.success = true; // Partial success
       result.message = `Partially completed fix: ${stats.documentsFixed} fixed, ${stats.errors} errors. ` +
                       `Some projects may now appear for "${companyName}".`;
 
-      console.log('⚠️ ENTERPRISE CRITICAL FIX: Partial success');
+      logger.warn('[Navigation/FixContactId] Partial success', { documentsFixed: stats.documentsFixed, errors: stats.errors });
 
     } else {
       result.success = false;
       result.message = `Failed to fix navigation documents. ${stats.errors} errors occurred.`;
 
-      console.log('❌ ENTERPRISE CRITICAL FIX: Failed');
+      logger.error('[Navigation/FixContactId] Fix failed', { errors: stats.errors });
     }
 
     // STEP 5: Log sample fixes for transparency
     if (result.fixes.length > 0) {
-      console.log('📋 Fix details:');
-      result.fixes.forEach(fix => {
-        console.log(`   - Document ${fix.documentId}: ${fix.action} (${fix.oldContactId} → ${fix.newContactId})`);
+      logger.info('[Navigation/FixContactId] Fix details', {
+        fixes: result.fixes.map(fix => ({ documentId: fix.documentId, action: fix.action, oldContactId: fix.oldContactId, newContactId: fix.newContactId }))
       });
     }
 
@@ -246,13 +241,13 @@ async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext)
       },
       `ContactId fix by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('[Navigation/FixContactId] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
     });
 
     return NextResponse.json({ ...result, executionTimeMs: duration });
 
   } catch (error: unknown) {
-    console.error('❌ ENTERPRISE CRITICAL FIX FAILED:', error);
+    logger.error('[Navigation/FixContactId] Enterprise critical fix failed', { error: error instanceof Error ? error.message : String(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

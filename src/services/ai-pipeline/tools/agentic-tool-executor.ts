@@ -20,6 +20,8 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCollectionSchemaInfo } from '@/config/firestore-schema-map';
+// ADR-173: Tool analytics
+import { getToolAnalyticsService } from '../tool-analytics-service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
@@ -186,6 +188,11 @@ export class AgenticToolExecutor {
         elapsedMs: elapsed,
         resultCount: result.count,
       });
+
+      // ADR-173: Record tool analytics (fire-and-forget)
+      getToolAnalyticsService()
+        .recordToolExecution(toolName, result.success, result.error)
+        .catch(() => { /* non-fatal */ });
 
       return result;
     } catch (error) {

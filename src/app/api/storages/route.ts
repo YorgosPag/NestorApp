@@ -5,6 +5,9 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('StoragesRoute');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Admin SDK Storages Endpoint
@@ -191,7 +194,7 @@ export const GET = withStandardRateLimit(
 );
 
 async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promise<NextResponse<StoragesResponse>> {
-  console.log(`🗄️ API: Loading storages for user ${ctx.email} (company: ${ctx.companyId})...`);
+  logger.info('Loading storages', { email: ctx.email, companyId: ctx.companyId });
   try {
     // 🏗️ ENTERPRISE: Extract projectId parameter for filtering
     const { searchParams } = new URL(request.url);
@@ -200,7 +203,7 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     // =========================================================================
     // STEP 0: Get authorized projects (TENANT ISOLATION)
     // =========================================================================
-    console.log('🔍 API: Getting authorized projects for user\'s company...');
+    logger.info('Getting authorized projects for company');
 
     const projectsSnapshot = await getAdminFirestore()
       .collection(COLLECTIONS.PROJECTS)
@@ -208,10 +211,10 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       .get();
 
     const authorizedProjectIds = new Set(projectsSnapshot.docs.map(doc => doc.id));
-    console.log(`🏗️ API: Found ${authorizedProjectIds.size} authorized projects for company ${ctx.companyId}`);
+    logger.info('Found authorized projects', { projectCount: authorizedProjectIds.size, companyId: ctx.companyId });
 
     if (authorizedProjectIds.size === 0) {
-      console.log('⚠️ API: No projects found for user\'s company - returning empty result');
+      logger.info('No projects found for company - returning empty result');
       return NextResponse.json({
         success: true,
         data: {
@@ -225,20 +228,20 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     // Validate projectId parameter if provided
     if (requestedProjectId) {
       if (!authorizedProjectIds.has(requestedProjectId)) {
-        console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized project ${requestedProjectId}`);
+        logger.warn('TENANT ISOLATION: Unauthorized project access attempt', { userId: ctx.uid, projectId: requestedProjectId });
         return NextResponse.json({
           success: false,
           error: 'Project not found or access denied',
           details: 'The requested project does not belong to your organization'
         }, { status: 403 });
       }
-      console.log(`✅ API: Project ${requestedProjectId} is authorized - proceeding with query`);
+      logger.info('Project authorized - proceeding with query', { projectId: requestedProjectId });
     }
 
     // =========================================================================
     // STEP 1: Fetch storages from Firestore (TENANT FILTERED)
     // =========================================================================
-    console.log('🔍 API: Fetching storages from Firestore with Admin SDK (tenant-filtered)...');
+    logger.info('Fetching storages from Firestore with Admin SDK (tenant-filtered)');
 
     let snapshot;
 
@@ -248,13 +251,13 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
         .collection(COLLECTIONS.STORAGE)
         .where('projectId', '==', requestedProjectId)
         .get();
-      console.log(`🔍 API: Querying storages for project ${requestedProjectId}`);
+      logger.info('Querying storages for project', { projectId: requestedProjectId });
     } else {
       // Multiple projects query - get all and filter in-memory
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
         .get();
-      console.log(`🔍 API: Querying all storages (will filter by ${authorizedProjectIds.size} authorized projects)`);
+      logger.info('Querying all storages', { authorizedProjectCount: authorizedProjectIds.size });
     }
 
     // =========================================================================
@@ -273,11 +276,11 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       ? allStorages // Already filtered by Firestore query
       : allStorages.filter(storage => storage.projectId && authorizedProjectIds.has(storage.projectId));
 
-    console.log(`✅ API: Found ${storages.length} storages for user's authorized projects`);
+    logger.info('Found storages for authorized projects', { count: storages.length });
     if (!requestedProjectId) {
       const filteredOut = allStorages.length - storages.length;
       if (filteredOut > 0) {
-        console.log(`🔒 TENANT ISOLATION: Filtered out ${filteredOut} storages from unauthorized projects`);
+        logger.info('TENANT ISOLATION: Filtered out storages from unauthorized projects', { filteredOut });
       }
     }
 
@@ -295,7 +298,7 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     });
 
   } catch (error) {
-    console.error('❌ Error fetching storages:', error);
+    logger.error('Error fetching storages', { error: error instanceof Error ? error.message : String(error) });
 
     return NextResponse.json({
       success: false,

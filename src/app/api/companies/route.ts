@@ -6,6 +6,9 @@ import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CompanyContact, ContactStatus } from '@/types/contacts';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CompaniesRoute');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Admin SDK Companies Endpoint
@@ -203,7 +206,7 @@ export const GET = withHighRateLimit(async function GET(request: NextRequest) {
 });
 
 async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promise<NextResponse<CompaniesResponse>> {
-  console.log(`🏢 API: Loading companies for user ${ctx.email} (company: ${ctx.companyId}, role: ${ctx.globalRole})...`);
+  logger.info('[Companies/List] Loading companies', { email: ctx.email, companyId: ctx.companyId, globalRole: ctx.globalRole });
 
   // =========================================================================
   // 🏢 ENTERPRISE RBAC: Unified authorization logic
@@ -219,7 +222,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
     const tenantCacheKey = isAdmin ? 'companies:admin' : `companies:tenant:${ctx.companyId}`;
     const cachedCompanies = CacheHelpers.getCachedCompanies(tenantCacheKey);
     if (cachedCompanies) {
-      console.log(`⚡ API: CACHE HIT (${tenantCacheKey}) - Returning ${cachedCompanies.length} cached companies`);
+      logger.info('[Companies/List] Cache hit', { cacheKey: tenantCacheKey, count: cachedCompanies.length });
       // 🏢 ENTERPRISE: Type-safe cache return with proper cast
       return NextResponse.json({
         companies: cachedCompanies as CompanyContact[],
@@ -228,7 +231,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       });
     }
 
-    console.log(`🔍 API: Cache miss (${tenantCacheKey}) - Fetching from Firestore with Admin SDK...`);
+    logger.info('[Companies/List] Cache miss, fetching from Firestore', { cacheKey: tenantCacheKey });
 
     // =========================================================================
     // 🏢 ENTERPRISE RBAC: Role-based company loading
@@ -240,7 +243,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       // 🔓 ADMIN MODE: Load from navigation_companies (multi-company view)
       // Same logic as /api/audit/bootstrap for admins
       // =====================================================================
-      console.log(`👑 API: Admin mode (${ctx.globalRole}) - Loading from navigation_companies...`);
+      logger.info('[Companies/List] Admin mode - loading from navigation_companies', { globalRole: ctx.globalRole });
 
       // Step 1: Get navigation company IDs
       const navigationSnapshot = await getAdminFirestore()
@@ -256,7 +259,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
         }
       });
 
-      console.log(`📍 API: Navigation company IDs: ${navigationCompanyIds.length}`);
+      logger.info('[Companies/List] Navigation company IDs loaded', { count: navigationCompanyIds.length });
 
       if (navigationCompanyIds.length === 0) {
         console.warn('⚠️ API: No navigation companies found - admin has no companies configured');

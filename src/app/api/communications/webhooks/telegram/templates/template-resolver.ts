@@ -11,6 +11,9 @@
 // Import translations directly for server-side use
 import telegramEl from '@/i18n/locales/el/telegram.json';
 import telegramEn from '@/i18n/locales/en/telegram.json';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramTemplateResolver');
 
 // ============================================================================
 // TYPES
@@ -71,7 +74,7 @@ export class TelegramTemplateResolver {
 
     if (typeof value !== 'string') {
       // 🏢 ENTERPRISE: Log missing key server-side, return safe generic message
-      console.error(`[TelegramTemplateResolver] MISSING_KEY: "${key}" locale: "${this.locale}"`);
+      logger.error('MISSING_KEY', { key, locale: this.locale });
 
       // Return generic error message from translations if available, otherwise safe default
       const genericError = this.getNestedValue('errors.generic');

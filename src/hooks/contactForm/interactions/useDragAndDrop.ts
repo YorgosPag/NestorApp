@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { useCallback } from 'react';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -22,6 +23,8 @@ export interface UseDragAndDropReturn {
   ) => void;
   handleDragOver: (e: React.DragEvent) => void;
 }
+
+const logger = createModuleLogger('useDragAndDrop');
 
 // ============================================================================
 // DRAG & DROP HOOK
@@ -51,14 +54,14 @@ export function useDragAndDrop(): UseDragAndDropReturn {
     e: React.DragEvent,
     handleFileChange: (file: File | null) => void
   ) => {
-    console.log('🎭 DRAG & DROP: File drop detected');
+    logger.info('File drop detected');
     e.preventDefault();
 
     const files = Array.from(e.dataTransfer.files);
-    console.log('🎭 DRAG & DROP: Dropped files count:', files.length);
+    logger.info('Dropped files count', { count: files.length });
 
     if (files.length > 0) {
-      console.log('🎭 DRAG & DROP: Processing first file:', files[0].name);
+      logger.info('Processing first file', { fileName: files[0].name });
       handleFileChange(files[0]);
     }
   }, []);

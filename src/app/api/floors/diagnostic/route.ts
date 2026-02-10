@@ -20,6 +20,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorsDiagnosticRoute');
 
 interface FirestoreDiagnosticResult {
   timestamp: string;
@@ -70,8 +73,8 @@ const getHandler = async (request: NextRequest) => {
   const handler = withAuth<FirestoreDiagnosticResult>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FirestoreDiagnosticResult>> => {
       const diagnosticStart = Date.now();
-      console.log('🔍 [Floors/Diagnostic] Starting Admin SDK operations...');
-      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+      logger.info('[Floors/Diagnostic] Starting Admin SDK operations');
+      logger.info('Auth context', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
       const result: FirestoreDiagnosticResult = {
         timestamp: new Date().toISOString(),
@@ -101,7 +104,7 @@ const getHandler = async (request: NextRequest) => {
         // TEST 1: ENVIRONMENT VARIABLES CHECK
         // ============================================================================
 
-        console.log('🔧 TEST 1: Environment variables...');
+        logger.info('TEST 1: Environment variables check');
         const requiredEnvVars = [
           'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
           'NEXT_PUBLIC_FIREBASE_API_KEY',
@@ -126,7 +129,7 @@ const getHandler = async (request: NextRequest) => {
         // TEST 2: BASIC CONNECTION TEST (Admin SDK)
         // ============================================================================
 
-        console.log('🔗 TEST 2: Basic Firestore connection...');
+        logger.info('TEST 2: Basic Firestore connection');
         const connectionStart = Date.now();
 
         try {
@@ -135,20 +138,20 @@ const getHandler = async (request: NextRequest) => {
 
           result.connection.status = 'CONNECTED';
           result.connection.latency = connectionLatency;
-          console.log(`   ✅ Connection successful (${connectionLatency}ms)`);
+          logger.info('Connection successful', { latencyMs: connectionLatency });
 
         } catch (error) {
           result.connection.status = 'FAILED';
           result.connection.errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
           result.summary.criticalIssues.push(`Firestore connection failed: ${result.connection.errorMessage}`);
-          console.log(`   ❌ Connection failed: ${result.connection.errorMessage}`);
+          logger.error('Connection failed', { error: result.connection.errorMessage });
         }
 
         // ============================================================================
         // TEST 3: COLLECTION ACCESSIBILITY TESTS (Admin SDK)
         // ============================================================================
 
-        console.log('📚 TEST 3: Collection accessibility...');
+        logger.info('TEST 3: Collection accessibility');
         const collectionsToTest = ['PROJECTS', 'BUILDINGS', 'FLOORS', 'CONTACTS'];
 
         for (const collectionName of collectionsToTest) {
@@ -156,7 +159,7 @@ const getHandler = async (request: NextRequest) => {
           if (!collectionPath) continue;
 
           const testStart = Date.now();
-          console.log(`   Testing ${collectionName} (${collectionPath})...`);
+          logger.info('Testing collection', { collectionName, collectionPath });
 
           try {
             const testSnapshot = await getAdminFirestore().collection(collectionPath).limit(5).get();
@@ -172,7 +175,7 @@ const getHandler = async (request: NextRequest) => {
               } : null
             };
 
-            console.log(`     ✅ ${collectionName}: ${testSnapshot.docs.length} docs (${testLatency}ms)`);
+            logger.info('Collection accessible', { collectionName, docCount: testSnapshot.docs.length, latencyMs: testLatency });
 
           } catch (error) {
             const testLatency = Date.now() - testStart;
@@ -182,7 +185,7 @@ const getHandler = async (request: NextRequest) => {
               errorMessage: error instanceof Error ? error.message : 'Unknown error'
             };
 
-            console.log(`     ❌ ${collectionName} failed (${testLatency}ms): ${result.collections[collectionName].errorMessage}`);
+            logger.error('Collection inaccessible', { collectionName, latencyMs: testLatency, error: result.collections[collectionName].errorMessage });
             result.summary.criticalIssues.push(`${collectionName} collection inaccessible`);
           }
         }
@@ -191,10 +194,10 @@ const getHandler = async (request: NextRequest) => {
         // TEST 4: SPECIFIC FLOORS DIAGNOSTICS (Admin SDK)
         // ============================================================================
 
-        console.log('🏗️ TEST 4: Specific floors diagnostics...');
+        logger.info('TEST 4: Specific floors diagnostics');
 
         // Test 4a: Normalized Floors Collection
-        console.log('   Testing normalized floors collection...');
+        logger.info('Testing normalized floors collection');
         const floorsNormalizedStart = Date.now();
 
         try {
@@ -211,7 +214,7 @@ const getHandler = async (request: NextRequest) => {
             latency: floorsLatency
           };
 
-          console.log(`     ✅ Normalized floors: ${floorsSnapshot.docs.length} docs (${floorsLatency}ms)`);
+          logger.info('Normalized floors accessible', { docCount: floorsSnapshot.docs.length, latencyMs: floorsLatency });
 
         } catch (error) {
           const floorsLatency = Date.now() - floorsNormalizedStart;
@@ -222,11 +225,11 @@ const getHandler = async (request: NextRequest) => {
             latency: floorsLatency
           };
 
-          console.log(`     ❌ Normalized floors failed (${floorsLatency}ms): ${result.specificTests.floorsNormalized.details}`);
+          logger.error('Normalized floors failed', { latencyMs: floorsLatency, details: result.specificTests.floorsNormalized.details });
         }
 
         // Test 4b: Buildings Access (needed for subcollection test)
-        console.log('   Testing buildings access...');
+        logger.info('Testing buildings access');
         const buildingsStart = Date.now();
 
         try {
@@ -243,11 +246,11 @@ const getHandler = async (request: NextRequest) => {
             latency: buildingsLatency
           };
 
-          console.log(`     ✅ Buildings access: ${buildingsSnapshot.docs.length} docs (${buildingsLatency}ms)`);
+          logger.info('Buildings access OK', { docCount: buildingsSnapshot.docs.length, latencyMs: buildingsLatency });
 
           // Test 4c: Subcollection Floors (only if buildings accessible)
           if (buildingsSnapshot.docs.length > 0) {
-            console.log('   Testing subcollection floors...');
+            logger.info('Testing subcollection floors');
             const subcollectionStart = Date.now();
 
             try {
@@ -269,7 +272,7 @@ const getHandler = async (request: NextRequest) => {
                 latency: subcollectionLatency
               };
 
-              console.log(`     ✅ Subcollection floors: ${subcollectionSnapshot.docs.length} docs (${subcollectionLatency}ms)`);
+              logger.info('Subcollection floors accessible', { docCount: subcollectionSnapshot.docs.length, latencyMs: subcollectionLatency });
 
             } catch (error) {
               const subcollectionLatency = Date.now() - subcollectionStart;
@@ -280,7 +283,7 @@ const getHandler = async (request: NextRequest) => {
                 latency: subcollectionLatency
               };
 
-              console.log(`     ❌ Subcollection floors failed (${subcollectionLatency}ms): ${result.specificTests.floorsSubcollections.details}`);
+              logger.error('Subcollection floors failed', { latencyMs: subcollectionLatency, details: result.specificTests.floorsSubcollections.details });
             }
           }
 
@@ -293,14 +296,14 @@ const getHandler = async (request: NextRequest) => {
             latency: buildingsLatency
           };
 
-          console.log(`     ❌ Buildings access failed (${buildingsLatency}ms): ${result.specificTests.buildingsAccess.details}`);
+          logger.error('Buildings access failed', { latencyMs: buildingsLatency, details: result.specificTests.buildingsAccess.details });
         }
 
         // ============================================================================
         // ANALYSIS: OVERALL HEALTH ASSESSMENT
         // ============================================================================
 
-        console.log('📊 ANALYSIS: Overall health assessment...');
+        logger.info('ANALYSIS: Overall health assessment');
 
         let healthScore = 0;
 
@@ -341,12 +344,12 @@ const getHandler = async (request: NextRequest) => {
         }
 
         const totalDiagnosticTime = Date.now() - diagnosticStart;
-        console.log(`✅ [Floors/Diagnostic] Complete: ${result.summary.overallHealth} (${totalDiagnosticTime}ms)`);
+        logger.info('[Floors/Diagnostic] Complete', { overallHealth: result.summary.overallHealth, durationMs: totalDiagnosticTime });
 
         return NextResponse.json(result);
 
       } catch (error) {
-        console.error('❌ [Floors/Diagnostic] Error:', {
+        logger.error('[Floors/Diagnostic] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

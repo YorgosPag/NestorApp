@@ -1,0 +1,47 @@
+{
+  "bank": {
+    "label": "Τράπεζα",
+    "placeholder": "Επιλέξτε τράπεζα...",
+    "groups": {
+      "systemic": "Συστημικές Τράπεζες",
+      "other": "Άλλες Τράπεζες"
+    },
+    "otherForeign": "Άλλη τράπεζα (εξωτερικού)"
+  },
+  "iban": {
+    "label": "IBAN",
+    "valid": "Έγκυρο IBAN",
+    "invalid": "Μη έγκυρο IBAN",
+    "copySuccess": "Το IBAN αντιγράφηκε"
+  },
+  "account": {
+    "primary": "Κύριος",
+    "inactive": "Ανενεργός",
+    "holder": "Δικαιούχος",
+    "type": "Τύπος Λογαριασμού",
+    "currency": "Νόμισμα",
+    "setPrimary": "Ορισμός ως κύριος",
+    "copyIban": "Αντιγραφή IBAN",
+    "edit": "Επεξεργασία",
+    "delete": "Διαγραφή",
+    "primaryAccount": "Κύριος λογαριασμός",
+    "activeAccount": "Ενεργός λογαριασμός"
+  },
+  "form": {
+    "bankName": "Όνομα Τράπεζας",
+    "bankNamePlaceholder": "π.χ. Deutsche Bank",
+    "holderName": "Δικαιούχος",
+    "holderPlaceholder": "Για κοινούς λογαριασμούς ή διαφορετικό δικαιούχο",
+    "notes": "Σημειώσεις",
+    "notesPlaceholder": "Επιπλέον πληροφορίες...",
+    "optional": "(προαιρετικό)",
+    "submit": "Αποθήκευση",
+    "add": "Προσθήκη",
+    "cancel": "Ακύρωση",
+    "validation": {
+      "ibanRequired": "Το IBAN είναι υποχρεωτικό",
+      "ibanInvalid": "Μη έγκυρο IBAN",
+      "bankNameRequired": "Το όνομα τράπεζας είναι υποχρεωτικό"
+    }
+  }
+}

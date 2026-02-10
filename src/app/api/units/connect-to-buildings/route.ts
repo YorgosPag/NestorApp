@@ -19,6 +19,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitsConnectBuildingsRoute');
 
 // Response types for type-safe withAuth
 type ConnectUnitsSuccess = {
@@ -53,14 +56,13 @@ export const POST = withHeavyRateLimit(
   const handler = withAuth<ConnectUnitsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ConnectUnitsResponse>> => {
       try {
-        console.log('🔗 [Units/ConnectToBuildings] Starting Admin SDK operations...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Units/ConnectToBuildings] Starting Admin SDK operations', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         // ============================================================================
         // STEP 1: GET BUILDINGS FOR CONFIGURED PROJECT (Admin SDK)
         // ============================================================================
 
-        console.log(`🏢 Getting buildings for project ${BUILDING_IDS.PROJECT_ID}...`);
+        logger.info('[Units/ConnectToBuildings] Getting buildings for project', { projectId: BUILDING_IDS.PROJECT_ID });
         const buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
@@ -71,7 +73,7 @@ export const POST = withHeavyRateLimit(
           name: doc.data().name || 'Unknown Building'
         }));
 
-        console.log(`Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
+        logger.info('[Units/ConnectToBuildings] Found buildings', { count: buildings.length, projectId: BUILDING_IDS.PROJECT_ID });
 
         if (buildings.length === 0) {
           return NextResponse.json({
@@ -85,7 +87,7 @@ export const POST = withHeavyRateLimit(
         // STEP 2: GET ALL UNITS (Admin SDK)
         // ============================================================================
 
-        console.log('🏠 Getting all units from database...');
+        logger.info('[Units/ConnectToBuildings] Getting all units from database');
         const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const units = unitsSnapshot.docs.map(doc => ({
@@ -95,7 +97,7 @@ export const POST = withHeavyRateLimit(
           unitName: doc.data().unitName
         }));
 
-        console.log(`Found ${units.length} total units in database`);
+        logger.info('[Units/ConnectToBuildings] Total units in database', { count: units.length });
 
         // ============================================================================
         // STEP 3: FIND UNITS TO CONNECT (Admin SDK)
@@ -113,7 +115,7 @@ export const POST = withHeavyRateLimit(
           return isLegacy || hasNoBuildingId || matchesKeyword;
         });
 
-        console.log(`Found ${unitsToConnect.length} units to potentially connect`);
+        logger.info('[Units/ConnectToBuildings] Units to potentially connect', { count: unitsToConnect.length });
 
         if (unitsToConnect.length === 0) {
           return NextResponse.json({
@@ -152,7 +154,7 @@ export const POST = withHeavyRateLimit(
           }
 
           if (targetBuilding) {
-            console.log(`Connecting unit ${unit.id} to building ${targetBuilding.id}`);
+            logger.info('[Units/ConnectToBuildings] Connecting unit to building', { unitId: unit.id, buildingId: targetBuilding.id });
 
             await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               buildingId: targetBuilding.id,
@@ -170,7 +172,7 @@ export const POST = withHeavyRateLimit(
           }
         }
 
-        console.log(`✅ [Units/ConnectToBuildings] Complete: Connected ${results.length} units`);
+        logger.info('[Units/ConnectToBuildings] Complete', { connectedCount: results.length });
 
         return NextResponse.json({
           success: true,
@@ -183,8 +185,8 @@ export const POST = withHeavyRateLimit(
         });
 
       } catch (error) {
-        console.error('❌ [Units/ConnectToBuildings] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Units/ConnectToBuildings] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

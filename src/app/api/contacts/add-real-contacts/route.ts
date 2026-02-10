@@ -4,6 +4,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AddRealContactsRoute');
 
 /** 🏢 ENTERPRISE: Discriminated union response types */
 interface AddContactsSuccessResponse {
@@ -36,9 +39,9 @@ export const POST = withStandardRateLimit(
       try {
         const { contacts } = await req.json();
 
-        console.log('🚀 Starting real contacts addition via API...');
-        console.log(`📝 Processing ${contacts.length} contacts`);
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
+        logger.info('Starting real contacts addition via API');
+        logger.info('Processing contacts', { count: contacts.length });
+        logger.info('Auth Context', { uid: ctx.uid, globalRole: ctx.globalRole || 'none', companyId: ctx.companyId });
 
     if (!getAdminFirestore()) {
       return NextResponse.json({
@@ -128,16 +131,16 @@ export const POST = withStandardRateLimit(
         const docRef = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).add(contactData);
         addedContactIds.push(docRef.id);
 
-        console.log(`✅ Added contact: ${contact.firstName || contact.companyName} (ID: ${docRef.id})`);
+        logger.info('Added contact', { name: contact.firstName || contact.companyName, id: docRef.id });
 
       } catch (contactError) {
-        console.error(`❌ Error adding contact ${i + 1}:`, contactError);
+        logger.error(`Error adding contact ${i + 1}`, { error: contactError });
         // Συνεχίζουμε με τις επόμενες επαφές ακόμα κι αν μία αποτύχει
       }
     }
 
-    console.log(`✅ Successfully added ${addedContactIds.length}/${contacts.length} contacts`);
-    console.log(`✅ Tenant isolation enforced: all contacts.companyId === ${ctx.companyId}`);
+    logger.info('Successfully added contacts', { added: addedContactIds.length, total: contacts.length });
+    logger.info('Tenant isolation enforced', { companyId: ctx.companyId });
 
     return NextResponse.json({
       success: true,
@@ -149,7 +152,7 @@ export const POST = withStandardRateLimit(
     });
 
       } catch (error) {
-        console.error('❌ Error in add-real-contacts API:', error);
+        logger.error('Error in add-real-contacts API', { error });
         return NextResponse.json({
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',

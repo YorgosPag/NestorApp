@@ -19,6 +19,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitsAdminLinkRoute');
 
 // Response types for type-safe withAuth
 type AdminLinkSuccess = {
@@ -51,8 +54,7 @@ export async function POST(request: NextRequest) {
   const handler = withSensitiveRateLimit(withAuth<AdminLinkResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AdminLinkResponse>> => {
       try {
-        console.log('🔥 [Units/AdminLink] Starting Admin SDK operations...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Units/AdminLink] Starting Admin SDK operations', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
           .map(doc => ({ id: doc.id, data: doc.data() }))
           .filter(unit => unit.data.status === 'sold');
 
-        console.log(`🔍 DEBUG: Found ${allSoldUnits.length} units with status='sold'`);
+        logger.info('[Units/AdminLink] DEBUG: Found sold units', { count: allSoldUnits.length });
 
         const soldUnitsToLink = unitsSnapshot.docs
           .map(doc => ({ id: doc.id, data: doc.data() }))
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
             return needsLinking;
           });
 
-        console.log(`Found ${soldUnitsToLink.length} units to link`);
+        logger.info('[Units/AdminLink] Units to link', { count: soldUnitsToLink.length });
 
         if (soldUnitsToLink.length === 0) {
           return NextResponse.json({
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
 
             createdContacts.push({ id: contactId, name: contactName });
           } catch (contactError) {
-            console.error(`Failed to create contact ${contactName}:`, contactError);
+            logger.error('[Units/AdminLink] Failed to create contact', { contactName, error: contactError instanceof Error ? contactError.message : String(contactError) });
           }
         }
 
@@ -161,11 +163,11 @@ export async function POST(request: NextRequest) {
 
             linked++;
           } catch (updateError) {
-            console.error(`Failed to update unit ${unit.id}:`, updateError);
+            logger.error('[Units/AdminLink] Failed to update unit', { unitId: unit.id, error: updateError instanceof Error ? updateError.message : String(updateError) });
           }
         }
 
-        console.log(`✅ [Units/AdminLink] Complete: Linked ${linked} units`);
+        logger.info('[Units/AdminLink] Complete', { linkedCount: linked });
 
         return NextResponse.json({
           success: true,
@@ -177,8 +179,8 @@ export async function POST(request: NextRequest) {
         });
 
       } catch (error) {
-        console.error('❌ [Units/AdminLink] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Units/AdminLink] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

@@ -7,6 +7,9 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { FieldValue } from 'firebase-admin/firestore';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BuildingsRoute');
 
 /** Building document with optional createdAt for sorting */
 interface BuildingDocument {
@@ -28,21 +31,21 @@ export const GET = withStandardRateLimit(
     // 🔐 ADMIN SDK: Get server-side Firestore instance
     const adminDb = getAdminFirestore();
     if (!adminDb) {
-      console.error('❌ Firebase Admin not initialized');
+      logger.error('Firebase Admin not initialized');
       throw new Error('Database unavailable: Firebase Admin not initialized');
     }
 
-    // 🏗️ ENTERPRISE: Extract projectId parameter for filtering
+    // Extract projectId parameter for filtering
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
-    // 🔒 TENANT ISOLATION: Always scope to user's company
+    // TENANT ISOLATION: Always scope to user's company
     const tenantCompanyId = ctx.companyId;
 
     if (projectId) {
-      console.log(`🏗️ [Buildings] Loading for project ${projectId} (tenant: ${tenantCompanyId})...`);
+      logger.info('[Buildings] Loading for project', { projectId, tenantCompanyId });
     } else {
-      console.log(`🏗️ [Buildings] Loading all buildings for tenant ${tenantCompanyId}...`);
+      logger.info('[Buildings] Loading all buildings for tenant', { tenantCompanyId });
     }
 
     // 🎯 ENTERPRISE: Build query with MANDATORY tenant filter + optional projectId
@@ -77,7 +80,7 @@ export const GET = withStandardRateLimit(
       return getTime(b.createdAt) - getTime(a.createdAt);
     });
 
-    console.log(`✅ [Buildings] Found ${buildings.length} buildings for tenant ${tenantCompanyId}${projectId ? ` (project: ${projectId})` : ''}`);
+    logger.info('[Buildings] Found buildings for tenant', { count: buildings.length, tenantCompanyId, projectId: projectId || undefined });
 
     // 🏢 ENTERPRISE: Return standard apiSuccess format
     return apiSuccess<BuildingsResponseData>(
@@ -130,15 +133,15 @@ export const POST = withStandardRateLimit(
     // 🔐 ADMIN SDK: Get server-side Firestore instance
     const adminDb = getAdminFirestore();
     if (!adminDb) {
-      console.error('❌ Firebase Admin not initialized');
+      logger.error('Firebase Admin not initialized');
       throw new ApiError(503, 'Database unavailable');
     }
 
     try {
-      // 🏢 ENTERPRISE: Parse request body
+      // Parse request body
       const body: BuildingCreatePayload = await request.json();
 
-      // 🔒 SECURITY: Override companyId with authenticated user's company
+      // SECURITY: Override companyId with authenticated user's company
       // This prevents cross-tenant building creation
       const sanitizedData = {
         ...body,
@@ -154,12 +157,12 @@ export const POST = withStandardRateLimit(
         Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
       );
 
-      console.log(`🏗️ [Buildings] Creating new building for tenant ${ctx.companyId}...`);
+      logger.info('[Buildings] Creating new building for tenant', { companyId: ctx.companyId });
 
       // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
       const docRef = await adminDb.collection(COLLECTIONS.BUILDINGS).add(cleanData);
 
-      console.log(`✅ [Buildings] Building created with ID: ${docRef.id}`);
+      logger.info('[Buildings] Building created', { buildingId: docRef.id });
 
       // 🏢 ENTERPRISE: Return created building with ID
       return apiSuccess<BuildingCreateResponse>(
@@ -171,7 +174,7 @@ export const POST = withStandardRateLimit(
       );
 
     } catch (error) {
-      console.error('❌ [Buildings] Error creating building:', error);
+      logger.error('[Buildings] Error creating building', { error });
       throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create building');
     }
     },
@@ -218,12 +221,12 @@ export const PATCH = withStandardRateLimit(
     // 🔐 ADMIN SDK: Get server-side Firestore instance
     const adminDb = getAdminFirestore();
     if (!adminDb) {
-      console.error('❌ Firebase Admin not initialized');
+      logger.error('Firebase Admin not initialized');
       throw new ApiError(503, 'Database unavailable');
     }
 
     try {
-      // 🏢 ENTERPRISE: Parse request body
+      // Parse request body
       const body = await request.json();
       const { buildingId, ...updates } = body as { buildingId: string } & BuildingUpdatePayload;
 
@@ -243,7 +246,7 @@ export const PATCH = withStandardRateLimit(
 
       // 🔒 TENANT ISOLATION: Check ownership (unless super_admin)
       if (!isSuperAdmin && buildingData?.companyId !== ctx.companyId) {
-        console.warn(`🚫 [Buildings] Unauthorized update attempt by ${ctx.email} on building ${buildingId}`);
+        logger.warn('[Buildings] Unauthorized update attempt', { email: ctx.email, buildingId });
         throw new ApiError(403, 'Unauthorized: Building belongs to different company');
       }
 
@@ -252,7 +255,7 @@ export const PATCH = withStandardRateLimit(
         Object.entries(updates).filter(([, value]) => value !== undefined)
       );
 
-      console.log(`🏗️ [Buildings] Updating building ${buildingId} for tenant ${ctx.companyId}...`);
+      logger.info('[Buildings] Updating building for tenant', { buildingId, companyId: ctx.companyId });
 
       // 🏗️ UPDATE: Use Admin SDK (bypasses Firestore rules)
       await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).update({
@@ -261,7 +264,7 @@ export const PATCH = withStandardRateLimit(
         updatedBy: ctx.uid,
       });
 
-      console.log(`✅ [Buildings] Building ${buildingId} updated by ${ctx.email}`);
+      logger.info('[Buildings] Building updated', { buildingId, email: ctx.email });
 
       // 📊 Audit log
       await logAuditEvent(ctx, 'data_updated', 'buildings', 'api', {
@@ -281,7 +284,7 @@ export const PATCH = withStandardRateLimit(
       );
 
     } catch (error) {
-      console.error('❌ [Buildings] Error updating building:', error);
+      logger.error('[Buildings] Error updating building', { error });
       throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update building');
     }
     },

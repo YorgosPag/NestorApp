@@ -14,6 +14,9 @@ import {
   type TelegramLocale
 } from '../templates/template-resolver';
 import { getActiveTypes } from '../catalogs/type-catalog';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramResponses');
 
 // ============================================================================
 // CONFIGURATION (from environment - NO hardcoded company values)
@@ -39,7 +42,7 @@ const getCompanyConfig = () => {
     .map(([key]) => key);
 
   if (missingKeys.length > 0) {
-    console.warn(`[TelegramBot] Missing company config: ${missingKeys.join(', ')}`);
+    logger.warn('Missing company config', { missingKeys: missingKeys.join(', ') });
   }
 
   // Return safe defaults for missing values (no real company info exposed)

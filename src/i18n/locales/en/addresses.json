@@ -1,0 +1,69 @@
+{
+  "types": {
+    "site": "Site",
+    "entrance": "Entrance",
+    "delivery": "Delivery",
+    "legal": "Legal",
+    "postal": "Postal",
+    "billing": "Billing",
+    "correspondence": "Correspondence",
+    "other": "Other"
+  },
+  "blockSides": {
+    "north": "North",
+    "south": "South",
+    "east": "East",
+    "west": "West",
+    "northeast": "Northeast",
+    "northwest": "Northwest",
+    "southeast": "Southeast",
+    "southwest": "Southwest",
+    "corner": "Corner",
+    "internal": "Internal"
+  },
+  "card": {
+    "primary": "Primary",
+    "side": "Side",
+    "edit": "Edit"
+  },
+  "list": {
+    "title": "Addresses",
+    "add": "Add Address",
+    "empty": "No addresses",
+    "addFirst": "Add the first address",
+    "total": "Total: {count} {count, plural, one {address} other {addresses}}",
+    "addButton": "Add"
+  },
+  "form": {
+    "street": "Street",
+    "number": "Number",
+    "city": "City",
+    "postalCode": "Postal Code",
+    "type": "Address Type",
+    "blockSide": "Block Side",
+    "area": "Area",
+    "country": "Country",
+    "floor": "Floor",
+    "label": "Label (Optional)",
+    "isPrimary": "Primary Address",
+    "requiredFields": "* Required fields",
+    "blockSidePlaceholder": "Select side...",
+    "blockSideNone": "None",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "validation": {
+      "streetRequired": "Street is required",
+      "cityRequired": "City is required",
+      "postalCodeRequired": "Postal code is required"
+    }
+  },
+  "map": {
+    "title": "Map",
+    "loading": "Locating addresses on map...",
+    "noLocation": "Location not found",
+    "openInMaps": "Open in Maps",
+    "error": "Could not locate addresses on map. Please verify the addresses are valid.",
+    "partialStatus": "{count} of {total} addresses"
+  }
+}

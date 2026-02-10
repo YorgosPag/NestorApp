@@ -31,6 +31,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 import type { MessageReactionsMap } from '@/types/conversations';
 import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
 import { sendTelegramReaction } from '@/app/api/communications/webhooks/telegram/telegram/client';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MessageReactionsRoute');
 
 // ============================================================================
 // TYPES
@@ -154,7 +157,7 @@ async function handleReaction(
 ): Promise<ReturnType<typeof apiSuccess<ReactionResponse>>> {
   const operationId = generateRequestId();
 
-  console.log(`😀 [Reactions] User ${ctx.email} (company: ${ctx.companyId}) reaction on ${messageId} [${operationId}]`);
+  logger.info('[Reactions] User reaction request', { email: ctx.email, companyId: ctx.companyId, messageId, operationId });
 
   // 1. Parse request
   const body: ReactionRequest = await request.json();
@@ -205,7 +208,7 @@ async function handleReaction(
   if (finalAction === 'add') {
     if (userHasReacted) {
       // Already reacted - return current state
-      console.log(`⚠️ [Reactions] User ${ctx.uid} already reacted with ${emoji} [${operationId}]`);
+      logger.info('[Reactions] User already reacted', { userId: ctx.uid, emoji, operationId });
       return apiSuccess<ReactionResponse>({
         success: true,
         reactions: currentReactions,
@@ -242,13 +245,13 @@ async function handleReaction(
       });
     }
 
-    console.log(`✅ [Reactions] Added ${emoji} by ${ctx.uid} on ${messageId} [${operationId}]`);
+    logger.info('[Reactions] Added reaction', { emoji, userId: ctx.uid, messageId, operationId });
 
   } else {
     // Remove reaction
     if (!userHasReacted) {
       // Not reacted - return current state
-      console.log(`⚠️ [Reactions] User ${ctx.uid} hasn't reacted with ${emoji} [${operationId}]`);
+      logger.info('[Reactions] User has not reacted', { userId: ctx.uid, emoji, operationId });
       return apiSuccess<ReactionResponse>({
         success: true,
         reactions: currentReactions,
@@ -277,7 +280,7 @@ async function handleReaction(
       });
     }
 
-    console.log(`✅ [Reactions] Removed ${emoji} by ${ctx.uid} on ${messageId} [${operationId}]`);
+    logger.info('[Reactions] Removed reaction', { emoji, userId: ctx.uid, messageId, operationId });
   }
 
   // 7. Get updated reactions
@@ -308,7 +311,7 @@ async function handleGetReactions(
 ): Promise<ReturnType<typeof apiSuccess<{ reactions: MessageReactionsMap; userReactions: string[] }>>> {
   const operationId = generateRequestId();
 
-  console.log(`📋 [Reactions] User ${ctx.email} getting reactions for ${messageId} [${operationId}]`);
+  logger.info('[Reactions] Getting reactions', { email: ctx.email, messageId, operationId });
 
   // 1. Get message document
   const messageRef = getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageId);
@@ -393,10 +396,7 @@ async function syncReactionToTelegram(
   const providerMessageId = messageData.providerMessageId;
 
   if (!chatId || !providerMessageId) {
-    console.warn(
-      `⚠️ [Reactions→Telegram] Missing chatId or providerMessageId for Telegram sync [${operationId}]`,
-      { chatId, providerMessageId }
-    );
+    logger.warn('[Reactions->Telegram] Missing chatId or providerMessageId for Telegram sync', { operationId, chatId, providerMessageId });
     return;
   }
 
@@ -405,35 +405,22 @@ async function syncReactionToTelegram(
     const telegramMessageId = parseInt(providerMessageId, 10);
 
     if (isNaN(telegramMessageId)) {
-      console.warn(
-        `⚠️ [Reactions→Telegram] Invalid providerMessageId: ${providerMessageId} [${operationId}]`
-      );
+      logger.warn('[Reactions->Telegram] Invalid providerMessageId', { providerMessageId, operationId });
       return;
     }
 
-    console.log(
-      `📤 [Reactions→Telegram] Syncing ${remove ? 'remove' : 'add'} reaction ${emoji} ` +
-      `to chat ${chatId} message ${telegramMessageId} [${operationId}]`
-    );
+    logger.info('[Reactions->Telegram] Syncing reaction', { action: remove ? 'remove' : 'add', emoji, chatId, telegramMessageId, operationId });
 
     const result = await sendTelegramReaction(chatId, telegramMessageId, emoji, remove);
 
     if (result.success) {
-      console.log(
-        `✅ [Reactions→Telegram] Synced ${emoji} ${remove ? 'removal' : 'addition'} successfully [${operationId}]`
-      );
+      logger.info('[Reactions->Telegram] Synced successfully', { emoji, action: remove ? 'removal' : 'addition', operationId });
     } else {
       // Log but don't throw - Telegram sync is non-blocking
-      console.warn(
-        `⚠️ [Reactions→Telegram] Sync failed: ${result.error} [${operationId}]`,
-        { chatId, telegramMessageId, emoji, remove }
-      );
+      logger.warn('[Reactions->Telegram] Sync failed', { error: result.error, operationId, chatId, telegramMessageId, emoji, remove });
     }
   } catch (error) {
     // Log but don't throw - Telegram sync is non-blocking
-    console.error(
-      `❌ [Reactions→Telegram] Unexpected error during sync [${operationId}]`,
-      error instanceof Error ? error.message : error
-    );
+    logger.error('[Reactions->Telegram] Unexpected error during sync', { operationId, error: error instanceof Error ? error.message : String(error) });
   }
 }

@@ -28,6 +28,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('SetupAdminConfigRoute');
 
 // =============================================================================
 // TYPES
@@ -64,7 +67,7 @@ interface SetupAdminConfigResponse {
 export async function POST(request: NextRequest) {
   const handler = withSensitiveRateLimit(withAuth<SetupAdminConfigResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      console.log(`🔧 [SetupAdminConfig] Request from user: ${ctx.uid}`);
+      logger.info('Request from user', { uid: ctx.uid });
 
       try {
         // Parse request body
@@ -125,33 +128,25 @@ export async function POST(request: NextRequest) {
               ],
             };
 
-            console.log(`✅ [SetupAdminConfig] Provisioned email routing rules`, {
-              domain: baseDomain,
-              companyId: ctx.companyId,
-              rulesCount: 2,
-            });
+            logger.info('Provisioned email routing rules', { domain: baseDomain, companyId: ctx.companyId, rulesCount: 2 });
           } else {
-            console.warn(`⚠️ [SetupAdminConfig] MAILGUN_DOMAIN not set - skipping email routing setup`);
+            logger.warn('MAILGUN_DOMAIN not set - skipping email routing setup');
           }
         }
 
         if (existingDoc.exists) {
           await docRef.set(settingsPayload, { merge: true });
-          console.log(`✅ [SetupAdminConfig] Updated existing settings document`);
+          logger.info('Updated existing settings document');
         } else {
           await docRef.set({
             ...settingsPayload,
             createdAt: new Date(),
             createdBy: ctx.uid,
           });
-          console.log(`✅ [SetupAdminConfig] Created new settings document`);
+          logger.info('Created new settings document');
         }
 
-        console.log(`✅ [SetupAdminConfig] Admin config saved:`, {
-          primaryAdminUid: adminConfig.primaryAdminUid,
-          adminEmail: adminConfig.adminEmail,
-          enableErrorReporting: adminConfig.enableErrorReporting,
-        });
+        logger.info('Admin config saved', { primaryAdminUid: adminConfig.primaryAdminUid, adminEmail: adminConfig.adminEmail, enableErrorReporting: adminConfig.enableErrorReporting });
 
         return NextResponse.json({
           success: true,
@@ -165,7 +160,7 @@ export async function POST(request: NextRequest) {
         });
 
       } catch (error) {
-        console.error('❌ [SetupAdminConfig] Error:', error);
+        logger.error('Error saving admin config', { error });
 
         return NextResponse.json({
           success: false,
@@ -195,7 +190,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const handler = withSensitiveRateLimit(withAuth<SetupAdminConfigResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      console.log(`🔍 [SetupAdminConfig] Check request from user: ${ctx.uid}`);
+      logger.info('Check request from user', { uid: ctx.uid });
 
       try {
         const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
@@ -232,7 +227,7 @@ export async function GET(request: NextRequest) {
         });
 
       } catch (error) {
-        console.error('❌ [SetupAdminConfig] Error checking config:', error);
+        logger.error('Error checking config', { error });
 
         return NextResponse.json({
           success: false,

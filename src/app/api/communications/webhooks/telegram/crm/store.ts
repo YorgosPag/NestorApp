@@ -44,6 +44,9 @@ import type {
   MessageDocument,
   ExternalIdentityDocument,
 } from '@/server/types/conversations.firestore';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramCRMStore');
 
 // ============================================================================
 // TYPES
@@ -102,13 +105,13 @@ async function isMessageAlreadyProcessed(
     const snapshot = await getDoc(messageDoc);
 
     if (snapshot.exists) {
-      console.log(`⏭️ Message already processed: ${docId}`);
+      logger.info('Message already processed', { docId });
       return true;
     }
     return false;
   } catch (error) {
     // If query fails, proceed with storage (fail-open for idempotency check only)
-    console.warn(`⚠️ Idempotency check failed, proceeding: ${error}`);
+    logger.warn('Idempotency check failed, proceeding', { error });
     return false;
   }
 }
@@ -151,7 +154,7 @@ async function upsertConversation(
         'audit.updatedAt': Timestamp.now(),
       });
 
-      console.log(`📝 Updated conversation: ${conversationId}`);
+      logger.info('Updated conversation', { conversationId });
       return { conversationId, isNew: false };
     } else {
       // Create new conversation - using domain constants (B3 fix)
@@ -196,11 +199,11 @@ async function upsertConversation(
       } satisfies ConversationDocument;
 
       await setDoc(convRef, newConversation);
-      console.log(`✨ Created new conversation: ${conversationId}`);
+      logger.info('Created new conversation', { conversationId });
       return { conversationId, isNew: true };
     }
   } catch (error) {
-    console.error(`❌ Conversation upsert failed: ${error}`);
+    logger.error('Conversation upsert failed', { error });
     return { conversationId: '', isNew: false };
   }
 }
@@ -256,11 +259,11 @@ async function upsertExternalIdentity(
       } satisfies ExternalIdentityDocument;
 
       await setDoc(identityRef, newIdentity);
-      console.log(`✨ Created external identity: ${identityId}`);
+      logger.info('Created external identity', { identityId });
       return identityId;
     }
   } catch (error) {
-    console.error(`❌ External identity upsert failed: ${error}`);
+    logger.error('External identity upsert failed', { error });
     return null;
   }
 }
@@ -278,13 +281,13 @@ export async function storeMessageInCRM(
   direction: Direction
 ): Promise<DocumentReference | null> {
   if (!isFirebaseAvailable()) {
-    console.warn('⚠️ Firebase not available, skipping CRM storage');
+    logger.warn('Firebase not available, skipping CRM storage');
     return null;
   }
 
   const firestoreHelpers = await getFirestoreHelpers();
   if (!firestoreHelpers) {
-    console.warn('⚠️ Firestore helpers not available for CRM storage');
+    logger.warn('Firestore helpers not available for CRM storage');
     return null;
   }
 
@@ -293,7 +296,7 @@ export async function storeMessageInCRM(
     const { collection, addDoc, doc, setDoc, Timestamp, updateDoc } = firestoreHelpers;
 
     // 🔍 DEBUG: Log incoming message data
-    console.log('📝 storeMessageInCRM called:', {
+    logger.info('storeMessageInCRM called', {
       hasText: !!message.text,
       hasCaption: !!message.caption,
       hasAttachments: !!(message.attachments && message.attachments.length > 0),
@@ -314,7 +317,7 @@ export async function storeMessageInCRM(
     );
 
     if (alreadyProcessed) {
-      console.log(`⏭️ Skipping duplicate message: ${messageId}`);
+      logger.info('Skipping duplicate message', { messageId });
       return null;
     }
 
@@ -378,17 +381,17 @@ export async function storeMessageInCRM(
     } satisfies MessageDocument;
 
     // 4. Store in canonical MESSAGES collection (SINGLE SOURCE OF TRUTH)
-    console.log('📝 Attempting to store message:', canonicalMessageDocId);
-    console.log('📝 Content:', JSON.stringify(content));
+    logger.info('Attempting to store message', { docId: canonicalMessageDocId });
+    logger.debug('Message content', { data: content });
 
     const messagesCollRef = collection(COLLECTIONS.MESSAGES);
     const messagesRef = doc(messagesCollRef, canonicalMessageDocId);
 
     try {
       await setDoc(messagesRef, canonicalMessage);
-      console.log('✅ setDoc succeeded for:', canonicalMessageDocId);
+      logger.info('setDoc succeeded', { docId: canonicalMessageDocId });
     } catch (setDocError) {
-      console.error('❌ setDoc FAILED:', setDocError);
+      logger.error('setDoc FAILED', { error: setDocError });
       throw setDocError; // Re-throw to be caught by safeDbOperation
     }
 
@@ -407,11 +410,11 @@ export async function storeMessageInCRM(
           'lastMessage.content': lastMessagePreview,
         });
       } catch (err) {
-        console.warn('⚠️ Failed to update lastMessage content:', err);
+        logger.warn('Failed to update lastMessage content', { error: err });
       }
     }
 
-    console.log(`✅ Message stored: ${canonicalMessageDocId} (conv: ${conversationId}, new: ${isNew}, attachments: ${message.attachments?.length || 0})`);
+    logger.info('Message stored', { docId: canonicalMessageDocId, conversationId, isNew, attachments: message.attachments?.length || 0 });
 
     // 🏢 ENTERPRISE: No legacy COMMUNICATIONS write (removed 2026-01-16)
     // Architecture: CONVERSATIONS (container) + MESSAGES (canonical) ONLY

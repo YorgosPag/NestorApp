@@ -24,6 +24,9 @@ import type { GlobalRole } from '@/lib/auth';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BootstrapAdminRoute');
 
 // ============================================================================
 // TYPES
@@ -93,7 +96,7 @@ const BOOTSTRAP_SECRET = process.env.BOOTSTRAP_ADMIN_SECRET || 'change-me-in-pro
  */
 async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<BootstrapAdminResponse>> {
   const startTime = Date.now();
-  console.log(`🔐 [BOOTSTRAP_ADMIN] Bootstrap request received (env: ${process.env.NODE_ENV})`);
+  logger.info('Bootstrap request received', { env: process.env.NODE_ENV });
 
   try {
     // ========================================================================
@@ -101,7 +104,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     // ========================================================================
 
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ [BOOTSTRAP_ADMIN] BLOCKED: Attempt to use bootstrap endpoint in production');
+      logger.warn('BLOCKED: Attempt to use bootstrap endpoint in production');
       return NextResponse.json(
         {
           success: false,
@@ -139,7 +142,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     }
 
     if (!isValidGlobalRole(globalRole)) {
-      console.warn(`⚠️ [BOOTSTRAP_ADMIN] Invalid globalRole: ${globalRole}`);
+      logger.warn('Invalid globalRole', { globalRole });
       return NextResponse.json(
         {
           success: false,
@@ -155,7 +158,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     // ========================================================================
 
     if (bootstrapSecret !== BOOTSTRAP_SECRET) {
-      console.warn('⚠️ [BOOTSTRAP_ADMIN] BLOCKED: Invalid bootstrap secret');
+      logger.warn('BLOCKED: Invalid bootstrap secret');
       return NextResponse.json(
         {
           success: false,
@@ -178,7 +181,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     });
 
     if (superAdminExists && globalRole === 'super_admin') {
-      console.warn('⚠️ [BOOTSTRAP_ADMIN] BLOCKED: super_admin already exists (one-time use protection)');
+      logger.warn('BLOCKED: super_admin already exists (one-time use protection)');
       return NextResponse.json(
         {
           success: false,
@@ -189,8 +192,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
       );
     }
 
-    console.log(`🔐 [BOOTSTRAP_ADMIN] Bootstrapping admin user: ${userIdentifier}`);
-    console.log(`🔐 [BOOTSTRAP_ADMIN] Company: ${companyId}, Role: ${globalRole}`);
+    logger.info('Bootstrapping admin user', { userIdentifier, companyId, globalRole });
 
     // ========================================================================
     // STEP 1: Find user in Firebase Auth (by email or UID)
@@ -205,9 +207,9 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
         // Try as email
         firebaseUser = await getAdminAuth().getUserByEmail(userIdentifier);
       }
-      console.log(`✅ [BOOTSTRAP_ADMIN] User found: ${firebaseUser.email} (${firebaseUser.uid})`);
+      logger.info('User found', { email: firebaseUser.email, uid: firebaseUser.uid });
     } catch (error) {
-      console.error(`❌ [BOOTSTRAP_ADMIN] User not found:`, error);
+      logger.error('User not found', { error });
       return NextResponse.json(
         {
           success: false,
@@ -231,9 +233,9 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
         globalRole,
         mfaEnrolled: false,
       });
-      console.log(`✅ [BOOTSTRAP_ADMIN] Custom claims set successfully`);
+      logger.info('Custom claims set successfully');
     } catch (error) {
-      console.error(`❌ [BOOTSTRAP_ADMIN] Failed to set custom claims:`, error);
+      logger.error('Failed to set custom claims', { error });
       return NextResponse.json(
         {
           success: false,
@@ -264,17 +266,17 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
 
       if (userDoc.exists) {
         await userRef.update(userData);
-        console.log(`✅ [BOOTSTRAP_ADMIN] Updated existing user document`);
+        logger.info('Updated existing user document');
       } else {
         await userRef.set({
           ...userData,
           createdAt: new Date(),
         });
-        console.log(`✅ [BOOTSTRAP_ADMIN] Created new user document`);
+        logger.info('Created new user document');
         firestoreDocCreated = true;
       }
     } catch (error) {
-      console.error(`❌ [BOOTSTRAP_ADMIN] Failed to create/update user document:`, error);
+      logger.error('Failed to create/update user document', { error });
       return NextResponse.json(
         {
           success: false,
@@ -291,11 +293,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     // ========================================================================
 
     const duration = Date.now() - startTime;
-    console.log(
-      `✅ [BOOTSTRAP_ADMIN] Complete in ${duration}ms: ` +
-      `${email} (${globalRole}) bootstrapped successfully ` +
-      `(company: ${companyId}, claims: ✅, firestore: ${firestoreDocCreated ? 'CREATED' : 'UPDATED'})`
-    );
+    logger.info('Bootstrap complete', { durationMs: duration, email, globalRole, companyId, firestoreDocCreated });
 
     return NextResponse.json({
       success: true,
@@ -312,7 +310,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
 
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(`❌ [BOOTSTRAP_ADMIN] Unexpected error (${duration}ms):`, error);
+    logger.error('Unexpected error', { durationMs: duration, error });
     return NextResponse.json(
       {
         success: false,

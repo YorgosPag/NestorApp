@@ -28,6 +28,7 @@ import {
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import type { FileRecord } from '@/types/file-record';
+import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_CATEGORIES, FILE_DOMAINS, FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
 
 // ============================================================================
@@ -63,6 +64,8 @@ export interface UseFloorplanFilesReturn {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
+
+const logger = createModuleLogger('useFloorplanFiles');
 
 const FILES_COLLECTION = 'files';
 
@@ -128,14 +131,14 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
 
     if (unprocessed.length === 0) return;
 
-    console.log(`🏭 [useFloorplanFiles] Processing ${unprocessed.length} unprocessed files via API...`);
+    logger.info(`Processing ${unprocessed.length} unprocessed files via API`);
 
     // 🏢 ENTERPRISE: Get ID token for API authentication
     let idToken: string;
     try {
       idToken = await user.getIdToken();
     } catch (tokenError) {
-      console.error('❌ [useFloorplanFiles] Failed to get ID token:', tokenError);
+      logger.error('Failed to get ID token', { error: tokenError });
       return;
     }
 
@@ -161,9 +164,9 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
         }
 
         const result = await response.json();
-        console.log(`✅ [useFloorplanFiles] Processed via API: ${file.displayName}`, result);
+        logger.info(`Processed via API: ${file.displayName}`, { result });
       } catch (err) {
-        console.warn(`⚠️ [useFloorplanFiles] Failed to process: ${file.displayName}`, err);
+        logger.warn(`Failed to process: ${file.displayName}`, { error: err });
       }
     }
   }, [autoProcess, user]);
@@ -186,12 +189,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
     setLoading(true);
     setError(null);
 
-    console.log('🔔 [useFloorplanFiles] Setting up listener:', {
-      companyId,
-      entityType,
-      entityId,
-      purposeFilter,
-    });
+    logger.info('Setting up listener', { companyId, entityType, entityId, purposeFilter });
 
     // Build query for floorplan files
     const filesRef = collection(db, FILES_COLLECTION);
@@ -222,7 +220,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
             } as FileRecord);
           });
 
-          console.log(`📡 [useFloorplanFiles] Received ${fileRecords.length} files`);
+          logger.info(`Received ${fileRecords.length} files`);
 
           // Filter by purpose if specified
           let filteredFiles = fileRecords;
@@ -245,20 +243,20 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
 
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Failed to load files';
-          console.error('❌ [useFloorplanFiles] Error processing snapshot:', errorMessage);
+          logger.error('Error processing snapshot', { error: errorMessage });
           setError(errorMessage);
           setLoading(false);
         }
       },
       (err) => {
-        console.error('❌ [useFloorplanFiles] Listener error:', err);
+        logger.error('Listener error', { error: err });
         setError(err.message);
         setLoading(false);
       }
     );
 
     return () => {
-      console.log('🔕 [useFloorplanFiles] Unsubscribing');
+      logger.info('Unsubscribing');
       unsubscribe();
     };
   }, [companyId, entityType, entityId, purposeFilter, user, authLoading, refreshTrigger, processUnprocessedFiles]);

@@ -21,6 +21,9 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationsPreferencesRoute');
 
 // 🏢 ENTERPRISE: Notification Preferences Interface
 interface NotificationPreferences {
@@ -54,14 +57,14 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
 const baseGET = async (request: NextRequest) => {
   const handler = withAuth<ApiSuccessResponse<PreferencesGetData>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      console.log(`🔔 [Notifications/Preferences] Fetching for user ${ctx.uid}...`);
+      logger.info('[Notifications/Preferences] Fetching preferences', { userId: ctx.uid });
 
       // Fetch user preferences from Firestore
       const docRef = getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
       const docSnapshot = await docRef.get();
 
       if (!docSnapshot.exists) {
-        console.log(`⚠️ [Notifications/Preferences] User document not found, returning defaults`);
+        logger.warn('[Notifications/Preferences] User document not found, returning defaults');
         return apiSuccess<PreferencesGetData>(
           { preferences: DEFAULT_PREFERENCES },
           'Returning default preferences'
@@ -71,7 +74,7 @@ const baseGET = async (request: NextRequest) => {
       const userData = docSnapshot.data();
       const preferences: NotificationPreferences = userData?.notificationPreferences || DEFAULT_PREFERENCES;
 
-      console.log(`✅ [Notifications/Preferences] Loaded successfully`);
+      logger.info('[Notifications/Preferences] Loaded successfully');
 
       // 🏢 ENTERPRISE: Return standard apiSuccess format
       return apiSuccess<PreferencesGetData>(
@@ -90,7 +93,7 @@ const basePUT = async (request: NextRequest) => {
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const body = await req.json();
 
-      console.log(`🔔 [Notifications/Preferences] Updating for user ${ctx.uid}...`);
+      logger.info('[Notifications/Preferences] Updating preferences', { userId: ctx.uid });
 
       // Update user preferences in Firestore
       const docRef = getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
@@ -102,7 +105,7 @@ const basePUT = async (request: NextRequest) => {
         { merge: true }
       );
 
-      console.log(`✅ [Notifications/Preferences] Updated successfully`);
+      logger.info('[Notifications/Preferences] Updated successfully');
 
       // 🏢 ENTERPRISE: Return standard apiSuccess format
       return apiSuccess<PreferencesUpdateData>(

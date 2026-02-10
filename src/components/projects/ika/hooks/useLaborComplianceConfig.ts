@@ -18,6 +18,9 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { LaborComplianceConfig } from '../contracts';
 import { DEFAULT_LABOR_COMPLIANCE_CONFIG } from '../contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useLaborComplianceConfig');
 
 interface UseLaborComplianceConfigReturn {
   /** Labor compliance configuration (insurance classes + contribution rates) */
@@ -66,7 +69,7 @@ export function useLaborComplianceConfig(): UseLaborComplianceConfigReturn {
         if (mounted) {
           const message = err instanceof Error ? err.message : 'Failed to load labor compliance config';
           setError(message);
-          console.error('[useLaborComplianceConfig] Error:', message);
+          logger.error('Failed to load labor compliance config', { error: message });
         }
       } finally {
         if (mounted) {

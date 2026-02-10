@@ -33,6 +33,9 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { adminConfigService } from '@/services/adminConfigService';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Severity } from '@/types/notification';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationsErrorReportRoute');
 
 // =============================================================================
 // TYPES (Protocol: ZERO any)
@@ -159,7 +162,7 @@ async function handleErrorReport(
   try {
     // Rate limiting check
     if (!checkRateLimit(ctx.uid)) {
-      console.warn(`⚠️ [ErrorReport] Rate limit exceeded for user ${ctx.uid}`);
+      logger.warn('[ErrorReport] Rate limit exceeded', { userId: ctx.uid });
       return NextResponse.json(
         { success: false, error: 'Rate limit exceeded. Please try again later.' },
         { status: 429 }
@@ -176,18 +179,15 @@ async function handleErrorReport(
       );
     }
 
-    console.log(`🔔 [ErrorReport] Processing error report from user ${ctx.uid}`);
-    console.log(`🔔 [ErrorReport] Error ID: ${body.errorId}, Severity: ${body.severity}`);
+    logger.info('[ErrorReport] Processing error report', { userId: ctx.uid, errorId: body.errorId, severity: body.severity });
 
     // Get admin UID from enterprise config
     const adminUid = await adminConfigService.getAdminUid();
 
-    console.log(`🔔 [ErrorReport] Admin UID from config: ${adminUid}`);
-    console.log(`🔔 [ErrorReport] Current user UID: ${ctx.uid}`);
-    console.log(`🔔 [ErrorReport] Are they the same? ${adminUid === ctx.uid}`);
+    logger.info('[ErrorReport] Admin UID resolution', { adminUid, currentUserId: ctx.uid, isSameUser: adminUid === ctx.uid });
 
     if (!adminUid) {
-      console.error('❌ [ErrorReport] No admin UID configured');
+      logger.error('[ErrorReport] No admin UID configured');
       return NextResponse.json(
         { success: false, error: 'Admin not configured. Please contact support.' },
         { status: 500 }
@@ -241,7 +241,7 @@ async function handleErrorReport(
       .add(notificationData);
 
     const duration = Date.now() - startTime;
-    console.log(`✅ [ErrorReport] Created notification ${docRef.id} in ${duration}ms`);
+    logger.info('[ErrorReport] Created notification', { notificationId: docRef.id, durationMs: duration });
 
     return NextResponse.json({
       success: true,
@@ -252,7 +252,7 @@ async function handleErrorReport(
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    console.error(`❌ [ErrorReport] Failed after ${duration}ms:`, errorMessage);
+    logger.error('[ErrorReport] Failed', { durationMs: duration, error: errorMessage });
 
     return NextResponse.json(
       { success: false, error: 'Failed to create error report notification' },

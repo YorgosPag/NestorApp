@@ -4,6 +4,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('CreateSampleContactsRoute');
 
 /**
  * 🏢 ENTERPRISE: Dynamic Sample Data Generator (MICROSOFT/GOOGLE CLASS)
@@ -125,7 +128,7 @@ function generateEnterpriseSecureId(): string {
   }
 
   // Fallback για environments χωρίς crypto API
-  console.warn('⚠️ Using Math.random fallback - not cryptographically secure');
+  logger.warn('Using Math.random fallback - not cryptographically secure');
   return Array.from({ length: FIRESTORE_ID_LENGTH }, () =>
     SECURE_CHARSET.charAt(Math.floor(Math.random() * SECURE_CHARSET.length))
   ).join('');
@@ -167,8 +170,8 @@ export const POST = withStandardRateLimit(
   withAuth<CreateSampleResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        console.log('📇 Creating real contacts with proper random IDs...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
+        logger.info('Creating real contacts with proper random IDs');
+        logger.info('Auth Context', { uid: ctx.uid, globalRole: ctx.globalRole || 'none', companyId: ctx.companyId });
 
     if (!getAdminFirestore()) {
       return NextResponse.json({
@@ -185,13 +188,13 @@ export const POST = withStandardRateLimit(
       environment: process.env.NODE_ENV || 'development'
     };
 
-    console.log('🏢 Using enterprise configuration:', baseConfig);
+    logger.info('Using enterprise configuration', { baseConfig });
 
     // Generate dynamic sample contacts με enterprise-grade patterns
     const sampleContacts = generateDynamicSampleContacts(baseConfig);
 
     // 🏢 ENTERPRISE: Clean up old contacts using configuration
-    console.log('🗑️ Cleaning up old test contacts...');
+    logger.info('Cleaning up old test contacts');
     const oldContactIds = (process.env.NEXT_PUBLIC_OLD_CONTACT_IDS ||
       'customer_001,customer_002,customer_003,customer_004,customer_005,customer_006,customer_007,customer_008'
     ).split(',').map(id => id.trim());
@@ -199,9 +202,9 @@ export const POST = withStandardRateLimit(
     for (const oldId of oldContactIds) {
       try {
         await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(oldId).delete();
-        console.log(`🗑️ Deleted old contact: ${oldId}`);
+        logger.info('Deleted old contact', { oldId });
       } catch (error) {
-        console.log(`⚠️ Contact ${oldId} not found (already deleted)`);
+        logger.info('Contact not found (already deleted)', { oldId });
       }
     }
 
@@ -288,15 +291,15 @@ export const POST = withStandardRateLimit(
           profession: contact.profession
         });
 
-        console.log(`✅ Created contact: ${contact.firstName} ${contact.lastName} (${contactId})`);
+        logger.info('Created contact', { name: `${contact.firstName} ${contact.lastName}`, contactId });
 
       } catch (error) {
-        console.error(`❌ Error creating contact ${i + 1}:`, error);
+        logger.error(`Error creating contact ${i + 1}`, { error });
       }
     }
 
     // 3. Update units to use new random IDs
-    console.log('🔗 Updating units with new contact IDs...');
+    logger.info('Updating units with new contact IDs');
 
     // Get all sold units that currently use old customer_xxx IDs
     const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS)
@@ -324,16 +327,16 @@ export const POST = withStandardRateLimit(
             soldTo: newContactId
           });
 
-          console.log(`🔗 Updated unit ${unitDoc.id}: ${currentSoldTo} → ${newContactId}`);
+          logger.info('Updated unit contact reference', { unitId: unitDoc.id, from: currentSoldTo, to: newContactId });
           updatedUnits++;
         } catch (error) {
-          console.error(`❌ Failed to update unit ${unitDoc.id}:`, error);
+          logger.error('Failed to update unit', { unitId: unitDoc.id, error });
         }
       }
     }
 
-    console.log(`✅ Updated ${updatedUnits} units with new contact IDs`);
-    console.log(`✅ Successfully created ${createdContacts.length} real contacts with proper random IDs!`);
+    logger.info('Updated units with new contact IDs', { updatedUnits });
+    logger.info('Successfully created contacts with proper random IDs', { count: createdContacts.length });
 
     return NextResponse.json({
       success: true,
@@ -345,7 +348,7 @@ export const POST = withStandardRateLimit(
     });
 
       } catch (error) {
-        console.error('❌ Error creating sample contacts:', error);
+        logger.error('Error creating sample contacts', { error });
         return NextResponse.json({
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',

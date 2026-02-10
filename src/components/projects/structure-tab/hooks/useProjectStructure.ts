@@ -71,7 +71,7 @@ export function useProjectStructure(
 
       const result = await apiClient.get<ProjectStructureApiResponse>(`/api/projects/structure/${projectId}`);
 
-      console.log(`✅ [LazyLoad] Project structure loaded successfully:`, result?.summary);
+      logger.info('Project structure loaded', { summary: result?.summary });
 
       if (mountedRef.current) {
         setStructure(result?.structure || null);
@@ -80,7 +80,7 @@ export function useProjectStructure(
       }
 
     } catch (e) {
-      console.error("❌ [LazyLoad] Failed to fetch project structure:", e);
+      logger.error('Failed to fetch project structure', { error: e });
       // 🌐 i18n: Error message converted to i18n key - 2026-01-18
       const errorMessage = e instanceof Error ? e.message : "projects.structure.errors.loadFailed";
       if (mountedRef.current) {

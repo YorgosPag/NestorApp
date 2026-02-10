@@ -18,6 +18,9 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EfkaDeclarationData, EfkaDeclarationStatus } from '../contracts';
 import { createDefaultEfkaDeclaration } from '../contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useEfkaDeclaration');
 
 interface UseEfkaDeclarationReturn {
   declaration: EfkaDeclarationData | null;
@@ -106,7 +109,7 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
         if (mounted) {
           const message = err instanceof Error ? err.message : 'Failed to load EFKA declaration';
           setError(message);
-          console.error('[useEfkaDeclaration] Error:', message);
+          logger.error('Failed to load EFKA declaration', { error: message });
         }
       } finally {
         if (mounted) {
@@ -148,7 +151,7 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save declaration';
       setError(message);
-      console.error('[useEfkaDeclaration] Save error:', message);
+      logger.error('Failed to save EFKA declaration', { error: message });
       return false;
     }
   }, [projectId, declaration]);
@@ -176,7 +179,7 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to initialize declaration';
       setError(message);
-      console.error('[useEfkaDeclaration] Init error:', message);
+      logger.error('Failed to initialize EFKA declaration', { error: message });
       return false;
     }
   }, [projectId, declaration]);

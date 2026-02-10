@@ -20,6 +20,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('UnitsFinalSolutionRoute');
 
 // Response types for type-safe withAuth
 type FinalSolutionSuccess = {
@@ -55,14 +58,13 @@ export async function POST(request: NextRequest) {
   const handler = withSensitiveRateLimit(withAuth<FinalSolutionResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FinalSolutionResponse>> => {
       try {
-        console.log('🎯 [Units/FinalSolution] Starting Admin SDK operations...');
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Units/FinalSolution] Starting Admin SDK operations', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         // ============================================================================
         // STEP 1: FIND SOLD UNITS WITHOUT CUSTOMERS (Admin SDK)
         // ============================================================================
 
-        console.log('🔍 Finding sold units without customers...');
+        logger.info('[Units/FinalSolution] Finding sold units without customers');
         const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         // 🏢 ENTERPRISE: Explicit type annotation to avoid implicit any[]
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        console.log(`📊 Found ${soldUnitsWithoutCustomers.length} sold units without customers`);
+        logger.info('[Units/FinalSolution] Found sold units without customers', { count: soldUnitsWithoutCustomers.length });
 
         if (soldUnitsWithoutCustomers.length === 0) {
           return NextResponse.json({
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
         // STEP 2: GET OR CREATE CONTACTS (Admin SDK)
         // ============================================================================
 
-        console.log('👥 Getting/creating contacts...');
+        logger.info('[Units/FinalSolution] Getting/creating contacts');
         const contactsSnapshot = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).get();
 
         let availableContacts: Array<{ id: string; name: string }> = [];
@@ -110,11 +112,11 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        console.log(`👥 Found ${availableContacts.length} existing contacts`);
+        logger.info('[Units/FinalSolution] Found existing contacts', { count: availableContacts.length });
 
         // If no contacts exist, use fallback names (contacts should be created via /api/contacts/create-sample first)
         if (availableContacts.length === 0) {
-          console.log('⚠️ No contacts found - contacts should be created via /api/contacts/create-sample first');
+          logger.warn('[Units/FinalSolution] No contacts found - contacts should be created via /api/contacts/create-sample first');
 
           // 🏢 ENTERPRISE: Generate fallback IDs from environment configuration
           const fallbackNames = (
@@ -127,14 +129,14 @@ export async function POST(request: NextRequest) {
             name: fallbackNames[index] || `Customer ${index + 1}`
           }));
 
-          console.log(`📝 Using ${availableContacts.length} fallback contact IDs`);
+          logger.info('[Units/FinalSolution] Using fallback contact IDs', { count: availableContacts.length });
         }
 
         // ============================================================================
         // STEP 3: UPDATE UNITS WITH CONTACT IDS (Admin SDK)
         // ============================================================================
 
-        console.log('🔄 Updating units with customer IDs...');
+        logger.info('[Units/FinalSolution] Updating units with customer IDs');
         const successfulUpdates = [];
         const failedUpdates = [];
 
@@ -154,10 +156,10 @@ export async function POST(request: NextRequest) {
               contactName: contact.name
             });
 
-            console.log(`✅ Unit "${unit.name}" (${unit.id}) → Contact "${contact.name}" (${contact.id})`);
+            logger.info('[Units/FinalSolution] Unit linked to contact', { unitName: unit.name, unitId: unit.id, contactName: contact.name, contactId: contact.id });
 
           } catch (error) {
-            console.error(`❌ Failed to update unit ${unit.name}:`, error);
+            logger.error('[Units/FinalSolution] Failed to update unit', { unitName: unit.name, error: error instanceof Error ? error.message : String(error) });
             failedUpdates.push({
               unitId: unit.id,
               unitName: unit.name,
@@ -166,7 +168,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        console.log(`✅ [Units/FinalSolution] Complete: ${successfulUpdates.length} successful, ${failedUpdates.length} failed`);
+        logger.info('[Units/FinalSolution] Complete', { successCount: successfulUpdates.length, failCount: failedUpdates.length });
 
         return NextResponse.json({
           success: true,
@@ -178,8 +180,8 @@ export async function POST(request: NextRequest) {
         });
 
       } catch (error) {
-        console.error('❌ [Units/FinalSolution] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Units/FinalSolution] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

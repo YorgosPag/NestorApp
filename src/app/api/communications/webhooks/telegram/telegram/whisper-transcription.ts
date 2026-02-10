@@ -15,6 +15,9 @@
 
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { getTelegramFile, downloadTelegramFile } from './media-download';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('WhisperTranscription');
 
 // ============================================================================
 // TYPES
@@ -46,25 +49,25 @@ export async function transcribeVoiceMessage(
 ): Promise<TranscriptionResult> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
-    console.error('🎤 [Whisper] OPENAI_API_KEY not configured');
+    logger.error('[Whisper] OPENAI_API_KEY not configured');
     return { success: false, text: '', error: 'OPENAI_API_KEY not configured' };
   }
 
   // 1. Get file info from Telegram
   const fileInfo = await getTelegramFile(fileId);
   if (!fileInfo || !fileInfo.file_path) {
-    console.error('🎤 [Whisper] Could not get file path from Telegram');
+    logger.error('[Whisper] Could not get file path from Telegram');
     return { success: false, text: '', error: 'Telegram getFile failed' };
   }
 
   // 2. Download .ogg buffer from Telegram
   const buffer = await downloadTelegramFile(fileInfo.file_path);
   if (!buffer) {
-    console.error('🎤 [Whisper] Could not download voice file');
+    logger.error('[Whisper] Could not download voice file');
     return { success: false, text: '', error: 'Voice file download failed' };
   }
 
-  console.log(`🎤 [Whisper] Downloaded voice file: ${buffer.length} bytes`);
+  logger.info('[Whisper] Downloaded voice file', { sizeBytes: buffer.length });
 
   // 3. Build multipart/form-data for Whisper API
   const { WHISPER_MODEL, WHISPER_TIMEOUT_MS, WHISPER_DEFAULT_LANGUAGE } =
@@ -96,7 +99,7 @@ export async function transcribeVoiceMessage(
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`🎤 [Whisper] API error ${response.status}: ${errorBody}`);
+      logger.error('[Whisper] API error', { status: response.status, body: errorBody });
       return { success: false, text: '', error: `Whisper API ${response.status}` };
     }
 
@@ -104,16 +107,16 @@ export async function transcribeVoiceMessage(
     const transcribedText = result.text?.trim() ?? '';
 
     if (!transcribedText) {
-      console.warn('🎤 [Whisper] Empty transcription returned');
+      logger.warn('[Whisper] Empty transcription returned');
       return { success: false, text: '', error: 'Empty transcription' };
     }
 
-    console.log(`🎤 [Whisper] Transcribed (${transcribedText.length} chars): "${transcribedText.substring(0, 80)}..."`);
+    logger.info('[Whisper] Transcribed', { chars: transcribedText.length, preview: transcribedText.substring(0, 80) });
     return { success: true, text: transcribedText };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const isTimeout = message.includes('abort');
-    console.error(`🎤 [Whisper] ${isTimeout ? 'Timeout' : 'Error'}: ${message}`);
+    logger.error(`[Whisper] ${isTimeout ? 'Timeout' : 'Error'}`, { error: message });
     return {
       success: false,
       text: '',

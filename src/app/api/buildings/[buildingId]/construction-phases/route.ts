@@ -10,6 +10,9 @@ import type {
   ConstructionPhase,
   ConstructionTask,
 } from '@/types/building/construction';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ConstructionPhasesRoute');
 
 // ─── Response Types ──────────────────────────────────────────────────────
 
@@ -131,7 +134,7 @@ export async function GET(
         };
       });
 
-      console.log(`✅ [Construction] Loaded ${phases.length} phases, ${tasks.length} tasks for building ${buildingId}`);
+      logger.info('[Construction] Loaded phases and tasks for building', { phasesCount: phases.length, tasksCount: tasks.length, buildingId });
 
       return NextResponse.json({
         success: true,
@@ -234,7 +237,7 @@ export async function POST(
 
       const docRef = await adminDb.collection(collection).add(docData);
 
-      console.log(`✅ [Construction] Created ${type} ${docRef.id} (${code}) for building ${buildingId}`);
+      logger.info('[Construction] Created entity for building', { type, id: docRef.id, code, buildingId });
 
       await logAuditEvent(ctx, 'data_created', buildingId, 'building', {
         newValue: {
@@ -332,7 +335,7 @@ export async function PATCH(
 
       await docRef.update(cleanUpdates);
 
-      console.log(`✅ [Construction] Updated ${type} ${id} for building ${buildingId}: ${Object.keys(cleanUpdates).join(', ')}`);
+      logger.info('[Construction] Updated entity for building', { type, id, buildingId, fields: Object.keys(cleanUpdates) });
 
       await logAuditEvent(ctx, 'data_updated', buildingId, 'building', {
         newValue: {
@@ -418,13 +421,13 @@ export async function DELETE(
           childTasks.docs.forEach((taskDoc) => batch.delete(taskDoc.ref));
           await batch.commit();
           cascadedTasks = childTasks.size;
-          console.log(`🗑️ [Construction] Cascade-deleted ${cascadedTasks} tasks for phase ${id}`);
+          logger.info('[Construction] Cascade-deleted tasks for phase', { cascadedTasks, phaseId: id });
         }
       }
 
       await docRef.delete();
 
-      console.log(`✅ [Construction] Deleted ${type} ${id} from building ${buildingId}`);
+      logger.info('[Construction] Deleted entity from building', { type, id, buildingId });
 
       await logAuditEvent(ctx, 'data_deleted', buildingId, 'building', {
         newValue: {

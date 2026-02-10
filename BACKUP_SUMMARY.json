@@ -1,69 +1,91 @@
 {
-  "backupId": "backup-2026-02-09-multi-intent-pipeline-adr131",
-  "timestamp": "2026-02-09T23:30:00+02:00",
-  "category": "FEATURE",
-  "shortDescription": "Multi-intent pipeline — one message, multiple intents, one unified reply (ADR-131)",
-  "problem": "Ένας πελάτης μπορεί να στείλει email με πολλαπλά αιτήματα (π.χ. ραντεβού ΚΑΙ αναζήτηση ακινήτου), αλλά η pipeline αναγνώριζε μόνο ένα intent και αγνοούσε τα υπόλοιπα.",
-  "cause": "Η αρχική αρχιτεκτονή υποστήριζε μόνο single-intent detection: ένα OpenAI schema, ένας router, ένα module ανά μήνυμα.",
+  "backupId": "backup-2026-02-11-services-logger-migration",
+  "timestamp": "2026-02-11T03:00:00+02:00",
+  "category": "REFACTOR",
+  "shortDescription": "Migrate console.log/warn/error to enterprise Logger in 34 service files (~620 calls)",
+  "problem": "34 service files across src/services/ used raw console.log/warn/error for logging instead of the enterprise createModuleLogger pattern from @/lib/telemetry.",
+  "cause": "These services were written before the centralized telemetry system was established, or were not migrated during previous cleanup passes covering hooks and components.",
   "filesChanged": [
-    "src/config/ai-analysis-config.ts — AI_MULTI_INTENT_SCHEMA + MULTI_INTENT_SYSTEM prompt",
-    "src/schemas/ai-analysis.ts — MultiIntentAnalysisSchema + DetectedIntentSchema + isMultiIntentAnalysis()",
-    "src/types/ai-pipeline.ts — DetectedIntent, detectedIntents[], multiLookupData, contributingModules",
-    "src/services/ai-analysis/providers/OpenAIAnalysisProvider.ts — Uses AI_MULTI_INTENT_SCHEMA",
-    "src/services/ai-pipeline/pipeline-orchestrator.ts — Multi-module flow (6 new methods)",
-    "src/services/ai-pipeline/module-registry.ts — getModulesForIntents()",
-    "src/services/ai-pipeline/intent-router.ts — routeMultiple() + MultiRoutingResult",
-    "src/config/ai-pipeline-config.ts — SECONDARY_INTENT_THRESHOLD: 50",
-    "src/services/ai-pipeline/shared/ai-reply-generator.ts — generateCompositeReply()",
-    "src/components/admin/operator-inbox/ProposalReviewCard.tsx — Multi-intent UI badges",
-    "src/i18n/locales/el/admin.json — multiIntent.* keys",
-    "src/i18n/locales/en/admin.json — multiIntent.* keys",
-    "docs/centralized-systems/reference/adrs/ADR-131-multi-intent-pipeline.md (NEW)",
-    "docs/centralized-systems/reference/adr-index.md — Added ADR-131",
-    "CLAUDE.md — Updated available ADR IDs"
+    "src/services/buildings.service.ts",
+    "src/services/navigation/ContextualNavigationService.ts",
+    "src/services/upload/utils/file-display-name.ts",
+    "src/services/calendar/CalendarEventService.ts",
+    "src/services/real-estate-monitor/AddressResolver.ts",
+    "src/services/navigation-companies.service.ts",
+    "src/services/projects/repositories/FirestoreProjectsRepository.ts",
+    "src/services/units.service.ts",
+    "src/services/projects.service.ts",
+    "src/services/floorplans/FloorplanProcessor.ts",
+    "src/services/projects/repositories/projects-repository.ts",
+    "src/services/projects-client.service.ts",
+    "src/services/contacts/DuplicatePreventionService.ts",
+    "src/services/opportunities-client.service.ts",
+    "src/services/communications-client.service.ts",
+    "src/services/enterprise-id-migration.service.ts",
+    "src/services/floorplans/FloorplanService.ts",
+    "src/services/upload/UnifiedUploadService.ts",
+    "src/services/upload/processors/CADProcessor.ts",
+    "src/services/entity-linking/utils/cache.ts",
+    "src/services/entity-linking/utils/audit.ts",
+    "src/services/entity-linking/utils/optimistic.ts",
+    "src/services/entity-linking/utils/retry.ts",
+    "src/services/realtime/hooks/useRealtimeUnits.ts",
+    "src/services/layer/EnterpriseLayerStyleService.ts",
+    "src/services/polygon/EnterprisePolygonStyleService.ts",
+    "src/services/contact-relationships/adapters/RelationshipCacheAdapter.ts",
+    "src/services/company/EnterpriseCompanySettingsService.ts",
+    "src/services/user-notification-settings/UserNotificationSettingsService.ts",
+    "src/services/obligations/InMemoryObligationsRepository.ts",
+    "src/services/adminConfigService.ts",
+    "src/services/notification/EnterpriseNotificationService.ts",
+    "src/services/contact-relationships/bulk/BulkRelationshipService.ts",
+    "src/services/realtime/RealtimeService.ts (220 console calls - largest file)"
   ],
   "solution": {
-    "phase1_ai_schema": "New AI_MULTI_INTENT_SCHEMA with primaryIntent + secondaryIntents[]. Zod MultiIntentAnalysisSchema. DetectedIntent type. mapAIResultToUnderstanding handles both multi and legacy.",
-    "phase2_router": "IntentRouter.routeMultiple() returns MultiRoutingResult with primary + secondary routes. ModuleRegistry.getModulesForIntents() for deduplicated multi-lookup. SECONDARY_INTENT_THRESHOLD: 50.",
-    "phase3_orchestrator": "6 new methods: stepMultiLookup, stepMultiPropose, composeProposal, stepApproveMulti, stepMultiExecute, resolveModulesForExecution. Each module gets its own lookup data via multiLookupData[moduleId].",
-    "phase4_composite_reply": "generateCompositeReply() merges N partial replies into 1 unified email. Single-reply shortcut: zero overhead. Operator Inbox shows multi-intent badges with primary/secondary labels."
+    "phase1_import": "Added import { createModuleLogger } from '@/lib/telemetry' in all 34 files.",
+    "phase2_logger": "Added const logger = createModuleLogger('ServiceName') at module level. Special names used: auditModuleLogger (audit.ts to avoid class conflict), notifLogger (EnterpriseNotificationService.ts).",
+    "phase3_replace": "Replaced console.log with logger.info/debug, console.warn with logger.warn, console.error with logger.error.",
+    "phase4_metadata": "Converted positional arguments to structured metadata objects.",
+    "phase5_cleanup": "Removed emoji prefixes and [ServiceName] brackets from log messages. Verbose realtime/cache data mapped to logger.debug."
   },
   "testing": {
-    "typescript": "npx tsc --noEmit → 0 errors (after each phase)",
+    "typescript": "npx tsc --noEmit: 0 errors in any migrated service file (pre-existing errors in unrelated files only)",
     "preCommit": "Pre-commit checks passed",
-    "deployment": "Pushed to main, Vercel auto-deployment triggered"
+    "deployment": "Pushed to main for Vercel auto-deployment"
   },
   "notes": [
-    "15 files changed: 817 insertions, 113 deletions",
-    "1 new file: ADR-131-multi-intent-pipeline.md",
-    "Full backward compatibility: single-intent messages follow identical flow",
-    "Primary module failure = fatal, secondary module failure = logged and skipped",
-    "Thresholds: SECONDARY_INTENT 50, AUTO_APPROVE 90, MANUAL_TRIAGE 60, QUARANTINE 30",
-    "ADR-131 documents complete architecture in 9 subsections"
+    "34 service files modified, 566 insertions, 489 deletions",
+    "~620 console calls replaced with structured logger calls",
+    "RealtimeService.ts was the largest: 220 console calls, all mapped to logger.debug for verbose realtime data",
+    "audit.ts logToConsole routing mechanism preserved but routed through auditModuleLogger",
+    "Cache hit/miss/set operations mapped to logger.debug to reduce noise",
+    "Combined with previous hooks (26 files) + components (162 files) = 222 total files migrated to enterprise Logger",
+    "No any type used - all metadata objects are properly typed"
   ],
   "contributors": {
-    "user": "Γιώργος Παγώνης",
+    "user": "Georgios Pagonis",
     "assistant": "Claude Opus 4.6 (Anthropic)",
-    "sessionDate": "2026-02-09"
+    "sessionDate": "2026-02-11"
   },
   "relatedBackups": [
-    "backup-2026-02-09-personas-ai-pipeline-property-search"
+    "backup-2026-02-11-components-logger-migration",
+    "backup-2026-02-10-hooks-logger-migration"
   ],
   "commits": [
     {
-      "hash": "038df8cc",
-      "message": "feat: multi-intent pipeline — one message, multiple intents, one unified reply (ADR-131)",
-      "files": 15,
-      "insertions": 817,
-      "deletions": 113
+      "hash": "88fa5ed8",
+      "message": "refactor: migrate 34 service files from console.log to enterprise Logger",
+      "files": 34,
+      "insertions": 566,
+      "deletions": 489
     }
   ],
   "statistics": {
-    "filesChanged": 15,
-    "totalInsertions": 817,
-    "totalDeletions": 113,
-    "netLinesAdded": 704,
-    "newFiles": 1,
-    "commitsInBackup": 1
+    "filesChanged": 34,
+    "totalInsertions": 566,
+    "totalDeletions": 489,
+    "newFiles": 0,
+    "commitsInBackup": 1,
+    "consoleCallsReplaced": "~620"
   }
 }

@@ -20,6 +20,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('MessagesDeleteRoute');
 
 // ============================================================================
 // TYPES
@@ -82,7 +85,7 @@ async function handleDeleteMessages(
   const startTime = Date.now();
   const operationId = generateRequestId();
 
-  console.log(`🗑️ [Messages/Delete] User ${ctx.email} (company: ${ctx.companyId}) deleting messages`);
+  logger.info('[Messages/Delete] User deleting messages', { email: ctx.email, companyId: ctx.companyId });
 
   // Parse request body
   const body: DeleteMessagesRequest = await request.json();
@@ -123,7 +126,7 @@ async function handleDeleteMessages(
 
       // CRITICAL: Tenant isolation check
       if (messageData?.companyId !== ctx.companyId) {
-        console.warn(`⚠️ [Messages/Delete] Unauthorized delete attempt:`, {
+        logger.warn('[Messages/Delete] Unauthorized delete attempt', {
           userId: ctx.uid,
           userCompany: ctx.companyId,
           messageId,
@@ -151,15 +154,15 @@ async function handleDeleteMessages(
     try {
       await batch.commit();
       result.deleted = validDeletes.length;
-      console.log(`✅ [Messages/Delete] Deleted ${validDeletes.length} messages`);
+      logger.info('[Messages/Delete] Deleted messages', { count: validDeletes.length });
     } catch (error) {
-      console.error('❌ [Messages/Delete] Batch commit failed:', error);
+      logger.error('[Messages/Delete] Batch commit failed', { error: error instanceof Error ? error.message : String(error) });
       throw new ApiError(500, 'Failed to delete messages');
     }
   }
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Messages/Delete] Complete in ${duration}ms - deleted: ${result.deleted}, failed: ${result.failed}`);
+  logger.info('[Messages/Delete] Complete', { durationMs: duration, deleted: result.deleted, failed: result.failed });
 
   return apiSuccess<DeleteMessagesResponse>(result);
 }

@@ -30,6 +30,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NormalizeFloorsRoute');
 
 interface BuildingRecord {
   id: string;
@@ -96,10 +99,7 @@ async function handleFloorsNormalization(
 
   // 🔐 ENTERPRISE: Database normalization is SYSTEM-LEVEL (cross-tenant)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [MIGRATION_NORMALIZE] BLOCKED: Non-super_admin attempted database normalization: ` +
-      `${ctx.email} (${ctx.globalRole})`
-    );
+    logger.warn('BLOCKED: Non-super_admin attempted database normalization', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {
         success: false,
@@ -110,23 +110,22 @@ async function handleFloorsNormalization(
     );
   }
 
-  console.log(`🔐 [MIGRATION_NORMALIZE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Database normalization request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {
-    console.log('🏢 ENTERPRISE DATABASE NORMALIZATION STARTING...');
-    console.log('📋 Migration: Floors Collection Normalization (3NF)');
+    logger.info('ENTERPRISE DATABASE NORMALIZATION STARTING - Floors Collection (3NF)');
 
     const adminDb = getAdminFirestore();
 
     // Step 1: Fetch all buildings with embedded floors
-    console.log('📋 Step 1: Analyzing buildings with embedded floors...');
+    logger.info('Step 1: Analyzing buildings with embedded floors...');
     const buildingsSnapshot = await adminDb.collection(COLLECTIONS.BUILDINGS).get();
     const buildings: BuildingRecord[] = buildingsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as BuildingRecord[];
 
-    console.log(`   Found ${buildings.length} buildings`);
+    logger.info('Found buildings', { count: buildings.length });
 
     // Analyze which buildings have embedded floors
     const stats = {
@@ -142,7 +141,7 @@ async function handleFloorsNormalization(
         stats.buildingsWithFloors++;
         stats.totalFloorsToExtract += building.buildingFloors.length;
 
-        console.log(`   📋 Building "${building.name}" has ${building.buildingFloors.length} embedded floors`);
+        logger.info('Building has embedded floors', { buildingName: building.name, count: building.buildingFloors.length });
 
         // Create normalized floor records
         for (const embeddedFloor of building.buildingFloors) {
@@ -177,13 +176,10 @@ async function handleFloorsNormalization(
       }
     }
 
-    console.log('📊 Analysis Results:');
-    console.log(`   - Buildings with embedded floors: ${stats.buildingsWithFloors}`);
-    console.log(`   - Buildings without embedded floors: ${stats.buildingsWithoutFloors}`);
-    console.log(`   - Total floors to extract: ${stats.totalFloorsToExtract}`);
+    logger.info('Analysis Results', { buildingsWithFloors: stats.buildingsWithFloors, buildingsWithoutFloors: stats.buildingsWithoutFloors, totalFloorsToExtract: stats.totalFloorsToExtract });
 
     // Step 2: Insert normalized floors (Enterprise batch operations)
-    console.log('📋 Step 2: Inserting normalized floors...');
+    logger.info('Step 2: Inserting normalized floors...');
 
     const BATCH_SIZE = 500;
     let successfulInserts = 0;
@@ -193,26 +189,26 @@ async function handleFloorsNormalization(
       const batch = adminDb.batch();
       const batchFloors = floorsToCreate.slice(i, i + BATCH_SIZE);
 
-      console.log(`   📦 Processing batch ${Math.floor(i / BATCH_SIZE) + 1} with ${batchFloors.length} floors`);
+      logger.info('Processing batch', { batchNumber: Math.floor(i / BATCH_SIZE) + 1, floorsInBatch: batchFloors.length });
 
       for (const floor of batchFloors) {
         const floorRef = adminDb.collection(COLLECTIONS.FLOORS).doc(floor.id);
         batch.set(floorRef, floor);
-        console.log(`     ✅ Queued floor: ${floor.name} (${floor.buildingName})`);
+        logger.info('Queued floor', { floorName: floor.name, buildingName: floor.buildingName });
       }
 
       try {
         await batch.commit();
         successfulInserts += batchFloors.length;
-        console.log(`   ✅ Batch committed successfully (${batchFloors.length} floors)`);
+        logger.info('Batch committed successfully', { floorsInBatch: batchFloors.length });
       } catch (error) {
         failedInserts += batchFloors.length;
-        console.error(`   ❌ Batch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.error('Batch failed', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
 
     // Step 3: Verify normalization integrity
-    console.log('📋 Step 3: Verifying normalization integrity...');
+    logger.info('Step 3: Verifying normalization integrity...');
     const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS).get();
     // 🏢 ENTERPRISE: Type-safe floor data extraction
     interface VerificationFloor {
@@ -253,12 +249,7 @@ async function handleFloorsNormalization(
 
     const integrityScore = (integrityResults.floorsWithValidBuildingIds / integrityResults.totalFloors) * 100;
 
-    console.log('📊 Final Results:');
-    console.log(`   - Total floors in collection: ${integrityResults.totalFloors}`);
-    console.log(`   - Floors from this migration: ${integrityResults.floorsFromThisMigration}`);
-    console.log(`   - Successful inserts: ${successfulInserts}`);
-    console.log(`   - Failed inserts: ${failedInserts}`);
-    console.log(`   - Referential integrity: ${integrityScore.toFixed(1)}%`);
+    logger.info('Final Results', { totalFloors: integrityResults.totalFloors, floorsFromMigration: integrityResults.floorsFromThisMigration, successfulInserts, failedInserts, referentialIntegrityPercent: integrityScore.toFixed(1) });
 
     if (failedInserts > 0) {
       throw new Error(`${failedInserts} floor inserts failed`);
@@ -289,7 +280,7 @@ async function handleFloorsNormalization(
       },
       `Database normalization executed by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ [MIGRATION_NORMALIZE] Audit logging failed (non-blocking):', err);
+      logger.warn('Audit logging failed (non-blocking)', { error: err });
     });
 
     return NextResponse.json({
@@ -330,7 +321,7 @@ async function handleFloorsNormalization(
     const executionTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    console.error(`❌ ENTERPRISE NORMALIZATION FAILED: ${errorMessage}`);
+    logger.error('ENTERPRISE NORMALIZATION FAILED', { error: errorMessage });
 
     return NextResponse.json(
       {

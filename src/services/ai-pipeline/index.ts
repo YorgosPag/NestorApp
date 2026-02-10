@@ -72,3 +72,10 @@ export { ChatHistoryService, getChatHistoryService } from './chat-history-servic
 // ADR-171: Agentic Tools
 export { getAgenticToolExecutor } from './tools/agentic-tool-executor';
 export { AGENTIC_TOOL_DEFINITIONS } from './tools/agentic-tool-definitions';
+
+// ADR-173: AI Self-Improvement
+export { FeedbackService, getFeedbackService } from './feedback-service';
+export { createFeedbackKeyboard, isFeedbackCallback, parseFeedbackCallback } from './feedback-keyboard';
+export { LearningService, getLearningService } from './learning-service';
+export { ToolAnalyticsService, getToolAnalyticsService } from './tool-analytics-service';
+export { enhanceSystemPrompt } from './prompt-enhancer';

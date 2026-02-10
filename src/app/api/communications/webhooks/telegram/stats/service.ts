@@ -17,6 +17,9 @@ import {
   formatCurrency,
   type TelegramLocale
 } from '../templates/template-resolver';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('TelegramStatsService');
 
 // ============================================================================
 // STATS RESPONSE
@@ -67,7 +70,7 @@ export async function createStatsResponse(
     };
 
   } catch (error) {
-    console.error('❌ Error creating stats response:', error);
+    logger.error('Error creating stats response', { error });
     return createDatabaseUnavailableResponse(chatId, locale);
   }
 }

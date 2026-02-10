@@ -44,6 +44,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationForceUniformRoute');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -152,10 +155,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/navigation/force-uniform-schema] BLOCKED: Non-super_admin attempted schema enforcement`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[Navigation/ForceUniform] BLOCKED: Non-super_admin attempted schema enforcement', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
 
     const errorResult: UniformSchemaResult = {
       success: false,
@@ -172,9 +172,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
   }
 
   try {
-    console.log('🚨 ENTERPRISE FORCE UNIFORM SCHEMA: STARTING TOTAL STANDARDIZATION...');
-    console.log('📋 TARGET: ALL documents will have EXACTLY the same fields');
-    console.log('⚠️  NO EXCEPTIONS - Fortune 500 compliance MANDATORY');
+    logger.info('[Navigation/ForceUniform] Starting total schema standardization');
 
     const result: UniformSchemaResult = {
       success: false,
@@ -188,10 +186,10 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
     };
 
     // STEP 1: Get ALL navigation documents
-    console.log('📊 Step 1: Loading ALL navigation_companies documents...');
+    logger.info('[Navigation/ForceUniform] Step 1: Loading all navigation_companies documents');
     const navigationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
 
-    console.log(`   Found ${navigationSnapshot.docs.length} documents to standardize`);
+    logger.info('[Navigation/ForceUniform] Found documents to standardize', { count: navigationSnapshot.docs.length });
     result.stats.documentsProcessed = navigationSnapshot.docs.length;
 
     if (navigationSnapshot.docs.length === 0) {
@@ -201,8 +199,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
     }
 
     // STEP 2: FORCE STANDARDIZATION - NO EXCEPTIONS
-    console.log('🔧 Step 2: FORCING uniform schema on ALL documents...');
-    console.log('⚠️  WARNING: This will OVERWRITE existing structures');
+    logger.info('[Navigation/ForceUniform] Step 2: Forcing uniform schema on all documents');
 
     for (const navDoc of navigationSnapshot.docs) {
       try {
@@ -210,8 +207,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
         const currentData = navDoc.data() as NavigationDocumentData;
         const beforeFields = Object.keys(currentData);
 
-        console.log(`   🔄 STANDARDIZING document ${docId}:`);
-        console.log(`      Before: ${beforeFields.length} fields [${beforeFields.join(', ')}]`);
+        logger.info('[Navigation/ForceUniform] Standardizing document', { docId, beforeFieldCount: beforeFields.length, fields: beforeFields });
 
         // 🏢 CREATE ENTERPRISE UNIFORM SCHEMA - FORCED STANDARDIZATION
         // Type inference για Firestore compatibility
@@ -265,11 +261,10 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
           action: 'standardized'
         });
 
-        console.log(`   ✅ Document ${docId} STANDARDIZED: ${beforeFields.length} → ${afterFields.length} fields`);
-        console.log(`      After: [${afterFields.join(', ')}]`);
+        logger.info('[Navigation/ForceUniform] Document standardized', { docId, beforeFields: beforeFields.length, afterFields: afterFields.length });
 
       } catch (error) {
-        console.error(`   ❌ FAILED to standardize document ${navDoc.id}:`, error);
+        logger.error('[Navigation/ForceUniform] Failed to standardize document', { docId: navDoc.id, error: error instanceof Error ? error.message : String(error) });
         result.stats.errors++;
         result.transformations.push({
           documentId: navDoc.id,
@@ -285,7 +280,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
     }
 
     // STEP 3: VALIDATION - Ensure ALL documents now have IDENTICAL schema
-    console.log('✅ Step 3: VALIDATING uniform schema compliance...');
+    logger.info('[Navigation/ForceUniform] Step 3: Validating uniform schema compliance');
     const validationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
 
     let allFieldCounts: number[] = [];
@@ -297,9 +292,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
     const uniqueFieldCounts = [...new Set(allFieldCounts)];
     const isUniform = uniqueFieldCounts.length === 1;
 
-    console.log(`   📊 Field count analysis: [${allFieldCounts.join(', ')}]`);
-    console.log(`   🎯 Unique field counts: [${uniqueFieldCounts.join(', ')}]`);
-    console.log(`   ${isUniform ? '✅' : '❌'} Schema uniformity: ${isUniform ? 'ACHIEVED' : 'FAILED'}`);
+    logger.info('[Navigation/ForceUniform] Validation results', { fieldCounts: allFieldCounts, uniqueFieldCounts, isUniform });
 
     // STEP 4: Generate final result
     const { stats } = result;
@@ -309,11 +302,7 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
       result.message = `🎉 ENTERPRISE SUCCESS: ALL ${stats.documentsStandardized} documents now have IDENTICAL schema structure. ` +
                       `Field count uniformity: ${uniqueFieldCounts[0]} fields per document. Zero tolerance for inconsistency achieved!`;
 
-      console.log('🎉 ENTERPRISE FORCE UNIFORM SCHEMA: TOTAL SUCCESS');
-      console.log(`   - All documents standardized: ${stats.documentsStandardized}`);
-      console.log(`   - Uniform field count: ${uniqueFieldCounts[0]}`);
-      console.log(`   - Inconsistency eliminated: 100%`);
-      console.log('   - Status: ENTERPRISE COMPLIANT ✅');
+      logger.info('[Navigation/ForceUniform] COMPLETED SUCCESSFULLY', { documentsStandardized: stats.documentsStandardized, uniformFieldCount: uniqueFieldCounts[0] });
 
     } else if (!isUniform) {
       result.success = false;
@@ -344,13 +333,13 @@ async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthCo
       },
       `Schema enforcement by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('[Navigation/ForceUniform] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
     });
 
     return NextResponse.json({ ...result, executionTimeMs: duration });
 
   } catch (error: unknown) {
-    console.error('❌ ENTERPRISE FORCE UNIFORM SCHEMA FAILED:', error);
+    logger.error('[Navigation/ForceUniform] Enterprise force uniform schema failed', { error: error instanceof Error ? error.message : String(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

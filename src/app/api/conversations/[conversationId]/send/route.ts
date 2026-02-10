@@ -40,6 +40,9 @@ import { generateMessageDocId } from '@/server/lib/id-generation';
 import type { MessageDocument } from '@/server/types/conversations.firestore';
 import type { TelegramSendPayload } from '@/app/api/communications/webhooks/telegram/telegram/types';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ConversationSendRoute');
 
 // ============================================================================
 // TYPES (ADR-055 - Enterprise Attachment System)
@@ -149,11 +152,11 @@ async function storeOutboundMessage(
       'audit.updatedAt': FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ Outbound message stored: ${messageDocId} (${attachments?.length || 0} attachments)`);
+    logger.info('Outbound message stored', { messageDocId, attachmentCount: attachments?.length || 0 });
     return messageDocId;
 
   } catch (error) {
-    console.error('❌ Failed to store outbound message:', error);
+    logger.error('Failed to store outbound message', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -205,7 +208,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     throw new ApiError(400, 'Conversation ID is required');
   }
 
-  console.log(`📤 [Send] User ${ctx.email} (company: ${ctx.companyId}) sending message to: ${conversationId}`);
+  logger.info('[Send] User sending message', { email: ctx.email, companyId: ctx.companyId, conversationId });
 
   // Parse request body
   const body: SendMessageRequest = await request.json();
@@ -243,7 +246,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
   const convData = convDoc.data();
 
   if (convData?.companyId !== ctx.companyId) {
-    console.warn(`⚠️ [Send] Unauthorized attempt:`, {
+    logger.warn('[Send] Unauthorized attempt', {
       userId: ctx.uid,
       userCompany: ctx.companyId,
       conversationId,
@@ -284,7 +287,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     throw new ApiError(400, 'Could not determine Telegram chat ID');
   }
 
-  console.log(`📱 Target Telegram chat: ${telegramChatId}`);
+  logger.info('Target Telegram chat resolved', { telegramChatId });
 
   // 🏢 TENANT ISOLATION: Get companyId from conversation for message storage
   const messageCompanyId = convData?.companyId as string || ctx.companyId;
@@ -367,7 +370,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
       } as TelegramSendPayload);
 
       if (!mediaResult.success) {
-        console.warn(`⚠️ Failed to send ${att.type} attachment: ${mediaResult.error}`);
+        logger.warn('Failed to send attachment', { type: att.type, error: mediaResult.error });
         // Continue with other attachments
       } else {
         // Use the last successful message ID for storage
@@ -393,7 +396,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
   }
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Send] Complete in ${duration}ms`);
+  logger.info('[Send] Complete', { durationMs: duration });
 
   const response: SendMessageResponse = {
     success: true,

@@ -20,6 +20,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationsAckRoute');
 
 // Response types for type-safe withAuth
 type AckSuccess = {
@@ -50,7 +53,7 @@ const basePOST = async (request: NextRequest) => {
           }, { status: 400 });
         }
 
-        console.log(`🔔 [Notifications/Ack] User ${ctx.uid} marking ${ids.length} notifications as read...`);
+        logger.info('[Notifications/Ack] Marking notifications as read', { userId: ctx.uid, count: ids.length });
 
         // CRITICAL: Ownership validation - fetch notifications to verify they belong to this user
         const notificationsRef = getAdminFirestore().collection(COLLECTIONS.NOTIFICATIONS);
@@ -72,7 +75,7 @@ const basePOST = async (request: NextRequest) => {
         });
 
         if (unauthorizedIds.length > 0) {
-          console.warn(`⚠️ [Notifications/Ack] Unauthorized attempt to ack notifications:`, {
+          logger.warn('[Notifications/Ack] Unauthorized attempt to ack notifications', {
             userId: ctx.uid,
             unauthorizedIds
           });
@@ -90,7 +93,7 @@ const basePOST = async (request: NextRequest) => {
           });
           await batch.commit();
 
-          console.log(`✅ [Notifications/Ack] Marked ${ownedIds.length} notifications as read`);
+          logger.info('[Notifications/Ack] Marked notifications as read', { count: ownedIds.length });
         }
 
         return NextResponse.json({
@@ -99,8 +102,8 @@ const basePOST = async (request: NextRequest) => {
           message: `Marked ${ownedIds.length} notification(s) as read`
         });
       } catch (error) {
-        console.error('❌ [Notifications/Ack] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Notifications/Ack] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid
         });
 

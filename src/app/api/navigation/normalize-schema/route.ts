@@ -44,6 +44,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NavigationNormalizeSchemaRoute');
 
 /** Firestore Timestamp type for navigation documents (Admin SDK) */
 type FirestoreTimestamp = AdminTimestamp | FieldValue | Date;
@@ -114,10 +117,7 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
 
   // 🏢 ENTERPRISE: Super_admin-only check (explicit)
   if (ctx.globalRole !== 'super_admin') {
-    console.warn(
-      `🚫 [POST /api/navigation/normalize-schema] BLOCKED: Non-super_admin attempted schema normalization`,
-      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
-    );
+    logger.warn('[Navigation/NormalizeSchema] BLOCKED: Non-super_admin attempted schema normalization', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
 
     const errorResult: SchemaNormalizationResult = {
       success: false,
@@ -135,7 +135,7 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
   }
 
   try {
-    console.log('🏢 ENTERPRISE SCHEMA NORMALIZATION: Starting navigation_companies normalization...');
+    logger.info('[Navigation/NormalizeSchema] Starting navigation_companies normalization');
 
     const result: SchemaNormalizationResult = {
       success: false,
@@ -150,10 +150,10 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
     };
 
     // STEP 1: Get all navigation_companies documents (Admin SDK)
-    console.log('📊 Step 1: Fetching all navigation_companies documents...');
+    logger.info('[Navigation/NormalizeSchema] Step 1: Fetching all navigation_companies documents');
     const navigationSnapshot = await getAdminFirestore().collection(COLLECTIONS.NAVIGATION).get();
 
-    console.log(`   Found ${navigationSnapshot.docs.length} navigation companies documents`);
+    logger.info('[Navigation/NormalizeSchema] Found navigation companies documents', { count: navigationSnapshot.docs.length });
     result.stats.documentsChecked = navigationSnapshot.docs.length;
 
     if (navigationSnapshot.docs.length === 0) {
@@ -163,7 +163,7 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
     }
 
     // STEP 2: Analyze and normalize each document
-    console.log('🔧 Step 2: Analyzing and normalizing document schemas...');
+    logger.info('[Navigation/NormalizeSchema] Step 2: Analyzing and normalizing document schemas');
 
     for (const navDoc of navigationSnapshot.docs) {
       try {
@@ -171,14 +171,13 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
         const docData = navDoc.data();
         const originalFields = Object.keys(docData);
 
-        console.log(`   📋 Analyzing document ${docId}: ${originalFields.length} fields`);
-        console.log(`      Fields: [${originalFields.join(', ')}]`);
+        logger.info('[Navigation/NormalizeSchema] Analyzing document', { docId, fieldCount: originalFields.length, fields: originalFields });
 
         // Check if document needs normalization
         const needsNormalization = !hasCompliantSchema(docData);
 
         if (needsNormalization) {
-          console.log(`   🔄 Normalizing document ${docId}...`);
+          logger.info('[Navigation/NormalizeSchema] Normalizing document', { docId });
 
           // Create normalized document
           const normalizedDoc: Partial<NavigationCompanySchema> = {
@@ -222,10 +221,10 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
             action: 'normalized'
           });
 
-          console.log(`   ✅ Document ${docId} normalized: ${originalFields.length} → ${normalizedFields.length} fields`);
+          logger.info('[Navigation/NormalizeSchema] Document normalized', { docId, beforeFields: originalFields.length, afterFields: normalizedFields.length });
 
         } else {
-          console.log(`   ✅ Document ${docId} already compliant`);
+          logger.info('[Navigation/NormalizeSchema] Document already compliant', { docId });
           result.stats.documentsCompliant++;
           result.normalization.push({
             documentId: docId,
@@ -240,7 +239,7 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
         }
 
       } catch (error) {
-        console.error(`   ❌ Failed to normalize document ${navDoc.id}:`, error);
+        logger.error('[Navigation/NormalizeSchema] Failed to normalize document', { docId: navDoc.id, error: error instanceof Error ? error.message : String(error) });
         result.stats.errors++;
         result.normalization.push({
           documentId: navDoc.id,
@@ -264,30 +263,25 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
                       `${stats.documentsCompliant} documents were already compliant. ` +
                       `Navigation companies now have consistent enterprise schema.`;
 
-      console.log('🎉 ENTERPRISE SCHEMA NORMALIZATION COMPLETED SUCCESSFULLY:');
-      console.log(`   - Documents checked: ${stats.documentsChecked}`);
-      console.log(`   - Documents normalized: ${stats.documentsNormalized}`);
-      console.log(`   - Documents already compliant: ${stats.documentsCompliant}`);
-      console.log(`   - All documents now follow enterprise schema standards`);
+      logger.info('[Navigation/NormalizeSchema] COMPLETED SUCCESSFULLY', { documentsChecked: stats.documentsChecked, documentsNormalized: stats.documentsNormalized, documentsCompliant: stats.documentsCompliant });
 
     } else if (stats.documentsNormalized === 0 && stats.documentsCompliant > 0) {
       result.success = true;
       result.message = `Schema is already normalized. All ${stats.documentsCompliant} documents follow enterprise standards.`;
 
-      console.log('✅ ENTERPRISE SCHEMA: Already normalized, no action needed');
+      logger.info('[Navigation/NormalizeSchema] Already normalized, no action needed');
 
     } else if (stats.errors > 0) {
       result.success = stats.documentsNormalized > 0; // Partial success if some normalized
       result.message = `Schema normalization completed with ${stats.errors} errors. ` +
                       `${stats.documentsNormalized} documents normalized successfully.`;
 
-      console.log('⚠️ ENTERPRISE SCHEMA NORMALIZATION: Completed with errors');
+      logger.warn('[Navigation/NormalizeSchema] Completed with errors');
     }
 
     // STEP 4: Log normalization details for transparency
-    console.log('📋 Schema normalization summary:');
-    result.normalization.slice(0, 5).forEach(norm => {
-      console.log(`   - Document ${norm.documentId}: ${norm.action} (${norm.fieldCount.before} → ${norm.fieldCount.after} fields)`);
+    logger.info('[Navigation/NormalizeSchema] Schema normalization summary', {
+      sample: result.normalization.slice(0, 5).map(norm => ({ docId: norm.documentId, action: norm.action, before: norm.fieldCount.before, after: norm.fieldCount.after }))
     });
 
     const duration = Date.now() - startTime;
@@ -309,13 +303,13 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
       },
       `Schema normalization by ${ctx.globalRole} ${ctx.email}`
     ).catch((err: unknown) => {
-      console.error('⚠️ Audit logging failed (non-blocking):', err);
+      logger.error('[Navigation/NormalizeSchema] Audit logging failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
     });
 
     return NextResponse.json({ ...result, executionTimeMs: duration });
 
   } catch (error: unknown) {
-    console.error('❌ ENTERPRISE SCHEMA NORMALIZATION FAILED:', error);
+    logger.error('[Navigation/NormalizeSchema] Enterprise schema normalization failed', { error: error instanceof Error ? error.message : String(error) });
     const duration = Date.now() - startTime;
 
     return NextResponse.json({

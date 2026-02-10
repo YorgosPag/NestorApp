@@ -12,6 +12,9 @@ import { useCallback } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { useMemoryCleanup } from '../files/useMemoryCleanup';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFormReset');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -55,15 +58,15 @@ export function useFormReset(): UseFormResetReturn {
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {
-    console.log('🔄 FORM RESET: Starting form reset with cleanup');
+    logger.info('Starting form reset with cleanup');
 
     // 🧹 CLEANUP: Revoke any blob URLs before reset
     revokeAllBlobUrls(formData);
 
-    console.log('🔄 FORM RESET: Memory cleanup completed, resetting to initial state');
+    logger.info('Memory cleanup completed, resetting to initial state');
     setFormData(initialFormData);
 
-    console.log('✅ FORM RESET: Form reset completed successfully');
+    logger.info('Form reset completed successfully');
   }, [revokeAllBlobUrls]);
 
   // ========================================================================

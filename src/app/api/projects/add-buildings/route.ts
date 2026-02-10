@@ -20,6 +20,9 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AddBuildingsRoute');
 
 // Response types for type-safe withAuth
 type AddBuildingsSuccess = {
@@ -41,8 +44,7 @@ type AddBuildingsResponse = AddBuildingsSuccess | AddBuildingsError;
 export const POST = withStandardRateLimit(async (request: NextRequest) => {
   const handler = withAuth<AddBuildingsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AddBuildingsResponse>> => {
-      console.log('🏗️ [Projects/AddBuildings] Starting building assignment...');
-      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+      logger.info('[Projects/AddBuildings] Starting building assignment', { uid: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
       try {
         // ============================================================================
@@ -59,7 +61,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
           ...doc.data()
         } as Record<string, unknown> & { id: string; name?: string; description?: string; status?: string; buildingFloors?: unknown[]; floors?: unknown[]; totalArea?: number; units?: number }));
 
-        console.log(`✅ Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
+        logger.info('Found buildings for project', { count: buildings.length, projectId: BUILDING_IDS.PROJECT_ID });
 
         if (buildings.length === 0) {
           throw new Error(`No buildings found for project ${BUILDING_IDS.PROJECT_ID}`);
@@ -85,7 +87,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
             updatedAt: new Date().toISOString()
           });
 
-        console.log(`✅ [Projects/AddBuildings] Complete: Added ${buildings.length} buildings to project ${BUILDING_IDS.PROJECT_ID}`);
+        logger.info('[Projects/AddBuildings] Complete', { buildingsAdded: buildings.length, projectId: BUILDING_IDS.PROJECT_ID });
 
         return NextResponse.json({
           success: true,
@@ -98,7 +100,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         });
 
       } catch (error) {
-        console.error('❌ [Projects/AddBuildings] Error:', {
+        logger.error('[Projects/AddBuildings] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

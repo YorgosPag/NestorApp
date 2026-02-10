@@ -18,6 +18,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createSampleNotifications } from '@/services/notificationService';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationsSeedRoute');
 
 interface SeedRequestBody {
   userId?: string;
@@ -43,8 +46,7 @@ const basePOST = async (request: NextRequest) => {
   const handler = withAuth<SeedResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<SeedResponse>> => {
       try {
-        console.log(`🔔 [Notifications/Seed] Starting sample data creation...`);
-        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+        logger.info('[Notifications/Seed] Starting sample data creation', { userId: ctx.uid, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
         // Get user ID from request body (Firebase Auth UID)
         const body = await req.json() as SeedRequestBody;
@@ -57,11 +59,11 @@ const basePOST = async (request: NextRequest) => {
           }, { status: 400 });
         }
 
-        console.log(`🌱 Creating sample notifications for user: ${userId}`);
+        logger.info('[Notifications/Seed] Creating sample notifications', { targetUserId: userId });
 
         await createSampleNotifications(userId);
 
-        console.log(`✅ [Notifications/Seed] Sample notifications created successfully`);
+        logger.info('[Notifications/Seed] Sample notifications created successfully');
 
         return NextResponse.json({
           success: true,
@@ -69,8 +71,8 @@ const basePOST = async (request: NextRequest) => {
           userId
         });
       } catch (error) {
-        console.error('❌ [Notifications/Seed] Error:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Notifications/Seed] Error', {
+          error: error instanceof Error ? error.message : String(error),
           userId: ctx.uid,
           companyId: ctx.companyId
         });

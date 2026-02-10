@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { BuildingFloorplanService, type BuildingFloorplanData } from '@/services/floorplans/BuildingFloorplanService';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useBuildingFloorplans');
 
 interface UseBuildingFloorplansReturn {
   buildingFloorplan: BuildingFloorplanData | null;
@@ -35,7 +38,7 @@ export function useBuildingFloorplans(buildingId: string | number): UseBuildingF
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Error fetching building floorplans:', err);
+      logger.error('Error fetching building floorplans', { error: err });
       setError(errorMessage);
     } finally {
       setLoading(false);

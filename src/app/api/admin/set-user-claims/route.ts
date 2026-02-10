@@ -111,7 +111,7 @@ async function handleSetUserClaims(
     // ========================================================================
 
     if (!uid || typeof uid !== 'string') {
-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid uid: ${uid}`);
+      logger.warn('Invalid uid', { uid });
       return NextResponse.json(
         { success: false, message: 'Invalid uid', error: 'uid is required and must be a string' },
         { status: 400 }
@@ -119,7 +119,7 @@ async function handleSetUserClaims(
     }
 
     if (!companyId || typeof companyId !== 'string') {
-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid companyId: ${companyId}`);
+      logger.warn('Invalid companyId', { companyId });
       return NextResponse.json(
         { success: false, message: 'Invalid companyId', error: 'companyId is required and must be a string' },
         { status: 400 }
@@ -127,7 +127,7 @@ async function handleSetUserClaims(
     }
 
     if (!email || typeof email !== 'string') {
-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid email: ${email}`);
+      logger.warn('Invalid email', { email });
       return NextResponse.json(
         { success: false, message: 'Invalid email', error: 'email is required and must be a string' },
         { status: 400 }
@@ -135,7 +135,7 @@ async function handleSetUserClaims(
     }
 
     if (!isValidGlobalRole(globalRole)) {
-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid globalRole: ${globalRole}`);
+      logger.warn('Invalid globalRole', { globalRole });
       return NextResponse.json(
         {
           success: false,
@@ -167,11 +167,7 @@ async function handleSetUserClaims(
     // 🏢 ENTERPRISE: company_admin can ONLY manage users in their own company
     // super_admin bypasses this restriction (can manage any company)
     if (ctx.globalRole === 'company_admin' && companyId !== ctx.companyId) {
-      console.warn(
-        `🚫 [SET_USER_CLAIMS] TENANT ISOLATION VIOLATION: ` +
-        `company_admin ${ctx.email} (company: ${ctx.companyId}) ` +
-        `attempted to manage user in company ${companyId}`
-      );
+      logger.warn('TENANT ISOLATION VIOLATION: company_admin attempted cross-company user management', { callerEmail: ctx.email, callerCompanyId: ctx.companyId, targetCompanyId: companyId });
       return NextResponse.json(
         {
           success: false,

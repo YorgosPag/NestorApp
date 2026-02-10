@@ -17,6 +17,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
 import { polygonStyleService } from '@/services/polygon/EnterprisePolygonStyleService';
+import { createModuleLogger } from '@/lib/telemetry';
 
 // ============================================================================
 // HOOK TYPES
@@ -64,6 +65,8 @@ export interface UsePolygonStylesReturn {
   hasTheme: (theme: string) => boolean;
 }
 
+const logger = createModuleLogger('usePolygonStyles');
+
 // ============================================================================
 // POLYGON STYLES HOOK
 // ============================================================================
@@ -100,7 +103,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
       setError(null);
 
       if (debug) {
-        console.log('🎨 Loading polygon styles:', { targetTheme, tenantId, environment });
+        logger.info('Loading polygon styles', { targetTheme, tenantId, environment });
       }
 
       // Load styles από service
@@ -118,7 +121,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
       setCurrentTheme(targetTheme);
 
       if (debug) {
-        console.log('✅ Polygon styles loaded successfully:', {
+        logger.info('Polygon styles loaded successfully', {
           stylesCount: Object.keys(loadedStyles).length,
           themesCount: themes.length,
           currentTheme: targetTheme
@@ -130,7 +133,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
       setError(errorMessage);
 
       if (debug) {
-        console.error('❌ Failed to load polygon styles:', err);
+        logger.error('Failed to load polygon styles', { error: err });
       }
 
       // Set fallback styles
@@ -139,10 +142,10 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
         setStyles(fallbackStyles);
 
         if (debug) {
-          console.log('🔄 Using fallback polygon styles');
+          logger.info('Using fallback polygon styles');
         }
       } catch (fallbackErr) {
-        console.error('❌ Failed to load fallback styles:', fallbackErr);
+        logger.error('Failed to load fallback styles', { error: fallbackErr });
       }
 
     } finally {
@@ -186,7 +189,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
     if (newTheme === currentTheme) return;
 
     if (debug) {
-      console.log(`🎨 Switching theme from ${currentTheme} to ${newTheme}`);
+      logger.info(`Switching theme from ${currentTheme} to ${newTheme}`);
     }
 
     await loadStyles(newTheme);
@@ -194,7 +197,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
 
   const reloadStyles = useCallback(async () => {
     if (debug) {
-      console.log('🔄 Manually reloading polygon styles');
+      logger.info('Manually reloading polygon styles');
     }
 
     // Invalidate cache first
@@ -204,7 +207,7 @@ export function usePolygonStyles(options: UsePolygonStylesOptions = {}): UsePoly
 
   const clearCache = useCallback(() => {
     if (debug) {
-      console.log('🗑️ Clearing polygon styles cache');
+      logger.info('Clearing polygon styles cache');
     }
 
     polygonStyleService.invalidateCache();
@@ -314,7 +317,7 @@ export function usePolygonStylePreloader(
 
     try {
       if (debug) {
-        console.log(`🚀 Preloading polygon theme: ${theme}`);
+        logger.info(`Preloading polygon theme: ${theme}`);
       }
 
       await polygonStyleService.loadPolygonStyles(theme, tenantId, environment);
@@ -322,7 +325,7 @@ export function usePolygonStylePreloader(
 
     } catch (error) {
       if (debug) {
-        console.warn(`⚠️ Failed to preload theme ${theme}:`, error);
+        logger.warn(`Failed to preload theme ${theme}`, { error });
       }
     }
   }, [preloadedThemes, tenantId, environment, debug]);
@@ -335,11 +338,11 @@ export function usePolygonStylePreloader(
       await Promise.allSettled(preloadPromises);
 
       if (debug) {
-        console.log('✅ All polygon themes preloaded');
+        logger.info('All polygon themes preloaded');
       }
     } catch (error) {
       if (debug) {
-        console.error('❌ Theme preloading failed:', error);
+        logger.error('Theme preloading failed', { error });
       }
     } finally {
       setIsPreloading(false);

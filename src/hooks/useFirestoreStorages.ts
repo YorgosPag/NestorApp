@@ -6,6 +6,9 @@ import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Storage } from '@/types/storage/contracts';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useFirestoreStorages');
 
 interface UseFirestoreStoragesReturn {
   storages: Storage[];
@@ -35,7 +38,7 @@ export function useFirestoreStorages(): UseFirestoreStoragesReturn {
       // 🔐 AUTH-READY GATING - Wait for authentication
       if (authLoading) {
         // Auth state is still loading - wait for it
-        console.log('⏳ [Storages] Waiting for auth state...');
+        logger.info('Waiting for auth state');
         return; // Will retry via useEffect when authLoading changes
       }
 
@@ -49,17 +52,17 @@ export function useFirestoreStorages(): UseFirestoreStoragesReturn {
       setLoading(true);
       setError(null);
 
-      console.log('📦 [Storages] Fetching storages...');
+      logger.info('Fetching storages');
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const data = await apiClient.get<StoragesApiResponse>('/api/storages');
 
       setStorages(data?.storages || []);
-      console.log(`✅ [Storages] Loaded ${data?.storages?.length || 0} storages`);
+      logger.info(`Loaded ${data?.storages?.length || 0} storages`);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ [Storages] Error fetching storages:', err);
+      logger.error('Error fetching storages', { error: err });
       setError(errorMessage);
     } finally {
       setLoading(false);

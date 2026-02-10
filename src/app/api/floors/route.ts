@@ -19,6 +19,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FloorsRoute');
 
 // 🏢 ENTERPRISE INTERFACES - Proper TypeScript typing
 interface FloorDocument {
@@ -65,9 +68,7 @@ export const GET = withStandardRateLimit(
         const buildingId = searchParams.get('buildingId');
         const projectId = searchParams.get('projectId');
 
-        console.log(`🏢 [Floors/List] Fetching floors for tenant ${ctx.companyId}...`);
-        console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
-        console.log(`📋 Filters: buildingId=${buildingId || 'all'}, projectId=${projectId || 'all'}`);
+        logger.info('[Floors/List] Fetching floors', { companyId: ctx.companyId, userId: ctx.uid, buildingId: buildingId || 'all', projectId: projectId || 'all' });
 
         // ============================================================================
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
@@ -95,7 +96,7 @@ export const GET = withStandardRateLimit(
           ...doc.data()
         } as FloorDocument));
 
-        console.log(`🏢 Found ${floors.length} floors for tenant ${ctx.companyId}`);
+        logger.info('Found floors', { count: floors.length, companyId: ctx.companyId });
 
         // ============================================================================
         // ENTERPRISE SORTING - JavaScript-based sorting to avoid Firestore index requirements
@@ -136,7 +137,7 @@ export const GET = withStandardRateLimit(
             return groups;
           }, {} as Record<string, FloorDocument[]>);
 
-          console.log(`✅ [Floors/List] Complete: ${floors.length} floors in ${Object.keys(floorsByBuilding).length} buildings`);
+          logger.info('[Floors/List] Complete', { floorCount: floors.length, buildingCount: Object.keys(floorsByBuilding).length });
 
           return NextResponse.json({
             success: true,
@@ -150,7 +151,7 @@ export const GET = withStandardRateLimit(
             message: `Found ${floors.length} floors in ${Object.keys(floorsByBuilding).length} buildings`
           });
         } else {
-          console.log(`✅ [Floors/List] Complete: ${floors.length} floors returned`);
+          logger.info('[Floors/List] Complete', { floorCount: floors.length });
 
           return NextResponse.json({
             success: true as const,
@@ -164,7 +165,7 @@ export const GET = withStandardRateLimit(
         }
 
       } catch (error) {
-        console.error('❌ [Floors/List] Error:', {
+        logger.error('[Floors/List] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId
@@ -222,9 +223,7 @@ export const POST = withStandardRateLimit(
       try {
         const body = await req.json() as CreateFloorRequest;
 
-        console.log(`🏢 [Floors/Create] Creating floor for tenant ${ctx.companyId}...`);
-        console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
-        console.log(`📋 Floor data:`, body);
+        logger.info('[Floors/Create] Creating floor', { companyId: ctx.companyId, userId: ctx.uid, floorData: body });
 
         // ============================================================================
         // VALIDATION
@@ -269,7 +268,7 @@ export const POST = withStandardRateLimit(
         const { generateFloorId } = await import('@/services/enterprise-id.service');
         const floorId = generateFloorId();
 
-        console.log(`🆔 [Floors/Create] Generated enterprise ID: ${floorId}`);
+        logger.info('[Floors/Create] Generated enterprise ID', { floorId });
 
         // ============================================================================
         // CREATE FLOOR DOCUMENT
@@ -299,7 +298,7 @@ export const POST = withStandardRateLimit(
           .doc(floorId)
           .set(floorDocument);
 
-        console.log(`✅ [Floors/Create] Floor created successfully: ${floorId}`);
+        logger.info('[Floors/Create] Floor created successfully', { floorId });
 
         return NextResponse.json({
           success: true,
@@ -308,7 +307,7 @@ export const POST = withStandardRateLimit(
         }, { status: 201 });
 
       } catch (error) {
-        console.error('❌ [Floors/Create] Error:', {
+        logger.error('[Floors/Create] Error', {
           error: error instanceof Error ? error.message : 'Unknown error',
           userId: ctx.uid,
           companyId: ctx.companyId

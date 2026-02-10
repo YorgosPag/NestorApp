@@ -4,6 +4,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useBuildingsPageState');
 
 export function useBuildingsPageState(initialBuildings: Building[]) {
   // [ENTERPRISE] URL parameter handling for contextual navigation
@@ -25,7 +28,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
       // URL parameter has priority - find and select the building
       const found = initialBuildings.find(b => b.id === buildingIdFromUrl);
       if (found) {
-        console.log('[useBuildingsPageState] Auto-selecting building from URL:', found.name);
+        logger.info('Auto-selecting building from URL', { buildingName: found.name });
         setSelectedBuilding(found);
         return;
       }
