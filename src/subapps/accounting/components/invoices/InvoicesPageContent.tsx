@@ -1,21 +1,119 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+/**
+ * @fileoverview Invoices Page Content — Σελίδα Τιμολογίων
+ * @description UnifiedDashboard stats + AdvancedFiltersPanel + InvoicesTable
+ * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
+ * @created 2026-02-09
+ * @updated 2026-02-10 — Migrated to UnifiedDashboard + AdvancedFiltersPanel
+ * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
+ */
+
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react';
+import {
+  Plus,
+  Receipt,
+  CreditCard,
+  Clock,
+  Send,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
+import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import { useAuth } from '@/hooks/useAuth';
 import type { Invoice, InvoiceType } from '@/subapps/accounting/types';
 import { InvoicesTable } from './InvoicesTable';
-import { InvoiceFilters } from './InvoiceFilters';
 
-interface InvoiceFilterState {
-  fiscalYear: number;
-  type: InvoiceType | '';
-  paymentStatus: '' | 'unpaid' | 'partial' | 'paid';
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface InvoiceFilterState extends GenericFilterState {
+  fiscalYear: string;
+  type: string;
+  paymentStatus: string;
 }
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const DEFAULT_FILTERS: InvoiceFilterState = {
+  fiscalYear: String(new Date().getFullYear()),
+  type: 'all',
+  paymentStatus: 'all',
+};
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+}
+
+function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
+  return {
+    title: 'filters.title',
+    i18nNamespace: 'accounting',
+    rows: [
+      {
+        id: 'invoices-main',
+        fields: [
+          {
+            id: 'fiscalYear',
+            type: 'select',
+            label: 'filterLabels.fiscalYear',
+            ariaLabel: 'Fiscal year',
+            width: 1,
+            options: [
+              { value: String(new Date().getFullYear()), label: String(new Date().getFullYear()) },
+              { value: String(new Date().getFullYear() - 1), label: String(new Date().getFullYear() - 1) },
+              { value: String(new Date().getFullYear() - 2), label: String(new Date().getFullYear() - 2) },
+            ],
+          },
+          {
+            id: 'type',
+            type: 'select',
+            label: 'filterLabels.type',
+            ariaLabel: 'Invoice type',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allTypes') },
+              { value: 'service_invoice', label: t('invoices.types.service_invoice') },
+              { value: 'sales_invoice', label: t('invoices.types.sales_invoice') },
+              { value: 'retail_receipt', label: t('invoices.types.retail_receipt') },
+              { value: 'service_receipt', label: t('invoices.types.service_receipt') },
+              { value: 'credit_invoice', label: t('invoices.types.credit_invoice') },
+            ],
+          },
+          {
+            id: 'paymentStatus',
+            type: 'select',
+            label: 'filterLabels.paymentStatus',
+            ariaLabel: 'Payment status',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allStatuses') },
+              { value: 'unpaid', label: t('invoices.paymentStatuses.unpaid') },
+              { value: 'partial', label: t('invoices.paymentStatuses.partial') },
+              { value: 'paid', label: t('invoices.paymentStatuses.paid') },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 export function InvoicesPageContent() {
   const { t } = useTranslation('accounting');
@@ -25,11 +123,9 @@ export function InvoicesPageContent() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<InvoiceFilterState>({
-    fiscalYear: new Date().getFullYear(),
-    type: '',
-    paymentStatus: '',
-  });
+  const [filters, setFilters] = useState<InvoiceFilterState>({ ...DEFAULT_FILTERS });
+
+  const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
   const fetchInvoices = useCallback(async () => {
     if (!user) return;
@@ -39,9 +135,9 @@ export function InvoicesPageContent() {
     try {
       const token = await user.getIdToken();
       const params = new URLSearchParams();
-      params.set('fiscalYear', String(filters.fiscalYear));
-      if (filters.type) params.set('type', filters.type);
-      if (filters.paymentStatus) params.set('paymentStatus', filters.paymentStatus);
+      params.set('fiscalYear', filters.fiscalYear);
+      if (filters.type && filters.type !== 'all') params.set('type', filters.type);
+      if (filters.paymentStatus && filters.paymentStatus !== 'all') params.set('paymentStatus', filters.paymentStatus);
 
       const res = await fetch(`/api/accounting/invoices?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -64,14 +160,56 @@ export function InvoicesPageContent() {
     fetchInvoices();
   }, [fetchInvoices]);
 
-  const handleFilterChange = useCallback((partial: Partial<InvoiceFilterState>) => {
-    setFilters((prev) => ({ ...prev, ...partial }));
-  }, []);
+  // Compute dashboard stats from loaded invoices
+  const dashboardStats: DashboardStat[] = useMemo(() => {
+    const totalRevenue = invoices.reduce((s, inv) => s + inv.totalGrossAmount, 0);
+    const unpaidBalance = invoices
+      .filter((inv) => inv.paymentStatus !== 'paid')
+      .reduce((s, inv) => s + inv.balanceDue, 0);
+    const thisMonthCount = invoices.filter((inv) => {
+      const d = new Date(inv.issueDate);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length;
+    const pendingMydata = invoices.filter((inv) => inv.mydata?.status === 'draft').length;
+
+    return [
+      {
+        title: t('dashboard.totalInvoices'),
+        value: invoices.length,
+        icon: Receipt,
+        color: 'blue' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.unpaidBalance'),
+        value: formatCurrency(unpaidBalance),
+        icon: CreditCard,
+        color: 'red' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.thisMonth'),
+        value: thisMonthCount,
+        icon: Clock,
+        color: 'green' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.pendingMydata'),
+        value: pendingMydata,
+        icon: Send,
+        color: 'orange' as const,
+        loading,
+      },
+    ];
+  }, [invoices, loading, t]);
 
   return (
     <main className="min-h-screen bg-background">
+      {/* Page Header */}
       <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('invoices.title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">{t('invoices.description')}</p>
@@ -81,9 +219,20 @@ export function InvoicesPageContent() {
             {t('invoices.newInvoice')}
           </Button>
         </div>
-        <InvoiceFilters filters={filters} onFilterChange={handleFilterChange} />
       </header>
 
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
+
+      {/* Filters */}
+      <AdvancedFiltersPanel
+        config={filterConfig}
+        filters={filters}
+        onFiltersChange={setFilters}
+        defaultFilters={DEFAULT_FILTERS}
+      />
+
+      {/* Content */}
       <section className="p-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -93,7 +242,7 @@ export function InvoicesPageContent() {
           <div className="text-center py-12">
             <p className="text-destructive mb-2">{error}</p>
             <Button variant="outline" onClick={fetchInvoices}>
-              {t('invoices.actions')}
+              {t('common.retry')}
             </Button>
           </div>
         ) : invoices.length === 0 ? (

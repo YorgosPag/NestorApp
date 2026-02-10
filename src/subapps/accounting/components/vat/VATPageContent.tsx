@@ -1,20 +1,28 @@
+'use client';
+
 /**
- * @fileoverview VAT Page Content — Κύρια σελίδα Διαχείρισης ΦΠΑ
- * @description Εμφανίζει header, FiscalYearPicker, 4 quarter cards, annual summary, deductibility table
+ * @fileoverview VAT Page Content — Διαχείριση ΦΠΑ
+ * @description UnifiedDashboard stats + quarterly cards + annual summary + deductibility
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @version 1.0.0
+ * @updated 2026-02-10 — Added UnifiedDashboard for annual VAT stats
  * @see ADR-ACC-004 VAT Engine
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles
  */
 
-'use client';
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  DollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
+  TrendingUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useVATSummary } from '../../hooks/useVATSummary';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
@@ -36,6 +44,14 @@ function isAnnualSummary(data: unknown): data is VATAnnualSummary {
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -52,22 +68,71 @@ export function VATPageContent() {
 
   const annualSummary = isAnnualSummary(summary) ? summary : null;
 
+  // Compute dashboard stats from VAT summary
+  const dashboardStats: DashboardStat[] = useMemo(() => {
+    if (!annualSummary) {
+      return [
+        { title: t('dashboard.outputVat'), value: '—', icon: ArrowUpRight, color: 'blue' as const, loading },
+        { title: t('dashboard.inputVat'), value: '—', icon: ArrowDownRight, color: 'green' as const, loading },
+        { title: t('dashboard.vatPayable'), value: '—', icon: DollarSign, color: 'orange' as const, loading },
+        { title: t('dashboard.vatCredit'), value: '—', icon: TrendingUp, color: 'gray' as const, loading },
+      ];
+    }
+
+    const outputVat = annualSummary.annualOutputVat ?? 0;
+    const inputVat = annualSummary.annualDeductibleInputVat ?? 0;
+    const vatPayable = annualSummary.annualVatPayable ?? 0;
+    const vatCredit = annualSummary.annualVatCredit ?? 0;
+
+    return [
+      {
+        title: t('dashboard.outputVat'),
+        value: formatCurrency(outputVat),
+        icon: ArrowUpRight,
+        color: 'blue' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.inputVat'),
+        value: formatCurrency(inputVat),
+        icon: ArrowDownRight,
+        color: 'green' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.vatPayable'),
+        value: formatCurrency(vatPayable),
+        icon: DollarSign,
+        color: vatPayable > 0 ? 'red' as const : 'green' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.vatCredit'),
+        value: formatCurrency(vatCredit),
+        icon: TrendingUp,
+        color: vatCredit > 0 ? 'green' as const : 'gray' as const,
+        loading,
+      },
+    ];
+  }, [annualSummary, loading, t]);
+
   return (
     <main className="min-h-screen bg-background">
       {/* Page Header */}
       <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('vat.title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">{t('vat.description')}</p>
           </div>
-        </div>
-        <nav className="flex gap-3" aria-label={t('common.filter')}>
           <div className="w-32">
             <FiscalYearPicker value={fiscalYear} onValueChange={handleYearChange} />
           </div>
-        </nav>
+        </div>
       </header>
+
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
 
       {/* Content Area */}
       <section className="p-6 space-y-8">

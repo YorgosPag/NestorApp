@@ -1,19 +1,32 @@
 'use client';
 
 /**
- * @fileoverview Company Setup — Basic Info Section
- * @description Βασικά στοιχεία επιχείρησης: Επωνυμία, ΑΦΜ, ΔΟΥ, Διεύθυνση, Επικοινωνία
+ * @fileoverview Company Setup — Basic Info Section with Contact Autocomplete
+ * @description Βασικά στοιχεία επιχείρησης: Επωνυμία (autocomplete από επαφές), ΑΦΜ, ΔΟΥ, Διεύθυνση, Επικοινωνία
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @version 1.0.0
+ * @updated 2026-02-10
+ * @version 1.1.0 — Added contact autocomplete for auto-fill
  * @see ADR-ACC-000 §2 Company Data
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
+import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
+import { ContactsService } from '@/services/contacts.service';
+import {
+  isIndividualContact,
+  isCompanyContact,
+  type Contact,
+  type AddressInfo,
+  type PhoneInfo,
+  type EmailInfo,
+} from '@/types/contacts';
 import type { CompanySetupInput } from '../../types';
 
 // ============================================================================
@@ -27,11 +40,111 @@ interface BasicInfoSectionProps {
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Βρίσκει το primary item σε array (isPrimary === true), αλλιώς fallback στο πρώτο
+ */
+function findPrimary<T extends { isPrimary: boolean }>(items: T[] | undefined): T | undefined {
+  if (!items || items.length === 0) return undefined;
+  return items.find((item) => item.isPrimary) ?? items[0];
+}
+
+/**
+ * Εξάγει address street (οδός + αριθμός) από AddressInfo
+ */
+function extractStreet(addr: AddressInfo | undefined): string {
+  if (!addr) return '';
+  return addr.number ? `${addr.street} ${addr.number}` : addr.street;
+}
+
+/**
+ * Map full Contact → partial CompanySetupInput fields
+ */
+function mapContactToSetupFields(contact: Contact): Partial<CompanySetupInput> {
+  const primaryAddress = findPrimary<AddressInfo>(contact.addresses);
+  const primaryPhone = findPrimary<PhoneInfo>(contact.phones);
+  const primaryEmail = findPrimary<EmailInfo>(contact.emails);
+
+  if (isIndividualContact(contact)) {
+    return {
+      businessName: `${contact.firstName} ${contact.lastName}`.trim(),
+      profession: contact.profession ?? '',
+      vatNumber: contact.vatNumber ?? '',
+      taxOffice: contact.taxOffice ?? '',
+      address: extractStreet(primaryAddress),
+      city: primaryAddress?.city ?? '',
+      postalCode: primaryAddress?.postalCode ?? '',
+      phone: primaryPhone?.number ?? null,
+      email: primaryEmail?.email ?? null,
+    };
+  }
+
+  if (isCompanyContact(contact)) {
+    return {
+      businessName: contact.companyName,
+      profession: '',
+      vatNumber: contact.vatNumber ?? '',
+      taxOffice: contact.taxOffice ?? '',
+      address: extractStreet(primaryAddress),
+      city: primaryAddress?.city ?? '',
+      postalCode: primaryAddress?.postalCode ?? '',
+      phone: primaryPhone?.number ?? null,
+      email: primaryEmail?.email ?? null,
+    };
+  }
+
+  // ServiceContact
+  return {
+    businessName: contact.serviceName,
+    address: extractStreet(primaryAddress),
+    city: primaryAddress?.city ?? '',
+    postalCode: primaryAddress?.postalCode ?? '',
+    phone: primaryPhone?.number ?? null,
+    email: primaryEmail?.email ?? null,
+  };
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionProps) {
   const { t } = useTranslation('accounting');
+  const [selectedContactId, setSelectedContactId] = useState('');
+  const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
+
+  /**
+   * Handle contact selection → fetch full details → auto-fill fields
+   */
+  const handleContactAutoFill = useCallback(async (contact: ContactSummary | null) => {
+    if (!contact) {
+      setSelectedContactId('');
+      setAutoFillMessage(null);
+      return;
+    }
+
+    setSelectedContactId(contact.id);
+
+    try {
+      const fullContact = await ContactsService.getContact(contact.id);
+      if (!fullContact) {
+        setAutoFillMessage(t('setup.contactAutoFillError'));
+        return;
+      }
+
+      const fields = mapContactToSetupFields(fullContact);
+      onChange(fields);
+      setAutoFillMessage(t('setup.contactAutoFilled'));
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setAutoFillMessage(null), 3000);
+    } catch {
+      console.error('Contact auto-fill failed for id:', contact.id);
+      setAutoFillMessage(t('setup.contactAutoFillError'));
+    }
+  }, [onChange, t]);
 
   return (
     <Card>
@@ -40,10 +153,22 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
       </CardHeader>
       <CardContent>
         <fieldset className="space-y-4">
-          {/* Row 1: Επωνυμία + Επάγγελμα */}
+          {/* Row 1: Επωνυμία (autocomplete) + Επάγγελμα */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="businessName">{t('setup.businessName')} *</Label>
+              <Label>{t('setup.businessName')} *</Label>
+              <ContactSearchManager
+                selectedContactId={selectedContactId}
+                onContactSelect={handleContactAutoFill}
+                allowedContactTypes={['individual', 'company', 'service']}
+                label=""
+                placeholder={t('setup.searchContact')}
+                searchConfig={{ autoLoadContacts: true, maxResults: 20 }}
+              />
+              {autoFillMessage && (
+                <p className="text-sm text-muted-foreground">{autoFillMessage}</p>
+              )}
+              {/* Editable fallback — πάντα ορατό, χρήστης μπορεί να αλλάξει μετά auto-fill */}
               <Input
                 id="businessName"
                 value={data.businessName}

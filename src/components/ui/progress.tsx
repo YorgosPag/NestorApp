@@ -26,13 +26,16 @@ const Progress = React.forwardRef<
       {...props}
     >
       <ProgressPrimitive.Indicator
-        className={cn("h-full w-full flex-1 transition-all rounded-full bg-primary", progressTransformClass)}      />
+        className={cn("h-full w-full flex-1 transition-all rounded-full bg-primary", progressTransformClass)}
+      />
     </ProgressPrimitive.Root>
   );
 })
 Progress.displayName = ProgressPrimitive.Root.displayName
 
 export { Progress }
+
+
 
 
 

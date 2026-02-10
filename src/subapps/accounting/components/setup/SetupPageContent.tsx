@@ -10,12 +10,19 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { Save } from 'lucide-react';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import {
+  Save,
+  ClipboardCheck,
+  FileText,
+  Layers,
+  Shield,
+} from 'lucide-react';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
 import type { CompanySetupInput, KadEntry } from '../../types';
 import { BasicInfoSection } from './BasicInfoSection';
@@ -89,7 +96,6 @@ function validateForm(data: CompanySetupInput): Record<string, string> {
 export function SetupPageContent() {
   const { t } = useTranslation('accounting');
   const { profile, loading, saving, error, saveSetup } = useCompanySetup();
-  const colors = useSemanticColors();
 
   const [formData, setFormData] = useState<CompanySetupInput>(createDefaultData);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -138,6 +144,54 @@ export function SetupPageContent() {
     translatedErrors[key] = t(`setup.${value}`);
   }
 
+  // Compute dashboard stats from form data
+  const dashboardStats: DashboardStat[] = useMemo(() => {
+    const requiredTotal = 4; // businessName, vatNumber, taxOffice, mainKad
+    const filledRequired =
+      (formData.businessName.trim() ? 1 : 0) +
+      (formData.vatNumber.trim() ? 1 : 0) +
+      (formData.taxOffice.trim() ? 1 : 0) +
+      (formData.mainKad.code.trim() ? 1 : 0);
+
+    const mainKadFilled = formData.mainKad.code.trim() !== '';
+    const kadCount = mainKadFilled
+      ? 1 + formData.secondaryKads.length
+      : formData.secondaryKads.length;
+
+    const seriesCount = formData.invoiceSeries.length;
+
+    return [
+      {
+        title: t('dashboard.requiredFields'),
+        value: `${filledRequired}/${requiredTotal}`,
+        icon: ClipboardCheck,
+        color: (filledRequired === requiredTotal ? 'green' : 'orange') as 'green' | 'orange',
+        loading,
+      },
+      {
+        title: t('dashboard.kadCodes'),
+        value: kadCount,
+        icon: FileText,
+        color: (kadCount > 0 ? 'blue' : 'gray') as 'blue' | 'gray',
+        loading,
+      },
+      {
+        title: t('dashboard.invoiceSeries'),
+        value: seriesCount,
+        icon: Layers,
+        color: (seriesCount > 0 ? 'green' : 'gray') as 'green' | 'gray',
+        loading,
+      },
+      {
+        title: t('dashboard.efkaCategoryDash'),
+        value: formData.efkaCategory,
+        icon: Shield,
+        color: 'blue' as const,
+        loading,
+      },
+    ];
+  }, [formData, loading, t]);
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
@@ -158,6 +212,9 @@ export function SetupPageContent() {
         </div>
       </header>
 
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
+
       {/* Content */}
       <section className="p-6 space-y-6 max-w-4xl">
         {loading ? (
@@ -170,7 +227,7 @@ export function SetupPageContent() {
             {saveSuccess && (
               <div
                 role="status"
-                className={`rounded-md border ${colors.border.success} ${colors.bg.successSubtle} p-3 text-sm ${colors.text.success}`}
+                className="rounded-md border border-green-500/50 bg-green-500/5 p-3 text-sm text-green-700 dark:text-green-400"
               >
                 {t('setup.saveSuccess')}
               </div>

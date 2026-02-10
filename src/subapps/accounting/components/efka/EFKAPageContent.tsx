@@ -1,22 +1,28 @@
 'use client';
 
 /**
- * @fileoverview Accounting Subapp — EFKA Page Content
- * @description Main page for EFKA social security contributions with annual summary
- * @author Claude Code (Anthropic AI) + Georgios Pagonis
+ * @fileoverview EFKA Page Content — Εισφορές ΕΦΚΑ
+ * @description UnifiedDashboard stats + monthly breakdown + payments list
+ * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @version 1.0.0
+ * @updated 2026-02-10 — Migrated annual summary cards to UnifiedDashboard
  * @see ADR-ACC-006 EFKA Contributions
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import {
+  DollarSign,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+} from 'lucide-react';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useEFKASummary } from '../../hooks/useEFKASummary';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { EFKAMonthlyBreakdown } from './EFKAMonthlyBreakdown';
@@ -36,17 +42,52 @@ function formatCurrency(amount: number): string {
 
 export function EFKAPageContent() {
   const { t } = useTranslation('accounting');
-  const colors = useSemanticColors();
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const { summary, loading, error, refetch } = useEFKASummary({ year: selectedYear });
 
+  // Compute dashboard stats from summary
+  const dashboardStats: DashboardStat[] = useMemo(() => {
+    if (!summary) {
+      return [
+        { title: t('dashboard.totalPaid'), value: '—', icon: CheckCircle, color: 'green' as const, loading },
+        { title: t('dashboard.totalDue'), value: '—', icon: DollarSign, color: 'blue' as const, loading },
+        { title: t('dashboard.balanceDue'), value: '—', icon: Clock, color: 'gray' as const, loading },
+      ];
+    }
+
+    return [
+      {
+        title: t('dashboard.totalPaid'),
+        value: formatCurrency(summary.totalPaid),
+        icon: CheckCircle,
+        color: 'green' as const,
+        description: `${summary.paidMonths} ${t('efka.month')}`,
+        loading,
+      },
+      {
+        title: t('dashboard.totalDue'),
+        value: formatCurrency(summary.totalDue),
+        icon: DollarSign,
+        color: 'blue' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.balanceDue'),
+        value: formatCurrency(summary.balanceDue),
+        icon: summary.balanceDue > 0 ? AlertTriangle : CheckCircle,
+        color: summary.balanceDue > 0 ? 'red' as const : 'green' as const,
+        loading,
+      },
+    ];
+  }, [summary, loading, t]);
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('efka.title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">{t('efka.description')}</p>
@@ -56,6 +97,9 @@ export function EFKAPageContent() {
           </div>
         </div>
       </header>
+
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
 
       {/* Content */}
       <section className="p-6 space-y-6">
@@ -81,72 +125,6 @@ export function EFKAPageContent() {
           </div>
         ) : (
           <>
-            {/* Annual Summary Cards */}
-            <section aria-label={t('efka.annualSummary')}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Total Paid */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {t('efka.totalPaid')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className={`text-2xl font-bold ${colors.text.success}`}>
-                      {formatCurrency(summary.totalPaid)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t('paidMonths', { count: summary.paidMonths })}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Total Due */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {t('efka.totalDue')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-foreground">
-                      {formatCurrency(summary.totalDue)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t('efka.annualContributions')}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Balance Due */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {t('efka.balanceDue')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p
-                      className={`text-2xl font-bold ${
-                        summary.balanceDue > 0
-                          ? colors.text.error
-                          : colors.text.success
-                      }`}
-                    >
-                      {formatCurrency(summary.balanceDue)}
-                    </p>
-                    {summary.overdueMonths > 0 && (
-                      <p className="text-xs text-destructive mt-1">
-                        {t('overdueMonths', { count: summary.overdueMonths })}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
-
-            <Separator />
-
             {/* Monthly Breakdown */}
             <section aria-label={t('efka.monthlyBreakdownTitle')}>
               <h2 className="text-lg font-semibold text-foreground mb-4">
@@ -170,4 +148,3 @@ export function EFKAPageContent() {
     </main>
   );
 }
-

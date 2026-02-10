@@ -1,27 +1,30 @@
 'use client';
 
 /**
- * @fileoverview Accounting Subapp — Bank Page Content
- * @description Main page component for bank reconciliation with filters and CSV import
- * @author Claude Code (Anthropic AI) + Georgios Pagonis
+ * @fileoverview Bank Page Content — Συμφωνία Τράπεζας
+ * @description UnifiedDashboard stats + AdvancedFiltersPanel + TransactionsList + CSV import
+ * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @version 1.0.0
+ * @updated 2026-02-10 — Migrated to UnifiedDashboard + AdvancedFiltersPanel
  * @see ADR-ACC-008 Bank Reconciliation
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload } from 'lucide-react';
+import {
+  Upload,
+  Landmark,
+  ArrowUpRight,
+  ArrowDownRight,
+  AlertCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
+import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { TransactionDirection, MatchStatus } from '@/subapps/accounting/types';
 import { useBankTransactions } from '../../hooks/useBankTransactions';
 import { TransactionsList } from './TransactionsList';
@@ -31,24 +34,67 @@ import { ImportCSVDialog } from './ImportCSVDialog';
 // TYPES
 // ============================================================================
 
-interface BankFilterState {
-  accountId: string;
-  direction: TransactionDirection | '';
-  matchStatus: MatchStatus | '';
+interface BankFilterState extends GenericFilterState {
+  direction: string;
+  matchStatus: string;
 }
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const DIRECTION_OPTIONS: TransactionDirection[] = ['credit', 'debit'];
+const DEFAULT_FILTERS: BankFilterState = {
+  direction: 'all',
+  matchStatus: 'all',
+};
 
-const MATCH_STATUS_OPTIONS: MatchStatus[] = [
-  'unmatched',
-  'auto_matched',
-  'manual_matched',
-  'excluded',
-];
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+}
+
+function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
+  return {
+    title: 'filters.title',
+    i18nNamespace: 'accounting',
+    rows: [
+      {
+        id: 'bank-main',
+        fields: [
+          {
+            id: 'direction',
+            type: 'select',
+            label: 'filterLabels.direction',
+            ariaLabel: 'Transaction direction',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allDirections') },
+              { value: 'credit', label: t('bank.credit') },
+              { value: 'debit', label: t('bank.debit') },
+            ],
+          },
+          {
+            id: 'matchStatus',
+            type: 'select',
+            label: 'filterLabels.matchStatus',
+            ariaLabel: 'Match status',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allStatuses') },
+              { value: 'unmatched', label: t('bank.statuses.unmatched') },
+              { value: 'matched', label: t('bank.statuses.matched') },
+              { value: 'manual', label: t('bank.statuses.manual') },
+              { value: 'excluded', label: t('bank.statuses.excluded') },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
 
 // ============================================================================
 // COMPONENT
@@ -57,34 +103,68 @@ const MATCH_STATUS_OPTIONS: MatchStatus[] = [
 export function BankPageContent() {
   const { t } = useTranslation('accounting');
 
-  const [filters, setFilters] = useState<BankFilterState>({
-    accountId: '',
-    direction: '',
-    matchStatus: '',
-  });
-
+  const [filters, setFilters] = useState<BankFilterState>({ ...DEFAULT_FILTERS });
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const { transactions, loading, error, refetch, importTransactions } = useBankTransactions({
-    accountId: filters.accountId || undefined,
-    direction: filters.direction || undefined,
-    matchStatus: filters.matchStatus || undefined,
-  });
+  const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
-  const handleFilterChange = useCallback((partial: Partial<BankFilterState>) => {
-    setFilters((prev) => ({ ...prev, ...partial }));
-  }, []);
+  const { transactions, loading, error, refetch, importTransactions } = useBankTransactions({
+    direction: filters.direction !== 'all' ? (filters.direction as TransactionDirection) : undefined,
+    matchStatus: filters.matchStatus !== 'all' ? (filters.matchStatus as MatchStatus) : undefined,
+  });
 
   const handleImportSuccess = useCallback(async () => {
     setImportDialogOpen(false);
     await refetch();
   }, [refetch]);
 
+  // Compute dashboard stats
+  const dashboardStats: DashboardStat[] = useMemo(() => {
+    const totalCredit = transactions
+      .filter((tx) => tx.direction === 'credit')
+      .reduce((s, tx) => s + Math.abs(tx.amount), 0);
+    const totalDebit = transactions
+      .filter((tx) => tx.direction === 'debit')
+      .reduce((s, tx) => s + Math.abs(tx.amount), 0);
+    const unmatchedCount = transactions.filter((tx) => tx.matchStatus === 'unmatched').length;
+
+    return [
+      {
+        title: t('dashboard.totalTransactions'),
+        value: transactions.length,
+        icon: Landmark,
+        color: 'blue' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.totalCredit'),
+        value: formatCurrency(totalCredit),
+        icon: ArrowUpRight,
+        color: 'green' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.totalDebit'),
+        value: formatCurrency(totalDebit),
+        icon: ArrowDownRight,
+        color: 'red' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.unmatchedCount'),
+        value: unmatchedCount,
+        icon: AlertCircle,
+        color: unmatchedCount > 0 ? 'orange' as const : 'green' as const,
+        loading,
+      },
+    ];
+  }, [transactions, loading, t]);
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('bank.title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">{t('bank.description')}</p>
@@ -94,75 +174,18 @@ export function BankPageContent() {
             {t('bank.importCSV')}
           </Button>
         </div>
-
-        {/* Filters */}
-        <nav className="flex flex-wrap gap-3" aria-label={t('bank.filters')}>
-          {/* Account Filter */}
-          <div className="w-48">
-            <Select
-              value={filters.accountId || 'all'}
-              onValueChange={(v) =>
-                handleFilterChange({ accountId: v === 'all' ? '' : v })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('bank.account')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Direction Filter */}
-          <div className="w-40">
-            <Select
-              value={filters.direction || 'all'}
-              onValueChange={(v) =>
-                handleFilterChange({
-                  direction: v === 'all' ? '' : (v as TransactionDirection),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('bank.direction')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-                {DIRECTION_OPTIONS.map((dir) => (
-                  <SelectItem key={dir} value={dir}>
-                    {t(`bank.directions.${dir}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Match Status Filter */}
-          <div className="w-44">
-            <Select
-              value={filters.matchStatus || 'all'}
-              onValueChange={(v) =>
-                handleFilterChange({
-                  matchStatus: v === 'all' ? '' : (v as MatchStatus),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('bank.matchStatus')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-                {MATCH_STATUS_OPTIONS.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {t(`bank.matchStatuses.${status}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </nav>
       </header>
+
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
+
+      {/* Filters */}
+      <AdvancedFiltersPanel
+        config={filterConfig}
+        filters={filters}
+        onFiltersChange={setFilters}
+        defaultFilters={DEFAULT_FILTERS}
+      />
 
       {/* Content */}
       <section className="p-6">

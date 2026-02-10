@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * @fileoverview Accounting Dashboard — Κεντρική σελίδα Λογιστικού
+ * @description Κύριο dashboard με UnifiedDashboard stats, quick actions
+ * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
+ * @created 2026-02-09
+ * @updated 2026-02-10 — Migrated to UnifiedDashboard (centralized component)
+ * @see ADR-ACC-000 Accounting Subapp Architecture
+ * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
+ */
+
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
@@ -15,8 +25,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useAuth } from '@/hooks/useAuth';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface DashboardStats {
   totalIncome: number;
@@ -25,11 +40,22 @@ interface DashboardStats {
   pendingInvoices: number;
 }
 
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 export function AccountingDashboard() {
   const { t } = useTranslation('accounting');
   const router = useRouter();
   const { user } = useAuth();
-  const colors = useSemanticColors();
 
   const [stats, setStats] = useState<DashboardStats>({
     totalIncome: 0,
@@ -78,40 +104,37 @@ export function AccountingDashboard() {
     fetchStats();
   }, [fetchStats]);
 
-  const statCards = [
+  // Build UnifiedDashboard stats
+  const dashboardStats: DashboardStat[] = [
     {
       title: t('dashboard.totalIncome'),
-      value: stats.totalIncome,
+      value: formatCurrency(stats.totalIncome),
       icon: ArrowUpRight,
-      color: colors.text.success,
-      bgColor: colors.bg.successSubtle,
+      color: 'green',
+      loading,
     },
     {
       title: t('dashboard.totalExpenses'),
-      value: stats.totalExpenses,
+      value: formatCurrency(stats.totalExpenses),
       icon: ArrowDownRight,
-      color: colors.text.error,
-      bgColor: colors.bg.errorSubtle,
+      color: 'red',
+      loading,
     },
     {
       title: t('dashboard.vatOwed'),
-      value: stats.vatOwed,
+      value: formatCurrency(stats.vatOwed),
       icon: DollarSign,
-      color: colors.text.warning,
-      bgColor: colors.bg.warningSubtle,
+      color: 'orange',
+      loading,
     },
     {
       title: t('dashboard.pendingInvoices'),
       value: stats.pendingInvoices,
       icon: FileWarning,
-      color: colors.text.info,
-      bgColor: colors.bg.infoSubtle,
-      isCount: true,
+      color: 'blue',
+      loading,
     },
   ];
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 
   if (loading) {
     return (
@@ -123,43 +146,26 @@ export function AccountingDashboard() {
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <section className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{t('pages.dashboard')}</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {new Date().getFullYear()}
-              </p>
-            </div>
-            <nav className="flex gap-2">
-              <Button onClick={() => router.push('/accounting/invoices/new')}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('invoices.newInvoice')}
-              </Button>
-            </nav>
+      {/* Page Header */}
+      <header className="border-b border-border bg-card p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{t('pages.dashboard')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {new Date().getFullYear()}
+            </p>
           </div>
-
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {statCards.map((card) => (
-              <Card key={card.title}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
-                    <span className={`p-2 rounded-lg ${card.bgColor}`}>
-                      <card.icon className={`h-4 w-4 ${card.color}`} />
-                    </span>
-                  </div>
-                  <p className="mt-2 text-2xl font-bold text-foreground">
-                    {card.isCount ? card.value : formatCurrency(card.value)}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
-        </section>
+          <Button onClick={() => router.push('/accounting/invoices/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('invoices.newInvoice')}
+          </Button>
+        </div>
       </header>
 
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
+
+      {/* Quick Actions */}
       <section className="p-6">
         <Card>
           <CardHeader>
@@ -206,4 +212,3 @@ export function AccountingDashboard() {
     </main>
   );
 }
-

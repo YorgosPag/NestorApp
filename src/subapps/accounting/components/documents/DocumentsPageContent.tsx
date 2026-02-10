@@ -1,23 +1,31 @@
 'use client';
 
 /**
- * @fileoverview Accounting Subapp — Documents Page Content
- * @description Main documents page with fiscal year picker, status tabs, document list
+ * @fileoverview Documents Page Content — Παραστατικά AI
+ * @description UnifiedDashboard stats + status tabs + document list with review
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-10
- * @version 1.0.0
+ * @updated 2026-02-10 — Added UnifiedDashboard stats
  * @see ADR-ACC-005 AI Document Processing
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  Clock,
+  CheckCircle,
+  Eye,
+} from 'lucide-react';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { DocumentReviewCard } from './DocumentReviewCard';
 import { UploadDocumentDialog } from './UploadDocumentDialog';
@@ -117,6 +125,44 @@ export function DocumentsPageContent() {
     [rejectDocument, refetch]
   );
 
+  // Compute dashboard stats
+  const dashboardStats: DashboardStat[] = useMemo(() => {
+    const processingCount = documents.filter((d) => d.status === 'processing').length;
+    const reviewCount = documents.filter((d) => d.status === 'review').length;
+    const confirmedCount = documents.filter((d) => d.status === 'confirmed').length;
+
+    return [
+      {
+        title: t('dashboard.totalDocuments'),
+        value: documents.length,
+        icon: FileText,
+        color: 'blue' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.processingDocs'),
+        value: processingCount,
+        icon: Clock,
+        color: 'orange' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.pendingReview'),
+        value: reviewCount,
+        icon: Eye,
+        color: 'purple' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.confirmedDocs'),
+        value: confirmedCount,
+        icon: CheckCircle,
+        color: 'green' as const,
+        loading,
+      },
+    ];
+  }, [documents, loading, t]);
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
@@ -137,6 +183,9 @@ export function DocumentsPageContent() {
           </div>
         </div>
       </header>
+
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
 
       {/* Status Tabs */}
       <nav className="border-b border-border bg-card px-6 py-3">

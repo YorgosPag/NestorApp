@@ -1,27 +1,30 @@
 'use client';
 
 /**
- * @fileoverview Accounting Subapp — Fixed Assets Page Content
- * @description Main page for fixed assets management with filters and CRUD
- * @author Claude Code (Anthropic AI) + Georgios Pagonis
+ * @fileoverview Fixed Assets Page Content — Πάγια Στοιχεία
+ * @description UnifiedDashboard stats + AdvancedFiltersPanel + AssetsList + AddAssetForm
+ * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
- * @version 1.0.0
+ * @updated 2026-02-10 — Migrated to UnifiedDashboard + AdvancedFiltersPanel
  * @see ADR-ACC-007 Fixed Assets & Depreciation
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react';
+import {
+  Plus,
+  Package,
+  DollarSign,
+  TrendingDown,
+  BarChart3,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
+import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { AssetCategory, AssetStatus, CreateFixedAssetInput } from '@/subapps/accounting/types';
 import { useFixedAssets } from '../../hooks/useFixedAssets';
 import { AssetsList } from './AssetsList';
@@ -31,26 +34,72 @@ import { AddAssetForm } from './AddAssetForm';
 // TYPES
 // ============================================================================
 
-interface AssetFilterState {
-  category: AssetCategory | '';
-  status: AssetStatus | '';
+interface AssetFilterState extends GenericFilterState {
+  category: string;
+  status: string;
 }
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const ASSET_CATEGORIES: AssetCategory[] = [
-  'buildings',
-  'machinery',
-  'vehicles',
-  'furniture',
-  'computers',
-  'measurement_instruments',
-  'other',
-];
+const DEFAULT_FILTERS: AssetFilterState = {
+  category: 'all',
+  status: 'all',
+};
 
-const ASSET_STATUSES: AssetStatus[] = ['active', 'fully_depreciated', 'disposed', 'inactive'];
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+}
+
+function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
+  return {
+    title: 'filters.title',
+    i18nNamespace: 'accounting',
+    rows: [
+      {
+        id: 'assets-main',
+        fields: [
+          {
+            id: 'category',
+            type: 'select',
+            label: 'filterLabels.category',
+            ariaLabel: 'Asset category',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allCategories') },
+              { value: 'computer_equipment', label: t('assets.categories.computer_equipment') },
+              { value: 'office_equipment', label: t('assets.categories.office_equipment') },
+              { value: 'vehicles', label: t('assets.categories.vehicles') },
+              { value: 'machinery', label: t('assets.categories.machinery') },
+              { value: 'software', label: t('assets.categories.software') },
+              { value: 'furniture', label: t('assets.categories.furniture') },
+              { value: 'tools', label: t('assets.categories.tools') },
+              { value: 'other', label: t('assets.categories.other') },
+            ],
+          },
+          {
+            id: 'status',
+            type: 'select',
+            label: 'filterLabels.status',
+            ariaLabel: 'Asset status',
+            width: 1,
+            options: [
+              { value: 'all', label: t('filterOptions.allStatuses') },
+              { value: 'active', label: t('assets.statuses.active') },
+              { value: 'fully_depreciated', label: t('assets.statuses.fully_depreciated') },
+              { value: 'disposed', label: t('assets.statuses.disposed') },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
 
 // ============================================================================
 // COMPONENT
@@ -59,21 +108,15 @@ const ASSET_STATUSES: AssetStatus[] = ['active', 'fully_depreciated', 'disposed'
 export function AssetsPageContent() {
   const { t } = useTranslation('accounting');
 
-  const [filters, setFilters] = useState<AssetFilterState>({
-    category: '',
-    status: '',
-  });
-
+  const [filters, setFilters] = useState<AssetFilterState>({ ...DEFAULT_FILTERS });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const { assets, loading, error, refetch, createAsset } = useFixedAssets({
-    category: filters.category || undefined,
-    status: filters.status || undefined,
-  });
+  const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
-  const handleFilterChange = useCallback((partial: Partial<AssetFilterState>) => {
-    setFilters((prev) => ({ ...prev, ...partial }));
-  }, []);
+  const { assets, loading, error, refetch, createAsset } = useFixedAssets({
+    category: filters.category !== 'all' ? (filters.category as AssetCategory) : undefined,
+    status: filters.status !== 'all' ? (filters.status as AssetStatus) : undefined,
+  });
 
   const handleCreateAsset = useCallback(
     async (data: CreateFixedAssetInput) => {
@@ -86,11 +129,49 @@ export function AssetsPageContent() {
     [createAsset],
   );
 
+  // Compute dashboard stats
+  const dashboardStats: DashboardStat[] = useMemo(() => {
+    const totalValue = assets.reduce((s, a) => s + a.acquisitionCost, 0);
+    const totalDepreciation = assets.reduce((s, a) => s + a.accumulatedDepreciation, 0);
+    const netBookValue = totalValue - totalDepreciation;
+
+    return [
+      {
+        title: t('dashboard.totalAssets'),
+        value: assets.length,
+        icon: Package,
+        color: 'blue' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.totalValue'),
+        value: formatCurrency(totalValue),
+        icon: DollarSign,
+        color: 'green' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.totalDepreciation'),
+        value: formatCurrency(totalDepreciation),
+        icon: TrendingDown,
+        color: 'orange' as const,
+        loading,
+      },
+      {
+        title: t('dashboard.netBookValue'),
+        value: formatCurrency(netBookValue),
+        icon: BarChart3,
+        color: 'purple' as const,
+        loading,
+      },
+    ];
+  }, [assets, loading, t]);
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('assets.title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">{t('assets.description')}</p>
@@ -100,54 +181,18 @@ export function AssetsPageContent() {
             {t('assets.addAsset')}
           </Button>
         </div>
-
-        {/* Filters */}
-        <nav className="flex flex-wrap gap-3" aria-label={t('assets.filters')}>
-          {/* Category Filter */}
-          <div className="w-48">
-            <Select
-              value={filters.category || 'all'}
-              onValueChange={(v) =>
-                handleFilterChange({ category: v === 'all' ? '' : (v as AssetCategory) })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('assets.category')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-                {ASSET_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {t(`assets.categories.${cat}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status Filter */}
-          <div className="w-44">
-            <Select
-              value={filters.status || 'all'}
-              onValueChange={(v) =>
-                handleFilterChange({ status: v === 'all' ? '' : (v as AssetStatus) })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('assets.status')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-                {ASSET_STATUSES.map((st) => (
-                  <SelectItem key={st} value={st}>
-                    {t(`assets.statuses.${st}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </nav>
       </header>
+
+      {/* Stats Dashboard */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} />
+
+      {/* Filters */}
+      <AdvancedFiltersPanel
+        config={filterConfig}
+        filters={filters}
+        onFiltersChange={setFilters}
+        defaultFilters={DEFAULT_FILTERS}
+      />
 
       {/* Content */}
       <section className="p-6">
