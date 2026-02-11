@@ -503,6 +503,7 @@ export class PipelineOrchestrator {
 
       // 6. Update pipeline context
       ctx.executionResult = { success: true, sideEffects: ['agentic_loop_completed'] };
+      ctx = this.transitionState(ctx, PipelineState.UNDERSTOOD);
       ctx = this.transitionState(ctx, PipelineState.PROPOSED);
       const approverLabel = ctx.adminCommandMeta?.isAdminCommand
         ? `super_admin:${ctx.adminCommandMeta.adminIdentity.displayName}`

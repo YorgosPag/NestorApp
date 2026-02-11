@@ -23,7 +23,7 @@ const logger = createModuleLogger('InstagramClient');
 // ============================================================================
 
 const GRAPH_API_VERSION = 'v22.0';
-const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+const GRAPH_API_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 
 // ============================================================================
 // SEND TEXT MESSAGE
