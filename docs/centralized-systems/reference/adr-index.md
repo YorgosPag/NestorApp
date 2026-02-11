@@ -163,7 +163,7 @@
 | **ADR-171** | Autonomous AI Agent with Agentic Tool Calling | ✅ IMPLEMENTED | 2026-02-10 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-171-autonomous-ai-agent.md) |
 | **ADR-172** | Pre-Production Code Quality Audit & Remediation | ✅ IN_PROGRESS | 2026-02-10 | Security & Auth / Infrastructure | [📄](./adrs/ADR-172-pre-production-audit-remediation.md) |
 | **ADR-173** | Enterprise AI Self-Improvement System | ✅ ACTIVE | 2026-02-10 | AI Architecture / Self-Improvement | [📄](./adrs/ADR-173-ai-self-improvement-system.md) |
-| **ADR-174** | Meta Omnichannel — WhatsApp + Messenger + Instagram | ✅ PHASE 1+2+3 COMPLETE (code ready, env vars pending) | 2026-02-11 | Communications / Omnichannel | [📄](./adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md) |
+| **ADR-174** | Meta Omnichannel — WhatsApp + Messenger + Instagram | ✅ PHASE 1+2 OPERATIONAL (WhatsApp + Messenger live), Phase 3 code ready | 2026-02-11 | Communications / Omnichannel | [📄](./adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-136** | Canvas Opacity Constants Centralization (Extended) | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-136-canvas-opacity-constants-centralization-extended.md) |
 | **ADR-137** | Snap Icon Geometry Centralization | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-137-snap-icon-geometry-centralization.md) |

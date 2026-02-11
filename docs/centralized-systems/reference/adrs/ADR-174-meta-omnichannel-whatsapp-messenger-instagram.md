@@ -1,6 +1,6 @@
 # ADR-174: Meta Omnichannel Integration — WhatsApp + Messenger + Instagram
 
-**Status**: Phase 1+2+3 COMPLETE (WhatsApp + Messenger + Instagram fully operational with AI pipeline)
+**Status**: Phase 1+2 OPERATIONAL, Phase 3 CODE COMPLETE (WhatsApp + Messenger tested & live, Instagram code ready — env vars pending)
 **Date**: 2026-02-11
 **Author**: Claude Code (Anthropic AI) + Γιώργος Παγώνης
 **Extends**: ADR-029 (Omnichannel Conversation Model), ADR-031 (Safe Document ID Generation)
@@ -51,8 +51,8 @@
 | `WHATSAPP_PHONE_NUMBER_ID` | Phone Number ID for sending | ✅ Set (2026-02-11) |
 | `WHATSAPP_BUSINESS_ACCOUNT_ID` | WABA ID | ✅ Set (2026-02-11) |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Custom string for webhook verification | ✅ Set (2026-02-11) |
-| `MESSENGER_PAGE_ACCESS_TOKEN` | Facebook Page token for Messenger | Pending — set when Page is connected |
-| `MESSENGER_WEBHOOK_VERIFY_TOKEN` | Custom string for Messenger webhook verification | Pending — set when configuring webhook |
+| `MESSENGER_PAGE_ACCESS_TOKEN` | Facebook Page token for Messenger | ✅ Set (2026-02-11) |
+| `MESSENGER_WEBHOOK_VERIFY_TOKEN` | Custom string for Messenger webhook verification | ✅ Set (2026-02-11) |
 | `INSTAGRAM_ACCESS_TOKEN` | Instagram Business account token | Pending — set when IG account is linked |
 | `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | Custom string for Instagram webhook verification | Pending — set when configuring webhook |
 
@@ -354,11 +354,11 @@ Authorization: Bearer {access_token}
 - [ ] Generate permanent System User Access Token (replace temporary 24h token)
 - [ ] Set META_APP_SECRET for webhook signature verification in production
 
-### Phase 2: Messenger (CODE COMPLETE)
+### Phase 2: Messenger (OPERATIONAL ✅)
 
-- [ ] Connect Facebook Page to Meta App
+- [x] Connect Facebook Page ("Nestor App", ID: 984661054730180) to Meta App
 - [x] Build `src/app/api/communications/webhooks/messenger/` (5 files: types, client, crm-adapter, handler, route)
-- [ ] Configure Messenger webhook on Meta Portal
+- [x] Configure Messenger webhook on Meta Portal (verified + subscribed: messages, messaging_postbacks, message_deliveries)
 - [x] Add Messenger to IMPLEMENTED_CHANNELS
 - [x] MessengerChannelAdapter created (mirrors WhatsAppChannelAdapter)
 - [x] dispatchMessenger added to channel-reply-dispatcher for outbound AI replies
@@ -369,9 +369,10 @@ Authorization: Bearer {access_token}
 - [x] sendMessengerQuickReplies() for quick reply message type
 - [x] markMessengerSeen() for sender_action: mark_seen
 - [x] Instant "⏳ Επεξεργάζομαι..." acknowledgment on incoming messages
-- [ ] Set MESSENGER_PAGE_ACCESS_TOKEN on Vercel
-- [ ] Set MESSENGER_WEBHOOK_VERIFY_TOKEN on Vercel
-- [ ] Submit for App Review (`pages_messaging` permission)
+- [x] Set MESSENGER_PAGE_ACCESS_TOKEN on Vercel (2026-02-11)
+- [x] Set MESSENGER_WEBHOOK_VERIFY_TOKEN on Vercel (2026-02-11)
+- [x] **TESTED**: End-to-end Messenger → AI pipeline → response + Quick Replies + feedback (2026-02-11)
+- [ ] Submit for App Review (`pages_messaging` permission) — needed for public access
 
 ### Phase 3: Instagram (CODE COMPLETE)
 
@@ -478,3 +479,4 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | 2026-02-11 | Type system: INSTAGRAM added to PipelineChannel, COMMUNICATION_CHANNELS, IDENTITY_PROVIDER, PLATFORMS | Claude + Γιώργος |
 | 2026-02-11 | IntakeSender extended: +messengerUserId, +instagramUserId | Claude + Γιώργος |
 | 2026-02-11 | Pipeline orchestrator: Messenger+Instagram routed to agentic path + buttons/quick replies | Claude + Γιώργος |
+| 2026-02-11 | **Phase 2 OPERATIONAL**: FB Page "Nestor App" (984661054730180) connected, webhook verified, subscriptions (messages, messaging_postbacks, message_deliveries), env vars set, end-to-end test passed — AI reply + Quick Replies + feedback working | Claude + Γιώργος |
