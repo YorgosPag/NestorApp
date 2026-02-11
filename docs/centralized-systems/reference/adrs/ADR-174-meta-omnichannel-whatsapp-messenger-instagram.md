@@ -53,7 +53,7 @@
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Custom string for webhook verification | ✅ Set (2026-02-11) |
 | `MESSENGER_PAGE_ACCESS_TOKEN` | Facebook Page token for Messenger | ✅ Set (2026-02-11) |
 | `MESSENGER_WEBHOOK_VERIFY_TOKEN` | Custom string for Messenger webhook verification | ✅ Set (2026-02-11) |
-| `INSTAGRAM_ACCESS_TOKEN` | Instagram Business account token (giorgio_pagoni) | ✅ Set (2026-02-11) |
+| `INSTAGRAM_ACCESS_TOKEN` | Instagram Business account token (nestor_app) | ✅ Updated (2026-02-11) |
 | `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | Custom string for Instagram webhook verification | ✅ Set (2026-02-11) |
 
 ---
@@ -388,15 +388,16 @@ Authorization: Bearer {instagram_access_token}
 - [x] Instagram → agentic AI path for immediate auto-reply
 - [x] Text-only replies (Instagram does not support quick replies or buttons)
 - [x] Instant "⏳ Επεξεργάζομαι..." acknowledgment on incoming messages
-- [x] Set INSTAGRAM_ACCESS_TOKEN on Vercel (2026-02-11)
+- [x] Set INSTAGRAM_ACCESS_TOKEN on Vercel (2026-02-11) — updated for nestor_app
 - [x] Set INSTAGRAM_WEBHOOK_VERIFY_TOKEN on Vercel (2026-02-11) — `nestor_ig_verify_2026`
 - [x] Set META_APP_SECRET on Vercel (2026-02-11) — signature verification for all Meta channels
-- [x] Instagram Tester role assigned to giorgio_pagoni
+- [x] Instagram Tester role assigned to giorgio_pagoni + nestor_app
 - [x] App published (Live mode) — webhooks operational
 - [x] Privacy Policy, Terms of Service, Data Deletion pages created
 - [x] **BUG FIX**: API base URL was `graph.facebook.com` (Messenger) — fixed to `graph.instagram.com`
 - [x] Super admin detection via IGSID (Γιώργος: 17841403201916682)
-- [x] **TESTED**: Webhooks arrive, admin detected, agentic loop completes, messages stored in CRM
+- [x] **Dedicated app account**: nestor_app (Instagram Business) — webhook receiver, token holder
+- [x] **TESTED**: giorgio_pagoni → nestor_app DM → ack "⏳ Επεξεργάζομαι..." → AI reply received ✅
 - [ ] Submit for App Review (`instagram_manage_messages` permission) — needed for non-tester users
 
 ### Phase 4: UI Updates (Pending)
@@ -493,3 +494,4 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | 2026-02-11 | **Phase 3 OPERATIONAL**: Instagram setup complete — IG account giorgio_pagoni linked, webhook verified, tokens set, app published (Live). Privacy/Terms/Data-deletion pages created for Meta compliance | Claude + Γιώργος |
 | 2026-02-11 | **BUG FIX**: Instagram reply dispatch was using `graph.facebook.com` (Messenger endpoint) — fixed to `graph.instagram.com`. Also fixed agentic path state transitions: added missing UNDERSTOOD step (acked→understood→proposed) | Claude + Γιώργος |
 | 2026-02-11 | Legal pages added to sidebar footer: Privacy Policy, Terms of Service, Data Deletion | Claude + Γιώργος |
+| 2026-02-11 | **Instagram dedicated app account**: Created nestor_app (Instagram Business) as webhook receiver. INSTAGRAM_ACCESS_TOKEN updated for nestor_app. Webhook subscription enabled for nestor_app. giorgio_pagoni sends DMs to nestor_app for testing. End-to-end test passed: ack + AI reply received | Claude + Γιώργος |

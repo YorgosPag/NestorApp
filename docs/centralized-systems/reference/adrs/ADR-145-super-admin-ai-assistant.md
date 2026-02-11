@@ -47,6 +47,7 @@ In-App:    isSuperAdminFirebaseUid(uid)    → check settings/super_admin_regist
 WhatsApp:  isSuperAdminWhatsApp(phone)     → check settings/super_admin_registry
 Messenger: isSuperAdminMessenger(psid)     → check settings/super_admin_registry
 Instagram: isSuperAdminInstagram(igsid)    → check settings/super_admin_registry
+           ↳ nestor_app = dedicated app account, Γιώργος sends DMs from giorgio_pagoni
 ```
 
 ### Pipeline Branching
@@ -534,6 +535,7 @@ interface AdminSession {
 | 2026-02-10 | **UC-011 Bottom-Up Discovery (Google approach)** — Πλήρης αναδόμηση `enrichProjectDetails()`. Πρόβλημα: buildings.companyId + units.companyId είναι OPTIONAL → queries by companyId επέστρεφαν κενά. Λύση: Bottom-up discovery χρησιμοποιώντας ΜΟΝΟ required fields: Buildings by `projectId` (required), Units by `buildingId` (required), Phases by `buildingId` (required). Νέο: `GanttBuildingDetail` type — η απάντηση δείχνει Gantt ανά κτίριο μέσα σε κάθε έργο (ιεραρχική εμφάνιση). Diagnostic logging σε κάθε step. | Claude Code |
 | 2026-02-10 | **ADR-171: Autonomous AI Agent** — Αντικατάσταση hardcoded UC module routing με agentic tool calling. Ο admin path πλέον χρησιμοποιεί `executeAgenticPath()` αντί individual UC modules. 8 generic tools (firestore_query, get_document, count, write, send_email, send_telegram, get_schema, search_text), agentic loop (max 5 iterations), chat history (24h TTL). UC-010~016 παραμένουν ως legacy για customer path. Βλ. ADR-171 για πλήρη τεκμηρίωση. | Claude Code |
 | 2026-02-11 | **Multi-Channel Super Admin Detection** — Επέκταση admin αναγνώρισης σε WhatsApp, Messenger, Instagram. Νέες συναρτήσεις: `isSuperAdminWhatsApp()`, `isSuperAdminMessenger()`, `isSuperAdminInstagram()` στο `super-admin-resolver.ts`. Όλα τα Meta channel adapters (WhatsApp, Messenger, Instagram) ενσωματώνουν admin detection block (ίδιο pattern με Telegram). Types: `SuperAdminMessengerIdentity`, `SuperAdminInstagramIdentity`, `AdminResolvedVia` +messenger_psid +instagram_igsid. Firestore registry ενημερώθηκε: Γιώργος PSID=25577455211956767. | Claude Code |
+| 2026-02-11 | **Instagram dedicated app account (nestor_app)**: Δημιουργία ξεχωριστού Instagram Business account (nestor_app) ως webhook receiver. Ο Γιώργος στέλνει DMs από giorgio_pagoni → nestor_app. INSTAGRAM_ACCESS_TOKEN ενημερώθηκε για nestor_app. End-to-end test passed: ack + AI agentic reply received. | Claude Code |
 
 ---
 
