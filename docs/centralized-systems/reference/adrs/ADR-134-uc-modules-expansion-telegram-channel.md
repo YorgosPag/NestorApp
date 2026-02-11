@@ -7,7 +7,7 @@
 | **Category** | AI Architecture / Pipeline Infrastructure |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Supersedes** | — |
-| **Related** | ADR-080 (Pipeline Implementation), ADR-131 (Multi-Intent Pipeline), ADR-169 (Modular AI Architecture), ADR-070 (Email & AI Ingestion) |
+| **Related** | ADR-080 (Pipeline Implementation), ADR-131 (Multi-Intent Pipeline), ADR-169 (Modular AI Architecture), ADR-070 (Email & AI Ingestion), ADR-174 (Meta Omnichannel — WhatsApp + Messenger + Instagram) |
 
 ---
 

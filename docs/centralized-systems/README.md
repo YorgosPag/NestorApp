@@ -103,6 +103,12 @@
 - **[🏛️ Governance](ai/governance.md)** - Prompt/model registry, drift monitoring, runbooks
 - **[📋 Prerequisites](ai/prerequisites.md)** - PRE-001~PRE-005 (calendar, leads, procurement)
 
+### 📡 **OMNICHANNEL COMMUNICATIONS**
+- **[📱 Meta Omnichannel (ADR-174)](reference/adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md)** - WhatsApp + Messenger + Instagram integration
+- **[💬 Telegram Pipeline (ADR-134)](reference/adrs/ADR-134-uc-modules-expansion-telegram-channel.md)** - Telegram webhook + CRM + AI pipeline
+- **[📧 Email Pipeline (ADR-070)](reference/adrs/ADR-070-email-ai-ingestion-pipeline.md)** - Mailgun webhook + email processing
+- **Channels**: Email ✅ | Telegram ✅ | WhatsApp ✅ | Messenger (pending) | Instagram (pending)
+
 ### 🖼️ **UI SYSTEMS**
 - **[📋 Overview](ui-systems/index.md)** - User interface systems architecture
 - **[📸 Photo System](ui-systems/photo-system.md)** - Media management & display

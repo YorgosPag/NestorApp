@@ -1,6 +1,6 @@
 # ADR-174: Meta Omnichannel Integration — WhatsApp + Messenger + Instagram
 
-**Status**: In Progress (Phase 1 — WhatsApp)
+**Status**: Phase 1 OPERATIONAL (WhatsApp webhook live)
 **Date**: 2026-02-11
 **Author**: Claude Code (Anthropic AI) + Γιώργος Παγώνης
 **Extends**: ADR-029 (Omnichannel Conversation Model), ADR-031 (Safe Document ID Generation)
@@ -45,12 +45,12 @@
 
 | Variable | Description | Status |
 |----------|-------------|--------|
-| `META_APP_ID` | Meta App ID | Pending |
+| `META_APP_ID` | Meta App ID | ✅ Set (2026-02-11) |
 | `META_APP_SECRET` | Meta App Secret (from App Dashboard → Settings → Basic) | Pending |
-| `WHATSAPP_ACCESS_TOKEN` | Permanent System User Token | Pending |
-| `WHATSAPP_PHONE_NUMBER_ID` | Phone Number ID for sending | Pending |
-| `WHATSAPP_BUSINESS_ACCOUNT_ID` | WABA ID | Pending |
-| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Custom string for webhook verification | Pending |
+| `WHATSAPP_ACCESS_TOKEN` | Temporary 24h token (needs permanent System User Token) | ✅ Set (2026-02-11) |
+| `WHATSAPP_PHONE_NUMBER_ID` | Phone Number ID for sending | ✅ Set (2026-02-11) |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID` | WABA ID | ✅ Set (2026-02-11) |
+| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Custom string for webhook verification | ✅ Set (2026-02-11) |
 | `MESSENGER_PAGE_ACCESS_TOKEN` | Facebook Page token for Messenger | Pending |
 | `INSTAGRAM_ACCESS_TOKEN` | Instagram Business account token | Pending |
 
@@ -311,14 +311,16 @@ Authorization: Bearer {access_token}
 - [x] Meta Developer App created ("Nestor App CRM")
 - [x] WhatsApp Business use case added
 - [x] Temporary Access Token generated
-- [ ] Save env vars to Vercel (WHATSAPP_ACCESS_TOKEN, PHONE_NUMBER_ID, etc.)
-- [ ] Build `src/app/api/communications/webhooks/whatsapp/` (5 files)
-- [ ] Extract shared CRM store to `src/services/crm/omnichannel-store.ts`
-- [ ] Configure webhook URL on Meta Developer Portal
-- [ ] Add WhatsApp to `IMPLEMENTED_CHANNELS` in communications.ts
+- [x] Save env vars to Vercel (5 vars: TOKEN, PHONE_ID, WABA_ID, APP_ID, VERIFY_TOKEN)
+- [x] Build `src/app/api/communications/webhooks/whatsapp/` (5 files)
+- [x] CRM adapter uses shared collections directly (same pattern as Telegram)
+- [x] Configure webhook URL on Meta Developer Portal (verified + messages subscribed)
+- [x] Add WhatsApp to `IMPLEMENTED_CHANNELS` in communications.ts
 - [ ] Update `conversations/[conversationId]/send/route.ts` for WhatsApp outbound
-- [ ] Test: Send test message → webhook fires → CRM stores → AI pipeline responds
-- [ ] Generate permanent System User Access Token (replace temporary)
+- [ ] Test: Send test message → webhook fires → CRM stores
+- [ ] Feed WhatsApp messages to AI pipeline (via `after()`)
+- [ ] Generate permanent System User Access Token (replace temporary 24h token)
+- [ ] Set META_APP_SECRET for webhook signature verification in production
 
 ### Phase 2: Messenger (Pending)
 
@@ -417,3 +419,4 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-02-11 | Initial ADR — Meta App created, WhatsApp token generated | Claude + Γιώργος |
+| 2026-02-11 | Phase 1 OPERATIONAL — 5 webhook files, env vars, webhook verified + subscribed | Claude + Γιώργος |
