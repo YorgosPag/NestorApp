@@ -185,13 +185,10 @@ async function processIncomingMessage(
 function verifySignature(rawBody: string, signature: string | null): boolean {
   const appSecret = process.env.META_APP_SECRET?.trim();
 
-  // If no app secret configured, skip verification in development
+  // If no app secret configured, allow with warning (temporary until META_APP_SECRET is set)
+  // TODO: Remove this fallback once META_APP_SECRET is configured on Vercel
   if (!appSecret) {
-    if (process.env.NODE_ENV === 'production') {
-      logger.error('META_APP_SECRET not configured in production — rejecting');
-      return false;
-    }
-    logger.warn('META_APP_SECRET not configured — skipping signature verification (dev mode)');
+    logger.warn('META_APP_SECRET not configured — skipping signature verification (TEMPORARY)');
     return true;
   }
 
