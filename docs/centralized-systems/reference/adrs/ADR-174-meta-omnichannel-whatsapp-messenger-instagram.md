@@ -103,6 +103,15 @@ src/app/api/communications/webhooks/
 │   ├── whatsapp-client.ts — WhatsApp Cloud API client (send messages)
 │   ├── crm-adapter.ts     — Normalize WhatsApp → CRMStoreMessage
 │   └── types.ts           — WhatsApp webhook payload types
+│
+src/services/ai-pipeline/channel-adapters/
+├── telegram-channel-adapter.ts  ← Existing
+├── whatsapp-channel-adapter.ts  ← NEW (mirrors Telegram pattern)
+│
+src/services/ai-pipeline/shared/
+├── channel-reply-dispatcher.ts  ← MODIFIED (+dispatchWhatsApp)
+│
+src/app/api/communications/webhooks/
 ├── messenger/             ← Phase 2 (NEW)
 │   ├── route.ts           — GET (verification) + POST (messages)
 │   ├── handler.ts         — Webhook processing
@@ -316,9 +325,12 @@ Authorization: Bearer {access_token}
 - [x] CRM adapter uses shared collections directly (same pattern as Telegram)
 - [x] Configure webhook URL on Meta Developer Portal (verified + messages subscribed)
 - [x] Add WhatsApp to `IMPLEMENTED_CHANNELS` in communications.ts
+- [x] Test: Send test message → webhook fires → CRM stores → blue checkmarks
+- [x] Feed WhatsApp messages to AI pipeline (via `after()`)
+- [x] WhatsAppChannelAdapter created (mirrors TelegramChannelAdapter)
+- [x] dispatchWhatsApp added to channel-reply-dispatcher for outbound AI replies
+- [x] WHATSAPP added to PipelineChannel enum + IntakeSender.whatsappPhone
 - [ ] Update `conversations/[conversationId]/send/route.ts` for WhatsApp outbound
-- [ ] Test: Send test message → webhook fires → CRM stores
-- [ ] Feed WhatsApp messages to AI pipeline (via `after()`)
 - [ ] Generate permanent System User Access Token (replace temporary 24h token)
 - [ ] Set META_APP_SECRET for webhook signature verification in production
 
@@ -420,3 +432,4 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 |------|--------|--------|
 | 2026-02-11 | Initial ADR — Meta App created, WhatsApp token generated | Claude + Γιώργος |
 | 2026-02-11 | Phase 1 OPERATIONAL — 5 webhook files, env vars, webhook verified + subscribed | Claude + Γιώργος |
+| 2026-02-11 | AI Pipeline integration — WhatsAppChannelAdapter, dispatchWhatsApp, after() batch, PipelineChannel.WHATSAPP | Claude + Γιώργος |
