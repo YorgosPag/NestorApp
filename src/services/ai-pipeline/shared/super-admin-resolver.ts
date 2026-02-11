@@ -150,6 +150,93 @@ export async function isSuperAdminEmail(
 }
 
 /**
+ * Check if a WhatsApp user is a super admin.
+ *
+ * @param phoneNumber - WhatsApp phone number (wa_id from webhook)
+ * @returns SuperAdminResolution if admin, null otherwise
+ */
+export async function isSuperAdminWhatsApp(
+  phoneNumber: string
+): Promise<SuperAdminResolution | null> {
+  const registry = await getRegistry();
+  if (!registry?.admins) return null;
+
+  for (const admin of registry.admins) {
+    if (!admin.isActive) continue;
+    if (admin.channels.whatsapp?.phoneNumber === phoneNumber) {
+      logger.info('Super admin identified via WhatsApp', {
+        displayName: admin.displayName,
+        phoneNumber,
+      });
+      return {
+        identity: admin,
+        resolvedVia: 'whatsapp_phone',
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if a Messenger user is a super admin.
+ *
+ * @param psid - Page-Scoped ID (from Messenger webhook)
+ * @returns SuperAdminResolution if admin, null otherwise
+ */
+export async function isSuperAdminMessenger(
+  psid: string
+): Promise<SuperAdminResolution | null> {
+  const registry = await getRegistry();
+  if (!registry?.admins) return null;
+
+  for (const admin of registry.admins) {
+    if (!admin.isActive) continue;
+    if (admin.channels.messenger?.psid === psid) {
+      logger.info('Super admin identified via Messenger', {
+        displayName: admin.displayName,
+        psid,
+      });
+      return {
+        identity: admin,
+        resolvedVia: 'messenger_psid',
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if an Instagram user is a super admin.
+ *
+ * @param igsid - Instagram-Scoped ID (from Instagram webhook)
+ * @returns SuperAdminResolution if admin, null otherwise
+ */
+export async function isSuperAdminInstagram(
+  igsid: string
+): Promise<SuperAdminResolution | null> {
+  const registry = await getRegistry();
+  if (!registry?.admins) return null;
+
+  for (const admin of registry.admins) {
+    if (!admin.isActive) continue;
+    if (admin.channels.instagram?.igsid === igsid) {
+      logger.info('Super admin identified via Instagram', {
+        displayName: admin.displayName,
+        igsid,
+      });
+      return {
+        identity: admin,
+        resolvedVia: 'instagram_igsid',
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Check if a Firebase Auth user is a super admin.
  *
  * @param firebaseUid - Firebase Auth UID (from session/JWT)

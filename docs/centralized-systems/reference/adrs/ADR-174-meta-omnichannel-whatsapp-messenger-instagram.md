@@ -480,3 +480,4 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | 2026-02-11 | IntakeSender extended: +messengerUserId, +instagramUserId | Claude + Γιώργος |
 | 2026-02-11 | Pipeline orchestrator: Messenger+Instagram routed to agentic path + buttons/quick replies | Claude + Γιώργος |
 | 2026-02-11 | **Phase 2 OPERATIONAL**: FB Page "Nestor App" (984661054730180) connected, webhook verified, subscriptions (messages, messaging_postbacks, message_deliveries), env vars set, end-to-end test passed — AI reply + Quick Replies + feedback working | Claude + Γιώργος |
+| 2026-02-11 | **Super Admin Detection (ADR-145)**: Όλα τα Meta channel adapters (WhatsApp, Messenger, Instagram) αναγνωρίζουν super admin. Firestore registry: Γιώργος PSID=25577455211956767. `AdminCommandMeta.resolvedVia` +messenger_psid +instagram_igsid | Claude + Γιώργος |

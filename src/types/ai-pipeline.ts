@@ -367,8 +367,15 @@ export interface AdminCommandMeta {
   };
   /** Whether this message should be treated as an admin command */
   isAdminCommand: boolean;
-  /** How the admin was identified */
-  resolvedVia: 'telegram_user_id' | 'email_address' | 'firebase_uid' | 'viber_phone' | 'whatsapp_phone';
+  /** How the admin was identified — matches AdminResolvedVia from super-admin.ts */
+  resolvedVia:
+    | 'telegram_user_id'
+    | 'email_address'
+    | 'firebase_uid'
+    | 'whatsapp_phone'
+    | 'messenger_psid'
+    | 'instagram_igsid'
+    | 'viber_phone';
 }
 
 // ============================================================================

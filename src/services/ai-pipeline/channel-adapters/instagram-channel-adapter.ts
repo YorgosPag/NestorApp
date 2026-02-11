@@ -17,10 +17,11 @@
  *     → InstagramChannelAdapter.feedToPipeline() → ai_pipeline_queue
  */
 
-import type { IntakeMessage } from '@/types/ai-pipeline';
+import type { IntakeMessage, AdminCommandMeta } from '@/types/ai-pipeline';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
+import { isSuperAdminInstagram } from '../shared/super-admin-resolver';
 
 // ============================================================================
 // TYPES
@@ -45,6 +46,7 @@ export interface InstagramFeedResult {
   enqueued: boolean;
   pipelineQueueId?: string;
   requestId?: string;
+  isAdmin?: boolean;
   error?: string;
 }
 
@@ -66,16 +68,36 @@ export class InstagramChannelAdapter {
     try {
       const intakeMessage = InstagramChannelAdapter.toIntakeMessage(params);
 
+      // ── ADR-145: Super Admin Detection ──
+      let adminCommandMeta: AdminCommandMeta | null = null;
+      try {
+        const adminResolution = await isSuperAdminInstagram(params.igsid);
+        if (adminResolution) {
+          adminCommandMeta = {
+            adminIdentity: {
+              displayName: adminResolution.identity.displayName,
+              firebaseUid: adminResolution.identity.firebaseUid,
+            },
+            isAdminCommand: true,
+            resolvedVia: adminResolution.resolvedVia,
+          };
+        }
+      } catch {
+        // Non-fatal: proceed as regular customer if admin check fails
+      }
+
       const { queueId, requestId } = await enqueuePipelineItem({
         companyId: params.companyId,
         channel: PipelineChannel.INSTAGRAM,
         intakeMessage,
+        ...(adminCommandMeta ? { adminCommandMeta } : {}),
       });
 
       return {
         enqueued: true,
         pipelineQueueId: queueId,
         requestId,
+        isAdmin: adminCommandMeta?.isAdminCommand ?? false,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

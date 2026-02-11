@@ -31,13 +31,32 @@ export interface SuperAdminEmailIdentity {
 }
 
 /**
- * Future channel identities (placeholder — not yet implemented)
+ * WhatsApp channel identity for a super admin
  */
-export interface SuperAdminViberIdentity {
+export interface SuperAdminWhatsAppIdentity {
   phoneNumber: string;
 }
 
-export interface SuperAdminWhatsAppIdentity {
+/**
+ * Messenger channel identity for a super admin
+ */
+export interface SuperAdminMessengerIdentity {
+  /** Page-Scoped ID (PSID) — unique per user-page pair */
+  psid: string;
+}
+
+/**
+ * Instagram channel identity for a super admin
+ */
+export interface SuperAdminInstagramIdentity {
+  /** Instagram-Scoped ID (IGSID) */
+  igsid: string;
+}
+
+/**
+ * Viber channel identity (placeholder — not yet implemented)
+ */
+export interface SuperAdminViberIdentity {
   phoneNumber: string;
 }
 
@@ -59,8 +78,10 @@ export interface SuperAdminIdentity {
   channels: {
     telegram?: SuperAdminTelegramIdentity;
     email?: SuperAdminEmailIdentity;
-    viber?: SuperAdminViberIdentity;
     whatsapp?: SuperAdminWhatsAppIdentity;
+    messenger?: SuperAdminMessengerIdentity;
+    instagram?: SuperAdminInstagramIdentity;
+    viber?: SuperAdminViberIdentity;
   };
   /** Whether this admin identity is currently active */
   isActive: boolean;
@@ -99,8 +120,10 @@ export type AdminResolvedVia =
   | 'telegram_user_id'
   | 'email_address'
   | 'firebase_uid'
-  | 'viber_phone'
-  | 'whatsapp_phone';
+  | 'whatsapp_phone'
+  | 'messenger_psid'
+  | 'instagram_igsid'
+  | 'viber_phone';
 
 /**
  * Result of resolving a super admin from a channel identifier
