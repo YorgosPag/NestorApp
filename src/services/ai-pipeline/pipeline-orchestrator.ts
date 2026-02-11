@@ -32,6 +32,7 @@ import type {
 } from '@/types/ai-pipeline';
 import {
   PipelineState,
+  PipelineChannel,
   PipelineIntentType,
   SenderType,
   ThreatLevel,
@@ -147,10 +148,19 @@ export class PipelineOrchestrator {
     ctx = this.transitionState(ctx, PipelineState.ACKED);
     ctx.stepDurations['intake'] = 0; // Already processed
 
-    // ── ADR-171: Agentic path for ALL admin commands ──
+    // ── ADR-171: Agentic path for admin commands ──
     // Skip UNDERSTAND step entirely for admin — the agentic loop does its
     // own AI analysis with tool calling. Saves ~3-5s per admin message.
     if (ctx.adminCommandMeta?.isAdminCommand === true) {
+      return this.executeAgenticPath(ctx);
+    }
+
+    // ── ADR-174: WhatsApp messages → agentic path ──
+    // WhatsApp customer messages use the agentic loop for immediate auto-reply.
+    // The legacy modular path (UC modules) requires manual approval for most
+    // intents (complaint, general_inquiry), leaving the user without any response.
+    // Agentic path generates a conversational reply autonomously.
+    if (ctx.intake.channel === PipelineChannel.WHATSAPP) {
       return this.executeAgenticPath(ctx);
     }
 
