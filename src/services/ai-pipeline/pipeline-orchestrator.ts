@@ -384,9 +384,9 @@ export class PipelineOrchestrator {
         requestId: ctx.requestId,
       });
 
-      // 5b. ADR-173: Send suggestions + feedback keyboard (Telegram only, non-fatal)
+      // 5b. ADR-173: Send suggestions + feedback keyboard (non-fatal)
       // Message order: [1] AI Answer, [2] Suggested Actions, [3] Feedback (👍/👎)
-      if (ctx.intake.channel === 'telegram' && telegramChatId && !isFailedResponse) {
+      if (!isFailedResponse) {
         try {
           const feedbackDocId = await getFeedbackService().saveFeedbackSnapshot({
             requestId: ctx.requestId,
@@ -399,12 +399,12 @@ export class PipelineOrchestrator {
             suggestedActions: agenticResult.suggestions,
           });
 
-          if (feedbackDocId) {
+          // ── Telegram: Inline keyboards ──
+          if (ctx.intake.channel === 'telegram' && telegramChatId && feedbackDocId) {
             const { sendTelegramMessage } = await import(
               '@/app/api/communications/webhooks/telegram/telegram/client'
             );
 
-            // [2] Send suggested actions keyboard (if AI provided suggestions)
             if (agenticResult.suggestions.length > 0) {
               await sendTelegramMessage({
                 chat_id: Number(telegramChatId),
@@ -413,12 +413,41 @@ export class PipelineOrchestrator {
               });
             }
 
-            // [3] Send feedback keyboard (👍/👎)
             await sendTelegramMessage({
               chat_id: Number(telegramChatId),
               text: '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7;',
               reply_markup: createFeedbackKeyboard(feedbackDocId),
             });
+          }
+
+          // ── ADR-174: WhatsApp: Interactive Reply Buttons ──
+          if (ctx.intake.channel === 'whatsapp' && whatsappPhone && feedbackDocId) {
+            const { sendWhatsAppButtons } = await import(
+              '@/app/api/communications/webhooks/whatsapp/whatsapp-client'
+            );
+
+            // [2] Send up to 3 suggestions as reply buttons (max 3, max 20 chars each)
+            if (agenticResult.suggestions.length > 0) {
+              const suggestionBtns = agenticResult.suggestions.slice(0, 3).map((s, i) => ({
+                id: `sug_${feedbackDocId}_${i}`,
+                title: s.substring(0, 20),
+              }));
+              await sendWhatsAppButtons(
+                whatsappPhone,
+                '\u{1F4A1} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03B5\u03C0\u03AF\u03C3\u03B7\u03C2 \u03BD\u03B1 \u03C1\u03C9\u03C4\u03AE\u03C3\u03B5\u03B9\u03C2:',
+                suggestionBtns,
+              );
+            }
+
+            // [3] Send feedback buttons (👍/👎)
+            await sendWhatsAppButtons(
+              whatsappPhone,
+              '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7;',
+              [
+                { id: `fb_${feedbackDocId}_up`, title: '\u{1F44D}' },
+                { id: `fb_${feedbackDocId}_down`, title: '\u{1F44E}' },
+              ],
+            );
           }
         } catch {
           // Non-fatal: feedback failure must never break the pipeline
@@ -428,9 +457,12 @@ export class PipelineOrchestrator {
       // 6. Update pipeline context
       ctx.executionResult = { success: true, sideEffects: ['agentic_loop_completed'] };
       ctx = this.transitionState(ctx, PipelineState.PROPOSED);
+      const approverLabel = ctx.adminCommandMeta?.isAdminCommand
+        ? `super_admin:${ctx.adminCommandMeta.adminIdentity.displayName}`
+        : `AI-auto:${ctx.intake.channel}`;
       ctx.approval = {
         decision: 'approved',
-        approvedBy: `super_admin:${ctx.adminCommandMeta?.adminIdentity.displayName ?? 'admin'}`,
+        approvedBy: approverLabel,
         decidedAt: now,
       };
       ctx = this.transitionState(ctx, PipelineState.APPROVED);

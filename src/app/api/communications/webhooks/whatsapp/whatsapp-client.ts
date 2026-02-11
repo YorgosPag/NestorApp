@@ -105,6 +105,86 @@ export async function sendWhatsAppMessage(
 }
 
 // ============================================================================
+// SEND INTERACTIVE BUTTONS (Reply Buttons — max 3)
+// ============================================================================
+
+/**
+ * WhatsApp Interactive Reply Buttons — max 3 buttons per message.
+ * Used for suggestions and feedback (👍/👎).
+ *
+ * @see https://developers.facebook.com/docs/whatsapp/cloud-api/messages/interactive-reply-buttons
+ */
+export async function sendWhatsAppButtons(
+  recipientPhone: string,
+  bodyText: string,
+  buttons: Array<{ id: string; title: string }>
+): Promise<WhatsAppSendResult> {
+  try {
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+
+    if (!accessToken || !phoneNumberId) {
+      return { success: false, error: 'WhatsApp credentials not configured' };
+    }
+
+    const url = `${GRAPH_API_BASE}/${phoneNumberId}/messages`;
+
+    // WhatsApp allows max 3 buttons, each title max 20 chars
+    const safeButtons = buttons.slice(0, 3).map(b => ({
+      type: 'reply' as const,
+      reply: {
+        id: b.id,
+        title: b.title.substring(0, 20),
+      },
+    }));
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: recipientPhone,
+      type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: { text: bodyText },
+        action: { buttons: safeButtons },
+      },
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json() as WhatsAppSendResponse | { error: { message: string; code: number } };
+
+    if (!response.ok) {
+      const errorResult = result as { error: { message: string; code: number } };
+      logger.error('WhatsApp interactive button error', {
+        status: response.status,
+        error: errorResult.error?.message,
+      });
+      return {
+        success: false,
+        error: errorResult.error?.message ?? `HTTP ${response.status}`,
+      };
+    }
+
+    const successResult = result as WhatsAppSendResponse;
+    return { success: true, messageId: successResult.messages?.[0]?.id };
+  } catch (error) {
+    logger.error('WhatsApp interactive button send error', { error });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+// ============================================================================
 // MARK MESSAGE AS READ
 // ============================================================================
 

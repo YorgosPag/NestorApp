@@ -123,11 +123,17 @@ function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatMessage[
     : 'No previous messages.';
 
   const channelLabel = ctx.channel === 'telegram' ? 'Telegram'
+    : ctx.channel === 'whatsapp' ? 'WhatsApp'
     : ctx.channel === 'email' ? 'Email'
     : ctx.channel ?? 'Εφαρμογή';
 
+  // ADR-174: Different persona for admin vs customer
+  const roleDescription = ctx.isAdmin
+    ? 'Ο χρήστης είναι ο Super Admin. Έχεις πλήρη πρόσβαση στα δεδομένα.'
+    : 'Ο χρήστης είναι πελάτης/ενδιαφερόμενος. Βοήθησέ τον ευγενικά με πληροφορίες για ακίνητα, ραντεβού, και γενικές ερωτήσεις. ΜΗΝ αποκαλύπτεις εσωτερικά δεδομένα εταιρείας (κόστη, κέρδη, εσωτερικές σημειώσεις). Μπορείς να ψάχνεις ακίνητα (units) και να δίνεις βασικές πληροφορίες (τ.μ., τιμή, τύπος, διαθεσιμότητα).';
+
   return `Είσαι ο AI βοηθός του Nestor — μια εφαρμογή διαχείρισης κατασκευαστικών έργων.
-Ο χρήστης είναι ο Super Admin. Έχεις πλήρη πρόσβαση στα δεδομένα.
+${roleDescription}
 Κανάλι επικοινωνίας: ${channelLabel}.
 
 ${schema}
