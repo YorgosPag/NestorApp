@@ -314,7 +314,8 @@ function getPlatformName(channel: CommunicationChannel): string {
     [COMMUNICATION_CHANNELS.TELEGRAM]: 'telegram',
     [COMMUNICATION_CHANNELS.WHATSAPP]: 'meta_cloud_api',
     [COMMUNICATION_CHANNELS.SMS]: 'sms_provider',
-    [COMMUNICATION_CHANNELS.MESSENGER]: 'messenger'
+    [COMMUNICATION_CHANNELS.MESSENGER]: 'messenger',
+    [COMMUNICATION_CHANNELS.INSTAGRAM]: 'instagram',
   };
   return platforms[channel] || channel;
 }
@@ -352,7 +353,8 @@ function getMaxAttempts(channel: CommunicationChannel, priority?: MessagePriorit
     [COMMUNICATION_CHANNELS.TELEGRAM]: 5,
     [COMMUNICATION_CHANNELS.WHATSAPP]: 3,
     [COMMUNICATION_CHANNELS.SMS]: 2,
-    [COMMUNICATION_CHANNELS.MESSENGER]: 3
+    [COMMUNICATION_CHANNELS.MESSENGER]: 3,
+    [COMMUNICATION_CHANNELS.INSTAGRAM]: 3,
   };
 
   const base = baseAttempts[channel] || 3;

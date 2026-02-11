@@ -155,12 +155,16 @@ export class PipelineOrchestrator {
       return this.executeAgenticPath(ctx);
     }
 
-    // ── ADR-174: WhatsApp messages → agentic path ──
-    // WhatsApp customer messages use the agentic loop for immediate auto-reply.
+    // ── ADR-174: WhatsApp/Messenger/Instagram messages → agentic path ──
+    // Customer messages from Meta channels use the agentic loop for immediate auto-reply.
     // The legacy modular path (UC modules) requires manual approval for most
     // intents (complaint, general_inquiry), leaving the user without any response.
     // Agentic path generates a conversational reply autonomously.
-    if (ctx.intake.channel === PipelineChannel.WHATSAPP) {
+    if (
+      ctx.intake.channel === PipelineChannel.WHATSAPP
+      || ctx.intake.channel === PipelineChannel.MESSENGER
+      || ctx.intake.channel === PipelineChannel.INSTAGRAM
+    ) {
       return this.executeAgenticPath(ctx);
     }
 
@@ -374,12 +378,20 @@ export class PipelineOrchestrator {
       const whatsappPhone = ctx.intake.normalized.sender.whatsappPhone
         ?? (ctx.intake.rawPayload?.phoneNumber as string | undefined)
         ?? undefined;
+      const messengerPsid = ctx.intake.normalized.sender.messengerUserId
+        ?? (ctx.intake.rawPayload?.psid as string | undefined)
+        ?? undefined;
+      const instagramIgsid = ctx.intake.normalized.sender.instagramUserId
+        ?? (ctx.intake.rawPayload?.igsid as string | undefined)
+        ?? undefined;
 
       await sendChannelReply({
         channel: ctx.intake.channel,
         recipientEmail: ctx.intake.normalized.sender.email,
         telegramChatId,
         whatsappPhone,
+        messengerPsid,
+        instagramIgsid,
         textBody: agenticResult.answer,
         requestId: ctx.requestId,
       });
@@ -449,6 +461,41 @@ export class PipelineOrchestrator {
               ],
             );
           }
+
+          // ── ADR-174: Messenger: Quick Reply Buttons ──
+          if (ctx.intake.channel === 'messenger' && messengerPsid && feedbackDocId) {
+            const { sendMessengerQuickReplies } = await import(
+              '@/app/api/communications/webhooks/messenger/messenger-client'
+            );
+
+            // [2] Send suggestions as quick replies (max 13, max 20 chars each)
+            if (agenticResult.suggestions.length > 0) {
+              const suggestionQRs = agenticResult.suggestions.slice(0, 3).map((s, i) => ({
+                content_type: 'text' as const,
+                title: s.substring(0, 20),
+                payload: `sug_${feedbackDocId}_${i}`,
+              }));
+              await sendMessengerQuickReplies(
+                messengerPsid,
+                '\u{1F4A1} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03B5\u03C0\u03AF\u03C3\u03B7\u03C2 \u03BD\u03B1 \u03C1\u03C9\u03C4\u03AE\u03C3\u03B5\u03B9\u03C2:',
+                suggestionQRs,
+              );
+            }
+
+            // [3] Send feedback quick replies (👍/👎)
+            await sendMessengerQuickReplies(
+              messengerPsid,
+              '\u{1F4AC} \u0397\u03C4\u03B1\u03BD \u03C7\u03C1\u03AE\u03C3\u03B9\u03BC\u03B7 \u03B7 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7;',
+              [
+                { content_type: 'text', title: '\u{1F44D}', payload: `fb_${feedbackDocId}_up` },
+                { content_type: 'text', title: '\u{1F44E}', payload: `fb_${feedbackDocId}_down` },
+              ],
+            );
+          }
+
+          // ── ADR-174: Instagram: Text-only (no buttons/quick replies) ──
+          // Instagram DMs do not support interactive elements.
+          // Feedback is collected via text prompts if needed.
         } catch {
           // Non-fatal: feedback failure must never break the pipeline
         }
@@ -512,12 +559,20 @@ export class PipelineOrchestrator {
         const whatsappPhone = ctx.intake.normalized.sender.whatsappPhone
           ?? (ctx.intake.rawPayload?.phoneNumber as string | undefined)
           ?? undefined;
+        const messengerPsidErr = ctx.intake.normalized.sender.messengerUserId
+          ?? (ctx.intake.rawPayload?.psid as string | undefined)
+          ?? undefined;
+        const instagramIgsidErr = ctx.intake.normalized.sender.instagramUserId
+          ?? (ctx.intake.rawPayload?.igsid as string | undefined)
+          ?? undefined;
 
         await sendChannelReply({
           channel: ctx.intake.channel,
           recipientEmail: ctx.intake.normalized.sender.email,
           telegramChatId,
           whatsappPhone,
+          messengerPsid: messengerPsidErr,
+          instagramIgsid: instagramIgsidErr,
           textBody: 'Συγγνώμη, αντιμετώπισα ένα πρόβλημα κατά την επεξεργασία. Δοκίμασε ξανά.',
           requestId: ctx.requestId,
         });
@@ -543,6 +598,8 @@ export class PipelineOrchestrator {
     const channel = ctx.intake.channel;
     const senderId = ctx.intake.normalized.sender.telegramId
       ?? ctx.intake.normalized.sender.whatsappPhone
+      ?? ctx.intake.normalized.sender.messengerUserId
+      ?? ctx.intake.normalized.sender.instagramUserId
       ?? ctx.intake.normalized.sender.email
       ?? ctx.intake.normalized.sender.phone
       ?? 'unknown';

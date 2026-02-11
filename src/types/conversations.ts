@@ -72,6 +72,7 @@ export const IDENTITY_PROVIDER = {
   EMAIL: 'email',
   WHATSAPP: 'whatsapp',
   MESSENGER: 'messenger',
+  INSTAGRAM: 'instagram',
   SMS: 'sms',
   PHONE: 'phone',
 } as const;

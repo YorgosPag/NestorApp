@@ -62,6 +62,12 @@ export type {
   FeedToPipelineResult,
 } from './channel-adapters/email-channel-adapter';
 
+// ADR-174: Messenger + Instagram channel adapters
+export { MessengerChannelAdapter } from './channel-adapters/messenger-channel-adapter';
+export type { MessengerFeedParams, MessengerFeedResult } from './channel-adapters/messenger-channel-adapter';
+export { InstagramChannelAdapter } from './channel-adapters/instagram-channel-adapter';
+export type { InstagramFeedParams, InstagramFeedResult } from './channel-adapters/instagram-channel-adapter';
+
 // ADR-171: Agentic Loop
 export { executeAgenticLoop } from './agentic-loop';
 export type { AgenticResult, ChatMessage, AgenticLoopConfig } from './agentic-loop';

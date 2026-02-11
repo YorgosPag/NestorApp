@@ -419,6 +419,7 @@ export const PLATFORMS = {
   EMAIL: 'email',
   WHATSAPP: 'whatsapp',
   MESSENGER: 'messenger',
+  INSTAGRAM: 'instagram',
   SMS: 'sms',
   WEB: 'web',
 } as const;

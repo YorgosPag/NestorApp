@@ -115,6 +115,7 @@ export const PipelineChannel = {
   WHATSAPP: 'whatsapp',
   IN_APP: 'in_app',
   MESSENGER: 'messenger',
+  INSTAGRAM: 'instagram',
   SMS: 'sms',
 } as const;
 
@@ -190,6 +191,8 @@ export interface IntakeSender {
   name?: string;
   telegramId?: string;
   whatsappPhone?: string;
+  messengerUserId?: string;
+  instagramUserId?: string;
 }
 
 /**

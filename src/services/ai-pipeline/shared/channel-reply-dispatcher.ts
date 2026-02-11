@@ -39,6 +39,10 @@ export interface ChannelReplyParams {
   telegramChatId?: string;
   /** WhatsApp phone number (required for whatsapp channel) */
   whatsappPhone?: string;
+  /** Messenger PSID (required for messenger channel) */
+  messengerPsid?: string;
+  /** Instagram IGSID (required for instagram channel) */
+  instagramIgsid?: string;
   /** In-app voice command document ID (required for in_app channel) */
   inAppCommandId?: string;
   /** Email subject (email only) */
@@ -88,6 +92,8 @@ export async function sendChannelReply(
     hasTelegramChat: !!params.telegramChatId,
     hasInAppCommand: !!params.inAppCommandId,
     hasWhatsAppPhone: !!params.whatsappPhone,
+    hasMessengerPsid: !!params.messengerPsid,
+    hasInstagramIgsid: !!params.instagramIgsid,
   });
 
   switch (channel) {
@@ -99,6 +105,12 @@ export async function sendChannelReply(
 
     case PipelineChannel.WHATSAPP:
       return dispatchWhatsApp(params);
+
+    case PipelineChannel.MESSENGER:
+      return dispatchMessenger(params);
+
+    case PipelineChannel.INSTAGRAM:
+      return dispatchInstagram(params);
 
     case PipelineChannel.IN_APP:
       return dispatchInApp(params);
@@ -268,6 +280,126 @@ async function dispatchWhatsApp(params: ChannelReplyParams): Promise<ChannelRepl
       success: false,
       error: `WhatsApp dispatch error: ${errorMessage}`,
       channel: PipelineChannel.WHATSAPP,
+    };
+  }
+}
+
+/**
+ * Dispatch reply via Facebook Messenger Send API
+ * Uses dynamic import to avoid build issues with Messenger client
+ *
+ * @see ADR-174 (Meta Omnichannel — Messenger)
+ */
+async function dispatchMessenger(params: ChannelReplyParams): Promise<ChannelReplyResult> {
+  const { messengerPsid, textBody, requestId } = params;
+
+  if (!messengerPsid) {
+    logger.warn('Messenger dispatch: no PSID', { requestId });
+    return {
+      success: false,
+      error: 'No Messenger PSID for messenger channel',
+      channel: PipelineChannel.MESSENGER,
+    };
+  }
+
+  try {
+    const { sendMessengerMessage } = await import(
+      '@/app/api/communications/webhooks/messenger/messenger-client'
+    );
+
+    const result = await sendMessengerMessage(messengerPsid, textBody);
+
+    if (result.success) {
+      logger.info('Messenger reply sent', {
+        requestId,
+        psid: messengerPsid.slice(-4),
+      });
+      return {
+        success: true,
+        messageId: result.messageId ?? undefined,
+        channel: PipelineChannel.MESSENGER,
+      };
+    }
+
+    logger.warn('Messenger reply failed', {
+      requestId,
+      error: result.error,
+    });
+    return {
+      success: false,
+      error: result.error ?? 'Messenger send failed',
+      channel: PipelineChannel.MESSENGER,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Messenger dispatch error', {
+      requestId,
+      error: errorMessage,
+    });
+    return {
+      success: false,
+      error: `Messenger dispatch error: ${errorMessage}`,
+      channel: PipelineChannel.MESSENGER,
+    };
+  }
+}
+
+/**
+ * Dispatch reply via Instagram Messaging API
+ * Uses dynamic import to avoid build issues with Instagram client
+ *
+ * @see ADR-174 (Meta Omnichannel — Instagram)
+ */
+async function dispatchInstagram(params: ChannelReplyParams): Promise<ChannelReplyResult> {
+  const { instagramIgsid, textBody, requestId } = params;
+
+  if (!instagramIgsid) {
+    logger.warn('Instagram dispatch: no IGSID', { requestId });
+    return {
+      success: false,
+      error: 'No Instagram IGSID for instagram channel',
+      channel: PipelineChannel.INSTAGRAM,
+    };
+  }
+
+  try {
+    const { sendInstagramMessage } = await import(
+      '@/app/api/communications/webhooks/instagram/instagram-client'
+    );
+
+    const result = await sendInstagramMessage(instagramIgsid, textBody);
+
+    if (result.success) {
+      logger.info('Instagram reply sent', {
+        requestId,
+        igsid: instagramIgsid.slice(-4),
+      });
+      return {
+        success: true,
+        messageId: result.messageId ?? undefined,
+        channel: PipelineChannel.INSTAGRAM,
+      };
+    }
+
+    logger.warn('Instagram reply failed', {
+      requestId,
+      error: result.error,
+    });
+    return {
+      success: false,
+      error: result.error ?? 'Instagram send failed',
+      channel: PipelineChannel.INSTAGRAM,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Instagram dispatch error', {
+      requestId,
+      error: errorMessage,
+    });
+    return {
+      success: false,
+      error: `Instagram dispatch error: ${errorMessage}`,
+      channel: PipelineChannel.INSTAGRAM,
     };
   }
 }

@@ -124,6 +124,8 @@ function buildAgenticSystemPrompt(ctx: AgenticContext, chatHistory: ChatMessage[
 
   const channelLabel = ctx.channel === 'telegram' ? 'Telegram'
     : ctx.channel === 'whatsapp' ? 'WhatsApp'
+    : ctx.channel === 'messenger' ? 'Facebook Messenger'
+    : ctx.channel === 'instagram' ? 'Instagram'
     : ctx.channel === 'email' ? 'Email'
     : ctx.channel ?? 'Εφαρμογή';
 

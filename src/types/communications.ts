@@ -24,6 +24,7 @@ export const COMMUNICATION_CHANNELS = {
   WHATSAPP: 'whatsapp',
   SMS: 'sms',
   MESSENGER: 'messenger',
+  INSTAGRAM: 'instagram',
 } as const;
 
 /**
@@ -57,8 +58,9 @@ export const IMPLEMENTED_CHANNELS = [
   COMMUNICATION_CHANNELS.EMAIL,
   COMMUNICATION_CHANNELS.TELEGRAM,
   COMMUNICATION_CHANNELS.WHATSAPP,
+  COMMUNICATION_CHANNELS.MESSENGER,
+  COMMUNICATION_CHANNELS.INSTAGRAM,
   // COMMUNICATION_CHANNELS.SMS,        // Declared but not fully implemented
-  // COMMUNICATION_CHANNELS.MESSENGER,  // Declared but not implemented
 ] as const;
 
 /**
