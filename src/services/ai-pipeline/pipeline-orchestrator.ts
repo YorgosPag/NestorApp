@@ -361,11 +361,15 @@ export class PipelineOrchestrator {
       const telegramChatId = ctx.intake.normalized.sender.telegramId
         ?? (ctx.intake.rawPayload?.chatId as string | undefined)
         ?? undefined;
+      const whatsappPhone = ctx.intake.normalized.sender.whatsappPhone
+        ?? (ctx.intake.rawPayload?.phoneNumber as string | undefined)
+        ?? undefined;
 
       await sendChannelReply({
         channel: ctx.intake.channel,
         recipientEmail: ctx.intake.normalized.sender.email,
         telegramChatId,
+        whatsappPhone,
         textBody: agenticResult.answer,
         requestId: ctx.requestId,
       });
@@ -463,11 +467,15 @@ export class PipelineOrchestrator {
         const telegramChatId = ctx.intake.normalized.sender.telegramId
           ?? (ctx.intake.rawPayload?.chatId as string | undefined)
           ?? undefined;
+        const whatsappPhone = ctx.intake.normalized.sender.whatsappPhone
+          ?? (ctx.intake.rawPayload?.phoneNumber as string | undefined)
+          ?? undefined;
 
         await sendChannelReply({
           channel: ctx.intake.channel,
           recipientEmail: ctx.intake.normalized.sender.email,
           telegramChatId,
+          whatsappPhone,
           textBody: 'Συγγνώμη, αντιμετώπισα ένα πρόβλημα κατά την επεξεργασία. Δοκίμασε ξανά.',
           requestId: ctx.requestId,
         });
@@ -492,6 +500,7 @@ export class PipelineOrchestrator {
   private buildChannelSenderId(ctx: PipelineContext): string {
     const channel = ctx.intake.channel;
     const senderId = ctx.intake.normalized.sender.telegramId
+      ?? ctx.intake.normalized.sender.whatsappPhone
       ?? ctx.intake.normalized.sender.email
       ?? ctx.intake.normalized.sender.phone
       ?? 'unknown';

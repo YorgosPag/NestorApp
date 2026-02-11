@@ -112,6 +112,7 @@ export type PipelineIntentTypeValue = typeof PipelineIntentType[keyof typeof Pip
 export const PipelineChannel = {
   EMAIL: 'email',
   TELEGRAM: 'telegram',
+  WHATSAPP: 'whatsapp',
   IN_APP: 'in_app',
   MESSENGER: 'messenger',
   SMS: 'sms',
@@ -188,6 +189,7 @@ export interface IntakeSender {
   phone?: string;
   name?: string;
   telegramId?: string;
+  whatsappPhone?: string;
 }
 
 /**

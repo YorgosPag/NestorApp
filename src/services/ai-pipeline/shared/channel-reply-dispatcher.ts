@@ -37,6 +37,8 @@ export interface ChannelReplyParams {
   recipientEmail?: string;
   /** Telegram chat ID (required for telegram channel) */
   telegramChatId?: string;
+  /** WhatsApp phone number (required for whatsapp channel) */
+  whatsappPhone?: string;
   /** In-app voice command document ID (required for in_app channel) */
   inAppCommandId?: string;
   /** Email subject (email only) */
@@ -85,6 +87,7 @@ export async function sendChannelReply(
     hasEmail: !!params.recipientEmail,
     hasTelegramChat: !!params.telegramChatId,
     hasInAppCommand: !!params.inAppCommandId,
+    hasWhatsAppPhone: !!params.whatsappPhone,
   });
 
   switch (channel) {
@@ -93,6 +96,9 @@ export async function sendChannelReply(
 
     case PipelineChannel.TELEGRAM:
       return dispatchTelegram(params);
+
+    case PipelineChannel.WHATSAPP:
+      return dispatchWhatsApp(params);
 
     case PipelineChannel.IN_APP:
       return dispatchInApp(params);
@@ -201,6 +207,67 @@ async function dispatchTelegram(params: ChannelReplyParams): Promise<ChannelRepl
       success: false,
       error: `Telegram dispatch error: ${errorMessage}`,
       channel: PipelineChannel.TELEGRAM,
+    };
+  }
+}
+
+/**
+ * Dispatch reply via WhatsApp Cloud API
+ * Uses dynamic import to avoid build issues with WhatsApp client
+ *
+ * @see ADR-174 (Meta Omnichannel — WhatsApp)
+ */
+async function dispatchWhatsApp(params: ChannelReplyParams): Promise<ChannelReplyResult> {
+  const { whatsappPhone, textBody, requestId } = params;
+
+  if (!whatsappPhone) {
+    logger.warn('WhatsApp dispatch: no phone number', { requestId });
+    return {
+      success: false,
+      error: 'No WhatsApp phone number for whatsapp channel',
+      channel: PipelineChannel.WHATSAPP,
+    };
+  }
+
+  try {
+    // Dynamic import to avoid circular dependencies and build issues
+    const { sendWhatsAppMessage } = await import(
+      '@/app/api/communications/webhooks/whatsapp/whatsapp-client'
+    );
+
+    const result = await sendWhatsAppMessage(whatsappPhone, textBody);
+
+    if (result.success) {
+      logger.info('WhatsApp reply sent', {
+        requestId,
+        phone: whatsappPhone.slice(-4), // Privacy: last 4 digits only
+      });
+      return {
+        success: true,
+        messageId: result.messageId ?? undefined,
+        channel: PipelineChannel.WHATSAPP,
+      };
+    }
+
+    logger.warn('WhatsApp reply failed', {
+      requestId,
+      error: result.error,
+    });
+    return {
+      success: false,
+      error: result.error ?? 'WhatsApp send failed',
+      channel: PipelineChannel.WHATSAPP,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('WhatsApp dispatch error', {
+      requestId,
+      error: errorMessage,
+    });
+    return {
+      success: false,
+      error: `WhatsApp dispatch error: ${errorMessage}`,
+      channel: PipelineChannel.WHATSAPP,
     };
   }
 }

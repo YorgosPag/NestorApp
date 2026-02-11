@@ -262,7 +262,7 @@ async function upsertExternalIdentity(
 /**
  * Extract text content from any WhatsApp message type
  */
-function extractMessageText(message: WhatsAppMessage): string {
+export function extractMessageText(message: WhatsAppMessage): string {
   switch (message.type) {
     case 'text':
       return message.text?.body ?? '';

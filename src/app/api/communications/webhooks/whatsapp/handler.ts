@@ -17,9 +17,9 @@
  * @enterprise ADR-029 - Omnichannel Conversation Model
  */
 
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse, after } from 'next/server';
 import { createHmac } from 'crypto';
-import { storeWhatsAppMessage, updateMessageDeliveryStatus } from './crm-adapter';
+import { storeWhatsAppMessage, updateMessageDeliveryStatus, extractMessageText } from './crm-adapter';
 import { markWhatsAppMessageRead } from './whatsapp-client';
 import type {
   WhatsAppWebhookPayload,
@@ -89,13 +89,47 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true });
     }
 
-    // 3. Process each entry
+    // 3. Clear pending pipeline messages from previous invocation
+    pendingPipelineMessages.length = 0;
+
+    // 4. Process each entry
     for (const entry of payload.entry) {
       for (const change of entry.changes) {
         if (change.field === 'messages') {
           await processChangeValue(change.value);
         }
       }
+    }
+
+    // 5. Feed to AI pipeline via after() — same pattern as Telegram (ADR-134)
+    // Enqueue first, then trigger batch processing after response is sent
+    if (pendingPipelineMessages.length > 0) {
+      const messagesToFeed = [...pendingPipelineMessages];
+      pendingPipelineMessages.length = 0;
+
+      // Enqueue pipeline items BEFORE after() — critical for race condition prevention
+      for (const msg of messagesToFeed) {
+        await feedWhatsAppToPipeline(msg);
+      }
+
+      // Trigger batch processing AFTER response is sent
+      after(async () => {
+        try {
+          const { processAIPipelineBatch } = await import(
+            '@/server/ai/workers/ai-pipeline-worker'
+          );
+          const result = await processAIPipelineBatch();
+          logger.info('[WhatsApp->Pipeline] after(): batch complete', {
+            processed: result.processed,
+            failed: result.failed,
+          });
+        } catch (error) {
+          // Non-fatal: daily cron will retry pipeline items
+          logger.warn('[WhatsApp->Pipeline] after(): pipeline batch failed (cron will retry)', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
     }
 
     return NextResponse.json({ ok: true });
@@ -137,6 +171,14 @@ async function processChangeValue(value: WhatsAppChangeValue): Promise<void> {
   }
 }
 
+/** Tracks messages that need pipeline processing (for after() batch) */
+const pendingPipelineMessages: Array<{
+  phoneNumber: string;
+  senderName: string;
+  messageText: string;
+  messageId: string;
+}> = [];
+
 async function processIncomingMessage(
   message: WhatsAppMessage,
   contacts: WhatsAppContact[] | undefined
@@ -169,8 +211,66 @@ async function processIncomingMessage(
     });
   }
 
-  // TODO (Phase 2): Feed to AI pipeline for auto-reply
-  // Similar to telegram handler's after() + feedTelegramToPipeline pattern
+  // Track message for pipeline processing (will be fed via after())
+  const messageText = extractMessageText(message);
+  if (messageText.trim().length > 0) {
+    pendingPipelineMessages.push({
+      phoneNumber: message.from,
+      senderName: contact?.profile?.name ?? message.from,
+      messageText,
+      messageId: message.id,
+    });
+  }
+}
+
+// ============================================================================
+// PIPELINE FEED
+// ============================================================================
+
+/**
+ * Feed a WhatsApp message to the AI Pipeline.
+ *
+ * Awaitable to ensure enqueue completes before after() batch processing.
+ * Non-fatal: catches all errors so pipeline failure never breaks the webhook.
+ * Uses dynamic import to avoid circular dependency issues.
+ *
+ * @see ADR-174 (Meta Omnichannel — WhatsApp)
+ * @see ADR-134 pattern (Telegram pipeline feed)
+ */
+async function feedWhatsAppToPipeline(msg: {
+  phoneNumber: string;
+  senderName: string;
+  messageText: string;
+  messageId: string;
+}): Promise<void> {
+  const companyId = process.env.DEFAULT_COMPANY_ID
+    ?? process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
+    ?? 'default';
+
+  try {
+    const { WhatsAppChannelAdapter } = await import(
+      '@/services/ai-pipeline/channel-adapters/whatsapp-channel-adapter'
+    );
+
+    const result = await WhatsAppChannelAdapter.feedToPipeline({
+      phoneNumber: msg.phoneNumber,
+      senderName: msg.senderName,
+      messageText: msg.messageText,
+      messageId: msg.messageId,
+      companyId,
+    });
+
+    if (result.enqueued) {
+      logger.info('[WhatsApp->Pipeline] Enqueued', { requestId: result.requestId });
+    } else {
+      logger.warn('[WhatsApp->Pipeline] Failed', { error: result.error });
+    }
+  } catch (error) {
+    // Non-fatal: pipeline failure should never break the WhatsApp webhook
+    logger.warn('[WhatsApp->Pipeline] Non-fatal error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 // ============================================================================
