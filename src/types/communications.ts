@@ -56,7 +56,7 @@ export type Channel = CommunicationChannel;
 export const IMPLEMENTED_CHANNELS = [
   COMMUNICATION_CHANNELS.EMAIL,
   COMMUNICATION_CHANNELS.TELEGRAM,
-  // COMMUNICATION_CHANNELS.WHATSAPP,   // Declared but not fully implemented
+  COMMUNICATION_CHANNELS.WHATSAPP,
   // COMMUNICATION_CHANNELS.SMS,        // Declared but not fully implemented
   // COMMUNICATION_CHANNELS.MESSENGER,  // Declared but not implemented
 ] as const;
