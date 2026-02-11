@@ -349,8 +349,8 @@ Authorization: Bearer {instagram_access_token}
 - [x] Instant "⏳ Επεξεργάζομαι..." acknowledgment on incoming messages
 - [x] WhatsApp → agentic AI path for immediate auto-reply (ADR-171)
 - [x] Admin vs Customer prompt split (admin: full access, customer: property info only)
-- [x] Interactive Reply Buttons: suggestions (max 3) + feedback (👍/👎)
-- [x] Handle interactive button_reply webhooks (sug_* → pipeline, fb_* → feedback record)
+- [x] Interactive Reply Buttons: suggestions (max 3) + feedback (👍/👎) + negative categories (❌/📊/❓/🐢)
+- [x] Handle interactive button_reply webhooks (sug_* → pipeline, fb_* → feedback, fbc_* → negative category)
 - [x] sendWhatsAppButtons() for interactive message type
 - [ ] Update `conversations/[conversationId]/send/route.ts` for WhatsApp outbound
 - [ ] Generate permanent System User Access Token (replace temporary 24h token)
@@ -366,8 +366,8 @@ Authorization: Bearer {instagram_access_token}
 - [x] dispatchMessenger added to channel-reply-dispatcher for outbound AI replies
 - [x] MESSENGER added to PipelineChannel enum + IntakeSender.messengerUserId
 - [x] Messenger → agentic AI path for immediate auto-reply
-- [x] Quick Reply buttons: suggestions (max 13) + feedback (👍/👎)
-- [x] Handle quick_reply.payload webhooks (sug_* → pipeline, fb_* → feedback)
+- [x] Quick Reply buttons: suggestions (max 13) + feedback (👍/👎) + negative categories (❌/📊/❓/🐢)
+- [x] Handle quick_reply.payload webhooks (sug_* → pipeline, fb_* → feedback, fbc_* → negative category)
 - [x] sendMessengerQuickReplies() for quick reply message type
 - [x] markMessengerSeen() for sender_action: mark_seen
 - [x] Instant "⏳ Επεξεργάζομαι..." acknowledgment on incoming messages
@@ -386,7 +386,7 @@ Authorization: Bearer {instagram_access_token}
 - [x] dispatchInstagram added to channel-reply-dispatcher for outbound AI replies
 - [x] INSTAGRAM added to PipelineChannel enum + IntakeSender.instagramUserId
 - [x] Instagram → agentic AI path for immediate auto-reply
-- [x] Text-only replies (Instagram does not support quick replies or buttons)
+- [x] Quick Replies: suggestions (max 13) + feedback (👍/👎) + negative categories (❌/📊/❓/🐢)
 - [x] Instant "⏳ Επεξεργάζομαι..." acknowledgment on incoming messages
 - [x] Set INSTAGRAM_ACCESS_TOKEN on Vercel (2026-02-11) — updated for nestor_app
 - [x] Set INSTAGRAM_WEBHOOK_VERIFY_TOKEN on Vercel (2026-02-11) — `nestor_ig_verify_2026`
@@ -495,3 +495,5 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | 2026-02-11 | **BUG FIX**: Instagram reply dispatch was using `graph.facebook.com` (Messenger endpoint) — fixed to `graph.instagram.com`. Also fixed agentic path state transitions: added missing UNDERSTOOD step (acked→understood→proposed) | Claude + Γιώργος |
 | 2026-02-11 | Legal pages added to sidebar footer: Privacy Policy, Terms of Service, Data Deletion | Claude + Γιώργος |
 | 2026-02-11 | **Instagram dedicated app account**: Created nestor_app (Instagram Business) as webhook receiver. INSTAGRAM_ACCESS_TOKEN updated for nestor_app. Webhook subscription enabled for nestor_app. giorgio_pagoni sends DMs to nestor_app for testing. End-to-end test passed: ack + AI reply received | Claude + Γιώργος |
+| 2026-02-11 | **Instagram Quick Replies**: `sendInstagramQuickReplies()` added. Instagram now supports suggestions + feedback (👍/👎) — same format as Messenger. Handler updated with quick_reply callback processing (sug_*, fb_*) | Claude + Γιώργος |
+| 2026-02-11 | **Negative Feedback Categories on ALL Meta channels**: After 👎 tap, users see 4 category buttons (❌ Λάθος απάντηση, 📊 Λάθος δεδομένα, ❓ Δεν κατάλαβε, 🐢 Αργό). `fbc_` callback prefix. Records `negativeCategory` in Firestore `ai_agent_feedback`. Parity with Telegram (ADR-173). WhatsApp: 2 button messages (max 3/msg). Messenger + Instagram: 4 Quick Replies in 1 message | Claude + Γιώργος |
