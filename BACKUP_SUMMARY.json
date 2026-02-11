@@ -1,44 +1,56 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "Instagram Phase 3 OPERATIONAL + Legal Pages + Bug Fixes",
-  "problem": "1) Instagram DM δεν απαντούσε — σιωπή μετά τον agentic loop. 2) State transitions errors στο pipeline (acked→proposed invalid). 3) Δεν υπήρχαν Privacy Policy/Terms/Data Deletion pages (απαιτούνται για Meta App publish). 4) Δεν υπήρχαν legal links στο sidebar.",
-  "cause": "1) Ο Instagram client χρησιμοποιούσε graph.facebook.com (Messenger endpoint) αντί graph.instagram.com. 2) Ο agentic path έκανε skip το UNDERSTOOD state (acked→proposed αντί acked→understood→proposed). 3) Meta Portal απαιτεί Privacy Policy URL για publish. 4) Legal pages δεν είχαν navigation entry.",
+  "category": "STABLE",
+  "shortDescription": "Safety checkpoint — Obligations refactor, BOQ architecture, ADR-175, Instagram text feedback, Meta omnichannel complete",
+  "problem": "Multiple parallel workstreams needed consolidation: obligations module refactoring, BOQ/measurements architecture, Instagram feedback fix, and Meta omnichannel polish",
+  "cause": "Parallel agents (Claude + OpenAI Codex) working on separate features simultaneously",
   "filesChanged": [
-    "src/app/api/communications/webhooks/instagram/instagram-client.ts",
+    "src/app/obligations/new/page.tsx",
+    "src/components/obligations/ (40+ files — live preview, PDF, rich text, section editor, structure editor, TOC)",
+    "src/components/crm/dashboard/OpportunityCard.tsx",
+    "src/app/crm/leads/[id]/utils/dates.ts",
+    "src/components/building-management/StorageCard/StorageCardUtils.ts",
+    "src/components/units/list/ListItem/UnitListItemFooter_old.tsx",
+    "src/i18n/locales/el/obligations.json",
+    "src/i18n/locales/en/obligations.json",
+    "src/lib/design-system.ts",
+    "src/subapps/accounting/components/reports/TaxEstimateCard.tsx",
+    "src/subapps/geo-canvas/components/InteractiveMapPresentation.tsx",
+    "src/services/ai-pipeline/feedback-service.ts",
     "src/services/ai-pipeline/pipeline-orchestrator.ts",
-    "src/app/privacy-policy/page.tsx",
-    "src/app/terms/page.tsx",
-    "src/app/data-deletion/page.tsx",
-    "src/components/app-sidebar.tsx",
-    "src/i18n/locales/el/navigation.json",
-    "src/i18n/locales/en/navigation.json",
+    "src/app/api/communications/webhooks/instagram/handler.ts",
+    "src/app/api/communications/webhooks/instagram/instagram-client.ts",
+    "src/app/api/communications/webhooks/instagram/types.ts",
+    "firestore.indexes.json",
+    "reports/visual/*.report.json (8 files)",
+    "docs/centralized-systems/reference/adrs/ADR-175-quantity-surveying-measurements-system.md",
     "docs/centralized-systems/reference/adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md",
-    "docs/centralized-systems/reference/adrs/ADR-145-super-admin-ai-assistant.md",
-    "docs/centralized-systems/reference/adrs/ADR-080-ai-pipeline-implementation.md"
+    "docs/centralized-systems/reference/adrs/ADR-080-ai-pipeline-implementation.md",
+    "docs/architecture-review/ (6 reports)",
+    "docs/boq/use-cases/ (6 UC specs + README)",
+    "docs/open ai analysis/ (3 analysis reports)"
   ],
   "solution": {
-    "fix1_instagram_api": "GRAPH_API_BASE: graph.facebook.com → graph.instagram.com στο instagram-client.ts",
-    "fix2_state_machine": "Προσθήκη transitionState(ctx, UNDERSTOOD) πριν PROPOSED στο agentic path (pipeline-orchestrator.ts)",
-    "feature1_legal_pages": "3 νέες Next.js σελίδες: /privacy-policy, /terms, /data-deletion (απαίτηση Meta για App publish)",
-    "feature2_sidebar_footer": "SidebarFooter με legal links (Privacy, Terms, Data Deletion) — i18n EL+EN",
-    "feature3_instagram_setup": "Instagram webhook setup: giorgio_pagoni linked, tokens set, webhook verified, app published (Live mode), IGSID στο super admin registry",
-    "adrs_updated": "ADR-174 (Phase 3 OPERATIONAL), ADR-145 (multi-channel registry), ADR-080 (changelog)"
+    "phase1": "Obligations module: 40+ components refactored — live preview, PDF export, rich text editor, section editor, structure editor, table of contents",
+    "phase2": "ADR-175: Quantity Surveying & Measurements System architecture designed. 6 BOQ use cases specified (CRUD, pricing, Gantt, DXF, subcontractors, import/export)",
+    "phase3": "Instagram text-based feedback: Replaced non-functional Quick Replies with emoji/number detection. Added FeedbackService.getLatestFeedbackForChannel(). Composite Firestore index deployed",
+    "phase4": "Meta omnichannel: Negative feedback categories on all channels (WhatsApp, Messenger, Instagram). ADR-174, ADR-080 changelog updated",
+    "phase5": "CRM: OpportunityCard, leads dates cleanup. Design system, i18n locales (el/en), accounting TaxEstimateCard, visual reports"
   },
   "testing": {
     "typescript": "npx tsc --noEmit: 0 errors",
-    "instagram_webhooks": "2 messages received: 'Καλημέρα' + 'Καλημέρα και σε σένα' — admin detected (super_admin:Γιώργος Παγώνης via instagram_igsid), agentic loop completed",
-    "deployment": "3 commits pushed to Vercel: ce3bf770, ff206e18, 5040a512"
+    "firestore": "Composite index (channelSenderId, createdAt desc) deployed successfully",
+    "instagram": "E2E: AI reply + text feedback prompt confirmed working",
+    "deployment": "Pushed to Vercel: a59bd551"
   },
   "notes": [
-    "11 αρχεία (8 modified + 3 νέα legal pages)",
-    "Instagram IGSID: 17841403201916682 (giorgio_pagoni)",
-    "META_APP_SECRET set: 667950dcbc641390983e586f1cbdec10 (Instagram app secret)",
-    "Instagram reply dispatch ΑΝΑΜΕΝΕΤΑΙ να λειτουργεί μετά το deploy (API endpoint fix)",
-    "Pending: Test end-to-end Instagram reply μετά deploy"
+    "85 files committed in safety checkpoint",
+    "Work from both Claude and OpenAI Codex agents consolidated",
+    "Instagram Quick Replies confirmed NOT supported by DM API — permanent text-based fallback implemented",
+    "Firestore composite index building in background (~2-5 min)"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
-    "assistant": "Claude Opus 4.6",
+    "assistant": "Claude Opus 4.6 + OpenAI Codex",
     "sessionDate": "2026-02-11"
   },
   "relatedBackups": [
@@ -48,16 +60,28 @@
   ],
   "commits": [
     {
-      "hash": "ce3bf770",
-      "message": "feat: add privacy policy, terms of service, and data deletion pages"
+      "hash": "84e400d3",
+      "message": "docs: ADR updates — Instagram nestor_app dedicated account, E2E test passed"
     },
     {
-      "hash": "ff206e18",
-      "message": "fix: Instagram reply dispatch — use graph.instagram.com + fix agentic state transitions"
+      "hash": "bb05e196",
+      "message": "feat: Instagram Quick Replies — suggestions + feedback buttons"
     },
     {
-      "hash": "5040a512",
-      "message": "feat: Instagram Phase 3 OPERATIONAL — ADR updates, legal pages in sidebar"
+      "hash": "6777f03c",
+      "message": "feat: negative feedback categories on all Meta channels"
+    },
+    {
+      "hash": "bbbf5312",
+      "message": "docs: ADR updates — Quick Replies + negative categories on all channels"
+    },
+    {
+      "hash": "24f76d77",
+      "message": "feat: Instagram text-based feedback — replace non-functional Quick Replies"
+    },
+    {
+      "hash": "a59bd551",
+      "message": "chore: safety checkpoint — obligations refactor, BOQ architecture, ADR-175, visual reports"
     }
   ]
 }
