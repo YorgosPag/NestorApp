@@ -282,6 +282,10 @@ export function extractMessageText(message: WhatsAppMessage): string {
       return '[Sticker]';
     case 'reaction':
       return message.reaction?.emoji ?? '';
+    case 'interactive':
+      return message.interactive?.button_reply?.title
+        ?? message.interactive?.list_reply?.title
+        ?? '';
     default:
       return `[${message.type}]`;
   }

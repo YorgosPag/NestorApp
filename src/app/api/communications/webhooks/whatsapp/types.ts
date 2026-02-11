@@ -76,8 +76,17 @@ export interface WhatsAppMessage {
   reaction?: { message_id: string; emoji: string };
   /** Sticker message */
   sticker?: WhatsAppMediaPayload;
+  /** Interactive button reply */
+  interactive?: WhatsAppInteractiveReply;
   /** Context (reply) */
   context?: { from: string; id: string };
+}
+
+/** Interactive button reply payload (when user taps a Reply Button) */
+export interface WhatsAppInteractiveReply {
+  type: 'button_reply' | 'list_reply';
+  button_reply?: { id: string; title: string };
+  list_reply?: { id: string; title: string; description?: string };
 }
 
 export type WhatsAppMessageType =

@@ -198,6 +198,32 @@ async function processIncomingMessage(
     return;
   }
 
+  // ── Handle interactive button replies (suggestions + feedback) ──
+  if (message.type === 'interactive' && message.interactive) {
+    const buttonId = message.interactive.button_reply?.id ?? '';
+    const buttonTitle = message.interactive.button_reply?.title ?? '';
+
+    // Feedback buttons (👍/👎) — record and acknowledge
+    if (buttonId.startsWith('fb_')) {
+      await handleFeedbackButton(buttonId, message.from);
+      await markWhatsAppMessageRead(message.id);
+      return;
+    }
+
+    // Suggestion buttons — treat as new user message, feed to pipeline
+    if (buttonId.startsWith('sug_')) {
+      await markWhatsAppMessageRead(message.id);
+      sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
+      pendingPipelineMessages.push({
+        phoneNumber: message.from,
+        senderName: contact?.profile?.name ?? message.from,
+        messageText: buttonTitle,
+        messageId: message.id,
+      });
+      return;
+    }
+  }
+
   // Store in CRM
   const result = await storeWhatsAppMessage(message, contact, 'inbound');
 
@@ -224,6 +250,49 @@ async function processIncomingMessage(
       senderName: contact?.profile?.name ?? message.from,
       messageText,
       messageId: message.id,
+    });
+  }
+}
+
+// ============================================================================
+// FEEDBACK HANDLER
+// ============================================================================
+
+/**
+ * Handle feedback button taps (👍/👎).
+ * Button ID format: fb_{feedbackDocId}_{up|down}
+ */
+async function handleFeedbackButton(buttonId: string, senderPhone: string): Promise<void> {
+  try {
+    // Parse: fb_{feedbackDocId}_{up|down}
+    const parts = buttonId.split('_');
+    const sentiment = parts[parts.length - 1]; // 'up' or 'down'
+    const feedbackDocId = parts.slice(1, -1).join('_');
+
+    if (!feedbackDocId || !sentiment) {
+      logger.warn('Invalid feedback button ID', { buttonId });
+      return;
+    }
+
+    const isPositive = sentiment === 'up';
+
+    // Record feedback in Firestore
+    const { getFeedbackService } = await import(
+      '@/services/ai-pipeline/feedback-service'
+    );
+    await getFeedbackService().updateRating(feedbackDocId, isPositive ? 'positive' : 'negative');
+
+    // Send acknowledgment
+    const ackText = isPositive
+      ? '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!'
+      : '\u{1F44E} \u0398\u03B1 \u03C0\u03C1\u03BF\u03C3\u03C0\u03B1\u03B8\u03AE\u03C3\u03C9 \u03BD\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE!';
+    await sendWhatsAppMessage(senderPhone, ackText);
+
+    logger.info('WhatsApp feedback recorded', { feedbackDocId, sentiment, phone: senderPhone.slice(-4) });
+  } catch (error) {
+    // Non-fatal
+    logger.warn('WhatsApp feedback handler error', {
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 }
