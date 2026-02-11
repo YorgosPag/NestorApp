@@ -3,26 +3,28 @@
 import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import type { ObligationDocument } from '@/types/obligations';
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/design-system";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface DocumentContentProps {
-    doc: Partial<ObligationDocument>;
-    activeItemId?: string;
+  doc: Partial<ObligationDocument>;
+  activeItemId?: string;
 }
 
 export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const { t } = useTranslation('obligations');
   const sections = doc.sections || [];
 
   if (sections.length === 0) {
     return (
       <div className="text-center py-16">
         <FileText className={`${iconSizes.xl4} mx-auto mb-4 text-muted-foreground`} />
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">Δεν υπάρχει περιεχόμενο</h3>
-        <p className="text-sm text-muted-foreground/70">Προσθέστε ενότητες στον editor για να δείτε την προεπισκόπηση</p>
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">{t('livePreview.emptyTitle')}</h3>
+        <p className="text-sm text-muted-foreground/70">{t('livePreview.emptyDescription')}</p>
       </div>
     );
   }
@@ -37,7 +39,7 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
         >
           <div className={`border-b-2 ${getStatusBorder('info')} pb-2`}>
             <div className="flex items-center gap-3 mb-2">
-              <Badge variant="outline" className="font-mono">Άρθρο {section.number}°</Badge>
+              <Badge variant="outline" className="font-mono">{t('livePreview.sectionLabel')} {section.number}</Badge>
               {section.category && <Badge variant="secondary" className="text-xs">{String(section.category).toUpperCase()}</Badge>}
             </div>
             <h2 className="text-xl font-bold text-primary uppercase tracking-wide">{section.title}</h2>
@@ -63,3 +65,5 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
     </div>
   );
 }
+
+

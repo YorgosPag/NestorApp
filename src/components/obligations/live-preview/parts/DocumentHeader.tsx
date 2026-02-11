@@ -5,7 +5,8 @@ import { FileText, Hash, MapPin, Users } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
+import { getSpacingClass } from '@/lib/design-system';
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate } from '@/lib/intl-utils';
 import { getObligationStatusLabel } from "@/constants/property-statuses-enterprise";
@@ -24,7 +25,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
   const statusLabel = statusKeyOrValue.includes(':') ? t(statusKeyOrValue) : statusKeyOrValue;
 
   return (
-    <div className="text-center space-y-4 p-8 border-b bg-muted/30">
+    <div className={`text-center space-y-4 ${getSpacingClass('p', 'xl')} border-b bg-muted/30`}>
       <div className="space-y-2">
         <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
           {doc.contractorCompany || t('documentHeader.defaultContractor')}
@@ -111,3 +112,4 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
     </div>
   );
 }
+

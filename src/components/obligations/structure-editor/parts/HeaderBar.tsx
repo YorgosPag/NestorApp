@@ -35,3 +35,4 @@ export function HeaderBar({ sectionsCount, readOnly, onAddSection }: HeaderBarPr
     </div>
   );
 }
+

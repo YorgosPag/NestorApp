@@ -9,5 +9,7 @@ export const OBLIGATION_PREVIEW_LAYOUT = {
   minHeightPx: 400,
   fixedPreviewHeightPx: 2300,
   initialPreviewHeight: `calc(100vh - 120px)`,
+  splitLayoutGridClass: 'lg:grid-cols-[1fr_1fr] lg:items-start',
+  singleLayoutGridClass: 'lg:grid-cols-1',
   toPixels: (value: number) => layoutUtilities.pixels(value),
 } as const;

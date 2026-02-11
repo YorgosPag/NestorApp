@@ -7,9 +7,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CommonBadge } from '@/core/badges';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
-import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
-import { formatDateTime } from '@/lib/intl-utils';
-import { brandClasses } from '@/styles/design-tokens';
+import type { Opportunity } from '@/types/crm';
+import { formatCurrency, formatDateTime } from '@/lib/intl-utils';
+import { normalizeToDate } from '@/lib/date-local';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -29,53 +29,11 @@ import {
 } from "@/components/ui/alert-dialog";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { getStatusColor } from '@/components/leads/utils/formatters';
 
-// 🏢 ENTERPRISE: Centralized stage colors function
-const getStageColors = (colors: ReturnType<typeof useSemanticColors>): Record<NonNullable<Opportunity['stage']>, string> => ({
-    'initial_contact': brandClasses.primary.badge,
-    'qualification': `${colors.bg.warningSubtle} ${colors.text.warning}`,
-    'viewing': `${colors.bg.accentSubtle} ${colors.text.accent}`,
-    'proposal': `${colors.bg.warningSubtle} ${colors.text.warning}`,
-    'negotiation': `${colors.bg.infoSubtle} ${colors.text.info}`,
-    'contract': `${colors.bg.accentSubtle} ${colors.text.accent}`,
-    'closed_won': `${colors.bg.successSubtle} ${colors.text.success}`,
-    'closed_lost': `${colors.bg.errorSubtle} ${colors.text.error}`
-});
-
-const getStatusColor = (status?: Opportunity['stage'], colors?: ReturnType<typeof useSemanticColors>) => {
-    if (!colors) return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'; // Enterprise fallback
-    const stageColors = getStageColors(colors);
-    return stageColors[status!] ?? `${colors.bg.muted} ${colors.text.muted}`;
-};
-
-// ✅ ENTERPRISE MIGRATION: Using centralized formatDateTime for consistent date formatting
-const formatDate = (timestamp: FirestoreishTimestamp, unknownLabel: string): string => {
-    if (!timestamp) return unknownLabel;
-
-    try {
-      // 🏢 ENTERPRISE: Type-safe timestamp conversion with proper type guards
-      let date: Date;
-
-      if (timestamp instanceof Date) {
-        date = timestamp;
-      } else if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
-        // Firestore Timestamp with toDate() method
-        const timestampObj = timestamp as { toDate: () => Date };
-        date = timestampObj.toDate();
-      } else if (typeof timestamp === 'string') {
-        // ISO string or date string
-        date = new Date(timestamp);
-      } else {
-        // Fallback
-        return unknownLabel;
-      }
-
-      if (isNaN(date.getTime())) return unknownLabel;
-
-      return formatDateTime(date); // ✅ Using centralized function
-    } catch {
-      return unknownLabel;
-    }
+const getCreatedAtLabel = (timestamp: Opportunity['createdAt'], unknownLabel: string): string => {
+    const date = normalizeToDate(timestamp);
+    return date ? formatDateTime(date) : unknownLabel;
 };
 
 export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity: Opportunity, onEdit: (opportunity: Opportunity) => void, onDelete: (opportunityId: string, opportunityName: string) => void }) {
@@ -125,7 +83,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 )}
                 <div className="flex items-center gap-2">
                     <Calendar className={iconSizes.xs} />
-                    <span>{formatDate(opportunity.createdAt, t('opportunities.unknownDate'))}</span>
+                    <span>{getCreatedAtLabel(opportunity.createdAt, t('opportunities.unknownDate'))}</span>
                 </div>
             </div>
 
@@ -140,7 +98,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
 
             {opportunity.estimatedValue !== undefined && (
                 <p className={`text-right text-sm font-bold ${colors.text.success} mt-2`} aria-live="polite">
-                    {opportunity.estimatedValue.toLocaleString('el-GR')}€
+                    {formatCurrency(opportunity.estimatedValue, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </p>
             )}
 
@@ -207,3 +165,4 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
         </div>
     );
 }
+

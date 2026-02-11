@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GripVertical, Edit3, Save, X, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import type { ObligationParagraph } from '@/types/obligations';
@@ -86,3 +86,5 @@ export function ParagraphItem({
     </div>
   );
 }
+
+

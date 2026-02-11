@@ -152,7 +152,6 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         {...viewState}
         onMove={(evt) => onViewStateChange(evt.viewState as ViewState)}
         onLoad={onLoad}
-        className="w-full h-full"
         mapStyle={mapStyle}
         onClick={onClick}
         onMouseMove={onMouseMove}

@@ -8,7 +8,8 @@ import { useExpandedToc } from './hooks/useExpandedToc';
 import { TocHeader } from './parts/TocHeader';
 import { TocBody } from './parts/TocBody';
 import type { TableOfContentsProps } from './types';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export default function TableOfContents({
   items,
@@ -19,6 +20,7 @@ export default function TableOfContents({
   className
 }: TableOfContentsProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('obligations');
   const { expandedIds, toggle, expandAll, collapseAll } = useExpandedToc(items);
 
   if (items.length === 0) {
@@ -27,20 +29,20 @@ export default function TableOfContents({
         <CardHeader className={cn("pb-4", compact && "pb-2")}>
           <CardTitle className={cn("text-lg flex items-center gap-2", compact && "text-base")}>
             <BookOpen className={iconSizes.md} />
-            Πίνακας Περιεχομένων
+            {t('tableOfContents.title')}
           </CardTitle>
           {!compact && (
             <CardDescription>
-              Η δομή του εγγράφου θα εμφανιστεί εδώ
+              {t('tableOfContents.description')}
             </CardDescription>
           )}
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <BookOpen className={`${iconSizes.xl} mx-auto mb-4 text-muted-foreground/50`} />
-            <p className="text-sm text-muted-foreground">Δεν υπάρχουν ενότητες ακόμα</p>
+            <p className="text-sm text-muted-foreground">{t('tableOfContents.emptyTitle')}</p>
             <p className="text-xs text-muted-foreground/80 mt-1">
-              Προσθέστε ενότητες για να δημιουργηθεί ο πίνακας περιεχομένων
+              {t('tableOfContents.emptyDescription')}
             </p>
           </div>
         </CardContent>
@@ -71,3 +73,5 @@ export default function TableOfContents({
     </Card>
   );
 }
+
+

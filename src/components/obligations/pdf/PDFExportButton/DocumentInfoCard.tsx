@@ -39,3 +39,4 @@ export function DocumentInfoCard({ document }: DocumentInfoCardProps) {
     </Card>
   );
 }
+

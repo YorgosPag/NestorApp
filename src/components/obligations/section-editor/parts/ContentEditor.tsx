@@ -24,3 +24,4 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
     </div>
   );
 }
+

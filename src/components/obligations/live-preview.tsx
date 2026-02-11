@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ObligationDocument, TableOfContentsItem } from '@/types/obligations';
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/design-system";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 
 import { PreviewHeader } from './live-preview/parts/PreviewHeader';
@@ -30,7 +30,6 @@ export function LivePreview({
   document: doc,
   activeItemId,
   onItemClick,
-  viewMode = "preview",
   zoom = 100,
   className,
 }: LivePreviewProps) {
@@ -116,3 +115,5 @@ export function CompactPreview(props: LivePreviewProps) {
 
 // Default export for backward compatibility
 export default LivePreview;
+
+

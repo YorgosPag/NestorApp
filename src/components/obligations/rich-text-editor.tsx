@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useHistoryStack } from './rich-text/hooks/useHistoryStack';
 import { useFormatter } from './rich-text/hooks/useFormatter';
 import { useShortcuts } from './rich-text/hooks/useShortcuts';
@@ -129,3 +129,5 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 };
 
 export default RichTextEditor;
+
+

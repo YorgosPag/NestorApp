@@ -39,7 +39,11 @@ export function useShortcuts(actions: ShortcutActions) {
         case 'z':
           e.preventDefault();
           e.stopPropagation();
-          e.shiftKey ? actions.onRedo() : actions.onUndo();
+          if (e.shiftKey) {
+            actions.onRedo();
+          } else {
+            actions.onUndo();
+          }
           break;
         case 'y':
           e.preventDefault();

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { TocHeaderProps } from '../types';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -64,3 +64,5 @@ export function TocHeader({
     </CardHeader>
   );
 }
+
+

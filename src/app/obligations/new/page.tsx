@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PageLayout } from "@/components/app/page-layout";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { getSpacingClass } from '@/lib/design-system';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { 
@@ -23,13 +24,7 @@ import {
   ProjectDetails, 
   ObligationDocument, 
   ObligationSection, 
-  ObligationArticle, 
-  ObligationParagraph,
-  createNewSection,
-  createNewArticle,
-  createNewParagraph,
-  generateTableOfContents,
-  renumberSections
+  generateTableOfContents
 } from "@/types/obligations";
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
 import { obligationsService } from "@/services/obligations.service";
@@ -110,14 +105,12 @@ export default function NewObligationPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'split' | 'edit-only'>('split');
   const [activeItem, setActiveItem] = useState<{type: 'section' | 'article' | 'paragraph', id: string} | null>(null);
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  const [dynamicHeight, setDynamicHeight] = useState(OBLIGATION_PREVIEW_LAYOUT.initialPreviewHeight);
+  const [dynamicHeight, setDynamicHeight] = useState<string>(OBLIGATION_PREVIEW_LAYOUT.initialPreviewHeight);
   const previewContentRef = useRef<HTMLDivElement>(null);
   const previewHeightClass = getDynamicHeightClass(dynamicHeight);
   const calculateHeightRef = useRef<() => void>();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const textareaTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const expandedTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Height calculation function
   const calculateHeight = useCallback(() => {
@@ -135,6 +128,7 @@ export default function NewObligationPage() {
         scrollHeight: `${scrollHeight}px`,
         viewportHeight: `${viewportHeight}px`,
         headerHeight: `${headerHeight}px`,
+        minHeight: `${minHeight}px`,
         calculatedNeededHeight: `${neededHeight}px`,
         finalDynamicHeight: `${neededHeight}px`
       });
@@ -289,27 +283,6 @@ export default function NewObligationPage() {
     };
   }, [formData.sections]); // Re-run when sections change
 
-  // Auto-resize textareas when accordion items are expanded
-  useEffect(() => {
-    const autoResizeAllTextareas = () => {
-      const textareas = document.querySelectorAll('textarea');
-      textareas.forEach(textarea => {
-        if (textarea instanceof HTMLTextAreaElement) {
-          autoResize(textarea);
-        }
-      });
-    };
-
-    // Run after a small delay to ensure DOM is updated after expansion - Strict Mode safe
-    expandedTimerRef.current = setTimeout(autoResizeAllTextareas, 150);
-
-    return () => {
-      if (expandedTimerRef.current) {
-        clearTimeout(expandedTimerRef.current);
-      }
-    };
-  }, [expandedItems]); // Re-run when accordion items expand/collapse
-
   // CSS overscroll-behavior χειρίζεται το synchronized scrolling φυσικά
 
   // Initialize with template if selected
@@ -349,18 +322,18 @@ export default function NewObligationPage() {
       .filter(company => company.id) // Φιλτράρουμε companies χωρίς id
       .map(company => ({
         id: company.id as string, // Type assertion αφού φιλτράραμε
-        name: company.companyName || 'Άγνωστη εταιρεία'
+        name: company.companyName || t('preview.unknownContractor')
       })),
-    [companies]
+    [companies, t]
   );
 
   // 🏢 ENTERPRISE: Transform projects for centralized Select
   const projectOptions = useMemo(() =>
     projects.map(project => ({
       id: String(project.id),
-      name: project.name || 'Άγνωστο έργο'
+      name: project.name || t('preview.unknownProject')
     })),
-    [projects]
+    [projects, t]
   );
 
   const handleInputChange = useCallback((field: keyof ObligationFormData, value: ObligationFormData[keyof ObligationFormData]) => {
@@ -402,135 +375,6 @@ export default function NewObligationPage() {
       }
     }));
   }, [projects]);
-
-  const handleProjectDetailsChange = useCallback((field: keyof ProjectDetails, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      projectDetails: {
-        ...(prev.projectDetails ?? {}),
-        [field]: value
-      }
-    }));
-  }, []);
-
-  const handleOwnerChange = useCallback((index: number, field: keyof Owner, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      owners: prev.owners.map((owner, i) => {
-        if (i === index) {
-            if (field === 'share') {
-                const raw = value as string;
-                const parsed = raw === '' ? undefined : (parseFloat(raw) || 0);
-                return { ...owner, [field]: parsed };
-            }
-            return { ...owner, [field]: value };
-        }
-        return owner;
-      })
-    }));
-  }, []);
-
-  const addOwner = useCallback(() => {
-    const newId = (formData.owners.length + 1).toString();
-    handleInputChange("owners", [...formData.owners, { id: newId, name: "", share: 0 }]);
-  }, [formData.owners, handleInputChange]);
-
-  const removeOwner = useCallback((index: number) => {
-    if (formData.owners.length > 1) {
-      handleInputChange("owners", formData.owners.filter((_, i) => i !== index));
-    }
-  }, [formData.owners, handleInputChange]);
-
-  // Section management
-  const addSection = useCallback(() => {
-    const newSection = createNewSection(formData.sections.length);
-    handleInputChange("sections", [...formData.sections, newSection]);
-    setActiveItem({ type: 'section', id: newSection.id });
-    setExpandedItems(prev => [...prev, newSection.id]);
-  }, [formData.sections, handleInputChange]);
-
-  const updateSection = useCallback((sectionId: string, updates: Partial<ObligationSection>) => {
-    handleInputChange("sections", formData.sections.map(section =>
-      section.id === sectionId ? { ...section, ...updates } : section
-    ));
-  }, [formData.sections, handleInputChange]);
-
-  const deleteSection = useCallback((sectionId: string) => {
-    handleInputChange("sections", renumberSections(formData.sections.filter(s => s.id !== sectionId)));
-    setExpandedItems(prev => prev.filter(id => id !== sectionId));
-    if (activeItem?.id === sectionId) {
-      setActiveItem(null);
-    }
-  }, [formData.sections, handleInputChange, activeItem]);
-
-  // Article management
-  const addArticle = useCallback((sectionId: string) => {
-    const newSections = formData.sections.map(section => {
-      if (section.id === sectionId) {
-        const newArticle = createNewArticle(sectionId, section.articles?.length || 0);
-        return { ...section, articles: [...(section.articles || []), newArticle], isExpanded: true };
-      }
-      return section;
-    });
-    handleInputChange("sections", newSections);
-  }, [formData.sections, handleInputChange]);
-
-  const updateArticle = useCallback((sectionId: string, articleId: string, updates: Partial<ObligationArticle>) => {
-    const newSections = formData.sections.map(section => {
-        if (section.id === sectionId) {
-            return { ...section, articles: section.articles?.map(a => a.id === articleId ? { ...a, ...updates } : a)};
-        }
-        return section;
-    });
-    handleInputChange("sections", newSections);
-  }, [formData.sections, handleInputChange]);
-  
-
-  // Paragraph management
-  const addParagraph = useCallback((sectionId: string, articleId: string) => {
-    const newSections = formData.sections.map(section => {
-        if (section.id === sectionId) {
-            return {
-                ...section,
-                articles: section.articles?.map(a => {
-                    if (a.id === articleId) {
-                        const newParagraph = createNewParagraph(articleId, a.paragraphs?.length || 0);
-                        return { ...a, paragraphs: [...(a.paragraphs || []), newParagraph], isExpanded: true };
-                    }
-                    return a;
-                })
-            };
-        }
-        return section;
-    });
-    handleInputChange("sections", newSections);
-  }, [formData.sections, handleInputChange]);
-
-  const updateParagraph = useCallback((sectionId: string, articleId: string, paragraphId: string, updates: Partial<ObligationParagraph>) => {
-    const newSections = formData.sections.map(section => {
-        if (section.id === sectionId) {
-            return {
-                ...section,
-                articles: section.articles?.map(a => {
-                    if (a.id === articleId) {
-                        return { ...a, paragraphs: a.paragraphs?.map(p => p.id === paragraphId ? { ...p, ...updates } : p) };
-                    }
-                    return a;
-                })
-            };
-        }
-        return section;
-    });
-    handleInputChange("sections", newSections);
-  }, [formData.sections, handleInputChange]);
-
-  const toggleExpanded = useCallback((id: string) => {
-    setExpandedItems(prev => 
-      prev.includes(id) 
-        ? prev.filter(item => item !== id)
-        : [...prev, id]
-    );
-  }, []);
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -610,7 +454,7 @@ export default function NewObligationPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-full mx-auto p-4 md:p-6 lg:p-8">
+      <div className={`max-w-full mx-auto ${getSpacingClass('p', 'md')} md:p-6 lg:p-8`}>
         {/* Header */}
         <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -647,7 +491,7 @@ export default function NewObligationPage() {
 
         {/* Main Content */}
         <section
-          className={`obligations-page flex-1 grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr] lg:items-start' : 'lg:grid-cols-1'} w-full min-h-0`}
+          className={`obligations-page flex-1 grid gap-6 ${viewMode === 'split' ? OBLIGATION_PREVIEW_LAYOUT.splitLayoutGridClass : OBLIGATION_PREVIEW_LAYOUT.singleLayoutGridClass} w-full min-h-0`}
           aria-label={t('aria.editObligation')}
         >
           {/* Left Panel - Editor */}

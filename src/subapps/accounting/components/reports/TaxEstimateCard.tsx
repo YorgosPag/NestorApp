@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxEstimate, EntityType, PartnershipTaxResult } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
+import { formatPercentage } from '@/lib/intl-utils';
 
 /** API response discriminated by entityType */
 interface TaxEstimateApiResponse {
@@ -39,13 +40,7 @@ interface TaxEstimateCardProps {
 // HELPERS
 // ============================================================================
 
-function formatPercent(rate: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'percent',
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(rate / 100);
-}
+const formatPercent = (rate: number): string => formatPercentage(rate, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 // ============================================================================
 // COMPONENT
@@ -197,3 +192,4 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
     </Card>
   );
 }
+

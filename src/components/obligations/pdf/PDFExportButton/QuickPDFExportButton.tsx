@@ -2,8 +2,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Download } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/design-system";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { PDFExportButtonProps } from "./types";
@@ -33,7 +34,7 @@ export function QuickPDFExportButton({
             className={cn("flex items-center gap-2", className)}
         >
             {isExporting ? (
-            <Loader2 className={`${iconSizes.sm} animate-spin`} />
+            <Spinner size="small" />
             ) : (
             <Download className={iconSizes.sm} />
             )}
@@ -41,3 +42,5 @@ export function QuickPDFExportButton({
         </Button>
     );
 }
+
+

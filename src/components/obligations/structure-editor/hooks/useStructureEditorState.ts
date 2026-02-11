@@ -15,7 +15,6 @@ interface UseStructureEditorStateProps {
 }
 
 export function useStructureEditorState({
-  initialSections,
   sections,
   onSectionsChange,
   onActiveItemChange,

@@ -1,17 +1,7 @@
 "use client";
 
 
-import { TableOfContentsItem } from '@/types/obligations';
 import TableOfContents from './table-of-contents/TableOfContents';
-
-interface TableOfContentsProps {
-  items: TableOfContentsItem[];
-  onItemClick?: (item: TableOfContentsItem) => void;
-  activeItemId?: string;
-  showPageNumbers?: boolean;
-  compact?: boolean;
-  className?: string;
-}
 
 export { default as CompactTableOfContents } from './table-of-contents/CompactTableOfContents';
 export { default as PrintTableOfContents } from './table-of-contents/PrintTableOfContents';
@@ -20,3 +10,4 @@ export { default as PrintTableOfContents } from './table-of-contents/PrintTableO
 export { TableOfContents };
 
 export default TableOfContents;
+

@@ -132,10 +132,26 @@
     "categoryLabel": "Κατηγορία",
     "selectCategory": "Επιλέξτε κατηγορία",
     "statusLabel": "Στάτους",
-    "requiredArticle": "Απαραίτητο άρθρο"
+    "requiredArticle": "Απαραίτητο άρθρο",
+    "header": {
+      "edit": "Επεξεργασία Άρθρου",
+      "preview": "Προβολή Άρθρου",
+      "unsavedChanges": "Μη αποθηκευμένες αλλαγές",
+      "articlePrefix": "Άρθρο"
+    },
+    "unsavedBanner": "Έχετε μη αποθηκευμένες αλλαγές σε αυτό το άρθρο"
   },
   "richText": {
-    "defaultPlaceholder": "Εισάγετε το περιεχόμενο..."
+    "defaultPlaceholder": "Εισάγετε το περιεχόμενο...",
+    "previewBrowserOnly": "Η προεπισκόπηση είναι διαθέσιμη μόνο στον browser.",
+    "stats": {
+      "words": "Λέξεις",
+      "characters": "Χαρακτήρες",
+      "shortcuts": "Συντομεύσεις",
+      "shortcutsValue": "Ctrl+B (έντονα), Ctrl+I (πλάγια), Ctrl+U (υπογράμμιση)",
+      "formatting": "Μορφοποίηση",
+      "formattingValue": "**έντονα**, *πλάγια*, <u>υπογράμμιση</u>, - λίστες"
+    }
   },
   "article": {
     "titlePlaceholder": "Τίτλος άρθρου...",
@@ -205,5 +221,46 @@
       "minutes": "λεπτά",
       "estimatedPages": "Εκτιμώμενες σελίδες:"
     }
+  },
+  "legacyForms": {
+    "newTitle": "Νέα Υποχρέωση",
+    "newDescription": "Φόρμα δημιουργίας νέας υποχρέωσης (υπό ανάπτυξη)",
+    "editTitle": "Επεξεργασία Υποχρέωσης",
+    "editDescription": "Φόρμα επεξεργασίας υποχρεώσεων (υπό ανάπτυξη)"
+  },
+  "livePreview": {
+    "emptyTitle": "Δεν υπάρχει περιεχόμενο",
+    "emptyDescription": "Προσθέστε ενότητες στον editor για να δείτε την προεπισκόπηση",
+    "sectionLabel": "Άρθρο"
+  },
+  "footer": {
+    "sections": "ενότητες",
+    "articles": "άρθρα",
+    "paragraphs": "παράγραφοι",
+    "zoom": "Ζουμ"
+  },
+  "tableOfContents": {
+    "title": "ΠΙΝΑΚΑΣ ΠΕΡΙΕΧΟΜΕΝΩΝ",
+    "description": "Η δομή του εγγράφου θα εμφανιστεί εδώ",
+    "emptyTitle": "Δεν υπάρχουν ενότητες ακόμα",
+    "emptyDescription": "Προσθέστε ενότητες για να δημιουργηθεί ο πίνακας περιεχομένων",
+    "sections": "Ενότητες",
+    "articles": "Άρθρα",
+    "paragraphs": "Παράγραφοι",
+    "pageShort": "σελ.",
+    "expandAria": "Επέκταση ενότητας {{title}}",
+    "collapseAria": "Σύμπτυξη ενότητας {{title}}",
+    "short": {
+      "section": "ΕΝ",
+      "article": "ΑΡ",
+      "paragraph": "ΠΑ"
+    }
+  },
+  "dialogs": {
+    "deleteTitle": "Διαγραφή Άρθρου",
+    "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το άρθρο;"
+  },
+  "pdf": {
+    "dialogDescription": "Δημιουργήστε ένα επαγγελματικό PDF του εγγράφου σας"
   }
 }

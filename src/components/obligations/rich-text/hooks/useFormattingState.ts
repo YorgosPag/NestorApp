@@ -28,8 +28,6 @@ export function useFormattingState(
     // Get surrounding text (20 chars before and after cursor)
     const before = text.substring(Math.max(0, cursorPos - 20), cursorPos);
     const after = text.substring(cursorPos, Math.min(text.length, cursorPos + 20));
-    const surrounding = before + after;
-
     // Check if cursor is inside formatting tags
     const isBold = isInsideFormatting(before, after, '**', '**');
     const isItalic = isInsideFormatting(before, after, '*', '*') && !isBold; // Exclude bold

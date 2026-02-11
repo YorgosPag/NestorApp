@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileText, FileDown } from "lucide-react";
 import { getContentSummary } from "@/lib/obligations-utils";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/design-system";
 import { useIconSizes } from "@/hooks/useIconSizes";
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { usePdfExport } from "./pdf/PDFExportButton/hooks/usePdfExport";
 import type { PDFExportButtonProps, ExportOptions } from "./pdf/PDFExportButton/types";
@@ -17,7 +18,6 @@ import { ActionsBar } from "./pdf/PDFExportButton/ActionsBar";
 import { PrintButton } from "./pdf/PDFExportButton/PrintButton";
 import { QuickPDFExportButton } from "./pdf/PDFExportButton/QuickPDFExportButton";
 
-
 export default function PDFExportButton({
   document,
   variant = "default",
@@ -26,6 +26,7 @@ export default function PDFExportButton({
   className,
 }: PDFExportButtonProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('obligations');
   const [showOptions, setShowOptions] = useState(false);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     includeTableOfContents: true,
@@ -37,7 +38,6 @@ export default function PDFExportButton({
   const { isExporting, exportProgress, handleExport } = usePdfExport(document);
   const contentSummary = useMemo(() => {
     const metrics = getContentSummary(document);
-    // Map ContentMetrics to the format expected by ExportOptionsCard
     const sections = document.sections?.length ?? 0;
     const articles = document.sections?.reduce((sum, s) => sum + (s.articles?.length ?? 0), 0) ?? 0;
     const paragraphs = document.sections?.reduce((sum, s) =>
@@ -67,17 +67,17 @@ export default function PDFExportButton({
       <DialogTrigger asChild>
         <Button variant={variant} size={size} className={cn("flex items-center gap-2", className)}>
           <FileDown className={iconSizes.sm} />
-          Εξαγωγή PDF
+          {t('export.button')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className={iconSizes.md} />
-            Εξαγωγή σε PDF
+            {t('export.button')}
           </DialogTitle>
           <DialogDescription>
-            Δημιουργήστε ένα επαγγελματικό PDF του εγγράφου σας
+            {t('pdf.dialogDescription')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
@@ -105,3 +105,5 @@ export default function PDFExportButton({
 }
 
 export { QuickPDFExportButton, PrintButton };
+
+

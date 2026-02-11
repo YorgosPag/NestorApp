@@ -12,7 +12,8 @@ interface UseFormatterProps {
   onChange: (newValue: string) => void;
 }
 
-export function useFormatter({ textareaRef, value, onChange }: UseFormatterProps) {
+export function useFormatter(props: UseFormatterProps) {
+  const { textareaRef } = props;
   const applyFormatting = useCallback((before: string, after: string = '', placeholder: string = '') => {
     if (!textareaRef.current) return;
 
@@ -45,7 +46,7 @@ export function useFormatter({ textareaRef, value, onChange }: UseFormatterProps
     // Position cursor after inserted text
     const newCursorPos = start + before.length + textToInsert.length + after.length;
     restoreCaret(textarea, newCursorPos);
-  }, [onChange, textareaRef]);
+  }, [textareaRef]);
 
   // Helper function to find word boundaries
   const findWordBounds = (text: string, position: number) => {
@@ -86,7 +87,7 @@ export function useFormatter({ textareaRef, value, onChange }: UseFormatterProps
     textareaRef.current.dispatchEvent(event);
 
     restoreCaret(textareaRef.current, start + textToInsert.length);
-  }, [onChange, textareaRef]);
+  }, [textareaRef]);
 
   // 🌐 i18n: Format placeholders converted to i18n keys - 2026-01-18
   const formatBold = useCallback(() => {

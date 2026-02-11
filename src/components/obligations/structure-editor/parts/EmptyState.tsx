@@ -35,3 +35,4 @@ export function EmptyState({ readOnly, onAddSection }: EmptyStateProps) {
     </Card>
   );
 }
+

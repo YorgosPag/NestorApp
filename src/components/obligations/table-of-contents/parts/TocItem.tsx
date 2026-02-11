@@ -7,9 +7,10 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import type { TocItemProps } from '../types';
 import { getItemIcon } from '../utils/icons';
 import { getItemBadgeColor } from '../utils/badges';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function TocItem({
   item,
@@ -23,6 +24,7 @@ export function TocItem({
 }: TocItemProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const { t } = useTranslation('obligations');
   const hasChildren = item.children && item.children.length > 0;
   const isExpanded = expandedIds.includes(item.id);
   const isActive = activeItemId === item.id;
@@ -50,7 +52,7 @@ export function TocItem({
               onToggle(item.id);
             }}
             className={`${iconSizes.lg} p-0 opacity-70 hover:opacity-100`}
-            aria-label={isExpanded ? `Σύμπτυξη ενότητας ${item.title}` : `Επέκταση ενότητας ${item.title}`}
+            aria-label={isExpanded ? t('tableOfContents.collapseAria', { title: item.title }) : t('tableOfContents.expandAria', { title: item.title })}
           >
             {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
           </Button>
@@ -82,13 +84,13 @@ export function TocItem({
 
         {showPageNumbers && item.page && (
           <Badge variant="outline" className="text-xs">
-            σελ. {item.page}
+            {t('tableOfContents.pageShort')} {item.page}
           </Badge>
         )}
 
         {compact && (
           <span className="text-xs text-muted-foreground/80 uppercase tracking-wide">
-            {item.type === 'section' ? 'ΕΝ' : item.type === 'article' ? 'ΑΡ' : 'ΠΑ'}
+            {item.type === 'section' ? t('tableOfContents.short.section') : item.type === 'article' ? t('tableOfContents.short.article') : t('tableOfContents.short.paragraph')}
           </span>
         )}
       </div>
@@ -113,3 +115,5 @@ export function TocItem({
     </div>
   );
 }
+
+

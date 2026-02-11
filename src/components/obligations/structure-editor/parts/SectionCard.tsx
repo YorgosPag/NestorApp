@@ -12,7 +12,7 @@ import { useTranslation } from '@/i18n';
 import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Save, X, Copy, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import type { ObligationSection, SectionCategory } from '@/types/obligations';
 import { categoryLabels } from '../config/categoryLabels';
 import { ArticleItem } from './ArticleItem';
@@ -180,3 +180,5 @@ export function SectionCard({
     </Card>
   );
 }
+
+

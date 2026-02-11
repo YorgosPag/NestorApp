@@ -132,10 +132,26 @@
     "categoryLabel": "Category",
     "selectCategory": "Select category",
     "statusLabel": "Status",
-    "requiredArticle": "Required article"
+    "requiredArticle": "Required article",
+    "header": {
+      "edit": "Edit Article",
+      "preview": "Article Preview",
+      "unsavedChanges": "Unsaved changes",
+      "articlePrefix": "Article"
+    },
+    "unsavedBanner": "You have unsaved changes in this article"
   },
   "richText": {
-    "defaultPlaceholder": "Enter content..."
+    "defaultPlaceholder": "Enter content...",
+    "previewBrowserOnly": "Preview is available only in the browser.",
+    "stats": {
+      "words": "Words",
+      "characters": "Characters",
+      "shortcuts": "Shortcuts",
+      "shortcutsValue": "Ctrl+B (bold), Ctrl+I (italic), Ctrl+U (underline)",
+      "formatting": "Formatting",
+      "formattingValue": "**bold**, *italic*, <u>underline</u>, - lists"
+    }
   },
   "article": {
     "titlePlaceholder": "Article title...",
@@ -205,5 +221,46 @@
       "minutes": "minutes",
       "estimatedPages": "Estimated pages:"
     }
+  },
+  "legacyForms": {
+    "newTitle": "New Obligation",
+    "newDescription": "Form for creating a new obligation (under development)",
+    "editTitle": "Edit Obligation",
+    "editDescription": "Form for editing obligations (under development)"
+  },
+  "livePreview": {
+    "emptyTitle": "No content available",
+    "emptyDescription": "Add sections in the editor to see the preview",
+    "sectionLabel": "Section"
+  },
+  "footer": {
+    "sections": "sections",
+    "articles": "articles",
+    "paragraphs": "paragraphs",
+    "zoom": "Zoom"
+  },
+  "tableOfContents": {
+    "title": "TABLE OF CONTENTS",
+    "description": "The document structure will appear here",
+    "emptyTitle": "No sections yet",
+    "emptyDescription": "Add sections to generate the table of contents",
+    "sections": "Sections",
+    "articles": "Articles",
+    "paragraphs": "Paragraphs",
+    "pageShort": "p.",
+    "expandAria": "Expand section {{title}}",
+    "collapseAria": "Collapse section {{title}}",
+    "short": {
+      "section": "SEC",
+      "article": "ART",
+      "paragraph": "PAR"
+    }
+  },
+  "dialogs": {
+    "deleteTitle": "Delete Article",
+    "deleteConfirm": "Are you sure you want to delete this article?"
+  },
+  "pdf": {
+    "dialogDescription": "Create a professional PDF of your document"
   }
 }

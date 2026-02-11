@@ -63,3 +63,4 @@ export function CategoryRequiredFields({
     </div>
   );
 }
+

@@ -1,0 +1,181 @@
+
+C:\Nestor_Pagonis\src\components\obligations\ObligationEditForm.tsx
+  1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  8:47  error  Hardcoded JSX text "Επεξεργασία Υποχρέωσης" should use {t('namespace.key')} instead                                                       custom/no-hardcoded-strings
+  9:44  error  Hardcoded JSX text "Φόρμα επεξεργασίας υποχρεώσεων (υπό ανάπτυξη)" should use {t('namespace.key')} instead                                custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\ObligationForm.tsx
+  1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  8:47  error  Hardcoded JSX text "Νέα Υποχρέωση" should use {t('namespace.key')} instead                                                                custom/no-hardcoded-strings
+  9:44  error  Hardcoded JSX text "Φόρμα δημιουργίας νέας υποχρέωσης (υπό ανάπτυξη)" should use {t('namespace.key')} instead                             custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\live-preview.tsx
+   1:1  error    Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  33:3  error    'viewMode' is assigned a value but never used                                                                                             @typescript-eslint/no-unused-vars
+  33:3  warning  'viewMode' is assigned a value but never used. Allowed unused args must match /^_/u                                                       unused-imports/no-unused-vars
+
+C:\Nestor_Pagonis\src\components\obligations\live-preview\parts\DocumentContent.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  24:72  error  Hardcoded JSX text "Δεν υπάρχει περιεχόμενο" should use {t('namespace.key')} instead                                                      custom/no-hardcoded-strings
+  25:57  error  Hardcoded JSX text "Προσθέστε ενότητες στον editor για να δείτε την προεπισκόπηση" should use {t('namespace.key')} instead                custom/no-hardcoded-strings
+  40:62  error  Hardcoded JSX text "Άρθρο" should use {t('namespace.key')} instead                                                                        custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\live-preview\parts\DocumentFooter.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  14:24  error  Hardcoded JSX text "ενότητες •" should use {t('namespace.key')} instead                                                                   custom/no-hardcoded-strings
+  14:51  error  Hardcoded JSX text "άρθρα •" should use {t('namespace.key')} instead                                                                      custom/no-hardcoded-strings
+  14:77  error  Hardcoded JSX text "παράγραφοι" should use {t('namespace.key')} instead                                                                   custom/no-hardcoded-strings
+  17:15  error  Hardcoded JSX text "Ζουμ:" should use {t('namespace.key')} instead                                                                        custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\live-preview\parts\PreviewHeader.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\live-preview\parts\TableOfContents.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  36:59  error  Hardcoded JSX text "σελ." should use {t('namespace.key')} instead                                                                         custom/no-hardcoded-strings
+  45:62  error  Hardcoded JSX text "ΠΙΝΑΚΑΣ ΠΕΡΙΕΧΟΜΕΝΩΝ" should use {t('namespace.key')} instead                                                         custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\pdf-export-button.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  69:48  error  Hardcoded JSX text "Εξαγωγή PDF" should use {t('namespace.key')} instead                                                                  custom/no-hardcoded-strings
+  76:50  error  Hardcoded JSX text "Εξαγωγή σε PDF" should use {t('namespace.key')} instead                                                               custom/no-hardcoded-strings
+  79:30  error  Hardcoded JSX text "Δημιουργήστε ένα επαγγελματικό PDF του εγγράφου σας" should use {t('namespace.key')} instead                          custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\pdf.ts
+  52:20  error  Hardcoded string "_blank" should use i18n key instead. Use t('namespace.key') pattern  custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\pdf\PDFExportButton\ActionsBar.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\pdf\PDFExportButton\DocumentInfoCard.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\pdf\PDFExportButton\ExportOptionsCard.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\pdf\PDFExportButton\ExportProgressCard.tsx
+  2:1  error    Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'                     design-system/prefer-design-system-imports
+  6:1  warning  Direct import of Loader2 from lucide-react is not allowed. Use the centralized Spinner component instead: import { Spinner } from "@/components/ui/spinner"  design-system/no-direct-loader-import
+
+C:\Nestor_Pagonis\src\components\obligations\pdf\PDFExportButton\PrintButton.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\pdf\PDFExportButton\QuickPDFExportButton.tsx
+  2:1  error    Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'                     design-system/prefer-design-system-imports
+  5:1  warning  Direct import of Loader2 from lucide-react is not allowed. Use the centralized Spinner component instead: import { Spinner } from "@/components/ui/spinner"  design-system/no-direct-loader-import
+
+C:\Nestor_Pagonis\src\components\obligations\rich-text\hooks\useFormatter.ts
+  15:45  error    'value' is defined but never used                                        @typescript-eslint/no-unused-vars
+  15:45  warning  'value' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+C:\Nestor_Pagonis\src\components\obligations\rich-text\hooks\useFormattingState.ts
+  31:11  error    'surrounding' is assigned a value but never used                                        @typescript-eslint/no-unused-vars
+  31:11  warning  'surrounding' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+C:\Nestor_Pagonis\src\components\obligations\rich-text\hooks\useShortcuts.ts
+  42:11  error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+C:\Nestor_Pagonis\src\components\obligations\rich-text\parts\EditorArea.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\rich-text\parts\Preview.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  28:45  error  Hardcoded JSX text "Η προεπισκόπηση είναι διαθέσιμη μόνο στον browser." should use {t('namespace.key')} instead                           custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\rich-text\parts\StatsFooter.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  12:34  error  Hardcoded JSX text "Λέξεις:" should use {t('namespace.key')} instead                                                                      custom/no-hardcoded-strings
+  13:34  error  Hardcoded JSX text "Χαρακτήρες:" should use {t('namespace.key')} instead                                                                  custom/no-hardcoded-strings
+  18:19  error  Hardcoded JSX text "Συντομεύσεις:" should use {t('namespace.key')} instead                                                                custom/no-hardcoded-strings
+  18:41  error  Hardcoded JSX text "Ctrl+B (έντονα), Ctrl+I (πλάγια), Ctrl+U (υπογράμμιση)" should use {t('namespace.key')} instead                       custom/no-hardcoded-strings
+  21:19  error  Hardcoded JSX text "Μορφοποίηση:" should use {t('namespace.key')} instead                                                                 custom/no-hardcoded-strings
+  21:40  error  Hardcoded JSX text "**έντονα**, *πλάγια*," should use {t('namespace.key')} instead                                                        custom/no-hardcoded-strings
+  21:66  error  Hardcoded JSX text "υπογράμμιση" should use {t('namespace.key')} instead                                                                  custom/no-hardcoded-strings
+  21:81  error  Hardcoded JSX text ", - λίστες" should use {t('namespace.key')} instead                                                                   custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\rich-text\parts\Toolbar.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\SectionEditor.tsx
+    1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  113:47  error  Hardcoded string "Διαγραφή Άρθρου" should use i18n key instead. Use t('namespace.key') pattern                                            custom/no-hardcoded-strings
+  114:55  error  Hardcoded string "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το άρθρο;" should use i18n key instead. Use t('namespace.key') pattern     custom/no-hardcoded-strings
+  116:44  error  Hardcoded string "Διαγραφή" should use i18n key instead. Use t('namespace.key') pattern                                                   custom/no-hardcoded-strings
+  117:43  error  Hardcoded string "Ακύρωση" should use i18n key instead. Use t('namespace.key') pattern                                                    custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\parts\ActionsBar.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\parts\BasicInfoFields.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\parts\CategoryRequiredFields.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\parts\ContentEditor.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\parts\HeaderBar.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  29:42  error  Hardcoded JSX text "Απαραίτητο" should use {t('namespace.key')} instead                                                                   custom/no-hardcoded-strings
+  32:66  error  Hardcoded JSX text "Μη αποθηκευμένες αλλαγές" should use {t('namespace.key')} instead                                                     custom/no-hardcoded-strings
+  44:24  error  Hardcoded JSX text "Άρθρο" should use {t('namespace.key')} instead                                                                        custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\parts\TitleField.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\section-editor\parts\UnsavedBanner.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  20:15  error  Hardcoded JSX text "Έχετε μη αποθηκευμένες αλλαγές σε αυτό το άρθρο" should use {t('namespace.key')} instead                              custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\StructureEditor.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\hooks\useStructureEditorState.ts
+  18:3  error    'initialSections' is defined but never used                                        @typescript-eslint/no-unused-vars
+  18:3  warning  'initialSections' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\parts\ActionsBar.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\parts\ArticleItem.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\parts\EmptyState.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\parts\HeaderBar.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\parts\ParagraphItem.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\structure-editor\parts\SectionCard.tsx
+  1:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\table-of-contents.tsx
+  7:11  error    'TableOfContentsProps' is defined but never used                                        @typescript-eslint/no-unused-vars
+  7:11  warning  'TableOfContentsProps' is defined but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+C:\Nestor_Pagonis\src\components\obligations\table-of-contents\TableOfContents.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  29:50  error  Hardcoded JSX text "Πίνακας Περιεχομένων" should use {t('namespace.key')} instead                                                         custom/no-hardcoded-strings
+  33:30  error  Hardcoded JSX text "Η δομή του εγγράφου θα εμφανιστεί εδώ" should use {t('namespace.key')} instead                                        custom/no-hardcoded-strings
+  41:58  error  Hardcoded JSX text "Δεν υπάρχουν ενότητες ακόμα" should use {t('namespace.key')} instead                                                  custom/no-hardcoded-strings
+  42:66  error  Hardcoded JSX text "Προσθέστε ενότητες για να δημιουργηθεί ο πίνακας περιεχομένων" should use {t('namespace.key')} instead                custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\table-of-contents\parts\TocBody.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  44:62  error  Hardcoded JSX text "Ενότητες" should use {t('namespace.key')} instead                                                                     custom/no-hardcoded-strings
+  48:62  error  Hardcoded JSX text "Άρθρα" should use {t('namespace.key')} instead                                                                        custom/no-hardcoded-strings
+  52:62  error  Hardcoded JSX text "Παράγραφοι" should use {t('namespace.key')} instead                                                                   custom/no-hardcoded-strings
+
+C:\Nestor_Pagonis\src\components\obligations\table-of-contents\parts\TocHeader.tsx
+  2:1  error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+
+C:\Nestor_Pagonis\src\components\obligations\table-of-contents\parts\TocItem.tsx
+   1:1   error  Consider importing design system utilities for consistent styling: import { getStatusColor, getSpacingClass } from '@/lib/design-system'  design-system/prefer-design-system-imports
+  84:56  error  Hardcoded JSX text "σελ." should use {t('namespace.key')} instead                                                                         custom/no-hardcoded-strings
+
+✖ 92 problems (85 errors, 7 warnings)
+

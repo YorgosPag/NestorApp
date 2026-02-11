@@ -49,3 +49,4 @@ export function PreviewHeader({ showToc, onToggleToc, onPrint }: PreviewHeaderPr
     </div>
   );
 }
+

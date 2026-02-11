@@ -4,7 +4,7 @@
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/design-system";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ObligationDocument } from "@/types/obligations";
 import { exportObligationToPDF } from "@/services/pdf-export.service";
@@ -61,3 +61,5 @@ export function PrintButton({ document, className }: PrintButtonProps) {
     </Button>
   );
 }
+
+

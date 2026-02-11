@@ -22,7 +22,7 @@ export default function SectionEditor({
   onCancel,
   isEditing = true
 }: SectionEditorProps) {
-  const { t } = useTranslation('common'); // 🏢 ENTERPRISE: i18n translation
+  const { t } = useTranslation(['common', 'obligations']); // 🏢 ENTERPRISE: i18n translation
 
   const {
     editedSection,
@@ -110,13 +110,14 @@ export default function SectionEditor({
         <WarningConfirmDialog
           open={deleteConfirmOpen}
           onOpenChange={setDeleteConfirmOpen}
-          title={t('obligations.deleteTitle', 'Διαγραφή Άρθρου')}
-          description={t('obligations.deleteConfirm', 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το άρθρο;')}
+          title={t('dialogs.deleteTitle')}
+          description={t('dialogs.deleteConfirm')}
           onConfirm={handleDeleteConfirm}
-          confirmText={t('buttons.delete', 'Διαγραφή')}
-          cancelText={t('buttons.cancel', 'Ακύρωση')}
+          confirmText={t('buttons.delete', { ns: 'common' })}
+          cancelText={t('buttons.cancel', { ns: 'common' })}
         />
       </CardContent>
     </Card>
   );
 }
+

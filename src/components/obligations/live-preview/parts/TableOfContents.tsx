@@ -2,7 +2,8 @@
 
 import { Badge } from "@/components/ui/badge";
 import type { TableOfContentsItem } from '@/types/obligations';
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/design-system";
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface TableOfContentsPartProps {
   toc: TableOfContentsItem[];
@@ -12,6 +13,7 @@ interface TableOfContentsPartProps {
 }
 
 export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableOfContentsPartProps) {
+  const { t } = useTranslation('obligations');
   if (!show || toc.length === 0) return null;
 
   const renderTocItem = (item: TableOfContentsItem, level: number = 0) => (
@@ -33,7 +35,7 @@ export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableO
           </span>
         </div>
         {item.page && (
-          <span className="text-xs text-muted-foreground">σελ. {item.page}</span>
+          <span className="text-xs text-muted-foreground">{t('tableOfContents.pageShort')} {item.page}</span>
         )}
       </div>
       {item.children?.map(child => renderTocItem(child, level + 1))}
@@ -42,10 +44,12 @@ export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableO
 
   return (
     <div className="p-6 border-b">
-      <h3 className="text-lg font-semibold mb-4 text-center">ΠΙΝΑΚΑΣ ΠΕΡΙΕΧΟΜΕΝΩΝ</h3>
+      <h3 className="text-lg font-semibold mb-4 text-center">{t('tableOfContents.title')}</h3>
       <div className="space-y-2">
         {toc.map(item => renderTocItem(item, 0))}
       </div>
     </div>
   );
 }
+
+

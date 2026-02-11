@@ -9,7 +9,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Save, X, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import type { ObligationArticle } from '@/types/obligations';
 import { ParagraphItem } from './ParagraphItem';
 import type { useStructureEditorState } from '../hooks/useStructureEditorState';
@@ -133,3 +133,5 @@ export function ArticleItem({
     </div>
   );
 }
+
+

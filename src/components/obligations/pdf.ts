@@ -49,7 +49,7 @@ export const mergePdfOptions = (options?: PDFExportOptions): PDFExportOptions =>
 /** Επιστρέφει ασφαλές Object URL για blob και το καθαρίζει μετά από λίγο */
 const openBlobInNewTab = (blob: Blob, revokeAfterMs = 1000) => {
   const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+  window.open(url);
   setTimeout(() => URL.revokeObjectURL(url), revokeAfterMs);
 };
 
@@ -78,7 +78,7 @@ export const PDFHelpers = {
   print: async (document: _Doc, options?: PDFExportOptions) => {
     const pdfData = await _exportToPDF(document, mergePdfOptions(options));
     const url = URL.createObjectURL(new Blob([pdfData as BlobPart], { type: 'application/pdf' }));
-    const printWindow = window.open(url, '_blank');
+    const printWindow = window.open(url);
     if (printWindow) {
       printWindow.addEventListener('load', () => printWindow.print());
     }

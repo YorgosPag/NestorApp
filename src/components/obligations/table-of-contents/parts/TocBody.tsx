@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TocItem } from './TocItem';
 import { useTocStats } from '../utils/stats';
 import type { TocBodyProps } from '../types';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function TocBody({
   items,
@@ -16,6 +17,7 @@ export function TocBody({
   compact,
 }: TocBodyProps) {
   const stats = useTocStats(items);
+  const { t } = useTranslation('obligations');
 
   return (
     <>
@@ -41,15 +43,15 @@ export function TocBody({
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-lg font-semibold text-primary">{stats.sections}</div>
-              <div className="text-xs text-muted-foreground">Ενότητες</div>
+              <div className="text-xs text-muted-foreground">{t('tableOfContents.sections')}</div>
             </div>
             <div>
               <div className="text-lg font-semibold text-accent-foreground">{stats.articles}</div>
-              <div className="text-xs text-muted-foreground">Άρθρα</div>
+              <div className="text-xs text-muted-foreground">{t('tableOfContents.articles')}</div>
             </div>
             <div>
               <div className="text-lg font-semibold text-foreground">{stats.paragraphs}</div>
-              <div className="text-xs text-muted-foreground">Παράγραφοι</div>
+              <div className="text-xs text-muted-foreground">{t('tableOfContents.paragraphs')}</div>
             </div>
           </div>
         </div>
@@ -57,3 +59,4 @@ export function TocBody({
     </>
   );
 }
+

@@ -41,3 +41,4 @@ export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps)
     </div>
   );
 }
+
