@@ -20,7 +20,7 @@
 import { type NextRequest, NextResponse, after } from 'next/server';
 import { createHmac } from 'crypto';
 import { storeWhatsAppMessage, updateMessageDeliveryStatus, extractMessageText } from './crm-adapter';
-import { markWhatsAppMessageRead, sendWhatsAppMessage } from './whatsapp-client';
+import { markWhatsAppMessageRead, sendWhatsAppButtons, sendWhatsAppMessage } from './whatsapp-client';
 import type {
   WhatsAppWebhookPayload,
   WhatsAppChangeValue,
@@ -210,6 +210,13 @@ async function processIncomingMessage(
       return;
     }
 
+    // Negative feedback category buttons (❌/📊/❓/🐢)
+    if (buttonId.startsWith('fbc_')) {
+      await handleCategoryButton(buttonId, message.from);
+      await markWhatsAppMessageRead(message.id);
+      return;
+    }
+
     // Suggestion buttons — treat as new user message, feed to pipeline
     if (buttonId.startsWith('sug_')) {
       await markWhatsAppMessageRead(message.id);
@@ -282,16 +289,72 @@ async function handleFeedbackButton(buttonId: string, senderPhone: string): Prom
     );
     await getFeedbackService().updateRating(feedbackDocId, isPositive ? 'positive' : 'negative');
 
-    // Send acknowledgment
-    const ackText = isPositive
-      ? '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!'
-      : '\u{1F44E} \u0398\u03B1 \u03C0\u03C1\u03BF\u03C3\u03C0\u03B1\u03B8\u03AE\u03C3\u03C9 \u03BD\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE!';
-    await sendWhatsAppMessage(senderPhone, ackText);
+    if (isPositive) {
+      await sendWhatsAppMessage(senderPhone, '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!');
+    } else {
+      // 👎 Negative: Send follow-up category buttons (WhatsApp max 3 per message → 2 messages)
+      await sendWhatsAppButtons(senderPhone, '\u{1F44E} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03BD\u03B1 \u03BC\u03BF\u03C5 \u03C0\u03B5\u03B9\u03C2 \u03C4\u03B9 \u03C0\u03AE\u03B3\u03B5 \u03BB\u03AC\u03B8\u03BF\u03C2;', [
+        { id: `fbc_${feedbackDocId}_w`, title: '\u274C \u039B\u03AC\u03B8\u03BF\u03C2 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7' },
+        { id: `fbc_${feedbackDocId}_d`, title: '\u{1F4CA} \u039B\u03AC\u03B8\u03BF\u03C2 \u03B4\u03B5\u03B4\u03BF\u03BC\u03AD\u03BD\u03B1' },
+        { id: `fbc_${feedbackDocId}_u`, title: '\u2753 \u0394\u03B5\u03BD \u03BA\u03B1\u03C4\u03AC\u03BB\u03B1\u03B2\u03B5' },
+      ]);
+      await sendWhatsAppButtons(senderPhone, '\u0389 \u03BA\u03AC\u03C4\u03B9 \u03AC\u03BB\u03BB\u03BF;', [
+        { id: `fbc_${feedbackDocId}_s`, title: '\u{1F422} \u0391\u03C1\u03B3\u03CC' },
+      ]);
+    }
 
     logger.info('WhatsApp feedback recorded', { feedbackDocId, sentiment, phone: senderPhone.slice(-4) });
   } catch (error) {
     // Non-fatal
     logger.warn('WhatsApp feedback handler error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ============================================================================
+// NEGATIVE CATEGORY HANDLER
+// ============================================================================
+
+/** Category code → Firestore value mapping */
+const CATEGORY_MAP: Record<string, 'wrong_answer' | 'wrong_data' | 'not_understood' | 'slow'> = {
+  w: 'wrong_answer',
+  d: 'wrong_data',
+  u: 'not_understood',
+  s: 'slow',
+};
+
+/**
+ * Handle negative feedback category button taps.
+ * Button ID format: fbc_{feedbackDocId}_{w|d|u|s}
+ */
+async function handleCategoryButton(buttonId: string, senderPhone: string): Promise<void> {
+  try {
+    const parts = buttonId.split('_');
+    const categoryCode = parts[parts.length - 1];
+    const feedbackDocId = parts.slice(1, -1).join('_');
+
+    if (!feedbackDocId || !categoryCode) {
+      logger.warn('Invalid category button ID', { buttonId });
+      return;
+    }
+
+    const category = CATEGORY_MAP[categoryCode];
+    if (!category) {
+      logger.warn('Unknown category code', { categoryCode });
+      return;
+    }
+
+    const { getFeedbackService } = await import(
+      '@/services/ai-pipeline/feedback-service'
+    );
+    await getFeedbackService().updateNegativeCategory(feedbackDocId, category);
+
+    await sendWhatsAppMessage(senderPhone, '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.');
+
+    logger.info('WhatsApp negative category recorded', { feedbackDocId, category });
+  } catch (error) {
+    logger.warn('WhatsApp category handler error', {
       error: error instanceof Error ? error.message : String(error),
     });
   }

@@ -20,7 +20,7 @@
 import { type NextRequest, NextResponse, after } from 'next/server';
 import { createHmac } from 'crypto';
 import { storeInstagramMessage, extractInstagramMessageText } from './crm-adapter';
-import { sendInstagramMessage } from './instagram-client';
+import { sendInstagramMessage, sendInstagramQuickReplies } from './instagram-client';
 import type {
   InstagramWebhookPayload,
   InstagramMessagingEvent,
@@ -173,6 +173,12 @@ async function processMessagingEvent(event: InstagramMessagingEvent): Promise<vo
       return;
     }
 
+    // Negative feedback category buttons (❌/📊/❓/🐢)
+    if (qrPayload.startsWith('fbc_')) {
+      await handleCategoryQuickReply(qrPayload, igsid);
+      return;
+    }
+
     // Suggestion buttons — treat as new user message
     if (qrPayload.startsWith('sug_')) {
       sendInstagramMessage(igsid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
@@ -213,8 +219,16 @@ async function processMessagingEvent(event: InstagramMessagingEvent): Promise<vo
 }
 
 // ============================================================================
-// FEEDBACK HANDLER
+// FEEDBACK & CATEGORY HANDLERS
 // ============================================================================
+
+/** Category code → Firestore value mapping */
+const CATEGORY_MAP: Record<string, 'wrong_answer' | 'wrong_data' | 'not_understood' | 'slow'> = {
+  w: 'wrong_answer',
+  d: 'wrong_data',
+  u: 'not_understood',
+  s: 'slow',
+};
 
 /**
  * Handle feedback Quick Reply taps (👍/👎).
@@ -239,12 +253,21 @@ async function handleFeedbackQuickReply(payload: string, igsid: string): Promise
     );
     await getFeedbackService().updateRating(feedbackDocId, isPositive ? 'positive' : 'negative');
 
-    // Send acknowledgment
-    const ackText = isPositive
-      ? '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03B1 \u03C3\u03C7\u03CC\u03BB\u03B9\u03AC \u03C3\u03BF\u03C5!'
-      : '\u{1F44E} \u039B\u03C5\u03C0\u03AC\u03BC\u03B1\u03B9. \u0398\u03B1 \u03C0\u03C1\u03BF\u03C3\u03C0\u03B1\u03B8\u03AE\u03C3\u03C9 \u03BD\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE!';
-
-    await sendInstagramMessage(igsid, ackText);
+    if (isPositive) {
+      await sendInstagramMessage(igsid, '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!');
+    } else {
+      // 👎 Negative: Send follow-up category quick replies (4 options)
+      await sendInstagramQuickReplies(
+        igsid,
+        '\u{1F44E} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03BD\u03B1 \u03BC\u03BF\u03C5 \u03C0\u03B5\u03B9\u03C2 \u03C4\u03B9 \u03C0\u03AE\u03B3\u03B5 \u03BB\u03AC\u03B8\u03BF\u03C2;',
+        [
+          { content_type: 'text', title: '\u274C \u039B\u03AC\u03B8\u03BF\u03C2 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7', payload: `fbc_${feedbackDocId}_w` },
+          { content_type: 'text', title: '\u{1F4CA} \u039B\u03AC\u03B8\u03BF\u03C2 \u03B4\u03B5\u03B4\u03BF\u03BC\u03AD\u03BD\u03B1', payload: `fbc_${feedbackDocId}_d` },
+          { content_type: 'text', title: '\u2753 \u0394\u03B5\u03BD \u03BA\u03B1\u03C4\u03AC\u03BB\u03B1\u03B2\u03B5', payload: `fbc_${feedbackDocId}_u` },
+          { content_type: 'text', title: '\u{1F422} \u0391\u03C1\u03B3\u03CC', payload: `fbc_${feedbackDocId}_s` },
+        ],
+      );
+    }
 
     logger.info('Instagram feedback recorded', {
       feedbackDocId,
@@ -252,6 +275,42 @@ async function handleFeedbackQuickReply(payload: string, igsid: string): Promise
     });
   } catch (error) {
     logger.warn('Instagram feedback processing failed (non-fatal)', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Handle negative feedback category quick reply taps.
+ * Payload format: fbc_{feedbackDocId}_{w|d|u|s}
+ */
+async function handleCategoryQuickReply(payload: string, igsid: string): Promise<void> {
+  try {
+    const parts = payload.split('_');
+    const categoryCode = parts[parts.length - 1];
+    const feedbackDocId = parts.slice(1, -1).join('_');
+
+    if (!feedbackDocId || !categoryCode) {
+      logger.warn('Invalid category quick reply payload', { payload });
+      return;
+    }
+
+    const category = CATEGORY_MAP[categoryCode];
+    if (!category) {
+      logger.warn('Unknown category code', { categoryCode });
+      return;
+    }
+
+    const { getFeedbackService } = await import(
+      '@/services/ai-pipeline/feedback-service'
+    );
+    await getFeedbackService().updateNegativeCategory(feedbackDocId, category);
+
+    await sendInstagramMessage(igsid, '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.');
+
+    logger.info('Instagram negative category recorded', { feedbackDocId, category });
+  } catch (error) {
+    logger.warn('Instagram category handler error', {
       error: error instanceof Error ? error.message : String(error),
     });
   }
