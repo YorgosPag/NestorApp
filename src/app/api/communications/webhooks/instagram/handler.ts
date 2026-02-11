@@ -5,9 +5,7 @@
  *
  * Handles incoming Instagram Messaging API webhook events:
  * - GET: Webhook verification (hub.challenge)
- * - POST: Incoming DMs + read receipts
- *
- * Simpler than Messenger — no quick replies, no buttons, text-only responses.
+ * - POST: Incoming DMs + read receipts + Quick Reply callbacks
  *
  * Security:
  * - Webhook signature verification (X-Hub-Signature-256) with META_APP_SECRET
@@ -162,7 +160,31 @@ async function processMessagingEvent(event: InstagramMessagingEvent): Promise<vo
     mid: message.mid,
     hasText: !!message.text,
     hasAttachments: !!(message.attachments && message.attachments.length > 0),
+    hasQuickReply: !!message.quick_reply,
   });
+
+  // ── Handle Quick Reply button taps (suggestions + feedback) ──
+  if (message.quick_reply) {
+    const qrPayload = message.quick_reply.payload;
+
+    // Feedback buttons (👍/👎) — record and acknowledge
+    if (qrPayload.startsWith('fb_')) {
+      await handleFeedbackQuickReply(qrPayload, igsid);
+      return;
+    }
+
+    // Suggestion buttons — treat as new user message
+    if (qrPayload.startsWith('sug_')) {
+      sendInstagramMessage(igsid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
+      pendingPipelineMessages.push({
+        igsid,
+        senderName: 'Instagram User',
+        messageText: message.text ?? qrPayload,
+        messageId: message.mid,
+      });
+      return;
+    }
+  }
 
   // Store in CRM
   const result = await storeInstagramMessage(igsid, message, 'Instagram User', 'inbound');
@@ -186,6 +208,51 @@ async function processMessagingEvent(event: InstagramMessagingEvent): Promise<vo
       senderName: 'Instagram User',
       messageText,
       messageId: message.mid,
+    });
+  }
+}
+
+// ============================================================================
+// FEEDBACK HANDLER
+// ============================================================================
+
+/**
+ * Handle feedback Quick Reply taps (👍/👎).
+ * Payload format: fb_{feedbackDocId}_{up|down}
+ */
+async function handleFeedbackQuickReply(payload: string, igsid: string): Promise<void> {
+  try {
+    const parts = payload.split('_');
+    const sentiment = parts[parts.length - 1]; // 'up' or 'down'
+    const feedbackDocId = parts.slice(1, -1).join('_');
+
+    if (!feedbackDocId || !sentiment) {
+      logger.warn('Invalid feedback quick reply payload', { payload });
+      return;
+    }
+
+    const isPositive = sentiment === 'up';
+
+    // Record feedback in Firestore
+    const { getFeedbackService } = await import(
+      '@/services/ai-pipeline/feedback-service'
+    );
+    await getFeedbackService().updateRating(feedbackDocId, isPositive ? 'positive' : 'negative');
+
+    // Send acknowledgment
+    const ackText = isPositive
+      ? '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03B1 \u03C3\u03C7\u03CC\u03BB\u03B9\u03AC \u03C3\u03BF\u03C5!'
+      : '\u{1F44E} \u039B\u03C5\u03C0\u03AC\u03BC\u03B1\u03B9. \u0398\u03B1 \u03C0\u03C1\u03BF\u03C3\u03C0\u03B1\u03B8\u03AE\u03C3\u03C9 \u03BD\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE!';
+
+    await sendInstagramMessage(igsid, ackText);
+
+    logger.info('Instagram feedback recorded', {
+      feedbackDocId,
+      rating: isPositive ? 'positive' : 'negative',
+    });
+  } catch (error) {
+    logger.warn('Instagram feedback processing failed (non-fatal)', {
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 }

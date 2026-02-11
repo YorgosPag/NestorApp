@@ -7,8 +7,8 @@
  * and send message request/response structures.
  *
  * Instagram uses the same messaging webhook format as Messenger
- * (object: 'instagram', entry[].messaging[]) but with more limited
- * capabilities (no quick replies, no buttons).
+ * (object: 'instagram', entry[].messaging[]) and supports Quick Replies
+ * (up to 13 buttons, 20 chars each) — same format as Messenger.
  *
  * @module api/communications/webhooks/instagram/types
  * @enterprise ADR-174 - Meta Omnichannel Integration (Phase 3)
@@ -51,6 +51,13 @@ export interface InstagramMessage {
   mid: string;
   text?: string;
   attachments?: InstagramAttachment[];
+  /** Present when user taps a Quick Reply button */
+  quick_reply?: InstagramQuickReply;
+}
+
+/** Quick Reply payload (when user taps a quick reply button) */
+export interface InstagramQuickReply {
+  payload: string;
 }
 
 /** Attachment in a message */
@@ -69,6 +76,13 @@ export interface InstagramRead {
 // ============================================================================
 // OUTBOUND — SEND MESSAGE API
 // ============================================================================
+
+/** Quick Reply button for outbound messages (max 13) */
+export interface InstagramQuickReplyButton {
+  content_type: 'text';
+  title: string;
+  payload: string;
+}
 
 /** Response from Instagram Send API */
 export interface InstagramSendResponse {
