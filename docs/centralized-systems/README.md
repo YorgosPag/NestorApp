@@ -107,7 +107,7 @@
 - **[📱 Meta Omnichannel (ADR-174)](reference/adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md)** - WhatsApp + Messenger + Instagram integration
 - **[💬 Telegram Pipeline (ADR-134)](reference/adrs/ADR-134-uc-modules-expansion-telegram-channel.md)** - Telegram webhook + CRM + AI pipeline
 - **[📧 Email Pipeline (ADR-070)](reference/adrs/ADR-070-email-ai-ingestion-pipeline.md)** - Mailgun webhook + email processing
-- **Channels**: Email ✅ | Telegram ✅ | WhatsApp ✅ | Messenger (pending) | Instagram (pending)
+- **Channels**: Email ✅ | Telegram ✅ | WhatsApp ✅ (AI + buttons) | Messenger (pending) | Instagram (pending)
 
 ### 🖼️ **UI SYSTEMS**
 - **[📋 Overview](ui-systems/index.md)** - User interface systems architecture

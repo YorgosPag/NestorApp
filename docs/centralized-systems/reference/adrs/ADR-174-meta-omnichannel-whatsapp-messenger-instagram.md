@@ -1,6 +1,6 @@
 # ADR-174: Meta Omnichannel Integration — WhatsApp + Messenger + Instagram
 
-**Status**: Phase 1 OPERATIONAL (WhatsApp webhook live)
+**Status**: Phase 1 COMPLETE (WhatsApp fully operational with AI pipeline + interactive buttons)
 **Date**: 2026-02-11
 **Author**: Claude Code (Anthropic AI) + Γιώργος Παγώνης
 **Extends**: ADR-029 (Omnichannel Conversation Model), ADR-031 (Safe Document ID Generation)
@@ -315,7 +315,7 @@ Authorization: Bearer {access_token}
 
 ## Implementation Checklist
 
-### Phase 1: WhatsApp (In Progress)
+### Phase 1: WhatsApp (COMPLETE)
 
 - [x] Meta Developer App created ("Nestor App CRM")
 - [x] WhatsApp Business use case added
@@ -330,6 +330,12 @@ Authorization: Bearer {access_token}
 - [x] WhatsAppChannelAdapter created (mirrors TelegramChannelAdapter)
 - [x] dispatchWhatsApp added to channel-reply-dispatcher for outbound AI replies
 - [x] WHATSAPP added to PipelineChannel enum + IntakeSender.whatsappPhone
+- [x] Instant "⏳ Επεξεργάζομαι..." acknowledgment on incoming messages
+- [x] WhatsApp → agentic AI path for immediate auto-reply (ADR-171)
+- [x] Admin vs Customer prompt split (admin: full access, customer: property info only)
+- [x] Interactive Reply Buttons: suggestions (max 3) + feedback (👍/👎)
+- [x] Handle interactive button_reply webhooks (sug_* → pipeline, fb_* → feedback record)
+- [x] sendWhatsAppButtons() for interactive message type
 - [ ] Update `conversations/[conversationId]/send/route.ts` for WhatsApp outbound
 - [ ] Generate permanent System User Access Token (replace temporary 24h token)
 - [ ] Set META_APP_SECRET for webhook signature verification in production
@@ -433,3 +439,6 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | 2026-02-11 | Initial ADR — Meta App created, WhatsApp token generated | Claude + Γιώργος |
 | 2026-02-11 | Phase 1 OPERATIONAL — 5 webhook files, env vars, webhook verified + subscribed | Claude + Γιώργος |
 | 2026-02-11 | AI Pipeline integration — WhatsAppChannelAdapter, dispatchWhatsApp, after() batch, PipelineChannel.WHATSAPP | Claude + Γιώργος |
+| 2026-02-11 | Instant ack, agentic path routing, admin/customer prompt split | Claude + Γιώργος |
+| 2026-02-11 | Interactive Reply Buttons — suggestions + feedback (👍/👎) + button_reply handler | Claude + Γιώργος |
+| 2026-02-11 | Phase 1 COMPLETE — 17/20 checklist items done | Claude + Γιώργος |
