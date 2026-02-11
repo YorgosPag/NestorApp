@@ -5,6 +5,7 @@ import { useIconSizes } from '@/hooks/useIconSizes'
 import {
     Sidebar,
     SidebarContent,
+    SidebarFooter,
     SidebarHeader,
     SidebarRail,
 } from "@/components/ui/sidebar"
@@ -105,8 +106,13 @@ export function AppSidebar() {
                 />
             </SidebarContent>
 
-            {/* 🗑️ REMOVED (2026-01-11): SidebarFooter with user info
-                Enterprise pattern: User management handled exclusively via header dropdown */}
+            <SidebarFooter className="border-t border-sidebar-border">
+                <nav aria-label={t('legal.privacyPolicy')} className="flex flex-wrap gap-x-3 gap-y-1 px-1 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                    <a href="/privacy-policy" className="hover:underline">{t('legal.privacyPolicy')}</a>
+                    <a href="/terms" className="hover:underline">{t('legal.termsOfService')}</a>
+                    <a href="/data-deletion" className="hover:underline">{t('legal.dataDeletion')}</a>
+                </nav>
+            </SidebarFooter>
 
             <SidebarRail />
         </Sidebar>

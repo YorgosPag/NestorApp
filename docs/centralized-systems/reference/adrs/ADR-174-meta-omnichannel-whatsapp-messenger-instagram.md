@@ -1,6 +1,6 @@
 # ADR-174: Meta Omnichannel Integration — WhatsApp + Messenger + Instagram
 
-**Status**: Phase 1+2 OPERATIONAL, Phase 3 CODE COMPLETE (WhatsApp + Messenger tested & live, Instagram code ready — env vars pending)
+**Status**: Phase 1+2+3 OPERATIONAL (WhatsApp + Messenger + Instagram all live)
 **Date**: 2026-02-11
 **Author**: Claude Code (Anthropic AI) + Γιώργος Παγώνης
 **Extends**: ADR-029 (Omnichannel Conversation Model), ADR-031 (Safe Document ID Generation)
@@ -46,15 +46,15 @@
 | Variable | Description | Status |
 |----------|-------------|--------|
 | `META_APP_ID` | Meta App ID | ✅ Set (2026-02-11) |
-| `META_APP_SECRET` | Meta App Secret (from App Dashboard → Settings → Basic) | Pending |
+| `META_APP_SECRET` | Meta App Secret (Instagram app secret used) | ✅ Set (2026-02-11) |
 | `WHATSAPP_ACCESS_TOKEN` | Temporary 24h token (needs permanent System User Token) | ✅ Set (2026-02-11) |
 | `WHATSAPP_PHONE_NUMBER_ID` | Phone Number ID for sending | ✅ Set (2026-02-11) |
 | `WHATSAPP_BUSINESS_ACCOUNT_ID` | WABA ID | ✅ Set (2026-02-11) |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Custom string for webhook verification | ✅ Set (2026-02-11) |
 | `MESSENGER_PAGE_ACCESS_TOKEN` | Facebook Page token for Messenger | ✅ Set (2026-02-11) |
 | `MESSENGER_WEBHOOK_VERIFY_TOKEN` | Custom string for Messenger webhook verification | ✅ Set (2026-02-11) |
-| `INSTAGRAM_ACCESS_TOKEN` | Instagram Business account token | Pending — set when IG account is linked |
-| `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | Custom string for Instagram webhook verification | Pending — set when configuring webhook |
+| `INSTAGRAM_ACCESS_TOKEN` | Instagram Business account token (giorgio_pagoni) | ✅ Set (2026-02-11) |
+| `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | Custom string for Instagram webhook verification | ✅ Set (2026-02-11) |
 
 ---
 
@@ -309,9 +309,11 @@ Authorization: Bearer {page_access_token}
 
 ### 3.2 Send Messages
 
+**IMPORTANT**: Instagram uses `graph.instagram.com`, NOT `graph.facebook.com`!
+
 ```
-POST https://graph.facebook.com/v22.0/me/messages
-Authorization: Bearer {access_token}
+POST https://graph.instagram.com/v22.0/me/messages
+Authorization: Bearer {instagram_access_token}
 
 {
   "recipient": { "id": "USER_IGSID" },
@@ -374,11 +376,11 @@ Authorization: Bearer {access_token}
 - [x] **TESTED**: End-to-end Messenger → AI pipeline → response + Quick Replies + feedback (2026-02-11)
 - [ ] Submit for App Review (`pages_messaging` permission) — needed for public access
 
-### Phase 3: Instagram (CODE COMPLETE)
+### Phase 3: Instagram (OPERATIONAL ✅)
 
-- [ ] Link Instagram Business account to Facebook Page
+- [x] Link Instagram Business account (giorgio_pagoni, IGSID: 17841403201916682) to Facebook Page
 - [x] Build `src/app/api/communications/webhooks/instagram/` (5 files: types, client, crm-adapter, handler, route)
-- [ ] Configure Instagram webhook on Meta Portal
+- [x] Configure Instagram webhook on Meta Portal (verified + subscribed)
 - [x] Add Instagram to IMPLEMENTED_CHANNELS + IDENTITY_PROVIDER + PLATFORMS
 - [x] InstagramChannelAdapter created (mirrors WhatsAppChannelAdapter)
 - [x] dispatchInstagram added to channel-reply-dispatcher for outbound AI replies
@@ -386,9 +388,16 @@ Authorization: Bearer {access_token}
 - [x] Instagram → agentic AI path for immediate auto-reply
 - [x] Text-only replies (Instagram does not support quick replies or buttons)
 - [x] Instant "⏳ Επεξεργάζομαι..." acknowledgment on incoming messages
-- [ ] Set INSTAGRAM_ACCESS_TOKEN on Vercel
-- [ ] Set INSTAGRAM_WEBHOOK_VERIFY_TOKEN on Vercel
-- [ ] Submit for App Review (`instagram_manage_messages` permission)
+- [x] Set INSTAGRAM_ACCESS_TOKEN on Vercel (2026-02-11)
+- [x] Set INSTAGRAM_WEBHOOK_VERIFY_TOKEN on Vercel (2026-02-11) — `nestor_ig_verify_2026`
+- [x] Set META_APP_SECRET on Vercel (2026-02-11) — signature verification for all Meta channels
+- [x] Instagram Tester role assigned to giorgio_pagoni
+- [x] App published (Live mode) — webhooks operational
+- [x] Privacy Policy, Terms of Service, Data Deletion pages created
+- [x] **BUG FIX**: API base URL was `graph.facebook.com` (Messenger) — fixed to `graph.instagram.com`
+- [x] Super admin detection via IGSID (Γιώργος: 17841403201916682)
+- [x] **TESTED**: Webhooks arrive, admin detected, agentic loop completes, messages stored in CRM
+- [ ] Submit for App Review (`instagram_manage_messages` permission) — needed for non-tester users
 
 ### Phase 4: UI Updates (Pending)
 
@@ -481,3 +490,6 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | 2026-02-11 | Pipeline orchestrator: Messenger+Instagram routed to agentic path + buttons/quick replies | Claude + Γιώργος |
 | 2026-02-11 | **Phase 2 OPERATIONAL**: FB Page "Nestor App" (984661054730180) connected, webhook verified, subscriptions (messages, messaging_postbacks, message_deliveries), env vars set, end-to-end test passed — AI reply + Quick Replies + feedback working | Claude + Γιώργος |
 | 2026-02-11 | **Super Admin Detection (ADR-145)**: Όλα τα Meta channel adapters (WhatsApp, Messenger, Instagram) αναγνωρίζουν super admin. Firestore registry: Γιώργος PSID=25577455211956767. `AdminCommandMeta.resolvedVia` +messenger_psid +instagram_igsid | Claude + Γιώργος |
+| 2026-02-11 | **Phase 3 OPERATIONAL**: Instagram setup complete — IG account giorgio_pagoni linked, webhook verified, tokens set, app published (Live). Privacy/Terms/Data-deletion pages created for Meta compliance | Claude + Γιώργος |
+| 2026-02-11 | **BUG FIX**: Instagram reply dispatch was using `graph.facebook.com` (Messenger endpoint) — fixed to `graph.instagram.com`. Also fixed agentic path state transitions: added missing UNDERSTOOD step (acked→understood→proposed) | Claude + Γιώργος |
+| 2026-02-11 | Legal pages added to sidebar footer: Privacy Policy, Terms of Service, Data Deletion | Claude + Γιώργος |

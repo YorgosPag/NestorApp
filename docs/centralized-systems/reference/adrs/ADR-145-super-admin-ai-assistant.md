@@ -40,10 +40,13 @@
 ### Admin Identity Detection
 
 ```
-Telegram: isSuperAdminTelegram(userId)    → check settings/super_admin_registry
-Email:    isSuperAdminEmail(address)      → check settings/super_admin_registry
-In-App:   isSuperAdminFirebaseUid(uid)    → check settings/super_admin_registry
-          ↳ fallback: isSuperAdminEmail() → if UID not in registry
+Telegram:  isSuperAdminTelegram(userId)    → check settings/super_admin_registry
+Email:     isSuperAdminEmail(address)      → check settings/super_admin_registry
+In-App:    isSuperAdminFirebaseUid(uid)    → check settings/super_admin_registry
+           ↳ fallback: isSuperAdminEmail() → if UID not in registry
+WhatsApp:  isSuperAdminWhatsApp(phone)     → check settings/super_admin_registry
+Messenger: isSuperAdminMessenger(psid)     → check settings/super_admin_registry
+Instagram: isSuperAdminInstagram(igsid)    → check settings/super_admin_registry
 ```
 
 ### Pipeline Branching
@@ -85,8 +88,9 @@ interface SuperAdminIdentity {
   channels: {
     telegram?: { userId: string; chatId: string };
     email?: { addresses: string[] };
-    viber?: { phoneNumber: string };    // Future
-    whatsapp?: { phoneNumber: string }; // Future
+    whatsapp?: { phoneNumber: string };
+    messenger?: { psid: string };
+    instagram?: { igsid: string };
   };
   isActive: boolean;
   createdAt: string;

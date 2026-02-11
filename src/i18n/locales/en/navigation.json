@@ -267,6 +267,11 @@
     "operatorInbox": "Operator Inbox",
     "setup": "Admin Setup"
   },
+  "legal": {
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "dataDeletion": "Data Deletion"
+  },
   "badges": {
     "new": "New",
     "pro": "PRO",

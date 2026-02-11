@@ -267,6 +267,11 @@
     "operatorInbox": "Εισερχόμενα Χειριστών",
     "setup": "Ρύθμιση Admin"
   },
+  "legal": {
+    "privacyPolicy": "Πολιτική Απορρήτου",
+    "termsOfService": "Όροι Χρήσης",
+    "dataDeletion": "Διαγραφή Δεδομένων"
+  },
   "badges": {
     "new": "Νέο",
     "pro": "PRO",
