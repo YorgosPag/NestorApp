@@ -20,7 +20,7 @@
 import { type NextRequest, NextResponse, after } from 'next/server';
 import { createHmac } from 'crypto';
 import { storeWhatsAppMessage, updateMessageDeliveryStatus, extractMessageText } from './crm-adapter';
-import { markWhatsAppMessageRead } from './whatsapp-client';
+import { markWhatsAppMessageRead, sendWhatsAppMessage } from './whatsapp-client';
 import type {
   WhatsAppWebhookPayload,
   WhatsAppChangeValue,
@@ -214,6 +214,11 @@ async function processIncomingMessage(
   // Track message for pipeline processing (will be fed via after())
   const messageText = extractMessageText(message);
   if (messageText.trim().length > 0) {
+    // Send immediate "processing" acknowledgment (non-blocking)
+    sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {
+      // Non-fatal — don't block pipeline feed if ack fails
+    });
+
     pendingPipelineMessages.push({
       phoneNumber: message.from,
       senderName: contact?.profile?.name ?? message.from,
