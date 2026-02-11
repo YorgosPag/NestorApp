@@ -223,6 +223,47 @@ export class FeedbackService {
   }
 
   /**
+   * Get the most recent feedback document for a given channelSenderId.
+   * Used by Instagram text-based feedback flow (emoji detection — no Quick Reply callbacks).
+   *
+   * Returns null if no feedback exists or if the latest is older than maxAgeMs.
+   *
+   * @param channelSenderId - Format: "{channel}_{senderId}" (e.g., "instagram_12345")
+   * @param maxAgeMs - Time window in ms (default: 30 minutes)
+   */
+  async getLatestFeedbackForChannel(
+    channelSenderId: string,
+    maxAgeMs: number = 30 * 60 * 1000
+  ): Promise<{ id: string; data: FeedbackSnapshot } | null> {
+    try {
+      const db = getAdminFirestore();
+      const snap = await db
+        .collection(COLLECTIONS.AI_AGENT_FEEDBACK)
+        .where('channelSenderId', '==', channelSenderId)
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+
+      if (snap.empty) return null;
+
+      const doc = snap.docs[0];
+      const data = doc.data() as FeedbackSnapshot;
+
+      // Check if within time window — ignore stale feedback
+      const createdAt = new Date(data.createdAt).getTime();
+      if (Date.now() - createdAt > maxAgeMs) return null;
+
+      return { id: doc.id, data };
+    } catch (error) {
+      logger.warn('Failed to get latest feedback for channel', {
+        channelSenderId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
    * Get unprocessed feedback with a rating (for learning extraction).
    */
   async getUnprocessedFeedback(limit: number = 50): Promise<Array<FeedbackSnapshot & { id: string }>> {

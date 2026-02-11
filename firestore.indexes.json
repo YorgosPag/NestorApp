@@ -1186,6 +1186,20 @@
       ]
     },
     {
+      "collectionGroup": "ai_agent_feedback",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "channelSenderId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "ai_learned_patterns",
       "queryScope": "COLLECTION",
       "fields": [

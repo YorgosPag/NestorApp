@@ -6,9 +6,9 @@
  * Type definitions for Instagram Messaging API webhook payloads
  * and send message request/response structures.
  *
- * Instagram uses the same messaging webhook format as Messenger
- * (object: 'instagram', entry[].messaging[]) and supports Quick Replies
- * (up to 13 buttons, 20 chars each) — same format as Messenger.
+ * NOTE: Instagram DM API does NOT support Quick Reply buttons (outbound).
+ * The API silently ignores `quick_replies` field — buttons never render.
+ * Feedback is collected via text-based emoji detection in the handler.
  *
  * @module api/communications/webhooks/instagram/types
  * @enterprise ADR-174 - Meta Omnichannel Integration (Phase 3)
@@ -76,13 +76,6 @@ export interface InstagramRead {
 // ============================================================================
 // OUTBOUND — SEND MESSAGE API
 // ============================================================================
-
-/** Quick Reply button for outbound messages (max 13) */
-export interface InstagramQuickReplyButton {
-  content_type: 'text';
-  title: string;
-  payload: string;
-}
 
 /** Response from Instagram Send API */
 export interface InstagramSendResponse {

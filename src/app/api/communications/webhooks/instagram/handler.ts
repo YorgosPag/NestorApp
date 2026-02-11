@@ -20,7 +20,7 @@
 import { type NextRequest, NextResponse, after } from 'next/server';
 import { createHmac } from 'crypto';
 import { storeInstagramMessage, extractInstagramMessageText } from './crm-adapter';
-import { sendInstagramMessage, sendInstagramQuickReplies } from './instagram-client';
+import { sendInstagramMessage } from './instagram-client';
 import type {
   InstagramWebhookPayload,
   InstagramMessagingEvent,
@@ -160,36 +160,18 @@ async function processMessagingEvent(event: InstagramMessagingEvent): Promise<vo
     mid: message.mid,
     hasText: !!message.text,
     hasAttachments: !!(message.attachments && message.attachments.length > 0),
-    hasQuickReply: !!message.quick_reply,
   });
 
-  // ── Handle Quick Reply button taps (suggestions + feedback) ──
-  if (message.quick_reply) {
-    const qrPayload = message.quick_reply.payload;
+  // ── Text-based feedback detection (Instagram doesn't support Quick Reply buttons) ──
+  // Detects emoji (👍/👎) and numbered (1-4) responses as feedback.
+  // Uses getLatestFeedbackForChannel() to find the most recent unrated feedback doc.
+  const rawText = extractInstagramMessageText(message);
+  const trimmedText = rawText.trim();
 
-    // Feedback buttons (👍/👎) — record and acknowledge
-    if (qrPayload.startsWith('fb_')) {
-      await handleFeedbackQuickReply(qrPayload, igsid);
-      return;
-    }
-
-    // Negative feedback category buttons (❌/📊/❓/🐢)
-    if (qrPayload.startsWith('fbc_')) {
-      await handleCategoryQuickReply(qrPayload, igsid);
-      return;
-    }
-
-    // Suggestion buttons — treat as new user message
-    if (qrPayload.startsWith('sug_')) {
-      sendInstagramMessage(igsid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
-      pendingPipelineMessages.push({
-        igsid,
-        senderName: 'Instagram User',
-        messageText: message.text ?? qrPayload,
-        messageId: message.mid,
-      });
-      return;
-    }
+  const feedbackResult = await handleTextBasedFeedback(igsid, trimmedText);
+  if (feedbackResult.handled) {
+    // Feedback processed — don't feed to pipeline
+    return;
   }
 
   // Store in CRM
@@ -204,115 +186,113 @@ async function processMessagingEvent(event: InstagramMessagingEvent): Promise<vo
   }
 
   // Track message for pipeline processing
-  const messageText = extractInstagramMessageText(message);
-  if (messageText.trim().length > 0) {
+  if (trimmedText.length > 0) {
     // Send immediate "processing" acknowledgment (non-blocking)
     sendInstagramMessage(igsid, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...').catch(() => {});
 
     pendingPipelineMessages.push({
       igsid,
       senderName: 'Instagram User',
-      messageText,
+      messageText: trimmedText,
       messageId: message.mid,
     });
   }
 }
 
 // ============================================================================
-// FEEDBACK & CATEGORY HANDLERS
+// TEXT-BASED FEEDBACK DETECTION (Instagram doesn't support Quick Replies)
 // ============================================================================
 
-/** Category code → Firestore value mapping */
-const CATEGORY_MAP: Record<string, 'wrong_answer' | 'wrong_data' | 'not_understood' | 'slow'> = {
-  w: 'wrong_answer',
-  d: 'wrong_data',
-  u: 'not_understood',
-  s: 'slow',
+/** Thumbs up emoji variants (all skin tones) */
+const POSITIVE_PATTERNS = ['\u{1F44D}', '\u{1F44D}\u{1F3FB}', '\u{1F44D}\u{1F3FC}', '\u{1F44D}\u{1F3FD}', '\u{1F44D}\u{1F3FE}', '\u{1F44D}\u{1F3FF}'];
+/** Thumbs down emoji variants (all skin tones) */
+const NEGATIVE_PATTERNS = ['\u{1F44E}', '\u{1F44E}\u{1F3FB}', '\u{1F44E}\u{1F3FC}', '\u{1F44E}\u{1F3FD}', '\u{1F44E}\u{1F3FE}', '\u{1F44E}\u{1F3FF}'];
+
+/** Number text → negative feedback category mapping */
+const TEXT_CATEGORY_MAP: Record<string, 'wrong_answer' | 'wrong_data' | 'not_understood' | 'slow'> = {
+  '1': 'wrong_answer',
+  '1\uFE0F\u20E3': 'wrong_answer',
+  '2': 'wrong_data',
+  '2\uFE0F\u20E3': 'wrong_data',
+  '3': 'not_understood',
+  '3\uFE0F\u20E3': 'not_understood',
+  '4': 'slow',
+  '4\uFE0F\u20E3': 'slow',
 };
 
 /**
- * Handle feedback Quick Reply taps (👍/👎).
- * Payload format: fb_{feedbackDocId}_{up|down}
+ * Handle text-based feedback for Instagram (Quick Replies NOT supported by Instagram DM API).
+ *
+ * Detection priority:
+ * 1. 👍 → lookup latest unrated feedback → mark as positive
+ * 2. 👎 → lookup latest unrated feedback → mark as negative → send category prompt
+ * 3. 1-4 (or 1️⃣-4️⃣) → lookup latest negative without category → record category
+ * 4. Anything else → not handled (continue to pipeline)
+ *
+ * Uses getLatestFeedbackForChannel() to find the most recent feedback doc
+ * within a 30-minute window for this IGSID.
  */
-async function handleFeedbackQuickReply(payload: string, igsid: string): Promise<void> {
+async function handleTextBasedFeedback(
+  igsid: string,
+  text: string
+): Promise<{ handled: boolean }> {
   try {
-    const parts = payload.split('_');
-    const sentiment = parts[parts.length - 1]; // 'up' or 'down'
-    const feedbackDocId = parts.slice(1, -1).join('_');
+    const channelSenderId = `instagram_${igsid}`;
 
-    if (!feedbackDocId || !sentiment) {
-      logger.warn('Invalid feedback quick reply payload', { payload });
-      return;
+    // ── 1. Check thumbs up ──
+    if (POSITIVE_PATTERNS.includes(text)) {
+      const { getFeedbackService } = await import('@/services/ai-pipeline/feedback-service');
+      const latest = await getFeedbackService().getLatestFeedbackForChannel(channelSenderId);
+
+      if (latest && latest.data.rating === null) {
+        await getFeedbackService().updateRating(latest.id, 'positive');
+        await sendInstagramMessage(igsid, '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!');
+        logger.info('Instagram text feedback: positive', { feedbackDocId: latest.id });
+        return { handled: true };
+      }
     }
 
-    const isPositive = sentiment === 'up';
+    // ── 2. Check thumbs down ──
+    if (NEGATIVE_PATTERNS.includes(text)) {
+      const { getFeedbackService } = await import('@/services/ai-pipeline/feedback-service');
+      const latest = await getFeedbackService().getLatestFeedbackForChannel(channelSenderId);
 
-    // Record feedback in Firestore
-    const { getFeedbackService } = await import(
-      '@/services/ai-pipeline/feedback-service'
-    );
-    await getFeedbackService().updateRating(feedbackDocId, isPositive ? 'positive' : 'negative');
-
-    if (isPositive) {
-      await sendInstagramMessage(igsid, '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!');
-    } else {
-      // 👎 Negative: Send follow-up category quick replies (4 options)
-      await sendInstagramQuickReplies(
-        igsid,
-        '\u{1F44E} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03BD\u03B1 \u03BC\u03BF\u03C5 \u03C0\u03B5\u03B9\u03C2 \u03C4\u03B9 \u03C0\u03AE\u03B3\u03B5 \u03BB\u03AC\u03B8\u03BF\u03C2;',
-        [
-          { content_type: 'text', title: '\u274C \u039B\u03AC\u03B8\u03BF\u03C2 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7', payload: `fbc_${feedbackDocId}_w` },
-          { content_type: 'text', title: '\u{1F4CA} \u039B\u03AC\u03B8\u03BF\u03C2 \u03B4\u03B5\u03B4\u03BF\u03BC\u03AD\u03BD\u03B1', payload: `fbc_${feedbackDocId}_d` },
-          { content_type: 'text', title: '\u2753 \u0394\u03B5\u03BD \u03BA\u03B1\u03C4\u03AC\u03BB\u03B1\u03B2\u03B5', payload: `fbc_${feedbackDocId}_u` },
-          { content_type: 'text', title: '\u{1F422} \u0391\u03C1\u03B3\u03CC', payload: `fbc_${feedbackDocId}_s` },
-        ],
-      );
+      if (latest && latest.data.rating === null) {
+        await getFeedbackService().updateRating(latest.id, 'negative');
+        // Send category prompt as text (4 numbered options)
+        await sendInstagramMessage(
+          igsid,
+          '\u{1F44E} \u039C\u03C0\u03BF\u03C1\u03B5\u03AF\u03C2 \u03BD\u03B1 \u03BC\u03BF\u03C5 \u03C0\u03B5\u03B9\u03C2 \u03C4\u03B9 \u03C0\u03AE\u03B3\u03B5 \u03BB\u03AC\u03B8\u03BF\u03C2;\n'
+          + '1\uFE0F\u20E3 \u039B\u03AC\u03B8\u03BF\u03C2 \u03B1\u03C0\u03AC\u03BD\u03C4\u03B7\u03C3\u03B7\n'
+          + '2\uFE0F\u20E3 \u039B\u03AC\u03B8\u03BF\u03C2 \u03B4\u03B5\u03B4\u03BF\u03BC\u03AD\u03BD\u03B1\n'
+          + '3\uFE0F\u20E3 \u0394\u03B5\u03BD \u03BA\u03B1\u03C4\u03AC\u03BB\u03B1\u03B2\u03B5\n'
+          + '4\uFE0F\u20E3 \u0391\u03C1\u03B3\u03CC',
+        );
+        logger.info('Instagram text feedback: negative', { feedbackDocId: latest.id });
+        return { handled: true };
+      }
     }
 
-    logger.info('Instagram feedback recorded', {
-      feedbackDocId,
-      rating: isPositive ? 'positive' : 'negative',
-    });
+    // ── 3. Check category number (1-4 after negative) ──
+    const category = TEXT_CATEGORY_MAP[text];
+    if (category) {
+      const { getFeedbackService } = await import('@/services/ai-pipeline/feedback-service');
+      const latest = await getFeedbackService().getLatestFeedbackForChannel(channelSenderId);
+
+      if (latest && latest.data.rating === 'negative' && latest.data.negativeCategory === null) {
+        await getFeedbackService().updateNegativeCategory(latest.id, category);
+        await sendInstagramMessage(igsid, '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.');
+        logger.info('Instagram text feedback: category', { feedbackDocId: latest.id, category });
+        return { handled: true };
+      }
+    }
+
+    return { handled: false };
   } catch (error) {
-    logger.warn('Instagram feedback processing failed (non-fatal)', {
+    logger.warn('Instagram text feedback handler error (non-fatal)', {
       error: error instanceof Error ? error.message : String(error),
     });
-  }
-}
-
-/**
- * Handle negative feedback category quick reply taps.
- * Payload format: fbc_{feedbackDocId}_{w|d|u|s}
- */
-async function handleCategoryQuickReply(payload: string, igsid: string): Promise<void> {
-  try {
-    const parts = payload.split('_');
-    const categoryCode = parts[parts.length - 1];
-    const feedbackDocId = parts.slice(1, -1).join('_');
-
-    if (!feedbackDocId || !categoryCode) {
-      logger.warn('Invalid category quick reply payload', { payload });
-      return;
-    }
-
-    const category = CATEGORY_MAP[categoryCode];
-    if (!category) {
-      logger.warn('Unknown category code', { categoryCode });
-      return;
-    }
-
-    const { getFeedbackService } = await import(
-      '@/services/ai-pipeline/feedback-service'
-    );
-    await getFeedbackService().updateNegativeCategory(feedbackDocId, category);
-
-    await sendInstagramMessage(igsid, '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.');
-
-    logger.info('Instagram negative category recorded', { feedbackDocId, category });
-  } catch (error) {
-    logger.warn('Instagram category handler error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    return { handled: false };
   }
 }
 
