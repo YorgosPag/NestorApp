@@ -10,17 +10,24 @@
 
 | ADR | Title | Status | Types | Date |
 |-----|-------|--------|-------|------|
-| [ACC-000](./ADR-ACC-000-founding-decision.md) | Founding Decision — Enterprise Accounting Subapp | DRAFT | — | 2026-02-09 |
-| [ACC-001](./ADR-ACC-001-chart-of-accounts.md) | Chart of Accounts (ΕΛΠ Λογιστικό Σχέδιο) | DRAFT | Phase 1+2 | 2026-02-09 |
-| [ACC-002](./ADR-ACC-002-invoicing-system.md) | Invoicing System (Τιμολόγηση) | DRAFT | Phase 1+2 | 2026-02-09 |
-| [ACC-003](./ADR-ACC-003-mydata-aade-integration.md) | myDATA/ΑΑΔΕ Integration | DRAFT | Phase 1+2 | 2026-02-09 |
-| [ACC-004](./ADR-ACC-004-vat-engine.md) | VAT Engine (ΦΠΑ) | DRAFT | Phase 2 | 2026-02-09 |
-| [ACC-005](./ADR-ACC-005-ai-document-processing.md) | AI Document Processing (Expense Tracker) | DRAFT | Phase 2 | 2026-02-09 |
-| [ACC-006](./ADR-ACC-006-efka-contribution-tracking.md) | EFKA Contribution Tracking | DRAFT | Phase 2 | 2026-02-09 |
-| [ACC-007](./ADR-ACC-007-fixed-assets-depreciation.md) | Fixed Assets & Depreciation | DRAFT | Phase 2 | 2026-02-09 |
-| [ACC-008](./ADR-ACC-008-bank-reconciliation.md) | Bank Reconciliation | DRAFT | Phase 2 | 2026-02-09 |
-| [ACC-009](./ADR-ACC-009-tax-engine.md) | Tax Engine (Income Tax + Prepayment) | DRAFT | Phase 2 | 2026-02-09 |
-| [ACC-010](./ADR-ACC-010-portability-abstraction-layers.md) | Portability & Abstraction Layers | DRAFT | Phase 2 | 2026-02-09 |
+| [ACC-000](./ADR-ACC-000-founding-decision.md) | Founding Decision — Enterprise Accounting Subapp | ACTIVE | — | 2026-02-09 |
+| [ACC-001](./ADR-ACC-001-chart-of-accounts.md) | Chart of Accounts (ΕΛΠ Λογιστικό Σχέδιο) | IMPLEMENTED | Phase 1+2 | 2026-02-09 |
+| [ACC-002](./ADR-ACC-002-invoicing-system.md) | Invoicing System (Τιμολόγηση) | IMPLEMENTED | Phase 1+2 | 2026-02-09 |
+| [ACC-003](./ADR-ACC-003-mydata-aade-integration.md) | myDATA/ΑΑΔΕ Integration | STUB | Phase 1+2 | 2026-02-09 |
+| [ACC-004](./ADR-ACC-004-vat-engine.md) | VAT Engine (ΦΠΑ) | IMPLEMENTED | Phase 2 | 2026-02-09 |
+| [ACC-005](./ADR-ACC-005-ai-document-processing.md) | AI Document Processing (Expense Tracker) | IMPLEMENTED | Phase 2 | 2026-02-09 |
+| [ACC-006](./ADR-ACC-006-efka-contribution-tracking.md) | EFKA Contribution Tracking | IMPLEMENTED | Phase 2 | 2026-02-09 |
+| [ACC-007](./ADR-ACC-007-fixed-assets-depreciation.md) | Fixed Assets & Depreciation | IMPLEMENTED | Phase 2 | 2026-02-09 |
+| [ACC-008](./ADR-ACC-008-bank-reconciliation.md) | Bank Reconciliation | IMPLEMENTED | Phase 2 | 2026-02-09 |
+| [ACC-009](./ADR-ACC-009-tax-engine.md) | Tax Engine (Income Tax + Corporate Tax) | IMPLEMENTED | Phase 2+3+4 | 2026-02-09 |
+| [ACC-010](./ADR-ACC-010-portability-abstraction-layers.md) | Portability & Abstraction Layers | IMPLEMENTED | Phase 2 | 2026-02-09 |
+| [ACC-011](./ADR-ACC-011-service-presets.md) | Service Presets — Προκαθορισμένες Υπηρεσίες | IMPLEMENTED | Phase 5A | 2026-02-10 |
+| [ACC-012](./ADR-ACC-012-oe-partnership-support.md) | OE Partnership Support (Ομόρρυθμη Εταιρεία) | IMPLEMENTED | Entity Types | 2026-02-10 |
+| [ACC-013](./ADR-ACC-013-searchable-doy-kad.md) | Searchable ΔΟΥ + ΚΑΔ Dropdowns | IMPLEMENTED | UX | 2026-02-10 |
+| [ACC-014](./ADR-ACC-014-epe-llc-support.md) | EPE LLC Support (Εταιρεία Περιορισμένης Ευθύνης) | IMPLEMENTED | Entity Types | 2026-02-12 |
+| [ACC-015](./ADR-ACC-015-ae-setup-shareholders.md) | AE Setup & Shareholder Management (Ανώνυμη Εταιρεία) | IMPLEMENTED | Entity Types | 2026-02-12 |
+| [ACC-016](./ADR-ACC-016-ae-corporate-tax-dividends.md) | AE Corporate Tax & Dividends | IMPLEMENTED | Entity Types | 2026-02-12 |
+| [ACC-017](./ADR-ACC-017-ae-board-efka.md) | AE Board of Directors & EFKA Dual-Mode | IMPLEMENTED | Entity Types | 2026-02-12 |
 
 ---
 
@@ -28,16 +35,19 @@
 
 | Module | ADR | Description |
 |--------|-----|-------------|
-| M-001: Company Setup | ACC-000 | Covered in founding ADR |
+| M-001: Company Setup | ACC-000, ACC-011, ACC-013 | Founding ADR + Service Presets + Searchable ΔΟΥ/ΚΑΔ |
 | M-002: Income/Expense Book | ACC-001 | Chart of accounts + journal entries |
-| M-003: Invoicing | ACC-002 | Invoice types, series, CRM integration |
+| M-003: Invoicing | ACC-002, ACC-011 | Invoice types, series, service presets |
 | M-004: myDATA | ACC-003 | ΑΑΔΕ API, document types, MARK numbers |
 | M-005: VAT Engine | ACC-004 | Quarterly declarations, rates |
 | M-006: Expense Tracker | ACC-005 | AI classification + data extraction |
-| M-007: EFKA Tracker | ACC-006 | ΤΣΜΕΔΕ/ΤΕΕ contributions |
+| M-007: EFKA Tracker | ACC-006, ACC-017 | ΤΣΜΕΔΕ/ΤΕΕ + OE/EPE/AE EFKA |
 | M-008: Fixed Assets | ACC-007 | Asset registry, depreciation |
 | M-009: Bank Reconciliation | ACC-008 | Account sync, transaction matching |
-| M-010: Reports | ACC-004, ACC-009 | VAT reports, tax reports |
+| M-010: Reports | ACC-004, ACC-009, ACC-016 | VAT, income tax, corporate tax reports |
+| Entity: ΟΕ | ACC-012 | Partnership: pass-through tax, per-partner EFKA |
+| Entity: ΕΠΕ | ACC-014 | LLC: 22% corporate tax, dividends, manager EFKA |
+| Entity: ΑΕ | ACC-015, ACC-016, ACC-017 | Corporation: shareholders, board, dual-mode EFKA |
 
 ---
 
@@ -110,4 +120,17 @@
 | `services/external/mydata-service.stub.ts` | `MyDataServiceStub implements IMyDataService` — throws "not configured" | ACC-003 |
 | `services/external/document-analyzer.stub.ts` | `DocumentAnalyzerStub implements IDocumentAnalyzer` — throws "not configured" | ACC-005 |
 
-### Phase 4+: React Components, Hooks, Pages — PENDING
+### Phase 4: UI Layer (2026-02-09 ~ 2026-02-10) — DONE
+
+Full React UI: 12 API routes, 8 hooks, 2 i18n files, navigation integration, invoicing CRUD, journal, VAT, bank reconciliation, EFKA tracker, fixed assets, reports, AI document processing.
+
+### Phase 5: Entity Types (2026-02-10 ~ 2026-02-12) — DONE
+
+| Phase | Entity | ADR | Date |
+|-------|--------|-----|------|
+| 5A | Service Presets + Setup UI | ACC-011, ACC-013 | 2026-02-10 |
+| 5B | ΟΕ (Ομόρρυθμη Εταιρεία) | ACC-012 | 2026-02-10 |
+| 5C | ΕΠΕ (Εταιρεία Περιορισμένης Ευθύνης) | ACC-014 | 2026-02-12 |
+| 5D | ΑΕ (Ανώνυμη Εταιρεία) | ACC-015, ACC-016, ACC-017 | 2026-02-12 |
+
+**All 4 entity types implemented**: Ατομική, ΟΕ, ΕΠΕ, ΑΕ — discriminated union `CompanyProfile`.

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | DRAFT |
+| **Status** | IMPLEMENTED |
 | **Date** | 2026-02-09 |
 | **Category** | Accounting / Social Insurance |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -495,6 +495,68 @@ efka_payments:
 
 ---
 
+## 11A. ΕΦΚΑ per Entity Type — Added 2026-02-12
+
+### 11A.1 Overview
+
+Η αρχική τεκμηρίωση αφορούσε μόνο ατομική επιχείρηση. Τώρα υποστηρίζονται **4 entity types** με διαφορετική ΕΦΚΑ λογική:
+
+| Entity Type | ΕΦΚΑ Λογική | Ασφαλισμένοι | ADR |
+|-------------|-------------|--------------|-----|
+| **Ατομική** | 1 ασφαλισμένος, κατηγορίες 1-6 | Ιδιοκτήτης | ACC-006 (αυτό) |
+| **ΟΕ** | Per-partner ΕΦΚΑ, κατηγορίες 1-6 | Κάθε εταίρος | ACC-012 |
+| **ΕΠΕ** | Μόνο managers (αυτοαπασχολούμενοι) | Διαχειριστές | ACC-014 |
+| **ΑΕ** | **Dual-mode** βάσει μετοχών | Μέλη ΔΣ με αμοιβή | ACC-017 |
+
+### 11A.2 ΟΕ — Per-Partner ΕΦΚΑ (ADR-ACC-012)
+
+- Κάθε εταίρος (Partner) πληρώνει **δικό του** ΕΦΚΑ
+- Ίδιες 6+3+3 κατηγορίες με ατομική
+- `PartnerEFKAConfig`: mainCategory, supplementaryCategory, lumpSumCategory
+- `partnerId` field added to `EFKAPayment` (nullable — null = sole proprietor)
+- `PartnershipEFKASummary`: per-partner + grand totals
+- UI: `PartnerEFKATabs` — ένα tab ανά εταίρο
+
+### 11A.3 ΕΠΕ — Manager ΕΦΚΑ (ADR-ACC-014)
+
+- **Μόνο διαχειριστές** (isManager = true) πληρώνουν ΕΦΚΑ
+- Ίδιες κατηγορίες αυτοαπασχολούμενων (κατηγορίες 1-6)
+- `MemberEFKAConfig`: Ίδια δομή με PartnerEFKAConfig
+- `ManagerEFKASummary`: per-manager breakdown
+- `EPEEFKASummary`: managers-only totals
+- Service: `getEPEEfkaSummary(year)` — filters isManager=true
+
+### 11A.4 ΑΕ — Dual-Mode ΕΦΚΑ (ADR-ACC-017)
+
+**Κρίσιμη διαφορά**: Η κατηγοριοποίηση εξαρτάται από ποσοστό μετοχών.
+
+| Ιδιότητα | Αμοιβή | Μετοχές | ΕΦΚΑ Mode | Κατηγορία |
+|---|---|---|---|---|
+| Μέλος ΔΣ | ΝΑΙ | <3% | **employee** | Μισθωτός (33,60%) |
+| Μέλος ΔΣ | ΝΑΙ | ≥3% | **self_employed** | Αυτοαπασχολούμενος |
+| Μέλος ΔΣ | ΟΧΙ | — | **none** | — |
+| Μέτοχος (μόνο) | — | — | **none** | — |
+
+**Employee mode**: 33,60% επί μηνιαίας αμοιβής (12,47% ασφαλισμένος + 21,13% εργοδότης)
+**Self-employed mode**: Κατηγορίες ΕΦΚΑ (reuse ManagerEFKASummary)
+
+```typescript
+type ShareholderEFKAMode = 'employee' | 'self_employed' | 'none';
+
+// Auto-derived — NOT user-set
+function deriveEfkaMode(shareholder, totalShares): ShareholderEFKAMode {
+  if (!isBoardMember || !compensation || compensation <= 0) return 'none';
+  const percent = (sharesCount / totalShares) * 100;
+  return percent < 3 ? 'employee' : 'self_employed';
+}
+```
+
+**Types**: `EmployeeBoardMemberEFKA`, `AEEFKASummary`
+**Service**: `getAEEfkaSummary(year)` — splits employee + self-employed board members
+**Legal**: Εγκύκλιοι ΕΦΚΑ 4/2017, 17/2017
+
+---
+
 ## 12. Dependencies
 
 | Module | Σχέση | Περιγραφή |
@@ -536,6 +598,10 @@ efka_payments:
 | 2026-02-09 | **Phase 2 implemented** — types/efka.ts: EFKACategoryRate, EFKAYearConfig (6+3+3 κατηγορίες), EFKAUserConfig, EFKAMonthlyBreakdown (6 κλάδοι), EFKAPaymentStatus (5 states incl. keao), EFKAPayment, EFKAAnnualSummary, EFKANotification. types/interfaces.ts: IAccountingRepository with getEFKAPayments, updateEFKAPayment, get/saveEFKAUserConfig | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/config/efka-config.ts: `EFKA_YEAR_CONFIGS` (ReadonlyMap 2025+2026), 6 main pension categories (185.09–703.69€/mo), 3 supplementary (46.57–68.62€/mo), 3 lump sum (31.05–45.33€/mo). Helpers: `getEfkaConfigForYear()`, `calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode)`, `calculateAnnualTotal()`. services/repository: `getEFKAPayments(year)`, `updateEFKAPayment()`, `getEFKAConfig()`, `saveEFKAConfig()`. services/accounting-service.ts: `getEfkaAnnualSummary()` | Claude Code |
 | 2026-02-09 | **Phase 4 implemented** — API: `GET /api/accounting/efka/summary`. Hook: `useEFKASummary(year)`. UI: `EFKAPageContent` (FiscalYearPicker + 3 summary cards: total paid/due/balance), `EFKAMonthlyBreakdown` (12 months table: pension/healthcare/supplementary/lumpSum/total), `EFKAPaymentsList` (payments table with 5 status badges: upcoming/due/paid/overdue/keao) | Claude Code |
+| 2026-02-10 | **OE per-partner ΕΦΚΑ** — `partnerId` on EFKAPayment (nullable), `PartnerEFKASummary`, `PartnerEFKATabs` UI (ADR-ACC-012) | Claude Code |
+| 2026-02-12 | **EPE manager ΕΦΚΑ** — `ManagerEFKASummary`, `EPEEFKASummary`, `getEPEEfkaSummary(year)` — managers-only (ADR-ACC-014) | Claude Code |
+| 2026-02-12 | **AE dual-mode ΕΦΚΑ** — `EmployeeBoardMemberEFKA`, `AEEFKASummary`, `getAEEfkaSummary(year)` — employee (<3%) vs self-employed (≥3%) (ADR-ACC-017) | Claude Code |
+| 2026-02-12 | **Section 11A added** — Entity-type ΕΦΚΑ overview: ατομική, ΟΕ, ΕΠΕ, ΑΕ | Claude Code |
 
 ---
 

@@ -671,17 +671,18 @@ if (body.entityType === 'oe') {
 
 Η αρχιτεκτονικη (discriminated union) υποστηριζει μελλοντικη προσθηκη:
 
-| Entity Type | Status | Ιδιαιτεροτητες |
-|-------------|--------|----------------|
-| `sole_proprietor` | Implemented | Baseline |
-| `oe` | **Implemented (ADR-ACC-012)** | Pass-through, ΕΦΚΑ per partner, 1.000€ τελος |
-| `epe` | Planned | Εταιρικος φορος 22%, μερισματα 5% |
-| `ae` | Planned | Εταιρικος φορος 22%, μερισματα 5%, ΔΣ |
+| Entity Type | Status | ADR | Ιδιαιτεροτητες |
+|-------------|--------|-----|----------------|
+| `sole_proprietor` | ✅ Implemented | ACC-000 | Baseline — κλίμακα 9%-44%, 1 ΕΦΚΑ |
+| `oe` | ✅ Implemented | ACC-012 | Pass-through, ΕΦΚΑ per partner, 1.000€ τέλος |
+| `epe` | ✅ **Implemented** | ACC-014 | Εταιρικός φόρος 22%, μερίσματα 5%, manager ΕΦΚΑ |
+| `ae` | ✅ **Implemented** | ACC-015/016/017 | Εταιρικός φόρος 22%, μερίσματα 5%, ΔΣ, dual-mode ΕΦΚΑ |
 
-Για ΕΠΕ/ΑΕ θα χρειαστει:
-- Νεο `EPECompanyProfile` / `AECompanyProfile` στο discriminated union
-- Εταιρικος φορος 22% (flat rate, οχι κλιμακα) + φορος μερισματων 5%
-- `calculateCorporateTax()` μεθοδος στο TaxEngine
+**Ολοκληρώθηκαν τα 4/4 entity types** (2026-02-12):
+- `EPECompanyProfile`: members (εταίροι), shareCapital, gemiNumber (ACC-014)
+- `AECompanyProfile`: shareholders (μέτοχοι), board of directors, min 25k€ (ACC-015)
+- `calculateCorporateTax(entityType)`: generalized, reuse across EPE + AE (ACC-016)
+- EFKA dual-mode (AE): employee <3% vs self-employed ≥3% μετοχών (ACC-017)
 
 ---
 

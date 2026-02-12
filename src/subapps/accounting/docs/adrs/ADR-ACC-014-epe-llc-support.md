@@ -113,3 +113,11 @@
 - `CompanyProfile` union extended (additive change)
 - Repository defaults: getMembers() returns [] if no doc exists
 - No migration needed for existing Firestore documents
+
+## AE Reuse (2026-02-12)
+
+Η ΑΕ (Ανώνυμη Εταιρεία) μοιράζεται **ίδια φορολόγηση** με ΕΠΕ:
+- `calculateCorporateTax()` generalized: `entityType: EntityType = 'epe'` — backward compatible
+- `CorporateTaxResult` reused by both EPE and AE
+- `CorporateTaxBreakdown` UI component shared
+- Βλ. ADR-ACC-015/016/017 για ΑΕ-specific implementation (shareholders, board, EFKA dual-mode)

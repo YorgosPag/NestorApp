@@ -1,8 +1,8 @@
-# ADR-ACC-009: Tax Engine — Μηχανή Φορολογίας Εισοδήματος
+# ADR-ACC-009: Tax Engine — Μηχανή Φορολογίας (Εισόδημα + Εταιρικός Φόρος)
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | DRAFT |
+| **Status** | IMPLEMENTED |
 | **Date** | 2026-02-09 |
 | **Category** | Accounting / Income Tax |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -191,6 +191,71 @@ function calculateIncomeTax(
     breakdown,
   };
 }
+```
+
+---
+
+## 3A. Corporate Tax Engine (ΕΠΕ / ΑΕ) — Added 2026-02-12
+
+### 3A.1 Context
+
+Η ΕΠΕ και ΑΕ φορολογούνται ως **νομικά πρόσωπα** — flat rate 22% (Ν.4172/2013, αρ.58), ΟΧΙ κλίμακα φυσικών προσώπων. Η μέθοδος `calculateCorporateTax()` γενικεύτηκε με `entityType` parameter.
+
+### 3A.2 Εταιρικός Φόρος — Συντελεστές
+
+| Παράμετρος | Τιμή | Νόμος |
+|-----------|-------|-------|
+| Εταιρικός φόρος | **22%** flat | Ν.4172/2013, αρ.58 |
+| Φόρος μερισμάτων | **5%** | Ν.4172/2013, αρ.64 |
+| Προκαταβολή φόρου | **80%** | Ν.4172/2013, αρ.71 |
+| Τέλος επιτηδεύματος | **1.000€** | — |
+
+### 3A.3 Generalized Tax Engine
+
+```typescript
+// tax-engine.ts — Γενίκευση calculateCorporateTax()
+calculateCorporateTax(params: {
+  revenue: number;
+  expenses: number;
+  efkaTotal: number;
+  members: Array<{ memberId: string; name: string; dividendSharePercent: number }>;
+  distributionPercent?: number;  // default 100%
+  entityType?: EntityType;       // default 'epe' — backward compatible
+}): CorporateTaxResult
+
+// Wrapper για ΑΕ — maps shareholders → members
+calculateAETax(params: {
+  revenue: number;
+  expenses: number;
+  efkaTotal: number;
+  shareholders: Shareholder[];
+  distributionPercent?: number;
+}): AETaxResult
+```
+
+### 3A.4 Key Architecture Decision
+
+**Reuse, not duplicate**: `calculateCorporateTax()` δέχεται `entityType` parameter → χρησιμοποιεί `getPrepaymentRateForEntity()` και `getProfessionalTaxForEntity()` δυναμικά. Μόνη διαφορά EPE vs AE: τα member types (Member vs Shareholder). Η `calculateAETax()` κάνει mapping internally.
+
+### 3A.5 Dividend Distribution
+
+```
+Κέρδη μετά φόρων × distributionPercent = Διανεμόμενα μερίσματα
+Ανά μέτοχο/εταίρο: dividendSharePercent% × μερίσματα
+Φόρος μερισμάτων: 5% × gross dividend ανά μέτοχο
+Καθαρό μέρισμα = gross - 5% φόρος
+```
+
+### 3A.6 Config (tax-config.ts)
+
+```typescript
+// Ήδη υπαρχόντα — added with EPE (ADR-ACC-014)
+getCorporateTaxRate(): 0.22
+getDividendTaxRate(): 0.05
+getPrepaymentRateForEntity('epe'): 0.80
+getPrepaymentRateForEntity('ae'): 0.80
+getProfessionalTaxForEntity('epe'): 1000
+getProfessionalTaxForEntity('ae'): 1000
 ```
 
 ---
@@ -590,6 +655,11 @@ accounting/shared/
 | 2026-02-09 | **Phase 2 implemented** — types/tax.ts: TaxBracket, TaxScaleConfig (brackets + prepayment + solidarity), TaxCalculationParams, TaxBracketResult, TaxResult (full breakdown), TaxEstimate (real-time projection), TaxInstallment (3 δόσεις), TaxPlanningInsight, WithholdingReconciliation. types/interfaces.ts: ITaxEngine (calculateAnnualTax, estimateTax, getTaxScale, calculateInstallments) | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/config/tax-config.ts: `GREEK_TAX_SCALES` (ReadonlyMap 2024/2025/2026), 5 brackets (9%/22%/28%/36%/44%), prepaymentRate 55%, professionalTax 650€, `getTaxScaleForYear()` with fallback. services/engines/tax-engine.ts: `TaxEngine implements ITaxEngine` — `calculateAnnualTax(params)` progressive bracket calculation, `estimateTax(fiscalYear)` async projection, `getTaxScale(year)`, `calculateInstallments(amount, year)` with 3 due dates (July/September/November) | Claude Code |
 | 2026-02-09 | **Phase 4 implemented** — API: `GET /api/accounting/tax/estimate`. UI: `ReportsPageContent` (FiscalYearPicker + grid: VATReportCard + TaxEstimateCard + TaxDashboard), `VATReportCard` (annual VAT summary from useVATSummary), `TaxEstimateCard` (projected income/expenses/tax/effective rate from /api/accounting/tax/estimate), `TaxDashboard` (key figures grid + TaxBracketsVisual + InstallmentsCard), `TaxBracketsVisual` (5 Greek brackets 9%/22%/28%/36%/44% with colored progress bars), `InstallmentsCard` (3 installments: July/September/November with status badges) | Claude Code |
+| 2026-02-10 | **OE Partnership Tax** — `calculatePartnershipTax()` added: pass-through taxation, per-partner progressive tax (ADR-ACC-012) | Claude Code |
+| 2026-02-12 | **EPE Corporate Tax** — `calculateCorporateTax()` added: 22% flat, 5% dividends, 80% prepayment. Config: `getCorporateTaxRate()`, `getDividendTaxRate()` (ADR-ACC-014) | Claude Code |
+| 2026-02-12 | **Generalization** — `calculateCorporateTax()` now accepts `entityType` parameter for reuse across EPE + AE. Backward compatible (default 'epe') | Claude Code |
+| 2026-02-12 | **AE Tax** — `calculateAETax()` wrapper: maps shareholders → members, delegates to `calculateCorporateTax()`. `AETaxResult` + `ShareholderDividendResult` types (ADR-ACC-016) | Claude Code |
+| 2026-02-12 | **Title updated**: "Income Tax + Prepayment" → "Income Tax + Corporate Tax" to reflect all entity types | Claude Code |
 
 ---
 

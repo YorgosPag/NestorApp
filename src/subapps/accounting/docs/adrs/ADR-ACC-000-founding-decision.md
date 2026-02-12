@@ -37,7 +37,7 @@ Layer 3 (ΕΠΕ):             + Γ' Κατηγορίας — Γενικό Καθ
 Layer 4 (ΑΕ):              + Μετοχικό κεφάλαιο + ΔΣ + ΓΕΜΗ
 ```
 
-### Phase 1: Ατομική Επιχείρηση (CURRENT TARGET)
+### Phase 1: Ατομική Επιχείρηση (✅ COMPLETE)
 
 | Χαρακτηριστικό | Τιμή |
 |----------------|-------|
@@ -598,22 +598,32 @@ interface InvoiceSeries {
 | 9 | M-008: Fixed Assets | ✅ DONE | Depreciation engine + asset management |
 | 10 | M-010: Reports | ✅ DONE | VAT report + tax estimate + brackets + installments |
 
-### Phase 2: ΟΕ Extension
+### Phase 2: ΟΕ Extension (✅ COMPLETE — 2026-02-10, ADR-ACC-012)
 
-- Partner shares + profit distribution
-- Shared accounting book
+- ✅ Partner shares + profit distribution (pass-through taxation)
+- ✅ Per-partner EFKA tracking
+- ✅ `calculatePartnershipTax()` — κλίμακα φυσικών προσώπων per partner
+- ✅ Config-driven professional tax: 650€ (ατομική) / 1.000€ (ΟΕ/ΕΠΕ/ΑΕ)
+- ✅ Partners CRUD: `/api/accounting/partners`, UI management
 
-### Phase 3: ΕΠΕ Extension
+### Phase 3: ΕΠΕ Extension (✅ COMPLETE — 2026-02-12, ADR-ACC-014)
 
-- Double-entry bookkeeping (Γ' Κατηγορίας)
-- General Ledger (Γενικό Καθολικό)
-- Balance Sheet (Ισολογισμός)
+- ✅ Εταιρικός φόρος 22% flat (Ν.4172/2013, αρ.58)
+- ✅ Μερίσματα 5% (Ν.4172/2013, αρ.64)
+- ✅ Προκαταβολή 80% (Ν.4172/2013, αρ.71)
+- ✅ Members (εταίροι) + manager EFKA (αυτοαπασχολούμενοι)
+- ✅ Γ' Βιβλία υποχρεωτικά, ΓΕΜΗ υποχρεωτικό
+- ✅ `calculateCorporateTax()` generalized with `entityType` parameter
+- ✅ `CorporateTaxBreakdown` reusable UI component
 
-### Phase 4: ΑΕ Extension
+### Phase 4: ΑΕ Extension (✅ COMPLETE — 2026-02-12, ADR-ACC-015/016/017)
 
-- Share capital management
-- Board of Directors records
-- ΓΕΜΗ integration
+- ✅ Shareholders (μέτοχοι) + Board of Directors (ΔΣ)
+- ✅ Ελάχιστο μετοχικό κεφάλαιο 25.000€ (Ν.4548/2018)
+- ✅ EFKA dual-mode: employee (<3% μετοχές) vs self-employed (≥3%)
+- ✅ Board roles: president, vice_president, ceo, member
+- ✅ Reuse `calculateCorporateTax()` — ίδια φορολόγηση με ΕΠΕ
+- ✅ Shareholders CRUD: `/api/accounting/shareholders`, UI management
 
 ---
 
@@ -681,6 +691,12 @@ interface InvoiceSeries {
 | 2026-02-09 | i18n: `react-i18next` with `useTranslation('accounting')` namespace. Full translations en/el (~400 lines each) | Claude Code |
 | 2026-02-09 | Navigation: Calculator icon, 7 sub-items (invoices, journal, vat, bank, efka, assets, reports) via `smart-navigation-factory.ts` | Claude Code |
 | 2026-02-09 | Status updated: DRAFT → ACTIVE (Phase 1 types + Phase 2 interfaces + Phase 3 services + Phase 4 UI = complete for sole proprietor) | Claude Code |
+| 2026-02-10 | **Phase 2 OE** — Partnership support: discriminated union, pass-through tax, per-partner EFKA (ADR-ACC-012) | Claude Code |
+| 2026-02-10 | **ADR-ACC-011** — Service Presets: searchable combobox, 10 default presets, CRUD | Claude Code |
+| 2026-02-10 | **ADR-ACC-013** — Searchable ΔΟΥ + ΚΑΔ dropdowns: accent-insensitive, lazy loading | Claude Code |
+| 2026-02-12 | **Phase 3 ΕΠΕ** — LLC support: 22% corporate tax, 5% dividends, 80% prepayment, manager EFKA, members CRUD (ADR-ACC-014) | Claude Code |
+| 2026-02-12 | **Phase 4 ΑΕ** — Corporation support: shareholders, board of directors, EFKA dual-mode, min capital 25k€ (ADR-ACC-015/016/017) | Claude Code |
+| 2026-02-12 | **All 4 entity types COMPLETE**: Ατομική, ΟΕ, ΕΠΕ, ΑΕ — πυραμίδα layers πλήρης | Claude Code |
 | 2026-02-10 | **Phase 5A implemented** — Company Setup full UI (CompanySetupPage with 4 sections: BasicInfo, FiscalInfo, KAD, InvoiceSeries). Brand colors cleanup, social effects cleanup | Claude Code |
 | 2026-02-10 | **Phase 5B implemented** — AI Document Processing FULL STACK: `OpenAIDocumentAnalyzer` (OpenAI Vision, gpt-4o-mini, 2 strict JSON schemas: EXPENSE_CLASSIFY + EXPENSE_EXTRACT), replaces `DocumentAnalyzerStub`. API routes: `GET/POST /api/accounting/documents` + `GET/PATCH /api/accounting/documents/[id]`. Hooks: `useExpenseDocuments` + `useExpenseDocument`. UI: `DocumentsPageContent` + `UploadDocumentDialog` + `DocumentReviewCard` + `ExtractedDataDisplay`. Page `/accounting/documents` with LazyRoute + navigation (FileText icon). i18n EL+EN. Async AI processing via POST trigger | Claude Code |
 | 2026-02-10 | **Phase 5D implemented** — Tax fixes: TaxEstimateCard API response mismatch (`data.estimate` → `data.data`), new `useTaxEstimate` hook | Claude Code |
