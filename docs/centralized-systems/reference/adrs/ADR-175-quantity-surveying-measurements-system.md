@@ -1,7 +1,7 @@
 # ADR-175: Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ)
 
 **Ημερομηνία:** 2026-02-11
-**Κατάσταση:** ΕΡΕΥΝΑ — Αρχιτεκτονική Αναφορά
+**Κατάσταση:** PHASE_1A_IMPLEMENTED — Types + Services + Cost Engine + Config
 **Συγγραφέας:** Claude Opus 4.6 + Γιώργος Παγώνης
 
 ---
@@ -1379,3 +1379,34 @@ src/
 ---
 
 *Αυτό το ADR είναι πλήρης αρχιτεκτονική αναφορά ("constitution"). Τα UC documents αποτελούν τα implementation contracts. Η υλοποίηση θα ξεκινήσει μόνο μετά από έγκριση του Γιώργου.*
+
+---
+
+## Changelog
+
+### 2026-02-12 — Phase 1A Implemented
+**Status:** `ΕΡΕΥΝΑ` → `PHASE_1A_IMPLEMENTED`
+
+**Νέα αρχεία (9):**
+- `src/types/boq/units.ts` — Type literals: BOQMeasurementUnit, IfcQuantityType, BOQItemStatus, etc.
+- `src/types/boq/boq.ts` — Core entities: BOQItem (~40 fields), BOQCategory, BOQSummary, inputs, filters
+- `src/types/boq/cost.ts` — Computed types: CostBreakdown, PriceResolution, VarianceResult
+- `src/types/boq/index.ts` — Barrel exports
+- `src/config/boq-categories.ts` — 12 ΑΤΟΕ master categories (bilingual EL+EN)
+- `src/services/measurements/contracts.ts` — IBOQRepository + IBOQService interfaces
+- `src/services/measurements/cost-engine.ts` — Pure functions: gross qty, item cost, variance, building summary
+- `src/services/measurements/boq-repository.ts` — FirestoreBOQRepository (Firestore CRUD)
+- `src/services/measurements/boq-service.ts` — BOQService singleton (validation + governance)
+- `src/services/measurements/index.ts` — Barrel exports + singleton instance
+
+**Τροποποιημένα αρχεία (3):**
+- `src/config/firestore-collections.ts` — +4 entries: BOQ_ITEMS, BOQ_CATEGORIES, BOQ_PRICE_LISTS, BOQ_TEMPLATES
+- `src/config/firestore-schema-map.ts` — +2 schemas: boq_items (15 fields), boq_categories (9 fields)
+- `docs/centralized-systems/reference/adr-index.md` — +1 row: ADR-175
+
+**Κρίσιμα patterns:**
+- Governance: `draft → submitted → approved → certified → locked`
+- Waste factor: `grossQuantity = netQuantity × (1 + wasteFactor)` — NEVER stored
+- Cost: computed at runtime via `computeItemCost()` — NEVER stored
+- Firestore: κάθε optional field → `?? null`
+- Zero `any`, zero `as any`, zero `@ts-ignore`

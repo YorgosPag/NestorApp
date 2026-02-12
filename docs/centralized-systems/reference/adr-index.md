@@ -190,6 +190,7 @@
 | **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | 2026-02-05 | Infrastructure | [📄](./adrs/ADR-168-multi-agent-development-environment.md) |
 | **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | ✅ DRAFT - Requirements Gathering | 2026-02-07 | AI Architecture / Enterprise Automation | [📄](./adrs/ADR-169-modular-ai-architecture.md) |
 | **ADR-170** | Construction Worker Attendance — QR Code + GPS Geofencing + Photo | ✅ IMPLEMENTED | 2026-02-09 | Backend Systems / Labor Compliance | [📄](./adrs/ADR-170-attendance-qr-gps-verification.md) |
+| **ADR-175** | Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ) | ✅ PHASE_1A_IMPLEMENTED | 2026-02-12 | Construction Management / BOQ | [📄](./adrs/ADR-175-quantity-surveying-measurements-system.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

@@ -412,6 +412,49 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       companyId: 'string?',
     },
   },
+
+  boq_items: {
+    description: 'Επιμετρήσεις BOQ (Quantity Surveying) — εργασίες/υλικά ανά κτίριο ή μονάδα',
+    fields: {
+      companyId: 'string',
+      projectId: 'string (->projects)',
+      buildingId: 'string (->buildings)',
+      scope: 'building|unit',
+      linkedUnitId: 'string? (->units)',
+      categoryCode: 'string (ΑΤΟΕ κωδικός, π.χ. OIK-2)',
+      title: 'string',
+      unit: 'm|m2|m3|kg|ton|pcs|lt|set|hr|day|lump',
+      estimatedQuantity: 'number',
+      actualQuantity: 'number?',
+      wasteFactor: 'number (0.08=8%)',
+      materialUnitCost: 'number (€/μονάδα)',
+      laborUnitCost: 'number (€/μονάδα)',
+      equipmentUnitCost: 'number (€/μονάδα)',
+      status: 'draft|submitted|approved|certified|locked',
+      source: 'manual|template|dxf_auto|dxf_verified|imported|duplicate',
+      linkedPhaseId: 'string? (->construction_phases)',
+    },
+    relationships: {
+      'boq_items.buildingId': 'buildings.id',
+      'boq_items.projectId': 'projects.id',
+      'boq_items.linkedPhaseId': 'construction_phases.id',
+    },
+  },
+
+  boq_categories: {
+    description: 'Κατηγορίες ΑΤΟΕ (Αναλυτικό Τιμολόγιο Οικοδομικών Εργών)',
+    fields: {
+      companyId: 'string',
+      code: 'string (π.χ. OIK-1)',
+      nameEL: 'string (ελληνικά)',
+      nameEN: 'string (αγγλικά)',
+      level: 'group|subgroup|item',
+      sortOrder: 'number',
+      defaultWasteFactor: 'number (0.05=5%)',
+      allowedUnits: 'string[] (m2, m3, pcs κλπ)',
+      isActive: 'boolean',
+    },
+  },
 };
 
 // ============================================================================
