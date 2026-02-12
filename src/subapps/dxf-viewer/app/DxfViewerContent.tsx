@@ -55,6 +55,8 @@ import type { DrawingEventPayload } from '../systems/events/EventBus';
 import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
 // 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager - Event Bus + Command Pattern
 import { useEntityCreationManager } from '../systems/entity-creation';
+// 🏢 ENTERPRISE: Centralized debug logging
+import { dlog } from '../debug';
 
 // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
 import { useOverlayState } from '../hooks/state/useOverlayState';
@@ -299,13 +301,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   React.useEffect(() => {
     // 🔍 DEBUG (2026-01-31): Log effect mount
-    console.log('🔌 [DxfViewerContent] Subscribing to drawing:complete event (ONCE)');
+    dlog('DxfViewerContent', 'Subscribing to drawing:complete event (ONCE)');
 
     const handleDrawingComplete = (payload: DrawingEventPayload<'drawing:complete'>) => {
       const sceneChange = handleSceneChangeRef.current;
 
       // 🔍 DEBUG: Log when handler is called
-      console.log('📨 [DxfViewerContent] drawing:complete received!', {
+      dlog('DxfViewerContent', 'drawing:complete received!', {
         payload,
         hasUpdatedScene: !!payload.updatedScene,
         updatedSceneEntityCount: payload.updatedScene?.entities?.length || 0
@@ -316,7 +318,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         const scene = payload.updatedScene;
         // 🔍 DEBUG: Check if arc entities have counterclockwise
         const arcEntities = scene.entities?.filter(e => e.type === 'arc') || [];
-        console.log('🔄 [DxfViewerContent] Syncing updatedScene to currentScene', {
+        dlog('DxfViewerContent', 'Syncing updatedScene to currentScene', {
           levelId: payload.levelId,
           entityCount: scene.entities?.length || 0,
           arcCount: arcEntities.length,
@@ -330,7 +332,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       } else {
         // Fallback to lookup (legacy compatibility)
         const lm = levelManagerRef.current;
-        console.log('⚠️ [DxfViewerContent] No updatedScene in payload, falling back to lookup');
+        dlog('DxfViewerContent', 'No updatedScene in payload, falling back to lookup');
         if (lm.currentLevelId) {
           const levelScene = lm.getLevelScene(lm.currentLevelId);
           if (levelScene) {
@@ -344,7 +346,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     const unsubscribe = EventBus.on('drawing:complete', handleDrawingComplete);
 
     return () => {
-      console.log('🔌 [DxfViewerContent] Unsubscribing from drawing:complete event');
+      dlog('DxfViewerContent', 'Unsubscribing from drawing:complete event');
       unsubscribe();
     };
   }, []); // Empty deps = subscribe once on mount
@@ -864,7 +866,7 @@ Check console for detailed metrics`;
     // Use centralized tool metadata - NO hardcoded arrays!
     // preservesOverlayMode() checks TOOL_DEFINITIONS[tool].preservesOverlayMode
     if (overlayMode === 'draw' && !preservesOverlayMode(activeTool)) {
-      console.log('🔄 Cancelling overlay draw mode - switched to non-overlay tool:', activeTool);
+      dlog('DxfViewerContent', 'Cancelling overlay draw mode - switched to non-overlay tool:', activeTool);
       setOverlayMode('select');
       // Also emit cancel event to clear any draft polygon
       eventBus.emit('overlay:cancel-polygon', undefined as unknown as void);
