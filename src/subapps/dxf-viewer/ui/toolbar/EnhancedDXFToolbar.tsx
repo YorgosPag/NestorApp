@@ -30,6 +30,9 @@ import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 // 🏢 ADR-050: Overlay Toolbar Integration
 import { OverlayToolbarSection } from './overlay-section';
 import type { EnhancedDXFToolbarPropsExtended } from './types';
+// ADR-176: Responsive layout
+import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
+import { MobileToolbarLayout } from './MobileToolbarLayout';
 
 interface EnhancedDXFToolbarProps {
   activeTool: ToolType;
@@ -72,7 +75,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   showOverlaySection = false,
   selectedOverlayId,
   isOverlaySectionCollapsed = false,
-  onToggleOverlaySection
+  onToggleOverlaySection,
+
+  // ADR-176: Mobile sidebar toggle
+  onSidebarToggle,
 }) => {
   // 🏢 ENTERPRISE HOOKS: Design system integration
   const iconSizes = useIconSizes();
@@ -208,6 +214,39 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     // 🔧 DEFAULT: Standard tool change
     onToolChange(tool);
   };
+
+  // ADR-176: Responsive layout detection
+  const { layoutMode } = useResponsiveLayout();
+
+  // ADR-176: Mobile/tablet → compact toolbar
+  if (layoutMode !== 'desktop') {
+    return (
+      <div
+        data-testid="dxf-main-toolbar"
+        className={`border ${getStatusBorder('muted')} ${quick.card} bg-card ${PANEL_LAYOUT.SHADOW.LG} ${className}`}
+      >
+        <MobileToolbarLayout
+          activeTool={activeTool}
+          onToolChange={handleToolChange}
+          onAction={onAction}
+          showGrid={showGrid}
+          autoCrop={autoCrop}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          snapEnabled={snapEnabled}
+          currentZoom={currentZoom}
+          commandCount={commandCount}
+          onSidebarToggle={onSidebarToggle ?? (() => {})}
+        />
+        <ToolbarStatusBar
+          activeTool={activeTool}
+          currentZoom={currentZoom}
+          snapEnabled={contextSnapEnabled}
+          compact
+        />
+      </div>
+    );
+  }
 
   // 🎨 ENTERPRISE: bg-card for consistency with FloatingPanel (Εργαλεία Σχεδίασης)
   return (

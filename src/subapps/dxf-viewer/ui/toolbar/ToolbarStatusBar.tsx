@@ -21,6 +21,8 @@ interface ToolbarStatusBarProps {
   commandCount?: number;
   mouseCoordinates?: Point2D | null;
   showCoordinates?: boolean;
+  /** ADR-176: Compact mode — shows only tool name + zoom percentage */
+  compact?: boolean;
 }
 
 export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
@@ -29,7 +31,8 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   snapEnabled,
   commandCount = 0,
   mouseCoordinates = null,
-  showCoordinates = false
+  showCoordinates = false,
+  compact = false,
 }) => {
   const { t } = useTranslation('dxf-viewer');
   const { settings } = useCursor();
@@ -101,6 +104,21 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   const toolLabelKey = toolLabelMap[activeTool];
   const toolLabel = toolLabelKey ? t(toolLabelKey) : activeTool || t('toolbarStatus.unknownTool');
   
+  // ADR-176: Compact mode — only tool + zoom
+  if (compact) {
+    return (
+      <div className={`${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <span>
+          {t('toolbarStatus.tool')}: <strong className={colors.text.info}>{toolLabel}</strong>
+        </span>
+        <span className={colors.text.muted}>|</span>
+        <span>
+          {t('toolbarStatus.zoom')}: <strong className={colors.text.success}>{formatPercent(currentZoom)}</strong>
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className={`${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_MD} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} flex justify-between items-center`}>
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.LG}`}>
@@ -109,17 +127,17 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
             {toolLabel}
           </strong>
         </span>
-        
+
         <span className={`${colors.text.muted}`}>|</span>
-        
+
         <span>
           {t('toolbarStatus.zoom')}: <strong className={`${colors.text.success}`}>
             {formatPercent(currentZoom)}
           </strong>
         </span>
-        
+
         <span className={`${colors.text.muted}`}>|</span>
-        
+
         <span>
           {t('toolbarStatus.snap')}: <strong className={snapEnabled ? `${colors.text.success}` : `${colors.text.error}`}>
             {snapEnabled ? t('toolbarStatus.on') : t('toolbarStatus.off')}

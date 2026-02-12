@@ -182,19 +182,20 @@ export function useDraggable(
   // DRAG HANDLERS - Enterprise Event Management
   // ========================================================================
 
-  /** Initialize drag operation with smart exclusions */
-  const handleMouseDown = (e: React.MouseEvent) => {
+  /**
+   * Initialize drag operation with smart exclusions
+   * ADR-176: Migrated from mouse to pointer events for touch support
+   */
+  const handleMouseDown = (e: React.PointerEvent | React.MouseEvent) => {
     if (disabled) return;
 
     const target = e.target as HTMLElement;
 
-    // ✅ ENTERPRISE FIX: Allow drag from dedicated drag handles even if they're inside buttons
-    // Elements with data-drag-handle="true" or cursor-grab class are always draggable
+    // ENTERPRISE FIX: Allow drag from dedicated drag handles even if they're inside buttons
     const isDragHandle = target.closest('[data-drag-handle="true"], .cursor-grab');
 
     if (!isDragHandle) {
       // Enterprise Feature: Smart interaction exclusion
-      // Prevent drag when clicking interactive elements (only if NOT a drag handle)
       const isInteractiveElement = target.closest(
         'button, input, select, textarea, a, [role="button"]'
       );
@@ -206,6 +207,11 @@ export function useDraggable(
 
     // Prevent text selection during drag
     e.preventDefault();
+
+    // ADR-176: Capture pointer for reliable tracking across element boundaries
+    if ('pointerId' in e) {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    }
 
     setIsDragging(true);
     setDragStart({
@@ -237,29 +243,28 @@ export function useDraggable(
   useEffect(() => {
     if (!isDragging) return;
 
-    /** Handle mouse move during drag */
-    const handleMouseMove = (e: MouseEvent) => {
+    /** ADR-176: Handle pointer move during drag (touch + mouse) */
+    const handlePointerMove = (e: PointerEvent) => {
       const newX = e.clientX - dragStart.x;
       const newY = e.clientY - dragStart.y;
 
-      // Apply bounds constraints
       const constrainedPosition = calculateBounds(newX, newY);
       setPosition(constrainedPosition);
     };
 
-    /** Handle mouse up to end drag */
-    const handleMouseUp = () => {
+    /** ADR-176: Handle pointer up to end drag */
+    const handlePointerUp = (e: PointerEvent) => {
+      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
       setIsDragging(false);
     };
 
-    // Enterprise Event Management: Efficient listeners
-    document.addEventListener('mousemove', handleMouseMove, { passive: false });
-    document.addEventListener('mouseup', handleMouseUp, { once: true });
+    // Enterprise Event Management: Pointer events for touch + mouse
+    document.addEventListener('pointermove', handlePointerMove, { passive: false });
+    document.addEventListener('pointerup', handlePointerUp, { once: true });
 
-    // Cleanup function
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
     };
   }, [isDragging, dragStart, minPosition, maxPosition, elementWidth, elementHeight, container]);
 

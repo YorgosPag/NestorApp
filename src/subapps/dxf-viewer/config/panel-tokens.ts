@@ -1166,7 +1166,36 @@ export const PANEL_LAYOUT = {
       BOLD: '3',
     },
   },
+
+  // ============================================================================
+  // ADR-176: RESPONSIVE TOKENS — Mobile/Tablet DXF Viewer layout
+  // ============================================================================
+  RESPONSIVE: {
+    /** Sidebar drawer width (85vw capped at 384px) */
+    SIDEBAR_DRAWER_WIDTH: 'w-[85vw] max-w-[384px]',
+    /** Compact toolbar gap */
+    TOOLBAR_GAP_MOBILE: 'gap-0.5',
+    /** Compact status bar height */
+    STATUS_BAR_COMPACT_HEIGHT: 'h-6',
+  },
 } as const;
+
+// ============================================================================
+// ADR-176: PANEL WIDTH CLAMPING UTILITY
+// ============================================================================
+
+/**
+ * Clamps a panel width so it never exceeds the viewport minus safe margin.
+ * Use for floating panels that need to fit on small screens.
+ *
+ * @param desiredWidth - Panel's normal width in pixels
+ * @param viewportWidth - Current viewport width in pixels
+ * @param margin - Safe margin in pixels (default: 16)
+ * @returns Clamped width in pixels
+ */
+export function clampPanelWidth(desiredWidth: number, viewportWidth: number, margin = 16): number {
+  return Math.min(desiredWidth, Math.max(0, viewportWidth - margin));
+}
 
 // ============================================================================
 // ENTERPRISE BACKWARD COMPATIBILITY - STATIC PANEL COLORS

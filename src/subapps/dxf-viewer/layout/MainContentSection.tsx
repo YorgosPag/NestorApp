@@ -72,6 +72,8 @@ interface MainContentSectionProps {
   panToWorldOrigin: () => void;
   showCalibration: boolean;
   handleCalibrationToggle: () => void;
+  /** ADR-176: Mobile sidebar toggle */
+  onSidebarToggle?: () => void;
 }
 
 /**
@@ -111,6 +113,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
   panToWorldOrigin,
   showCalibration,
   handleCalibrationToggle,
+  onSidebarToggle,
 }) => {
   return (
     <div
@@ -177,6 +180,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
           setOverlayMode={setOverlayMode}
           setOverlayStatus={setOverlayStatus}
           setOverlayKind={setOverlayKind}
+          onSidebarToggle={onSidebarToggle}
         />
       </div>
     </div>

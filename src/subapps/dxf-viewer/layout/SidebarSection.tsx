@@ -57,8 +57,13 @@ const SIDEBAR_LAYOUT = {
 // 📋 TYPE DEFINITIONS
 // ============================================================================
 
+/** ADR-176: Sidebar display variant */
+type SidebarVariant = 'inline' | 'drawer';
+
 /** Props interface for SidebarSection component */
 interface SidebarSectionProps {
+  /** ADR-176: 'inline' (default desktop) or 'drawer' (mobile Sheet) */
+  variant?: SidebarVariant;
   floatingRef: React.RefObject<FloatingPanelHandle>;
   currentScene: SceneModel | null;
   selectedEntityIds: string[];
@@ -78,6 +83,7 @@ interface SidebarSectionProps {
  * The main content area scrolls while the status bar stays fixed at bottom.
  */
 export const SidebarSection = React.memo<SidebarSectionProps>(({
+  variant = 'inline',
   floatingRef,
   currentScene,
   selectedEntityIds,
@@ -88,14 +94,17 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
+  // ADR-176: Drawer variant uses full width, inline uses fixed 384px
+  const isDrawer = variant === 'drawer';
+
   return (
     <aside
       className={`
-        ${SIDEBAR_LAYOUT.WIDTH}
-        ${SIDEBAR_LAYOUT.MIN_WIDTH}
-        ${SIDEBAR_LAYOUT.MAX_WIDTH}
+        ${isDrawer ? 'w-full' : SIDEBAR_LAYOUT.WIDTH}
+        ${isDrawer ? '' : SIDEBAR_LAYOUT.MIN_WIDTH}
+        ${isDrawer ? '' : SIDEBAR_LAYOUT.MAX_WIDTH}
         h-full
-        flex-shrink-0
+        ${isDrawer ? '' : 'flex-shrink-0'}
         ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}
       `}
       aria-label="DXF Viewer Sidebar"

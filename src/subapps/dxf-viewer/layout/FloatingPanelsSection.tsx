@@ -31,6 +31,9 @@ import { useUniversalSelection } from '../systems/selection';
 import { useEventBus } from '../systems/events';
 // 🏢 ENTERPRISE (2027-01-27): ADR-050 - Hide floating toolbar when unified toolbar is enabled
 import { USE_UNIFIED_OVERLAY_TOOLBAR } from '../config/feature-flags';
+// ADR-176: Responsive layout
+import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
+import { MobilePanelManager } from './MobilePanelManager';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface FloatingPanelsSectionProps {
@@ -106,6 +109,9 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   testReport,
   formattedTestReport,
 }) => {
+  // ADR-176: Responsive layout detection
+  const { layoutMode } = useResponsiveLayout();
+
   // 🏢 ENTERPRISE: Local state for panel visibility
   const [showOverlayToolbar, setShowOverlayToolbar] = useState(true);
 
@@ -121,6 +127,25 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   const handleDelete = () => {
     eventBus.emit('toolbar:delete', undefined as unknown as void);
   };
+
+  // ADR-176: On mobile/tablet, use MobilePanelManager instead of floating panels
+  if (layoutMode !== 'desktop') {
+    return (
+      <MobilePanelManager
+        colorMenu={colorMenu}
+        currentScene={currentScene}
+        handleSceneChange={handleSceneChange}
+        closeColorMenu={closeColorMenu}
+        floatingRef={floatingRef}
+        showCursorSettings={showCursorSettings}
+        handleAction={handleAction}
+        testModalOpen={testModalOpen}
+        setTestModalOpen={setTestModalOpen}
+        testReport={testReport}
+        formattedTestReport={formattedTestReport}
+      />
+    );
+  }
 
   return (
     <>

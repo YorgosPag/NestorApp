@@ -94,6 +94,9 @@ const ToolbarWithCursorCoordinates = React.lazy(() => import('../ui/components/T
 
 // ⚡ LCP OPTIMIZATION: Critical layout for initial paint
 import { SidebarSection } from '../layout/SidebarSection';
+import { MobileSidebarDrawer } from '../layout/MobileSidebarDrawer';
+// ADR-176: Responsive layout detection
+import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
 // 🚀 AGGRESSIVE LAZY LOADING: Heavy layout sections loaded after initial paint
 const MainContentSection = React.lazy(() => import('../layout/MainContentSection').then(mod => ({ default: mod.MainContentSection })));
@@ -128,6 +131,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const notifications = useNotifications();
   const eventBus = useEventBus(); // 🔧 PHASE 3: Centralized event coordination
   const colors = useSemanticColors();
+
+  // ADR-176: Responsive layout + sidebar drawer state
+  const { layoutMode } = useResponsiveLayout();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   // 🧪 UNIFIED TEST RUNNER - State για modal
   const [testModalOpen, setTestModalOpen] = React.useState(false);
@@ -986,15 +993,28 @@ Check console for detailed metrics`;
           activeTool === 'layering' ? PANEL_LAYOUT.POINTER_EVENTS.NONE : PANEL_LAYOUT.POINTER_EVENTS.AUTO
         }`}
       >
-      {/* ✅ PHASE 5: Sidebar Section */}
-      <SidebarSection
-        floatingRef={floatingRef}
-        currentScene={currentScene}
-        selectedEntityIds={selectedEntityIds}
-        setSelectedEntityIds={setSelectedEntityIds}
-        currentZoom={currentZoom}
-        activeTool={activeTool}
-      />
+      {/* ✅ PHASE 5: Sidebar Section — ADR-176: Responsive */}
+      {layoutMode === 'desktop' ? (
+        <SidebarSection
+          floatingRef={floatingRef}
+          currentScene={currentScene}
+          selectedEntityIds={selectedEntityIds}
+          setSelectedEntityIds={setSelectedEntityIds}
+          currentZoom={currentZoom}
+          activeTool={activeTool}
+        />
+      ) : (
+        <MobileSidebarDrawer
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+          floatingRef={floatingRef}
+          currentScene={currentScene}
+          selectedEntityIds={selectedEntityIds}
+          setSelectedEntityIds={setSelectedEntityIds}
+          currentZoom={currentZoom}
+          activeTool={activeTool}
+        />
+      )}
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Main Content Section */}
       <React.Suspense fallback={<div className={`flex-1 ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
@@ -1029,6 +1049,7 @@ Check console for detailed metrics`;
         panToWorldOrigin={panToWorldOrigin}
         showCalibration={showCalibration}
         handleCalibrationToggle={handleCalibrationToggle}
+        onSidebarToggle={() => setSidebarOpen(prev => !prev)}
         />
       </React.Suspense>
 

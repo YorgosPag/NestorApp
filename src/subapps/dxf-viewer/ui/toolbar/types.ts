@@ -265,4 +265,7 @@ export interface EnhancedDXFToolbarPropsExtended {
   selectedOverlayId?: string | null;
   isOverlaySectionCollapsed?: boolean;
   onToggleOverlaySection?: () => void;
+
+  /** ADR-176: Mobile sidebar toggle callback */
+  onSidebarToggle?: () => void;
 }

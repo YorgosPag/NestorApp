@@ -37,6 +37,9 @@ export interface DXFViewerLayoutProps extends Omit<DxfViewerState, 'snapEnabled'
   overlayStatus?: PropertyStatus;
   setOverlayMode?: (mode: OverlayEditorMode) => void;
 
+  /** ADR-176: Mobile sidebar toggle callback */
+  onSidebarToggle?: () => void;
+
   // Props from useDxfViewerState that need to be passed down
   className?: string;
   entities: DXFEntity[];

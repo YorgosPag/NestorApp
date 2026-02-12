@@ -26,6 +26,8 @@ interface ToolbarSectionProps extends DXFViewerLayoutProps {
   isOverlaySectionCollapsed?: boolean;
   onToggleOverlaySection?: () => void;
   // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - ToolbarStatusBar uses CursorContext (SSoT)
+  /** ADR-176: Mobile sidebar toggle */
+  onSidebarToggle?: () => void;
 }
 
 export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
@@ -39,6 +41,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     showOverlayToolbar = false,
     isOverlaySectionCollapsed = false,
     onToggleOverlaySection,
+    onSidebarToggle,
     // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - using CursorContext (SSoT)
     ...dxfProps
   } = props;
@@ -117,6 +120,8 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           onToggleOverlaySection={onToggleOverlaySection}
           // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - ToolbarStatusBar uses CursorContext (SSoT)
           showCoordinates
+          // ADR-176: Mobile sidebar toggle
+          onSidebarToggle={onSidebarToggle}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
 

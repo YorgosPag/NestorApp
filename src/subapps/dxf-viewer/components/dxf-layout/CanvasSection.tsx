@@ -98,6 +98,10 @@ import { useSpecialTools } from '../../hooks/tools';
 import { useGripSystem } from '../../hooks/grips';
 // 🏢 ADR-119: UnifiedFrameScheduler for centralized RAF management
 import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
+// ADR-176: Touch gestures + responsive layout
+import { usePinchZoom } from '../../hooks/gestures/usePinchZoom';
+import { useTouchPan } from '../../hooks/gestures/useTouchPan';
+import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -541,6 +545,38 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
    */
   const { updatePosition, setActive } = useCursorActions();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // ADR-176: Touch gesture hooks for mobile pinch-zoom and pan
+  const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
+  const isMobileOrTablet = canvasLayoutMode !== 'desktop';
+
+  usePinchZoom({
+    targetRef: containerRef,
+    enabled: isMobileOrTablet,
+    onZoom: useCallback((delta: number, center: { x: number; y: number }) => {
+      // Synthetic zoom: scale transform around center point
+      const newScale = transform.scale * delta;
+      const clampedScale = Math.max(0.01, Math.min(newScale, 1000));
+      contextSetTransform({
+        scale: clampedScale,
+        offsetX: center.x - (center.x - transform.offsetX) * (clampedScale / transform.scale),
+        offsetY: center.y - (center.y - transform.offsetY) * (clampedScale / transform.scale),
+      });
+    }, [transform, contextSetTransform]),
+  });
+
+  useTouchPan({
+    targetRef: containerRef,
+    enabled: isMobileOrTablet,
+    activeTool,
+    onPan: useCallback((deltaX: number, deltaY: number) => {
+      contextSetTransform({
+        scale: transform.scale,
+        offsetX: transform.offsetX + deltaX,
+        offsetY: transform.offsetY + deltaY,
+      });
+    }, [transform, contextSetTransform]),
+  });
 
   // 🏢 ENTERPRISE (2026-01-31): Mouse event handling moved to useCanvasMouse hook - ADR-XXX
   // Previous ~290 lines of handler definitions now handled by centralized hook
