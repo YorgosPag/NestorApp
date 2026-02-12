@@ -2406,6 +2406,68 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📏 BOQ_ITEMS COLLECTION — Quantity Surveying / Επιμετρήσεις (ADR-175)
+    // =========================================================================
+    // Bill of Quantities items per building.
+    // CRUD from client-side SDK (useBOQItems hook).
+    // Governance flow: draft → submitted → approved → certified → locked.
+    // Cost fields computed at runtime (NEVER stored as totals).
+    // =========================================================================
+    match /boq_items/{itemId} {
+
+      // 📖 READ: Authenticated user
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Authenticated user with required fields
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll([
+                         'companyId', 'projectId', 'buildingId',
+                         'categoryCode', 'title', 'unit', 'status',
+                         'estimatedQuantity', 'createdAt', 'updatedAt'
+                       ])
+                    && request.resource.data.companyId is string
+                    && request.resource.data.projectId is string
+                    && request.resource.data.buildingId is string
+                    && request.resource.data.categoryCode is string
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 0
+                    && request.resource.data.status in [
+                         'draft', 'submitted', 'approved', 'certified', 'locked'
+                       ]
+                    && request.resource.data.estimatedQuantity is number;
+
+      // ✏️ UPDATE: Authenticated user (buildingId and projectId immutable)
+      allow update: if isAuthenticated()
+                    && request.resource.data.buildingId == resource.data.buildingId
+                    && request.resource.data.projectId == resource.data.projectId
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.status in [
+                         'draft', 'submitted', 'approved', 'certified', 'locked'
+                       ];
+
+      // 🗑️ DELETE: Authenticated user (only draft/submitted items — locked cannot be deleted)
+      allow delete: if isAuthenticated()
+                    && resource.data.status in ['draft', 'submitted'];
+    }
+
+    // =========================================================================
+    // 📏 BOQ_CATEGORIES COLLECTION — ΑΤΟΕ Custom Categories (ADR-175)
+    // =========================================================================
+    // Company-specific BOQ category overrides.
+    // Fallback to static ATOE_MASTER_CATEGORIES when empty.
+    // Client reads only; future admin UI may write.
+    // =========================================================================
+    match /boq_categories/{categoryId} {
+
+      // 📖 READ: Authenticated user
+      allow read: if isAuthenticated();
+
+      // 🚫 WRITE: Reserved for future admin UI
+      allow create, update, delete: if false;
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
