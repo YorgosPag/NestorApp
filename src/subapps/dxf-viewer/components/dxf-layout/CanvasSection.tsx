@@ -1860,7 +1860,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               bottom: COORDINATE_LAYOUT.MARGINS.bottom
             }}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-            style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}
+            style={{ height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)` }}
           />
 
           {/* 🎯 SNAP INDICATOR: Visual feedback for snap points (AutoCAD/MicroStation style)

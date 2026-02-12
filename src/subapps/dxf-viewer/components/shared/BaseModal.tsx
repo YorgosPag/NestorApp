@@ -10,13 +10,6 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { BaseButton } from './BaseButton';
-// portalComponents not available - creating mock
-const portalComponents = {
-  modal: {
-    backdrop: { zIndex: (z: number) => z },
-    content: { zIndex: (z: number) => z + 1 }
-  }
-};
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -135,7 +128,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       {/* Backdrop */}
       <div
         className={`fixed ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} ${PANEL_LAYOUT.TRANSITION.OPACITY} ${overlayClassName}`}
-        style={{ zIndex: portalComponents.modal.backdrop.zIndex(zIndex) }}
+        style={{ zIndex }}
         onClick={handleBackdropClick}
         aria-hidden="true"
       />
@@ -143,7 +136,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       {/* Modal Container */}
       <div
         className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}
-        style={{ zIndex: portalComponents.modal.content.zIndex(zIndex) }}
+        style={{ zIndex: zIndex + 1 }}
       >
         <div className={`flex items-center justify-center min-h-full ${PANEL_LAYOUT.SPACING.LG} text-center ${PANEL_LAYOUT.SPACING.SM_NONE}`}>
           {/* Modal Content */}

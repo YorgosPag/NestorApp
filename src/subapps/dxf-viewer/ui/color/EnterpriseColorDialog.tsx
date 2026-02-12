@@ -30,6 +30,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Centralized z-index values
+import { MODAL_Z_INDEX } from '../../config/modal-config';
 
 // ✅ ENTERPRISE: Custom hook για draggable functionality
 function useDraggable(initialPosition = { x: 0, y: 0 }) {
@@ -182,7 +184,7 @@ export function EnterpriseColorDialog({
     ? createPortal(
         <div
           className={`fixed ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center cursor-default pointer-events-none`}
-          style={{ zIndex: 2147483646 }} // Just below max to allow stacking
+          style={{ zIndex: MODAL_Z_INDEX.COLOR_DIALOG_CONTAINER }}
         >
           {/* Backdrop - ✅ FIX: No click handlers, just visual overlay */}
           <div
@@ -205,11 +207,9 @@ export function EnterpriseColorDialog({
               style={{
                 transform: `translate(${position.x}px, ${position.y}px)`,
                 cursor: isDragging ? 'grabbing' : 'default',
-                zIndex: 2147483647, // Maximum z-index - above everything
-                pointerEvents: 'auto',
-                isolation: 'isolate' // Create new stacking context
+                zIndex: MODAL_Z_INDEX.COLOR_DIALOG,
               }}
-              className={`relative ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} ${PANEL_LAYOUT.SHADOW['2XL']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_LG} ${PANEL_LAYOUT.SELECT.NONE}`}
+              className={`relative pointer-events-auto isolate ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} ${PANEL_LAYOUT.SHADOW['2XL']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_LG} ${PANEL_LAYOUT.SELECT.NONE}`}
             >
               {/* Header - ✅ ENTERPRISE: Draggable handle */}
               <div
