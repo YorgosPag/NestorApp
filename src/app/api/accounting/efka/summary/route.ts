@@ -23,7 +23,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { isPartnership, isLlc } from '@/subapps/accounting/utils/entity-guards';
+import { isPartnership, isLlc, isCorporation } from '@/subapps/accounting/utils/entity-guards';
 
 // =============================================================================
 // GET — EFKA Annual Summary
@@ -66,6 +66,15 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
             success: true,
             entityType: 'epe',
             data: epeSummary,
+          });
+        }
+
+        if (profile && isCorporation(profile)) {
+          const aeSummary = await service.getAEEfkaSummary(year);
+          return NextResponse.json({
+            success: true,
+            entityType: 'ae',
+            data: aeSummary,
           });
         }
 

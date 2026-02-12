@@ -15,12 +15,12 @@ import type {
   IDepreciationEngine,
 } from '../types/interfaces';
 import type { VATQuarterSummary, VATAnnualSummary } from '../types/vat';
-import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult } from '../types/tax';
-import type { EFKAAnnualSummary, PartnershipEFKASummary, PartnerEFKASummary, EPEEFKASummary, ManagerEFKASummary } from '../types/efka';
+import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult, AETaxResult } from '../types/tax';
+import type { EFKAAnnualSummary, PartnershipEFKASummary, PartnerEFKASummary, EPEEFKASummary, ManagerEFKASummary, AEEFKASummary, EmployeeBoardMemberEFKA } from '../types/efka';
 import type { DepreciationRecord } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
 import type { FiscalQuarter } from '../types/common';
-import type { Partner, Member } from '../types/entity';
+import type { Partner, Member, Shareholder } from '../types/entity';
 import { TaxEngine } from './engines/tax-engine';
 import { getCategoryByCode } from '../config/account-categories';
 import { getEfkaConfigForYear, calculateMonthlyBreakdown } from './config/efka-config';
@@ -309,6 +309,136 @@ export class AccountingService {
     };
   }
 
+  // ── AE Corporate Tax (ADR-ACC-016) ──────────────────────────────────
+
+  /**
+   * Υπολογισμός εταιρικού φόρου ΑΕ (22% flat + μερίσματα 5%)
+   */
+  async calculateAETax(fiscalYear: number): Promise<AETaxResult> {
+    const shareholders = await this.repository.getShareholders();
+    const incomeEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'income' });
+    const expenseEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'expense' });
+
+    const totalIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
+    const totalExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
+
+    // EFKA only for board members with compensation
+    const boardWithEfka = shareholders.filter(
+      (s) => s.isBoardMember && s.monthlyCompensation !== null && s.monthlyCompensation > 0 && s.isActive
+    );
+    let efkaBoardTotal = 0;
+    for (const bm of boardWithEfka) {
+      if (bm.efkaMode === 'self_employed') {
+        const payments = await this.repository.getShareholderEFKAPayments(bm.shareholderId, fiscalYear);
+        const paid = payments
+          .filter((pay) => pay.status === 'paid')
+          .reduce((sum, pay) => sum + pay.amount, 0);
+        efkaBoardTotal += paid;
+      }
+      // Employee mode EFKA is employer cost, not deductible from corporate tax
+    }
+
+    const taxEngine = this.taxEngine as TaxEngine;
+
+    const activeShareholders = shareholders.filter((s) => s.isActive);
+    return taxEngine.calculateAETax(
+      fiscalYear,
+      totalIncome,
+      totalExpenses,
+      efkaBoardTotal,
+      activeShareholders.map((s) => ({
+        shareholderId: s.shareholderId,
+        shareholderName: s.fullName,
+        dividendSharePercent: s.dividendSharePercent,
+      }))
+    );
+  }
+
+  /**
+   * Σύνοψη ΕΦΚΑ ΑΕ — Dual mode (employee + self-employed)
+   *
+   * @see ADR-ACC-017 Board of Directors & EFKA
+   */
+  async getAEEfkaSummary(year: number): Promise<AEEFKASummary> {
+    const shareholders = await this.repository.getShareholders();
+
+    // Board members with compensation
+    const boardWithComp = shareholders.filter(
+      (s) => s.isBoardMember && s.monthlyCompensation !== null && s.monthlyCompensation > 0 && s.isActive
+    );
+
+    const employeeBoardMembers: EmployeeBoardMemberEFKA[] = [];
+    const selfEmployedBoardMembers: ManagerEFKASummary[] = [];
+    let totalEmployeeEFKA = 0;
+    let totalSelfEmployedEFKA = 0;
+
+    for (const bm of boardWithComp) {
+      if (bm.efkaMode === 'employee') {
+        // Employee mode: 33,60% (12,47% employee + 21,13% employer)
+        const compensation = bm.monthlyCompensation ?? 0;
+        const employeeContribution = roundToTwo(compensation * 0.1247 * 12);
+        const employerContribution = roundToTwo(compensation * 0.2113 * 12);
+        const totalAnnual = roundToTwo(employeeContribution + employerContribution);
+
+        employeeBoardMembers.push({
+          shareholderId: bm.shareholderId,
+          shareholderName: bm.fullName,
+          monthlyCompensation: compensation,
+          employeeContribution,
+          employerContribution,
+          totalAnnual,
+        });
+
+        totalEmployeeEFKA += employerContribution; // Employer cost
+      } else if (bm.efkaMode === 'self_employed') {
+        // Self-employed mode: same as EPE managers
+        const payments = await this.repository.getShareholderEFKAPayments(bm.shareholderId, year);
+        const mainCode = bm.efkaConfig?.selectedMainPensionCode || 'main_1';
+        const suppCode = bm.efkaConfig?.selectedSupplementaryCode || 'supplementary_1';
+        const lumpCode = bm.efkaConfig?.selectedLumpSumCode || 'lump_sum_1';
+
+        const monthlyBreakdown = calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode);
+
+        const totalPaid = payments
+          .filter((pay) => pay.status === 'paid')
+          .reduce((sum, pay) => sum + pay.amount, 0);
+        const totalDue = monthlyBreakdown.reduce((sum, m) => sum + m.totalMonthly, 0);
+        const balanceDue = roundToTwo(totalDue - totalPaid);
+        const paidMonths = payments.filter((pay) => pay.status === 'paid').length;
+        const overdueMonths = payments.filter(
+          (pay) => pay.status === 'overdue' || pay.status === 'keao'
+        ).length;
+
+        selfEmployedBoardMembers.push({
+          memberId: bm.shareholderId,
+          memberName: bm.fullName,
+          summary: {
+            year,
+            monthlyBreakdown,
+            payments,
+            totalPaid,
+            totalDue,
+            balanceDue,
+            taxDeductibleAmount: totalPaid,
+            paidMonths,
+            overdueMonths,
+          },
+        });
+
+        totalSelfEmployedEFKA += totalPaid;
+      }
+    }
+
+    return {
+      year,
+      employeeBoardMembers,
+      selfEmployedBoardMembers,
+      totalEmployeeEFKA,
+      totalSelfEmployedEFKA,
+      totalAllEFKA: roundToTwo(totalEmployeeEFKA + totalSelfEmployedEFKA),
+    };
+  }
+
   /**
    * Σύνοψη ΕΦΚΑ ΟΕ (per-partner)
    */
@@ -407,6 +537,10 @@ export class AccountingService {
 // ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
+
+function roundToTwo(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 
 function getQuarterFromMonth(month: number): FiscalQuarter {
   if (month <= 3) return 1;

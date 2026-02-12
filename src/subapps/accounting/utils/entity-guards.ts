@@ -8,7 +8,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
-import type { CompanyProfile, SoleProprietorProfile, OECompanyProfile, EPECompanyProfile } from '../types/company';
+import type { CompanyProfile, SoleProprietorProfile, OECompanyProfile, EPECompanyProfile, AECompanyProfile } from '../types/company';
 
 /**
  * Type guard: Ατομική Επιχείρηση
@@ -29,4 +29,11 @@ export function isPartnership(profile: CompanyProfile): profile is OECompanyProf
  */
 export function isLlc(profile: CompanyProfile): profile is EPECompanyProfile {
   return profile.entityType === 'epe';
+}
+
+/**
+ * Type guard: Ανώνυμη Εταιρεία (ΑΕ / Corporation)
+ */
+export function isCorporation(profile: CompanyProfile): profile is AECompanyProfile {
+  return profile.entityType === 'ae';
 }

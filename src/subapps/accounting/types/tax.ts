@@ -325,6 +325,56 @@ export interface EPETaxResult {
 }
 
 // ============================================================================
+// SHAREHOLDER DIVIDEND RESULT — Μέρισμα ανά Μέτοχο ΑΕ
+// ============================================================================
+
+/**
+ * Αποτέλεσμα μερισμάτων ανά μέτοχο (ΑΕ)
+ *
+ * Ίδια δομή/λογική με MemberDividendResult, αλλά
+ * χρησιμοποιεί shareholderId αντί memberId.
+ */
+export interface ShareholderDividendResult {
+  /** ID μετόχου */
+  shareholderId: string;
+  /** Ονοματεπώνυμο */
+  shareholderName: string;
+  /** Ποσοστό μερισμάτων */
+  dividendSharePercent: number;
+  /** Μερίδιο κέρδους (πριν τον φόρο μερισμάτων) */
+  grossDividend: number;
+  /** Φόρος μερισμάτων 5% */
+  dividendTaxRate: number;
+  /** Ποσό φόρου μερισμάτων */
+  dividendTaxAmount: number;
+  /** Καθαρό μέρισμα μετά φόρου */
+  netDividend: number;
+}
+
+/**
+ * Πλήρες αποτέλεσμα φόρου ΑΕ
+ *
+ * Ίδια φορολόγηση με ΕΠΕ (22% flat, 5% μερίσματα, 80% προκαταβολή)
+ * αλλά μέτοχοι αντί μελών.
+ *
+ * @see ADR-ACC-016 AE Corporate Tax & Dividends
+ */
+export interface AETaxResult {
+  /** Εταιρικός φόρος */
+  corporateTax: CorporateTaxResult;
+  /** Κέρδη μετά φόρου */
+  profitAfterTax: number;
+  /** Ποσό διανεμόμενων μερισμάτων */
+  distributedDividends: number;
+  /** Αδιανέμητα κέρδη (retained earnings) */
+  retainedEarnings: number;
+  /** Αναλυτικά μερίσματα ανά μέτοχο */
+  shareholderDividends: ShareholderDividendResult[];
+  /** Συνολικός φόρος μερισμάτων */
+  totalDividendTax: number;
+}
+
+// ============================================================================
 // PARTNERSHIP TAX RESULT — Αποτέλεσμα Φόρου ΟΕ
 // ============================================================================
 

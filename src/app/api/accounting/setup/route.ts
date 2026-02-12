@@ -21,7 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { CompanySetupInput } from '@/subapps/accounting/types';
-import type { Partner, Member } from '@/subapps/accounting/types/entity';
+import type { Partner, Member, Shareholder } from '@/subapps/accounting/types/entity';
 
 // =============================================================================
 // VALIDATION HELPERS
@@ -119,7 +119,23 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
         // Build discriminated union based on entityType
         let data: CompanySetupInput;
 
-        if (entityType === 'epe') {
+        if (entityType === 'ae') {
+          const shareCapital = ((body as Record<string, unknown>).shareCapital as number) ?? 0;
+          if (shareCapital < 25000) {
+            return NextResponse.json(
+              { success: false, error: 'AE minimum share capital is €25,000 (Ν.4548/2018)' },
+              { status: 400 }
+            );
+          }
+          data = {
+            ...commonFields,
+            entityType: 'ae' as const,
+            bookCategory: 'double_entry', // Γ' Βιβλία ΥΠΟΧΡΕΩΤΙΚΑ
+            gemiNumber: ((body as Record<string, unknown>).gemiNumber as string) ?? '',
+            shareholders: ((body as Record<string, unknown>).shareholders as Shareholder[]) ?? [],
+            shareCapital,
+          };
+        } else if (entityType === 'epe') {
           data = {
             ...commonFields,
             entityType: 'epe' as const,

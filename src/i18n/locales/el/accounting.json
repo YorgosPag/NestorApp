@@ -413,7 +413,7 @@
         "sole_proprietor": "Ατομική Επιχείρηση",
         "oe": "ΟΕ — Ομόρρυθμη Εταιρεία",
         "epe": "ΕΠΕ — Εταιρεία Περ. Ευθύνης",
-        "ae": "ΑΕ — Ανώνυμη Εταιρεία (σύντομα)"
+        "ae": "ΑΕ — Ανώνυμη Εταιρεία"
       }
     },
     "gemiNumber": "Αριθμός ΓΕΜΗ",
@@ -476,6 +476,49 @@
       "grossDividend": "Μικτό Μέρισμα",
       "netDividend": "Καθαρό Μέρισμα",
       "totalDividendTax": "Σύνολο Φόρου Μερισμάτων"
+    },
+    "shareholders": {
+      "title": "Μέτοχοι & Διοικητικό Συμβούλιο ΑΕ",
+      "shareholderLabel": "Μέτοχος {number}",
+      "fullName": "Ονοματεπώνυμο",
+      "fullNamePlaceholder": "π.χ. Ιωάννης Παπαδόπουλος",
+      "vatNumber": "ΑΦΜ Μετόχου",
+      "taxOffice": "ΔΟΥ Μετόχου",
+      "sharesCount": "Αριθμός Μετοχών",
+      "shareNominalValue": "Ονομαστική Αξία Μετοχής (€)",
+      "capitalContribution": "Κεφαλαιακή Εισφορά",
+      "dividendSharePercent": "Ποσοστό Μερισμάτων (%)",
+      "isBoardMember": "Μέλος ΔΣ",
+      "boardRole": "Ρόλος στο ΔΣ",
+      "boardRoles": {
+        "president": "Πρόεδρος ΔΣ",
+        "vice_president": "Αντιπρόεδρος ΔΣ",
+        "ceo": "Διευθύνων Σύμβουλος (CEO)",
+        "member": "Μέλος ΔΣ"
+      },
+      "monthlyCompensation": "Μηνιαία Αμοιβή (€)",
+      "efkaMode": "Καθεστώς ΕΦΚΑ",
+      "efkaModes": {
+        "employee": "Μισθωτός (33,60%)",
+        "self_employed": "Αυτοαπασχολούμενος",
+        "none": "Χωρίς ΕΦΚΑ"
+      },
+      "efkaMainCategory": "Κατηγορία ΕΦΚΑ (Κύρια)",
+      "joinDate": "Ημ/νία Εισόδου",
+      "isFirstFiveYears": "Πρώτα 5 χρόνια (μειωμένη προκαταβολή)",
+      "active": "Ενεργός",
+      "remove": "Αφαίρεση Μετόχου",
+      "addShareholder": "Προσθήκη Μετόχου",
+      "shareSum": "Σύνολο ποσοστών: {sum}%",
+      "shareSumValid": "Σωστό",
+      "shareSumInvalid": "Πρέπει να ισούται με 100%",
+      "shareCapital": "Μετοχικό Κεφάλαιο (€)",
+      "minCapitalNotice": "Το ελάχιστο μετοχικό κεφάλαιο ΑΕ είναι 25.000€ (Ν.4548/2018)",
+      "gemiRequired": "Ο αριθμός ΓΕΜΗ είναι υποχρεωτικός για ΑΕ",
+      "doubleEntryNotice": "Η ΑΕ τηρεί ΥΠΟΧΡΕΩΤΙΚΑ Γ' κατηγορίας βιβλία (Διπλογραφικά)",
+      "boardMemberOnlyEfka": "Μόνο τα αμειβόμενα μέλη ΔΣ πληρώνουν ΕΦΚΑ",
+      "efkaEmployeeExplain": "Μισθωτός: μετοχές <3% του συνόλου → 33,60% επί αμοιβής",
+      "efkaSelfEmployedExplain": "Αυτοαπ.: μετοχές ≥3% → κατηγορίες ΕΦΚΑ αυτοαπασχολούμενου"
     }
   },
   "categories": {

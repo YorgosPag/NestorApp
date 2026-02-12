@@ -127,6 +127,100 @@ export interface Member {
 // PARTNER — Εταίρος ΟΕ
 // ============================================================================
 
+// ============================================================================
+// SHAREHOLDER EFKA CONFIG — Ρυθμίσεις ΕΦΚΑ ανά Μέτοχο ΑΕ (self-employed mode)
+// ============================================================================
+
+/**
+ * Ρυθμίσεις ΕΦΚΑ μετόχου ΑΕ (self-employed mode)
+ *
+ * Ίδια δομή με MemberEFKAConfig / PartnerEFKAConfig.
+ * Χρησιμοποιείται μόνο όταν efkaMode = 'self_employed'.
+ */
+export interface ShareholderEFKAConfig {
+  /** Επιλεγμένη κατηγορία κύριας σύνταξης */
+  selectedMainPensionCode: string;
+  /** Επιλεγμένη κατηγορία επικουρικής */
+  selectedSupplementaryCode: string;
+  /** Επιλεγμένη κατηγορία εφάπαξ */
+  selectedLumpSumCode: string;
+  /** Κωδικός πληρωμής ΕΦΚΑ (ΑΜΑ) */
+  efkaRegistrationNumber: string;
+  /** Ημερομηνία έναρξης δραστηριότητας (ISO 8601) */
+  activityStartDate: string;
+  /** Σημειώσεις */
+  notes: string | null;
+}
+
+// ============================================================================
+// BOARD ROLE — Ρόλος στο Διοικητικό Συμβούλιο
+// ============================================================================
+
+/** Ρόλος μέλους ΔΣ */
+export type BoardRole = 'president' | 'vice_president' | 'ceo' | 'member';
+
+/** Καθεστώς ΕΦΚΑ μετόχου ΑΕ */
+export type ShareholderEFKAMode = 'employee' | 'self_employed' | 'none';
+
+// ============================================================================
+// SHAREHOLDER — Μέτοχος ΑΕ
+// ============================================================================
+
+/**
+ * Μέτοχος Ανώνυμης Εταιρείας
+ *
+ * Ενοποιεί μέτοχο + μέλος ΔΣ σε μία εγγραφή.
+ * Αν χρειαστεί μέλος ΔΣ χωρίς μετοχές → sharesCount = 0.
+ *
+ * ΕΦΚΑ Dual-Mode:
+ * - employee: isBoardMember && compensation > 0 && shares < 3% συνόλου
+ * - self_employed: isBoardMember && compensation > 0 && shares ≥ 3%
+ * - none: !isBoardMember || compensation === 0/null
+ *
+ * @see ADR-ACC-015 AE Setup & Shareholders
+ * @see Εγκύκλιοι ΕΦΚΑ 4/2017, 17/2017, Ν.4548/2018
+ */
+export interface Shareholder {
+  /** Μοναδικό ID μετόχου ('shr_xxxxx') */
+  shareholderId: string;
+  /** Ονοματεπώνυμο μετόχου */
+  fullName: string;
+  /** Προσωπικό ΑΦΜ μετόχου */
+  vatNumber: string;
+  /** ΔΟΥ μετόχου */
+  taxOffice: string;
+  /** Αριθμός μετοχών */
+  sharesCount: number;
+  /** Ονομαστική αξία μετοχής (€/μετοχή) */
+  shareNominalValue: number;
+  /** Κεφαλαιακή εισφορά = sharesCount × shareNominalValue */
+  capitalContribution: number;
+  /** Ποσοστό μερισμάτων (0-100) */
+  dividendSharePercent: number;
+  /** Είναι μέλος ΔΣ; */
+  isBoardMember: boolean;
+  /** Ρόλος στο ΔΣ (null αν δεν είναι μέλος) */
+  boardRole: BoardRole | null;
+  /** Μηνιαία αμοιβή ΔΣ (null αν δεν αμείβεται) */
+  monthlyCompensation: number | null;
+  /** Καθεστώς ΕΦΚΑ (auto-calculated based on board + shares + compensation) */
+  efkaMode: ShareholderEFKAMode;
+  /** Ρυθμίσεις ΕΦΚΑ (μόνο self-employed mode) */
+  efkaConfig: ShareholderEFKAConfig | null;
+  /** Πρώτα 5 χρόνια δραστηριότητας; (μειωμένη προκαταβολή) */
+  isFirstFiveYears: boolean;
+  /** Ημερομηνία εισόδου (ISO 8601) */
+  joinDate: string;
+  /** Ημερομηνία εξόδου (ISO 8601, null αν ενεργός) */
+  exitDate: string | null;
+  /** Ενεργός μέτοχος */
+  isActive: boolean;
+}
+
+// ============================================================================
+// PARTNER — Εταίρος ΟΕ
+// ============================================================================
+
 export interface Partner {
   /** Μοναδικό ID εταίρου ('prt_xxxxx') */
   partnerId: string;

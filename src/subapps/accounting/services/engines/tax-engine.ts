@@ -22,7 +22,10 @@ import type {
   EPETaxResult,
   CorporateTaxResult,
   MemberDividendResult,
+  AETaxResult,
+  ShareholderDividendResult,
 } from '../../types/tax';
+import type { EntityType } from '../../types/entity';
 import type { FiscalQuarter, ExpenseCategory, IncomeCategory } from '../../types/common';
 import {
   getTaxScaleForYear,
@@ -265,18 +268,19 @@ export class TaxEngine implements ITaxEngine {
   }
 
   /**
-   * Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat rate)
+   * Υπολογισμός εταιρικού φόρου ΕΠΕ/ΑΕ (22% flat rate)
    *
    * - Φορολόγηση: 22% flat (ΟΧΙ progressive brackets)
    * - Προκαταβολή: 80%
-   * - Μερίσματα: 5% φόρος μερισμάτων ανά μέλος
+   * - Μερίσματα: 5% φόρος μερισμάτων ανά μέλος/μέτοχο
    *
    * @param fiscalYear - Φορολογικό έτος
    * @param totalIncome - Ακαθάριστα έσοδα
    * @param totalExpenses - Εκπεστέα έξοδα
-   * @param efkaManagerTotal - Σύνολο ΕΦΚΑ διαχειριστών
-   * @param members - Ενεργά μέλη με ποσοστό μερισμάτων
+   * @param efkaManagerTotal - Σύνολο ΕΦΚΑ διαχειριστών/μελών ΔΣ
+   * @param members - Ενεργά μέλη/μέτοχοι με ποσοστό μερισμάτων
    * @param distributionPercent - Ποσοστό διανομής κερδών (0-100, default 100)
+   * @param entityType - Νομική μορφή ('epe' | 'ae'), default 'epe'
    */
   calculateCorporateTax(
     fiscalYear: number,
@@ -288,12 +292,13 @@ export class TaxEngine implements ITaxEngine {
       memberName: string;
       dividendSharePercent: number;
     }>,
-    distributionPercent: number = 100
+    distributionPercent: number = 100,
+    entityType: EntityType = 'epe'
   ): EPETaxResult {
     const corporateTaxRate = getCorporateTaxRate();
     const dividendTaxRate = getDividendTaxRate();
-    const prepaymentRate = getPrepaymentRateForEntity('epe');
-    const professionalTax = getProfessionalTaxForEntity('epe');
+    const prepaymentRate = getPrepaymentRateForEntity(entityType);
+    const professionalTax = getProfessionalTaxForEntity(entityType);
 
     // 1. Φορολογητέο εισόδημα
     const taxableIncome = Math.max(0, totalIncome - totalExpenses - efkaManagerTotal);
@@ -356,6 +361,62 @@ export class TaxEngine implements ITaxEngine {
       retainedEarnings,
       memberDividends,
       totalDividendTax,
+    };
+  }
+
+  /**
+   * Υπολογισμός εταιρικού φόρου ΑΕ (22% flat + μερίσματα 5% + 80% προκαταβολή)
+   *
+   * Ίδια φορολόγηση με ΕΠΕ, αλλά shareholders αντί members.
+   * Reuses calculateCorporateTax() internally.
+   *
+   * @see ADR-ACC-016 AE Corporate Tax & Dividends
+   */
+  calculateAETax(
+    fiscalYear: number,
+    totalIncome: number,
+    totalExpenses: number,
+    efkaBoardTotal: number,
+    shareholders: Array<{
+      shareholderId: string;
+      shareholderName: string;
+      dividendSharePercent: number;
+    }>,
+    distributionPercent: number = 100
+  ): AETaxResult {
+    // Reuse the corporate tax engine — same rates for AE (22%, 80%, 5%)
+    const epeResult = this.calculateCorporateTax(
+      fiscalYear,
+      totalIncome,
+      totalExpenses,
+      efkaBoardTotal,
+      shareholders.map((s) => ({
+        memberId: s.shareholderId,
+        memberName: s.shareholderName,
+        dividendSharePercent: s.dividendSharePercent,
+      })),
+      distributionPercent,
+      'ae'
+    );
+
+    // Map MemberDividendResult → ShareholderDividendResult
+    const shareholderDividends: ShareholderDividendResult[] = epeResult.memberDividends.map((md) => ({
+      shareholderId: md.memberId,
+      shareholderName: md.memberName,
+      dividendSharePercent: md.dividendSharePercent,
+      grossDividend: md.grossDividend,
+      dividendTaxRate: md.dividendTaxRate,
+      dividendTaxAmount: md.dividendTaxAmount,
+      netDividend: md.netDividend,
+    }));
+
+    return {
+      corporateTax: epeResult.corporateTax,
+      profitAfterTax: epeResult.profitAfterTax,
+      distributedDividends: epeResult.distributedDividends,
+      retainedEarnings: epeResult.retainedEarnings,
+      shareholderDividends,
+      totalDividendTax: epeResult.totalDividendTax,
     };
   }
 

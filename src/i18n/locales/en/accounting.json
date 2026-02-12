@@ -413,7 +413,7 @@
         "sole_proprietor": "Sole Proprietor",
         "oe": "OE — General Partnership",
         "epe": "EPE — Limited Liability Company",
-        "ae": "AE — Corporation (coming soon)"
+        "ae": "AE — Corporation (SA)"
       }
     },
     "gemiNumber": "GEMI Number",
@@ -476,6 +476,49 @@
       "grossDividend": "Gross Dividend",
       "netDividend": "Net Dividend",
       "totalDividendTax": "Total Dividend Tax"
+    },
+    "shareholders": {
+      "title": "Shareholders & Board of Directors (AE)",
+      "shareholderLabel": "Shareholder {number}",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "e.g. John Smith",
+      "vatNumber": "Shareholder VAT Number",
+      "taxOffice": "Shareholder Tax Office",
+      "sharesCount": "Number of Shares",
+      "shareNominalValue": "Nominal Share Value (€)",
+      "capitalContribution": "Capital Contribution",
+      "dividendSharePercent": "Dividend Share (%)",
+      "isBoardMember": "Board Member",
+      "boardRole": "Board Role",
+      "boardRoles": {
+        "president": "Chairman of the Board",
+        "vice_president": "Vice Chairman",
+        "ceo": "Chief Executive Officer (CEO)",
+        "member": "Board Member"
+      },
+      "monthlyCompensation": "Monthly Compensation (€)",
+      "efkaMode": "EFKA Status",
+      "efkaModes": {
+        "employee": "Employee (33.60%)",
+        "self_employed": "Self-Employed",
+        "none": "No EFKA"
+      },
+      "efkaMainCategory": "EFKA Category (Main)",
+      "joinDate": "Join Date",
+      "isFirstFiveYears": "First 5 years (reduced prepayment)",
+      "active": "Active",
+      "remove": "Remove Shareholder",
+      "addShareholder": "Add Shareholder",
+      "shareSum": "Share total: {sum}%",
+      "shareSumValid": "Valid",
+      "shareSumInvalid": "Must equal 100%",
+      "shareCapital": "Share Capital (€)",
+      "minCapitalNotice": "Minimum share capital for AE is €25,000 (Law 4548/2018)",
+      "gemiRequired": "GEMI number is required for AE",
+      "doubleEntryNotice": "AE is REQUIRED to keep Class C books (Double-entry)",
+      "boardMemberOnlyEfka": "Only compensated board members pay EFKA contributions",
+      "efkaEmployeeExplain": "Employee: shares <3% of total → 33.60% on compensation",
+      "efkaSelfEmployedExplain": "Self-employed: shares ≥3% → self-employed EFKA categories"
     }
   },
   "categories": {

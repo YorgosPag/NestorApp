@@ -225,6 +225,57 @@ export interface EPEEFKASummary {
 // EFKA NOTIFICATION
 // ============================================================================
 
+// ============================================================================
+// AE EFKA SUMMARY — ΑΕ Board Member EFKA (Dual-Mode)
+// ============================================================================
+
+/**
+ * ΕΦΚΑ μέλους ΔΣ ΑΕ — Employee mode (μισθωτός)
+ *
+ * Όταν μέλος ΔΣ κατέχει <3% μετοχών και λαμβάνει αμοιβή.
+ * Εισφορές: 33,60% (12,47% ασφαλισμένος + 21,13% εργοδότης)
+ *
+ * @see Εγκύκλιος ΕΦΚΑ 4/2017, 17/2017
+ */
+export interface EmployeeBoardMemberEFKA {
+  /** ID μετόχου */
+  shareholderId: string;
+  /** Ονοματεπώνυμο */
+  shareholderName: string;
+  /** Μηνιαία αμοιβή ΔΣ */
+  monthlyCompensation: number;
+  /** Εισφορά ασφαλισμένου (12,47% × αμοιβή × 12) */
+  employeeContribution: number;
+  /** Εισφορά εργοδότη (21,13% × αμοιβή × 12) */
+  employerContribution: number;
+  /** Ετήσιο σύνολο ΕΦΚΑ */
+  totalAnnual: number;
+}
+
+/**
+ * Σύνοψη ΕΦΚΑ ΑΕ (dual-mode: employee + self-employed)
+ *
+ * @see ADR-ACC-017 Board of Directors & EFKA
+ */
+export interface AEEFKASummary {
+  /** Φορολογικό έτος */
+  year: number;
+  /** Μέλη ΔΣ σε καθεστώς μισθωτού (<3% μετοχών) */
+  employeeBoardMembers: EmployeeBoardMemberEFKA[];
+  /** Μέλη ΔΣ σε καθεστώς αυτοαπασχολούμενου (≥3% μετοχών) — reuse ManagerEFKASummary */
+  selfEmployedBoardMembers: ManagerEFKASummary[];
+  /** Σύνολο ΕΦΚΑ εργοδότη (employee board members) */
+  totalEmployeeEFKA: number;
+  /** Σύνολο ΕΦΚΑ αυτοαπασχολούμενων */
+  totalSelfEmployedEFKA: number;
+  /** Γενικό σύνολο ΕΦΚΑ ΑΕ */
+  totalAllEFKA: number;
+}
+
+// ============================================================================
+// EFKA NOTIFICATION
+// ============================================================================
+
 /** Τύπος ειδοποίησης ΕΦΚΑ */
 export type EFKANotificationType = 'payment_due' | 'payment_overdue' | 'keao_warning' | 'rate_change';
 

@@ -24,7 +24,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { isPartnership, isLlc } from '@/subapps/accounting/utils/entity-guards';
+import { isPartnership, isLlc, isCorporation } from '@/subapps/accounting/utils/entity-guards';
 import { getProfessionalTaxForEntity } from '@/subapps/accounting/services/config/tax-config';
 import type { TaxResult, TaxInstallment } from '@/subapps/accounting/types';
 
@@ -90,6 +90,11 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         if (profile && isLlc(profile)) {
           const corporateResult = await service.calculateEPETax(fiscalYear);
           return NextResponse.json({ entityType: 'epe', taxResult: null, corporateResult, installments: [] });
+        }
+
+        if (profile && isCorporation(profile)) {
+          const corporateResult = await service.calculateAETax(fiscalYear);
+          return NextResponse.json({ entityType: 'ae', taxResult: null, corporateResult, installments: [] });
         }
 
         // 5. Sole proprietor — progressive tax calculation

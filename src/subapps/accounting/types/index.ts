@@ -13,6 +13,10 @@ export type {
   PartnerEFKAConfig,
   Member,
   MemberEFKAConfig,
+  Shareholder,
+  ShareholderEFKAConfig,
+  ShareholderEFKAMode,
+  BoardRole,
 } from './entity';
 
 // ── Company Profile Types (M-001 Company Setup) ────────────────────────────
@@ -23,9 +27,11 @@ export type {
   SoleProprietorProfile,
   OECompanyProfile,
   EPECompanyProfile,
+  AECompanyProfile,
   SoleProprietorSetupInput,
   OESetupInput,
   EPESetupInput,
+  AESetupInput,
 } from './company';
 
 // ── Common Types ────────────────────────────────────────────────────────────
@@ -112,6 +118,8 @@ export type {
   CorporateTaxResult,
   MemberDividendResult,
   EPETaxResult,
+  ShareholderDividendResult,
+  AETaxResult,
 } from './tax';
 
 // ── EFKA Types (ADR-ACC-006, ADR-ACC-014 EPE) ──────────────────────────────
@@ -129,6 +137,8 @@ export type {
   PartnershipEFKASummary,
   ManagerEFKASummary,
   EPEEFKASummary,
+  EmployeeBoardMemberEFKA,
+  AEEFKASummary,
 } from './efka';
 
 // ── Fixed Assets Types (ADR-ACC-007) ────────────────────────────────────────

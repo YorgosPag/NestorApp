@@ -9,7 +9,7 @@
  */
 
 import type { InvoiceSeries } from './invoice';
-import type { EntityType, Partner, Member } from './entity';
+import type { EntityType, Partner, Member, Shareholder } from './entity';
 
 // ============================================================================
 // ΚΑΔ — Κωδικοί Αριθμοί Δραστηριότητας
@@ -130,16 +130,30 @@ export interface EPECompanyProfile extends CompanyProfileBase {
 }
 
 // ============================================================================
+// AE — Ανώνυμη Εταιρεία (Corporation / SA)
+// ============================================================================
+
+export interface AECompanyProfile extends CompanyProfileBase {
+  entityType: 'ae';
+  /** Αριθμός ΓΕΜΗ (υποχρεωτικό για ΑΕ) */
+  gemiNumber: string;
+  /** Μέτοχοι ΑΕ (ενσωματώνει και μέλη ΔΣ) */
+  shareholders: Shareholder[];
+  /** Μετοχικό κεφάλαιο (EUR) — ελάχιστο 25.000€ (Ν.4548/2018) */
+  shareCapital: number;
+}
+
+// ============================================================================
 // DISCRIMINATED UNION — CompanyProfile
 // ============================================================================
 
 /**
  * Discriminated union: CompanyProfile
  *
- * Ατομική vs ΟΕ vs ΕΠΕ (extensible: +ΑΕ στο μέλλον).
+ * Ατομική vs ΟΕ vs ΕΠΕ vs ΑΕ.
  * Backward compatibility: docs χωρίς entityType → 'sole_proprietor' στο repository.
  */
-export type CompanyProfile = SoleProprietorProfile | OECompanyProfile | EPECompanyProfile;
+export type CompanyProfile = SoleProprietorProfile | OECompanyProfile | EPECompanyProfile | AECompanyProfile;
 
 // ============================================================================
 // INPUT TYPES
@@ -154,4 +168,5 @@ export type CompanyProfile = SoleProprietorProfile | OECompanyProfile | EPECompa
 export type SoleProprietorSetupInput = Omit<SoleProprietorProfile, 'createdAt' | 'updatedAt'>;
 export type OESetupInput = Omit<OECompanyProfile, 'createdAt' | 'updatedAt'>;
 export type EPESetupInput = Omit<EPECompanyProfile, 'createdAt' | 'updatedAt'>;
-export type CompanySetupInput = SoleProprietorSetupInput | OESetupInput | EPESetupInput;
+export type AESetupInput = Omit<AECompanyProfile, 'createdAt' | 'updatedAt'>;
+export type CompanySetupInput = SoleProprietorSetupInput | OESetupInput | EPESetupInput | AESetupInput;
