@@ -19,7 +19,6 @@ import { ProjectHierarchyProvider } from './contexts/ProjectHierarchyContext';
 // ✅ ΑΦΑΙΡΕΣΗ ΔΙΑΓΡΑΜΜΕΝΩΝ SPECIFIC CONTEXTS - ΧΡΗΣΙΜΟΠΟΙΟΥΝΤΑΙ ΠΛΕΟΝ UNIFIED HOOKS
 // TextSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider
 import { DxfViewerContent } from './app/DxfViewerContent';
-import { CanvasProvider } from './contexts/CanvasContext';
 import type { DxfViewerAppProps } from './types';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal refactoring) =====
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
@@ -76,11 +75,9 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                   <CursorSystem>
                       <SelectionSystem>
                         <ToolbarsSystem>
-                          <LevelsSystem enableFirestore>
+                          <LevelsSystem enableFirestore={process.env.NODE_ENV === 'production'}>
                             <OverlayStoreProvider>
-                              <CanvasProvider>
                                 <DxfViewerContent {...props} />
-                              </CanvasProvider>
                             </OverlayStoreProvider>
                           </LevelsSystem>
                         </ToolbarsSystem>
