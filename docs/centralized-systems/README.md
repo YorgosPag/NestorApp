@@ -4,9 +4,9 @@
 >
 > Complete documentation για όλα τα κεντρικοποιημένα συστήματα της εφαρμογής
 
-**📊 Quick Stats**: 32 Enterprise Systems + Accounting Subapp (11 ADRs) | 22,500+ Lines | Fortune 500 Quality
+**📊 Quick Stats**: 33 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: Accounting Subapp Phase 1 COMPLETE — 10 modules for sole proprietor (AI Document Processing, Tax Engine, VAT, EFKA, Invoicing, Bank Reconciliation, Fixed Assets, Reports) (2026-02-10)
+> **🆕 Latest**: BOQ Phase 1B — UI Layer for Measurements Tab (Summary Cards, ΑΤΟΕ Accordion, Filter Bar, Item Editor) (2026-02-12)
 
 ---
 
@@ -72,6 +72,7 @@
 - **[📧 Email/AI Ingestion](data-systems/email-ai-ingestion.md)** - Email webhooks & AI analysis
 - **[🇪🇺 ESCO Professional Classification](reference/adrs/ADR-132-esco-professional-classification.md)** - EU ESCO occupations + skills taxonomy (ADR-132)
 - **[👷 Attendance QR + GPS Verification](reference/adrs/ADR-170-attendance-qr-gps-verification.md)** - QR Code + GPS Geofencing + Photo Verification (ADR-170)
+- **[📏 BOQ / Quantity Surveying](reference/adrs/ADR-175-quantity-surveying-measurements-system.md)** - Σύστημα Επιμετρήσεων: ΑΤΟΕ categories, cost engine, governance, UI (ADR-175)
 
 ### 🧮 **ACCOUNTING SUBAPP** ✨ **NEW — Phase 1 Complete**
 - **[📋 Founding Decision (ADR-ACC-000)](../../src/subapps/accounting/docs/adrs/ADR-ACC-000-founding-decision.md)** - Enterprise Accounting Subapp architecture
