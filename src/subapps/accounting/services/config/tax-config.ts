@@ -134,3 +134,42 @@ const PROFESSIONAL_TAX_BY_ENTITY: Record<EntityType, number> = {
 export function getProfessionalTaxForEntity(entityType: EntityType): number {
   return PROFESSIONAL_TAX_BY_ENTITY[entityType];
 }
+
+// ============================================================================
+// CORPORATE TAX CONFIG — Εταιρικός Φόρος (ΕΠΕ/ΑΕ)
+// ============================================================================
+
+/** Εταιρικός φόρος 22% (Ν.4172/2013, αρ.58) */
+const CORPORATE_TAX_RATE = 22;
+
+/** Φόρος μερισμάτων 5% (Ν.4172/2013, αρ.64) */
+const DIVIDEND_TAX_RATE = 5;
+
+/** Προκαταβολή φόρου ανά νομική μορφή */
+const PREPAYMENT_RATE_BY_ENTITY: Record<EntityType, number> = {
+  sole_proprietor: 55,
+  oe: 55,
+  epe: 80,
+  ae: 80,
+};
+
+/**
+ * Λήψη συντελεστή εταιρικού φόρου (22% for ΕΠΕ/ΑΕ)
+ */
+export function getCorporateTaxRate(): number {
+  return CORPORATE_TAX_RATE;
+}
+
+/**
+ * Λήψη συντελεστή φόρου μερισμάτων (5%)
+ */
+export function getDividendTaxRate(): number {
+  return DIVIDEND_TAX_RATE;
+}
+
+/**
+ * Λήψη συντελεστή προκαταβολής ανά νομική μορφή
+ */
+export function getPrepaymentRateForEntity(entityType: EntityType): number {
+  return PREPAYMENT_RATE_BY_ENTITY[entityType];
+}

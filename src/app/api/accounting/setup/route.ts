@@ -21,7 +21,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { CompanySetupInput } from '@/subapps/accounting/types';
-import type { Partner } from '@/subapps/accounting/types/entity';
+import type { Partner, Member } from '@/subapps/accounting/types/entity';
 
 // =============================================================================
 // VALIDATION HELPERS
@@ -117,18 +117,31 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
         };
 
         // Build discriminated union based on entityType
-        const data: CompanySetupInput = entityType === 'oe'
-          ? {
-              ...commonFields,
-              entityType: 'oe' as const,
-              gemiNumber: ((body as Record<string, unknown>).gemiNumber as string | null) ?? null,
-              partners: ((body as Record<string, unknown>).partners as Partner[]) ?? [],
-            }
-          : {
-              ...commonFields,
-              entityType: 'sole_proprietor' as const,
-              efkaCategory: ((body as Record<string, unknown>).efkaCategory as 1 | 2 | 3 | 4 | 5 | 6) ?? 1,
-            };
+        let data: CompanySetupInput;
+
+        if (entityType === 'epe') {
+          data = {
+            ...commonFields,
+            entityType: 'epe' as const,
+            bookCategory: 'double_entry', // Γ' Βιβλία ΥΠΟΧΡΕΩΤΙΚΑ
+            gemiNumber: ((body as Record<string, unknown>).gemiNumber as string) ?? '',
+            members: ((body as Record<string, unknown>).members as Member[]) ?? [],
+            shareCapital: ((body as Record<string, unknown>).shareCapital as number) ?? 0,
+          };
+        } else if (entityType === 'oe') {
+          data = {
+            ...commonFields,
+            entityType: 'oe' as const,
+            gemiNumber: ((body as Record<string, unknown>).gemiNumber as string | null) ?? null,
+            partners: ((body as Record<string, unknown>).partners as Partner[]) ?? [],
+          };
+        } else {
+          data = {
+            ...commonFields,
+            entityType: 'sole_proprietor' as const,
+            efkaCategory: ((body as Record<string, unknown>).efkaCategory as 1 | 2 | 3 | 4 | 5 | 6) ?? 1,
+          };
+        }
 
         await repository.saveCompanySetup(data);
 

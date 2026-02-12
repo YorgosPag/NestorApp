@@ -251,16 +251,79 @@ export interface TaxPlanningInsight {
 }
 
 // ============================================================================
-// WITHHOLDING RECONCILIATION — Αντιστοίχιση Παρακρατήσεων
+// CORPORATE TAX RESULT — Αποτέλεσμα Εταιρικού Φόρου ΕΠΕ
 // ============================================================================
 
 /**
- * Αντιστοίχιση παρακράτησης φόρου (20% σε ΤΠΥ)
+ * Αποτέλεσμα εταιρικού φόρου (22% flat rate)
  *
- * Κάθε ΤΠΥ που εκδίδεται σε νομικό πρόσωπο υπόκειται σε
- * παρακράτηση φόρου 20%. Αυτό πρέπει να αντιστοιχιστεί
- * με τη βεβαίωση αποδοχών.
+ * ΕΠΕ φορολογείται ως νομικό πρόσωπο: 22% flat (ΟΧΙ κλιμακωτά).
  */
+export interface CorporateTaxResult {
+  /** Φορολογικό έτος */
+  fiscalYear: number;
+  /** Ακαθάριστα έσοδα */
+  grossIncome: number;
+  /** Εκπεστέα έξοδα */
+  deductibleExpenses: number;
+  /** ΕΦΚΑ εκπεστέο (μόνο διαχειριστών) */
+  efkaContributions: number;
+  /** Φορολογητέο εισόδημα */
+  taxableIncome: number;
+  /** Εταιρικός φόρος 22% */
+  corporateTaxRate: number;
+  /** Ποσό εταιρικού φόρου */
+  corporateTaxAmount: number;
+  /** Τέλος επιτηδεύματος (1.000€) */
+  professionalTax: number;
+  /** Συντελεστής προκαταβολής (80%) */
+  prepaymentRate: number;
+  /** Ποσό προκαταβολής */
+  prepaymentAmount: number;
+  /** Συνολική φορολογική υποχρέωση */
+  totalObligation: number;
+}
+
+/**
+ * Αποτέλεσμα μερισμάτων ανά μέλος
+ */
+export interface MemberDividendResult {
+  /** ID μέλους */
+  memberId: string;
+  /** Ονοματεπώνυμο */
+  memberName: string;
+  /** Ποσοστό μερισμάτων */
+  dividendSharePercent: number;
+  /** Μερίδιο κέρδους (πριν τον φόρο μερισμάτων) */
+  grossDividend: number;
+  /** Φόρος μερισμάτων 5% */
+  dividendTaxRate: number;
+  /** Ποσό φόρου μερισμάτων */
+  dividendTaxAmount: number;
+  /** Καθαρό μέρισμα μετά φόρου */
+  netDividend: number;
+}
+
+/**
+ * Πλήρες αποτέλεσμα φόρου ΕΠΕ
+ *
+ * Περιλαμβάνει εταιρικό φόρο + μερίσματα + αδιανέμητα κέρδη.
+ */
+export interface EPETaxResult {
+  /** Εταιρικός φόρος */
+  corporateTax: CorporateTaxResult;
+  /** Κέρδη μετά φόρου (disponible for dividends) */
+  profitAfterTax: number;
+  /** Ποσό διανεμόμενων μερισμάτων (100% ή custom) */
+  distributedDividends: number;
+  /** Αδιανέμητα κέρδη (retained earnings) */
+  retainedEarnings: number;
+  /** Αναλυτικά μερίσματα ανά μέλος */
+  memberDividends: MemberDividendResult[];
+  /** Συνολικός φόρος μερισμάτων (5% επί διανεμόμενων) */
+  totalDividendTax: number;
+}
+
 // ============================================================================
 // PARTNERSHIP TAX RESULT — Αποτέλεσμα Φόρου ΟΕ
 // ============================================================================

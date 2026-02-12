@@ -15,12 +15,12 @@ import type {
   IDepreciationEngine,
 } from '../types/interfaces';
 import type { VATQuarterSummary, VATAnnualSummary } from '../types/vat';
-import type { TaxResult, TaxEstimate, PartnershipTaxResult } from '../types/tax';
-import type { EFKAAnnualSummary, PartnershipEFKASummary, PartnerEFKASummary } from '../types/efka';
+import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult } from '../types/tax';
+import type { EFKAAnnualSummary, PartnershipEFKASummary, PartnerEFKASummary, EPEEFKASummary, ManagerEFKASummary } from '../types/efka';
 import type { DepreciationRecord } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
 import type { FiscalQuarter } from '../types/common';
-import type { Partner } from '../types/entity';
+import type { Partner, Member } from '../types/entity';
 import { TaxEngine } from './engines/tax-engine';
 import { getCategoryByCode } from '../config/account-categories';
 import { getEfkaConfigForYear, calculateMonthlyBreakdown } from './config/efka-config';
@@ -208,6 +208,105 @@ export class AccountingService {
         isFirstFiveYears: p.isFirstFiveYears,
       }))
     );
+  }
+
+  // ── EPE Corporate Tax (ADR-ACC-014) ──────────────────────────────────
+
+  /**
+   * Υπολογισμός εταιρικού φόρου ΕΠΕ (22% flat + μερίσματα 5%)
+   */
+  async calculateEPETax(fiscalYear: number): Promise<EPETaxResult> {
+    const members = await this.repository.getMembers();
+    const incomeEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'income' });
+    const expenseEntries = await this.repository.listJournalEntries({ fiscalYear, type: 'expense' });
+
+    const totalIncome = incomeEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
+    const totalExpenses = expenseEntries.items.reduce((sum, e) => sum + e.netAmount, 0);
+
+    // EFKA only for managers
+    const managers = members.filter((m) => m.isManager && m.isActive);
+    let efkaManagerTotal = 0;
+    for (const mgr of managers) {
+      const payments = await this.repository.getMemberEFKAPayments(mgr.memberId, fiscalYear);
+      const paid = payments
+        .filter((pay) => pay.status === 'paid')
+        .reduce((sum, pay) => sum + pay.amount, 0);
+      efkaManagerTotal += paid;
+    }
+
+    // Cast to TaxEngine for corporate method
+    const taxEngine = this.taxEngine as TaxEngine;
+
+    const activeMembers = members.filter((m) => m.isActive);
+    return taxEngine.calculateCorporateTax(
+      fiscalYear,
+      totalIncome,
+      totalExpenses,
+      efkaManagerTotal,
+      activeMembers.map((m) => ({
+        memberId: m.memberId,
+        memberName: m.fullName,
+        dividendSharePercent: m.dividendSharePercent,
+      }))
+    );
+  }
+
+  /**
+   * Σύνοψη ΕΦΚΑ ΕΠΕ (μόνο διαχειριστές)
+   */
+  async getEPEEfkaSummary(year: number): Promise<EPEEFKASummary> {
+    const members = await this.repository.getMembers();
+    const managers = members.filter((m) => m.isManager && m.isActive);
+    const managerSummaries: ManagerEFKASummary[] = [];
+    let totalAllManagersPaid = 0;
+    let totalAllManagersDue = 0;
+
+    for (const mgr of managers) {
+      const payments = await this.repository.getMemberEFKAPayments(mgr.memberId, year);
+      const mainCode = mgr.efkaConfig?.selectedMainPensionCode || 'main_1';
+      const suppCode = mgr.efkaConfig?.selectedSupplementaryCode || 'supplementary_1';
+      const lumpCode = mgr.efkaConfig?.selectedLumpSumCode || 'lump_sum_1';
+
+      const monthlyBreakdown = calculateMonthlyBreakdown(year, mainCode, suppCode, lumpCode);
+
+      const totalPaid = payments
+        .filter((pay) => pay.status === 'paid')
+        .reduce((sum, pay) => sum + pay.amount, 0);
+      const totalDue = monthlyBreakdown.reduce((sum, m) => sum + m.totalMonthly, 0);
+      const balanceDue = Math.round((totalDue - totalPaid) * 100) / 100;
+      const paidMonths = payments.filter((pay) => pay.status === 'paid').length;
+      const overdueMonths = payments.filter(
+        (pay) => pay.status === 'overdue' || pay.status === 'keao'
+      ).length;
+
+      const summary = {
+        year,
+        monthlyBreakdown,
+        payments,
+        totalPaid,
+        totalDue,
+        balanceDue,
+        taxDeductibleAmount: totalPaid,
+        paidMonths,
+        overdueMonths,
+      };
+
+      managerSummaries.push({
+        memberId: mgr.memberId,
+        memberName: mgr.fullName,
+        summary,
+      });
+
+      totalAllManagersPaid += totalPaid;
+      totalAllManagersDue += totalDue;
+    }
+
+    return {
+      year,
+      managerSummaries,
+      totalAllManagersPaid,
+      totalAllManagersDue,
+    };
   }
 
   /**

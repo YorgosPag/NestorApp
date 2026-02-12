@@ -13,7 +13,7 @@ import type { PaginatedResult } from '@/lib/pagination';
 
 // ── Company Profile Types ────────────────────────────────────────────────────
 import type { CompanyProfile, CompanySetupInput } from './company';
-import type { Partner } from './entity';
+import type { Partner, Member } from './entity';
 
 // ── Phase 1 Types ───────────────────────────────────────────────────────────
 import type {
@@ -131,6 +131,11 @@ export interface IAccountingRepository {
   getPartners(): Promise<Partner[]>;
   savePartners(partners: Partner[]): Promise<void>;
   getPartnerEFKAPayments(partnerId: string, year: number): Promise<EFKAPayment[]>;
+
+  // ── Members (ADR-ACC-014 EPE) ────────────────────────────────────────
+  getMembers(): Promise<Member[]>;
+  saveMembers(members: Member[]): Promise<void>;
+  getMemberEFKAPayments(memberId: string, year: number): Promise<EFKAPayment[]>;
 
   // ── EFKA Payments ───────────────────────────────────────────────────────
   getEFKAPayments(year: number): Promise<EFKAPayment[]>;

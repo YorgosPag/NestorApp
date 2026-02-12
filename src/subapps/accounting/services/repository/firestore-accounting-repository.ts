@@ -55,7 +55,7 @@ import type {
   EFKAPayment,
   EFKAUserConfig,
 } from '../../types/efka';
-import type { Partner } from '../../types/entity';
+import type { Partner, Member } from '../../types/entity';
 import type { TaxInstallment } from '../../types/tax';
 import type { ReceivedExpenseDocument } from '../../types/documents';
 import type { CompanyProfile, CompanySetupInput } from '../../types/company';
@@ -135,6 +135,41 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
       const snap = await db
         .collection(COLLECTIONS.ACCOUNTING_EFKA_PAYMENTS)
         .where('partnerId', '==', partnerId)
+        .where('year', '==', year)
+        .orderBy('month', 'asc')
+        .get();
+      return snap.docs.map((d) => d.data() as EFKAPayment);
+    }, []);
+  }
+
+  // ── Members (ADR-ACC-014 EPE) ─────────────────────────────────────────
+
+  async getMembers(): Promise<Member[]> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('members').get();
+      if (!snap.exists) return [];
+      const data = snap.data() as { members: Member[] };
+      return data.members ?? [];
+    }, []);
+  }
+
+  async saveMembers(members: Member[]): Promise<void> {
+    const now = isoNow();
+    await safeFirestoreOperation(async (db) => {
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc('members');
+      const doc = sanitizeForFirestore({
+        members,
+        updatedAt: now,
+      } as unknown as Record<string, unknown>);
+      await docRef.set(doc);
+    }, undefined);
+  }
+
+  async getMemberEFKAPayments(memberId: string, year: number): Promise<EFKAPayment[]> {
+    return safeFirestoreOperation(async (db) => {
+      const snap = await db
+        .collection(COLLECTIONS.ACCOUNTING_EFKA_PAYMENTS)
+        .where('partnerId', '==', memberId)
         .where('year', '==', year)
         .orderBy('month', 'asc')
         .get();

@@ -60,7 +60,7 @@ export function EntityTypeSelector({ value, onChange }: EntityTypeSelectorProps)
               <SelectItem value="oe">
                 {t('setup.entityType.types.oe')}
               </SelectItem>
-              <SelectItem value="epe" disabled>
+              <SelectItem value="epe">
                 {t('setup.entityType.types.epe')}
               </SelectItem>
               <SelectItem value="ae" disabled>

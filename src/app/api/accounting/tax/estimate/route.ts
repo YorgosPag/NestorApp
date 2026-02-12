@@ -23,7 +23,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { isPartnership } from '@/subapps/accounting/utils/entity-guards';
+import { isPartnership, isLlc } from '@/subapps/accounting/utils/entity-guards';
 
 // =============================================================================
 // GET — Tax Estimate
@@ -48,14 +48,24 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           );
         }
 
-        // Check entity type for partnership path
+        // Check entity type for partnership / corporate path
         const profile = await repository.getCompanySetup();
+
         if (profile && isPartnership(profile)) {
           const partnershipResult = await service.calculatePartnershipTax(fiscalYear);
           return NextResponse.json({
             success: true,
             entityType: 'oe',
             data: partnershipResult,
+          });
+        }
+
+        if (profile && isLlc(profile)) {
+          const epeResult = await service.calculateEPETax(fiscalYear);
+          return NextResponse.json({
+            success: true,
+            entityType: 'epe',
+            data: epeResult,
           });
         }
 

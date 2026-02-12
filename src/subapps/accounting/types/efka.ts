@@ -203,6 +203,25 @@ export interface PartnershipEFKASummary {
 }
 
 // ============================================================================
+// EPE EFKA SUMMARY — ΕΠΕ per-manager
+// ============================================================================
+
+/** Σύνοψη ΕΦΚΑ ανά διαχειριστή ΕΠΕ */
+export interface ManagerEFKASummary {
+  memberId: string;
+  memberName: string;
+  summary: EFKAAnnualSummary;
+}
+
+/** Σύνοψη ΕΦΚΑ ΕΠΕ (μόνο διαχειριστές, σύνολα) */
+export interface EPEEFKASummary {
+  year: number;
+  managerSummaries: ManagerEFKASummary[];
+  totalAllManagersPaid: number;
+  totalAllManagersDue: number;
+}
+
+// ============================================================================
 // EFKA NOTIFICATION
 // ============================================================================
 

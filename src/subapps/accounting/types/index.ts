@@ -6,11 +6,13 @@
  * @version 1.0.0
  */
 
-// ── Entity Types (ADR-ACC-012 OE) ───────────────────────────────────────────
+// ── Entity Types (ADR-ACC-012 OE, ADR-ACC-014 EPE) ─────────────────────────
 export type {
   EntityType,
   Partner,
   PartnerEFKAConfig,
+  Member,
+  MemberEFKAConfig,
 } from './entity';
 
 // ── Company Profile Types (M-001 Company Setup) ────────────────────────────
@@ -20,8 +22,10 @@ export type {
   CompanySetupInput,
   SoleProprietorProfile,
   OECompanyProfile,
+  EPECompanyProfile,
   SoleProprietorSetupInput,
   OESetupInput,
+  EPESetupInput,
 } from './company';
 
 // ── Common Types ────────────────────────────────────────────────────────────
@@ -90,7 +94,7 @@ export type {
   ReceivedDocument,
 } from './mydata';
 
-// ── Tax Types (ADR-ACC-009) ─────────────────────────────────────────────────
+// ── Tax Types (ADR-ACC-009, ADR-ACC-014 EPE) ───────────────────────────────
 export type {
   TaxBracket,
   TaxScaleConfig,
@@ -105,9 +109,12 @@ export type {
   WithholdingReconciliation,
   PartnerTaxResult,
   PartnershipTaxResult,
+  CorporateTaxResult,
+  MemberDividendResult,
+  EPETaxResult,
 } from './tax';
 
-// ── EFKA Types (ADR-ACC-006) ────────────────────────────────────────────────
+// ── EFKA Types (ADR-ACC-006, ADR-ACC-014 EPE) ──────────────────────────────
 export type {
   EFKACategoryRate,
   EFKAYearConfig,
@@ -120,6 +127,8 @@ export type {
   EFKANotification,
   PartnerEFKASummary,
   PartnershipEFKASummary,
+  ManagerEFKASummary,
+  EPEEFKASummary,
 } from './efka';
 
 // ── Fixed Assets Types (ADR-ACC-007) ────────────────────────────────────────

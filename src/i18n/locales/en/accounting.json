@@ -412,7 +412,7 @@
       "types": {
         "sole_proprietor": "Sole Proprietor",
         "oe": "OE — General Partnership",
-        "epe": "EPE — Limited Liability (coming soon)",
+        "epe": "EPE — Limited Liability Company",
         "ae": "AE — Corporation (coming soon)"
       }
     },
@@ -435,6 +435,47 @@
       "shareSum": "Share total: {sum}%",
       "shareSumValid": "Valid",
       "shareSumInvalid": "Must equal 100%"
+    },
+    "members": {
+      "title": "EPE Members",
+      "memberLabel": "Member {number}",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "e.g. John Smith",
+      "vatNumber": "Member VAT Number",
+      "taxOffice": "Member Tax Office",
+      "sharesCount": "Number of Shares",
+      "shareNominalValue": "Nominal Share Value (€)",
+      "capitalContribution": "Capital Contribution",
+      "dividendSharePercent": "Dividend Share (%)",
+      "isManager": "Manager (EFKA)",
+      "efkaMainCategory": "EFKA Category (Main)",
+      "joinDate": "Join Date",
+      "isFirstFiveYears": "First 5 years (reduced prepayment)",
+      "active": "Active",
+      "remove": "Remove Member",
+      "addMember": "Add Member",
+      "shareSum": "Share total: {sum}%",
+      "shareSumValid": "Valid",
+      "shareSumInvalid": "Must equal 100%",
+      "shareCapital": "Share Capital (€)",
+      "gemiRequired": "GEMI number is required for EPE",
+      "doubleEntryNotice": "EPE is REQUIRED to keep Class C books (Double-entry)",
+      "managerOnlyEfka": "Only managers pay EFKA contributions"
+    },
+    "corporateTax": {
+      "title": "EPE Corporate Tax",
+      "flatRate": "Corporate Tax 22%",
+      "prepayment": "Prepayment 80%",
+      "professionalTax": "Professional Tax",
+      "totalObligation": "Total Tax Obligation",
+      "profitAfterTax": "Profit After Tax",
+      "dividends": "Dividends",
+      "dividendTax": "Dividend Tax 5%",
+      "retainedEarnings": "Retained Earnings",
+      "memberDividends": "Dividends per Member",
+      "grossDividend": "Gross Dividend",
+      "netDividend": "Net Dividend",
+      "totalDividendTax": "Total Dividend Tax"
     }
   },
   "categories": {

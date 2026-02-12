@@ -412,7 +412,7 @@
       "types": {
         "sole_proprietor": "Ατομική Επιχείρηση",
         "oe": "ΟΕ — Ομόρρυθμη Εταιρεία",
-        "epe": "ΕΠΕ — Εταιρεία Περ. Ευθύνης (σύντομα)",
+        "epe": "ΕΠΕ — Εταιρεία Περ. Ευθύνης",
         "ae": "ΑΕ — Ανώνυμη Εταιρεία (σύντομα)"
       }
     },
@@ -435,6 +435,47 @@
       "shareSum": "Σύνολο ποσοστών: {sum}%",
       "shareSumValid": "Σωστό",
       "shareSumInvalid": "Πρέπει να ισούται με 100%"
+    },
+    "members": {
+      "title": "Μέλη ΕΠΕ",
+      "memberLabel": "Μέλος {number}",
+      "fullName": "Ονοματεπώνυμο",
+      "fullNamePlaceholder": "π.χ. Ιωάννης Παπαδόπουλος",
+      "vatNumber": "ΑΦΜ Μέλους",
+      "taxOffice": "ΔΟΥ Μέλους",
+      "sharesCount": "Αριθμός Μεριδίων",
+      "shareNominalValue": "Ονομαστική Αξία Μεριδίου (€)",
+      "capitalContribution": "Κεφαλαιακή Εισφορά",
+      "dividendSharePercent": "Ποσοστό Μερισμάτων (%)",
+      "isManager": "Διαχειριστής (ΕΦΚΑ)",
+      "efkaMainCategory": "Κατηγορία ΕΦΚΑ (Κύρια)",
+      "joinDate": "Ημ/νία Εισόδου",
+      "isFirstFiveYears": "Πρώτα 5 χρόνια (μειωμένη προκαταβολή)",
+      "active": "Ενεργό",
+      "remove": "Αφαίρεση Μέλους",
+      "addMember": "Προσθήκη Μέλους",
+      "shareSum": "Σύνολο ποσοστών: {sum}%",
+      "shareSumValid": "Σωστό",
+      "shareSumInvalid": "Πρέπει να ισούται με 100%",
+      "shareCapital": "Μετοχικό Κεφάλαιο (€)",
+      "gemiRequired": "Ο αριθμός ΓΕΜΗ είναι υποχρεωτικός για ΕΠΕ",
+      "doubleEntryNotice": "Η ΕΠΕ τηρεί ΥΠΟΧΡΕΩΤΙΚΑ Γ' κατηγορίας βιβλία (Διπλογραφικά)",
+      "managerOnlyEfka": "Μόνο οι διαχειριστές πληρώνουν ΕΦΚΑ"
+    },
+    "corporateTax": {
+      "title": "Εταιρικός Φόρος ΕΠΕ",
+      "flatRate": "Εταιρικός Φόρος 22%",
+      "prepayment": "Προκαταβολή 80%",
+      "professionalTax": "Τέλος Επιτηδεύματος",
+      "totalObligation": "Συνολική Φορολογική Υποχρέωση",
+      "profitAfterTax": "Κέρδη Μετά Φόρου",
+      "dividends": "Μερίσματα",
+      "dividendTax": "Φόρος Μερισμάτων 5%",
+      "retainedEarnings": "Αδιανέμητα Κέρδη",
+      "memberDividends": "Μερίσματα ανά Μέλος",
+      "grossDividend": "Μικτό Μέρισμα",
+      "netDividend": "Καθαρό Μέρισμα",
+      "totalDividendTax": "Σύνολο Φόρου Μερισμάτων"
     }
   },
   "categories": {

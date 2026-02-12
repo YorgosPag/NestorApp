@@ -9,7 +9,7 @@
  */
 
 import type { InvoiceSeries } from './invoice';
-import type { EntityType, Partner } from './entity';
+import type { EntityType, Partner, Member } from './entity';
 
 // ============================================================================
 // ΚΑΔ — Κωδικοί Αριθμοί Δραστηριότητας
@@ -116,16 +116,30 @@ export interface OECompanyProfile extends CompanyProfileBase {
 }
 
 // ============================================================================
+// EPE — Εταιρεία Περιορισμένης Ευθύνης (LLC)
+// ============================================================================
+
+export interface EPECompanyProfile extends CompanyProfileBase {
+  entityType: 'epe';
+  /** Αριθμός ΓΕΜΗ (υποχρεωτικό για ΕΠΕ) */
+  gemiNumber: string;
+  /** Μέλη ΕΠΕ */
+  members: Member[];
+  /** Μετοχικό κεφάλαιο (EUR) */
+  shareCapital: number;
+}
+
+// ============================================================================
 // DISCRIMINATED UNION — CompanyProfile
 // ============================================================================
 
 /**
  * Discriminated union: CompanyProfile
  *
- * Ατομική vs ΟΕ (extensible: +ΕΠΕ, +ΑΕ στο μέλλον).
+ * Ατομική vs ΟΕ vs ΕΠΕ (extensible: +ΑΕ στο μέλλον).
  * Backward compatibility: docs χωρίς entityType → 'sole_proprietor' στο repository.
  */
-export type CompanyProfile = SoleProprietorProfile | OECompanyProfile;
+export type CompanyProfile = SoleProprietorProfile | OECompanyProfile | EPECompanyProfile;
 
 // ============================================================================
 // INPUT TYPES
@@ -139,4 +153,5 @@ export type CompanyProfile = SoleProprietorProfile | OECompanyProfile;
  */
 export type SoleProprietorSetupInput = Omit<SoleProprietorProfile, 'createdAt' | 'updatedAt'>;
 export type OESetupInput = Omit<OECompanyProfile, 'createdAt' | 'updatedAt'>;
-export type CompanySetupInput = SoleProprietorSetupInput | OESetupInput;
+export type EPESetupInput = Omit<EPECompanyProfile, 'createdAt' | 'updatedAt'>;
+export type CompanySetupInput = SoleProprietorSetupInput | OESetupInput | EPESetupInput;
