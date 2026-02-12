@@ -1,44 +1,40 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "BOQ Phase 1A — types, services, cost engine, config (ADR-175)",
-  "problem": "Το σύστημα Επιμετρήσεων (BOQ/Quantity Surveying) ήταν 100% σχεδιασμένο (ADR-175, 6 Use Cases) αλλά 0% κωδικοποιημένο. Χρειαζόταν το foundation layer: types, services, repository, cost engine.",
-  "cause": "Νέο feature — Phase 1A implementation ξεκίνησε σήμερα",
+  "category": "FIX",
+  "shortDescription": "DXF Viewer Audit Fixes — CRITICAL auth bypass + HIGH duplicate provider + MEDIUM constants + LOW cleanup",
+  "problem": "OpenAI audit report εντόπισε ευρήματα σε 4 επίπεδα σοβαρότητας στο DXF Viewer: auth bypass σε dev mode, duplicate CanvasProvider, hardcoded z-index/px τιμές, unconditional console.log, orphaned legacy files",
+  "cause": "Security oversight (dev bypass), code accumulation over time (dead code, hardcoded values, legacy files)",
   "filesChanged": [
-    "src/types/boq/units.ts (NEW)",
-    "src/types/boq/boq.ts (NEW)",
-    "src/types/boq/cost.ts (NEW)",
-    "src/types/boq/index.ts (NEW)",
-    "src/config/boq-categories.ts (NEW)",
-    "src/services/measurements/contracts.ts (NEW)",
-    "src/services/measurements/cost-engine.ts (NEW)",
-    "src/services/measurements/boq-repository.ts (NEW)",
-    "src/services/measurements/boq-service.ts (NEW)",
-    "src/services/measurements/index.ts (NEW)",
-    "src/config/firestore-collections.ts",
-    "src/config/firestore-schema-map.ts",
-    "docs/centralized-systems/reference/adrs/ADR-175-quantity-surveying-measurements-system.md",
-    "docs/centralized-systems/reference/adr-index.md"
+    "src/app/dxf/viewer/page.tsx (CRITICAL: removed dev auth bypass)",
+    "src/subapps/dxf-viewer/DxfViewerApp.tsx (HIGH: removed duplicate CanvasProvider + guarded LevelsSystem Firestore)",
+    "src/subapps/dxf-viewer/ui/color/EnterpriseColorDialog.tsx (MEDIUM: MODAL_Z_INDEX + Tailwind classes)",
+    "src/subapps/dxf-viewer/components/shared/BaseModal.tsx (MEDIUM: removed mock portalComponents)",
+    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx (MEDIUM: COORDINATE_LAYOUT constant)",
+    "src/subapps/dxf-viewer/app/DxfViewerContent.tsx (MEDIUM: 6 console.log → dlog)",
+    "src/subapps/dxf-viewer/config/modal-select-old.ts (DELETED)",
+    "src/subapps/dxf-viewer/afairesh_DXFcanvasRefactored.txt (DELETED)",
+    "docs/centralized-systems/reference/adrs/ADR-172-pre-production-audit-remediation.md (Phase 3 added)",
+    "docs/centralized-systems/reference/adrs/ADR-002-enterprise-z-index-hierarchy.md (DXF exception documented)",
+    "docs/centralized-systems/reference/adrs/ADR-020-centralized-auth-module.md (auth bypass fix logged)",
+    "docs/centralized-systems/reference/adrs/ADR-036-enterprise-structured-logging.md (DXF dlog system documented)"
   ],
   "solution": {
-    "phase1": "Types: BOQMeasurementUnit (11 units), IfcQuantityType (5 IFC types), BOQItemStatus, BOQSource, QAStatus κλπ — src/types/boq/units.ts",
-    "phase2": "Entities: BOQItem (~40 fields), BOQCategory (~15 fields), BOQSummary, inputs/filters/defaults — src/types/boq/boq.ts + cost.ts",
-    "phase3": "Config: 12 ΑΤΟΕ master categories (bilingual EL+EN) + 4 Firestore collections + 2 AI schema entries",
-    "phase4": "Services: IBOQRepository/IBOQService interfaces, cost-engine (4 pure functions), FirestoreBOQRepository (full CRUD + search)",
-    "phase5": "Business Logic: BOQService singleton, governance (draft→submitted→approved→certified→locked), validation, default waste factors from ΑΤΟΕ categories"
+    "phase1_critical": "Removed NODE_ENV === 'development' bypass in AdminGuard — useUserRole() works in both environments",
+    "phase2_high": "Removed dead-code CanvasProvider from DxfViewerApp (DxfViewerContent has the real one). Guarded LevelsSystem enableFirestore to production-only",
+    "phase3_medium_constants": "EnterpriseColorDialog: hardcoded z-index → MODAL_Z_INDEX, inline pointerEvents/isolation → Tailwind. BaseModal: removed mock portalComponents → direct zIndex. CanvasSection: ?? 30 → COORDINATE_LAYOUT.RULER_TOP_HEIGHT",
+    "phase4_medium_logging": "6 console.log in DxfViewerContent.tsx → dlog('DxfViewerContent', ...) via UnifiedDebugManager",
+    "phase5_low": "git rm 2 orphaned legacy files (modal-select-old.ts, afairesh_DXFcanvasRefactored.txt)"
   },
   "testing": {
-    "typescript": "npx tsc --noEmit: 0 errors",
-    "deployment": "Pushed to Vercel: 588273a8"
+    "typescript": "npx tsc --noEmit: 1 pre-existing error (buildingMappings.ts — unrelated), 0 new errors",
+    "preCommit": "All 5 commits passed pre-commit checks",
+    "deployment": "Pushed to Vercel: 5e14e3bd, dcaf00b7, 8b8be51c, 0919b259, cdb464f1"
   },
   "notes": [
-    "10 new files, 4 modified, 1885 insertions, 1 deletion",
-    "Zero any, zero as any, zero @ts-ignore",
-    "Governance: draft→submitted→approved→certified→locked (BOQ_ALLOWED_TRANSITIONS)",
-    "Cost engine: computed at runtime, NEVER stored in Firestore",
-    "Waste factor: grossQuantity = netQuantity × (1 + wasteFactor)",
-    "Firestore: κάθε optional field → ?? null",
-    "Static ΑΤΟΕ categories fallback αν Firestore boq_categories empty",
-    "No UI in this phase — θεμέλια μόνο"
+    "8 files modified, 2 files deleted, 4 ADRs updated",
+    "CRITICAL: Dev auth bypass could expose DXF viewer to non-admin users",
+    "CentralizedAutoSaveStatus Tailwind migration deferred (297-line style file — separate PR)",
+    "TypeScript 'errors' from audit report (isLlc, calculateEPETax) were stale — code compiles fine",
+    "Zero any, zero as any, zero @ts-ignore"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
@@ -46,12 +42,13 @@
     "sessionDate": "2026-02-12"
   },
   "relatedBackups": [
-    "backup-2026-02-12-epe-llc-support"
+    "backup-2026-02-10-pre-production-audit-phase2"
   ],
   "commits": [
-    {
-      "hash": "588273a8",
-      "message": "feat: BOQ Phase 1A — types, services, cost engine, config (ADR-175)"
-    }
+    { "hash": "5e14e3bd", "message": "fix: remove development auth bypass in DXF viewer" },
+    { "hash": "dcaf00b7", "message": "fix: remove duplicate CanvasProvider + guard LevelsSystem Firestore" },
+    { "hash": "8b8be51c", "message": "fix: replace hardcoded z-index/px values with centralized constants" },
+    { "hash": "0919b259", "message": "fix: replace console.log with centralized dlog debug system" },
+    { "hash": "cdb464f1", "message": "docs: update ADR-172, ADR-002, ADR-020, ADR-036 for DXF viewer audit fixes" }
   ]
 }
