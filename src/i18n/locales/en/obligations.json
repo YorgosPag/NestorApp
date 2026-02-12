@@ -262,5 +262,70 @@
   },
   "pdf": {
     "dialogDescription": "Create a professional PDF of your document"
+  },
+  "workspace": {
+    "register": {
+      "title": "Obligations Register",
+      "subtitle": "Enterprise workspace for obligations workflow and revisions.",
+      "create": "Create Obligation",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Title, project, contractor",
+      "statusLabel": "Status",
+      "allStatuses": "All statuses",
+      "loading": "Loading obligations...",
+      "loadError": "Failed to load obligations.",
+      "table": {
+        "emptyTitle": "No obligations found",
+        "emptyDescription": "Create a new obligation to start your register.",
+        "doc": "Doc",
+        "project": "Project",
+        "status": "Status",
+        "revision": "Revision",
+        "updated": "Updated",
+        "actions": "Actions",
+        "open": "Open",
+        "delete": "Delete"
+      }
+    },
+    "edit": {
+      "loading": "Loading obligation...",
+      "loadError": "Could not load obligation.",
+      "back": "Back to register",
+      "title": "Edit Obligation",
+      "subtitle": "Enterprise workflow, revision and compliance workspace.",
+      "register": "Register",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "basics": "Document Basics",
+      "fields": {
+        "title": "Title",
+        "project": "Project",
+        "contractor": "Contractor"
+      },
+      "structure": "Structure Editor",
+      "preview": "Live Preview"
+    },
+    "workflow": {
+      "title": "Workflow"
+    },
+    "metadata": {
+      "title": "Metadata",
+      "subtitle": "Enterprise document control fields",
+      "docNumber": "Doc Number",
+      "revision": "Revision",
+      "dueDate": "Due Date",
+      "assignee": "Assignee",
+      "revisionNotes": "Revision Notes",
+      "phaseBinding": "Phase Binding",
+      "phaseId": "Phase ID",
+      "phaseName": "Phase Name",
+      "milestoneId": "Milestone ID",
+      "acceptanceCriteria": "Acceptance Criteria",
+      "costBinding": "Cost Binding",
+      "costCode": "Cost Code",
+      "costLine": "Cost Line",
+      "boqItem": "BOQ Item",
+      "budgetAmount": "Budget Amount"
+    }
   }
 }

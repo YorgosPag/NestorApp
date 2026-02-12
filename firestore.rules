@@ -1862,6 +1862,44 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📤 OBLIGATION_TRANSMITTALS COLLECTION - ENTERPRISE TENANT ISOLATION
+    // =========================================================================
+    // Security Model:
+    //   - READ: Tenant-scoped via companyId
+    //   - CREATE: companyId required from claims
+    //   - UPDATE/DELETE: creator or company admin
+    // =========================================================================
+    match /obligation_transmittals/{transmittalId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && request.resource.data.companyId == resource.data.companyId;
+
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
+    }
+
+    // =========================================================================
     // 📋 OBLIGATION_TEMPLATES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)

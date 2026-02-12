@@ -314,8 +314,13 @@ export type OperationalStatusValue = keyof typeof OPERATIONAL_STATUS_LABELS;
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const OBLIGATION_STATUS_LABELS = {
   draft: 'common:documentStatus.draft',
-  completed: 'common:documentStatus.completed',
-  approved: 'common:documentStatus.approved'
+  'in-review': 'common:documentStatus.inReview',
+  returned: 'common:documentStatus.returned',
+  approved: 'common:documentStatus.approved',
+  issued: 'common:documentStatus.issued',
+  superseded: 'common:documentStatus.superseded',
+  archived: 'common:documentStatus.archived',
+  completed: 'common:documentStatus.completed'
 } as const;
 
 // Obligation status label getter function (migrated)
@@ -2040,3 +2045,4 @@ export const PERSONA_SECTION_LABELS = {
   REAL_ESTATE_AGENT_TITLE: 'persona.sections.realEstateAgent.title',
   REAL_ESTATE_AGENT_DESCRIPTION: 'persona.sections.realEstateAgent.description',
 } as const;
+

@@ -374,6 +374,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'building',      // Building management - core module
     'navigation',    // Navigation labels
     'projects',      // Projects module
+    'obligations',   // Obligations module (register/edit/workflow)
     'contacts',      // Contacts module
     'units',         // Units module
     'storage',       // 🏢 Storage management module - added 2026-01-24
@@ -423,3 +424,4 @@ export function clearTranslationCache() {
 }
 
 export default i18n;
+

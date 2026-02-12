@@ -28,7 +28,16 @@ function compareDocuments(a: ObligationDocument, b: ObligationDocument, field: S
       return a.projectName.localeCompare(b.projectName, 'el-GR');
 
     case 'status':
-      const statusOrder = { draft: 0, completed: 1, approved: 2 };
+      const statusOrder: Record<ObligationDocument['status'], number> = {
+        draft: 0,
+        'in-review': 1,
+        returned: 2,
+        approved: 3,
+        issued: 4,
+        superseded: 5,
+        archived: 6,
+        completed: 7,
+      };
       return statusOrder[a.status] - statusOrder[b.status];
 
     case 'createdAt':

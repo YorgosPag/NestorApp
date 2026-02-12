@@ -50,8 +50,8 @@ export interface ITextRenderer {
 }
 
 export interface IHeaderFooterRenderer {
-  addHeader(doc: IPDFDoc, margins: Margins, contentWidth: number): void;
-  addFooter(doc: IPDFDoc, margins: Margins, contentWidth: number, pageWidth: number, pageNum: number, totalPages: number): void;
+  addHeader(doc: IPDFDoc, margins: Margins, contentWidth: number, pageWidth: number, document: ObligationDocument, options?: PDFExportOptions): void;
+  addFooter(doc: IPDFDoc, margins: Margins, contentWidth: number, pageWidth: number, pageNum: number, totalPages: number, document: ObligationDocument, options?: PDFExportOptions): void;
 }
 
 export interface ICoverRenderer {

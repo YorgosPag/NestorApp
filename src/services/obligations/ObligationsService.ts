@@ -1,4 +1,11 @@
-import type { ObligationDocument, ObligationTemplate } from '@/types/obligations';
+import type {
+  ObligationDocument,
+  ObligationTemplate,
+  ObligationWorkflowTransition,
+  ObligationIssueRequest,
+  ObligationIssueResult,
+  ObligationTransmittal,
+} from '@/types/obligations';
 import type { IObligationsService, IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 import { FirestoreObligationsRepository } from './InMemoryObligationsRepository';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
@@ -85,8 +92,12 @@ class ObligationsService implements IObligationsService {
     return this.repository.duplicate(id);
   }
 
-  updateStatus(id: string, status: ObligationDocument['status']): Promise<boolean> {
-    return this.repository.updateStatus(id, status);
+  updateStatus(
+    id: string,
+    status: ObligationDocument['status'],
+    transition?: Pick<ObligationWorkflowTransition, 'changedBy' | 'reason'>
+  ): Promise<boolean> {
+    return this.repository.updateStatus(id, status, transition);
   }
 
   getTemplates(): Promise<ObligationTemplate[]> {
@@ -100,9 +111,29 @@ class ObligationsService implements IObligationsService {
   getStatistics(): Promise<ObligationStats> {
     return this.repository.getStatistics();
   }
-  
+
   exportToPDF(id: string): Promise<Blob> {
     return this.repository.exportToPDF(id);
+  }
+
+  async issueWithTransmittal(request: ObligationIssueRequest): Promise<ObligationIssueResult | null> {
+    const result = await this.repository.issueWithTransmittal(request);
+
+    if (result) {
+      RealtimeService.dispatchObligationUpdated({
+        obligationId: request.obligationId,
+        updates: {
+          status: 'issued',
+        },
+        timestamp: Date.now(),
+      });
+    }
+
+    return result;
+  }
+
+  getTransmittalsForObligation(obligationId: string): Promise<ObligationTransmittal[]> {
+    return this.repository.getTransmittalsForObligation(obligationId);
   }
 }
 

@@ -8,3 +8,5 @@ export * from './obligations/numbering';
 export * from './obligations/toc';
 export * from './obligations/structure';
 export * from './obligations/dnd';
+
+export * from './obligations/transmittals';

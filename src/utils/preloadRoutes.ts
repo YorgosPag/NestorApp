@@ -56,6 +56,7 @@ const HREF_TO_PRELOADABLE_ROUTE: Record<string, PreloadableRoute> = {
   '/dxf/viewer': 'dxf-viewer',
 
   // Form routes
+  '/obligations': 'obligations-new',
   '/obligations/new': 'obligations-new',
   '/obligations/edit': 'obligations-edit',
 };
@@ -219,3 +220,4 @@ export async function updateRouteConfig(configId: string, updates: Record<string
 export function invalidateRouteCache() {
   routeConfigService.invalidateCache();
 }
+

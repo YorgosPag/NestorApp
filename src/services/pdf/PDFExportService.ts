@@ -27,9 +27,9 @@ export class PDFExportService {
   async exportDocument(document: ObligationDocument): Promise<Uint8Array> {
     const loader = new JSPDFLoader();
     const doc = await loader.initialize();
-    
+
     const pageHeight = doc.pageSize.height;
-    
+
     let currentY = this.margins.top;
 
     // 1. Render Cover Page
@@ -58,11 +58,11 @@ export class PDFExportService {
       this.totalPages = doc.getNumberOfPages();
       for (let i = 2; i <= this.totalPages; i++) {
         doc.setPage(i);
-        headerFooterRenderer.addHeader(doc, this.margins, doc.pageSize.width - this.margins.left - this.margins.right);
-        headerFooterRenderer.addFooter(doc, this.margins, doc.pageSize.width - this.margins.left - this.margins.right, doc.pageSize.width, i, this.totalPages);
+        headerFooterRenderer.addHeader(doc, this.margins, doc.pageSize.width - this.margins.left - this.margins.right, doc.pageSize.width, document, this.options);
+        headerFooterRenderer.addFooter(doc, this.margins, doc.pageSize.width - this.margins.left - this.margins.right, doc.pageSize.width, i, this.totalPages, document, this.options);
       }
     }
-    
+
     return new Uint8Array(doc.output('arraybuffer'));
   }
 

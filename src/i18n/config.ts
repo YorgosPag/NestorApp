@@ -56,7 +56,7 @@ i18n
     
     // 🏢 ENTERPRISE: Start with common + navigation (both pre-loaded sync)
     defaultNS: 'common',
-    ns: ['common', 'navigation'],
+    ns: ['common', 'navigation', 'obligations'],
     
     react: {
       useSuspense: false, // Better for lazy loading
@@ -87,6 +87,7 @@ if (typeof window !== 'undefined') {
       'dxf-viewer',
       'geo-canvas',
       'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets
+      'obligations',   // 🏢 Obligations workspace translations
     ];
 
     const saved = localStorage.getItem('preferred-language');
@@ -111,3 +112,4 @@ if (typeof window !== 'undefined') {
 }
 
 export default i18n;
+

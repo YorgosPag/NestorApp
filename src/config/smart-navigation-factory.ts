@@ -531,7 +531,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             subItems: [
               {
                 icon: PenTool,
-                href: '/obligations/new'
+                href: '/obligations'
               }
             ]
           },
@@ -685,7 +685,7 @@ function getLabelKeyForPath(path: string): string {
 
     // Legal subpaths
     'legal-documents': 'legal_documents',
-    'obligations/new': 'obligations_writing',
+    'obligations': 'obligations_writing',
 
     // Settings subpaths
     'settings': 'settings',
@@ -957,3 +957,4 @@ export default {
 
 // ✅ ENTERPRISE: All types exported at declaration site above
 // No duplicate exports needed
+

@@ -4,3 +4,6 @@ export * from './numbering';
 export * from './toc';
 export * from './structure';
 export * from './dnd';
+
+export * from './transmittals';
+

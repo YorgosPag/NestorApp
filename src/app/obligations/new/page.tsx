@@ -34,6 +34,7 @@ import { getDynamicHeightClass } from "@/components/ui/utils/dynamic-styles";
 import { OBLIGATION_PREVIEW_LAYOUT } from "@/components/obligations/config/preview-layout";
 import Link from "next/link";
 import { createModuleLogger } from '@/lib/telemetry';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 const logger = createModuleLogger('NewObligationPage');
 
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
@@ -240,13 +241,70 @@ export default function NewObligationPage() {
           usingMapping: contactIdForProjects !== formData.companyId
         });
 
-        // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Φόρτωση projects μέσω centralized system
+        // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Φόρτωση projects με explicit company ID
         logger.info(`Loading projects for company ${contactIdForProjects} via Relationship Engine`);
-        const projectsData = await companyRelationships.getProjects();
-        setProjects(projectsData as Project[]);
 
-        logger.info(`Loaded ${projectsData.length} projects for company ${contactIdForProjects} via Relationship Engine`);
+        const primaryProjects = await companyRelationships.getChildren('company', contactIdForProjects, 'project');
+        const fallbackProjects =
+          (!primaryProjects || primaryProjects.length === 0) && contactIdForProjects !== formData.companyId
+            ? await companyRelationships.getChildren('company', String(formData.companyId), 'project')
+            : [];
 
+        const mergedProjects = [...(primaryProjects || []), ...(fallbackProjects || [])] as Project[];
+        let uniqueProjects = Array.from(
+          new Map(mergedProjects.map((project) => [String(project.id), project])).values()
+        );
+
+        if (uniqueProjects.length === 0) {
+          interface ProjectListApiItem {
+            id: string;
+            name?: string;
+            title?: string;
+            companyId?: string;
+            company?: string;
+            status?: string;
+            address?: string;
+            city?: string;
+            startDate?: string;
+            completionDate?: string;
+            totalValue?: number;
+          }
+
+          interface ProjectListApiResponse {
+            projects?: ProjectListApiItem[];
+          }
+
+          const listResponse = await apiClient.get<ProjectListApiResponse>('/api/projects/list');
+          const companyName = companies.find((company) => company.id === formData.companyId)?.companyName || '';
+          const candidateCompanyIds = new Set([String(contactIdForProjects), String(formData.companyId)]);
+
+          const fallbackListProjects = (listResponse?.projects || []).filter((project) => {
+            const byCompanyId = project.companyId ? candidateCompanyIds.has(String(project.companyId)) : false;
+            const byCompanyName = companyName && project.company ? project.company === companyName : false;
+            return byCompanyId || byCompanyName;
+          });
+
+          uniqueProjects = fallbackListProjects.map((project) => ({
+            id: String(project.id),
+            name: project.title || project.name || '',
+            title: project.title || project.name || '',
+            status: (project.status as Project['status']) || 'planning',
+            company: project.company || companyName,
+            companyId: project.companyId || String(formData.companyId || ''),
+            address: project.address || '',
+            city: project.city || '',
+            progress: 0,
+            totalValue: project.totalValue || 0,
+            startDate: project.startDate,
+            completionDate: project.completionDate,
+            lastUpdate: new Date().toISOString(),
+            totalArea: 0,
+          } as Project));
+        }
+
+        setProjects(uniqueProjects);
+
+        logger.info(`Loaded ${uniqueProjects.length} projects for company ${contactIdForProjects} via Relationship Engine`);
       } catch (error) {
         logger.error('Error loading projects for company', { error });
         setProjects([]);
@@ -259,7 +317,7 @@ export default function NewObligationPage() {
     if (navigationCompanyMap.size > 0) {
       loadProjectsForCompany();
     }
-  }, [formData.companyId, navigationCompanyMap]);
+  }, [formData.companyId, navigationCompanyMap, companies]);
 
   // Auto-resize all textareas when content changes
   useEffect(() => {
@@ -442,8 +500,9 @@ export default function NewObligationPage() {
 
       router.push(`/obligations/${newObligation.id}/edit`);
     } catch (error) {
-      logger.error('Error creating obligation', { error });
-      alert(t('validation.createError'));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Error creating obligation', { error, errorMessage });
+      alert(t('validation.createError') + ': ' + errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -666,4 +725,7 @@ export default function NewObligationPage() {
     </PageLayout>
   );
 }
+
+
+
 

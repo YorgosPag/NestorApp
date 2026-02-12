@@ -1025,7 +1025,12 @@
   "documentStatus": {
     "draft": "Draft",
     "completed": "Completed",
-    "approved": "Approved"
+    "approved": "Approved",
+    "inReview": "In Review",
+    "returned": "Returned",
+    "issued": "Issued",
+    "superseded": "Superseded",
+    "archived": "Archived"
   },
   "availability": {
     "unavailable": "Unavailable",
@@ -1752,18 +1757,17 @@
     "submitError": "Failed to submit command"
   },
   "months": {
-  "5": "May",
-  "2": "February",
-  "9": "September",
-  "11": "November",
-  "10": "October",
-  "6": "June",
-  "8": "August",
-  "3": "March",
-  "4": "April",
-  "7": "July",
-  "1": "January",
-  "12": "December"
+    "5": "May",
+    "2": "February",
+    "9": "September",
+    "11": "November",
+    "10": "October",
+    "6": "June",
+    "8": "August",
+    "3": "March",
+    "4": "April",
+    "7": "July",
+    "1": "January",
+    "12": "December"
+  }
 }
-}
-

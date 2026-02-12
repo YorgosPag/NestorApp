@@ -180,8 +180,13 @@ export function useObligationStats() {
   const [stats, setStats] = useState({
     total: 0,
     draft: 0,
-    completed: 0,
+    inReview: 0,
+    returned: 0,
     approved: 0,
+    issued: 0,
+    superseded: 0,
+    archived: 0,
+    completed: 0,
     thisMonth: 0
   });
   const [loading, setLoading] = useState(true);
@@ -213,6 +218,7 @@ export function useObligationStats() {
     error
   };
 }
+
 
 
 

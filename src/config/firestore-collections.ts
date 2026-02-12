@@ -41,6 +41,7 @@ export const COLLECTIONS = {
   TASKS: process.env.NEXT_PUBLIC_TASKS_COLLECTION || 'tasks',
   OBLIGATIONS: process.env.NEXT_PUBLIC_OBLIGATIONS_COLLECTION || 'obligations',
   OBLIGATION_TEMPLATES: process.env.NEXT_PUBLIC_OBLIGATION_TEMPLATES_COLLECTION || 'obligationTemplates',
+  OBLIGATION_TRANSMITTALS: process.env.NEXT_PUBLIC_OBLIGATION_TRANSMITTALS_COLLECTION || 'obligation_transmittals',
   ASSIGNMENT_POLICIES: process.env.NEXT_PUBLIC_ASSIGNMENT_POLICIES_COLLECTION || 'assignment_policies',
 
   // 📊 ANALYTICS & METRICS
@@ -372,7 +373,7 @@ export function getCollectionConfigSummary(): {
   customizedCollections: number;
   environment: string;
 } {
-  const customizedCount = Object.entries(COLLECTIONS).reduce((count, [key, value]) => {
+  const customizedCount = Object.entries(COLLECTIONS).reduce((count, [key]) => {
     const envVar = `NEXT_PUBLIC_${key}_COLLECTION`;
     return process.env[envVar] ? count + 1 : count;
   }, 0);
@@ -395,3 +396,4 @@ export type SystemDocKey = keyof typeof SYSTEM_DOCS;
 
 // Default export για backward compatibility
 export default COLLECTIONS;
+

@@ -1,4 +1,59 @@
-export type ObligationStatus = 'draft' | 'completed' | 'approved';
+import type { ObligationDistributionEntry, ObligationIssueLogEntry } from './transmittals';
+export type ObligationStatus =
+  | 'draft'
+  | 'in-review'
+  | 'returned'
+  | 'approved'
+  | 'issued'
+  | 'superseded'
+  | 'archived'
+  | 'completed';
+
+export interface ObligationWorkflowTransition {
+  fromStatus: ObligationStatus;
+  toStatus: ObligationStatus;
+  changedAt: Date;
+  changedBy: string;
+  reason?: string;
+}
+
+export interface ObligationApprovalEntry {
+  role: 'author' | 'reviewer' | 'approver' | 'legal' | 'project-manager';
+  name: string;
+  approved: boolean;
+  approvedAt?: Date;
+  notes?: string;
+}
+
+export interface ObligationAuditEvent {
+  id: string;
+  action:
+    | 'created'
+    | 'updated'
+    | 'status-transition'
+    | 'approved'
+    | 'linked-phase'
+    | 'linked-cost'
+    | 'issued'
+    | 'transmittal-created';
+  actor: string;
+  occurredAt: Date;
+  details: string;
+}
+
+export interface ObligationPhaseBinding {
+  phaseId: string;
+  phaseName: string;
+  milestoneId?: string;
+  acceptanceCriteria?: string;
+}
+
+export interface ObligationCostBinding {
+  costCode: string;
+  costLineName: string;
+  boqItemCode?: string;
+  budgetAmount?: number;
+}
 
 export interface ObligationDocument {
   id: string;
@@ -37,6 +92,21 @@ export interface ObligationDocument {
     projectType?: string;
     budget?: number;
   };
+
+  // 🏢 ENTERPRISE: Workflow/revision metadata
+  docNumber?: string;
+  revision?: number;
+  revisionNotes?: string;
+  dueDate?: Date;
+  assigneeId?: string;
+  assigneeName?: string;
+  workflowTransitions?: ObligationWorkflowTransition[];
+  approvals?: ObligationApprovalEntry[];
+  auditTrail?: ObligationAuditEvent[];
+  distribution?: ObligationDistributionEntry[];
+  issueLog?: ObligationIssueLogEntry[];
+  phaseBinding?: ObligationPhaseBinding;
+  costBinding?: ObligationCostBinding;
 }
 
 export interface Owner {

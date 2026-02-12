@@ -216,6 +216,25 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
     },
   },
 
+  obligation_transmittals: {
+    description: 'Transmittal records για issued obligations PDFs',
+    fields: {
+      obligationId: 'string (->obligations)',
+      companyId: 'string',
+      projectId: 'string? (->projects)',
+      buildingId: 'string? (->buildings)',
+      docNumber: 'string',
+      revision: 'number',
+      issuedAt: 'Timestamp',
+      issuedBy: 'string',
+      recipients: 'array',
+      deliveryProof: 'array',
+      issueProof: 'object (algorithm, pdfSha256, generatedAt, fileName, byteSize)',
+      createdAt: 'Timestamp',
+      updatedAt: 'Timestamp',
+    },
+  },
+
   messages: {
     description: 'Μηνύματα AI pipeline (email, telegram κλπ)',
     fields: {
