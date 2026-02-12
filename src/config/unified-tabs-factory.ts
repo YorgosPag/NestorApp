@@ -463,6 +463,15 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             order: 10,
             enabled: true,
             component: 'VideosTabContent'
+          },
+          {
+            id: 'measurements',
+            value: 'measurements',
+            icon: 'ruler',
+            description: 'Επιμετρήσεις εργασιών και κοστολόγηση',
+            order: 11,
+            enabled: true,
+            component: 'MeasurementsTabContent'
           }
         ],
         defaultEnabled: true

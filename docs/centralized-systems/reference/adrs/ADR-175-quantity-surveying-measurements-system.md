@@ -1,7 +1,7 @@
 # ADR-175: Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ)
 
 **Ημερομηνία:** 2026-02-11
-**Κατάσταση:** PHASE_1A_IMPLEMENTED — Types + Services + Cost Engine + Config
+**Κατάσταση:** PHASE_1B_IMPLEMENTED — Types + Services + Cost Engine + Config + UI Layer
 **Συγγραφέας:** Claude Opus 4.6 + Γιώργος Παγώνης
 
 ---
@@ -1410,3 +1410,32 @@ src/
 - Cost: computed at runtime via `computeItemCost()` — NEVER stored
 - Firestore: κάθε optional field → `?? null`
 - Zero `any`, zero `as any`, zero `@ts-ignore`
+
+### 2026-02-12 — Phase 1B Implemented (UI Layer)
+**Status:** `PHASE_1A_IMPLEMENTED` → `PHASE_1B_IMPLEMENTED`
+
+**Νέα αρχεία (7):**
+- `src/hooks/useBOQItems.ts` — Custom hook: data fetching, CRUD, client-side filtering, cost summary
+- `src/components/building-management/tabs/MeasurementsTabContent.tsx` — Orchestrator: summary + filters + accordion + editor
+- `src/components/building-management/tabs/MeasurementsTabContent/BOQSummaryCards.tsx` — 4 summary cards (Materials, Labor, Equipment, Total)
+- `src/components/building-management/tabs/MeasurementsTabContent/BOQFilterBar.tsx` — Scope / Status / Category / Search filters (ADR-001 Radix Select)
+- `src/components/building-management/tabs/MeasurementsTabContent/BOQCategoryAccordion.tsx` — ΑΤΟΕ accordion + item tables with status badges & variance
+- `src/components/building-management/tabs/MeasurementsTabContent/BOQItemEditor.tsx` — Create/Edit dialog with computed totals, allowed unit logic, governance transitions
+- `src/components/building-management/tabs/MeasurementsTabContent/index.ts` — Barrel export
+
+**Τροποποιημένα αρχεία (5):**
+- `src/subapps/dxf-viewer/config/modal-select/core/labels/tabs.ts` — +`measurements` key in BuildingTabLabelsConfig
+- `src/config/unified-tabs-factory.ts` — +measurements tab (order 11, icon 'ruler')
+- `src/components/generic/mappings/buildingMappings.ts` — +MeasurementsTabContent + BuildingMeasurementsTab alias
+- `src/i18n/locales/el/building.json` — +tabs.measurements.* (~80 keys EL)
+- `src/i18n/locales/en/building.json` — +tabs.measurements.* (~80 keys EN)
+
+**Κρίσιμα patterns:**
+- ADR-001 compliance: Radix Select only (zero EnterpriseComboBox)
+- Semantic HTML: section, header, nav, fieldset, legend — zero div soup
+- Computed costs in BOQSummaryCards update in real-time from items array
+- Status badges: Draft=gray, Submitted=blue, Approved=green, Certified=purple, Locked=amber
+- Variance indicator: green (≤5%), yellow (5-15%), red (>15%)
+- Category accordion: groups by ΑΤΟΕ code, sorted by sortOrder, shows item count + category total
+- Editor: auto-computes gross quantity and totals; allowed units change per category
+- Zero `any`, zero inline styles, zero `@ts-ignore`

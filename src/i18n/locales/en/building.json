@@ -764,7 +764,8 @@
       "parking": "Parking Spaces",
       "contributors": "Contributors",
       "projectDocuments": "Project Documents",
-      "ika": "IKA"
+      "ika": "IKA",
+      "measurements": "Measurements"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -779,7 +780,127 @@
       "projectDocuments": "Contracts, permits and legal documents",
       "ika": "IKA data and insurance obligations",
       "photos": "Progress and completed project photos",
-      "videos": "Presentation and documentation videos"
+      "videos": "Presentation and documentation videos",
+      "measurements": "Quantity surveying and cost tracking per building"
+    },
+    "measurements": {
+      "title": "Measurements",
+      "summary": {
+        "materials": "Materials",
+        "labor": "Labor",
+        "equipment": "Equipment",
+        "total": "Total",
+        "estimated": "Estimated",
+        "actual": "Actual",
+        "variance": "Variance"
+      },
+      "filters": {
+        "scope": "Scope",
+        "scopeAll": "All",
+        "scopeBuilding": "Building",
+        "scopeUnit": "Unit",
+        "status": "Status",
+        "statusAll": "All",
+        "category": "Category",
+        "categoryAll": "All categories",
+        "search": "Search items..."
+      },
+      "status": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "certified": "Certified",
+        "locked": "Locked"
+      },
+      "table": {
+        "index": "#",
+        "description": "Description",
+        "unit": "Unit",
+        "estimatedQty": "Est.Qty",
+        "waste": "Waste%",
+        "grossQty": "Gross Qty",
+        "unitCost": "Unit Cost",
+        "totalCost": "Total",
+        "statusLabel": "Status",
+        "actions": "Actions",
+        "items": "items",
+        "categoryTotal": "Category total"
+      },
+      "editor": {
+        "createTitle": "New Item",
+        "editTitle": "Edit Item",
+        "sections": {
+          "basic": "Basic Info",
+          "scope": "Scope",
+          "quantities": "Quantities",
+          "costs": "Cost per Unit",
+          "totals": "Computed Totals",
+          "link": "Links & Notes"
+        },
+        "fields": {
+          "category": "ATOE Category",
+          "title": "Title",
+          "titlePlaceholder": "e.g. Reinforced concrete C20/25",
+          "specifications": "Specifications",
+          "specificationsPlaceholder": "Detailed work description...",
+          "scopeBuilding": "Entire Building",
+          "scopeUnit": "Individual Unit",
+          "linkedUnit": "Unit",
+          "measurementUnit": "Measurement Unit",
+          "estimatedQuantity": "Estimated Quantity",
+          "wasteFactor": "Waste Factor (%)",
+          "grossQuantity": "Gross Quantity",
+          "actualQuantity": "Actual Quantity",
+          "materialUnitCost": "Materials (€/unit)",
+          "laborUnitCost": "Labor (€/unit)",
+          "equipmentUnitCost": "Equipment (€/unit)",
+          "linkedPhase": "Construction Phase",
+          "linkedPhaseNone": "No link",
+          "notes": "Notes",
+          "notesPlaceholder": "Work notes...",
+          "statusLabel": "Status"
+        },
+        "save": "Save",
+        "cancel": "Cancel",
+        "saving": "Saving..."
+      },
+      "empty": {
+        "title": "No measurements",
+        "description": "No items have been added to this building.",
+        "cta": "New Item"
+      },
+      "actions": {
+        "newItem": "New Item",
+        "edit": "Edit",
+        "delete": "Delete",
+        "deleteConfirm": "Are you sure you want to delete this item?",
+        "duplicate": "Duplicate"
+      },
+      "units": {
+        "m": "m",
+        "m2": "sq.m",
+        "m3": "cu.m",
+        "kg": "kg",
+        "ton": "ton",
+        "pcs": "pcs",
+        "lt": "lt",
+        "set": "set",
+        "hr": "hr",
+        "day": "day",
+        "lump": "l.s."
+      },
+      "varianceLevel": {
+        "good": "Within limits",
+        "warning": "Warning",
+        "critical": "Overrun"
+      },
+      "toast": {
+        "created": "Item created",
+        "updated": "Item updated",
+        "deleted": "Item deleted",
+        "statusChanged": "Status changed",
+        "error": "Error: {message}"
+      }
     },
     "general": {
       "header": {

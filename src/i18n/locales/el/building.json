@@ -764,7 +764,8 @@
       "parking": "Θέσεις Στάθμευσης",
       "contributors": "Συντελεστές",
       "projectDocuments": "Έγγραφα Έργου",
-      "ika": "IKA"
+      "ika": "IKA",
+      "measurements": "Επιμετρήσεις"
     },
     "descriptions": {
       "projectGeneral": "Βασικές πληροφορίες και στοιχεία του έργου",
@@ -779,7 +780,127 @@
       "projectDocuments": "Συμβάσεις, άδειες και νομικά έγγραφα",
       "ika": "Στοιχεία IKA και ασφαλιστικές υποχρεώσεις",
       "photos": "Φωτογραφίες προόδου και ολοκληρωμένου έργου",
-      "videos": "Βίντεο παρουσίασης και τεκμηρίωσης του έργου"
+      "videos": "Βίντεο παρουσίασης και τεκμηρίωσης του έργου",
+      "measurements": "Επιμετρήσεις εργασιών και υλικών ανά κτίριο"
+    },
+    "measurements": {
+      "title": "Επιμετρήσεις",
+      "summary": {
+        "materials": "Υλικά",
+        "labor": "Εργασίες",
+        "equipment": "Εξοπλισμός",
+        "total": "Σύνολο",
+        "estimated": "Εκτίμηση",
+        "actual": "Πραγματικά",
+        "variance": "Απόκλιση"
+      },
+      "filters": {
+        "scope": "Εύρος",
+        "scopeAll": "Όλα",
+        "scopeBuilding": "Κτίριο",
+        "scopeUnit": "Μονάδα",
+        "status": "Κατάσταση",
+        "statusAll": "Όλες",
+        "category": "Κατηγορία",
+        "categoryAll": "Όλες οι κατηγορίες",
+        "search": "Αναζήτηση εργασιών..."
+      },
+      "status": {
+        "draft": "Σχέδιο",
+        "submitted": "Υποβληθέν",
+        "approved": "Εγκεκριμένο",
+        "certified": "Πιστοποιημένο",
+        "locked": "Κλειδωμένο"
+      },
+      "table": {
+        "index": "#",
+        "description": "Περιγραφή",
+        "unit": "Μον.",
+        "estimatedQty": "Εκτ.Ποσ.",
+        "waste": "Φύρα%",
+        "grossQty": "Μικτή Ποσ.",
+        "unitCost": "Κόστος/μον.",
+        "totalCost": "Σύνολο",
+        "statusLabel": "Κατάσταση",
+        "actions": "Ενέργειες",
+        "items": "εργασίες",
+        "categoryTotal": "Σύνολο κατηγορίας"
+      },
+      "editor": {
+        "createTitle": "Νέα Εργασία",
+        "editTitle": "Επεξεργασία Εργασίας",
+        "sections": {
+          "basic": "Βασικά Στοιχεία",
+          "scope": "Εύρος Εφαρμογής",
+          "quantities": "Ποσότητες",
+          "costs": "Κόστος ανά Μονάδα",
+          "totals": "Υπολογιζόμενα Σύνολα",
+          "link": "Σύνδεση & Σημειώσεις"
+        },
+        "fields": {
+          "category": "Κατηγορία ΑΤΟΕ",
+          "title": "Τίτλος",
+          "titlePlaceholder": "π.χ. Οπλισμένο σκυρόδεμα C20/25",
+          "specifications": "Προδιαγραφές",
+          "specificationsPlaceholder": "Αναλυτική περιγραφή εργασίας...",
+          "scopeBuilding": "Ολόκληρο Κτίριο",
+          "scopeUnit": "Μεμονωμένη Μονάδα",
+          "linkedUnit": "Μονάδα",
+          "measurementUnit": "Μονάδα Μέτρησης",
+          "estimatedQuantity": "Εκτιμώμενη Ποσότητα",
+          "wasteFactor": "Φύρα (%)",
+          "grossQuantity": "Μικτή Ποσότητα",
+          "actualQuantity": "Πραγματική Ποσότητα",
+          "materialUnitCost": "Υλικά (€/μον.)",
+          "laborUnitCost": "Εργασία (€/μον.)",
+          "equipmentUnitCost": "Εξοπλισμός (€/μον.)",
+          "linkedPhase": "Φάση Κατασκευής",
+          "linkedPhaseNone": "Χωρίς σύνδεση",
+          "notes": "Σημειώσεις",
+          "notesPlaceholder": "Σημειώσεις εργασίας...",
+          "statusLabel": "Κατάσταση"
+        },
+        "save": "Αποθήκευση",
+        "cancel": "Ακύρωση",
+        "saving": "Αποθήκευση..."
+      },
+      "empty": {
+        "title": "Δεν υπάρχουν επιμετρήσεις",
+        "description": "Δεν έχουν προστεθεί εργασίες σε αυτό το κτίριο.",
+        "cta": "Νέα Εργασία"
+      },
+      "actions": {
+        "newItem": "Νέο Item",
+        "edit": "Επεξεργασία",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την εργασία;",
+        "duplicate": "Αντιγραφή"
+      },
+      "units": {
+        "m": "μ.",
+        "m2": "τ.μ.",
+        "m3": "κ.μ.",
+        "kg": "kg",
+        "ton": "τον.",
+        "pcs": "τεμ.",
+        "lt": "λτ.",
+        "set": "σετ",
+        "hr": "ώρ.",
+        "day": "ημ.",
+        "lump": "κ.α."
+      },
+      "varianceLevel": {
+        "good": "Εντός ορίων",
+        "warning": "Προσοχή",
+        "critical": "Υπέρβαση"
+      },
+      "toast": {
+        "created": "Η εργασία δημιουργήθηκε",
+        "updated": "Η εργασία ενημερώθηκε",
+        "deleted": "Η εργασία διαγράφηκε",
+        "statusChanged": "Η κατάσταση άλλαξε",
+        "error": "Σφάλμα: {message}"
+      }
     },
     "general": {
       "header": {

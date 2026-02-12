@@ -27,6 +27,7 @@ export interface BuildingTabLabelsConfig {
   readonly photos: string;
   readonly customers: string;
   readonly videos: string;
+  readonly measurements: string;
 
   // Legacy Backward Compatibility
   readonly details: string;
@@ -155,6 +156,7 @@ export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
   photos: "tabs.labels.photos",
   customers: "tabs.labels.customers",
   videos: "tabs.labels.videos",
+  measurements: "tabs.labels.measurements",
 
   // 🔧 LEGACY: i18n keys for backward compatibility
   details: "tabs.labels.details",

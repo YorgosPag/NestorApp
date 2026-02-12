@@ -44,6 +44,12 @@ import { BuildingContractsTab } from '@/components/building-management/tabs/Buil
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
 
 // ============================================================================
+// BOQ MEASUREMENTS TAB (ADR-175 Phase 1B)
+// ============================================================================
+
+import { MeasurementsTabContent } from '@/components/building-management/tabs/MeasurementsTabContent';
+
+// ============================================================================
 // BUILDING COMPONENT MAPPING
 // 🏢 ENTERPRISE: Explicit type for UniversalTabsRenderer compatibility
 // ============================================================================
@@ -59,6 +65,8 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'StorageTab': StorageTab as ComponentType<TabComponentProps>,
   'BuildingCustomersTab': BuildingCustomersTab as unknown as ComponentType<TabComponentProps>,
 
+  'MeasurementsTabContent': MeasurementsTabContent as ComponentType<TabComponentProps>,
+
   // 🏢 ENTERPRISE: Unified Factory aliases - all using EntityFilesManager (ADR-031)
   'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,
   'BuildingFloorsTab': TimelineTabContent as ComponentType<TabComponentProps>,
@@ -67,6 +75,7 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'BuildingPhotosTab': BuildingPhotosTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
   'BuildingVideosTab': BuildingVideosTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
   'BuildingActivityTab': AnalyticsTabContent as ComponentType<TabComponentProps>,
+  'BuildingMeasurementsTab': MeasurementsTabContent as ComponentType<TabComponentProps>,
 };
 
 // ============================================================================
