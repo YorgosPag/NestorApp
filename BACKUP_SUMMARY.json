@@ -1,52 +1,44 @@
 {
   "category": "FEATURE",
-  "shortDescription": "EPE (ΕΠΕ) LLC support — corporate tax 22%, dividends 5%, member management",
-  "problem": "Το λογιστικό subapp υποστήριζε μόνο Ατομική και ΟΕ. Η ΕΠΕ (3η νομική μορφή) δεν είχε implementation παρόλο που ο τύπος 'epe' υπήρχε στο EntityType.",
-  "cause": "Incremental feature delivery — ΕΠΕ ήταν planned αλλά δεν είχε υλοποιηθεί ακόμα",
+  "shortDescription": "BOQ Phase 1A — types, services, cost engine, config (ADR-175)",
+  "problem": "Το σύστημα Επιμετρήσεων (BOQ/Quantity Surveying) ήταν 100% σχεδιασμένο (ADR-175, 6 Use Cases) αλλά 0% κωδικοποιημένο. Χρειαζόταν το foundation layer: types, services, repository, cost engine.",
+  "cause": "Νέο feature — Phase 1A implementation ξεκίνησε σήμερα",
   "filesChanged": [
-    "src/subapps/accounting/types/entity.ts",
-    "src/subapps/accounting/types/company.ts",
-    "src/subapps/accounting/types/tax.ts",
-    "src/subapps/accounting/types/efka.ts",
-    "src/subapps/accounting/types/interfaces.ts",
-    "src/subapps/accounting/types/index.ts",
-    "src/subapps/accounting/utils/entity-guards.ts",
-    "src/subapps/accounting/services/config/tax-config.ts",
-    "src/subapps/accounting/services/engines/tax-engine.ts",
-    "src/subapps/accounting/services/accounting-service.ts",
-    "src/subapps/accounting/services/repository/firestore-accounting-repository.ts",
-    "src/subapps/accounting/components/setup/EntityTypeSelector.tsx",
-    "src/subapps/accounting/components/setup/SetupPageContent.tsx",
-    "src/subapps/accounting/components/setup/MemberManagementSection.tsx (NEW)",
-    "src/subapps/accounting/components/setup/MemberRow.tsx (NEW)",
-    "src/subapps/accounting/components/tax/CorporateTaxBreakdown.tsx (NEW)",
-    "src/app/api/accounting/members/route.ts (NEW)",
-    "src/app/api/accounting/setup/route.ts",
-    "src/app/api/accounting/tax/estimate/route.ts",
-    "src/app/api/accounting/tax/dashboard/route.ts",
-    "src/app/api/accounting/efka/summary/route.ts",
-    "src/i18n/locales/el/accounting.json",
-    "src/i18n/locales/en/accounting.json",
-    "src/subapps/accounting/docs/adrs/ADR-ACC-014-epe-llc-support.md (NEW)"
+    "src/types/boq/units.ts (NEW)",
+    "src/types/boq/boq.ts (NEW)",
+    "src/types/boq/cost.ts (NEW)",
+    "src/types/boq/index.ts (NEW)",
+    "src/config/boq-categories.ts (NEW)",
+    "src/services/measurements/contracts.ts (NEW)",
+    "src/services/measurements/cost-engine.ts (NEW)",
+    "src/services/measurements/boq-repository.ts (NEW)",
+    "src/services/measurements/boq-service.ts (NEW)",
+    "src/services/measurements/index.ts (NEW)",
+    "src/config/firestore-collections.ts",
+    "src/config/firestore-schema-map.ts",
+    "docs/centralized-systems/reference/adrs/ADR-175-quantity-surveying-measurements-system.md",
+    "docs/centralized-systems/reference/adr-index.md"
   ],
   "solution": {
-    "phase1": "Bugfixes: Fix hardcoded professionalTax:650 in estimateTax(), fix tax dashboard entity dispatch",
-    "phase2": "Type system: Member, MemberEFKAConfig, EPECompanyProfile, isLlc() guard, CorporateTaxResult, MemberDividendResult, EPETaxResult",
-    "phase3": "Tax engine: calculateCorporateTax() — 22% flat, 80% prepayment, per-member dividends 5%. Config: getCorporateTaxRate, getDividendTaxRate, getPrepaymentRateForEntity",
-    "phase4": "API routes: /api/accounting/members (GET/PUT), extend setup/tax/efka routes with EPE path. Repository: getMembers/saveMembers/getMemberEFKAPayments",
-    "phase5": "UI: Enable EPE in EntityTypeSelector, MemberManagementSection (shares, capital, manager toggle, EFKA), CorporateTaxBreakdown (22% + dividends 5% + retained earnings). i18n: el/en translations"
+    "phase1": "Types: BOQMeasurementUnit (11 units), IfcQuantityType (5 IFC types), BOQItemStatus, BOQSource, QAStatus κλπ — src/types/boq/units.ts",
+    "phase2": "Entities: BOQItem (~40 fields), BOQCategory (~15 fields), BOQSummary, inputs/filters/defaults — src/types/boq/boq.ts + cost.ts",
+    "phase3": "Config: 12 ΑΤΟΕ master categories (bilingual EL+EN) + 4 Firestore collections + 2 AI schema entries",
+    "phase4": "Services: IBOQRepository/IBOQService interfaces, cost-engine (4 pure functions), FirestoreBOQRepository (full CRUD + search)",
+    "phase5": "Business Logic: BOQService singleton, governance (draft→submitted→approved→certified→locked), validation, default waste factors from ΑΤΟΕ categories"
   },
   "testing": {
     "typescript": "npx tsc --noEmit: 0 errors",
-    "deployment": "Pushed to Vercel: dce34662"
+    "deployment": "Pushed to Vercel: 588273a8"
   },
   "notes": [
-    "5 new files, 19 modified, 1491 insertions, 49 deletions",
-    "ΕΠΕ: Εταιρικός φόρος 22% flat (ΟΧΙ κλιμακωτός), Μερίσματα 5%, Προκαταβολή 80%, Τέλος Επιτηδ. 1000€",
-    "Γ' κατηγορίας βιβλία (Διπλογραφικά) ΥΠΟΧΡΕΩΤΙΚΑ — enforced στο setup",
-    "ΕΦΚΑ μόνο για διαχειριστές (passive members exempt)",
-    "ΓΕΜΗ υποχρεωτικό για ΕΠΕ",
-    "Backward compatible: existing sole_proprietor/OE data untouched"
+    "10 new files, 4 modified, 1885 insertions, 1 deletion",
+    "Zero any, zero as any, zero @ts-ignore",
+    "Governance: draft→submitted→approved→certified→locked (BOQ_ALLOWED_TRANSITIONS)",
+    "Cost engine: computed at runtime, NEVER stored in Firestore",
+    "Waste factor: grossQuantity = netQuantity × (1 + wasteFactor)",
+    "Firestore: κάθε optional field → ?? null",
+    "Static ΑΤΟΕ categories fallback αν Firestore boq_categories empty",
+    "No UI in this phase — θεμέλια μόνο"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
@@ -54,13 +46,12 @@
     "sessionDate": "2026-02-12"
   },
   "relatedBackups": [
-    "backup-2026-02-10-accounting-oe-support",
-    "backup-2026-02-10-accounting-phase1-complete"
+    "backup-2026-02-12-epe-llc-support"
   ],
   "commits": [
     {
-      "hash": "dce34662",
-      "message": "feat: EPE (ΕΠΕ) LLC support — corporate tax 22%, dividends 5%, member management"
+      "hash": "588273a8",
+      "message": "feat: BOQ Phase 1A — types, services, cost engine, config (ADR-175)"
     }
   ]
 }
