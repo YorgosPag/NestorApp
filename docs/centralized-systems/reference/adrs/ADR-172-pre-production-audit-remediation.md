@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | PHASE_2_COMPLETE |
+| **Status** | PHASE_3_COMPLETE |
 | **Date** | 2026-02-10 |
 | **Category** | Security & Code Quality / Infrastructure |
 | **Author** | Γιώργος Παγώνης + Claude Code |
@@ -180,12 +180,53 @@ Note: Dynamic inline styles (zIndex, brand colors, calculated dimensions) remain
 
 ---
 
-## 6. Remaining Work (Long-term)
+## 6. Phase 3: DXF Viewer OpenAI Audit Remediation (2026-02-12)
 
-### Console.log (~2,145 remaining)
-**Strategy**: Continue migrate-on-touch for non-subapp files. Subapps (dxf-viewer, geo-canvas) use different architecture and are lower priority.
+External OpenAI audit report identified findings across 4 severity levels in the DXF Viewer subapp. All fixes applied in 4 commits.
 
-### Inline Styles (~77 remaining)
+### 6.1 CRITICAL — Auth Bypass Removal
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `src/app/dxf/viewer/page.tsx` | `AdminGuard` bypassed entirely in `NODE_ENV === 'development'` | Removed 4-line dev bypass. `useUserRole()` works in dev+prod |
+
+### 6.2 HIGH — Dead Code + Environment Guard
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `src/subapps/dxf-viewer/DxfViewerApp.tsx` | Duplicate `CanvasProvider` — outer one was dead code (inner one in DxfViewerContent is the real consumer) | Removed outer `CanvasProvider` + import |
+| `src/subapps/dxf-viewer/DxfViewerApp.tsx` | `LevelsSystem enableFirestore` always true — unnecessary Firestore connections in dev | Changed to `enableFirestore={process.env.NODE_ENV === 'production'}` |
+
+### 6.3 MEDIUM — Centralized Constants + Debug Logging
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `EnterpriseColorDialog.tsx` | Hardcoded z-index `2147483646`/`2147483647` | → `MODAL_Z_INDEX.COLOR_DIALOG_CONTAINER` / `MODAL_Z_INDEX.COLOR_DIALOG` |
+| `EnterpriseColorDialog.tsx` | Inline `pointerEvents`/`isolation` styles | → Tailwind `pointer-events-auto isolate` |
+| `BaseModal.tsx` | Mock `portalComponents` object (identity function) | Removed mock, direct `zIndex` / `zIndex + 1` |
+| `CanvasSection.tsx` | Hardcoded `?? 30` fallback | → `?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT` |
+| `DxfViewerContent.tsx` | 6 unconditional `console.log` in core render flow | → `dlog('DxfViewerContent', ...)` via UnifiedDebugManager |
+
+### 6.4 LOW — Orphaned Legacy Files
+
+| File | Action |
+|------|--------|
+| `config/modal-select-old.ts` | `git rm` — no imports found |
+| `afairesh_DXFcanvasRefactored.txt` | `git rm` — no references found |
+
+### 6.5 Deferred
+
+- **CentralizedAutoSaveStatus.tsx**: 297-line style companion file → Tailwind/CSS modules conversion deferred to separate PR
+- **TypeScript errors** (`isLlc`, `calculateEPETax`): Confirmed as stale findings — code compiles successfully
+
+---
+
+## 7. Remaining Work (Long-term)
+
+### Console.log (~2,139 remaining)
+**Strategy**: Continue migrate-on-touch for non-subapp files. DXF Viewer core render flow now uses `dlog()`. Remaining DXF calls use `dlog` or `DEBUG_DXF_VIEWER_CONTENT` flag.
+
+### Inline Styles (~76 remaining)
 **Policy**: All remaining are justified (dynamic values). No action needed.
 
 ### Hardcoded Strings (~2,435 remaining)
@@ -197,7 +238,7 @@ Note: Dynamic inline styles (zIndex, brand colors, calculated dimensions) remain
 
 ---
 
-## 7. Prohibitions (New Code Standards)
+## 8. Prohibitions (New Code Standards)
 
 Από σήμερα, **νέος κώδικας ΠΡΕΠΕΙ** να:
 
@@ -215,3 +256,4 @@ Note: Dynamic inline styles (zIndex, brand colors, calculated dimensions) remain
 |------|-------|---------|
 | 2026-02-10 | 1-4 | Initial audit + fixes: security, type safety, unused imports, console.log |
 | 2026-02-10 | Phase 2 | Massive remediation: ~1,500 console.log → Logger, 4 inline styles → Tailwind, i18n banking (4 components) + addresses (5 components). 164 files, 4250 insertions, 1647 deletions |
+| 2026-02-12 | Phase 3 | DXF Viewer OpenAI audit: CRITICAL auth bypass removed, duplicate CanvasProvider removed, LevelsSystem Firestore guarded, hardcoded z-index → MODAL_Z_INDEX, mock portalComponents removed, hardcoded px → centralized constant, 6 console.log → dlog, 2 orphaned files deleted |

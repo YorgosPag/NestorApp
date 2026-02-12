@@ -15,3 +15,9 @@
 - **Canonical**: `src/auth/` module
 - **Deleted**: `FirebaseAuthContext.tsx`, `UserRoleContext.tsx`
 - **Import**: `import { AuthProvider, useAuth } from '@/auth'`
+
+### Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-02-12 | **CRITICAL FIX**: Removed `NODE_ENV === 'development'` bypass in `AdminGuard` (`src/app/dxf/viewer/page.tsx`). The guard was completely skipped in development mode. `useUserRole()` works correctly in both dev and prod — no bypass needed. |
