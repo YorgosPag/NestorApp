@@ -52,11 +52,6 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
   const iconSizes = useIconSizes();
   const centerLayout = 'w-full h-full flex items-center justify-center';
 
-  // ??? DEVELOPMENT BYPASS: Allow access in development mode
-  if (process.env.NODE_ENV === 'development') {
-    return <>{children}</>;
-  }
-
   if (isLoading) {
     return (
       <main className={cn(centerLayout)} role="main" aria-label={t('dxfViewer.checkingPermissionsAriaLabel')}>
