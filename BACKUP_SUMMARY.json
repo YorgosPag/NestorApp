@@ -1,87 +1,66 @@
 {
-  "category": "STABLE",
-  "shortDescription": "Safety checkpoint — Obligations refactor, BOQ architecture, ADR-175, Instagram text feedback, Meta omnichannel complete",
-  "problem": "Multiple parallel workstreams needed consolidation: obligations module refactoring, BOQ/measurements architecture, Instagram feedback fix, and Meta omnichannel polish",
-  "cause": "Parallel agents (Claude + OpenAI Codex) working on separate features simultaneously",
+  "category": "FEATURE",
+  "shortDescription": "EPE (ΕΠΕ) LLC support — corporate tax 22%, dividends 5%, member management",
+  "problem": "Το λογιστικό subapp υποστήριζε μόνο Ατομική και ΟΕ. Η ΕΠΕ (3η νομική μορφή) δεν είχε implementation παρόλο που ο τύπος 'epe' υπήρχε στο EntityType.",
+  "cause": "Incremental feature delivery — ΕΠΕ ήταν planned αλλά δεν είχε υλοποιηθεί ακόμα",
   "filesChanged": [
-    "src/app/obligations/new/page.tsx",
-    "src/components/obligations/ (40+ files — live preview, PDF, rich text, section editor, structure editor, TOC)",
-    "src/components/crm/dashboard/OpportunityCard.tsx",
-    "src/app/crm/leads/[id]/utils/dates.ts",
-    "src/components/building-management/StorageCard/StorageCardUtils.ts",
-    "src/components/units/list/ListItem/UnitListItemFooter_old.tsx",
-    "src/i18n/locales/el/obligations.json",
-    "src/i18n/locales/en/obligations.json",
-    "src/lib/design-system.ts",
-    "src/subapps/accounting/components/reports/TaxEstimateCard.tsx",
-    "src/subapps/geo-canvas/components/InteractiveMapPresentation.tsx",
-    "src/services/ai-pipeline/feedback-service.ts",
-    "src/services/ai-pipeline/pipeline-orchestrator.ts",
-    "src/app/api/communications/webhooks/instagram/handler.ts",
-    "src/app/api/communications/webhooks/instagram/instagram-client.ts",
-    "src/app/api/communications/webhooks/instagram/types.ts",
-    "firestore.indexes.json",
-    "reports/visual/*.report.json (8 files)",
-    "docs/centralized-systems/reference/adrs/ADR-175-quantity-surveying-measurements-system.md",
-    "docs/centralized-systems/reference/adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md",
-    "docs/centralized-systems/reference/adrs/ADR-080-ai-pipeline-implementation.md",
-    "docs/architecture-review/ (6 reports)",
-    "docs/boq/use-cases/ (6 UC specs + README)",
-    "docs/open ai analysis/ (3 analysis reports)"
+    "src/subapps/accounting/types/entity.ts",
+    "src/subapps/accounting/types/company.ts",
+    "src/subapps/accounting/types/tax.ts",
+    "src/subapps/accounting/types/efka.ts",
+    "src/subapps/accounting/types/interfaces.ts",
+    "src/subapps/accounting/types/index.ts",
+    "src/subapps/accounting/utils/entity-guards.ts",
+    "src/subapps/accounting/services/config/tax-config.ts",
+    "src/subapps/accounting/services/engines/tax-engine.ts",
+    "src/subapps/accounting/services/accounting-service.ts",
+    "src/subapps/accounting/services/repository/firestore-accounting-repository.ts",
+    "src/subapps/accounting/components/setup/EntityTypeSelector.tsx",
+    "src/subapps/accounting/components/setup/SetupPageContent.tsx",
+    "src/subapps/accounting/components/setup/MemberManagementSection.tsx (NEW)",
+    "src/subapps/accounting/components/setup/MemberRow.tsx (NEW)",
+    "src/subapps/accounting/components/tax/CorporateTaxBreakdown.tsx (NEW)",
+    "src/app/api/accounting/members/route.ts (NEW)",
+    "src/app/api/accounting/setup/route.ts",
+    "src/app/api/accounting/tax/estimate/route.ts",
+    "src/app/api/accounting/tax/dashboard/route.ts",
+    "src/app/api/accounting/efka/summary/route.ts",
+    "src/i18n/locales/el/accounting.json",
+    "src/i18n/locales/en/accounting.json",
+    "src/subapps/accounting/docs/adrs/ADR-ACC-014-epe-llc-support.md (NEW)"
   ],
   "solution": {
-    "phase1": "Obligations module: 40+ components refactored — live preview, PDF export, rich text editor, section editor, structure editor, table of contents",
-    "phase2": "ADR-175: Quantity Surveying & Measurements System architecture designed. 6 BOQ use cases specified (CRUD, pricing, Gantt, DXF, subcontractors, import/export)",
-    "phase3": "Instagram text-based feedback: Replaced non-functional Quick Replies with emoji/number detection. Added FeedbackService.getLatestFeedbackForChannel(). Composite Firestore index deployed",
-    "phase4": "Meta omnichannel: Negative feedback categories on all channels (WhatsApp, Messenger, Instagram). ADR-174, ADR-080 changelog updated",
-    "phase5": "CRM: OpportunityCard, leads dates cleanup. Design system, i18n locales (el/en), accounting TaxEstimateCard, visual reports"
+    "phase1": "Bugfixes: Fix hardcoded professionalTax:650 in estimateTax(), fix tax dashboard entity dispatch",
+    "phase2": "Type system: Member, MemberEFKAConfig, EPECompanyProfile, isLlc() guard, CorporateTaxResult, MemberDividendResult, EPETaxResult",
+    "phase3": "Tax engine: calculateCorporateTax() — 22% flat, 80% prepayment, per-member dividends 5%. Config: getCorporateTaxRate, getDividendTaxRate, getPrepaymentRateForEntity",
+    "phase4": "API routes: /api/accounting/members (GET/PUT), extend setup/tax/efka routes with EPE path. Repository: getMembers/saveMembers/getMemberEFKAPayments",
+    "phase5": "UI: Enable EPE in EntityTypeSelector, MemberManagementSection (shares, capital, manager toggle, EFKA), CorporateTaxBreakdown (22% + dividends 5% + retained earnings). i18n: el/en translations"
   },
   "testing": {
     "typescript": "npx tsc --noEmit: 0 errors",
-    "firestore": "Composite index (channelSenderId, createdAt desc) deployed successfully",
-    "instagram": "E2E: AI reply + text feedback prompt confirmed working",
-    "deployment": "Pushed to Vercel: a59bd551"
+    "deployment": "Pushed to Vercel: dce34662"
   },
   "notes": [
-    "85 files committed in safety checkpoint",
-    "Work from both Claude and OpenAI Codex agents consolidated",
-    "Instagram Quick Replies confirmed NOT supported by DM API — permanent text-based fallback implemented",
-    "Firestore composite index building in background (~2-5 min)"
+    "5 new files, 19 modified, 1491 insertions, 49 deletions",
+    "ΕΠΕ: Εταιρικός φόρος 22% flat (ΟΧΙ κλιμακωτός), Μερίσματα 5%, Προκαταβολή 80%, Τέλος Επιτηδ. 1000€",
+    "Γ' κατηγορίας βιβλία (Διπλογραφικά) ΥΠΟΧΡΕΩΤΙΚΑ — enforced στο setup",
+    "ΕΦΚΑ μόνο για διαχειριστές (passive members exempt)",
+    "ΓΕΜΗ υποχρεωτικό για ΕΠΕ",
+    "Backward compatible: existing sole_proprietor/OE data untouched"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
-    "assistant": "Claude Opus 4.6 + OpenAI Codex",
-    "sessionDate": "2026-02-11"
+    "assistant": "Claude Opus 4.6",
+    "sessionDate": "2026-02-12"
   },
   "relatedBackups": [
-    "backup-2026-02-11-adr174-whatsapp-phase1",
-    "backup-2026-02-11-adr174-messenger-instagram",
-    "backup-2026-02-11-multi-channel-admin-detection"
+    "backup-2026-02-10-accounting-oe-support",
+    "backup-2026-02-10-accounting-phase1-complete"
   ],
   "commits": [
     {
-      "hash": "84e400d3",
-      "message": "docs: ADR updates — Instagram nestor_app dedicated account, E2E test passed"
-    },
-    {
-      "hash": "bb05e196",
-      "message": "feat: Instagram Quick Replies — suggestions + feedback buttons"
-    },
-    {
-      "hash": "6777f03c",
-      "message": "feat: negative feedback categories on all Meta channels"
-    },
-    {
-      "hash": "bbbf5312",
-      "message": "docs: ADR updates — Quick Replies + negative categories on all channels"
-    },
-    {
-      "hash": "24f76d77",
-      "message": "feat: Instagram text-based feedback — replace non-functional Quick Replies"
-    },
-    {
-      "hash": "a59bd551",
-      "message": "chore: safety checkpoint — obligations refactor, BOQ architecture, ADR-175, visual reports"
+      "hash": "dce34662",
+      "message": "feat: EPE (ΕΠΕ) LLC support — corporate tax 22%, dividends 5%, member management"
     }
   ]
 }
