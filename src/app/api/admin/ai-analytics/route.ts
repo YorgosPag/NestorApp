@@ -20,10 +20,11 @@
 
 import 'server-only';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { withAuth } from '@/lib/auth/middleware';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AI_ANALYTICS_ENDPOINT');
@@ -67,7 +68,7 @@ interface AnalyticsResponse {
 // HANDLER
 // ============================================================================
 
-async function handleGet(): Promise<Response> {
+async function handleGet(_request: NextRequest, _ctx: unknown, _cache: unknown): Promise<Response> {
   try {
     const db = getAdminFirestore();
     const now = new Date();
@@ -210,4 +211,6 @@ async function handleGet(): Promise<Response> {
   }
 }
 
-export const GET = withStandardRateLimit(handleGet);
+export const GET = withSensitiveRateLimit(withAuth(handleGet, {
+  requiredGlobalRoles: 'super_admin',
+}));
