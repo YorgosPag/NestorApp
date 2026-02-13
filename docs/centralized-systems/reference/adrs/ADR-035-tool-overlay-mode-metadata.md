@@ -90,3 +90,13 @@
 | **Implementation** | Added point-proximity hit-testing in `handleCanvasClick` for `activeTool === 'select'`, using the same tolerance as Circle-TTT. Selection state stored in `selectedEntityIds` and passed to DxfCanvas via `renderOptions.selectedEntityIds`. DxfRenderer already had rendering support for `selectedEntityIds`. |
 | **Entity types** | Line, Polyline, LWPolyline, Circle, Arc, Rectangle, Rect |
 | **File** | `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` |
+
+### 2026-02-13 — Fix: AutoCAD-style Window/Crossing marquee selection not working
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Window Selection (blue, left-to-right) and Crossing Selection (green, right-to-left) marquee boxes did not appear when dragging on the canvas — no visual feedback and no entities/overlays selected |
+| **Root Cause** | DxfCanvas (z-10) intercepts ALL pointer events but did NOT forward marquee-related props (`colorLayers`, `onLayerSelected`, `onMultiLayerSelected`, `onEntitiesSelected`, `canvasRef`, `isGripDragging`) to its internal `useCentralizedMouseHandlers` instance. The existing marquee code in `useCentralizedMouseHandlers` was fully functional but only wired up for LayerCanvas (z-0), which never receives events due to z-index stacking. Additionally, the marquee guard required `colorLayers.length > 0`, blocking entity-only selection. |
+| **Fix** | (1) Added `onLayerSelected`, `onMultiLayerSelected`, `onEntitiesSelected`, `isGripDragging` props to `DxfCanvasProps` interface. (2) Destructured and forwarded all marquee props to `useCentralizedMouseHandlers` in DxfCanvas, including `colorLayers` and `canvasRef`. (3) In `useCentralizedMouseHandlers`, added `onEntitiesSelected` callback prop and routed `breakdown.entityIds` to it separately from layer/overlay IDs. (4) Removed `colorLayers.length > 0` guard so marquee works for entities even without overlays. (5) In CanvasSection, passed `handleOverlayClick`, `handleMultiOverlayClick`, `setSelectedEntityIds`, and grip-drag state to DxfCanvas. |
+| **Files** | `DxfCanvas.tsx`, `CanvasSection.tsx`, `useCentralizedMouseHandlers.ts` |
+| **Lesson** | The dual-canvas z-index architecture (DxfCanvas z-10 > LayerCanvas z-0) means ALL interactive features must be wired through DxfCanvas. Any mouse handler feature in `useCentralizedMouseHandlers` that works on LayerCanvas must also have its props forwarded from DxfCanvas. This is the same pattern as the move tool fix (earlier in this changelog). |
