@@ -182,12 +182,22 @@ export class PreviewRenderer {
     if (!this.canvas || !this.ctx) return;
 
     const dpr = getDevicePixelRatio(); // 🏢 ADR-094
+
+    // 🔧 FIX (2026-02-13): Skip if size unchanged — setting canvas.width/height
+    // CLEARS the canvas buffer even when the value is the same (HTML spec).
+    // This was causing preview to disappear on every React re-render.
+    const newWidth = toDevicePixels(width, dpr);
+    const newHeight = toDevicePixels(height, dpr);
+    if (this.canvas.width === newWidth && this.canvas.height === newHeight && this.dpr === dpr) {
+      return;
+    }
+
     this.dpr = dpr;
 
     // Set canvas buffer size
     // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
-    this.canvas.width = toDevicePixels(width, dpr);
-    this.canvas.height = toDevicePixels(height, dpr);
+    this.canvas.width = newWidth;
+    this.canvas.height = newHeight;
 
     // Set canvas display size
     this.canvas.style.width = `${width}px`;

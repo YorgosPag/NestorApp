@@ -24,7 +24,7 @@
  * - Full TypeScript (ZERO any)
  */
 
-import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform } from '../../rendering/types/Types';
@@ -157,12 +157,18 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     // 🏢 ADR-146: Centralized Canvas Size Observer
     // ============================================================================
 
+    // 🔧 FIX (2026-02-13): Memoize callback to prevent useCanvasSizeObserver effect re-running
+    // on every React re-render. Without useCallback, the inline function creates a new reference
+    // each render → effect re-runs → updateSize() sets canvas.width → CLEARS THE CANVAS!
+    // This was the root cause of "preview disappears during mouse movement" bug.
+    const handleSizeChange = useCallback((canvas: HTMLCanvasElement) => {
+      const rect = canvas.getBoundingClientRect();
+      rendererRef.current?.updateSize(rect.width, rect.height);
+    }, []);
+
     useCanvasSizeObserver({
       canvasRef,
-      onSizeChange: (canvas) => {
-        const rect = canvas.getBoundingClientRect();
-        rendererRef.current?.updateSize(rect.width, rect.height);
-      },
+      onSizeChange: handleSizeChange,
     });
 
     // ============================================================================
