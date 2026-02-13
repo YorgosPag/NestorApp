@@ -51,7 +51,7 @@ const PhotoSharePage = () => {
         { property: 'og:title', content: photoData.title },
         { property: 'og:description', content: photoData.description },
         { property: 'og:image', content: photoData.url },
-        { property: 'og:url', content: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL || 'https://nestor-app.vercel.app'}/share/photo/${id}` },
+        { property: 'og:url', content: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://nestor-app.vercel.app'}/share/photo/${id}` },
         { property: 'og:type', content: 'article' },
         { property: 'og:site_name', content: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Nestor Construct' },
         { property: 'og:image:width', content: '1200' },

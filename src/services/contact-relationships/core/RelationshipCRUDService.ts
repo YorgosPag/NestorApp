@@ -307,7 +307,7 @@ export class RelationshipCRUDService {
         changedBy: updates.lastModifiedBy || 'system',
         oldValue: existing,
         newValue: updates,
-        notes: updates.relationshipNotes
+        ...(updates.relationshipNotes ? { notes: updates.relationshipNotes } : {}),
       };
 
       updated.changeHistory = [...(existing.changeHistory || []), changeEntry];
