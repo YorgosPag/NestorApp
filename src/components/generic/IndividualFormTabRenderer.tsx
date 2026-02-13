@@ -62,6 +62,8 @@ export interface IndividualFormTabRendererProps {
   onProfilePhotoSelection?: (index: number) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, IndividualCustomRendererFn>;
+  /** Optional section footer renderers (rendered below section fields) */
+  sectionFooterRenderers?: Record<string, IndividualCustomRendererFn>;
   /** Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
@@ -88,6 +90,7 @@ function createIndividualFormTabsFromConfig(
   onProfilePhotoSelection?: (index: number) => void,
   // handleEnterpriseMultiplePhotoUpload removed - using centralized handler
   customRenderers?: Record<string, IndividualCustomRendererFn>,
+  sectionFooterRenderers?: Record<string, IndividualCustomRendererFn>,
   onPhotoClick?: (index: number) => void
 ) {
   return sections.map(section => ({
@@ -128,6 +131,7 @@ function createIndividualFormTabsFromConfig(
             onSelectChange={onSelectChange}
             disabled={disabled}
             customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
+            sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
           />
         </FormGrid>
       </div>
@@ -141,6 +145,7 @@ function createIndividualFormTabsFromConfig(
           onSelectChange={onSelectChange}
           disabled={disabled}
           customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
+          sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
         />
       </FormGrid>
     )
@@ -190,6 +195,7 @@ export function IndividualFormTabRenderer({
   onMultiplePhotoUploadComplete,
   onProfilePhotoSelection,
   customRenderers,
+  sectionFooterRenderers,
   onPhotoClick,
   onActiveTabChange
 }: IndividualFormTabRendererProps) {
@@ -218,6 +224,7 @@ export function IndividualFormTabRenderer({
     onProfilePhotoSelection,
     // handleEnterpriseMultiplePhotoUpload removed
     customRenderers,
+    sectionFooterRenderers,
     onPhotoClick
   );
 

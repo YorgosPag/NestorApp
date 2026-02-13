@@ -1,20 +1,15 @@
 {
   "category": "FIX",
-  "shortDescription": "Fix DXF overlay rendering — 4 cascading bugs in overlay pipeline",
-  "problem": "Η σχεδίαση και εμφάνιση colored overlay polygons στον DXF Viewer ήταν πλήρως χαλασμένη. 4 cascading bugs: (1) clicks δεν εγγράφονταν, (2) LayerRenderer TDZ crash, (3) Firestore permissions rejection, (4) saved overlays αόρατα στον καμβά.",
-  "cause": "4 ξεχωριστές αιτίες: (1) Λανθασμένη συνθήκη activeTool!=='select' στο CanvasSection, (2) const actualViewport χρησιμοποιούνταν πριν τη δήλωσή του (Temporal Dead Zone) στο LayerRenderer.ts, (3) overlay-store.tsx δεν περνούσε companyId/createdBy στα Firestore documents, (4) DxfCanvas (z-10) είχε αδιαφανές μαύρο CSS background (#000000) που κάλυπτε πλήρως τη LayerCanvas (z-0) + useEffect καθάριζε draft polygon κατά τη σχεδίαση.",
+  "shortDescription": "Fix duplicate photo appearing in two consecutive slots",
+  "problem": "When a user uploaded a photo to a contact, after save+refresh the same photo appeared in 2 consecutive slots instead of 1",
+  "cause": "ContactDetails.enhancedFormData useMemo was concatenating multiplePhotoURLs (from contact) on top of the already-mapped multiplePhotos from individualMapper.ts, doubling the entries",
   "filesChanged": [
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx (overlay draw condition, draft clear fix, container background)",
-    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts (TDZ fix — moved const before usage)",
-    "src/subapps/dxf-viewer/overlays/overlay-store.tsx (companyId + createdBy from useAuth)",
-    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx (transparent background)",
-    "docs/centralized-systems/reference/adrs/ADR-029-canvas-v2-migration.md (changelog)",
-    "docs/centralized-systems/reference/adrs/ADR-035-tool-overlay-mode-metadata.md (changelog)",
-    "docs/centralized-systems/reference/adrs/ADR-063-company-isolation-custom-claims.md (changelog)"
+    "src/components/contacts/details/ContactDetails.tsx",
+    "src/hooks/useCacheBusting.ts"
   ],
-  "solution": "Phase 1: Αφαίρεση activeTool guard. Phase 2: Μεταφορά const actualViewport πριν τη χρήση (TDZ fix). Phase 3: Προσθήκη useAuth() + companyId/createdBy. Phase 4: Μεταφορά canvas background από DxfCanvas element σε container div + προσθήκη overlayMode!=='draw' guard στο useEffect clear.",
-  "testing": "npx tsc --noEmit — 0 TS errors. Production logs verified: ReferenceError eliminated, Firestore permission error resolved.",
-  "notes": "Κλασικό cascade failure: κάθε fix αποκάλυπτε το επόμενο bug. Το root-cause τελικό ήταν αρχιτεκτονικό — DxfCanvas z-10 με αδιαφανές background μπλοκάρει τη LayerCanvas z-0. ADR documentation ενημερώθηκε για και τα 3 πρώτα bugs.",
+  "solution": "1) Removed redundant getMultiplePhotoURLs conversion/concatenation in ContactDetails — individualMapper is the single source of truth. 2) Fixed addCacheBuster to use & separator when URL already has query params (was creating invalid double-? URLs).",
+  "testing": "TypeScript compilation: 0 errors. User confirmed photos upload and display correctly. Duplicate bug confirmed via browser console logs.",
+  "notes": "Browser-level console.log diagnostics (🔴 PHOTO DEBUG) still in place at 5 chain points for future debugging. Can be cleaned up later.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -23,20 +18,12 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "d311a00a",
-      "message": "fix(dxf-viewer): overlay draw mode clicks now work — remove activeTool guard"
+      "hash": "1dc71775",
+      "message": "fix(photos): fix addCacheBuster URL corruption + add browser-level diagnostics"
     },
     {
-      "hash": "ed7dfe14",
-      "message": "fix(dxf-viewer): LayerRenderer TDZ crash — actualViewport used before declaration"
-    },
-    {
-      "hash": "07f0c4ce",
-      "message": "fix(dxf-viewer): add companyId + createdBy to overlay Firestore writes"
-    },
-    {
-      "hash": "9064aa05",
-      "message": "fix(dxf-viewer): overlay polygons invisible — DxfCanvas opaque bg covered LayerCanvas"
+      "hash": "8d894bfc",
+      "message": "fix(contacts): remove duplicate multiplePhotos concatenation causing photo duplication"
     }
   ]
 }

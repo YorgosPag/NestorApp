@@ -52,6 +52,8 @@ export interface IndividualFormRendererProps {
   disabled?: boolean;
   /** Custom field renderers */
   customRenderers?: Record<string, CustomFieldRenderer>;
+  /** Optional section footer renderers (rendered below section fields) */
+  sectionFooterRenderers?: Record<string, CustomFieldRenderer>;
 }
 
 // ============================================================================
@@ -213,7 +215,8 @@ export function IndividualFormRenderer({
   onChange,
   onSelectChange,
   disabled = false,
-  customRenderers
+  customRenderers,
+  sectionFooterRenderers
 }: IndividualFormRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -255,6 +258,12 @@ export function IndividualFormRenderer({
                 </FormField>
               ))
             )}
+
+            {sectionFooterRenderers && sectionFooterRenderers[section.id] ? (
+              <div className="w-full col-span-full">
+                {sectionFooterRenderers[section.id]({} as IndividualFieldConfig, formData, onChange, onSelectChange, disabled)}
+              </div>
+            ) : null}
           </div>
         </div>
       ))}

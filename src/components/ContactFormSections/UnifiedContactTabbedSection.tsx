@@ -31,6 +31,7 @@ import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-type
 // 🏢 ENTERPRISE: Employer Entity Linking (ADR-177)
 import { EmployerPicker } from '@/components/shared/EmployerPicker';
 import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
+import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
 
@@ -569,6 +570,17 @@ export function UnifiedContactTabbedSection({
             />
           ),
         } : {})
+      },
+      sectionFooterRenderers: {
+        address: () => (
+          <ContactAddressMapPreview
+            contactId={formData.id}
+            street={formData.street}
+            streetNumber={formData.streetNumber}
+            city={formData.city}
+            postalCode={formData.postalCode}
+          />
+        ),
       }
     };
 
