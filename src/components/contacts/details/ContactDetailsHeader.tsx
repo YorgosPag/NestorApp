@@ -16,13 +16,7 @@ import type {
 import type { ContactStatus } from '@/core/types/BadgeTypes';
 import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
-import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
-
-// 🎯 CENTRALIZED: Use centralized contact constants instead of hardcoded values
-const getTypeInfo = (type: ContactType) => ({
-  icon: getContactIcon(type),
-  name: getContactLabel(type, 'singular')
-});
+import { CONTACT_TYPES, getContactIcon } from '@/constants/contacts';
 
 const logger = createModuleLogger('ContactDetailsHeader');
 
@@ -74,7 +68,7 @@ export function ContactDetailsHeader({
       window.removeEventListener('forceAvatarRerender', handleForceRerender as EventListener);
     };
   }, [contact.id]);
-  const { icon: Icon, name: typeName } = getTypeInfo(type);
+  const Icon = getContactIcon(type);
 
   // ✅ ENTERPRISE: Type-safe property access using type guards
   const status: ContactStatus | undefined = contact.status;

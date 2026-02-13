@@ -1,24 +1,4 @@
 {
-  "common": {
-    "select": "Select",
-    "fields": {
-      "street": {
-        "placeholder": "e.g. Athens Avenue",
-        "helpText": "Street address"
-      },
-      "streetNumber": {
-        "placeholder": "e.g. 123",
-        "helpText": "Street number"
-      },
-      "city": {
-        "placeholder": "e.g. Athens",
-        "helpText": "City"
-      },
-      "postalCode": {
-        "helpText": "Postal code (5 digits)"
-      }
-    }
-  },
   "emptyState": {
     "title": "Select a contact",
     "description": "Select a contact from the list to view its details."
@@ -690,6 +670,7 @@
     }
   },
   "common": {
+    "select": "Select",
     "fields": {
       "street": {
         "placeholder": "e.g. Main Street",

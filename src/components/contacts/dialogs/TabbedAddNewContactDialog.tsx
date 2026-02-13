@@ -20,7 +20,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
-import { CONTACT_TYPES, getContactLabel } from '@/constants/contacts';
+import { CONTACT_TYPES } from '@/constants/contacts';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Auth context for canonical upload pipeline (ADR-031)
@@ -156,19 +156,19 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                       <SelectItem value={CONTACT_TYPES.INDIVIDUAL}>
                         <div className="flex items-center gap-2">
                           <User className={iconSizes.sm} />
-                          <span>{getContactLabel(CONTACT_TYPES.INDIVIDUAL, 'singular')}</span>
+                          <span>{t('types.individual')}</span>
                         </div>
                       </SelectItem>
                       <SelectItem value={CONTACT_TYPES.COMPANY}>
                         <div className="flex items-center gap-2">
                           <Building2 className={iconSizes.sm} />
-                          <span>{getContactLabel(CONTACT_TYPES.COMPANY, 'singular')}</span>
+                          <span>{t('types.company')}</span>
                         </div>
                       </SelectItem>
                       <SelectItem value={CONTACT_TYPES.SERVICE}>
                         <div className="flex items-center gap-2">
                           <Landmark className={iconSizes.sm} />
-                          <span>{getContactLabel(CONTACT_TYPES.SERVICE, 'singular')}</span>
+                          <span>{t('types.service')}</span>
                         </div>
                       </SelectItem>
                     </SelectContent>

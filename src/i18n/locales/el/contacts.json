@@ -1,24 +1,4 @@
 {
-  "common": {
-    "select": "Επιλέξτε",
-    "fields": {
-      "street": {
-        "placeholder": "π.χ. Λεωφόρος Αθηνών",
-        "helpText": "Η οδός κατοικίας"
-      },
-      "streetNumber": {
-        "placeholder": "π.χ. 123",
-        "helpText": "Ο αριθμός της οδού"
-      },
-      "city": {
-        "placeholder": "π.χ. Αθήνα",
-        "helpText": "Η πόλη κατοικίας"
-      },
-      "postalCode": {
-        "helpText": "Ο ταχυδρομικός κώδικας (5 ψηφία)"
-      }
-    }
-  },
   "emptyState": {
     "title": "Επιλέξτε μια επαφή",
     "description": "Επιλέξτε μια επαφή από τη λίστα για να δείτε τις λεπτομέρειές της."
@@ -690,6 +670,7 @@
     }
   },
   "common": {
+    "select": "Επιλέξτε",
     "fields": {
       "street": {
         "placeholder": "π.χ. Λεωφόρος Αθηνών",
