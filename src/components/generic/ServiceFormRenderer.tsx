@@ -78,6 +78,8 @@ export interface ServiceFormRendererProps {
   onPhotosChange?: (photos: PhotoData[]) => void;
   /** Custom field renderers */
   customRenderers?: Record<string, CustomFieldRenderer>;
+  /** Optional section footer renderers (rendered below section fields) */
+  sectionFooterRenderers?: Record<string, CustomFieldRenderer>;
 }
 
 // ============================================================================
@@ -277,7 +279,8 @@ export function ServiceFormRenderer({
   onSelectChange,
   disabled = false,
   onPhotosChange,
-  customRenderers
+  customRenderers,
+  sectionFooterRenderers
 }: ServiceFormRendererProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support for service form translations
@@ -340,6 +343,12 @@ export function ServiceFormRenderer({
                   </FormField>
                 );
               })}
+
+              {sectionFooterRenderers && sectionFooterRenderers[section.id] ? (
+                <div className="w-full col-span-full">
+                  {sectionFooterRenderers[section.id]({} as ServiceFieldConfig, formData, onChange, onSelectChange, disabled)}
+                </div>
+              ) : null}
             </div>
 
           </div>

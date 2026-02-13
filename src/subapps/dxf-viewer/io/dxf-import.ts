@@ -11,6 +11,7 @@
 import type { DxfImportResult, SceneModel } from '../types/scene';
 import { encodingService, type SupportedEncoding } from './encoding-service';
 import { calculateTightBounds } from '../utils/bounds-utils';
+import { PANEL_TOKENS } from '../config/panel-tokens';
 
 export class DxfImportService {
   private worker: Worker | null = null;
@@ -33,31 +34,29 @@ export class DxfImportService {
    */
   async importDxfFile(file: File, encoding?: string): Promise<DxfImportResult> {
 
-    // Προσωρινά επαναφορά σε direct parsing μέχρι να διορθωθεί το worker
-    if (process.env.NODE_ENV === 'development') {
-      try {
-
-        const result = await this.directParseFileWithEncoding(file, encoding);
-        if (result.success) {
-          return result;
-        }
-
-      } catch (error) {
-
+    // 🏢 ENTERPRISE: Direct parse first (reliable, encoding-aware)
+    // Worker fallback kept for future use but direct parse is primary path
+    try {
+      const result = await this.directParseFileWithEncoding(file, encoding);
+      if (result.success) {
+        return result;
       }
+    } catch {
+      // Fall through to worker path
     }
     
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
+      const importTimeout = PANEL_TOKENS.TIMING.IMPORT_TIMEOUT;
       const timeout = setTimeout(() => {
-        console.error('⌛ DXF import timeout after 15 seconds');
+        console.error(`⌛ DXF import timeout after ${importTimeout / 1000} seconds`);
         resolve({
           success: false,
-          error: 'DXF import timeout - worker did not respond',
+          error: `DXF import timeout after ${importTimeout / 1000}s - worker did not respond`,
           stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
         });
-      }, 15000);
+      }, importTimeout);
       
       reader.onload = (e) => {
         const content = e.target?.result as string;
@@ -122,8 +121,8 @@ export class DxfImportService {
         });
       };
       
-      // Try UTF-8 first, then fallback to Windows-1253 for Greek characters
-      reader.readAsText(file, 'UTF-8');
+      // 🏢 ENTERPRISE: Use provided encoding or default to UTF-8
+      reader.readAsText(file, encoding || 'UTF-8');
     });
   }
   

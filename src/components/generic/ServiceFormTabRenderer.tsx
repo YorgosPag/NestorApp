@@ -60,6 +60,8 @@ export interface ServiceFormTabRendererProps {
   onPhotosChange?: (photos: PhotoSlot[]) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>;
+  /** Optional section footer renderers (rendered below section fields) */
+  sectionFooterRenderers?: Record<string, CustomRendererFn>;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
 }
@@ -80,7 +82,8 @@ function createServiceFormTabsFromConfig(
   disabled: boolean,
   t: (key: string) => string,
   onPhotosChange?: (photos: PhotoSlot[]) => void,
-  customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>
+  customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>,
+  sectionFooterRenderers?: Record<string, CustomRendererFn>
 ) {
   return sections.map(section => {
     // ========================================================================
@@ -170,6 +173,7 @@ function createServiceFormTabsFromConfig(
             disabled={disabled}
             onPhotosChange={onPhotosChange as ((photos: PhotoData[]) => void) | undefined} // 🏢 ENTERPRISE: Type assertion
             customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
+            sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
           />
         </div>
       );
@@ -215,6 +219,7 @@ export function ServiceFormTabRenderer({
   disabled = false,
   onPhotosChange,
   customRenderers,
+  sectionFooterRenderers,
   onActiveTabChange
 }: ServiceFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook for translating tab labels
@@ -234,7 +239,8 @@ export function ServiceFormTabRenderer({
     disabled,
     t,
     onPhotosChange,
-    customRenderers
+    customRenderers,
+    sectionFooterRenderers
   );
 
   return (
