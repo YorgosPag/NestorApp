@@ -348,8 +348,10 @@ export function UnifiedContactTabbedSection({
         ),
 
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager) - only for companies
+        // ⚠️ NOTE: This renderer is called as section-level (no args) by GenericFormTabRenderer,
+        // so fieldDisabled is always undefined. We use the `disabled` prop from the closure instead.
         ...(contactType === 'company' ? {
-          companyPhotos: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+          companyPhotos: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, _fieldDisabled: boolean) => (
             <UnifiedPhotoManager
               contactType="company"
               formData={formData}
@@ -360,14 +362,15 @@ export function UnifiedContactTabbedSection({
                 handleUploadedPhotoURL
               }}
               uploadHandlers={getPhotoUploadHandlers(formData, canonicalUploadContext)}
-              disabled={fieldDisabled}
+              disabled={disabled}
               className="mt-4"
             />
           )
         } : {}),
 
         // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types
-        relationships: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => {
+        // ⚠️ NOTE: Called as section-level (no args) by GenericFormTabRenderer — use `disabled` from closure
+        relationships: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, _fieldDisabled: boolean) => {
           // ✅ FIXED: Now formData.id is correctly included from the contact mappers
           const contactId = formData.id || 'new-contact';
 
@@ -384,7 +387,7 @@ export function UnifiedContactTabbedSection({
                 <RelationshipsSummary
                   contactId={contactId}
                   contactType={contactType}
-                  readonly={fieldDisabled}
+                  readonly={disabled}
                   className="mt-4"
                   onManageRelationships={undefined} // 🎯 No modal needed - inline editing
                 />
@@ -392,7 +395,7 @@ export function UnifiedContactTabbedSection({
                 <ContactRelationshipManager
                   contactId={contactId}
                   contactType={contactType}
-                  readonly={fieldDisabled}
+                  readonly={disabled}
                   className="mt-4"
                   onRelationshipsChange={(relationships) => {
                     // Optionally update form data with relationship count for display

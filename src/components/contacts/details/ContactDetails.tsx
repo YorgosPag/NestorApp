@@ -146,6 +146,37 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     setEditedData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
+  // 🖼️ PHOTO HANDLERS: Persist uploaded URLs into editedData so they survive tab switches
+  const handleUploadedLogoURL = useCallback((logoURL: string) => {
+    setEditedData(prev => ({
+      ...prev,
+      logoURL,
+      logoFile: null
+    }));
+  }, []);
+
+  const handleUploadedPhotoURL = useCallback((photoURL: string) => {
+    setEditedData(prev => ({
+      ...prev,
+      photoURL,
+      photoFile: null
+    }));
+  }, []);
+
+  const handleFileChange = useCallback((file: File | null) => {
+    if (file) {
+      const preview = URL.createObjectURL(file);
+      setEditedData(prev => ({ ...prev, photoFile: file, photoPreview: preview }));
+    }
+  }, []);
+
+  const handleLogoChange = useCallback((file: File | null) => {
+    if (file) {
+      const preview = URL.createObjectURL(file);
+      setEditedData(prev => ({ ...prev, logoFile: file, logoPreview: preview }));
+    }
+  }, []);
+
   // 🖼️ Photo click handler για gallery preview
   const handlePhotoClick = React.useCallback((index: number) => {
     logger.info('Photo click triggered', {
@@ -228,6 +259,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           relationshipsMode={isEditing ? "full" : "summary"} // 🎯 KEY: Full mode when editing, summary when viewing
           onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
           onActiveTabChange={setActiveTab} // 🏢 ENTERPRISE: Track active tab for hiding header controls
+          handleUploadedLogoURL={isEditing ? handleUploadedLogoURL : undefined}
+          handleUploadedPhotoURL={isEditing ? handleUploadedPhotoURL : undefined}
+          handleFileChange={isEditing ? handleFileChange : undefined}
+          handleLogoChange={isEditing ? handleLogoChange : undefined}
         />
       </DetailsContainer>
 
