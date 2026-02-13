@@ -139,6 +139,26 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση του CursorSystem αντί για local state
   const cursor = useCursor();
 
+  // 🏢 FIX (2026-02-13): Selection state refs for RAF-synchronized rendering
+  // PROBLEM: Selection box was rendered in a separate useEffect OUTSIDE the RAF loop.
+  // The RAF loop clears the canvas and re-renders the scene, wiping the selection box.
+  // SOLUTION: Render selection box INSIDE the RAF loop, after scene/grid/rulers.
+  // Use refs so the RAF callback always reads the latest cursor state without React dependencies.
+  const selectionStateRef = useRef<{
+    isSelecting: boolean;
+    selectionStart: Point2D | null;
+    selectionCurrent: Point2D | null;
+  }>({ isSelecting: false, selectionStart: null, selectionCurrent: null });
+  selectionStateRef.current = {
+    isSelecting: cursor.isSelecting,
+    selectionStart: cursor.selectionStart ?? null,
+    selectionCurrent: cursor.selectionCurrent ?? null
+  };
+
+  // 🏢 FIX (2026-02-13): ActiveTool ref for RAF callback — avoids stale closure
+  const activeToolRef = useRef(activeTool);
+  activeToolRef.current = activeTool;
+
   // ✅ IMPERATIVE HANDLE: Expose methods για external controls
   useImperativeHandle(ref, () => ({
     getCanvas: () => canvasRef.current,
@@ -400,6 +420,27 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
           rulerRendererRef.current.render(context, currentViewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
         }
       }
+
+      // 4️⃣ RENDER SELECTION BOX (after everything, so it's on top — AutoCAD-style Window/Crossing)
+      // 🏢 FIX (2026-02-13): Selection rendering is now INSIDE the RAF loop.
+      // Previously it was in a separate useEffect that ran OUTSIDE the loop, so the
+      // RAF's canvas clear would wipe the selection box before the browser could display it.
+      const selState = selectionStateRef.current;
+      const currentActiveTool = activeToolRef.current;
+      if (selectionRendererRef.current && currentActiveTool !== 'pan' &&
+          selState.isSelecting && selState.selectionStart && selState.selectionCurrent) {
+        const cursorSettings = getCursorSettings();
+        const selectionBox = {
+          startPoint: selState.selectionStart,
+          endPoint: selState.selectionCurrent,
+          type: (selState.selectionCurrent.x > selState.selectionStart.x) ? 'window' : 'crossing'
+        } as const;
+        selectionRendererRef.current.renderSelection(
+          selectionBox,
+          currentViewport,
+          cursorSettings.selection
+        );
+      }
     } catch (error) {
       console.error('Failed to render DXF scene:', error);
     }
@@ -429,52 +470,16 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     isDirtyRef.current = true;
   }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings]);
 
-  // 🚀 SEPARATE UI RENDERING - Independent of scene rendering for better performance
+  // 🏢 FIX (2026-02-13): Mark dirty when selection state changes so RAF loop re-renders
+  // The actual selection box rendering now happens inside renderScene (step 4️⃣)
   useEffect(() => {
-    // ✅ ADR-006: crosshairRenderer REMOVED - Now rendered by CrosshairOverlay component
-    // ✅ ADR-007: cursorRenderer REMOVED - Only CrosshairOverlay renders cursor now
-    const selectionRenderer = selectionRendererRef.current;
-
-    if (!viewport.width || !viewport.height) return;
-
-    try {
-      // Use centralized cursor position from CursorSystem
-      const cursorSystemSettings = getCursorSettings();
-
-      // 🔥 PAN TOOL: Skip UI rendering in pan mode
-      const isPanToolActive = activeTool === 'pan';
-
-      // ✅ RENDER SELECTION BOX FIRST (behind cursor) - disable in pan mode
-      if (selectionRenderer && !isPanToolActive && cursor.isSelecting && cursor.selectionStart && cursor.selectionCurrent) {
-        const selectionBox = {
-          startPoint: cursor.selectionStart,
-          endPoint: cursor.selectionCurrent,
-          type: (cursor.selectionCurrent.x > cursor.selectionStart.x) ? 'window' : 'crossing'
-        } as const;
-
-        selectionRenderer.renderSelection(
-          selectionBox,
-          viewport,
-          cursorSystemSettings.selection // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση centralized selection settings
-        );
-      }
-
-      // ✅ ADR-006: CROSSHAIR RENDERING REMOVED - Now in CrosshairOverlay (canvas-v2/overlays/)
-      // ✅ ADR-007: CURSOR RENDERING REMOVED - Only CrosshairOverlay renders cursor now
-      // CrosshairOverlay is the ONLY cursor renderer (no more χεράκι/hand cursor from LegacyCursorAdapter)
-    } catch (error) {
-      console.error('Failed to render UI elements:', error);
-    }
+    isDirtyRef.current = true;
   }, [
     cursor.isSelecting,
     cursor.selectionStart?.x,
     cursor.selectionStart?.y,
     cursor.selectionCurrent?.x,
-    cursor.selectionCurrent?.y,
-    // ✅ ADR-006: crosshairSettings removed from deps - no longer used for rendering
-    // ✅ ADR-007: cursor.position removed from deps - no longer used for cursor rendering
-    activeTool,
-    viewport
+    cursor.selectionCurrent?.y
   ]);
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Όλα τα mouse events τώρα διαχειρίζονται από τους centralized handlers

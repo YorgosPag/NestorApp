@@ -164,6 +164,7 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       };
     case 'polyline':
       return calculateVerticesBounds(entity.vertices);
+    case 'rect':
     case 'rectangle': {
       // Handle both corner-based and vertex-based rectangles
       let vertices: Point2D[] | undefined = ('vertices' in entity ? entity.vertices as Point2D[] : undefined);
