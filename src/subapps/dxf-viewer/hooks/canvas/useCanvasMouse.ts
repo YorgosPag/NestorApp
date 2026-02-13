@@ -323,11 +323,19 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     // Update CSS coordinates
     updateMouseCss(screenPos);
 
-    // 🏢 ENTERPRISE (2026-02-02): World coordinates calculation REMOVED
-    // ToolbarStatusBar now uses CursorContext.worldPosition (SSoT)
-    // The worldPosition is updated by useCentralizedMouseHandlers in LayerCanvas/DxfCanvas
-    // This eliminates duplicate coordinate calculation and duplicate mouse handling systems
-  }, [containerRef, updatePosition, updateMouseCss]);
+    // 🏢 ENTERPRISE (2026-02-02): World coordinates calculation REMOVED for status bar (SSoT in CursorContext)
+    // 🔧 FIX (2026-02-13): BUT we still need world coords for drag preview updates.
+    // LayerCanvas.onMouseMove (which had the drag preview logic) never fires because
+    // DxfCanvas (z-10) intercepts all pointer events. Container's mousemove is the only
+    // reliable handler that fires during mouse movement, so drag preview updates go here.
+    if (draggingOverlayBody || draggingVertices || draggingEdgeMidpoint) {
+      const snap = getPointerSnapshotFromElement(container);
+      if (snap) {
+        const worldPoint = screenToWorldWithSnapshot(screenPos, transform, snap);
+        setDragPreviewPosition(worldPoint);
+      }
+    }
+  }, [containerRef, updatePosition, updateMouseCss, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, transform, setDragPreviewPosition]);
 
   /**
    * 🏢 ENTERPRISE: Container mouse enter handler

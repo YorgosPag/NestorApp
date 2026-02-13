@@ -1263,7 +1263,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // 🔧 FIX (2026-02-13): Move tool — hit-test overlays and start body drag
     // DxfCanvas (z-10) captures mouse events, but overlay hit-testing only exists in LayerCanvas.
     // Since LayerCanvas (z-0) never receives pointer events, we do the hit-test here.
-    if (activeTool === 'move') {
+    // 🔧 FIX (2026-02-13): Guard against re-initiating drag when already dragging.
+    // Second click should be handled by handleContainerMouseUp (event bubbles to container).
+    if (activeTool === 'move' && !draggingOverlayBody) {
       for (const overlay of currentOverlays) {
         if (!overlay.polygon || overlay.polygon.length < 3) continue;
         const vertices = overlay.polygon.map(([x, y]) => ({ x, y }));
@@ -1272,6 +1274,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           return;
         }
       }
+    }
+
+    // 🔧 FIX (2026-02-13): When move-dragging, second click ends drag via handleContainerMouseUp.
+    // Skip deselection and all further processing to avoid interfering with the drag-end.
+    if (activeTool === 'move' && draggingOverlayBody) {
+      return;
     }
 
     // 🏢 ENTERPRISE (2026-01-25): Only deselect overlay if clicking on EMPTY canvas space
