@@ -626,6 +626,22 @@ The following individual ADRs have been consolidated into this domain ADR:
 
 ---
 
+---
+
+## Changelog
+
+### 2026-02-13 — Fix: `calculatePolygonCentroid()` signed area bug
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Centroid calculation used `Math.abs(area)` (from `calculatePolygonArea()`) but the centroid formula requires **signed area**. For CW-wound polygons (normal in canvas Y-down), this negated the centroid coordinates, placing area/perimeter labels off-screen |
+| **Root Cause** | `factor = 1 / (6 * area)` where `area` = absolute value. With CW winding (signed area < 0), `cx` and `cy` sums are negative, but dividing by positive `|area|` keeps them negative instead of correcting the sign |
+| **Fix** | Compute `signedArea2` (= 2 × signed area) directly, use `factor = 1 / (3 * signedArea2)` for correct sign cancellation |
+| **File** | `rendering/entities/shared/geometry-utils.ts` → `calculatePolygonCentroid()` |
+| **Impact** | Fixes area/perimeter text in measure-area polygons + hover centroid labels |
+
+---
+
 *Consolidated: 2026-02-01*
 *Based on: Michael Nygard's Architecture Decision Records*
 *Enterprise standards inspired by: Autodesk, Adobe, Bentley Systems, Google*
