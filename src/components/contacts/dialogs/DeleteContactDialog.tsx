@@ -16,6 +16,7 @@
 'use client';
 
 import { createSmartDialog } from '@/core/modals/SmartDialogEngine';
+import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
 
 interface DeleteContactDialogProps {
@@ -38,11 +39,21 @@ export function DeleteContactDialog(props: DeleteContactDialogProps) {
     operationType: 'delete',
     props: {
       ...props,
-      // Mapping για destructive action
+      // 🔥 Perform actual Firestore deletion, then notify parent
       onSubmit: async () => {
-        if (props.onContactsDeleted) {
-          props.onContactsDeleted();
+        const ids = props.selectedContactIds?.length
+          ? props.selectedContactIds
+          : props.contact?.id ? [props.contact.id] : [];
+
+        if (ids.length === 0) return;
+
+        if (ids.length === 1) {
+          await ContactsService.deleteContact(ids[0]);
+        } else {
+          await ContactsService.deleteMultipleContacts(ids);
         }
+
+        props.onContactsDeleted?.();
       }
     }
   });
