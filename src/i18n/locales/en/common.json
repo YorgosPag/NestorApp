@@ -784,6 +784,15 @@
       "logoUploaded": "Logo uploaded successfully!"
     }
   },
+  "photo": {
+    "preview": "Photo preview",
+    "logo": "Logo",
+    "photo": "Photo",
+    "remove": "Remove {name}",
+    "logoUploaded": "Logo uploaded successfully",
+    "photoUploaded": "Photo uploaded successfully",
+    "clickToChange": "Click to change"
+  },
   "photos": {
     "addPhoto": "Add Photo",
     "galleryLabel": "Photo gallery",

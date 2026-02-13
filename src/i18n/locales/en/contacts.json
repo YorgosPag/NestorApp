@@ -715,12 +715,18 @@
   },
   "validation": {
     "contactTypeRequired": "Contact type is required",
+    "unknownType": "Unknown contact type",
     "individual": {
       "firstNameRequired": "First name is required for individuals",
-      "lastNameRequired": "Last name is required for individuals"
+      "lastNameRequired": "Last name is required for individuals",
+      "nameRequired": "First name and last name are required",
+      "birthDateFuture": "Birth date cannot be in the future",
+      "documentIssueDateFuture": "Document issue date cannot be in the future",
+      "documentDatesInvalid": "Expiry date must be after issue date"
     },
     "company": {
       "nameRequired": "Company name is required for legal entities",
+      "nameAndVatRequired": "Company name and VAT number are required",
       "vatRecommended": "VAT number is recommended for legal entities"
     },
     "service": {
@@ -733,6 +739,19 @@
     "phone": {
       "invalidFormat": "Phone number may have invalid format"
     }
+  },
+  "submission": {
+    "failedUploads": "There are failed uploads. Please try again.",
+    "pendingUploads": "Waiting for uploads to complete...",
+    "updateSuccess": "Contact updated successfully!",
+    "createSuccess": "Contact created successfully!",
+    "updateError": "Error updating contact",
+    "createError": "Error creating contact"
+  },
+  "duplicate": {
+    "exactMatch": "This contact already exists in the system!",
+    "similarMatch": "A similar contact was found. Please check before continuing.",
+    "possibleMatch": "Possible match with an existing contact."
   },
   "individual": {
     "sections": {

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { toast, Toaster } from 'sonner';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import i18n from '@/i18n/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { generateNotificationId } from '@/services/enterprise-id.service';
@@ -120,6 +121,41 @@ export function NotificationProvider({
     }
   }, [iconSizes.sm]);
 
+  // 🏢 ENTERPRISE: Auto-resolve i18n keys to translated messages
+  // Supports keys in format: "namespace.key.path" or "prefix.namespace.key.path"
+  const resolveI18nMessage = useCallback((message: string): string => {
+    // If message contains spaces, it's already a human-readable string
+    if (!message || message.includes(' ')) return message;
+
+    const knownNamespaces = ['contacts', 'common', 'building', 'projects', 'units'];
+
+    for (const ns of knownNamespaces) {
+      // Pattern 1: "contacts.submission.createSuccess" → ns="contacts", key="submission.createSuccess"
+      if (message.startsWith(`${ns}.`)) {
+        const key = message.slice(ns.length + 1);
+        if (i18n.exists(key, { ns })) {
+          return i18n.t(key, { ns });
+        }
+      }
+
+      // Pattern 2: "validation.contacts.individual.nameRequired" → ns="contacts", key="validation.individual.nameRequired"
+      const nsInfix = `.${ns}.`;
+      if (message.includes(nsInfix)) {
+        const key = message.replace(nsInfix, '.');
+        if (i18n.exists(key, { ns })) {
+          return i18n.t(key, { ns });
+        }
+      }
+    }
+
+    // Fallback: try with default namespace
+    if (i18n.exists(message)) {
+      return i18n.t(message);
+    }
+
+    return message;
+  }, []);
+
   // Core notification function
   const notify = useCallback((message: string, options: NotificationOptions = {}): string => {
     const {
@@ -135,9 +171,12 @@ export function NotificationProvider({
       onCancel
     } = options;
 
+    // 🏢 ENTERPRISE: Auto-translate i18n keys
+    const resolvedMessage = resolveI18nMessage(message);
+
     // Rate limiting - SKIP για μεγάλα μηνύματα (test results)
-    const skipRateLimiting = message.length > 500; // Large messages are likely test results
-    if (!skipRateLimiting && !canShowNotification(message)) {
+    const skipRateLimiting = resolvedMessage.length > 500; // Large messages are likely test results
+    if (!skipRateLimiting && !canShowNotification(resolvedMessage)) {
       logger.info('RATE LIMITED: Skipping duplicate notification');
       return ''; // Return empty ID for rate-limited notifications
     }
@@ -148,7 +187,7 @@ export function NotificationProvider({
     // Create notification data
     const notificationData: NotificationData = {
       id: notificationId,
-      message,
+      message: resolvedMessage,
       type,
       timestamp: new Date(),
       options
@@ -165,10 +204,10 @@ export function NotificationProvider({
     });
 
     // Accessibility announcement
-    announceToScreenReader(message, type === 'error' ? 'assertive' : 'polite');
+    announceToScreenReader(resolvedMessage, type === 'error' ? 'assertive' : 'polite');
 
     // Create toast with Sonner
-    const toastId = toast(message, {
+    const toastId = toast(resolvedMessage, {
       id: notificationId,
       duration: duration === 0 ? Infinity : duration,
       icon: getNotificationIcon(type),
