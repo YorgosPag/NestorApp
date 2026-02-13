@@ -288,7 +288,7 @@ export class GeoAlertBundleOptimizer {
    * Analyze complete bundle structure και performance
    */
   public async analyzeBundles(): Promise<Map<string, BundleAnalysis>> {
-    console.log('🔍 BUNDLE ANALYSIS - Starting comprehensive analysis...');
+    console.debug('🔍 BUNDLE ANALYSIS - Starting comprehensive analysis...');
 
     const startTime = performance.now();
 
@@ -301,7 +301,7 @@ export class GeoAlertBundleOptimizer {
     }
 
     const duration = performance.now() - startTime;
-    console.log(`✅ Bundle analysis completed in ${duration.toFixed(2)}ms`);
+    console.debug(`✅ Bundle analysis completed in ${duration.toFixed(2)}ms`);
 
     // Generate optimization recommendations
     await this.generateOptimizationPlan();
@@ -659,8 +659,8 @@ export class GeoAlertBundleOptimizer {
   // ========================================================================
 
   private async generateOptimizationPlan(): Promise<void> {
-    console.log('\n📋 OPTIMIZATION PLAN GENERATION');
-    console.log('=================================');
+    console.debug('\n📋 OPTIMIZATION PLAN GENERATION');
+    console.debug('=================================');
 
     const allRecommendations: OptimizationRecommendation[] = [];
 
@@ -682,12 +682,12 @@ export class GeoAlertBundleOptimizer {
 
     // Calculate total potential savings
     const totalSavings = sortedRecommendations.reduce((sum, rec) => sum + rec.estimatedSavings, 0);
-    console.log(`💰 Total Potential Savings: ${this.formatBytes(totalSavings)}`);
+    console.debug(`💰 Total Potential Savings: ${this.formatBytes(totalSavings)}`);
   }
 
   private generateImplementationPlan(recommendations: OptimizationRecommendation[]): void {
-    console.log('\n🎯 IMPLEMENTATION PLAN');
-    console.log('======================');
+    console.debug('\n🎯 IMPLEMENTATION PLAN');
+    console.debug('======================');
 
     const phases = {
       immediate: recommendations.filter(r => r.priority === 'critical' && r.effort === 'low'),
@@ -698,10 +698,10 @@ export class GeoAlertBundleOptimizer {
 
     Object.entries(phases).forEach(([phase, recs]) => {
       if (recs.length > 0) {
-        console.log(`\n📅 ${phase.toUpperCase()} (${recs.length} tasks):`);
+        console.debug(`\n📅 ${phase.toUpperCase()} (${recs.length} tasks):`);
         recs.forEach((rec, index) => {
           const savings = this.formatBytes(rec.estimatedSavings);
-          console.log(`  ${index + 1}. ${rec.description} - Saves ${savings}`);
+          console.debug(`  ${index + 1}. ${rec.description} - Saves ${savings}`);
         });
       }
     });
@@ -992,7 +992,7 @@ export class GeoAlertBundleOptimizer {
     const skipped: string[] = [];
     const errors: string[] = [];
 
-    console.log('🤖 AUTOMATED OPTIMIZATION - Starting...');
+    console.debug('🤖 AUTOMATED OPTIMIZATION - Starting...');
 
     // Apply safe optimizations
     for (const [bundleName, analysis] of this.analysisResults.entries()) {
@@ -1010,9 +1010,9 @@ export class GeoAlertBundleOptimizer {
       }
     }
 
-    console.log(`✅ Applied: ${applied.length} optimizations`);
-    console.log(`⏭️  Skipped: ${skipped.length} optimizations`);
-    console.log(`❌ Errors: ${errors.length} optimizations`);
+    console.debug(`✅ Applied: ${applied.length} optimizations`);
+    console.debug(`⏭️  Skipped: ${skipped.length} optimizations`);
+    console.debug(`❌ Errors: ${errors.length} optimizations`);
 
     return { applied, skipped, errors };
   }
@@ -1025,7 +1025,7 @@ export class GeoAlertBundleOptimizer {
 
   private async applyOptimization(recommendation: OptimizationRecommendation): Promise<void> {
     // Mock optimization application
-    console.log(`🔧 Applying: ${recommendation.description}`);
+    console.debug(`🔧 Applying: ${recommendation.description}`);
 
     // In real implementation, this would:
     // - Update webpack config για code splitting

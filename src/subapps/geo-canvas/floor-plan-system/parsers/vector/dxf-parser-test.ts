@@ -11,11 +11,11 @@ import DxfParser from 'dxf-parser';
  * Test basic import
  */
 export function testDxfParserImport() {
-  console.log('✅ dxf-parser imported successfully!');
+  console.debug('✅ dxf-parser imported successfully!');
 
   // Create parser instance to verify it works
   const parser = new DxfParser();
-  console.log('✅ DxfParser instance created:', typeof parser.parseSync === 'function');
+  console.debug('✅ DxfParser instance created:', typeof parser.parseSync === 'function');
 
   return true;
 }

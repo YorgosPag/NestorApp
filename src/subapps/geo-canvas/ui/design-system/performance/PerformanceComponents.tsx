@@ -648,7 +648,7 @@ export const usePerformanceMonitor = (componentName: string) => {
     lastRenderTime.current = now;
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Performance] ${componentName} rendered ${renderCountRef.current} times. Time since last render: ${timeSinceLastRender}ms`);
+      console.debug(`[Performance] ${componentName} rendered ${renderCountRef.current} times. Time since last render: ${timeSinceLastRender}ms`);
     }
   });
 

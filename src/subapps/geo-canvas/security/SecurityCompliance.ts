@@ -232,7 +232,7 @@ export class GeoAlertSecurityCompliance {
       this.generateMockSecurityData();
       this.isInitialized = true;
 
-      console.log('🔒 GeoAlert Security & Compliance System initialized');
+      console.debug('🔒 GeoAlert Security & Compliance System initialized');
     } catch (error) {
       console.error('❌ Security initialization failed:', error);
       throw error;
@@ -329,13 +329,13 @@ export class GeoAlertSecurityCompliance {
   private setupSecurityPolicies(): void {
     // Password Policy
     const passwordPolicy = this.config.authentication.passwordPolicy;
-    console.log(`🔐 Password Policy: ${passwordPolicy.minLength}+ chars, complexity enabled`);
+    console.debug(`🔐 Password Policy: ${passwordPolicy.minLength}+ chars, complexity enabled`);
 
     // Session Management
-    console.log(`⏱️ Session timeout: ${this.config.authorization.sessionTimeout}s`);
+    console.debug(`⏱️ Session timeout: ${this.config.authorization.sessionTimeout}s`);
 
     // Encryption Standards
-    console.log(`🔒 Encryption: ${this.config.encryption.algorithm}, TLS ${this.config.encryption.tlsVersion}`);
+    console.debug(`🔒 Encryption: ${this.config.encryption.algorithm}, TLS ${this.config.encryption.tlsVersion}`);
   }
 
   /**
@@ -374,7 +374,7 @@ export class GeoAlertSecurityCompliance {
         `Critical vulnerabilities detected: ${criticalVulns.length} findings`);
     }
 
-    console.log(`🔍 Vulnerability scan completed: ${assessment.vulnerabilities.length} findings`);
+    console.debug(`🔍 Vulnerability scan completed: ${assessment.vulnerabilities.length} findings`);
     return assessment;
   }
 
@@ -389,7 +389,7 @@ export class GeoAlertSecurityCompliance {
       this.updateSecurityDashboard();
     }, 60000); // Κάθε λεπτό
 
-    console.log('📊 Security monitoring started');
+    console.debug('📊 Security monitoring started');
   }
 
   /**
@@ -509,7 +509,7 @@ export class GeoAlertSecurityCompliance {
     };
 
     this.incidents.push(incident);
-    console.log(`🚨 Security incident created: ${incident.id} (${severity})`);
+    console.debug(`🚨 Security incident created: ${incident.id} (${severity})`);
 
     return incident;
   }
@@ -550,7 +550,7 @@ export class GeoAlertSecurityCompliance {
     };
 
     this.complianceReports.push(report);
-    console.log(`📊 ${framework} compliance report generated: ${report.complianceScore.toFixed(1)}%`);
+    console.debug(`📊 ${framework} compliance report generated: ${report.complianceScore.toFixed(1)}%`);
 
     return report;
   }
@@ -658,7 +658,7 @@ export class GeoAlertSecurityCompliance {
   private updateSecurityDashboard(): void {
     // Mock dashboard update - σε production θα στέλναμε τα metrics σε dashboard
     if (this.securityMetrics) {
-      console.log(`📊 Security Dashboard Updated - Risk Score: ${this.securityMetrics.threats.riskScore.toFixed(1)}`);
+      console.debug(`📊 Security Dashboard Updated - Risk Score: ${this.securityMetrics.threats.riskScore.toFixed(1)}`);
     }
   }
 
@@ -755,7 +755,7 @@ export class GeoAlertSecurityCompliance {
       this.monitoringInterval = null;
     }
     this.isInitialized = false;
-    console.log('🧹 Security system cleanup completed');
+    console.debug('🧹 Security system cleanup completed');
   }
 }
 

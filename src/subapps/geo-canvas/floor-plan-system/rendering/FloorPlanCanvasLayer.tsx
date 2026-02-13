@@ -137,7 +137,7 @@ export function FloorPlanCanvasLayer({
     canvasRef.current.height = height;
     setCanvasSize({ width, height });
 
-    console.log('🖼️ FloorPlanCanvasLayer: Canvas resized', { width, height });
+    console.debug('🖼️ FloorPlanCanvasLayer: Canvas resized', { width, height });
   }, [map]);
 
   /**
@@ -204,7 +204,7 @@ export function FloorPlanCanvasLayer({
     // Set fill style
     ctx.fillStyle = layerStyle.fillColor;
 
-    console.log('🎨 Rendering floor plan features:', floorPlan.geoJSON.features.length);
+    console.debug('🎨 Rendering floor plan features:', floorPlan.geoJSON.features.length);
 
     // NOTE: For now, we're rendering in LOCAL COORDINATES (not geo-projected)
     // This is a placeholder - Phase 2.2-2.3 will add proper transformation
@@ -220,7 +220,7 @@ export function FloorPlanCanvasLayer({
       }
     });
 
-    console.log(`✅ Rendered ${renderedCount}/${floorPlan.geoJSON.features.length} features`);
+    console.debug(`✅ Rendered ${renderedCount}/${floorPlan.geoJSON.features.length} features`);
 
     // 🎯 RENDER SNAP INDICATOR (if active)
     if (snapEngine && snapEngine.snapResult && floorPlan.bounds) {
@@ -254,7 +254,7 @@ export function FloorPlanCanvasLayer({
         canvasSnapY = canvas.height - ((point.y - bounds.minY) * scale + offsetY);
       }
 
-      console.log('🎯 Rendering snap indicator:', {
+      console.debug('🎯 Rendering snap indicator:', {
         local: { x: point.x.toFixed(2), y: point.y.toFixed(2) },
         canvas: { x: canvasSnapX.toFixed(2), y: canvasSnapY.toFixed(2) }
       });
@@ -402,7 +402,7 @@ export function FloorPlanCanvasLayer({
       radiusLocal = 10 / scale;
     }
 
-    console.log('🔄 Cursor transformation:', {
+    console.debug('🔄 Cursor transformation:', {
       canvas: { x: canvasX, y: canvasY },
       local: { x: localX.toFixed(2), y: localY.toFixed(2) },
       radius: radiusLocal.toFixed(2)
@@ -451,13 +451,13 @@ export function FloorPlanCanvasLayer({
         canvasY = canvas.height - ((localPoint.y - bounds.minY) * scale + offsetY);
       }
 
-      console.log('🎯 Snap used:', {
+      console.debug('🎯 Snap used:', {
         local: { x: localPoint.x.toFixed(2), y: localPoint.y.toFixed(2) },
         canvas: { x: canvasX.toFixed(2), y: canvasY.toFixed(2) }
       });
     }
 
-    console.log('🖱️ Canvas clicked:', { canvasX, canvasY });
+    console.debug('🖱️ Canvas clicked:', { canvasX, canvasY });
 
     // Pass coordinates to parent
     onClick(canvasX, canvasY, event);

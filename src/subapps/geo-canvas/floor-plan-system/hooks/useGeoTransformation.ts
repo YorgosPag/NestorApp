@@ -217,7 +217,7 @@ export function useGeoTransformation(
    */
   const calculate = useCallback(() => {
     if (debug) {
-      console.log('useGeoTransformation: Calculating...', {
+      console.debug('useGeoTransformation: Calculating...', {
         pointCount: controlPoints.length,
         minRequired: MIN_CONTROL_POINTS
       });
@@ -242,7 +242,7 @@ export function useGeoTransformation(
       setResult(transformResult);
 
       if (debug) {
-        console.log('✅ Transformation calculated:', {
+        console.debug('✅ Transformation calculated:', {
           success: transformResult.success,
           quality: transformResult.quality,
           rmsError: transformResult.rmsError
@@ -264,7 +264,7 @@ export function useGeoTransformation(
    */
   const recalculate = useCallback(() => {
     if (debug) {
-      console.log('Manual recalculation triggered');
+      console.debug('Manual recalculation triggered');
     }
     calculate();
   }, [calculate, debug]);
@@ -285,7 +285,7 @@ export function useGeoTransformation(
           : prev
       );
       if (debug) {
-        console.log('⏭️ Skipping calculation: insufficient points', {
+        console.debug('⏭️ Skipping calculation: insufficient points', {
           count: controlPoints.length,
           required: MIN_CONTROL_POINTS
         });
@@ -294,7 +294,7 @@ export function useGeoTransformation(
     }
 
     if (debug) {
-      console.log('Control points changed, auto-recalculating...', {
+      console.debug('Control points changed, auto-recalculating...', {
         count: controlPoints.length,
         pointsKey
       });
@@ -307,13 +307,13 @@ export function useGeoTransformation(
     setResult(prev => {
       if (equalTransform(prev, next)) {
         if (debug) {
-          console.log('⏭️ Skipping setState: result unchanged');
+          console.debug('⏭️ Skipping setState: result unchanged');
         }
         return prev;
       }
 
       if (debug) {
-        console.log('✅ Transformation updated:', {
+        console.debug('✅ Transformation updated:', {
           success: next.success,
           quality: next.quality,
           rmsError: next.rmsError

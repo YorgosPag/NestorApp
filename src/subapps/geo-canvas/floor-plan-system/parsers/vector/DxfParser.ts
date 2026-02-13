@@ -57,11 +57,11 @@ export class DxfParser {
    */
   async parse(file: File): Promise<ParserResult> {
     try {
-      console.log('📐 DXF Parser: Starting parse...', file.name);
+      console.debug('📐 DXF Parser: Starting parse...', file.name);
 
       // STEP A: Read file as text
       const text = await file.text();
-      console.log('📄 DXF file loaded:', `${text.length} characters`);
+      console.debug('📄 DXF file loaded:', `${text.length} characters`);
 
       // STEP B: Parse με dxf-parser library
       const parser = new DxfParserLib();
@@ -71,7 +71,7 @@ export class DxfParser {
         throw new Error('DXF parsing failed - invalid file format');
       }
 
-      console.log('✅ DXF parsed successfully:', {
+      console.debug('✅ DXF parsed successfully:', {
         entities: dxf.entities?.length || 0,
         blocks: dxf.blocks?.length || 0,
         hasHeader: !!dxf.header
@@ -79,19 +79,19 @@ export class DxfParser {
 
       // STEP C: Extract entities
       const entities = dxf.entities || [];
-      console.log(`📊 Extracting ${entities.length} entities...`);
+      console.debug(`📊 Extracting ${entities.length} entities...`);
 
       // STEP D: Extract layers
       const layers = this.extractLayers(dxf);
-      console.log(`📋 Found ${layers.length} layers:`, layers);
+      console.debug(`📋 Found ${layers.length} layers:`, layers);
 
       // STEP E: Convert to GeoJSON
       const geoJSON = this.entitiesToGeoJSON(entities);
-      console.log(`🗺️ Converted to GeoJSON: ${geoJSON.features.length} features`);
+      console.debug(`🗺️ Converted to GeoJSON: ${geoJSON.features.length} features`);
 
       // STEP F: Calculate bounds
       const bounds = this.calculateBounds(geoJSON.features);
-      console.log('📏 Bounds calculated:', bounds);
+      console.debug('📏 Bounds calculated:', bounds);
 
       // STEP G: Generate thumbnail
       const thumbnail = await generateDxfThumbnail(geoJSON, bounds, {
@@ -102,7 +102,7 @@ export class DxfParser {
         strokeWidth: 0.8,  // Visible lines (0.8px on screen) - ensures small arcs are visible
         padding: 20
       });
-      console.log('🖼️ Thumbnail generated');
+      console.debug('🖼️ Thumbnail generated');
 
       // STEP H: Return result
       return {
@@ -170,7 +170,7 @@ export class DxfParser {
       }
     });
 
-    console.log('📊 DXF Entity types:', entityTypeCounts);
+    console.debug('📊 DXF Entity types:', entityTypeCounts);
 
     return {
       type: 'FeatureCollection',

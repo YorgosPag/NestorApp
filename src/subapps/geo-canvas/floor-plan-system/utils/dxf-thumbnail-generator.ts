@@ -69,7 +69,7 @@ export async function generateDxfThumbnail(
 ): Promise<string> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  console.log('🖼️ Generating DXF thumbnail...', {
+  console.debug('🖼️ Generating DXF thumbnail...', {
     features: geoJSON.features.length,
     bounds,
     size: `${opts.width}x${opts.height}`
@@ -116,7 +116,7 @@ export async function generateDxfThumbnail(
   // Divide by scale so lines appear same thickness regardless of drawing size
   const adaptiveLineWidth = opts.strokeWidth / scale;
 
-  console.log('📐 Thumbnail scaling:', {
+  console.debug('📐 Thumbnail scaling:', {
     drawingSize: `${drawingWidth.toFixed(2)} x ${drawingHeight.toFixed(2)}`,
     scale: scale.toFixed(4),
     offset: `${offsetX.toFixed(2)}, ${offsetY.toFixed(2)}`,
@@ -169,10 +169,10 @@ export async function generateDxfThumbnail(
 
   ctx.restore();
 
-  console.log(`✅ Rendered ${renderedCount}/${geoJSON.features.length} features to thumbnail`);
-  console.log('📊 Geometry types:', geometryTypes);
+  console.debug(`✅ Rendered ${renderedCount}/${geoJSON.features.length} features to thumbnail`);
+  console.debug('📊 Geometry types:', geometryTypes);
   if (smallArcsCount > 0) {
-    console.log(`🎯 Small ARCs detected: ${smallArcsCount} (enhanced with 3× stroke width)`);
+    console.debug(`🎯 Small ARCs detected: ${smallArcsCount} (enhanced with 3× stroke width)`);
   }
 
   // STEP 6: Convert to data URL
@@ -341,7 +341,7 @@ export async function generateDxfThumbnailWithLayers(
 ): Promise<string> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  console.log('🎨 Generating DXF thumbnail with layer colors...', {
+  console.debug('🎨 Generating DXF thumbnail with layer colors...', {
     features: geoJSON.features.length,
     layers: layerColors.size
   });
@@ -415,7 +415,7 @@ export async function generateDxfThumbnailWithLayers(
   });
 
   if (smallArcsCount > 0) {
-    console.log(`🎯 Small ARCs detected: ${smallArcsCount} (enhanced with 3× stroke width)`);
+    console.debug(`🎯 Small ARCs detected: ${smallArcsCount} (enhanced with 3× stroke width)`);
   }
 
   ctx.restore();

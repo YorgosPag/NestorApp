@@ -86,7 +86,7 @@ export function useSnapEngine(
   // Create snap engine (once)
   useEffect(() => {
     if (!engineRef.current) {
-      if (debug) console.log('🔧 useSnapEngine: Creating snap engine...');
+      if (debug) console.debug('🔧 useSnapEngine: Creating snap engine...');
       engineRef.current = createSnapEngine(initialSettings);
     }
   }, [initialSettings, debug]);
@@ -95,7 +95,7 @@ export function useSnapEngine(
   useEffect(() => {
     if (!engineRef.current) return;
 
-    if (debug) console.log('🔧 useSnapEngine: Initializing με DXF data...');
+    if (debug) console.debug('🔧 useSnapEngine: Initializing με DXF data...');
     engineRef.current.initialize(parserResult);
 
     const ready = engineRef.current.isInitialized();
@@ -104,7 +104,7 @@ export function useSnapEngine(
     if (ready) {
       setCurrentSettings(engineRef.current.getSettings());
       if (debug) {
-        console.log(`✅ useSnapEngine: Ready with ${engineRef.current.getSnapPointsCount()} snap points`);
+        console.debug(`✅ useSnapEngine: Ready with ${engineRef.current.getSnapPointsCount()} snap points`);
       }
     }
   }, [parserResult, debug]);
@@ -125,7 +125,7 @@ export function useSnapEngine(
     setSnapResult(result);
 
     if (debug && result) {
-      console.log('🎯 Snap found:', {
+      console.debug('🎯 Snap found:', {
         point: result.point,
         distance: result.distance.toFixed(2)
       });
@@ -153,7 +153,7 @@ export function useSnapEngine(
     engineRef.current.updateSettings(settings);
     setCurrentSettings(engineRef.current.getSettings());
 
-    if (debug) console.log('⚙️ useSnapEngine: Settings updated', settings);
+    if (debug) console.debug('⚙️ useSnapEngine: Settings updated', settings);
   }, [debug]);
 
   /**
@@ -169,7 +169,7 @@ export function useSnapEngine(
       clearSnap();
     }
 
-    if (debug) console.log(`⚙️ useSnapEngine: Snap ${enabled ? 'enabled' : 'disabled'}`);
+    if (debug) console.debug(`⚙️ useSnapEngine: Snap ${enabled ? 'enabled' : 'disabled'}`);
   }, [clearSnap, debug]);
 
   // ===================================================================

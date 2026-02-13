@@ -127,7 +127,7 @@ export function TechnicalDrawingInterface({
     // Start automated monitoring with technical precision
     startPeriodicCheck(alertConfiguration.monitoringInterval);
 
-    console.log('🚨 Technical: Advanced automated alert created', technicalRealEstatePolygon);
+    console.debug('🚨 Technical: Advanced automated alert created', technicalRealEstatePolygon);
   }, [alertConfiguration, addRealEstatePolygon, onRealEstateAlertCreated, startPeriodicCheck]);
 
   // Tool selection handler
@@ -144,7 +144,7 @@ export function TechnicalDrawingInterface({
     switch (tool) {
       case 'dxf-viewer':
         // Redirect to full DXF Viewer
-        console.log('🛠️ Technical: Opening DXF Viewer');
+        console.debug('🛠️ Technical: Opening DXF Viewer');
         window.open('/dxf/viewer', '_blank');
         break;
 
@@ -156,18 +156,18 @@ export function TechnicalDrawingInterface({
           strokeWidth: 1 // Thin lines για precision
         });
         setIsDrawing(true);
-        console.log('📐 Technical: Ultra-precision mode activated');
+        console.debug('📐 Technical: Ultra-precision mode activated');
         break;
 
       case 'settings':
         // Technical settings (mock)
-        console.log('⚙️ Technical: Advanced settings mode');
+        console.debug('⚙️ Technical: Advanced settings mode');
         break;
 
       case 'automated-alerts':
         // 🚨 Phase 2.5.3: Automated Alerts Configuration
         setShowAutomatedAlerts(true);
-        console.log('🚨 Technical: Automated alerts configuration opened');
+        console.debug('🚨 Technical: Automated alerts configuration opened');
         break;
     }
   }, [actualIsDrawing, startDrawing, cancelDrawing]);
@@ -177,7 +177,7 @@ export function TechnicalDrawingInterface({
     const polygon = finishDrawing();
     if (polygon && onPolygonComplete) {
       onPolygonComplete(polygon);
-      console.log('✅ Technical: Ultra-precision drawing completed', polygon);
+      console.debug('✅ Technical: Ultra-precision drawing completed', polygon);
     }
     setIsDrawing(false);
     setSelectedTool(null);
@@ -188,7 +188,7 @@ export function TechnicalDrawingInterface({
     cancelDrawing();
     setIsDrawing(false);
     setSelectedTool(null);
-    console.log('❌ Technical: Drawing cancelled');
+    console.debug('❌ Technical: Drawing cancelled');
   }, [cancelDrawing]);
 
   return (
@@ -514,7 +514,7 @@ export function TechnicalDrawingInterface({
             <button
               onClick={() => {
                 startPeriodicCheck(alertConfiguration.monitoringInterval);
-                console.log('🚨 Technical: Automated monitoring started');
+                console.debug('🚨 Technical: Automated monitoring started');
               }}
               className={`flex items-center justify-center gap-2 ${colors.bg.success} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON}`}
             >
@@ -525,7 +525,7 @@ export function TechnicalDrawingInterface({
             <button
               onClick={() => {
                 stopPeriodicCheck();
-                console.log('🚨 Technical: Automated monitoring stopped');
+                console.debug('🚨 Technical: Automated monitoring stopped');
               }}
               className={`flex items-center justify-center gap-2 ${colors.bg.muted} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`}
             >

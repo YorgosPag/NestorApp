@@ -242,7 +242,7 @@ export class GeoAlertPerformanceOptimization {
       this.generateMockPerformanceData();
       this.isInitialized = true;
 
-      console.log('⚡ GeoAlert Performance Optimization System initialized');
+      console.debug('⚡ GeoAlert Performance Optimization System initialized');
     } catch (error) {
       console.error('❌ Performance optimization initialization failed:', error);
       throw error;
@@ -408,15 +408,15 @@ export class GeoAlertPerformanceOptimization {
     const cacheConfig = this.config.caching;
 
     if (cacheConfig.enableBrowserCache) {
-      console.log(`💾 Browser cache enabled: ${cacheConfig.cacheMaxAge}s TTL`);
+      console.debug(`💾 Browser cache enabled: ${cacheConfig.cacheMaxAge}s TTL`);
     }
 
     if (cacheConfig.enableServiceWorker) {
-      console.log('🔧 Service Worker caching enabled');
+      console.debug('🔧 Service Worker caching enabled');
     }
 
     if (cacheConfig.enableRedisCache) {
-      console.log(`🔴 Redis cache enabled: ${cacheConfig.redisTtl}s TTL`);
+      console.debug(`🔴 Redis cache enabled: ${cacheConfig.redisTtl}s TTL`);
     }
   }
 
@@ -427,11 +427,11 @@ export class GeoAlertPerformanceOptimization {
     const compressionConfig = this.config.compression;
 
     if (compressionConfig.enableGzip) {
-      console.log(`📦 Gzip compression enabled: Level ${compressionConfig.compressionLevel}`);
+      console.debug(`📦 Gzip compression enabled: Level ${compressionConfig.compressionLevel}`);
     }
 
     if (compressionConfig.enableBrotli) {
-      console.log('📦 Brotli compression enabled');
+      console.debug('📦 Brotli compression enabled');
     }
   }
 
@@ -442,15 +442,15 @@ export class GeoAlertPerformanceOptimization {
     const bundleConfig = this.config.bundling;
 
     if (bundleConfig.enableCodeSplitting) {
-      console.log(`✂️ Code splitting enabled: ${bundleConfig.chunkSizeLimit}KB chunks`);
+      console.debug(`✂️ Code splitting enabled: ${bundleConfig.chunkSizeLimit}KB chunks`);
     }
 
     if (bundleConfig.enableTreeShaking) {
-      console.log('🌳 Tree shaking enabled');
+      console.debug('🌳 Tree shaking enabled');
     }
 
     if (bundleConfig.enableMinification) {
-      console.log('🗜️ Minification enabled');
+      console.debug('🗜️ Minification enabled');
     }
   }
 
@@ -461,15 +461,15 @@ export class GeoAlertPerformanceOptimization {
     const imageConfig = this.config.images;
 
     if (imageConfig.enableWebP) {
-      console.log('🖼️ WebP format enabled');
+      console.debug('🖼️ WebP format enabled');
     }
 
     if (imageConfig.enableAVIF) {
-      console.log('🖼️ AVIF format enabled');
+      console.debug('🖼️ AVIF format enabled');
     }
 
     if (imageConfig.enableLazyLoading) {
-      console.log('⏳ Lazy loading enabled');
+      console.debug('⏳ Lazy loading enabled');
     }
   }
 
@@ -478,27 +478,27 @@ export class GeoAlertPerformanceOptimization {
    */
   private setupCDN(): void {
     if (!this.cdnConfig.enabled) {
-      console.log('🌐 CDN disabled');
+      console.debug('🌐 CDN disabled');
       return;
     }
 
-    console.log(`🌐 CDN Provider: ${this.cdnConfig.provider.toUpperCase()}`);
-    console.log(`CDN Endpoints: ${this.cdnConfig.endpoints.length} active`);
+    console.debug(`🌐 CDN Provider: ${this.cdnConfig.provider.toUpperCase()}`);
+    console.debug(`CDN Endpoints: ${this.cdnConfig.endpoints.length} active`);
 
     // Setup CDN endpoints
     this.cdnConfig.endpoints.forEach(endpoint => {
       if (endpoint.status === 'active') {
-        console.log(`  ✅ ${endpoint.name} (${endpoint.region}): ${endpoint.domain}`);
+        console.debug(`  ✅ ${endpoint.name} (${endpoint.region}): ${endpoint.domain}`);
       }
     });
 
     // Setup CDN security
     if (this.cdnConfig.securitySettings.enableWAF) {
-      console.log('WAF protection enabled');
+      console.debug('WAF protection enabled');
     }
 
     if (this.cdnConfig.securitySettings.enableDDoSProtection) {
-      console.log('DDoS protection enabled');
+      console.debug('DDoS protection enabled');
     }
   }
 
@@ -513,7 +513,7 @@ export class GeoAlertPerformanceOptimization {
       this.updateOptimizationRecommendations();
     }, 30000); // Κάθε 30 δευτερόλεπτα
 
-    // console.log('📊 Performance monitoring started'); // DISABLED - προκαλούσε loops
+    // console.debug('📊 Performance monitoring started'); // DISABLED - προκαλούσε loops
   }
 
   /**
@@ -594,20 +594,20 @@ export class GeoAlertPerformanceOptimization {
 
     // Ανάλυση Web Vitals
     if (metrics.webVitals.largestContentfulPaint > 2500) {
-      console.log('⚠️ LCP above threshold: Consider image optimization');
+      console.debug('⚠️ LCP above threshold: Consider image optimization');
     }
 
     if (metrics.webVitals.firstInputDelay > 100) {
-      console.log('⚠️ FID above threshold: Consider reducing JavaScript execution time');
+      console.debug('⚠️ FID above threshold: Consider reducing JavaScript execution time');
     }
 
     if (metrics.webVitals.cumulativeLayoutShift > 0.1) {
-      console.log('⚠️ CLS above threshold: Check for layout stability issues');
+      console.debug('⚠️ CLS above threshold: Check for layout stability issues');
     }
 
     // Ανάλυση Cache Performance
     if (metrics.networkMetrics.cacheHitRatio < 80) {
-      console.log('⚠️ Low cache hit ratio: Review caching strategy');
+      console.debug('⚠️ Low cache hit ratio: Review caching strategy');
     }
   }
 
@@ -806,7 +806,7 @@ export class GeoAlertPerformanceOptimization {
           ? `CDN cache purged for pattern: ${pattern}`
           : 'CDN cache completely purged';
 
-        console.log(`🗑️ ${message}`);
+        console.debug(`🗑️ ${message}`);
         resolve({ success: true, message });
       }, 1000);
     });
@@ -815,7 +815,7 @@ export class GeoAlertPerformanceOptimization {
   public prefetchResources(urls: string[]): Promise<{ success: boolean; prefetched: number }> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        console.log(`⚡ Prefetched ${urls.length} resources via CDN`);
+        console.debug(`⚡ Prefetched ${urls.length} resources via CDN`);
         resolve({ success: true, prefetched: urls.length });
       }, 500);
     });
@@ -861,7 +861,7 @@ export class GeoAlertPerformanceOptimization {
       this.monitoringInterval = null;
     }
     this.isInitialized = false;
-    console.log('🧹 Performance optimization system cleanup completed');
+    console.debug('🧹 Performance optimization system cleanup completed');
   }
 }
 

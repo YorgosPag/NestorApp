@@ -226,25 +226,15 @@ export function MultiplePhotosCompact({
           const rawPreview = photo.preview || photo.uploadUrl;
           const photoPreviewWithCacheBuster = addCacheBuster(rawPreview);
 
-          // 🎯 MOBILE FIX: Fixed 4:3 ratio
+          // 🎯 MOBILE FIX: Fixed 4:3 ratio — Tailwind-only (no inline styles)
           const slotSize = maxPhotos === 1
             ? "h-64 w-64 overflow-hidden"
-            : "w-[320px] h-[240px] flex-shrink-0 mx-auto overflow-hidden sm:w-full sm:h-[300px]"; // Clean 4:3 ratio
-
-          const mobileStyle = maxPhotos === 1 ? {} : {
-            width: '240px',
-            height: '320px',
-            minWidth: '240px',
-            minHeight: '320px',
-            maxWidth: '240px',
-            maxHeight: '320px'
-          };
+            : "w-[240px] h-[320px] min-w-[240px] min-h-[320px] max-w-[240px] max-h-[320px] flex-shrink-0 mx-auto overflow-hidden sm:w-full sm:h-[300px] sm:min-w-0 sm:min-h-0 sm:max-w-none sm:max-h-none";
 
           return (
             <article
               key={`compact-photo-slot-${index}-${photosKey}`}
               className={slotSize}
-              style={mobileStyle}
               role="img"
               aria-label={t('photos.management.photoNumber', { number: index + 1 })}
             >

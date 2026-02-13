@@ -46,7 +46,7 @@ export function calculateAffineTransformation(
   controlPoints: FloorPlanControlPoint[],
   options: TransformationOptions = {}
 ): TransformationResult {
-  console.log('🔄 Calculating affine transformation...', {
+  console.debug('🔄 Calculating affine transformation...', {
     pointCount: controlPoints.length,
     options
   });
@@ -116,7 +116,7 @@ export function calculateAffineTransformation(
       f: solution[5]
     };
 
-    console.log('✅ Transformation matrix calculated:', matrix);
+    console.debug('✅ Transformation matrix calculated:', matrix);
 
     // ===================================================================
     // QUALITY ASSESSMENT
@@ -195,7 +195,7 @@ function calculateQualityMetrics(
     quality = 'poor';
   }
 
-  console.log('📊 Quality metrics:', {
+  console.debug('📊 Quality metrics:', {
     rmsError: `${rmsError.toFixed(2)}m`,
     maxError: `${maxError.toFixed(2)}m`,
     meanError: `${meanError.toFixed(2)}m`,

@@ -126,7 +126,7 @@ export function ProfessionalDrawingInterface({
   // 🏠 Phase 2.5: Property Status Management Handlers
   const handlePropertyStatusChange = useCallback((status: PropertyStatus) => {
     setCurrentPropertyStatus(status);
-    console.log('🏢 Professional: Property status changed to', status);
+    console.debug('🏢 Professional: Property status changed to', status);
     // TODO: Update active polygon/property status
   }, []);
 
@@ -138,7 +138,7 @@ export function ProfessionalDrawingInterface({
   // Professional batch real estate monitoring handler
   // 🏢 ENTERPRISE: Type-safe polygon array using local RealEstatePolygon type
   const handleBatchRealEstateMonitoring = useCallback((polygons: Array<Partial<RealEstatePolygon>>) => {
-    console.log('🏢 Professional: Setting up batch real estate monitoring for', polygons.length, 'polygons');
+    console.debug('🏢 Professional: Setting up batch real estate monitoring for', polygons.length, 'polygons');
 
     polygons.forEach((polygon) => {
       const polygonId = typeof polygon.id === 'string' ? polygon.id : generateLayerId();
@@ -163,7 +163,7 @@ export function ProfessionalDrawingInterface({
       }
     });
 
-    console.log('✅ Professional: Batch monitoring setup completed');
+    console.debug('✅ Professional: Batch monitoring setup completed');
   }, [addRealEstatePolygon, onRealEstateAlertCreated]);
 
   // Tool selection handler
@@ -181,7 +181,7 @@ export function ProfessionalDrawingInterface({
       case 'upload':
         // Open floor plan upload modal
         setShowUploadModal(true);
-        console.log('🏢 Professional: Floor plan upload mode');
+        console.debug('🏢 Professional: Floor plan upload mode');
         break;
 
       case 'polygon':
@@ -192,7 +192,7 @@ export function ProfessionalDrawingInterface({
           strokeWidth: 2
         });
         setIsDrawing(true);
-        console.log('🔷 Professional: Precision polygon mode started');
+        console.debug('🔷 Professional: Precision polygon mode started');
         break;
 
       case 'auto-detect':
@@ -202,7 +202,7 @@ export function ProfessionalDrawingInterface({
           // Fallback to upload mode
           setShowUploadModal(true);
         } else {
-          console.log('🤖 Professional: Auto-detection mode activated');
+          console.debug('🤖 Professional: Auto-detection mode activated');
           // TODO: Implement auto-detection algorithm
         }
         break;
@@ -210,13 +210,13 @@ export function ProfessionalDrawingInterface({
       case 'property-manager':
         // 🏠 Phase 2.5: Property Management mode
         setShowPropertyManager(true);
-        console.log('🏢 Professional: Property management mode activated');
+        console.debug('🏢 Professional: Property management mode activated');
         break;
 
       case 'monitoring-dashboard':
         // 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard
         setShowMonitoringDashboard(true);
-        console.log('📊 Professional: Real estate monitoring dashboard opened');
+        console.debug('📊 Professional: Real estate monitoring dashboard opened');
         break;
     }
   }, [actualIsDrawing, startDrawing, cancelDrawing, parserResult]);
@@ -248,7 +248,7 @@ export function ProfessionalDrawingInterface({
         onFloorPlanUploaded(mockResult);
       }
 
-      console.log('📁 Professional: Floor plan uploaded and parsed', mockResult);
+      console.debug('📁 Professional: Floor plan uploaded and parsed', mockResult);
     }, 2000);
   }, [onFloorPlanUploaded]);
 
@@ -262,7 +262,7 @@ export function ProfessionalDrawingInterface({
     const polygon = finishDrawing();
     if (polygon && onPolygonComplete) {
       onPolygonComplete(polygon);
-      console.log('✅ Professional: Drawing completed', polygon);
+      console.debug('✅ Professional: Drawing completed', polygon);
     }
     setIsDrawing(false);
     setSelectedTool(null);
@@ -273,7 +273,7 @@ export function ProfessionalDrawingInterface({
     cancelDrawing();
     setIsDrawing(false);
     setSelectedTool(null);
-    console.log('❌ Professional: Drawing cancelled');
+    console.debug('❌ Professional: Drawing cancelled');
   }, [cancelDrawing]);
 
   // Auto-detect rooms/properties
@@ -284,7 +284,7 @@ export function ProfessionalDrawingInterface({
     }
 
     // Mock auto-detection of 3 polygons
-    console.log('🤖 Professional: Running auto-detection algorithm...');
+    console.debug('🤖 Professional: Running auto-detection algorithm...');
 
     // Simulate auto-detection delay
     setTimeout(() => {
@@ -312,7 +312,7 @@ export function ProfessionalDrawingInterface({
         }
       }
 
-      console.log('✅ Professional: Auto-detection completed - 3 properties detected');
+      console.debug('✅ Professional: Auto-detection completed - 3 properties detected');
     }, 1500);
 
     setSelectedTool(null);
@@ -536,11 +536,11 @@ export function ProfessionalDrawingInterface({
           <PropertyStatusManager
             onStatusChange={handlePropertyStatusChange}
             onColorSchemeChange={(scheme) => {
-              console.log('🏢 Professional: Color scheme changed to', scheme);
+              console.debug('🏢 Professional: Color scheme changed to', scheme);
               // TODO: Apply color scheme to floor plan visualization
             }}
             onLayerVisibilityChange={(statuses, visible) => {
-              console.log('🏢 Professional: Layer visibility changed', { statuses, visible });
+              console.debug('🏢 Professional: Layer visibility changed', { statuses, visible });
               // TODO: Toggle property layer visibility
             }}
             className="max-w-md"
@@ -621,7 +621,7 @@ export function ProfessionalDrawingInterface({
             <button
               onClick={() => {
                 exportMatches();
-                console.log('📊 Professional: Exporting data to CSV');
+                console.debug('📊 Professional: Exporting data to CSV');
               }}
               disabled={realEstateStats.totalMatches === 0}
               className={`flex items-center justify-center gap-2 ${colors.bg.muted} ${colors.text.foreground} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors disabled:opacity-50`}

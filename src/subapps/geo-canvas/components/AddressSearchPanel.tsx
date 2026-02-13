@@ -131,13 +131,13 @@ export function AddressSearchPanel({
       setSearchResults([]);
 
       try {
-        console.log('🔍 Searching for address:', searchQuery);
+        console.debug('🔍 Searching for address:', searchQuery);
 
         const result = await resolve(searchQuery.trim());
 
         if (result) {
           setSearchResults([result]);
-          console.log('✅ Address found:', result);
+          console.debug('✅ Address found:', result);
         } else {
           setSearchError('Δεν βρέθηκε η διεύθυνση. Δοκιμάστε με πιο συγκεκριμένα στοιχεία.');
           setSearchResults([]);
@@ -152,7 +152,7 @@ export function AddressSearchPanel({
     } else {
       // Administrative boundaries search
       try {
-        console.log('🏛️ Searching for boundaries:', searchQuery);
+        console.debug('🏛️ Searching for boundaries:', searchQuery);
         await searchBoundaries(searchQuery.trim());
       } catch (error) {
         console.error('❌ Boundaries search error:', error);
@@ -201,7 +201,7 @@ export function AddressSearchPanel({
         setLastGpsLocation(gpsLocation);
         setIsGettingLocation(false);
 
-        console.log('GPS location obtained:', gpsLocation);
+        console.debug('GPS location obtained:', gpsLocation);
 
         // Call parent callback
         if (onLocationSelected) {
@@ -239,7 +239,7 @@ export function AddressSearchPanel({
    * Handle location selection (search result or recent)
    */
   const handleLocationSelect = useCallback((result: GeocodingResult) => {
-    console.log('Location selected:', result);
+    console.debug('Location selected:', result);
 
     // Save to recent searches
     saveRecentSearch(result);
@@ -254,7 +254,7 @@ export function AddressSearchPanel({
    * Handle administrative boundary selection
    */
   const handleBoundarySelect = useCallback(async (result: AdminSearchResult) => {
-    console.log('🏛️ Boundary selected:', result);
+    console.debug('🏛️ Boundary selected:', result);
 
     try {
       let boundary: GeoJSON.Feature | GeoJSON.FeatureCollection | null = null;

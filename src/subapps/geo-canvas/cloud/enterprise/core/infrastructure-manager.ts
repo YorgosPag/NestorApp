@@ -103,11 +103,11 @@ export class InfrastructureManager {
     let providersInitialized = 0;
 
     try {
-      console.log('🚀 Initializing Infrastructure Manager...');
+      console.debug('🚀 Initializing Infrastructure Manager...');
 
       // Initialize Alert Engine integration
       // TODO: Add proper alert engine initialization when connected
-      console.log('Alert Engine integration placeholder - ready for connection');
+      console.debug('Alert Engine integration placeholder - ready for connection');
 
       // Initialize all configured providers
       for (const providerConfig of this.config.providers) {
@@ -116,7 +116,7 @@ export class InfrastructureManager {
           providersInitialized++;
 
           // Log successful provider initialization
-          console.log(`✅ Provider ${providerConfig.name} initialized για region ${providerConfig.region}`);
+          console.debug(`✅ Provider ${providerConfig.name} initialized για region ${providerConfig.region}`);
 
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : `Failed to initialize ${providerConfig.name}`;
@@ -138,7 +138,7 @@ export class InfrastructureManager {
         await this.enableMonitoring();
         this.isInitialized = true;
 
-        console.log(`✅ Infrastructure Manager initialized με ${providersInitialized} providers`);
+        console.debug(`✅ Infrastructure Manager initialized με ${providersInitialized} providers`);
       } else {
         console.error('❌ No providers initialized successfully');
       }
@@ -181,7 +181,7 @@ export class InfrastructureManager {
       throw new Error(`Provider connection failed: ${connection.error}`);
     }
 
-    console.log(`✅ Provider ${config.name} initialized successfully`);
+    console.debug(`✅ Provider ${config.name} initialized successfully`);
   }
 
   // ========================================================================
@@ -206,7 +206,7 @@ export class InfrastructureManager {
         await this.collectPerformanceMetrics();
       }, 300000); // Collect every 5 minutes
 
-      console.log('📊 Infrastructure monitoring enabled');
+      console.debug('📊 Infrastructure monitoring enabled');
 
     } catch (error) {
       console.error('Failed to enable monitoring:', error);
@@ -808,7 +808,7 @@ export class InfrastructureManager {
    */
   private async collectPerformanceMetrics(): Promise<void> {
     // Implementation will integrate με existing monitoring systems
-    console.log('📊 Collecting performance metrics...');
+    console.debug('📊 Collecting performance metrics...');
   }
 
   /**

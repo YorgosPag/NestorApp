@@ -351,7 +351,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
       if (config.cancelDrawing) {
         config.cancelDrawing();
       }
-      console.log('🚫 Freehand drawing cancelled: Not enough points');
+      console.debug('🚫 Freehand drawing cancelled: Not enough points');
     }
   }, [
     config.isDraggingFreehand,
@@ -379,7 +379,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
     systemIsDrawing?: boolean
   ) => {
     return (event: { target: MapInstance }) => {
-      console.log('🗺️ Map onLoad event fired!', { event });
+      console.debug('🗺️ Map onLoad event fired!', { event });
 
       const map = event?.target;
       if (!map) {
@@ -391,7 +391,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
       if (enablePolygonDrawing) {
         // Note: We don't have a canvas here, so we initialize with map only
         // The canvas would be used for overlay drawing if needed
-        console.log('📦 Polygon drawing enabled');
+        console.debug('📦 Polygon drawing enabled');
       }
 
       // ✅ ENTERPRISE FIX: Pass map to centralized polygon system
@@ -408,12 +408,12 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
           cancelDrawing,
           isDrawing: systemIsDrawing || false
         };
-        console.log('✅ Polygon system initialized on map');
+        console.debug('✅ Polygon system initialized on map');
       }
 
       // Notify parent that map is ready
       if (onMapReady) {
-        console.log('📣 Calling onMapReady callback');
+        console.debug('📣 Calling onMapReady callback');
         onMapReady(map);
       } else {
         console.warn('⚠️ No onMapReady callback provided');

@@ -61,7 +61,7 @@ export class SnapEngine {
    * @param parserResult - DXF parser result
    */
   public initialize(parserResult: ParserResult | null): void {
-    console.log('🔧 SnapEngine: Initializing...');
+    console.debug('🔧 SnapEngine: Initializing...');
 
     if (!parserResult) {
       console.warn('⚠️ SnapEngine: No parser result provided');
@@ -72,14 +72,14 @@ export class SnapEngine {
 
     // Extract endpoints from DXF
     const endpoints = extractEndpoints(parserResult);
-    console.log(`📍 SnapEngine: Extracted ${endpoints.length} endpoints`);
+    console.debug(`📍 SnapEngine: Extracted ${endpoints.length} endpoints`);
 
     // Deduplicate points
     this.snapPoints = deduplicateSnapPoints(endpoints);
-    console.log(`📍 SnapEngine: ${this.snapPoints.length} unique snap points after deduplication`);
+    console.debug(`📍 SnapEngine: ${this.snapPoints.length} unique snap points after deduplication`);
 
     this.initialized = true;
-    console.log('✅ SnapEngine: Initialized successfully');
+    console.debug('✅ SnapEngine: Initialized successfully');
   }
 
   // ===================================================================
@@ -138,7 +138,7 @@ export class SnapEngine {
       ...this.settings,
       ...settings
     };
-    console.log('⚙️ SnapEngine: Settings updated', this.settings);
+    console.debug('⚙️ SnapEngine: Settings updated', this.settings);
   }
 
   /**
@@ -262,7 +262,7 @@ export class SnapEngine {
     this.snapPoints = [];
     this.currentSnapResult = null;
     this.initialized = false;
-    console.log('🔄 SnapEngine: Reset');
+    console.debug('🔄 SnapEngine: Reset');
   }
 }
 

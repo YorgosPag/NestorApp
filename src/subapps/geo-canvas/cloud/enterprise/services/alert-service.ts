@@ -56,7 +56,7 @@ type CreateAlertArgs = [
 
 // ENTERPRISE: Mock Alert Engine για compilation - θα συνδεθεί με πραγματικό Alert Engine
 const geoAlertEngine = {
-  reportAlert: (alert: AlertData) => console.log('🚨 Alert Engine:', alert),
+  reportAlert: (alert: AlertData) => console.debug('🚨 Alert Engine:', alert),
   processAlert: (alert: AlertData) => ({ processed: true, alert }),
   getActiveAlerts: () => ({
     active: [] as AlertData[],
@@ -83,9 +83,9 @@ const geoAlertEngine = {
     }
   }),
   analytics: {
-    track: (event: AnalyticsEvent) => console.log('📊 Analytics:', event),
+    track: (event: AnalyticsEvent) => console.debug('📊 Analytics:', event),
     getMetrics: () => ({ totalAlerts: 0, resolvedAlerts: 0 }),
-    ingestEvent: (event: AnalyticsEvent) => console.log('📊 Analytics:', event)
+    ingestEvent: (event: AnalyticsEvent) => console.debug('📊 Analytics:', event)
   }
 };
 

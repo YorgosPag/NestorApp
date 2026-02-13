@@ -319,7 +319,7 @@ export function PolygonSystemProvider({
         }
       };
       dispatch({ type: 'SET_POLYGONS', payload: updatedPolygons });
-      console.log('✅ Updated polygon config:', polygonId, configUpdates);
+      console.debug('✅ Updated polygon config:', polygonId, configUpdates);
     }
   }, [state.polygons]);
 

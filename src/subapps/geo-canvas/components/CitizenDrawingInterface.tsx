@@ -279,7 +279,7 @@ export function CitizenDrawingInterface({
       onRealEstateAlertCreated(realEstatePolygon);
     }
 
-    console.log('🏠 Citizen: Real estate alert created', realEstatePolygon);
+    console.debug('🏠 Citizen: Real estate alert created', realEstatePolygon);
     setShowRealEstateSetup(false);
   }, [realEstateSettings, addRealEstatePolygon, onRealEstateAlertCreated]);
 
@@ -313,7 +313,7 @@ export function CitizenDrawingInterface({
           strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_POLYGON_STROKE,
           strokeWidth: 2
         });
-        console.log('🔷 Citizen: Polygon mode started');
+        console.debug('🔷 Citizen: Polygon mode started');
         break;
 
       case 'freehand':
@@ -323,13 +323,13 @@ export function CitizenDrawingInterface({
           strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_AREA_STROKE,
           strokeWidth: 2
         });
-        console.log('✏️ Citizen: Freehand mode started');
+        console.debug('✏️ Citizen: Freehand mode started');
         break;
 
       case 'real-estate':
         // Real estate alert mode - show setup dialog
         setShowRealEstateSetup(true);
-        console.log('🏠 Citizen: Real estate alert setup opened');
+        console.debug('🏠 Citizen: Real estate alert setup opened');
         break;
     }
   }, [isDrawing, startDrawing, cancelDrawing, pointRadius]);
@@ -357,7 +357,7 @@ export function CitizenDrawingInterface({
           createdAt: new Date().toISOString()
         };
         onPolygonComplete(normalPolygon);
-        console.log('✅ Citizen: Drawing completed', polygon);
+        console.debug('✅ Citizen: Drawing completed', polygon);
       }
     }
     setSelectedTool(null);
@@ -369,7 +369,7 @@ export function CitizenDrawingInterface({
     cancelDrawing();
     setSelectedTool(null);
     setLastPointPolygonId(null); // Clear reference to last point polygon
-    console.log('❌ Citizen: Drawing cancelled');
+    console.debug('❌ Citizen: Drawing cancelled');
   }, [cancelDrawing]);
 
   // ✅ ENTERPRISE: Track point mode polygons for real-time radius updates
@@ -381,7 +381,7 @@ export function CitizenDrawingInterface({
 
     if (pointPolygon && pointPolygon.id !== lastPointPolygonId) {
       setLastPointPolygonId(pointPolygon.id);
-      console.log('Found new point polygon for radius tracking:', pointPolygon.id);
+      console.debug('Found new point polygon for radius tracking:', pointPolygon.id);
     }
   }, [polygons, lastPointPolygonId]);
 
@@ -389,19 +389,19 @@ export function CitizenDrawingInterface({
   useEffect(() => {
     if (lastPointPolygonId && selectedTool === 'point') {
       updatePolygonConfig(lastPointPolygonId, { radius: pointRadius });
-      console.log('Updated point polygon radius:', lastPointPolygonId, pointRadius);
+      console.debug('Updated point polygon radius:', lastPointPolygonId, pointRadius);
     }
   }, [lastPointPolygonId, pointRadius, selectedTool, updatePolygonConfig]);
 
   // Clear all
   const handleClearAll = useCallback(() => {
     clearAll();
-    console.log('🗑️ Citizen: All polygons cleared');
+    console.debug('🗑️ Citizen: All polygons cleared');
   }, [clearAll]);
 
   // ✅ NEW: Handle location selection από address search
   const handleLocationFromSearch = useCallback((lat: number, lng: number, address?: Record<string, unknown>) => {
-    console.log('Location selected from search:', { lat, lng, address });
+    console.debug('Location selected from search:', { lat, lng, address });
 
     // Close address search panel
     setShowAddressSearch(false);
@@ -742,7 +742,7 @@ export function CitizenDrawingInterface({
                 });
                 setSelectedTool('real-estate');
                 setShowRealEstateSetup(false);
-                console.log('🏠 Citizen: Real estate polygon drawing started');
+                console.debug('🏠 Citizen: Real estate polygon drawing started');
               }}
               className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.warning} ${colors.text.foreground} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >

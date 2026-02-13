@@ -253,7 +253,7 @@ export function performLegacyMigration(legacySources: LegacySourceData[]): Migra
   if (report.errors.length > 0) {
     console.warn('🔄 Legacy migration completed with warnings:', report);
   } else {
-    console.log('✅ Legacy migration completed successfully:', report);
+    console.debug('✅ Legacy migration completed successfully:', report);
   }
 
   return report;

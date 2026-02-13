@@ -88,7 +88,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   const transformation = useGeoTransformation(points, { debug: true });
 
   // ❗ DEBUG: Log transformation state
-  console.log('🔍 Transformation state:', {
+  console.debug('🔍 Transformation state:', {
     pointsCount: points.length,
     isValid: transformation.isValid,
     quality: transformation.quality,
@@ -159,7 +159,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    * Start picking new control point
    */
   const handleStartPicking = () => {
-    console.log('🎯 User clicked "Add Control Point"');
+    console.debug('🎯 User clicked "Add Control Point"');
     startPicking();
   };
 
@@ -167,7 +167,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    * Cancel current picking
    */
   const handleCancelPicking = () => {
-    console.log('❌ User cancelled picking');
+    console.debug('❌ User cancelled picking');
     cancelPicking();
   };
 
@@ -175,7 +175,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    * Delete control point
    */
   const handleDelete = (id: string) => {
-    console.log('🗑️ Deleting control point:', id);
+    console.debug('🗑️ Deleting control point:', id);
     deletePoint(id);
   };
 
@@ -184,7 +184,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    */
   const handleClearAll = () => {
     if (window.confirm(t('floorPlanControlPoints.confirm.clearAll'))) {
-      console.log('🗑️ Clearing all control points');
+      console.debug('🗑️ Clearing all control points');
       clearAll();
     }
   };
@@ -249,7 +249,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
       // Add to points via the hook's internal state
       // Note: We need to access the addPoint method from the hook
-      console.log('🔧 Manual point to add:', newPoint);
+      console.debug('🔧 Manual point to add:', newPoint);
       toast.success(t('toastMessages.pointAddedManually'));
 
       // Reset form
@@ -278,7 +278,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
     }
 
     toast.success(t('toastMessages.calibrationComplete', { quality: transformation.quality?.toUpperCase() }));
-    console.log('🎯 Calibration completed:', transformation);
+    console.debug('🎯 Calibration completed:', transformation);
   };
 
   /**
@@ -318,7 +318,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         const data = JSON.parse(e.target?.result as string);
         if (data.points && Array.isArray(data.points)) {
           // This would need to be implemented in the hook
-          console.log('📁 Loading points:', data.points);
+          console.debug('📁 Loading points:', data.points);
           toast.success(t('toastMessages.pointsLoaded', { count: data.points.length }));
         } else {
           toast.error(t('toastMessages.invalidPointsFile'));

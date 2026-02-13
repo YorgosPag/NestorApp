@@ -98,7 +98,7 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
   // ===================================================================
 
   useEffect(() => {
-    console.log('pickingState changed to:', pickingState);
+    console.debug('pickingState changed to:', pickingState);
     pickingStateRef.current = pickingState; // Update ref immediately
   }, [pickingState]);
 
@@ -116,20 +116,20 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
    * Start picking new control point
    */
   const startPicking = useCallback(() => {
-    console.log('Starting control point picking...');
-    console.log('Setting pickingState to: picking-floor');
+    console.debug('Starting control point picking...');
+    console.debug('Setting pickingState to: picking-floor');
     pickingStateRef.current = 'picking-floor'; // ❗ Update ref immediately!
     setPickingState('picking-floor');
     setTempFloorPlan(null);
     setTempGeo(null);
-    console.log('Ref updated immediately to:', pickingStateRef.current);
+    console.debug('Ref updated immediately to:', pickingStateRef.current);
   }, []);
 
   /**
    * Cancel current picking
    */
   const cancelPicking = useCallback(() => {
-    console.log('❌ Cancelling control point picking');
+    console.debug('❌ Cancelling control point picking');
     setPickingState('idle');
     setTempFloorPlan(null);
     setTempGeo(null);
@@ -139,7 +139,7 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
    * Add floor plan coordinate (STEP 1)
    */
   const addFloorPlanPoint = useCallback((x: number, y: number) => {
-    console.log('🗺️ Floor plan point selected:', { x, y });
+    console.debug('🗺️ Floor plan point selected:', { x, y });
 
     if (pickingState !== 'picking-floor') {
       console.warn('⚠️ Not in picking-floor state. Current:', pickingState);
@@ -150,14 +150,14 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
     setTempFloorPlan({ x, y });
     setPickingState('picking-geo');
 
-    console.log('➡️ Now waiting for geo coordinate...');
+    console.debug('➡️ Now waiting for geo coordinate...');
   }, [pickingState]);
 
   /**
    * Add geo coordinate (STEP 2) - completes the pair
    */
   const addGeoPoint = useCallback((lng: number, lat: number, label?: string) => {
-    console.log('🌍 Geo point selected:', { lng, lat });
+    console.debug('🌍 Geo point selected:', { lng, lat });
 
     if (pickingState !== 'picking-geo' || !tempFloorPlan) {
       console.warn('⚠️ Not in picking-geo state or no temp floor plan. State:', pickingState);
@@ -181,8 +181,8 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
     setTempFloorPlan(null);
     setTempGeo(null);
 
-    console.log('✅ Control point added:', newPoint);
-    console.log(`📊 Total points: ${points.length + 1}`);
+    console.debug('✅ Control point added:', newPoint);
+    console.debug(`📊 Total points: ${points.length + 1}`);
 
     // ❌ REMOVED: Auto-start next picking (causes button flashing)
     // User must manually click "Add Control Point" for next point
@@ -193,7 +193,7 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
    * Delete control point
    */
   const deletePoint = useCallback((id: string) => {
-    console.log('🗑️ Deleting control point:', id);
+    console.debug('🗑️ Deleting control point:', id);
     setPoints(prev => prev.filter(p => p.id !== id));
   }, []);
 
@@ -201,7 +201,7 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
    * Clear all points
    */
   const clearAll = useCallback(() => {
-    console.log('🗑️ Clearing all control points');
+    console.debug('🗑️ Clearing all control points');
     setPoints([]);
     setPickingState('idle');
     setTempFloorPlan(null);
@@ -212,7 +212,7 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
    * Update point label
    */
   const updateLabel = useCallback((id: string, label: string) => {
-    console.log('✏️ Updating label for point:', id, '→', label);
+    console.debug('✏️ Updating label for point:', id, '→', label);
     setPoints(prev =>
       prev.map(p => (p.id === id ? { ...p, label } : p))
     );

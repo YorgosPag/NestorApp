@@ -42,15 +42,15 @@ export function useSnapPoints(
       return [];
     }
 
-    console.log('🔧 useSnapPoints: Extracting snap points from DXF...');
+    console.debug('🔧 useSnapPoints: Extracting snap points from DXF...');
 
     // Extract endpoints
     const endpoints = extractEndpoints(parserResult);
-    console.log(`useSnapPoints: Extracted ${endpoints.length} endpoints`);
+    console.debug(`useSnapPoints: Extracted ${endpoints.length} endpoints`);
 
     // Deduplicate
     const unique = deduplicateSnapPoints(endpoints);
-    console.log(`useSnapPoints: ${unique.length} unique points after deduplication`);
+    console.debug(`useSnapPoints: ${unique.length} unique points after deduplication`);
 
     return unique;
   }, [parserResult, enabled]);

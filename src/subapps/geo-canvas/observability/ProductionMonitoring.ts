@@ -2269,7 +2269,7 @@ export class GeoAlertProductionMonitoring {
       return;
     }
 
-    console.log('📊 PRODUCTION MONITORING - Starting comprehensive monitoring...');
+    console.debug('📊 PRODUCTION MONITORING - Starting comprehensive monitoring...');
     this.isMonitoring = true;
 
     this.monitoringInterval = setInterval(() => {
@@ -2280,7 +2280,7 @@ export class GeoAlertProductionMonitoring {
       this.updateSystemHealth();
     }, this.config.refreshInterval);
 
-    console.log(`✅ Production monitoring started (refresh: ${this.config.refreshInterval}ms)`);
+    console.debug(`✅ Production monitoring started (refresh: ${this.config.refreshInterval}ms)`);
   }
 
   /**
@@ -2289,7 +2289,7 @@ export class GeoAlertProductionMonitoring {
   public stopMonitoring(): void {
     if (!this.isMonitoring) return;
 
-    console.log('🛑 Stopping production monitoring...');
+    console.debug('🛑 Stopping production monitoring...');
     this.isMonitoring = false;
 
     if (this.monitoringInterval) {
@@ -2297,7 +2297,7 @@ export class GeoAlertProductionMonitoring {
       this.monitoringInterval = undefined;
     }
 
-    console.log('✅ Production monitoring stopped');
+    console.debug('✅ Production monitoring stopped');
   }
 
   /**
@@ -2574,7 +2574,7 @@ export class GeoAlertProductionMonitoring {
   }
 
   private sendAlert(alert: AlertData, rule: AlertRule): void {
-    console.log(`🚨 ALERT FIRED: ${rule.name} - Value: ${alert.value}, Threshold: ${alert.threshold}`);
+    console.debug(`🚨 ALERT FIRED: ${rule.name} - Value: ${alert.value}, Threshold: ${alert.threshold}`);
 
     for (const channelId of rule.channels) {
       const channel = this.config.alerting.channels.find(c => c.id === channelId);
@@ -2585,7 +2585,7 @@ export class GeoAlertProductionMonitoring {
   }
 
   private sendAlertResolution(alert: AlertData, rule: AlertRule): void {
-    console.log(`✅ ALERT RESOLVED: ${rule.name} - Duration: ${(alert.endsAt! - alert.startsAt) / 1000}s`);
+    console.debug(`✅ ALERT RESOLVED: ${rule.name} - Duration: ${(alert.endsAt! - alert.startsAt) / 1000}s`);
 
     for (const channelId of rule.channels) {
       const channel = this.config.alerting.channels.find(c => c.id === channelId);
@@ -2597,12 +2597,12 @@ export class GeoAlertProductionMonitoring {
 
   private sendAlertToChannel(alert: AlertData, rule: AlertRule, channel: AlertChannel): void {
     // Mock alert sending
-    console.log(`  📤 Sending alert via ${channel.type} (${channel.name})`);
+    console.debug(`  📤 Sending alert via ${channel.type} (${channel.name})`);
   }
 
   private sendResolutionToChannel(alert: AlertData, rule: AlertRule, channel: AlertChannel): void {
     // Mock resolution sending
-    console.log(`  📤 Sending resolution via ${channel.type} (${channel.name})`);
+    console.debug(`  📤 Sending resolution via ${channel.type} (${channel.name})`);
   }
 
   /**

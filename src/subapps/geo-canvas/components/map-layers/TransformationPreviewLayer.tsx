@@ -136,8 +136,8 @@ export const TransformationPreviewLayer: React.FC<TransformationPreviewLayerProp
   // Currently returns null as this feature is planned για future development
   // The calibration system is in place, but DXF content overlay is not yet implemented
 
-  console.log('📋 TransformationPreviewLayer: Ready για DXF content overlay implementation');
-  console.log('🎯 Transform State:', {
+  console.debug('📋 TransformationPreviewLayer: Ready για DXF content overlay implementation');
+  console.debug('🎯 Transform State:', {
     isCalibrated: transformState.isCalibrated,
     controlPointsCount: transformState.controlPoints.length,
     hasTransformMatrix: !!transformState.matrix

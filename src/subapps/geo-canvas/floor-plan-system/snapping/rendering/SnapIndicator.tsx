@@ -66,7 +66,7 @@ export const SnapIndicator: React.FC<SnapIndicatorProps> = ({
     const indicatorColor = color || SNAP_VISUAL.COLORS[point.mode] || GEO_COLORS.CAD.SNAP_INDICATOR;
     const indicatorSize = size || SNAP_VISUAL.SIZES.ACTIVE;
 
-    console.log('🎨 SnapIndicator rendering:', {
+    console.debug('🎨 SnapIndicator rendering:', {
       point: { x: point.x, y: point.y },
       color: indicatorColor,
       size: indicatorSize
@@ -111,7 +111,7 @@ export const SnapIndicator: React.FC<SnapIndicatorProps> = ({
 
     ctx.restore();
 
-    console.log('✅ SnapIndicator: Rendered successfully');
+    console.debug('✅ SnapIndicator: Rendered successfully');
   }, [snapResult, ctx, canvasWidth, canvasHeight, showTooltip, color, size]);
 
   return null; // Canvas rendering component - no JSX

@@ -102,7 +102,7 @@ export function FloorPlanUploadModal({
   const handleFileUpload = useCallback(async (files: File[]) => {
     if (files.length > 0) {
       const file = files[0]; // Floor plan upload is single file
-      console.log('✅ File selected:', file.name, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      console.debug('✅ File selected:', file.name, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
       onFileSelect(file);
       // Don't close modal - let it show preview after parsing completes
     }

@@ -99,7 +99,7 @@ export function useFloorPlanUpload(): UseFloorPlanUploadReturn {
    * Upload and parse file
    */
   const uploadFile = useCallback(async (selectedFile: File) => {
-    console.log('📤 useFloorPlanUpload: Starting upload...', {
+    console.debug('📤 useFloorPlanUpload: Starting upload...', {
       name: selectedFile.name,
       size: `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
       type: selectedFile.type
@@ -121,7 +121,7 @@ export function useFloorPlanUpload(): UseFloorPlanUploadReturn {
         );
       }
 
-      console.log(`🔍 Format detected: ${format}`);
+      console.debug(`🔍 Format detected: ${format}`);
 
       // STEP 2: Parse based on format
       let parseResult: ParserResult;
@@ -146,7 +146,7 @@ export function useFloorPlanUpload(): UseFloorPlanUploadReturn {
           throw new Error(`Format ${format} not yet supported`);
       }
 
-      console.log('✅ Parse result:', parseResult);
+      console.debug('✅ Parse result:', parseResult);
 
       // STEP 3: Check result
       if (!parseResult.success) {
@@ -158,11 +158,11 @@ export function useFloorPlanUpload(): UseFloorPlanUploadReturn {
       setResult(parseResult);
       setError(null);
 
-      console.log('🎉 Upload successful!');
+      console.debug('🎉 Upload successful!');
 
       // STEP 5: Auto-close modal after successful upload
       setTimeout(() => {
-        console.log('🚪 Auto-closing modal after successful upload');
+        console.debug('🚪 Auto-closing modal after successful upload');
         setIsModalOpen(false);
       }, 1500); // 1.5 second delay to show preview briefly
 
@@ -185,7 +185,7 @@ export function useFloorPlanUpload(): UseFloorPlanUploadReturn {
    * Clear upload state
    */
   const clearUpload = useCallback(() => {
-    console.log('🗑️ useFloorPlanUpload: Clearing upload state');
+    console.debug('🗑️ useFloorPlanUpload: Clearing upload state');
 
     setFile(null);
     setResult(null);
@@ -197,7 +197,7 @@ export function useFloorPlanUpload(): UseFloorPlanUploadReturn {
    * Open modal
    */
   const openModal = useCallback(() => {
-    console.log('🏗️ useFloorPlanUpload: Opening modal');
+    console.debug('🏗️ useFloorPlanUpload: Opening modal');
     setIsModalOpen(true);
   }, []);
 
@@ -205,7 +205,7 @@ export function useFloorPlanUpload(): UseFloorPlanUploadReturn {
    * Close modal (and optionally clear state)
    */
   const closeModal = useCallback(() => {
-    console.log('🚪 useFloorPlanUpload: Closing modal');
+    console.debug('🚪 useFloorPlanUpload: Closing modal');
     setIsModalOpen(false);
     // Note: We don't clear upload state here - user might want to see result again
   }, []);

@@ -31,7 +31,7 @@ export function extractEndpoints(parserResult: ParserResult | null): SnapPoint[]
     return [];
   }
 
-  console.log(`🔍 extractEndpoints: Processing ${features.length} GeoJSON features`);
+  console.debug(`🔍 extractEndpoints: Processing ${features.length} GeoJSON features`);
 
   const snapPoints: SnapPoint[] = [];
 
@@ -70,7 +70,7 @@ export function extractEndpoints(parserResult: ParserResult | null): SnapPoint[]
     }
   }
 
-  console.log(`📍 extractEndpoints: Extracted ${snapPoints.length} snap points`);
+  console.debug(`📍 extractEndpoints: Extracted ${snapPoints.length} snap points`);
   return deduplicateSnapPoints(snapPoints);
 }
 

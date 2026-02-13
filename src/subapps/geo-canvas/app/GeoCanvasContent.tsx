@@ -163,7 +163,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           analytics.updateUser(userId, pendingUserType);
         }
 
-        console.log('🎭 User type analytics tracked:', pendingUserType);
+        console.debug('🎭 User type analytics tracked:', pendingUserType);
       }, 0);
 
       // Clear pending state immediately
@@ -179,7 +179,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     // Update state immediately
     setUserType(userType);
 
-    console.log('🎭 User type selected:', userType);
+    console.debug('🎭 User type selected:', userType);
   }, [setUserType]);
 
   // 🏢 ENTERPRISE: SINGLE SOURCE OF TRUTH for Control Points
@@ -223,7 +223,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   // ✅ NEW: Handle location selection από address search/GPS
   const handleLocationSelected = useCallback((lat: number, lng: number, address?: string | { fullAddress?: string; street?: string; number?: string; area?: string; municipality?: string; display_name?: string }) => {
-    console.log('Location selected, centering map:', { lat, lng, address });
+    console.debug('Location selected, centering map:', { lat, lng, address });
 
     // Set search marker
     let displayAddress = 'Αναζητημένη θέση';
@@ -259,7 +259,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     // Auto-hide marker after 30 seconds
     setTimeout(() => {
       setSearchMarker(null);
-      console.log('🗑️ Search marker auto-cleared after 30 seconds');
+      console.debug('🗑️ Search marker auto-cleared after 30 seconds');
     }, 30000);
 
     if (mapRef.current) {
@@ -271,7 +271,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         essential: true
       });
 
-      console.log('🗺️ Map centered to selected location');
+      console.debug('🗺️ Map centered to selected location');
     } else {
       console.warn('⚠️ Map reference not available yet');
     }
@@ -280,7 +280,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   // ✅ NEW: Handle administrative boundary selection (Enhanced for Layer Management)
   const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: Record<string, unknown>) => {
     const boundaryResult = result as AdminBoundaryResult;
-    console.log('??? Administrative boundary selected:', { boundary, result: boundaryResult });
+    console.debug('??? Administrative boundary selected:', { boundary, result: boundaryResult });
     setSelectedBoundaryResult(boundaryResult);
 
     // Determine boundary type και default style
@@ -390,14 +390,14 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             duration: 2000,
             essential: true
           });
-          console.log(`🗺️ Map centered to ${result.name}:`, center);
+          console.debug(`🗺️ Map centered to ${result.name}:`, center);
         }
       } catch (error) {
         console.warn('⚠️ Failed to center map on boundary:', error);
       }
     }
 
-    console.log(`✅ Boundary layer "${result.name}" added with ID: ${layerId}`);
+    console.debug(`✅ Boundary layer "${result.name}" added with ID: ${layerId}`);
   }, []);
 
   // ✅ NEW: Boundary Layer Control Handlers
@@ -425,7 +425,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       return prev;
     });
 
-    console.log(`Layer ${layerId} visibility: ${visible}`);
+    console.debug(`Layer ${layerId} visibility: ${visible}`);
   }, []);
 
   const handleLayerOpacityChange = useCallback((layerId: string, opacity: number) => {
@@ -452,7 +452,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       return prev;
     });
 
-    console.log(`🎨 Layer ${layerId} opacity: ${opacity}`);
+    console.debug(`🎨 Layer ${layerId} opacity: ${opacity}`);
   }, []);
 
   const handleLayerStyleChange = useCallback((layerId: string, styleChanges: Partial<BoundaryLayerStyle>) => {
@@ -481,7 +481,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       return prev;
     });
 
-    console.log(`🎨 Layer ${layerId} style updated:`, styleChanges);
+    console.debug(`🎨 Layer ${layerId} style updated:`, styleChanges);
   }, []);
 
   const handleLayerRemove = useCallback((layerId: string) => {
@@ -505,12 +505,12 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       return updated;
     });
 
-    console.log(`🗑️ Layer ${layerId} removed`);
+    console.debug(`🗑️ Layer ${layerId} removed`);
   }, []);
 
   const handleAddNewBoundary = useCallback(() => {
     // This will trigger the address search panel to open boundaries tab
-    console.log('➕ Add new boundary requested');
+    console.debug('➕ Add new boundary requested');
     // We can implement this later to programmatically open the search panel
   }, []);
 
@@ -518,7 +518,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const handleFloorPlanUploadClick = useCallback(() => {
     floorPlanUpload.clearUpload(); // Clear previous state
     floorPlanUpload.openModal();
-    console.log('🏗️ Floor Plan Upload button clicked - Modal will open');
+    console.debug('🏗️ Floor Plan Upload button clicked - Modal will open');
   }, [floorPlanUpload]);
 
   // Floor Plan file selection handler - uses hook
@@ -538,15 +538,15 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
    * This prevents canvas from stealing clicks when we're waiting for map click
    */
   const handleFloorPlanClick = useCallback((x: number, y: number, event: React.MouseEvent) => {
-    console.log('🗺️ Floor plan clicked:', { x, y });
-    console.log('🎯 Current pickingState:', controlPoints.pickingState);
+    console.debug('🗺️ Floor plan clicked:', { x, y });
+    console.debug('🎯 Current pickingState:', controlPoints.pickingState);
 
     // Only process if we're waiting for floor plan point
     if (controlPoints.pickingState === 'picking-floor') {
-      console.log('✅ Valid state - calling addFloorPlanPoint');
+      console.debug('✅ Valid state - calling addFloorPlanPoint');
       controlPoints.addFloorPlanPoint(x, y);
     } else {
-      console.log('⏭️ Ignoring click - not in picking-floor state');
+      console.debug('⏭️ Ignoring click - not in picking-floor state');
     }
   }, [controlPoints.pickingState, controlPoints.addFloorPlanPoint]);
 
@@ -558,7 +558,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   // 🏢 ENTERPRISE: Map coordinate picking handler (SINGLE SOURCE OF TRUTH)
   const handleCoordinateClick = useCallback(async (coordinate: GeoCoordinate) => {
-    console.log('🗺️ Coordinate picked:', coordinate);
+    console.debug('🗺️ Coordinate picked:', coordinate);
 
     // ✅ OFFICIAL: Check if we're in control point picking mode (STEP 2.2)
     if (controlPoints.pickingState === 'picking-geo') {
@@ -619,7 +619,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       <CitizenDrawingInterface
         mapRef={mapRef}
         onPolygonComplete={(polygon) => {
-          console.log('🏘️ Citizen polygon completed:', polygon);
+          console.debug('🏘️ Citizen polygon completed:', polygon);
           // TODO: Integrate με alert system
         }}
         onLocationSelected={handleLocationSelected}
@@ -637,11 +637,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         <ProfessionalDrawingInterface
           mapRef={mapRef}
           onPolygonComplete={(polygon) => {
-            console.log('🏢 Professional polygon completed:', polygon);
+            console.debug('🏢 Professional polygon completed:', polygon);
             // TODO: Integrate με alert system
           }}
           onFloorPlanUploaded={(floorPlan) => {
-            console.log('📁 Professional floor plan uploaded:', floorPlan);
+            console.debug('📁 Professional floor plan uploaded:', floorPlan);
             // TODO: Integrate με georeferencing system
           }}
         />
@@ -651,7 +651,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           <TechnicalDrawingInterface
             mapRef={mapRef}
             onPolygonComplete={(polygon) => {
-              console.log('🛠️ Technical polygon completed:', polygon);
+              console.debug('🛠️ Technical polygon completed:', polygon);
               // TODO: Integrate με alert system και DXF precision system
             }}
           />
@@ -998,10 +998,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     searchMarker={searchMarker}
                     administrativeBoundaries={administrativeBoundaries}
                     onPolygonComplete={() => {
-                      console.log('🎯 Polygon completed');
+                      console.debug('🎯 Polygon completed');
                     }}
                     onMapReady={(map) => {
-                      console.log('🗺️ Map ready - storing reference');
+                      console.debug('🗺️ Map ready - storing reference');
                       mapRef.current = map;
                   }}
                   />

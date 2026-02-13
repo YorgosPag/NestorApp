@@ -65,7 +65,7 @@ export class GeoAlertCloudInfrastructure {
    */
   public startInfrastructureMonitoring(): void {
     // Enterprise monitoring integration pending
-    console.log('Enterprise infrastructure monitoring started (minimal implementation)');
+    console.debug('Enterprise infrastructure monitoring started (minimal implementation)');
   }
 
   /**

@@ -56,12 +56,12 @@ export function AlertManagementPanel({
 
   const handleCreateAlert = useCallback(() => {
     // TODO: Open Alert Creation Wizard (using existing wizard pattern)
-    console.log('🚨 Opening Alert Creation Wizard...');
+    console.debug('🚨 Opening Alert Creation Wizard...');
   }, []);
 
   const handleManageSubscriptions = useCallback(() => {
     // TODO: Open Subscription Management (using existing management pattern)
-    console.log('📋 Opening Subscription Management...');
+    console.debug('📋 Opening Subscription Management...');
   }, []);
 
   const handleNotificationPreferences = useCallback(() => {

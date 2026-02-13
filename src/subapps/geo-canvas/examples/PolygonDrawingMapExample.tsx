@@ -281,37 +281,37 @@ export function PolygonDrawingMapExample(): JSX.Element {
 
   // Handle coordinate click (για control points)
   const handleCoordinateClick = useCallback((coordinate: GeoCoordinate) => {
-    console.log('Coordinate clicked:', coordinate);
+    console.debug('Coordinate clicked:', coordinate);
     // Εδώ θα μπορούσαμε να προσθέσουμε control points
   }, []);
 
   // Handle polygon creation
   const handlePolygonCreated = useCallback((polygon: UniversalPolygon) => {
-    console.log('Polygon created:', polygon);
+    console.debug('Polygon created:', polygon);
     setPolygons(prev => [...prev, polygon]);
   }, []);
 
   // Handle polygon modification
   const handlePolygonModified = useCallback((polygon: UniversalPolygon) => {
-    console.log('Polygon modified:', polygon);
+    console.debug('Polygon modified:', polygon);
     setPolygons(prev => prev.map(p => p.id === polygon.id ? polygon : p));
   }, []);
 
   // Handle polygon deletion
   const handlePolygonDeleted = useCallback((polygonId: string) => {
-    console.log('Polygon deleted:', polygonId);
+    console.debug('Polygon deleted:', polygonId);
     setPolygons(prev => prev.filter(p => p.id !== polygonId));
   }, []);
 
   // Handle clear all polygons
   const handleClearAllPolygons = useCallback(() => {
-    console.log('Clearing all polygons');
+    console.debug('Clearing all polygons');
     setPolygons([]);
   }, []);
 
   // Handle map ready
   const handleMapReady = useCallback((map: MapInstance) => {
-    console.log('Map ready:', map);
+    console.debug('Map ready:', map);
   }, []);
 
   return (
