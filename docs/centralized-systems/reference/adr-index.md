@@ -89,7 +89,7 @@
 | **ADR-051** | Enterprise Filter System Centralization | ✅ APPROVED | 2026-01-01 | Filters & Search | [📄](./adrs/ADR-051-enterprise-filter-system-centralization.md) |
 | **ADR-052** | DXF Export API Contract | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-052-dxf-export-api-contract.md) |
 | **ADR-053** | Drawing Context Menu | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-053-drawing-context-menu.md) |
-| **ADR-054** | Enterprise Upload System Consolidation | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-054-enterprise-upload-system-consolidation.md) |
+| **ADR-054** | Enterprise Upload System Consolidation | ✅ STABILIZED | 2026-02-13 | Entity Systems | [📄](./adrs/ADR-054-enterprise-upload-system-consolidation.md) |
 | **ADR-055** | Centralized Tool State Persistence | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-055-centralized-tool-state-persistence.md) |
 | **ADR-056** | Centralized Entity Completion Styles | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-056-centralized-entity-completion-styles.md) |
 | **ADR-057** | Unified Entity Completion Pipeline | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-057-unified-entity-completion-pipeline.md) |

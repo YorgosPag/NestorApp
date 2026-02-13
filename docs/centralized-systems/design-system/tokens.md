@@ -169,6 +169,32 @@ const { getStatusBorder } = useBorderTokens();
 
 ---
 
+## 📋 **Photo Preview Layout Tokens**
+
+**Status**: ✅ STABILIZED | **Date**: 2026-02-13 | **ADR**: ADR-018.1, ADR-054
+
+> **ΜΗΝ ΤΡΟΠΟΠΟΙΕΙΤΕ** — λειτουργεί σωστά μετά από critical bug fix (commit `e33ec40e`)
+
+### Token: `photoPreviewLayout`
+
+| Key | Purpose | Critical Overrides |
+|-----|---------|-------------------|
+| `dialog.desktop` | Fullscreen photo preview (desktop) | `!translate-x-0 !translate-y-0 !left-0 !top-0` |
+| `dialog.mobile` | Fullscreen photo preview (mobile) | `!translate-x-0 !translate-y-0 !left-0 !top-auto` |
+| `image.base` | Image container inside preview | — |
+
+### Γιατί τα `!important` overrides
+
+Το Radix `DialogContent` εφαρμόζει centering μέσω `left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]`. Τα fullscreen modals χρησιμοποιούν `inset-0` αντί centering, αλλά χωρίς explicit override τα translate classes μετατοπίζουν το modal κατά -50vw και -50vh.
+
+### File
+
+| File | Section |
+|------|---------|
+| `src/styles/design-tokens.ts` | `photoPreviewLayout` const |
+
+---
+
 ## 📚 **QUICK REFERENCE**
 
 ### Token System Files
