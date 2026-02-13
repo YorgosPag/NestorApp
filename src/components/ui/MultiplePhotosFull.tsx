@@ -114,6 +114,14 @@ export function MultiplePhotosFull({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
+  // 🔧 FIX: Refs to avoid stale closures in async onUploadComplete callbacks.
+  // The upload completes asynchronously — by then, normalizedPhotos and onPhotosChange
+  // from the render closure may be stale. Refs always hold the latest values.
+  const normalizedPhotosRef = React.useRef(normalizedPhotos);
+  normalizedPhotosRef.current = normalizedPhotos;
+  const onPhotosChangeRef = React.useRef(onPhotosChange);
+  onPhotosChangeRef.current = onPhotosChange;
+
   // ========================================================================
   // COMPUTED VALUES
   // ========================================================================
@@ -287,10 +295,13 @@ export function MultiplePhotosFull({
                 onUploadComplete={(result) => {
                   logger.info('Upload completed for slot', { index, success: result.success });
 
-                  // 🔧 FIX: Αποθήκευση uploaded URL στο PhotoSlot μετά το upload
-                  // Χωρίς αυτό, το URL χάνεται αν ο component κάνει re-mount
-                  if (result.success && result.url && onPhotosChange) {
-                    const newPhotos = [...normalizedPhotos];
+                  // 🔧 FIX: Use refs to avoid stale closures — upload completes asynchronously
+                  // and the render-time normalizedPhotos/onPhotosChange may be outdated.
+                  const currentPhotos = normalizedPhotosRef.current;
+                  const currentHandler = onPhotosChangeRef.current;
+
+                  if (result.success && result.url && currentHandler) {
+                    const newPhotos = [...currentPhotos];
                     newPhotos[index] = {
                       ...newPhotos[index],
                       uploadUrl: result.url,
@@ -299,7 +310,7 @@ export function MultiplePhotosFull({
                       uploadProgress: 100,
                       error: undefined
                     };
-                    onPhotosChange(newPhotos);
+                    currentHandler(newPhotos);
                   }
 
                   if (handleUploadComplete) {

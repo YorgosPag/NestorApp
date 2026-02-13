@@ -132,6 +132,12 @@ export function MultiplePhotosCompact({
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('common');
 
+  // 🔧 FIX: Refs to avoid stale closures in async onUploadComplete callbacks.
+  const normalizedPhotosRef = React.useRef(normalizedPhotos);
+  normalizedPhotosRef.current = normalizedPhotos;
+  const onPhotosChangeRef = React.useRef(onPhotosChange);
+  onPhotosChangeRef.current = onPhotosChange;
+
   // ========================================================================
   // COMPUTED VALUES
   // ========================================================================
@@ -274,9 +280,12 @@ export function MultiplePhotosCompact({
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
-                  // 🔧 FIX: Αποθήκευση uploaded URL στο PhotoSlot μετά το upload
-                  if (result.success && result.url && onPhotosChange) {
-                    const newPhotos = [...normalizedPhotos];
+                  // 🔧 FIX: Use refs to avoid stale closures — upload completes asynchronously
+                  const currentPhotos = normalizedPhotosRef.current;
+                  const currentHandler = onPhotosChangeRef.current;
+
+                  if (result.success && result.url && currentHandler) {
+                    const newPhotos = [...currentPhotos];
                     newPhotos[index] = {
                       ...newPhotos[index],
                       uploadUrl: result.url,
@@ -285,7 +294,7 @@ export function MultiplePhotosCompact({
                       uploadProgress: 100,
                       error: undefined
                     };
-                    onPhotosChange(newPhotos);
+                    currentHandler(newPhotos);
                   }
 
                   if (handleUploadComplete) handleUploadComplete(index, result);
