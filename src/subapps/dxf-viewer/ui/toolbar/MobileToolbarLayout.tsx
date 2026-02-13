@@ -68,13 +68,12 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
     if (tool === 'zoom-in') { onAction('zoom-in'); return; }
     if (tool === 'zoom-out') { onAction('zoom-out'); return; }
     if (tool === 'zoom-extents') { onAction('fit-to-view'); return; }
+    // 🔧 FIX (2026-02-13): Removed onAction('toggle-layers') — layer visibility independent of toolbar
     if (tool === 'layering') {
       if (activeTool === 'layering') {
         onToolChange('select');
-        onAction('toggle-layers');
       } else {
         onToolChange(tool);
-        onAction('toggle-layers');
       }
       return;
     }

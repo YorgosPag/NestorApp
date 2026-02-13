@@ -192,14 +192,15 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       return;
     }
 
-    // 🗂️ LAYERING TOOL: Toggle layers panel
+    // 🗂️ LAYERING TOOL: Toggle overlay drawing toolbar only
+    // 🔧 FIX (2026-02-13): Removed onAction('toggle-layers') — layer VISIBILITY on canvas
+    // must be independent of toolbar open/close. The toolbar panel is controlled by activeTool,
+    // the colored layers on canvas are controlled by showLayers (separate concern).
     if (tool === 'layering') {
       if (activeTool === 'layering') {
         onToolChange('select'); // Toggle off to select mode
-        onAction('toggle-layers'); // Hide layers panel
       } else {
         onToolChange(tool); // Activate layering tool with UGS
-        onAction('toggle-layers'); // Show layers panel
       }
       return;
     }
