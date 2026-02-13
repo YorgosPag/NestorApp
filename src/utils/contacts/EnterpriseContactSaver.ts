@@ -142,6 +142,32 @@ export class EnterpriseContactSaver {
     delete enterpriseData.email;
     delete enterpriseData.phone;
 
+    // 📸 ENTERPRISE: Extract multiplePhotoURLs from multiplePhotos BEFORE cleanup
+    // ΚΡΙΣΙΜΟ: Στο UPDATE path, αυτή είναι η ΜΟΝΑΔΙΚΗ ευκαιρία εξαγωγής URLs
+    // (Στο CREATE path, οι mappers κάνουν αυτή τη δουλειά μέσω extractMultiplePhotoURLs)
+    const rawPhotos = formData.multiplePhotos;
+    if (Array.isArray(rawPhotos) && rawPhotos.length > 0) {
+      const extractedURLs = rawPhotos
+        .map(slot => slot.uploadUrl)
+        .filter((url): url is string =>
+          typeof url === 'string' &&
+          url.trim() !== '' &&
+          !url.startsWith('blob:') &&
+          (url.includes('firebasestorage.googleapis.com') || url.startsWith('data:'))
+        );
+
+      if (extractedURLs.length > 0) {
+        enterpriseData.multiplePhotoURLs = extractedURLs;
+        // Πρώτη φωτογραφία γίνεται profile photo (αν δεν έχει ήδη)
+        if (!enterpriseData.photoURL || (enterpriseData.photoURL as string).startsWith('blob:')) {
+          enterpriseData.photoURL = extractedURLs[0];
+        }
+        logger.info('ENTERPRISE SAVER: Extracted photo URLs from multiplePhotos', {
+          count: extractedURLs.length,
+        });
+      }
+    }
+
     // 🛡️ ENTERPRISE: Remove UI-only fields with non-serializable objects
     // ΚΡΙΣΙΜΟ: multiplePhotos περιέχει File objects → Firestore ΑΠΟΡΡΙΠΤΕΙ
     const uiFields = [
