@@ -27,6 +27,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🛡️ ENTERPRISE: Auto-save guard for pending relationship data
+import { PendingRelationshipGuard } from '@/utils/pending-relationship-guard';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactRelationship } from '@/types/contacts/relationships';
@@ -170,6 +172,20 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     handleEdit(relationship); // Load data into form
     setShowFormCard(true);     // Show the form
   };
+
+  // 🛡️ ENTERPRISE: Register pending relationship guard for auto-save
+  React.useEffect(() => {
+    PendingRelationshipGuard.register(handleSubmit);
+    return () => {
+      PendingRelationshipGuard.unregister();
+    };
+  }, [handleSubmit]);
+
+  // 🛡️ Track dirty state — form has data when targetContactId is set and form is visible
+  React.useEffect(() => {
+    const hasPending = showFormCard && !!formData.targetContactId;
+    PendingRelationshipGuard.setHasPendingData(hasPending);
+  }, [showFormCard, formData.targetContactId]);
 
   // ============================================================================
   // RENDER HELPERS

@@ -12,6 +12,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Contact, IndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes'; // 🏢 ENTERPRISE: Type-safe form data
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+// 🛡️ ENTERPRISE: Auto-save guard for pending relationship form data
+import { PendingRelationshipGuard } from '@/utils/pending-relationship-guard';
 
 // 🏢 ENTERPRISE: Type guard for contacts with multiple photo URLs (used for gallery preview only)
 const getMultiplePhotoURLs = (contact: Contact): string[] => {
@@ -148,6 +150,12 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     if (!contact?.id) return;
 
     try {
+      // 🛡️ ENTERPRISE: Auto-submit pending relationship form before saving contact
+      if (PendingRelationshipGuard.hasPendingData) {
+        logger.info('Auto-submitting pending relationship before contact save');
+        await PendingRelationshipGuard.submitPending();
+      }
+
       // 🏢 ENTERPRISE: Use new form-to-arrays conversion method
       await ContactsService.updateContactFromForm(contact.id, editedData);
 

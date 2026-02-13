@@ -398,8 +398,10 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   } });
 
   return (
-    <div className={`relative ${heightClass} ${className}`}>
+    <div className={`relative overflow-hidden ${heightClass} ${className}`}>
       <PolygonSystemProvider>
+        {/* 🗺️ Keep map absolutely bounded to prevent attribution panel from affecting layout height */}
+        <div className="absolute inset-0">
           {/* 🗺️ Interactive Map (GeoCanvas) - Render ONLY after geocoding */}
           {shouldRenderMap && (
             <InteractiveMap
@@ -415,51 +417,52 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               showMapControls={false}
               className="w-full h-full rounded-lg overflow-hidden"
             >
-            {/* 📍 Address Markers - Enterprise Symbol Layer με custom pin icon */}
-            {mapLoaded && markersGeoJSON.features.length > 0 && (
-              <Source
-                id="address-markers"
-                type="geojson"
-                data={markersGeoJSON}
-              >
-                {/* Symbol layer με professional pin icon */}
-                <Layer
-                  id="address-markers-symbols"
-                  type="symbol"
-                  layout={{
-                    'icon-image': 'address-pin',
-                    'icon-size': 1,
-                    'icon-anchor': 'bottom',
-                    'icon-allow-overlap': true,
-                    'text-field': ['get', 'label'],
-                    'text-size': 12,
-                    'text-anchor': 'top',
-                    'text-offset': [0, 0.5],
-                    'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
-                  }}
-                  paint={{
-                    'text-color': MAP_TEXT_COLORS.label,
-                    'text-halo-color': MAP_TEXT_COLORS.halo,
-                    'text-halo-width': 2
-                  }}
-                />
-              </Source>
-            )}
+              {/* 📍 Address Markers - Enterprise Symbol Layer με custom pin icon */}
+              {mapLoaded && markersGeoJSON.features.length > 0 && (
+                <Source
+                  id="address-markers"
+                  type="geojson"
+                  data={markersGeoJSON}
+                >
+                  {/* Symbol layer με professional pin icon */}
+                  <Layer
+                    id="address-markers-symbols"
+                    type="symbol"
+                    layout={{
+                      'icon-image': 'address-pin',
+                      'icon-size': 1,
+                      'icon-anchor': 'bottom',
+                      'icon-allow-overlap': true,
+                      'text-field': ['get', 'label'],
+                      'text-size': 12,
+                      'text-anchor': 'top',
+                      'text-offset': [0, 0.5],
+                      'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
+                    }}
+                    paint={{
+                      'text-color': MAP_TEXT_COLORS.label,
+                      'text-halo-color': MAP_TEXT_COLORS.halo,
+                      'text-halo-width': 2
+                    }}
+                  />
+                </Source>
+              )}
             </InteractiveMap>
           )}
+        </div>
 
-          {/* 🏷️ Geocoding Status Badge */}
-          {showGeocodingStatus && geocodingStatus === 'partial' && (
-            <div className="absolute top-4 right-4">
-              <Badge variant="secondary" className="shadow-md">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                {t('map.partialStatus', {
-                  count: geocodedAddresses.size,
-                  total: getGeocodableAddresses(addresses).length
-                })}
-              </Badge>
-            </div>
-          )}
+        {/* 🏷️ Geocoding Status Badge */}
+        {showGeocodingStatus && geocodingStatus === 'partial' && (
+          <div className="absolute top-4 right-4">
+            <Badge variant="secondary" className="shadow-md">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              {t('map.partialStatus', {
+                count: geocodedAddresses.size,
+                total: getGeocodableAddresses(addresses).length
+              })}
+            </Badge>
+          </div>
+        )}
       </PolygonSystemProvider>
     </div>
   );

@@ -14,7 +14,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Import centralized components and utilities
@@ -195,6 +195,18 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               <AlertTriangle className={iconSizes.sm} />
               <AlertDescription className={designSystem.getTypographyClass('sm', 'medium')}>
                 {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* 🛡️ ENTERPRISE: Pending data reminder — shows when form has data but not yet submitted */}
+          {formData.targetContactId && !loading && (
+            <Alert className="mt-4 border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30">
+              <Info className={designSystem.cn(iconSizes.sm, "text-amber-600 dark:text-amber-400")} />
+              <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                {t('relationships.form.pendingReminder', {
+                  defaultValue: 'Πάτησε "Προσθήκη" για να αποθηκεύσεις τη σχέση. Η σχέση αποθηκεύεται επίσης αυτόματα όταν αποθηκεύεις την επαφή.'
+                })}
               </AlertDescription>
             </Alert>
           )}

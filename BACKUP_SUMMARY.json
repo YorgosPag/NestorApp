@@ -1,15 +1,22 @@
 {
   "category": "FIX",
-  "shortDescription": "Fix duplicate photo appearing in two consecutive slots",
-  "problem": "When a user uploaded a photo to a contact, after save+refresh the same photo appeared in 2 consecutive slots instead of 1",
-  "cause": "ContactDetails.enhancedFormData useMemo was concatenating multiplePhotoURLs (from contact) on top of the already-mapped multiplePhotos from individualMapper.ts, doubling the entries",
+  "shortDescription": "Photo system stabilization — upload pipeline + preview modal fixes",
+  "problem": "1) Photo appeared in 2 consecutive slots after save. 2) addCacheBuster created invalid URLs. 3) Stale closure in async upload callbacks. 4) Photo preview modal overflowed left and top of screen.",
+  "cause": "1) ContactDetails.enhancedFormData duplicated mapper output. 2) addCacheBuster used ? instead of & on URLs with existing query params. 3) Handlers closed over stale formData state. 4) Radix DialogContent translate-x/y centering conflicted with fullscreen inset-0.",
   "filesChanged": [
     "src/components/contacts/details/ContactDetails.tsx",
-    "src/hooks/useCacheBusting.ts"
+    "src/hooks/useCacheBusting.ts",
+    "src/components/ui/MultiplePhotosFull.tsx",
+    "src/components/ui/MultiplePhotosCompact.tsx",
+    "src/styles/design-tokens.ts",
+    "docs/centralized-systems/reference/adrs/ADR-054-enterprise-upload-system-consolidation.md",
+    "docs/centralized-systems/reference/adrs/ADR-018-1-photos-tab-base-template.md",
+    "docs/centralized-systems/design-system/tokens.md",
+    "docs/centralized-systems/reference/adr-index.md"
   ],
-  "solution": "1) Removed redundant getMultiplePhotoURLs conversion/concatenation in ContactDetails — individualMapper is the single source of truth. 2) Fixed addCacheBuster to use & separator when URL already has query params (was creating invalid double-? URLs).",
-  "testing": "TypeScript compilation: 0 errors. User confirmed photos upload and display correctly. Duplicate bug confirmed via browser console logs.",
-  "notes": "Browser-level console.log diagnostics (🔴 PHOTO DEBUG) still in place at 5 chain points for future debugging. Can be cleaned up later.",
+  "solution": "1) Removed redundant getMultiplePhotoURLs concatenation — individualMapper.ts is SSoT. 2) Fixed addCacheBuster to use & separator. 3) Added useRef + functional updater pattern. 4) Added !translate-x-0 !translate-y-0 !left-0 !top-0 overrides in photoPreviewLayout. 5) Updated ADR-054, ADR-018.1, design tokens docs with stabilization notices and DO NOT MODIFY markers.",
+  "testing": "TypeScript compilation: 0 errors. User confirmed photos upload, display, and preview work correctly.",
+  "notes": "ADR-054 and ADR-018.1 now contain full changelogs and lists of stabilized files that should NOT be modified without serious reason. Browser-level console.log diagnostics (PHOTO DEBUG) still in place for future debugging.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -22,8 +29,20 @@
       "message": "fix(photos): fix addCacheBuster URL corruption + add browser-level diagnostics"
     },
     {
+      "hash": "533f7e95",
+      "message": "fix(photos): useRef pattern to prevent stale closures in upload callbacks"
+    },
+    {
       "hash": "8d894bfc",
       "message": "fix(contacts): remove duplicate multiplePhotos concatenation causing photo duplication"
+    },
+    {
+      "hash": "e33ec40e",
+      "message": "chore: update design-tokens styling — fix PhotoPreviewModal overflow"
+    },
+    {
+      "hash": "7d80e2ef",
+      "message": "docs: stabilize photo system ADRs — mark upload pipeline as DO NOT MODIFY"
     }
   ]
 }
