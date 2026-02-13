@@ -135,8 +135,9 @@ export function EmployerPicker({
 
     fetchingRef.current = true;
     try {
+      // Fetch all contacts without type filter to avoid composite index requirement
+      // Client-side filtering is more resilient and company count is typically <500
       const { contacts } = await ContactsService.getAllContacts({
-        type: 'company',
         limitCount: 500,
       });
 
