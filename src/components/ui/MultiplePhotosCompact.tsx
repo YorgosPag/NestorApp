@@ -258,10 +258,13 @@ export function MultiplePhotosCompact({
 
                   logger.info('File changed for slot', { index, fileName: file?.name });
                   const newPhotos = [...normalizedPhotos];
+                  // 🔧 FIX: Αποθήκευση blob preview στο PhotoSlot ώστε να μην χαθεί σε re-render
+                  const preview = file ? URL.createObjectURL(file) : undefined;
                   newPhotos[index] = {
                     ...newPhotos[index],
                     file,
-                    isUploading: false, // Reset upload state
+                    preview,
+                    isUploading: false,
                     uploadProgress: 0,
                     error: undefined
                   };
@@ -271,6 +274,20 @@ export function MultiplePhotosCompact({
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
+                  // 🔧 FIX: Αποθήκευση uploaded URL στο PhotoSlot μετά το upload
+                  if (result.success && result.url && onPhotosChange) {
+                    const newPhotos = [...normalizedPhotos];
+                    newPhotos[index] = {
+                      ...newPhotos[index],
+                      uploadUrl: result.url,
+                      preview: result.url,
+                      isUploading: false,
+                      uploadProgress: 100,
+                      error: undefined
+                    };
+                    onPhotosChange(newPhotos);
+                  }
+
                   if (handleUploadComplete) handleUploadComplete(index, result);
                 }}
                 disabled={disabled}
