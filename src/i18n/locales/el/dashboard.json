@@ -27,7 +27,7 @@
       "description": "Προσθήκη ατόμου"
     },
     "company": {
-      "title": "Νομικό Πρόσωπο", 
+      "title": "Νομικό Πρόσωπο",
       "description": "Προσθήκη εταιρείας"
     },
     "service": {
@@ -46,5 +46,80 @@
   },
   "aria": {
     "statsSection": "Στατιστικά Dashboard"
+  },
+  "home": {
+    "greeting": {
+      "morning": "Καλημέρα",
+      "afternoon": "Καλό απόγευμα",
+      "evening": "Καλό βράδυ"
+    },
+    "subtitle": "Τι θέλετε να διαχειριστείτε σήμερα;",
+    "sections": {
+      "quickActions": "Γρήγορες Ενέργειες",
+      "mainMenu": "Κύρια Πλοήγηση",
+      "tools": "Εργαλεία"
+    },
+    "actions": {
+      "newContact": "Νέα Επαφή",
+      "newProject": "Νέο Έργο",
+      "newInvoice": "Νέο Τιμολόγιο",
+      "search": "Αναζήτηση"
+    },
+    "modules": {
+      "properties": {
+        "title": "Ευρετήριο Ακινήτων",
+        "description": "Αναζήτηση και διαχείριση ακινήτων"
+      },
+      "contacts": {
+        "title": "Επαφές",
+        "description": "Φυσικά και νομικά πρόσωπα"
+      },
+      "projects": {
+        "title": "Έργα",
+        "description": "Κατασκευαστικά έργα και αξιολόγηση"
+      },
+      "buildings": {
+        "title": "Κτίρια",
+        "description": "Διαχείριση κτιριακού αποθέματος"
+      },
+      "spaces": {
+        "title": "Χώροι",
+        "description": "Διαμερίσματα, αποθήκες, parking"
+      },
+      "sales": {
+        "title": "Πωλήσεις",
+        "description": "Διαθέσιμα και πωλημένα ακίνητα"
+      },
+      "crm": {
+        "title": "CRM",
+        "description": "Πελάτες, leads, pipeline"
+      },
+      "accounting": {
+        "title": "Λογιστικό",
+        "description": "Τιμολόγια, ΦΠΑ, ΕΦΚΑ"
+      },
+      "files": {
+        "title": "Αρχεία",
+        "description": "Διαχείριση αρχείων και εγγράφων"
+      },
+      "legal": {
+        "title": "Νομικά",
+        "description": "Νομικά έγγραφα και υποχρεώσεις"
+      },
+      "geoCanvas": {
+        "title": "Geo-Canvas",
+        "description": "Γεωχωρικό σύστημα χαρτών"
+      },
+      "dxfViewer": {
+        "title": "DXF Viewer",
+        "description": "Τεχνικά σχέδια και μετρήσεις"
+      }
+    },
+    "badges": {
+      "pro": "PRO",
+      "enterprise": "ENTERPRISE",
+      "new": "ΝΕΟ"
+    },
+    "subItems": "{count} υπο-ενότητες"
   }
 }

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 153 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-14
+**📊 Stats**: 154 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-14
 
 ---
 
@@ -195,6 +195,7 @@
 | **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ IMPLEMENTED | 2026-02-13 | UI Components / Data Quality | [📄](./adrs/ADR-177-employer-picker-entity-linking.md) |
 | **ADR-178** | Contact Relationship Auto-Save UX (PendingRelationshipGuard) | ✅ IMPLEMENTED | 2026-02-13 | UX / Contact Relationships | [📄](./adrs/ADR-178-contact-relationship-auto-save-ux.md) |
 | **ADR-179** | IFC-Compliant Floor Plan Import Hierarchy | ✅ IMPLEMENTED | 2026-02-14 | DXF Viewer / Import | [📄](./adrs/ADR-179-ifc-compliant-floorplan-hierarchy.md) |
+| **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ IMPLEMENTED | 2026-02-14 | Navigation / UX | [📄](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -345,6 +346,7 @@
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | [View](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ IMPLEMENTED | [View](./adrs/ADR-177-employer-picker-entity-linking.md) |
 | **ADR-178** | Contact Relationship Auto-Save UX (PendingRelationshipGuard) | ✅ IMPLEMENTED | [View](./adrs/ADR-178-contact-relationship-auto-save-ux.md) |
+| **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ IMPLEMENTED | [View](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
 
 ---

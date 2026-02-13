@@ -27,7 +27,7 @@
       "description": "Add person"
     },
     "company": {
-      "title": "Company", 
+      "title": "Company",
       "description": "Add company"
     },
     "service": {
@@ -46,5 +46,80 @@
   },
   "aria": {
     "statsSection": "Dashboard Statistics"
+  },
+  "home": {
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "subtitle": "What would you like to manage today?",
+    "sections": {
+      "quickActions": "Quick Actions",
+      "mainMenu": "Main Navigation",
+      "tools": "Tools"
+    },
+    "actions": {
+      "newContact": "New Contact",
+      "newProject": "New Project",
+      "newInvoice": "New Invoice",
+      "search": "Search"
+    },
+    "modules": {
+      "properties": {
+        "title": "Property Index",
+        "description": "Search and manage properties"
+      },
+      "contacts": {
+        "title": "Contacts",
+        "description": "Individuals and companies"
+      },
+      "projects": {
+        "title": "Projects",
+        "description": "Construction projects and evaluation"
+      },
+      "buildings": {
+        "title": "Buildings",
+        "description": "Building stock management"
+      },
+      "spaces": {
+        "title": "Spaces",
+        "description": "Apartments, storage, parking"
+      },
+      "sales": {
+        "title": "Sales",
+        "description": "Available and sold properties"
+      },
+      "crm": {
+        "title": "CRM",
+        "description": "Customers, leads, pipeline"
+      },
+      "accounting": {
+        "title": "Accounting",
+        "description": "Invoices, VAT, social security"
+      },
+      "files": {
+        "title": "Files",
+        "description": "File and document management"
+      },
+      "legal": {
+        "title": "Legal",
+        "description": "Legal documents and obligations"
+      },
+      "geoCanvas": {
+        "title": "Geo-Canvas",
+        "description": "Geospatial mapping system"
+      },
+      "dxfViewer": {
+        "title": "DXF Viewer",
+        "description": "Technical drawings and measurements"
+      }
+    },
+    "badges": {
+      "pro": "PRO",
+      "enterprise": "ENTERPRISE",
+      "new": "NEW"
+    },
+    "subItems": "{count} sub-sections"
   }
 }
