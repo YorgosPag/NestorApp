@@ -100,3 +100,23 @@
 | **Fix** | (1) Added `onLayerSelected`, `onMultiLayerSelected`, `onEntitiesSelected`, `isGripDragging` props to `DxfCanvasProps` interface. (2) Destructured and forwarded all marquee props to `useCentralizedMouseHandlers` in DxfCanvas, including `colorLayers` and `canvasRef`. (3) In `useCentralizedMouseHandlers`, added `onEntitiesSelected` callback prop and routed `breakdown.entityIds` to it separately from layer/overlay IDs. (4) Removed `colorLayers.length > 0` guard so marquee works for entities even without overlays. (5) In CanvasSection, passed `handleOverlayClick`, `handleMultiOverlayClick`, `setSelectedEntityIds`, and grip-drag state to DxfCanvas. |
 | **Files** | `DxfCanvas.tsx`, `CanvasSection.tsx`, `useCentralizedMouseHandlers.ts` |
 | **Lesson** | The dual-canvas z-index architecture (DxfCanvas z-10 > LayerCanvas z-0) means ALL interactive features must be wired through DxfCanvas. Any mouse handler feature in `useCentralizedMouseHandlers` that works on LayerCanvas must also have its props forwarded from DxfCanvas. This is the same pattern as the move tool fix (earlier in this changelog). |
+
+### 2026-02-13 — Fix: Selection marquee box invisible during drag
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Window Selection (blue) and Crossing Selection (green dashed) marquee rectangles were invisible during drag — the selection logic worked (entities/layers were selected on mouse-up) but no visual feedback appeared |
+| **Root Cause** | Selection box rendering was in a separate `useEffect` OUTSIDE the RAF-synchronized rendering loop. The RAF loop's `DxfRenderer.render()` calls `clearCanvas()` at the start of each frame, wiping the selection box that the useEffect had drawn. Even though `isDirtyRef` prevented most RAF frames during drag, the timing between React useEffect and RAF callback meant the selection box was cleared before the browser could paint it. |
+| **Fix** | Moved selection rendering INTO the `renderScene()` RAF callback as step 4 (after scene → grid → rulers → **selection box**). Added `selectionStateRef` and `activeToolRef` refs so the RAF callback reads the latest cursor state without React dependency issues. The old selection useEffect now only sets `isDirtyRef = true` to trigger the RAF loop when selection state changes. |
+| **File** | `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx` |
+| **Lesson** | Any visual element rendered on a canvas that uses a RAF loop with `clearCanvas()` MUST be rendered inside that RAF loop. Rendering in a separate useEffect creates a race condition where the RAF clears what the useEffect drew. |
+
+### 2026-02-13 — Fix: Rectangle entities not selected by marquee
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Marquee selection (Window/Crossing) selected lines, circles, polylines but NOT rectangles |
+| **Root Cause** | `calculateEntityBounds()` in `selection-duplicate-utils.ts` had a `switch` that handled `case 'rectangle'` but NOT `case 'rect'`. Both types exist in the codebase with identical properties (`x, y, width, height, corner1, corner2`), but `'rect'` fell through to the `default: return null` case, causing marquee selection to skip rect entities. |
+| **Fix** | Added `case 'rect':` fallthrough before `case 'rectangle':` in `calculateEntityBounds()` |
+| **File** | `src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts` |
+| **Lesson** | The DXF viewer has two rectangle entity types: `'rectangle'` (RectangleEntity) and `'rect'` (RectEntity). Any switch statement handling one MUST handle both. |
