@@ -1,47 +1,25 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "ADR-176: DXF Viewer Mobile Responsive Refactoring — 4 Phases Complete",
-  "problem": "Το DXF Viewer ήταν αποκλειστικά desktop-oriented: σταθερό sidebar 384px, toolbar flex-wrap χωρίς overflow, floating panels με absolute positioning, mouse-only drag. Σε mobile (375px) το UI βγαίνει εκτός οθόνης.",
-  "cause": "Δεν είχε σχεδιαστεί responsive layout — όλα τα components είχαν fixed widths και mouse-only interactions.",
+  "category": "FIX",
+  "shortDescription": "Fix contact photo save failure — non-serializable File objects leaked to Firestore",
+  "problem": "Οι φωτογραφίες δεν αποθηκεύονταν. Η ενημέρωση επαφής απέτυχε με γενικό σφάλμα 'Update failed Object' χωρίς λεπτομέρειες.",
+  "cause": "Το πεδίο multiplePhotos (PhotoSlot[] με File/Blob objects) δεν αφαιρούνταν πριν σταλεί στο Firestore. Το Firestore ΑΠΟΡΡΙΠΤΕΙ μη-σειριοποιήσιμα αντικείμενα (File, Blob). Επιπλέον, τα error logs έδειχαν μόνο 'Object' αντί του πραγματικού μηνύματος σφάλματος.",
   "filesChanged": [
-    "docs/centralized-systems/reference/adrs/ADR-176-dxf-viewer-mobile-responsive.md",
-    "docs/centralized-systems/reference/adr-index.md",
-    "src/constants/layout.ts",
-    "src/components/contacts/dynamic/hooks/useResponsiveLayout.ts",
-    "src/app/dxf/viewer/layout.tsx",
-    "src/subapps/dxf-viewer/layout/MobileSidebarDrawer.tsx",
-    "src/subapps/dxf-viewer/layout/MobilePanelManager.tsx",
-    "src/subapps/dxf-viewer/layout/SidebarSection.tsx",
-    "src/subapps/dxf-viewer/layout/FloatingPanelsSection.tsx",
-    "src/subapps/dxf-viewer/layout/MainContentSection.tsx",
-    "src/subapps/dxf-viewer/ui/toolbar/toolbar-responsive-config.ts",
-    "src/subapps/dxf-viewer/ui/toolbar/MobileToolbarLayout.tsx",
-    "src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx",
-    "src/subapps/dxf-viewer/ui/toolbar/ToolbarStatusBar.tsx",
-    "src/subapps/dxf-viewer/ui/toolbar/types.ts",
-    "src/subapps/dxf-viewer/config/panel-tokens.ts",
-    "src/subapps/dxf-viewer/app/DxfViewerContent.tsx",
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx",
-    "src/subapps/dxf-viewer/components/dxf-layout/ToolbarSection.tsx",
-    "src/subapps/dxf-viewer/integration/types.ts",
-    "src/subapps/dxf-viewer/hooks/gestures/usePinchZoom.ts",
-    "src/subapps/dxf-viewer/hooks/gestures/useTouchPan.ts",
-    "src/subapps/dxf-viewer/hooks/gestures/useLongPress.ts",
-    "src/hooks/useDraggable.ts"
+    "src/services/contacts.service.ts (uiOnlyFields + error logging)",
+    "src/utils/contacts/EnterpriseContactSaver.ts (UI fields cleanup)"
   ],
-  "solution": "Υλοποίηση 4-phase responsive refactoring: Phase 1 (layout shell: sidebar drawer + compact toolbar + responsive hook), Phase 2 (touch gestures: pinch-zoom + touch pan + pointer events migration), Phase 3 (panel clamping + mobile tool config + long press), Phase 4 (ARIA roles + viewport meta + iOS safe areas). Desktop παραμένει αμετάβλητο.",
-  "testing": "npx tsc --noEmit → 0 errors. Desktop path unchanged (all changes behind layoutMode conditions).",
-  "notes": "Mobile = view + navigate only. Drawing/measure tools disabled σε mobile λόγω precision requirements. 9 νέα αρχεία, 15 τροποποιημένα, 1245 lines added.",
+  "solution": "1. Προστέθηκαν 6 νέα UI-only πεδία στη λίστα αφαίρεσης πριν το Firestore write: multiplePhotos, _isLogoUploading, _isPhotoUploading, _forceDeleteLogo, activePersonaTab, photoFileName. 2. Δεύτερο layer ασφαλείας στο EnterpriseContactSaver.convertToEnterpriseStructure(). 3. Βελτιωμένο error logging — εμφανίζει errorMessage, errorCode, contactId αντί για generic 'Object'.",
+  "testing": "npx tsc --noEmit — 0 TS errors",
+  "notes": "Το deprecation warning για canonical fields (companyId, contactId, createdBy) παραμένει — η legacy pipeline λειτουργεί αλλά δεν δημιουργεί FileRecord. Αυτό είναι δευτερεύον ζήτημα.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-02-12"
+    "sessionDate": "2026-02-13"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "597a6ff8",
-      "message": "feat(ADR-176): DXF Viewer mobile responsive refactoring — all 4 phases"
+      "hash": "76fcdcfe",
+      "message": "fix: prevent non-serializable File objects from leaking into Firestore payload"
     }
   ]
 }

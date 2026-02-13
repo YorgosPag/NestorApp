@@ -982,6 +982,13 @@ Check console for detailed metrics`;
     overlayStore
   });
 
+  // Keep global pointer lock behavior scoped to desktop only.
+  // Mobile/tablet must keep toolbar taps active in layering mode.
+  const rootPointerEventsClass =
+    layoutMode === 'desktop' && activeTool === 'layering'
+      ? PANEL_LAYOUT.POINTER_EVENTS.NONE
+      : PANEL_LAYOUT.POINTER_EVENTS.AUTO;
+
   return (
     <CanvasProvider>
       <TransformProvider
@@ -989,9 +996,7 @@ Check console for detailed metrics`;
         onTransformReady={handleTransformReady}
       >
       <section
-        className={`flex h-full ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${
-          activeTool === 'layering' ? PANEL_LAYOUT.POINTER_EVENTS.NONE : PANEL_LAYOUT.POINTER_EVENTS.AUTO
-        }`}
+        className={`flex h-full ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
       >
       {/* ✅ PHASE 5: Sidebar Section — ADR-176: Responsive */}
       {layoutMode === 'desktop' ? (
@@ -1121,3 +1126,6 @@ Check console for detailed metrics`;
 });
 
 export default DxfViewerContent;
+
+
+
