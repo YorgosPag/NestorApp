@@ -151,7 +151,18 @@ export class ContactRelationshipService {
    * 🔗 Create New Relationship
    */
   static async createRelationship(data: Partial<ContactRelationship>): Promise<ContactRelationship> {
-    return await RelationshipCRUDService.createRelationship(data);
+    const result = await RelationshipCRUDService.createRelationship(data);
+
+    // Invalidate caches for both contacts so next fetch returns fresh data
+    if (data.sourceContactId) {
+      RelationshipCacheAdapter.invalidateContact(data.sourceContactId);
+    }
+    if (data.targetContactId) {
+      RelationshipCacheAdapter.invalidateContact(data.targetContactId);
+    }
+    RelationshipCacheAdapter.invalidatePattern('search:*');
+
+    return result;
   }
 
   /**
@@ -179,14 +190,37 @@ export class ContactRelationshipService {
     relationshipId: string,
     updates: Partial<ContactRelationship>
   ): Promise<ContactRelationship> {
-    return await RelationshipCRUDService.updateRelationship(relationshipId, updates);
+    const result = await RelationshipCRUDService.updateRelationship(relationshipId, updates);
+
+    // Invalidate caches for affected contacts
+    if (updates.sourceContactId) {
+      RelationshipCacheAdapter.invalidateContact(updates.sourceContactId);
+    }
+    if (updates.targetContactId) {
+      RelationshipCacheAdapter.invalidateContact(updates.targetContactId);
+    }
+    RelationshipCacheAdapter.invalidatePattern('search:*');
+
+    return result;
   }
 
   /**
    * 🗑️ Delete Relationship
    */
   static async deleteRelationship(relationshipId: string, deletedBy: string): Promise<boolean> {
-    return await RelationshipCRUDService.deleteRelationship(relationshipId, deletedBy);
+    // Fetch relationship before deletion to know which contacts to invalidate
+    const relationship = await RelationshipCRUDService.getRelationshipById(relationshipId);
+
+    const result = await RelationshipCRUDService.deleteRelationship(relationshipId, deletedBy);
+
+    // Invalidate caches for affected contacts
+    if (relationship) {
+      RelationshipCacheAdapter.invalidateContact(relationship.sourceContactId);
+      RelationshipCacheAdapter.invalidateContact(relationship.targetContactId);
+    }
+    RelationshipCacheAdapter.invalidatePattern('search:*');
+
+    return result;
   }
 
   // ========================================================================
