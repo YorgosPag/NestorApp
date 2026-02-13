@@ -218,7 +218,7 @@ export class EnterpriseIdService {
     }
 
     if (this.config.enableLogging) {
-      console.log(`🆔 Generated enterprise ID: ${id} (attempts: ${attempts})`);
+      console.debug(`🆔 Generated enterprise ID: ${id} (attempts: ${attempts})`);
     }
 
     return enterpriseId;

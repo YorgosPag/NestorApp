@@ -27,7 +27,7 @@ export class TasksRepository implements ITasksRepository {
     const isSuperAdmin = globalRole === 'super_admin';
 
     // 🔍 DEBUG: Log claims for troubleshooting
-    console.log('🔍 [TasksRepository] Auth claims:', {
+    console.debug('🔍 [TasksRepository] Auth claims:', {
       uid: currentUser.uid,
       companyId,
       globalRole,
@@ -93,20 +93,20 @@ export class TasksRepository implements ITasksRepository {
     const { companyId, isSuperAdmin } = await this.requireAuthContext();
 
     // 🔍 DEBUG: Log query parameters
-    console.log('🔍 [TasksRepository.getAll] Query params:', { companyId, isSuperAdmin });
+    console.debug('🔍 [TasksRepository.getAll] Query params:', { companyId, isSuperAdmin });
 
     // 🏢 ENTERPRISE: Super admin can see all tasks, regular users see only their company's
     let q;
     if (isSuperAdmin && !companyId) {
       // Super admin without company - get all tasks
-      console.log('🔍 [TasksRepository.getAll] Using super admin query (no companyId filter)');
+      console.debug('🔍 [TasksRepository.getAll] Using super admin query (no companyId filter)');
       q = query(
         collection(db, this.collectionName),
         orderBy('dueDate', 'asc')
       );
     } else {
       // Regular user or super admin with company - filter by companyId
-      console.log('🔍 [TasksRepository.getAll] Using companyId filter:', companyId);
+      console.debug('🔍 [TasksRepository.getAll] Using companyId filter:', companyId);
       q = query(
         collection(db, this.collectionName),
         where('companyId', '==', companyId),
@@ -262,20 +262,20 @@ export class TasksRepository implements ITasksRepository {
     const { companyId, isSuperAdmin } = await this.requireAuthContext();
 
     // 🔍 DEBUG: Log query parameters
-    console.log('🔍 [TasksRepository.getStats] Query params:', { companyId, isSuperAdmin, userId });
+    console.debug('🔍 [TasksRepository.getStats] Query params:', { companyId, isSuperAdmin, userId });
 
     // 🏢 ENTERPRISE: Build query based on role
     let q;
     if (isSuperAdmin && !companyId) {
       // Super admin without company - get all tasks stats
-      console.log('🔍 [TasksRepository.getStats] Using super admin query (no companyId filter)');
+      console.debug('🔍 [TasksRepository.getStats] Using super admin query (no companyId filter)');
       q = query(
         collection(db, this.collectionName),
         where('status', '!=', 'cancelled')
       );
     } else {
       // Regular user or super admin with company - filter by companyId
-      console.log('🔍 [TasksRepository.getStats] Using companyId filter:', companyId);
+      console.debug('🔍 [TasksRepository.getStats] Using companyId filter:', companyId);
       q = query(
         collection(db, this.collectionName),
         where('companyId', '==', companyId),
