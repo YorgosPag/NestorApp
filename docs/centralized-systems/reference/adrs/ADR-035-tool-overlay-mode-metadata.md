@@ -120,3 +120,13 @@
 | **Fix** | Added `case 'rect':` fallthrough before `case 'rectangle':` in `calculateEntityBounds()` |
 | **File** | `src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts` |
 | **Lesson** | The DXF viewer has two rectangle entity types: `'rectangle'` (RectangleEntity) and `'rect'` (RectEntity). Any switch statement handling one MUST handle both. |
+
+### 2026-02-13 — Fix: Arcs/polylines/angle-measurements not highlighted after marquee selection
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Arcs, polylines, polygons, area measurements, and angle measurements appeared not to be selected by marquee — no visual feedback (dashed rectangle) after selection |
+| **Root Cause (dual)** | TWO separate `calculateEntityBounds()` functions exist: (1) in `selection-duplicate-utils.ts` (marquee selection logic) — missing `'arc'` and `'lwpolyline'` cases, so arcs returned null and were skipped. (2) in `DxfRenderer.ts` (visual highlight rendering) — only handled `'line'` and `'circle'`, so ALL other entity types (polyline, arc, angle-measurement, text) returned null and showed no highlight box. Users thought entities weren't selected because there was zero visual feedback. |
+| **Fix** | (1) Added `'arc'` case (center ± radius) and `'lwpolyline'` fallthrough in `selection-duplicate-utils.ts`. (2) Added `'polyline'` (vertex bounds), `'arc'` (center ± radius), `'angle-measurement'` (3-point bounds), and `'text'` (position + estimated size) cases to `DxfRenderer.ts`. |
+| **Files** | `selection-duplicate-utils.ts`, `DxfRenderer.ts` |
+| **Lesson** | When adding a new entity type to the system, BOTH the selection logic (`calculateEntityBounds` in selection utils) AND the visual highlight (`calculateEntityBounds` in DxfRenderer) must be updated. These are separate functions with separate switch statements that must stay in sync. |
