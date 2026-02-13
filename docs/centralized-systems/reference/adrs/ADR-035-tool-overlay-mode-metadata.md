@@ -47,3 +47,13 @@
 | **Fix** | Removed `onAction('toggle-layers')` from the layering tool toggle. Now the button only toggles `activeTool` between `'layering'` and `'select'`, keeping toolbar UI and layer visibility as independent state axes |
 | **Files** | `src/subapps/dxf-viewer/components/ui/toolbar/EnhancedDXFToolbar.tsx`, `src/subapps/dxf-viewer/components/ui/mobile/MobileToolbarLayout.tsx` |
 | **Lesson** | Toolbar button interactions must respect the principle of "independent state axes" — `activeTool` controls which toolbar is visible, while layer visibility should be controlled by separate state. Avoid bundling multiple state mutations into a single UI action. |
+
+### 2026-02-13 — Fix: Move tool not working on overlays
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Selecting an overlay and switching to the Move tool had no effect — clicking the overlay with the move tool active did nothing |
+| **Root Cause** | DxfCanvas (z-10) intercepts ALL pointer events before they reach LayerCanvas (z-0). The `handleOverlayClick` function (which handles move tool initiation) was only reachable through LayerCanvas's `onPointerUp`, which is gated to `activeTool === 'layering'`. The `handleCanvasClick` path (DxfCanvas click route) had no overlay hit-testing for the 'move' tool. |
+| **Fix** | Added point-in-polygon hit-test in `handleCanvasClick` for `activeTool === 'move'`: iterates over `currentOverlays`, tests if `worldPoint` is inside each polygon using `isPointInPolygon()`, and calls `handleOverlayClick()` on match to initiate body drag. |
+| **File** | `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` |
+| **Lesson** | Due to z-index stacking (DxfCanvas z-10 > LayerCanvas z-0), any overlay interaction that previously relied on LayerCanvas mouse handlers MUST be duplicated in the DxfCanvas click path (`handleCanvasClick`). This is a fundamental architectural constraint of the dual-canvas system. |
