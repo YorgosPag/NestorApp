@@ -52,11 +52,12 @@ export class RelationshipCRUDService {
    *
    * Creates a new relationship με full validation και business rules
    */
-  static async createRelationship(data: Partial<ContactRelationship>): Promise<ContactRelationship> {
+  static async createRelationship(data: Partial<ContactRelationship>, options?: { skipReciprocal?: boolean }): Promise<ContactRelationship> {
     logger.info('🔗 CRUD: Creating relationship', {
       sourceId: data.sourceContactId,
       targetId: data.targetContactId,
-      type: data.relationshipType
+      type: data.relationshipType,
+      skipReciprocal: options?.skipReciprocal ?? false
     });
 
     // ====================================================================
@@ -89,10 +90,9 @@ export class RelationshipCRUDService {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorCode = (error as { code?: string })?.code;
 
+      // 🔧 FIX: Removed 'FirebaseError' match — it caught ALL Firebase errors (permissions, etc.)
       const isIndexError = errorMessage.includes('query requires an index') ||
-                          errorMessage.includes('FirebaseError') ||
-                          errorCode === 'failed-precondition' ||
-                          errorMessage.includes('index');
+                          errorCode === 'failed-precondition';
 
       if (isIndexError) {
         logger.warn('⚠️ Firebase index missing for duplicate check - proceeding with relationship creation');
@@ -158,7 +158,8 @@ export class RelationshipCRUDService {
       relationshipStrength: data.relationshipStrength || 'moderate',
       communicationFrequency: data.communicationFrequency,
 
-      relationshipNotes: data.relationshipNotes,
+      // 🔧 FIX: Map both 'notes' and 'relationshipNotes' (form uses 'notes')
+      relationshipNotes: data.relationshipNotes || (data as Record<string, unknown>).notes as string | undefined,
       tags: data.tags || [],
       customFields: data.customFields || {},
 
@@ -174,14 +175,18 @@ export class RelationshipCRUDService {
     // Save to database (Firebase/backend implementation)
     await this.saveRelationship(relationship);
 
-    // Create reciprocal relationship if needed
-    logger.info('🔄 CRUD: Creating reciprocal relationship...');
-    try {
-      await this.createReciprocalRelationship(relationship, sourceContact, targetContact);
-      logger.info('✅ CRUD: Reciprocal relationship created successfully');
-    } catch (reciprocalError) {
-      logger.error('❌ CRUD: Reciprocal relationship creation failed:', reciprocalError);
-      // Don't fail the main operation - reciprocal relationships are optional
+    // Create reciprocal relationship if needed (skip if this IS a reciprocal)
+    if (!options?.skipReciprocal) {
+      logger.info('🔄 CRUD: Creating reciprocal relationship...');
+      try {
+        await this.createReciprocalRelationship(relationship, sourceContact, targetContact);
+        logger.info('✅ CRUD: Reciprocal relationship created successfully');
+      } catch (reciprocalError) {
+        logger.error('❌ CRUD: Reciprocal relationship creation failed:', reciprocalError);
+        // Don't fail the main operation - reciprocal relationships are optional
+      }
+    } else {
+      logger.info('ℹ️ CRUD: Skipping reciprocal creation (this IS a reciprocal)');
     }
 
     // Update organizational hierarchy if employment relationship
@@ -444,7 +449,7 @@ export class RelationshipCRUDService {
             startDate: relationship.startDate,
             createdBy: relationship.createdBy,
             lastModifiedBy: relationship.lastModifiedBy
-          });
+          }, { skipReciprocal: true }); // 🔧 FIX: Prevent infinite recursion
         }
       } catch (error) {
         logger.warn('⚠️ CRUD: Error creating reciprocal relationship:', error);

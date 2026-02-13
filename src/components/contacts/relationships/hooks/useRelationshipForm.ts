@@ -278,11 +278,10 @@ export const useRelationshipForm = (
         setSuccessMessage(null);
       }, 5000);
 
-      // 🔧 FIX: For new relationships, add delay to ensure Firestore consistency
-      // before refreshing the cache
+      // 🔧 FIX: Short delay for Firestore eventual consistency
       if (!editingId) {
-        logger.info('⏱RELATIONSHIP FORM: Adding 2500ms delay for Firestore consistency...');
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        logger.info('⏱RELATIONSHIP FORM: Adding 500ms delay for Firestore consistency...');
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Call success callback to refresh data

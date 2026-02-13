@@ -329,12 +329,14 @@ export class FirestoreRelationshipAdapter {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
       // Create query για την specific relationship
+      // 🔧 FIX: Use equality filter (== 'active') instead of inequality (!= 'deleted')
+      // Inequality filters require composite indexes and can cause silent failures
       const q = query(
         colRef,
         where('sourceContactId', '==', sourceId),
         where('targetContactId', '==', targetId),
         where('relationshipType', '==', relationshipType),
-        where('status', '!=', 'deleted')
+        where('status', '==', 'active')
       );
 
       const snapshot = await getDocs(q);

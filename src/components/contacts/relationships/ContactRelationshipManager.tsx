@@ -100,60 +100,30 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   } = useOrganizationTree(contactId, contactType);
 
   // 🔄 Global refresh callback that updates both relationships and organization tree
+  // 🔧 FIX: Simplified — removed stale-closure retry logic that used relationships.length
   const handleGlobalRefresh = React.useCallback(async () => {
     try {
-      logger.info('Refreshing relationships and organization tree after relationship creation');
+      logger.info('🔄 REFRESH: Starting global refresh after relationship save');
 
-      // Add retry mechanism for Firestore consistency
-      const maxRetries = 3;
-      let retryCount = 0;
-      let lastRelationshipsCount = 0;
-
-      while (retryCount < maxRetries) {
-        // Force clear relationship cache first
-        logger.info('Clearing all caches before refresh');
-
-        // Clear organization tree cache if it exists
-        if (shouldShowTree && window.localStorage) {
-          const orgCacheKeys = Object.keys(window.localStorage).filter(key =>
-            key.includes('organization:') && key.includes(contactId)
-          );
-          orgCacheKeys.forEach(key => {
-            logger.info('Clearing organization cache key', { key });
-            window.localStorage.removeItem(key);
-          });
-        }
-
-        // Refresh relationships and organization tree in parallel
-        await Promise.all([
-          refreshRelationships(),
-          shouldShowTree ? refreshTree() : Promise.resolve()
-        ]);
-
-        // Check if relationships were updated by looking at current count
-        const currentRelationshipsCount = relationships?.length || 0;
-        logger.info('Global refresh retry', { retryCount: retryCount + 1, maxRetries, currentRelationshipsCount });
-
-        // If we have relationships or this isn't the first attempt, we're done
-        if (currentRelationshipsCount > lastRelationshipsCount || retryCount === maxRetries - 1) {
-          break;
-        }
-
-        // Wait before retrying
-        retryCount++;
-        if (retryCount < maxRetries) {
-          logger.info('Waiting before retry', { retryCount: retryCount + 1 });
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-
-        lastRelationshipsCount = currentRelationshipsCount;
+      // Clear organization tree cache if it exists
+      if (shouldShowTree && typeof window !== 'undefined' && window.localStorage) {
+        const orgCacheKeys = Object.keys(window.localStorage).filter(key =>
+          key.includes('organization:') && key.includes(contactId)
+        );
+        orgCacheKeys.forEach(key => window.localStorage.removeItem(key));
       }
 
-      logger.info('Successfully refreshed all relationship data');
+      // Refresh relationships and organization tree in parallel
+      await Promise.all([
+        refreshRelationships(),
+        shouldShowTree ? refreshTree() : Promise.resolve()
+      ]);
+
+      logger.info('✅ REFRESH: Global refresh completed successfully');
     } catch (err) {
-      logger.error('Error refreshing relationship data', { error: err });
+      logger.error('❌ REFRESH: Error refreshing relationship data', { error: err });
     }
-  }, [refreshRelationships, refreshTree, shouldShowTree, relationships]);
+  }, [refreshRelationships, refreshTree, shouldShowTree, contactId]);
 
   // 📝 Relationship form management hook
   const {
