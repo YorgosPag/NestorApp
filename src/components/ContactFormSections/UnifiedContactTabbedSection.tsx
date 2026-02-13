@@ -28,6 +28,9 @@ import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { EscoSkillPicker } from '@/components/shared/EscoSkillPicker';
 import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-types';
+// 🏢 ENTERPRISE: Employer Entity Linking (ADR-177)
+import { EmployerPicker } from '@/components/shared/EmployerPicker';
+import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
 
@@ -521,6 +524,25 @@ export function UnifiedContactTabbedSection({
                     escoUri: escoValue.escoUri ?? '',
                     escoLabel: escoValue.escoLabel ?? '',
                     iscoCode: escoValue.iscoCode ?? '',
+                  });
+                }
+              }}
+            />
+          ),
+
+          // 🏢 ENTERPRISE: Employer Picker — field-level custom renderer for "employer" (ADR-177)
+          // Autocomplete backed by existing Company contacts with entity linking
+          employer: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+            <EmployerPicker
+              value={formData.employer ?? ''}
+              employerId={formData.employerId ?? undefined}
+              disabled={fieldDisabled}
+              onChange={(empValue: EmployerPickerValue) => {
+                if (setFormData) {
+                  setFormData({
+                    ...formData,
+                    employer: empValue.employer,
+                    employerId: empValue.employerId ?? '',
                   });
                 }
               }}

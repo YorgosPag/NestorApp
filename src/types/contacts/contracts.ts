@@ -110,6 +110,7 @@ export interface IndividualContact extends BaseContact {
   profession?: string;        // Επάγγελμα (human-readable, always set)
   specialty?: string;         // Ειδικότητα
   employer?: string;          // Επιχείρηση/Εργοδότης
+  employerId?: string;        // ID σύνδεσης με Company contact (ADR-177)
   position?: string;          // Θέση/Ρόλος
   workAddress?: string;       // Διεύθυνση Εργασίας
   workWebsite?: string;       // Ιστοσελίδα Επαγγελματικού Προφίλ

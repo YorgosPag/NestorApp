@@ -58,6 +58,7 @@ export interface ContactFormData {
   profession: string;
   specialty: string;
   employer: string;
+  employerId: string;         // ID σύνδεσης με Company contact (ADR-177)
   position: string;
   workAddress: string;
   workWebsite: string;
@@ -288,6 +289,7 @@ export const initialFormData: ContactFormData = {
   profession: '',
   specialty: '',
   employer: '',
+  employerId: '',
   position: '',
   workAddress: '',
   workWebsite: '',

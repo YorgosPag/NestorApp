@@ -131,6 +131,8 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     profession: getSafeFieldValue(individualContact, 'profession'),
     specialty: getSafeFieldValue(individualContact, 'specialty'),
     employer: getSafeFieldValue(individualContact, 'employer'),
+    // 🏢 ENTERPRISE: Employer Entity Linking (ADR-177)
+    employerId: getSafeFieldValue(individualContact, 'employerId'),
     position: getSafeFieldValue(individualContact, 'position'),
     workAddress: getSafeFieldValue(individualContact, 'workAddress'),
     workWebsite: getSafeFieldValue(individualContact, 'workWebsite'),

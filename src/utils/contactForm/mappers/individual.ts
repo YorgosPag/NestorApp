@@ -42,6 +42,7 @@ interface MappedIndividualContactData {
   profession?: string;
   specialty?: string;
   employer?: string;
+  employerId?: string | null;
   position?: string;
   workAddress?: string;
   workWebsite?: string;
@@ -145,6 +146,9 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     profession: formData.profession,
     specialty: formData.specialty,
     employer: formData.employer,
+    // 🏢 ENTERPRISE: Employer Entity Linking (ADR-177)
+    // ΚΡΙΣΙΜΟ: Firestore rejects undefined — use null for empty employerId
+    employerId: formData.employerId || null,
     position: formData.position,
     workAddress: formData.workAddress,
     workWebsite: formData.workWebsite,
