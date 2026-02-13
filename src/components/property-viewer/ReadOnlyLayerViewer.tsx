@@ -36,7 +36,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { layoutUtilities } from '@/styles/design-tokens';
 
 // Import types
@@ -141,7 +141,6 @@ function ReadOnlyLayerItem({
             )}
             
             {categoryInfo && (
-              <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
                     <div
@@ -153,7 +152,6 @@ function ReadOnlyLayerItem({
                     <p>{categoryInfo.name}</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
             )}
             
             <div className="flex-1 min-w-0">
@@ -183,7 +181,6 @@ function ReadOnlyLayerItem({
 
           {/* Right side - Visibility control only */}
           <div className="flex items-center gap-1 ml-2">
-            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -199,7 +196,6 @@ function ReadOnlyLayerItem({
                   <p>{visibilityState.isVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')} layer</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
 
@@ -441,7 +437,6 @@ export function ReadOnlyLayerViewer({
           
           <div className="flex items-center gap-2">
             {/* Connection Status */}
-            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
                   {layerState.isConnected ? (
@@ -464,10 +459,8 @@ export function ReadOnlyLayerViewer({
                   )}
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-            
+
             {/* Info about read-only mode */}
-            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
                   <Info className={`${iconSizes.sm} text-muted-foreground`} />
@@ -477,7 +470,6 @@ export function ReadOnlyLayerViewer({
                   <p className="text-xs">{t('layerManager.readOnly.canOnlyChangeVisibility')}</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
       </CardHeader>

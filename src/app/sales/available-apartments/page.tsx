@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   DollarSign,
@@ -65,8 +65,7 @@ export default function AvailableApartmentsPage() {
     }
   ];
   return (
-    <TooltipProvider>
-      <PageContainer fullScreen ariaLabel={t('sales.available.title')}>
+    <PageContainer fullScreen ariaLabel={t('sales.available.title')}>
         {/* Header */}
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
@@ -279,6 +278,5 @@ export default function AvailableApartmentsPage() {
             </div>
           </div>
       </PageContainer>
-    </TooltipProvider>
   );
 }

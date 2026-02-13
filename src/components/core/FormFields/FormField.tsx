@@ -18,7 +18,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { HelpCircle, Eye, EyeOff } from 'lucide-react';
@@ -415,7 +414,6 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         </Label>
         
         {tooltip && (
-          <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <HelpCircle className={`${iconSizes.sm} text-muted-foreground`} />
@@ -424,7 +422,6 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
                 <p>{tooltip}</p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
         )}
         
         {loading && (

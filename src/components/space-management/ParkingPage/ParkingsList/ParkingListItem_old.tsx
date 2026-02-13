@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -65,7 +65,6 @@ export function ParkingListItem({
   };
 
   return (
-    <TooltipProvider>
       <div
         className={cn(
           `relative p-3 ${quick.card} border cursor-pointer group`,
@@ -142,6 +141,5 @@ export function ParkingListItem({
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
         )}
       </div>
-    </TooltipProvider>
   );
 }

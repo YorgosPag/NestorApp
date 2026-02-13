@@ -15,7 +15,6 @@ import { useTypography } from '@/hooks/useTypography';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -82,7 +81,6 @@ export function GeneralProjectHeader({
     return (
         <div className={cn("flex items-center justify-between", spacing.margin.bottom.md)}>
             <div className={cn("flex items-center", spacing.gap.sm)}>
-                <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <div className="cursor-pointer" onClick={handleCopyTechnicalId}>
@@ -108,7 +106,6 @@ export function GeneralProjectHeader({
                             </div>
                         </TooltipContent>
                     </Tooltip>
-                </TooltipProvider>
                 <CommonBadge
                   status="company"
                   customLabel={t('projectHeader.residentialBadge')}

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project';
 import { EntityDetailsHeader } from '@/core/entity-headers';
@@ -35,7 +35,6 @@ export function ProjectCard({
   // EntityDetailsHeader centralized component
 
   return (
-    <TooltipProvider>
       <Card
         role="button"
         aria-pressed={isSelected}
@@ -106,6 +105,5 @@ export function ProjectCard({
           isHovered ? "opacity-100" : "opacity-0"
         )} />
       </Card>
-    </TooltipProvider>
   );
 }

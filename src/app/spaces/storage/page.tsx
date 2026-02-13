@@ -5,7 +5,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { StoragesHeader } from '@/components/space-management/StoragesPage/StoragesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { StoragesList } from '@/components/space-management/StoragesPage/StoragesList';
@@ -189,8 +189,7 @@ function StoragePageContent() {
   }
 
   return (
-    <TooltipProvider>
-      <PageContainer ariaLabel={t('pages.storage.pageLabel')}>
+    <PageContainer ariaLabel={t('pages.storage.pageLabel')}>
         {/* Header */}
         <StoragesHeader
             viewMode={viewMode}
@@ -289,7 +288,6 @@ function StoragePageContent() {
           />
         </MobileDetailsSlideIn>
       </PageContainer>
-    </TooltipProvider>
   );
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
@@ -205,7 +205,6 @@ export function ProjectsPageContent() {
   }
   
   return (
-    <TooltipProvider>
       <PageContainer ariaLabel={t('page.pageLabel')}>
         <ProjectsHeader
             viewMode={viewMode}
@@ -275,6 +274,5 @@ export function ProjectsPageContent() {
           />
         </ListContainer>
       </PageContainer>
-    </TooltipProvider>
   );
 }

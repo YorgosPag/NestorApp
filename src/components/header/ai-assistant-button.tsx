@@ -3,7 +3,6 @@
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
@@ -13,7 +12,6 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 export function AIAssistantButton() {
   const iconSizes = useIconSizes();
   return (
-    <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="outline" size="icon" className="relative">
@@ -28,6 +26,5 @@ export function AIAssistantButton() {
           <p>AI Assistant</p>
         </TooltipContent>
       </Tooltip>
-    </TooltipProvider>
   )
 }

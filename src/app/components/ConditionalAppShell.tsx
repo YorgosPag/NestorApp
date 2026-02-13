@@ -142,19 +142,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               <SharedPropertiesProvider>
                 <NavigationProvider>
                   <PhotoPreviewProvider>
-                    <TooltipProvider delayDuration={300}>
-                      <SidebarProvider>
-                        <div className={layout.shellAppContainer}>
-                          <AppSidebar />
-                          <SidebarInset className={layout.shellAppContent}>
-                            <AppHeader />
-                            <MainContentBridge>
-                              {children}
-                            </MainContentBridge>
-                          </SidebarInset>
-                        </div>
-                      </SidebarProvider>
-                    </TooltipProvider>
+                    <SidebarProvider>
+                      <div className={layout.shellAppContainer}>
+                        <AppSidebar />
+                        <SidebarInset className={layout.shellAppContent}>
+                          <AppHeader />
+                          <MainContentBridge>
+                            {children}
+                          </MainContentBridge>
+                        </SidebarInset>
+                      </div>
+                    </SidebarProvider>
                   </PhotoPreviewProvider>
                 </NavigationProvider>
 
@@ -175,17 +173,21 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 /**
  * 🏢 ENTERPRISE: Main Conditional App Shell
  *
- * Routes auth vs app and loads appropriate layout + providers
+ * Routes auth vs app and loads appropriate layout + providers.
+ * TooltipProvider wraps EVERYTHING at the top level so that
+ * any Tooltip rendered anywhere in the app (including global
+ * components outside SidebarProvider) has access to the context.
  */
 export function ConditionalAppShell({ children }: ConditionalAppShellProps) {
   const pathname = usePathname();
   const isStandaloneRoute = isAuthRoute(pathname);
 
-  // 🔐 AUTH ROUTES: Minimal providers, standalone layout
-  if (isStandaloneRoute) {
-    return <AuthLayout>{children}</AuthLayout>;
-  }
-
-  // 🏢 APP ROUTES: Full providers, full layout
-  return <AppLayout>{children}</AppLayout>;
+  return (
+    <TooltipProvider delayDuration={300}>
+      {isStandaloneRoute
+        ? <AuthLayout>{children}</AuthLayout>
+        : <AppLayout>{children}</AppLayout>
+      }
+    </TooltipProvider>
+  );
 }

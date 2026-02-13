@@ -18,7 +18,7 @@
 import React from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Users, Plus, RefreshCw } from 'lucide-react';
@@ -313,7 +313,6 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // ============================================================================
 
   return (
-    <TooltipProvider>
       <div className="space-y-6">
         {/* Header with title and actions */}
         {renderHeader()}
@@ -386,7 +385,6 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           </Card>
         )}
       </div>
-    </TooltipProvider>
   );
 };
 

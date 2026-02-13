@@ -11,7 +11,7 @@ import { NavigationStatus } from '../../../core/types/BadgeTypes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
 import { ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { spacing } from '@/styles/design-tokens/core/spacing';
 
@@ -241,7 +241,6 @@ function NavigationLinkOverlay({ href, tooltip = 'Άνοιγμα στις Επα
   };
 
   return (
-    <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <span
@@ -293,7 +292,6 @@ function NavigationLinkOverlay({ href, tooltip = 'Άνοιγμα στις Επα
           </p>
         </TooltipContent>
       </Tooltip>
-    </TooltipProvider>
   );
 }
 

@@ -1,7 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 import React from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { HelpCircle, Zap } from 'lucide-react';
 import { QuickSearch } from '@/components/ui/QuickSearch';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -48,7 +48,6 @@ export function UnitsToolbar({
   } = useUnitsToolbarState(totalUnits, selectedUnitIds);
 
   return (
-    <TooltipProvider>
       <div className={`${quick.separatorH} bg-muted/30 backdrop-blur-sm`}>
         <div className="p-2 flex items-center gap-1">
           <div className="flex items-center gap-2 pl-2">
@@ -118,6 +117,5 @@ export function UnitsToolbar({
           />
         )}
       </div>
-    </TooltipProvider>
   );
 }

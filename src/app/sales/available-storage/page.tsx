@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Package,
@@ -60,8 +60,7 @@ export default function AvailableStoragePage() {
     }
   ];
   return (
-    <TooltipProvider>
-      <PageContainer fullScreen ariaLabel={t('availableStorage.pageLabel')}>
+    <PageContainer fullScreen ariaLabel={t('availableStorage.pageLabel')}>
         {/* Header */}
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
@@ -286,6 +285,5 @@ export default function AvailableStoragePage() {
             </div>
           </div>
       </PageContainer>
-    </TooltipProvider>
   );
 }

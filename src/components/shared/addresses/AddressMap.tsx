@@ -34,7 +34,6 @@ import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteracti
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { TooltipProvider } from '@/components/ui/tooltip';
 
 import type { ProjectAddress } from '@/types/project/addresses';
 import {
@@ -401,7 +400,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   return (
     <div className={`relative ${heightClass} ${className}`}>
       <PolygonSystemProvider>
-        <TooltipProvider>
           {/* 🗺️ Interactive Map (GeoCanvas) - Render ONLY after geocoding */}
           {shouldRenderMap && (
             <InteractiveMap
@@ -462,7 +460,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               </Badge>
             </div>
           )}
-        </TooltipProvider>
       </PolygonSystemProvider>
     </div>
   );

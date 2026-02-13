@@ -145,6 +145,22 @@ New users without claims:
 - **Privilege escalation**: `company_admin` cannot modify other companies
 - **Unauthorized claims modification**: Admin-only API with RBAC
 
+---
+
+## Changelog
+
+### 2026-02-13 — Fix: Overlay save rejected by Firestore permissions
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Saving overlay drawings to Firestore was rejected with permission denied |
+| **Root Cause** | `overlay-store.tsx` created documents WITHOUT the `companyId` field, but Firestore security rules require `request.resource.data.companyId == getUserCompanyId()`. Additionally, `createdBy` was hardcoded to `'user@example.com'` instead of using the authenticated user's UID |
+| **Fix** | Added `useAuth()` hook to `overlay-store.tsx` to inject the authenticated user's `companyId` and `uid` into overlay documents before Firestore write |
+| **File** | `src/subapps/dxf-viewer/overlays/overlay-store.tsx` |
+| **Lesson** | All Firestore documents in tenant-isolated collections must include `companyId` from the authenticated user's custom claims; hardcoded placeholder values will be rejected by security rules |
+
+---
+
 ## References
 
 - Firebase Custom Claims: https://firebase.google.com/docs/auth/admin/custom-claims

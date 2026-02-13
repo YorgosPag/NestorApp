@@ -16,7 +16,7 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('NavigationIcon');
@@ -193,7 +193,6 @@ export function NavigationIcon({
   // ============================================================================
 
   return (
-    <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -240,7 +239,6 @@ export function NavigationIcon({
           </p>
         </TooltipContent>
       </Tooltip>
-    </TooltipProvider>
   );
 }
 

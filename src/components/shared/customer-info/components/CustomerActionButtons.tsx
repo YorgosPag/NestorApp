@@ -27,7 +27,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
@@ -279,8 +279,7 @@ export function CustomerActionButtons({
     // Wrap με tooltip αν έχουμε tooltip text
     if (action.tooltip) {
       return (
-        <TooltipProvider key={`${action.type}-${index}`}>
-          <Tooltip>
+          <Tooltip key={`${action.type}-${index}`}>
             <TooltipTrigger asChild>
               {buttonContent}
             </TooltipTrigger>
@@ -288,7 +287,6 @@ export function CustomerActionButtons({
               <p>{action.tooltip}</p>
             </TooltipContent>
           </Tooltip>
-        </TooltipProvider>
       );
     }
 

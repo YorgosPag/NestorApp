@@ -1,6 +1,6 @@
 'use client';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { MousePointer } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -113,8 +113,6 @@ export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoP
   }
 
   return (
-    <TooltipProvider>
-      <PropertyHoverContent property={property} />
-    </TooltipProvider>
+    <PropertyHoverContent property={property} />
   );
 }

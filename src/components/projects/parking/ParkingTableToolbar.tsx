@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TooltipProvider } from "@/components/ui/tooltip";
+
 import { CommonBadge } from '@/core/badges';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import {
@@ -54,7 +54,6 @@ export function ParkingTableToolbar({
   const { quick } = useBorderTokens();
 
   return (
-    <TooltipProvider>
       <div className="space-y-4">
         {/* Action Toolbar */}
         <div className="flex items-center justify-between p-3 bg-muted/30 ${quick.card}">
@@ -132,6 +131,5 @@ export function ParkingTableToolbar({
         <ParkingStatsSummary stats={stats} />
         <ParkingFilterPanel filters={filters} onFiltersChange={onFiltersChange} />
       </div>
-    </TooltipProvider>
   );
 }

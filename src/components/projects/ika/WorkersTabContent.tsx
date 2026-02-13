@@ -15,7 +15,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Users, UserPlus, Loader2, AlertCircle, HardHat } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
@@ -95,7 +95,6 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   }
 
   return (
-    <TooltipProvider>
       <section className="space-y-6">
         {/* Header card */}
         <Card>
@@ -166,6 +165,5 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
           />
         )}
       </section>
-    </TooltipProvider>
   );
 }

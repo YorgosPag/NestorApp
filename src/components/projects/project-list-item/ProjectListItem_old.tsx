@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import { TooltipProvider } from "@/components/ui/tooltip";
+
 import { cn } from '@/lib/utils';
 import type { ProjectListItemProps } from './types';
 import { EntityDetailsHeader } from '@/core/entity-headers';
@@ -34,7 +34,6 @@ export function ProjectListItem({
     const colors = useSemanticColors();
 
     return (
-        <TooltipProvider>
             <Card
                 className={cn(
                     `relative p-4 rounded-lg border cursor-pointer ${TRANSITION_PRESETS.STANDARD_ALL} group ${HOVER_SHADOWS.ENHANCED}`,
@@ -71,6 +70,5 @@ export function ProjectListItem({
                 <RowActions onToggleFavorite={onToggleFavorite} isFavorite={isFavorite} />
                 <SelectedStripe isSelected={isSelected} />
             </Card>
-        </TooltipProvider>
     );
 }

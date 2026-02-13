@@ -21,7 +21,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { MessageSquare, Inbox, Mail, AlertCircle, RefreshCw, Filter, History } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { Button } from '@/components/ui/button';
 
 // 🏢 ENTERPRISE: Centralized containers and headers
@@ -339,8 +339,7 @@ export default function CrmCommunicationsPage() {
   const headerTitle = t('inbox.title') + ` (${totalCount})`;
 
   return (
-    <TooltipProvider>
-      <PageContainer ariaLabel={t('inbox.title')}>
+    <PageContainer ariaLabel={t('inbox.title')}>
         {/* (1) Header - Using PageHeader directly */}
         <PageHeader
           variant="sticky-rounded"
@@ -619,6 +618,5 @@ export default function CrmCommunicationsPage() {
               </section>
         </ListContainer>
       </PageContainer>
-    </TooltipProvider>
   );
 }

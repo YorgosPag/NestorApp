@@ -15,7 +15,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ParkingsList } from '@/components/space-management/ParkingPage/ParkingsList';
@@ -179,8 +179,7 @@ function ParkingPageContent() {
   }
 
   return (
-    <TooltipProvider>
-      <PageContainer ariaLabel={t('pages.parking.pageLabel')}>
+    <PageContainer ariaLabel={t('pages.parking.pageLabel')}>
         {/* Header */}
         <ParkingsHeader
             viewMode={viewMode}
@@ -279,7 +278,6 @@ function ParkingPageContent() {
           />
         </MobileDetailsSlideIn>
       </PageContainer>
-    </TooltipProvider>
   );
 }
 

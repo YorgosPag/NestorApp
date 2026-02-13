@@ -22,7 +22,6 @@ import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import {
@@ -133,7 +132,6 @@ export function FloorPlanToolbar({
   );
 
   return (
-    <TooltipProvider>
       <div className={cn(
         `flex items-center gap-2 p-3 ${colors.bg.primary} ${quick.separatorH} shadow-sm`,
         className
@@ -280,6 +278,5 @@ export function FloorPlanToolbar({
           {showPDF && <span className={`${colors.text.success}`}>• {t('floorPlanToolbar.status.pdfActive')}</span>}
         </div>
       </div>
-    </TooltipProvider>
   );
 }

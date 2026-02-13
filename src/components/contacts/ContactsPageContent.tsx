@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { Contact, IndividualContact } from '@/types/contacts';
@@ -689,7 +689,6 @@ export function ContactsPageContent() {
   };
 
   return (
-    <TooltipProvider>
       <PageContainer ariaLabel={t('page.pageLabel')}>
         {/* Main Header - Works for both desktop and mobile */}
         {/* 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel */}
@@ -919,7 +918,6 @@ export function ContactsPageContent() {
           onContactsArchived={handleContactsArchived}
         />
       </PageContainer>
-    </TooltipProvider>
   );
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Users,
@@ -61,8 +61,7 @@ export default function CommonSpacesPage() {
     }
   ];
   return (
-    <TooltipProvider>
-      <div className={`flex h-screen ${colors.bg.primary}`}>
+    <div className={`flex h-screen ${colors.bg.primary}`}>
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
@@ -255,6 +254,5 @@ export default function CommonSpacesPage() {
           </div>
         </div>
       </div>
-    </TooltipProvider>
   );
 }

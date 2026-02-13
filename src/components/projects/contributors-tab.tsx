@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -87,7 +87,6 @@ export function ContributorsTab() {
   }
 
   return (
-    <TooltipProvider>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -151,6 +150,5 @@ export function ContributorsTab() {
           </div>
         </CardContent>
       </Card>
-    </TooltipProvider>
   );
 }

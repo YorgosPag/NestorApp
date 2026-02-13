@@ -2,7 +2,6 @@
 'use client';
 
 import React from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -189,7 +188,6 @@ export function BuildingsPageContent() {
   // Show loading state
   if (buildingsLoading) {
     return (
-      <TooltipProvider>
         <PageContainer ariaLabel={t('pages.buildings.loading')}>
           <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
@@ -198,14 +196,12 @@ export function BuildingsPageContent() {
             </div>
           </section>
         </PageContainer>
-      </TooltipProvider>
     );
   }
 
   // Show error state
   if (buildingsError) {
     return (
-      <TooltipProvider>
         <PageContainer ariaLabel={t('pages.buildings.error.pageLabel')}>
           <section className="flex-1 flex items-center justify-center" role="alert" aria-label={t('pages.buildings.error.ariaLabel')}>
             <div className={`text-center ${colors.text.error}`}>
@@ -214,12 +210,10 @@ export function BuildingsPageContent() {
             </div>
           </section>
         </PageContainer>
-      </TooltipProvider>
     );
   }
 
   return (
-    <TooltipProvider>
       <PageContainer ariaLabel={t('pages.buildings.pageLabel')}>
         <BuildingsHeader
           viewMode={viewMode}
@@ -340,7 +334,6 @@ export function BuildingsPageContent() {
           editBuilding={editingBuilding}
         />
       </PageContainer>
-    </TooltipProvider>
   );
 }
 

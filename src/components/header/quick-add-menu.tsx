@@ -12,7 +12,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
@@ -173,7 +172,7 @@ export function QuickAddMenu() {
   };
 
   return (
-    <TooltipProvider>
+    <>
       <DropdownMenu>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -270,6 +269,6 @@ export function QuickAddMenu() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </TooltipProvider>
+    </>
   )
 }

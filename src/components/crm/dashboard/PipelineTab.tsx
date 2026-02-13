@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Filter, Plus, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -53,8 +53,7 @@ export function PipelineTab() {
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
 
   return (
-    <TooltipProvider>
-      <div className={`${colors.bg.primary} rounded-lg shadow`}>
+    <div className={`${colors.bg.primary} rounded-lg shadow`}>
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t('pipeline.title')}</h2>
@@ -126,6 +125,5 @@ export function PipelineTab() {
           />
         )}
       </div>
-    </TooltipProvider>
   );
 }

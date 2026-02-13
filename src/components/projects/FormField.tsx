@@ -4,7 +4,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -70,7 +70,6 @@ export function FormField({
   };
 
   return (
-    <TooltipProvider>
         <div className={cn(
             "flex",
             labelPosition === 'top' ? cn("flex-col", spacing.spaceBetween.sm) : cn("flex-row items-center justify-between", spacing.gap.md)
@@ -108,6 +107,5 @@ export function FormField({
             {unit && unitPosition === 'right' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{unit}</span>}
         </div>
         </div>
-    </TooltipProvider>
   );
 }

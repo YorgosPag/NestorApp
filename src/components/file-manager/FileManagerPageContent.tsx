@@ -41,7 +41,7 @@ import {
   Upload,
   Inbox,
 } from 'lucide-react';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -488,8 +488,7 @@ export function FileManagerPageContent() {
   }
 
   return (
-    <TooltipProvider>
-      {/* 🏢 ENTERPRISE: Full-width layout */}
+      // 🏢 ENTERPRISE: Full-width layout
       <main className="flex flex-col h-full w-full bg-background">
         {/* 🏢 ENTERPRISE: Centralized PageHeader with dashboard toggle */}
         <PageHeader
@@ -859,7 +858,6 @@ export function FileManagerPageContent() {
           </Card>
         </section>
       </main>
-    </TooltipProvider>
   );
 }
 

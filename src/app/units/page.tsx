@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, Suspense } from 'react';
-import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { UnitsHeader } from '@/components/units/page/UnitsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -321,8 +321,7 @@ function UnitsPageContent() {
   };
 
   return (
-    <TooltipProvider>
-      <PageContainer ariaLabel={t('page.pageLabel')}>
+    <PageContainer ariaLabel={t('page.pageLabel')}>
         <UnitsHeader
           viewMode={viewMode as 'list' | 'grid'}
           setViewMode={setViewMode}
@@ -418,7 +417,6 @@ function UnitsPageContent() {
           buildingsLoading={buildingsLoading}
         />
       </PageContainer>
-    </TooltipProvider>
   );
 }
 

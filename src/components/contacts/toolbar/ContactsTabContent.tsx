@@ -20,7 +20,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -68,7 +67,6 @@ export function ActionsTabContent({
 
   return (
     <>
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarAddButton
@@ -83,9 +81,7 @@ export function ActionsTabContent({
             <p>{t('toolbar.tabs.actions.newContactTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarEditButton
@@ -100,9 +96,7 @@ export function ActionsTabContent({
             <p>{t('toolbar.tabs.actions.editTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarDeleteButton
@@ -124,9 +118,7 @@ export function ActionsTabContent({
             </p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarRefreshButton
@@ -139,7 +131,6 @@ export function ActionsTabContent({
             <p>{t('toolbar.tabs.actions.refreshTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
     </>
   );
 }
@@ -154,7 +145,6 @@ export function CommunicationTabContent({
 
   return (
     <>
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarCallButton
@@ -170,9 +160,7 @@ export function CommunicationTabContent({
             <p>{t('toolbar.tabs.communication.callTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarEmailButton
@@ -188,9 +176,7 @@ export function CommunicationTabContent({
             <p>{t('toolbar.tabs.communication.emailTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarSMSButton
@@ -206,7 +192,6 @@ export function CommunicationTabContent({
             <p>{t('toolbar.tabs.communication.smsTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
       {selectedItems.length === 0 && (
         <div className={`text-center text-sm text-muted-foreground mt-4 p-4 ${quick.card} bg-muted/20 w-full`}>
@@ -237,7 +222,6 @@ export function ManagementTabContent({
 
   return (
     <>
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarExportButton
@@ -250,9 +234,7 @@ export function ManagementTabContent({
             <p>{t('toolbar.tabs.management.exportTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarImportButton
@@ -267,10 +249,8 @@ export function ManagementTabContent({
             <p>{t('toolbar.tabs.management.importTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarArchiveButton
@@ -291,9 +271,7 @@ export function ManagementTabContent({
             </p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarHelpButton
@@ -308,7 +286,6 @@ export function ManagementTabContent({
             <p>{t('toolbar.tabs.management.helpTooltip')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
     </>
   );
 }
@@ -328,7 +305,6 @@ export function FiltersTabContent({
 
   return (
     <>
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarFavoritesButton
@@ -342,9 +318,7 @@ export function FiltersTabContent({
             <p>{showOnlyFavorites ? t('toolbar.tabs.filters.showAllContacts') : t('toolbar.tabs.filters.filterFavoritesOnly')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarArchivedFilterButton
@@ -358,9 +332,7 @@ export function FiltersTabContent({
             <p>{showArchivedContacts ? t('toolbar.tabs.filters.showActiveContacts') : t('toolbar.tabs.filters.filterArchivedOnly')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
-      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarSortToggleButton
@@ -372,7 +344,6 @@ export function FiltersTabContent({
             <p>{sortDirection === 'asc' ? t('toolbar.tabs.filters.sortAtoZ') : t('toolbar.tabs.filters.sortZtoA')}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
 
       <div className={`text-center text-sm text-muted-foreground mt-4 p-4 ${quick.card} bg-blue-50/50 w-full`}>
         💡 {t('toolbar.tabs.filters.filterHint')}
