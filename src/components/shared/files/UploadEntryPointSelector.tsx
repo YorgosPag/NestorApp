@@ -110,11 +110,11 @@ export function UploadEntryPointSelector({
     return null;
   }
 
-  // Get icon component from lucide-react
-  const getIcon = (iconName?: string) => {
+  // Get icon component from lucide-react (type-safe dynamic lookup)
+  const getIcon = (iconName?: string): LucideIcons.LucideIcon => {
     if (!iconName) return LucideIcons.File;
-    // @ts-ignore - Dynamic icon lookup
-    return LucideIcons[iconName] || LucideIcons.File;
+    const icons = LucideIcons as Record<string, LucideIcons.LucideIcon | undefined>;
+    return icons[iconName] ?? LucideIcons.File;
   };
 
   return (

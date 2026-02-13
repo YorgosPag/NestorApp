@@ -175,6 +175,7 @@
     "@types/jest-axe": "^3.5.9",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^20.16.5",
+    "@types/pako": "^2.0.4",
     "@types/pg": "^8.11.10",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",

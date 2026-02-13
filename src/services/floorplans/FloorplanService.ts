@@ -2,8 +2,6 @@
 
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-// ✅ ENTERPRISE: Pako compression library with type assertion
-// @ts-ignore - Pako module lacks TypeScript definitions
 import pako from 'pako';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';

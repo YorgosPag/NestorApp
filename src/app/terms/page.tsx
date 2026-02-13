@@ -1,6 +1,6 @@
 export default function TermsOfServicePage() {
   return (
-    <main style={{ maxWidth: 800, margin: '0 auto', padding: '2rem 1rem' }}>
+    <main className="max-w-3xl mx-auto px-4 py-8">
       <h1>Terms of Service</h1>
       <p><strong>Last updated:</strong> February 11, 2026</p>
 

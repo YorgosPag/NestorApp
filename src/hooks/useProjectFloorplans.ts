@@ -6,8 +6,6 @@ import { db } from '@/lib/firebase';
 import { type FloorplanData } from '@/services/floorplans/FloorplanService';
 import { useAuth } from '@/hooks/useAuth';
 import { createModuleLogger } from '@/lib/telemetry';
-// ✅ ENTERPRISE: Import pako for decompression (same as FloorplanService)
-// @ts-ignore - Pako module lacks TypeScript definitions
 import pako from 'pako';
 
 const logger = createModuleLogger('useProjectFloorplans');

@@ -37,3 +37,13 @@
 | **Fix** | Removed the `activeTool !== 'select'` guard from the condition |
 | **File** | `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` |
 | **Lesson** | `overlayMode` and `activeTool` are independent state axes; guard conditions must not assume one implies the other |
+
+### 2026-02-13 — Fix: Layering toolbar toggle affecting layer visibility
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Clicking the "Επίπεδα" (Layering) toolbar button toggled BOTH the overlay drawing toolbar AND the `showLayers` state, causing colored overlay polygons to disappear when the user closed the toolbar |
+| **Root Cause** | The layering tool toggle in `EnhancedDXFToolbar.tsx` and `MobileToolbarLayout.tsx` was calling both `setActiveTool('layering')` AND `onAction('toggle-layers')`, mixing two independent concerns: toolbar open/close vs. layer canvas visibility |
+| **Fix** | Removed `onAction('toggle-layers')` from the layering tool toggle. Now the button only toggles `activeTool` between `'layering'` and `'select'`, keeping toolbar UI and layer visibility as independent state axes |
+| **Files** | `src/subapps/dxf-viewer/components/ui/toolbar/EnhancedDXFToolbar.tsx`, `src/subapps/dxf-viewer/components/ui/mobile/MobileToolbarLayout.tsx` |
+| **Lesson** | Toolbar button interactions must respect the principle of "independent state axes" — `activeTool` controls which toolbar is visible, while layer visibility should be controlled by separate state. Avoid bundling multiple state mutations into a single UI action. |
