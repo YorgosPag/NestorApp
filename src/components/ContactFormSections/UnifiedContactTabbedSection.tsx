@@ -581,6 +581,24 @@ export function UnifiedContactTabbedSection({
             postalCode={formData.postalCode}
           />
         ),
+        contact: () => (
+          <ContactAddressMapPreview
+            contactId={formData.id}
+            street={formData.street}
+            streetNumber={formData.streetNumber}
+            city={formData.city}
+            postalCode={formData.postalCode}
+          />
+        ),
+        addresses: () => (
+          <ContactAddressMapPreview
+            contactId={formData.id}
+            street={formData.street}
+            streetNumber={formData.streetNumber}
+            city={formData.city}
+            postalCode={formData.postalCode}
+          />
+        ),
       }
     };
 

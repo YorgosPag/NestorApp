@@ -1,48 +1,34 @@
 {
-  "category": "FIX",
-  "shortDescription": "Photo system stabilization — upload pipeline + preview modal fixes",
-  "problem": "1) Photo appeared in 2 consecutive slots after save. 2) addCacheBuster created invalid URLs. 3) Stale closure in async upload callbacks. 4) Photo preview modal overflowed left and top of screen.",
-  "cause": "1) ContactDetails.enhancedFormData duplicated mapper output. 2) addCacheBuster used ? instead of & on URLs with existing query params. 3) Handlers closed over stale formData state. 4) Radix DialogContent translate-x/y centering conflicted with fullscreen inset-0.",
+  "category": "FEATURE",
+  "shortDescription": "Contact Relationship Auto-Save UX + ADR Documentation",
+  "problem": "Users filling relationship form data and clicking main contact Save without clicking the separate Add button inside the relationship form — data was silently lost. 5+ debugging sessions before discovering this was a UX issue, not a technical bug.",
+  "cause": "Two independent save actions existed (relationship Add vs contact Save) without clear guidance. Users expected the main Save to cover everything.",
   "filesChanged": [
+    "src/utils/pending-relationship-guard.ts",
+    "src/components/contacts/relationships/ContactRelationshipManager.tsx",
     "src/components/contacts/details/ContactDetails.tsx",
-    "src/hooks/useCacheBusting.ts",
-    "src/components/ui/MultiplePhotosFull.tsx",
-    "src/components/ui/MultiplePhotosCompact.tsx",
-    "src/styles/design-tokens.ts",
-    "docs/centralized-systems/reference/adrs/ADR-054-enterprise-upload-system-consolidation.md",
-    "docs/centralized-systems/reference/adrs/ADR-018-1-photos-tab-base-template.md",
-    "docs/centralized-systems/design-system/tokens.md",
+    "src/components/contacts/relationships/RelationshipForm.tsx",
+    "src/components/contacts/relationships/hooks/useRelationshipForm.ts",
+    "src/components/contacts/relationships/context/RelationshipProvider.tsx",
+    "src/services/contact-relationships/ContactRelationshipService.ts",
+    "src/services/contact-relationships/adapters/FirestoreRelationshipAdapter.ts",
+    "src/services/contact-relationships/core/RelationshipCRUDService.ts",
+    "src/i18n/locales/el/contacts.json",
+    "src/i18n/locales/en/contacts.json",
+    "docs/centralized-systems/reference/adrs/ADR-178-contact-relationship-auto-save-ux.md",
     "docs/centralized-systems/reference/adr-index.md"
   ],
-  "solution": "1) Removed redundant getMultiplePhotoURLs concatenation — individualMapper.ts is SSoT. 2) Fixed addCacheBuster to use & separator. 3) Added useRef + functional updater pattern. 4) Added !translate-x-0 !translate-y-0 !left-0 !top-0 overrides in photoPreviewLayout. 5) Updated ADR-054, ADR-018.1, design tokens docs with stabilization notices and DO NOT MODIFY markers.",
-  "testing": "TypeScript compilation: 0 errors. User confirmed photos upload, display, and preview work correctly.",
-  "notes": "ADR-054 and ADR-018.1 now contain full changelogs and lists of stabilized files that should NOT be modified without serious reason. Browser-level console.log diagnostics (PHOTO DEBUG) still in place for future debugging.",
+  "solution": "1. Created PendingRelationshipGuard (Service Locator pattern module singleton) that tracks dirty state of relationship form. 2. ContactRelationshipManager registers its handleSubmit callback on mount. 3. ContactDetails.handleSaveEdit() calls submitPending() before saving contact — auto-submits pending relationship. 4. Added amber warning banner in RelationshipForm when data is pending. 5. Fixed stack overflow in isEmploymentRelationship (inline check). 6. Removed 40+ diagnostic console.logs from 6 files. 7. Added i18n keys for pendingReminder (EL+EN). 8. Created ADR-178 with full flow documentation.",
+  "testing": "TypeScript compilation: 0 errors. Verified all DIAG console.logs removed. ADR-178 created with complete architecture documentation.",
+  "notes": "Root cause of 5+ sessions of 'relationships dont work' was a UX issue — user never clicked Add button. The PendingRelationshipGuard now bridges this gap. Stack overflow in production was caused by isEmploymentRelationship import (likely circular dependency in tree-shaking).",
   "contributors": {
     "user": "Γιώργος Παγώνης",
-    "assistant": "Claude Opus 4.6",
+    "assistant": "Claude Code (Anthropic AI)",
     "sessionDate": "2026-02-13"
   },
   "relatedBackups": [],
   "commits": [
-    {
-      "hash": "1dc71775",
-      "message": "fix(photos): fix addCacheBuster URL corruption + add browser-level diagnostics"
-    },
-    {
-      "hash": "533f7e95",
-      "message": "fix(photos): useRef pattern to prevent stale closures in upload callbacks"
-    },
-    {
-      "hash": "8d894bfc",
-      "message": "fix(contacts): remove duplicate multiplePhotos concatenation causing photo duplication"
-    },
-    {
-      "hash": "e33ec40e",
-      "message": "chore: update design-tokens styling — fix PhotoPreviewModal overflow"
-    },
-    {
-      "hash": "7d80e2ef",
-      "message": "docs: stabilize photo system ADRs — mark upload pipeline as DO NOT MODIFY"
-    }
+    { "hash": "49b80a4a", "message": "feat(relationships): auto-save pending relationships on contact save" },
+    { "hash": "04cd1843", "message": "docs: add ADR-178 — Contact Relationship Auto-Save UX (PendingRelationshipGuard)" }
   ]
 }

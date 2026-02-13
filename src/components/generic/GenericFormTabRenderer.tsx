@@ -56,6 +56,8 @@ export interface GenericFormTabRendererProps {
   onPhotosChange?: (photos: PhotoSlotData[]) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, FieldRendererFn | LocalCustomRendererFn>;
+  /** Optional section footer renderers (rendered below section fields) */
+  sectionFooterRenderers?: Record<string, FieldRendererFn>;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
 }
@@ -95,7 +97,8 @@ function createFormTabsFromConfig(
   disabled: boolean,
   t: (key: string) => string,
   onPhotosChange?: (photos: PhotoSlotData[]) => void,
-  customRenderers?: Record<string, FieldRendererFn | CustomRendererFn>
+  customRenderers?: Record<string, FieldRendererFn | CustomRendererFn>,
+  sectionFooterRenderers?: Record<string, FieldRendererFn>
 ) {
   return sections.map(section => {
     // ========================================================================
@@ -167,6 +170,7 @@ function createFormTabsFromConfig(
             disabled={disabled}
             onPhotosChange={onPhotosChange as ((photos: PhotoData[]) => void) | undefined} // 🏢 ENTERPRISE: Type assertion
             customRenderers={customRenderers as Record<string, CustomRendererFn> | undefined} // 🏢 ENTERPRISE: Type assertion
+            sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomRendererFn> | undefined}
           />
         </FormGrid>
       );
@@ -209,6 +213,7 @@ export function GenericFormTabRenderer({
   disabled = false,
   onPhotosChange,
   customRenderers,
+  sectionFooterRenderers,
   onActiveTabChange
 }: GenericFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n support for tab labels
@@ -228,7 +233,8 @@ export function GenericFormTabRenderer({
     disabled,
     t,
     onPhotosChange,
-    customRenderers
+    customRenderers,
+    sectionFooterRenderers
   );
 
   return (

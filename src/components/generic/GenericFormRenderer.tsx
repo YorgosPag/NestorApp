@@ -58,6 +58,8 @@ export interface GenericFormRendererProps {
   onPhotosChange?: (photos: PhotoData[]) => void;
   /** Custom field renderers */
   customRenderers?: Record<string, CustomRendererFn>;
+  /** Optional section footer renderers (rendered below section fields) */
+  sectionFooterRenderers?: Record<string, CustomRendererFn>;
 }
 
 // ============================================================================
@@ -335,7 +337,8 @@ export function GenericFormRenderer({
   onChange,
   onSelectChange,
   disabled = false,
-  customRenderers
+  customRenderers,
+  sectionFooterRenderers
 }: GenericFormRendererProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n - Direct translation with forms namespace
@@ -418,6 +421,12 @@ export function GenericFormRenderer({
                   )}
                 </FormField>
               ))}
+
+              {sectionFooterRenderers && sectionFooterRenderers[section.id] ? (
+                <div className="w-full col-span-full">
+                  {sectionFooterRenderers[section.id]({} as FieldConfig, formData, onChange, onSelectChange, disabled)}
+                </div>
+              ) : null}
             </div>
           </div>
         );
