@@ -306,7 +306,7 @@ export class OverpassApiService {
     const advancedCacheKey = `overpass:${cacheKey}`;
     const cachedResult = await adminBoundariesCache.get<OverpassAdminResponse>(advancedCacheKey);
     if (cachedResult) {
-      console.log('📦 Overpass: Using advanced cached result');
+      console.debug('📦 Overpass: Using advanced cached result');
       adminBoundariesAnalytics.endOverpassRequest(requestId, JSON.stringify(cachedResult).length);
       return cachedResult;
     }
@@ -314,7 +314,7 @@ export class OverpassApiService {
     // Check legacy cache
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log('📦 Overpass: Using legacy cached result');
+      console.debug('📦 Overpass: Using legacy cached result');
       // End tracking for cache hit
       adminBoundariesAnalytics.endOverpassRequest(requestId, JSON.stringify(cached.data).length);
 
@@ -336,7 +336,7 @@ export class OverpassApiService {
     for (let attempt = 0; attempt < OVERPASS_ENDPOINTS.length; attempt++) {
       try {
         const endpoint = OVERPASS_ENDPOINTS[this.currentEndpointIndex];
-        console.log(`🌍 Overpass: Query to ${endpoint} (attempt ${attempt + 1})`);
+        console.debug(`🌍 Overpass: Query to ${endpoint} (attempt ${attempt + 1})`);
 
         const response = await this.makeRequest(endpoint, query, fullConfig);
 
@@ -413,7 +413,7 @@ export class OverpassApiService {
         throw new Error('Invalid Overpass response: missing elements');
       }
 
-      console.log(`✅ Overpass: Successfully fetched ${data.elements.length} elements`);
+      console.debug(`✅ Overpass: Successfully fetched ${data.elements.length} elements`);
       return data;
 
     } catch (error) {
@@ -431,7 +431,7 @@ export class OverpassApiService {
    */
   async getMunicipalityBoundary(municipalityName: string): Promise<Feature | null> {
     try {
-      console.log(`🏛️ Fetching municipality boundary: ${municipalityName}`);
+      console.debug(`🏛️ Fetching municipality boundary: ${municipalityName}`);
 
       const query = OverpassQueryBuilder.getMunicipalityByName(municipalityName);
       const response = await this.executeQuery(query);
@@ -449,7 +449,7 @@ export class OverpassApiService {
    */
   async getRegionBoundary(regionName: string): Promise<Feature | null> {
     try {
-      console.log(`🗺️ Fetching region boundary: ${regionName}`);
+      console.debug(`🗺️ Fetching region boundary: ${regionName}`);
 
       const query = OverpassQueryBuilder.getRegionByName(regionName);
       const response = await this.executeQuery(query);
@@ -467,7 +467,7 @@ export class OverpassApiService {
    */
   async getMunicipalitiesInRegion(regionName: string): Promise<FeatureCollection | null> {
     try {
-      console.log(`🏛️ Fetching municipalities in region: ${regionName}`);
+      console.debug(`🏛️ Fetching municipalities in region: ${regionName}`);
 
       const query = OverpassQueryBuilder.getMunicipalitiesInRegion(regionName);
       const response = await this.executeQuery(query);
@@ -488,7 +488,7 @@ export class OverpassApiService {
     adminLevel?: GreekAdminLevel
   ): Promise<AdminSearchResult[]> {
     try {
-      console.log(`🔍 Searching administrative: "${searchTerm}" level: ${adminLevel}`);
+      console.debug(`🔍 Searching administrative: "${searchTerm}" level: ${adminLevel}`);
 
       const query = OverpassQueryBuilder.searchAdministrative(searchTerm, adminLevel);
       const response = await this.executeQuery(query);
@@ -506,7 +506,7 @@ export class OverpassApiService {
    */
   async getPostalCodeBoundary(postalCode: string): Promise<Feature | null> {
     try {
-      console.log(`📮 Fetching postal code boundary: ${postalCode}`);
+      console.debug(`📮 Fetching postal code boundary: ${postalCode}`);
 
       const query = OverpassQueryBuilder.getPostalCodeByNumber(postalCode);
       const response = await this.executeQuery(query);
@@ -524,7 +524,7 @@ export class OverpassApiService {
    */
   async getPostalCodesInMunicipality(municipalityName: string): Promise<FeatureCollection | null> {
     try {
-      console.log(`📮 Fetching postal codes in municipality: ${municipalityName}`);
+      console.debug(`📮 Fetching postal codes in municipality: ${municipalityName}`);
 
       const query = OverpassQueryBuilder.getPostalCodesInMunicipality(municipalityName);
       const response = await this.executeQuery(query);
@@ -542,7 +542,7 @@ export class OverpassApiService {
    */
   async searchPostalCodes(searchTerm: string): Promise<AdminSearchResult[]> {
     try {
-      console.log(`📮 Searching postal codes: "${searchTerm}"`);
+      console.debug(`📮 Searching postal codes: "${searchTerm}"`);
 
       const query = OverpassQueryBuilder.searchPostalCodes(searchTerm);
       const response = await this.executeQuery(query);
@@ -560,7 +560,7 @@ export class OverpassApiService {
    */
   async getPostalCodesInBounds(bounds: BoundingBox): Promise<FeatureCollection | null> {
     try {
-      console.log(`📮 Fetching postal codes in bounds:`, bounds);
+      console.debug(`📮 Fetching postal codes in bounds:`, bounds);
 
       const query = OverpassQueryBuilder.getPostalCodesInBounds(bounds);
       const response = await this.executeQuery(query);
@@ -806,7 +806,7 @@ export class OverpassApiService {
     // Check if we're over the limit
     if (this.requestHistory.length >= RATE_LIMIT.maxRequestsPerMinute) {
       const waitTime = 60000 - (now - this.requestHistory[0]) + 1000;
-      console.log(`⏱️ Rate limit reached. Waiting ${Math.ceil(waitTime / 1000)}s...`);
+      console.debug(`⏱️ Rate limit reached. Waiting ${Math.ceil(waitTime / 1000)}s...`);
       await this.delay(waitTime);
     }
 
@@ -912,7 +912,7 @@ export class OverpassApiService {
    */
   clearCache(): void {
     this.cache.clear();
-    console.log('🧹 Overpass cache cleared');
+    console.debug('🧹 Overpass cache cleared');
   }
 
   /**

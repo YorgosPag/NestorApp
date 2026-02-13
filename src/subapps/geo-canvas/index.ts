@@ -502,8 +502,7 @@ export class GeoAlertSystem {
       };
     }
 
-    console.log('🚀 GEO-ALERT SYSTEM - INITIALIZATION STARTING');
-    console.log('=============================================');
+    console.debug('🚀 GEO-ALERT SYSTEM - INITIALIZATION STARTING');
 
     const startTime = performance.now();
     const subsystemResults: Record<string, boolean> = {};
@@ -516,32 +515,32 @@ export class GeoAlertSystem {
       subsystemResults['performance-monitoring'] = true;
 
       // Phase 2: DXF Transformation Engine - TEMPORARILY DISABLED
-      console.log('📐 Phase 2: DXF Transformation Engine (via services/) - AVAILABLE');
+      console.debug('📐 Phase 2: DXF Transformation Engine (via services/) - AVAILABLE');
       // await this.transformation.initialize(); // ❌ REMOVED: Missing service
       subsystemResults['transformation'] = true;
 
       // Phase 3: MapLibre Integration - TEMPORARILY DISABLED
-      console.log('🗺️  Phase 3: MapLibre Integration (via services/) - AVAILABLE');
+      console.debug('🗺️  Phase 3: MapLibre Integration (via services/) - AVAILABLE');
       // await this.mapping.initialize(); // ❌ REMOVED: Missing service
       subsystemResults['mapping'] = true;
 
       // Phase 4: PostGIS Database
-      console.log('🗄️  Phase 4: Initializing PostGIS Database...');
+      console.debug('🗄️  Phase 4: Initializing PostGIS Database...');
       await this.database.initialize();
       subsystemResults['database'] = true;
 
       // Phase 5: Alert Engine
-      console.log('🚨 Phase 5: Initializing Alert Engine...');
+      console.debug('🚨 Phase 5: Initializing Alert Engine...');
       await this.alerts.initialize();
       subsystemResults['alerts'] = true;
 
       // Phase 6: Design System
-      console.log('🎨 Phase 6: Initializing Design System...');
+      console.debug('🎨 Phase 6: Initializing Design System...');
       // Design system initializes automatically
       subsystemResults['design-system'] = true;
 
       // Phase 7: Testing & Optimization
-      console.log('🧪 Phase 7: Initializing Testing & Optimization...');
+      console.debug('🧪 Phase 7: Initializing Testing & Optimization...');
       // Testing systems are ready to use
       subsystemResults['testing-suite'] = true;
       subsystemResults['bundle-optimizer'] = true;
@@ -552,7 +551,7 @@ export class GeoAlertSystem {
       this.isInitialized = true;
       this.initializationTime = performance.now() - startTime;
 
-      console.log(`✅ GEO-ALERT SYSTEM INITIALIZED (${this.initializationTime.toFixed(2)}ms)`);
+      console.debug(`✅ GEO-ALERT SYSTEM INITIALIZED (${this.initializationTime.toFixed(2)}ms)`);
 
       // Get performance snapshot
       const performanceSnapshot = await this.getPerformanceSnapshot();
@@ -673,7 +672,7 @@ export class GeoAlertSystem {
     results: TestExecutionResults;
     report: string;
   }> {
-    console.log('🧪 COMPREHENSIVE TESTING - Starting full system test...');
+    console.debug('🧪 COMPREHENSIVE TESTING - Starting full system test...');
 
     const startTime = performance.now();
 
@@ -802,7 +801,7 @@ Generated at: ${new Date().toISOString()}
    * Shutdown system gracefully
    */
   public async shutdown(): Promise<void> {
-    console.log('🛑 GEO-ALERT SYSTEM - SHUTDOWN INITIATED');
+    console.debug('🛑 GEO-ALERT SYSTEM - SHUTDOWN INITIATED');
 
     // Stop monitoring systems
     this.performanceMonitor.stopMonitoring();
@@ -815,7 +814,7 @@ Generated at: ${new Date().toISOString()}
 
     this.isInitialized = false;
 
-    console.log('✅ GEO-ALERT SYSTEM - SHUTDOWN COMPLETED');
+    console.debug('✅ GEO-ALERT SYSTEM - SHUTDOWN COMPLETED');
   }
 
   /**
@@ -853,22 +852,18 @@ export default geoAlertSystem;
 // SYSTEM STARTUP MESSAGE
 // ============================================================================
 
-console.log(`
-🌍 ===================================================================
+console.debug(`
    GEO-ALERT SYSTEM v1.0.0 - ENTERPRISE GEOSPATIAL INTELLIGENCE
-   ===================================================================
 
-   📐 Phase 2: DXF Transformation Engine        ✅ COMPLETE
-   🗺️  Phase 3: MapLibre Integration            ✅ COMPLETE
-   🗄️  Phase 4: PostGIS Database               ✅ COMPLETE
-   🚨 Phase 5: Alert Engine & Rules            ✅ COMPLETE
-   🎨 Phase 6: Advanced UI/UX & Dashboard      ✅ COMPLETE
-   🚀 Phase 7: Performance & Testing           ✅ COMPLETE
+   Phase 2: DXF Transformation Engine        COMPLETE
+   Phase 3: MapLibre Integration             COMPLETE
+   Phase 4: PostGIS Database                 COMPLETE
+   Phase 5: Alert Engine & Rules             COMPLETE
+   Phase 6: Advanced UI/UX & Dashboard       COMPLETE
+   Phase 7: Performance & Testing            COMPLETE
 
-   Ready για production deployment!
+   Ready for production deployment.
 
    Import: import { geoAlertSystem } from './geo-canvas'
    Initialize: await geoAlertSystem.initialize()
-
-🌍 ===================================================================
 `);

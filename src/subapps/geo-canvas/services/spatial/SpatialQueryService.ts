@@ -162,11 +162,11 @@ export class SpatialQueryService {
     // Check cache
     const cached = this.spatialCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log('📦 Using cached spatial query results');
+      console.debug('📦 Using cached spatial query results');
       return cached.results;
     }
 
-    console.log(`🗺️ Executing spatial query: ${query.type}`);
+    console.debug(`🗺️ Executing spatial query: ${query.type}`);
 
     try {
       let results: AdminSearchResult[] = [];
@@ -206,7 +206,7 @@ export class SpatialQueryService {
         timestamp: Date.now()
       });
 
-      console.log(`✅ Spatial query found ${results.length} results`);
+      console.debug(`✅ Spatial query found ${results.length} results`);
 
       return results;
 
@@ -482,7 +482,7 @@ export class SpatialQueryService {
    */
   clearCache(): void {
     this.spatialCache.clear();
-    console.log('🗺️ Spatial query cache cleared');
+    console.debug('🗺️ Spatial query cache cleared');
   }
 
   /**

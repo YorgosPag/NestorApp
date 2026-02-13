@@ -71,7 +71,7 @@ export class AdministrativeBoundaryService {
     detectedType: 'municipality' | 'region' | 'general' | null;
     suggestions: string[];
   }> {
-    console.log(`🧠 Smart search: "${query}"`);
+    console.debug(`🧠 Smart search: "${query}"`);
 
     // 🚀 Phase 7.1: Start performance tracking
     const searchId = adminBoundariesAnalytics.startSearchTracking(query);
@@ -157,7 +157,7 @@ export class AdministrativeBoundaryService {
         suggestions = this.getGeneralSuggestions(cleanQuery);
       }
 
-      console.log(`✅ Smart search found ${results.length} results, type: ${detectedType}`);
+      console.debug(`✅ Smart search found ${results.length} results, type: ${detectedType}`);
 
       // 🚀 Phase 7.2: Cache successful results
       const searchResult = {
@@ -198,7 +198,7 @@ export class AdministrativeBoundaryService {
    * Advanced search με filters (Enhanced - Phase 6.3)
    */
   async advancedSearch(searchQuery: AdminSearchQuery): Promise<AdminSearchResult[]> {
-    console.log(`🔍 Advanced search:`, searchQuery);
+    console.debug(`🔍 Advanced search:`, searchQuery);
 
     try {
       const results = await overpassApiService.searchAdministrative(
@@ -233,7 +233,7 @@ export class AdministrativeBoundaryService {
     query: string,
     filters: AdvancedSearchFilters
   ): Promise<AdminSearchResult[]> {
-    console.log(`🔍 Enhanced advanced search with filters:`, { query, filters });
+    console.debug(`🔍 Enhanced advanced search with filters:`, { query, filters });
 
     try {
       let results: AdminSearchResult[] = [];
@@ -268,7 +268,7 @@ export class AdministrativeBoundaryService {
       // Step 5: Sort by relevance and confidence
       results = this.sortByRelevance(results, query, filters);
 
-      console.log(`✅ Enhanced advanced search found ${results.length} results`);
+      console.debug(`✅ Enhanced advanced search found ${results.length} results`);
 
       return results;
 
@@ -291,7 +291,7 @@ export class AdministrativeBoundaryService {
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log(`📦 Using cached municipality boundary: ${municipalityName}`);
+      console.debug(`📦 Using cached municipality boundary: ${municipalityName}`);
       return cached.data as Feature;
     }
 
@@ -305,7 +305,7 @@ export class AdministrativeBoundaryService {
           timestamp: Date.now()
         });
 
-        console.log(`✅ Fetched municipality boundary: ${municipalityName}`);
+        console.debug(`✅ Fetched municipality boundary: ${municipalityName}`);
       }
 
       return boundary;
@@ -325,7 +325,7 @@ export class AdministrativeBoundaryService {
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log(`📦 Using cached region boundary: ${regionName}`);
+      console.debug(`📦 Using cached region boundary: ${regionName}`);
       return cached.data as Feature;
     }
 
@@ -339,7 +339,7 @@ export class AdministrativeBoundaryService {
           timestamp: Date.now()
         });
 
-        console.log(`✅ Fetched region boundary: ${regionName}`);
+        console.debug(`✅ Fetched region boundary: ${regionName}`);
       }
 
       return boundary;
@@ -359,7 +359,7 @@ export class AdministrativeBoundaryService {
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log(`📦 Using cached municipalities for region: ${regionName}`);
+      console.debug(`📦 Using cached municipalities for region: ${regionName}`);
       return cached.data as FeatureCollection;
     }
 
@@ -373,7 +373,7 @@ export class AdministrativeBoundaryService {
           timestamp: Date.now()
         });
 
-        console.log(`✅ Fetched ${municipalities.features.length} municipalities in ${regionName}`);
+        console.debug(`✅ Fetched ${municipalities.features.length} municipalities in ${regionName}`);
       }
 
       return municipalities;
@@ -392,11 +392,11 @@ export class AdministrativeBoundaryService {
    * Search postal codes by partial code (e.g., "151" για all 151XX codes)
    */
   async searchPostalCodes(searchTerm: string): Promise<AdminSearchResult[]> {
-    console.log(`📮 Postal codes search: "${searchTerm}"`);
+    console.debug(`📮 Postal codes search: "${searchTerm}"`);
 
     try {
       const results = await overpassApiService.searchPostalCodes(searchTerm);
-      console.log(`✅ Found ${results.length} postal code results`);
+      console.debug(`✅ Found ${results.length} postal code results`);
       return results;
 
     } catch (error) {
@@ -414,7 +414,7 @@ export class AdministrativeBoundaryService {
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log(`📦 Using cached postal code boundary: ${postalCode}`);
+      console.debug(`📦 Using cached postal code boundary: ${postalCode}`);
       return cached.data as Feature;
     }
 
@@ -428,7 +428,7 @@ export class AdministrativeBoundaryService {
           timestamp: Date.now()
         });
 
-        console.log(`✅ Fetched postal code boundary: ${postalCode}`);
+        console.debug(`✅ Fetched postal code boundary: ${postalCode}`);
       }
 
       return boundary;
@@ -448,7 +448,7 @@ export class AdministrativeBoundaryService {
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log(`📦 Using cached postal codes for municipality: ${municipalityName}`);
+      console.debug(`📦 Using cached postal codes for municipality: ${municipalityName}`);
       return cached.data as FeatureCollection;
     }
 
@@ -462,7 +462,7 @@ export class AdministrativeBoundaryService {
           timestamp: Date.now()
         });
 
-        console.log(`✅ Fetched ${postalCodes.features.length} postal codes in ${municipalityName}`);
+        console.debug(`✅ Fetched ${postalCodes.features.length} postal codes in ${municipalityName}`);
       }
 
       return postalCodes;
@@ -482,7 +482,7 @@ export class AdministrativeBoundaryService {
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
-      console.log(`📦 Using cached postal codes for bounds`);
+      console.debug(`📦 Using cached postal codes for bounds`);
       return cached.data as FeatureCollection;
     }
 
@@ -496,7 +496,7 @@ export class AdministrativeBoundaryService {
           timestamp: Date.now()
         });
 
-        console.log(`✅ Fetched ${postalCodes.features.length} postal codes in bounding box`);
+        console.debug(`✅ Fetched ${postalCodes.features.length} postal codes in bounding box`);
       }
 
       return postalCodes;
@@ -691,7 +691,7 @@ export class AdministrativeBoundaryService {
       limit = 8
     } = context || {};
 
-    console.log(`🔍 Enhanced suggestions for: "${partialQuery}"`);
+    console.debug(`🔍 Enhanced suggestions for: "${partialQuery}"`);
 
     const suggestions = new Set<string>();
     const categories = {
@@ -771,7 +771,7 @@ export class AdministrativeBoundaryService {
 
       const confidence = this.calculateSuggestionConfidence(finalSuggestions, partialQuery);
 
-      console.log(`✅ Enhanced suggestions: ${finalSuggestions.length} from ${totalSources} sources`);
+      console.debug(`✅ Enhanced suggestions: ${finalSuggestions.length} from ${totalSources} sources`);
 
       return {
         suggestions: finalSuggestions,
@@ -862,14 +862,14 @@ export class AdministrativeBoundaryService {
   clearCache(): void {
     this.boundaryCache.clear();
     overpassApiService.clearCache();
-    console.log('🧹 Administrative boundary cache cleared');
+    console.debug('🧹 Administrative boundary cache cleared');
   }
 
   /**
    * Preload popular boundaries για performance
    */
   async preloadPopularBoundaries(): Promise<void> {
-    console.log('🚀 Preloading popular boundaries...');
+    console.debug('🚀 Preloading popular boundaries...');
 
     const popularMunicipalities = [
       MajorGreekMunicipalities.ATHENS,
@@ -903,7 +903,7 @@ export class AdministrativeBoundaryService {
     // Wait for all preloads
     await Promise.all([...municipalityPromises, ...regionPromises]);
 
-    console.log('✅ Popular boundaries preloaded');
+    console.debug('✅ Popular boundaries preloaded');
   }
 
   /**
@@ -1534,7 +1534,7 @@ export class AdministrativeBoundaryService {
 
       const processingTime = performance.now() - startTime;
 
-      console.log(
+      console.debug(
         `🔧 Batch simplification: ${boundaries.length} boundaries in ${processingTime.toFixed(1)}ms`
       );
 

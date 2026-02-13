@@ -164,7 +164,7 @@ export class AdminBoundariesCacheManager {
         this.startPrefetchingPopular();
       }
 
-      console.log('🏛️ AdminBoundariesCacheManager initialized');
+      console.debug('🏛️ AdminBoundariesCacheManager initialized');
 
     } catch (error) {
       console.error('Cache initialization error:', error);
@@ -233,7 +233,7 @@ export class AdminBoundariesCacheManager {
         this.stats.hits++;
         this.recordAccessTime(performance.now() - startTime);
 
-        console.log(`📦 Cache HIT: ${key} (${entry.accessCount} accesses)`);
+        console.debug(`📦 Cache HIT: ${key} (${entry.accessCount} accesses)`);
         return entry.data as T;
       }
 
@@ -248,13 +248,13 @@ export class AdminBoundariesCacheManager {
           this.stats.hits++;
           this.recordAccessTime(performance.now() - startTime);
 
-          console.log(`💾 Cache HIT (persisted): ${key}`);
+          console.debug(`💾 Cache HIT (persisted): ${key}`);
           return persistedEntry.data as T;
         }
       }
 
       this.stats.misses++;
-      console.log(`❌ Cache MISS: ${key}`);
+      console.debug(`❌ Cache MISS: ${key}`);
       return null;
 
     } catch (error) {
@@ -327,7 +327,7 @@ export class AdminBoundariesCacheManager {
         this.triggerContextualPrefetch(entry);
       }
 
-      console.log(`💾 Cache SET: ${key} (${this.formatBytes(size)}, TTL: ${entry.ttl / 1000}s)`);
+      console.debug(`💾 Cache SET: ${key} (${this.formatBytes(size)}, TTL: ${entry.ttl / 1000}s)`);
 
     } catch (error) {
       console.error('Cache set error:', error);
@@ -365,7 +365,7 @@ export class AdminBoundariesCacheManager {
       }
 
       if (existed) {
-        console.log(`🗑️ Cache DELETE: ${key}`);
+        console.debug(`🗑️ Cache DELETE: ${key}`);
       }
 
       return existed;
@@ -398,7 +398,7 @@ export class AdminBoundariesCacheManager {
         writeTimes: []
       };
 
-      console.log('🧹 Cache cleared completely');
+      console.debug('🧹 Cache cleared completely');
     } catch (error) {
       console.error('Cache clear error:', error);
     }
@@ -447,7 +447,7 @@ export class AdminBoundariesCacheManager {
 
     const entry = this.memoryCache.get(lruKey);
     if (entry) {
-      console.log(`⚡ Cache EVICT (LRU): ${lruKey} (${this.formatBytes(entry.size)}, accessed ${entry.accessCount} times)`);
+      console.debug(`⚡ Cache EVICT (LRU): ${lruKey} (${this.formatBytes(entry.size)}, accessed ${entry.accessCount} times)`);
 
       await this.delete(lruKey);
       this.stats.evictions++;
@@ -476,7 +476,7 @@ export class AdminBoundariesCacheManager {
     }
 
     if (expiredKeys.length > 0) {
-      console.log(`⏰ Cache CLEANUP: Removed ${expiredKeys.length} expired entries`);
+      console.debug(`⏰ Cache CLEANUP: Removed ${expiredKeys.length} expired entries`);
     }
   }
 
@@ -600,7 +600,7 @@ export class AdminBoundariesCacheManager {
           }
         }
 
-        console.log(`💾 Loaded ${loadedCount} persisted cache entries`);
+        console.debug(`💾 Loaded ${loadedCount} persisted cache entries`);
         resolve();
       };
 
@@ -617,7 +617,7 @@ export class AdminBoundariesCacheManager {
       if (!this.has(boundaryId) && !this.prefetchQueue.has(boundaryId)) {
         this.prefetchQueue.add(boundaryId);
         // Note: Actual prefetching would require integration with data fetching service
-        console.log(`🔮 Queued for prefetch: ${boundaryId}`);
+        console.debug(`🔮 Queued for prefetch: ${boundaryId}`);
       }
     }
   }
@@ -631,7 +631,7 @@ export class AdminBoundariesCacheManager {
       const contextKey = `${entry.region}_${entry.adminLevel}_neighbors`;
       if (!this.prefetchQueue.has(contextKey)) {
         this.prefetchQueue.add(contextKey);
-        console.log(`🎯 Contextual prefetch triggered: ${contextKey}`);
+        console.debug(`🎯 Contextual prefetch triggered: ${contextKey}`);
       }
     }
   }
@@ -774,7 +774,7 @@ export class AdminBoundariesCacheManager {
       );
 
       // Log cache status periodically
-      console.log(`📊 Cache Status: ${stats.totalEntries} entries, ${Math.round(stats.hitRate)}% hit rate, ${Math.round(stats.memoryUsage.used)}MB used`);
+      console.debug(`📊 Cache Status: ${stats.totalEntries} entries, ${Math.round(stats.hitRate)}% hit rate, ${Math.round(stats.memoryUsage.used)}MB used`);
     }, 10 * 60 * 1000); // Every 10 minutes
   }
 
@@ -812,12 +812,12 @@ export class AdminBoundariesCacheManager {
 
   public updateConfig(newConfig: Partial<CacheConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('🏛️ Cache configuration updated');
+    console.debug('🏛️ Cache configuration updated');
   }
 
   public updatePrefetchConfig(newConfig: Partial<PrefetchStrategy>): void {
     this.prefetchConfig = { ...this.prefetchConfig, ...newConfig };
-    console.log('🔮 Prefetch configuration updated');
+    console.debug('🔮 Prefetch configuration updated');
   }
 
   // ============================================================================
@@ -843,7 +843,7 @@ export class AdminBoundariesCacheManager {
     }
 
     AdminBoundariesCacheManager.instance = null;
-    console.log('🏛️ AdminBoundariesCacheManager disposed');
+    console.debug('🏛️ AdminBoundariesCacheManager disposed');
   }
 }
 

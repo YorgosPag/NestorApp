@@ -183,7 +183,7 @@ export class AdminBoundariesPerformanceAnalytics {
 
   private constructor() {
     this.thresholds = this.getDefaultThresholds();
-    console.log('🏛️ AdminBoundariesPerformanceAnalytics initialized');
+    console.debug('🏛️ AdminBoundariesPerformanceAnalytics initialized');
   }
 
   public static getInstance(): AdminBoundariesPerformanceAnalytics {
@@ -210,7 +210,7 @@ export class AdminBoundariesPerformanceAnalytics {
       this.collectBoundariesMetrics();
     }, interval);
 
-    // console.log('🏛️ Administrative Boundaries Performance Monitoring started'); // DISABLED - προκαλούσε loops
+    // console.debug('🏛️ Administrative Boundaries Performance Monitoring started'); // DISABLED - προκαλούσε loops
   }
 
   public stopMonitoring(): void {
@@ -221,7 +221,7 @@ export class AdminBoundariesPerformanceAnalytics {
       this.monitoringInterval = null;
     }
 
-    // console.log('🏛️ Administrative Boundaries Performance Monitoring stopped'); // DISABLED - προκαλούσε loops
+    // console.debug('🏛️ Administrative Boundaries Performance Monitoring stopped'); // DISABLED - προκαλούσε loops
   }
 
   // ============================================================================
@@ -237,7 +237,7 @@ export class AdminBoundariesPerformanceAnalytics {
 
     this.searchMetrics.activeSearches.set(searchId, startTime);
 
-    console.log(`🔍 Search tracking started: "${searchQuery}" (${adminLevel || 'all levels'})`);
+    console.debug(`🔍 Search tracking started: "${searchQuery}" (${adminLevel || 'all levels'})`);
     return searchId;
   }
 
@@ -289,7 +289,7 @@ export class AdminBoundariesPerformanceAnalytics {
     // Cleanup
     this.searchMetrics.activeSearches.delete(searchId);
 
-    console.log(`✅ Search completed in ${Math.round(searchTime)}ms (${resultCount} results, cache: ${cacheHit})`);
+    console.debug(`✅ Search completed in ${Math.round(searchTime)}ms (${resultCount} results, cache: ${cacheHit})`);
   }
 
   // ============================================================================
@@ -306,7 +306,7 @@ export class AdminBoundariesPerformanceAnalytics {
     this.apiMetrics.activeRequests.set(requestId, startTime);
     this.apiMetrics.totalRequests++;
 
-    console.log(`🌍 Overpass API request started: ${query.substring(0, 50)}...`);
+    console.debug(`🌍 Overpass API request started: ${query.substring(0, 50)}...`);
     return requestId;
   }
 
@@ -364,7 +364,7 @@ export class AdminBoundariesPerformanceAnalytics {
     this.apiMetrics.activeRequests.delete(requestId);
 
     const status = error ? '❌ failed' : '✅ success';
-    console.log(`🌍 Overpass API ${status}: ${Math.round(responseTime)}ms (${dataSize} bytes)`);
+    console.debug(`🌍 Overpass API ${status}: ${Math.round(responseTime)}ms (${dataSize} bytes)`);
   }
 
   // ============================================================================
@@ -397,7 +397,7 @@ export class AdminBoundariesPerformanceAnalytics {
       });
     }
 
-    console.log(`🗺️ Processed ${boundaryCount} boundaries in ${Math.round(processingTime)}ms`);
+    console.debug(`🗺️ Processed ${boundaryCount} boundaries in ${Math.round(processingTime)}ms`);
   }
 
   /**
@@ -425,7 +425,7 @@ export class AdminBoundariesPerformanceAnalytics {
       });
     }
 
-    console.log(`🗺️ Map rendered in ${Math.round(renderTime)}ms (${boundariesCount} boundaries, ${layersCount} layers)`);
+    console.debug(`🗺️ Map rendered in ${Math.round(renderTime)}ms (${boundariesCount} boundaries, ${layersCount} layers)`);
   }
 
   // ============================================================================
@@ -626,9 +626,9 @@ export class AdminBoundariesPerformanceAnalytics {
       'critical': '🔥'
     }[alert.severity];
 
-    console.log(`${emoji} Admin Boundaries ${alert.severity.toUpperCase()}: ${alert.message}`);
+    console.debug(`${emoji} Admin Boundaries ${alert.severity.toUpperCase()}: ${alert.message}`);
     if (alert.suggestion) {
-      console.log(`💡 Suggestion: ${alert.suggestion}`);
+      console.debug(`💡 Suggestion: ${alert.suggestion}`);
     }
   }
 
@@ -653,12 +653,12 @@ export class AdminBoundariesPerformanceAnalytics {
 
   public clearAlerts(): void {
     this.alerts = [];
-    console.log('🏛️ Administrative boundaries alerts cleared');
+    console.debug('🏛️ Administrative boundaries alerts cleared');
   }
 
   public updateThresholds(newThresholds: Partial<PerformanceThresholds>): void {
     this.thresholds = { ...this.thresholds, ...newThresholds };
-    console.log('🏛️ Performance thresholds updated');
+    console.debug('🏛️ Performance thresholds updated');
   }
 
   // 🏢 ENTERPRISE: Proper return type instead of any
@@ -749,7 +749,7 @@ export class AdminBoundariesPerformanceAnalytics {
     this.searchMetrics.activeSearches.clear();
     this.apiMetrics.activeRequests.clear();
     AdminBoundariesPerformanceAnalytics.instance = null;
-    console.log('🏛️ AdminBoundariesPerformanceAnalytics disposed');
+    console.debug('🏛️ AdminBoundariesPerformanceAnalytics disposed');
   }
 }
 

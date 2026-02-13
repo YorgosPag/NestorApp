@@ -304,7 +304,7 @@ export class GeometrySimplificationEngine {
 
   private constructor() {
     this.config = this.getDefaultConfig();
-    console.log('🔧 GeometrySimplificationEngine initialized');
+    console.debug('🔧 GeometrySimplificationEngine initialized');
   }
 
   public static getInstance(): GeometrySimplificationEngine {
@@ -378,7 +378,7 @@ export class GeometrySimplificationEngine {
         result.reductionRatio
       );
 
-      console.log(
+      console.debug(
         `🔧 Simplified boundary: ${result.originalPoints} → ${result.simplifiedPoints} points ` +
         `(${Math.round(result.reductionRatio * 100)}% reduction, ${result.processingTime.toFixed(1)}ms)`
       );
@@ -417,7 +417,7 @@ export class GeometrySimplificationEngine {
 
     const batchTime = performance.now() - startTime;
 
-    console.log(
+    console.debug(
       `📦 Batch simplification: ${totalSimplified}/${totalProcessed} boundaries ` +
       `processed in ${batchTime.toFixed(1)}ms`
     );
@@ -675,7 +675,7 @@ export class GeometrySimplificationEngine {
    */
   public updateConfig(newConfig: Partial<SimplificationConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('🔧 Geometry simplification configuration updated');
+    console.debug('🔧 Geometry simplification configuration updated');
   }
 
   /**
@@ -703,7 +703,7 @@ export class GeometrySimplificationEngine {
    */
   public clearCache(): void {
     this.simplificationCache.clear();
-    console.log('🧹 Geometry simplification cache cleared');
+    console.debug('🧹 Geometry simplification cache cleared');
   }
 
   /**
@@ -727,7 +727,7 @@ export class GeometrySimplificationEngine {
   public dispose(): void {
     this.clearCache();
     GeometrySimplificationEngine.instance = null;
-    console.log('🔧 GeometrySimplificationEngine disposed');
+    console.debug('🔧 GeometrySimplificationEngine disposed');
   }
 }
 

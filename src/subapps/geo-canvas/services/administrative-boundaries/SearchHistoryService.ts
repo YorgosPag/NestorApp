@@ -76,7 +76,7 @@ export class SearchHistoryService {
     // Update analytics
     this.updateAnalytics(entry);
 
-    console.log(`📚 Added to search history: "${query}" (${searchType})`);
+    console.debug(`📚 Added to search history: "${query}" (${searchType})`);
 
     return entry;
   }
@@ -248,7 +248,7 @@ export class SearchHistoryService {
 
     if (filtered.length !== history.length) {
       this.saveHistory(filtered);
-      console.log(`📚 Removed entry ${entryId} from search history`);
+      console.debug(`📚 Removed entry ${entryId} from search history`);
       return true;
     }
 
@@ -261,7 +261,7 @@ export class SearchHistoryService {
   clearHistory(): void {
     localStorage.removeItem(this.storageKey);
     localStorage.removeItem(this.analyticsKey);
-    console.log('📚 Search history cleared');
+    console.debug('📚 Search history cleared');
   }
 
   /**
@@ -276,7 +276,7 @@ export class SearchHistoryService {
 
     if (removedCount > 0) {
       this.saveHistory(filtered);
-      console.log(`📚 Removed ${removedCount} old entries from search history`);
+      console.debug(`📚 Removed ${removedCount} old entries from search history`);
     }
 
     return removedCount;
@@ -357,7 +357,7 @@ export class SearchHistoryService {
       localStorage.setItem(this.analyticsKey, JSON.stringify(data.analytics));
     }
 
-    console.log(`📚 Imported ${imported} entries, skipped ${skipped}`);
+    console.debug(`📚 Imported ${imported} entries, skipped ${skipped}`);
 
     return { imported, skipped };
   }

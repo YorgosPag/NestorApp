@@ -24,7 +24,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { withAuth } from '@/lib/auth/middleware';
+import { withAuth, type AuthenticatedHandler } from '@/lib/auth/middleware';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('AI_ANALYTICS_ENDPOINT');
@@ -68,7 +68,7 @@ interface AnalyticsResponse {
 // HANDLER
 // ============================================================================
 
-async function handleGet(_request: NextRequest, _ctx: unknown, _cache: unknown): Promise<Response> {
+const handleGet: AuthenticatedHandler<AnalyticsResponse> = async () => {
   try {
     const db = getAdminFirestore();
     const now = new Date();
@@ -209,7 +209,7 @@ async function handleGet(_request: NextRequest, _ctx: unknown, _cache: unknown):
       { status: 500 }
     );
   }
-}
+};
 
 export const GET = withSensitiveRateLimit(withAuth(handleGet, {
   requiredGlobalRoles: 'super_admin',

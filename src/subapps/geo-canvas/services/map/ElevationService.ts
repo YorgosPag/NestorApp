@@ -83,14 +83,14 @@ export class ElevationService {
     // Check cache first
     const cachedElevation = this.getCachedElevation(cacheKey);
     if (cachedElevation !== null) {
-      console.log('🎯 Cache hit! Elevation:', cachedElevation, 'for key:', cacheKey);
+      console.debug('🎯 Cache hit! Elevation:', cachedElevation, 'for key:', cacheKey);
       return cachedElevation;
     }
 
     // Check if request is already pending
     const pendingRequest = this.pendingRequests.get(cacheKey);
     if (pendingRequest) {
-      console.log('⏳ Request already pending for:', cacheKey);
+      console.debug('⏳ Request already pending for:', cacheKey);
       return pendingRequest;
     }
 
@@ -138,7 +138,7 @@ export class ElevationService {
    */
   clearCache(): void {
     this.cache.clear();
-    console.log('🗑️ Elevation cache cleared');
+    console.debug('🗑️ Elevation cache cleared');
   }
 
   /**
@@ -168,7 +168,7 @@ export class ElevationService {
   private async fetchElevationFromAPI(lng: number, lat: number, cacheKey: string): Promise<number | null> {
     try {
       const url = `${this.config.apiUrl}?locations=${lat},${lng}`;
-      console.log('🌐 Fetching elevation from:', url);
+      console.debug('🌐 Fetching elevation from:', url);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
@@ -183,18 +183,18 @@ export class ElevationService {
 
       clearTimeout(timeoutId);
 
-      console.log('📡 Elevation response status:', response.status, response.statusText);
+      console.debug('📡 Elevation response status:', response.status, response.statusText);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('📊 Elevation API response:', data);
+      console.debug('📊 Elevation API response:', data);
 
       if (data.results && data.results.length > 0) {
         const elevation = Math.round(data.results[0].elevation);
-        console.log('🏔️ Elevation found:', elevation, 'meters');
+        console.debug('🏔️ Elevation found:', elevation, 'meters');
 
         // Cache the result
         this.setCachedElevation(cacheKey, elevation);
@@ -252,7 +252,7 @@ export class ElevationService {
       timestamp: Date.now(),
       cacheKey
     });
-    console.log('💾 Caching elevation:', elevation, 'for key:', cacheKey);
+    console.debug('💾 Caching elevation:', elevation, 'for key:', cacheKey);
   }
 
   /**

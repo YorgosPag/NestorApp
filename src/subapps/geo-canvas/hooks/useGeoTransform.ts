@@ -103,12 +103,12 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
       const newPoint = controlPointManager.addControlPoint(dxfPoint, geoPoint, options);
       const allPoints = controlPointManager.getAllControlPoints();
 
-      console.log('🎯 Hook: Added control point:', newPoint);
-      console.log('🎯 Hook: All control points:', allPoints);
-      console.log('🎯 Hook: Points count:', allPoints.length);
+      console.debug('🎯 Hook: Added control point:', newPoint);
+      console.debug('🎯 Hook: All control points:', allPoints);
+      console.debug('🎯 Hook: Points count:', allPoints.length);
 
       // 🔧 ENTERPRISE FIX: Direct setState - no mountedRef check needed
-      console.log('🔍 Hook: About to call setState directly...');
+      console.debug('🔍 Hook: About to call setState directly...');
       setState(prev => {
         const newState = {
           ...prev,
@@ -116,10 +116,10 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
           validation: controlPointManager.validateControlPoints(),
           lastOperation: `Added control point: ${newPoint.id}`
         };
-        console.log('🎯 Hook: Setting new state:', newState);
+        console.debug('🎯 Hook: Setting new state:', newState);
         return newState;
       });
-      console.log('✅ Hook: setState called successfully!');
+      console.debug('✅ Hook: setState called successfully!');
     } catch (error) {
       if (mountedRef.current) {
         setState(prev => ({

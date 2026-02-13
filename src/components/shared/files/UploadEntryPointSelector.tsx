@@ -113,7 +113,7 @@ export function UploadEntryPointSelector({
   // Get icon component from lucide-react (type-safe dynamic lookup)
   const getIcon = (iconName?: string): LucideIcons.LucideIcon => {
     if (!iconName) return LucideIcons.File;
-    const icons = LucideIcons as Record<string, LucideIcons.LucideIcon | undefined>;
+    const icons: Record<string, LucideIcons.LucideIcon | undefined> = LucideIcons as unknown as Record<string, LucideIcons.LucideIcon | undefined>;
     return icons[iconName] ?? LucideIcons.File;
   };
 
