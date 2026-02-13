@@ -95,7 +95,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
     cursorHookResult = {
       settings: DEFAULT_CURSOR_SETTINGS,
       updateSettings: (updates: Partial<typeof DEFAULT_CURSOR_SETTINGS>) => {
-        console.log('🔧 Mock updateSettings:', updates);
+        console.debug('🔧 Mock updateSettings:', updates);
       }
     };
   }

@@ -279,7 +279,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       ].find(t => t.name === templateName);
 
       if (template) {
-        console.log('🎨 Applying template:', templateName, template);
+        console.debug('🎨 Applying template:', templateName, template);
         // 🏢 ENTERPRISE: Convert LineConstantsTemplate to LineSettingsTemplate format
         // LineSettings requires 'enabled' property but template.settings doesn't have it
         const lineSettingsTemplate: LineSettingsTemplate = {
@@ -294,7 +294,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         applyTemplate(lineSettingsTemplate);
         // 🏢 ENTERPRISE: activeTemplate is part of LineSettings interface (settings-core/types/domain.ts)
         updateSettings({ activeTemplate: templateName });
-        console.log('✅ Template applied, activeTemplate set to:', templateName);
+        console.debug('✅ Template applied, activeTemplate set to:', templateName);
       }
     } else {
       console.warn('⚠️ Template not found:', templateName);
@@ -363,7 +363,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   const handleFactoryResetConfirm = () => {
     if (resetToFactory) {
       resetToFactory();
-      console.log('🏭 [LineSettings] Factory reset confirmed - resetting to ISO/AutoCAD defaults');
+      console.debug('🏭 [LineSettings] Factory reset confirmed - resetting to ISO/AutoCAD defaults');
 
       // Close modal
       setShowFactoryResetModal(false);
@@ -379,7 +379,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   };
 
   const handleFactoryResetCancel = () => {
-    console.log('🏭 [LineSettings] Factory reset cancelled by user');
+    console.debug('🏭 [LineSettings] Factory reset cancelled by user');
     setShowFactoryResetModal(false);
 
     // Toast notification για ακύρωση

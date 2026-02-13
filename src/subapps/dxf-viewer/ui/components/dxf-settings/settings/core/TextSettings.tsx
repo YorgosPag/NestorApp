@@ -297,7 +297,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   const handleFactoryResetConfirm = () => {
     if (resetToFactory) {
       resetToFactory();
-      console.log('🏭 [TextSettings] Factory reset confirmed - resetting to ISO 3098 defaults');
+      console.debug('🏭 [TextSettings] Factory reset confirmed - resetting to ISO 3098 defaults');
 
       // Close modal
       setShowFactoryResetModal(false);
@@ -313,7 +313,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   };
 
   const handleFactoryResetCancel = () => {
-    console.log('🏭 [TextSettings] Factory reset cancelled by user');
+    console.debug('🏭 [TextSettings] Factory reset cancelled by user');
     setShowFactoryResetModal(false);
 
     // Toast notification για ακύρωση

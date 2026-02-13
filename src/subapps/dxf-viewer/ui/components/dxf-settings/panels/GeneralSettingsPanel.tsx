@@ -154,7 +154,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
   }
 
   // 🔍 DEBUG: Log settings για να δούμε τι περνάει στο Preview
-  console.log('✅ GeneralSettingsPanel: Settings loaded', {
+  console.debug('✅ GeneralSettingsPanel: Settings loaded', {
     lineSettings: lineSettings.settings,
     textSettings: textSettings.settings,
     gripSettings: gripSettings.settings

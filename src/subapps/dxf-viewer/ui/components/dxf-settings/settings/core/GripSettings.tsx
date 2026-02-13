@@ -84,7 +84,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
   const handleFactoryResetConfirm = () => {
     resetToDefaults();
-    console.log('🏭 [GripSettings] Factory reset confirmed - resetting to CAD defaults');
+    console.debug('🏭 [GripSettings] Factory reset confirmed - resetting to CAD defaults');
 
     // Close modal
     setShowFactoryResetModal(false);
@@ -99,7 +99,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
   };
 
   const handleFactoryResetCancel = () => {
-    console.log('🏭 [GripSettings] Factory reset cancelled by user');
+    console.debug('🏭 [GripSettings] Factory reset cancelled by user');
     setShowFactoryResetModal(false);
 
     // Toast notification για ακύρωση
