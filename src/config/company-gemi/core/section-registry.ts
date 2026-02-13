@@ -117,6 +117,22 @@ const addressesSection: SectionConfig = {
   ],
 };
 
+// 🏢 ENTERPRISE: Communication section for company contacts (phones, emails, websites, social media)
+const communicationSection: SectionConfig = {
+  id: 'communication',
+  title: 'sections.communication',
+  icon: 'smartphone',
+  description: 'sectionDescriptions.communication',
+  order: 2.5, // Between addresses (2) and activities (3)
+  fields: [
+    {
+      id: 'communication', // Triggers existing custom renderer in UnifiedContactTabbedSection
+      label: 'sections.communication',
+      type: 'input',
+    }
+  ],
+};
+
 // Add more simplified sections για demonstration...
 const shareholdersSection: SectionConfig = {
   id: 'shareholders',
@@ -172,6 +188,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   // Remaining sections (simplified για demo)
   datesLocationSection,
   addressesSection,
+  communicationSection, // 🏢 ENTERPRISE: Communication tab for companies (phones, emails, websites, social media)
   shareholdersSection,
   documentsSection,
   decisionsSection,

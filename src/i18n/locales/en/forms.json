@@ -20,7 +20,8 @@
     "servicesResponsibilities": "Responsibilities & Services",
     "logo": "Logo",
     "employeesOrganization": "Employees & Organization",
-    "banking": "Banking"
+    "banking": "Banking",
+    "communication": "Communication"
   },
   "sectionDescriptions": {
     "basicInfoGemi": "Basic company information from GEMI",
@@ -37,7 +38,8 @@
     "statusesLifecycle": "Company lifecycle and statuses",
     "logoPhotos": "Logo and photos",
     "shareholdersEmployees": "Shareholders and employees management",
-    "banking": "Manage contact bank accounts"
+    "banking": "Manage contact bank accounts",
+    "communication": "Phone numbers, emails, websites and social media"
   },
   "company": {
     "companyName": "Company Name",
