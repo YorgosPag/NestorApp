@@ -20,6 +20,16 @@
 
 ## Changelog
 
+### 2026-02-13 — Fix: DxfCanvas opaque background blocking LayerCanvas (z-index stacking)
+
+| Field | Value |
+|-------|-------|
+| **Bug** | LayerCanvas (z-0) was completely invisible because DxfCanvas (z-10) had an opaque black CSS background (`#000000`) that blocked everything beneath it |
+| **Root Cause** | DxfCanvas canvas element had `backgroundColor: CANVAS_THEME.DXF_CANVAS` (solid black), making the higher z-index canvas fully opaque and hiding LayerCanvas underneath |
+| **Fix** | Moved the background color from the DxfCanvas `<canvas>` element to the CanvasSection container div (`bg-[var(--canvas-background-dxf)]`), and set DxfCanvas canvas background to `'transparent'` so lower z-index canvases are visible through it |
+| **Files** | `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx`, `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` |
+| **Lesson** | In a multi-canvas stacking architecture, only the lowest container should carry an opaque background; all overlay canvases must be transparent to allow composited rendering |
+
 ### 2026-02-13 — Fix: LayerRenderer TDZ crash (Layer Canvas rendered nothing)
 
 | Field | Value |

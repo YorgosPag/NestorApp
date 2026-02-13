@@ -1,14 +1,20 @@
 {
   "category": "FIX",
-  "shortDescription": "Fix DXF overlay draw mode — clicks now register on canvas",
-  "problem": "Τα εργαλεία σχεδίασης overlay στον DXF Viewer ήταν εντελώς νεκρά. Κλικ στον καμβά δεν δημιουργούσε κανένα σημείο, κανένα polygon, καμία καταγραφή στην κονσόλα.",
-  "cause": "Στο CanvasSection.tsx (γρ. 1239), η συνθήκη `overlayMode === 'draw' && activeTool !== 'select'` αξιολογούνταν ΠΑΝΤΑ σε false. Όταν ο χρήστης πατά 'Draw' στο overlay toolbar (OverlayModeButtons.tsx), μόνο το overlayMode αλλάζει σε 'draw' — το activeTool παραμένει 'select'. Επομένως activeTool !== 'select' = false, και ο κώδικας σχεδίασης δεν εκτελούνταν ποτέ.",
+  "shortDescription": "Fix DXF overlay rendering — 4 cascading bugs in overlay pipeline",
+  "problem": "Η σχεδίαση και εμφάνιση colored overlay polygons στον DXF Viewer ήταν πλήρως χαλασμένη. 4 cascading bugs: (1) clicks δεν εγγράφονταν, (2) LayerRenderer TDZ crash, (3) Firestore permissions rejection, (4) saved overlays αόρατα στον καμβά.",
+  "cause": "4 ξεχωριστές αιτίες: (1) Λανθασμένη συνθήκη activeTool!=='select' στο CanvasSection, (2) const actualViewport χρησιμοποιούνταν πριν τη δήλωσή του (Temporal Dead Zone) στο LayerRenderer.ts, (3) overlay-store.tsx δεν περνούσε companyId/createdBy στα Firestore documents, (4) DxfCanvas (z-10) είχε αδιαφανές μαύρο CSS background (#000000) που κάλυπτε πλήρως τη LayerCanvas (z-0) + useEffect καθάριζε draft polygon κατά τη σχεδίαση.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx (overlay draw condition fix)"
+    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx (overlay draw condition, draft clear fix, container background)",
+    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts (TDZ fix — moved const before usage)",
+    "src/subapps/dxf-viewer/overlays/overlay-store.tsx (companyId + createdBy from useAuth)",
+    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx (transparent background)",
+    "docs/centralized-systems/reference/adrs/ADR-029-canvas-v2-migration.md (changelog)",
+    "docs/centralized-systems/reference/adrs/ADR-035-tool-overlay-mode-metadata.md (changelog)",
+    "docs/centralized-systems/reference/adrs/ADR-063-company-isolation-custom-claims.md (changelog)"
   ],
-  "solution": "Αφαίρεση του `activeTool !== 'select'` guard από τη συνθήκη overlay draw. Η συνθήκη `overlayMode === 'draw'` είναι αρκετή — είναι true μόνο όταν ο χρήστης ενεργοποίησε ρητά το overlay draw mode μέσω του toolbar button.",
-  "testing": "npx tsc --noEmit — 0 TS errors",
-  "notes": "Επίσης στο ίδιο session: Διόρθωση photo upload bugs σε Company contacts (disabled state propagation, handler wiring, optimistic photo state) + αποκατάσταση individual-config.ts που είχε αδειάσει κατά λάθος.",
+  "solution": "Phase 1: Αφαίρεση activeTool guard. Phase 2: Μεταφορά const actualViewport πριν τη χρήση (TDZ fix). Phase 3: Προσθήκη useAuth() + companyId/createdBy. Phase 4: Μεταφορά canvas background από DxfCanvas element σε container div + προσθήκη overlayMode!=='draw' guard στο useEffect clear.",
+  "testing": "npx tsc --noEmit — 0 TS errors. Production logs verified: ReferenceError eliminated, Firestore permission error resolved.",
+  "notes": "Κλασικό cascade failure: κάθε fix αποκάλυπτε το επόμενο bug. Το root-cause τελικό ήταν αρχιτεκτονικό — DxfCanvas z-10 με αδιαφανές background μπλοκάρει τη LayerCanvas z-0. ADR documentation ενημερώθηκε για και τα 3 πρώτα bugs.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -17,12 +23,20 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "e823b131",
-      "message": "fix: extract multiplePhotoURLs from PhotoSlots before removing non-serializable data"
-    },
-    {
       "hash": "d311a00a",
       "message": "fix(dxf-viewer): overlay draw mode clicks now work — remove activeTool guard"
+    },
+    {
+      "hash": "ed7dfe14",
+      "message": "fix(dxf-viewer): LayerRenderer TDZ crash — actualViewport used before declaration"
+    },
+    {
+      "hash": "07f0c4ce",
+      "message": "fix(dxf-viewer): add companyId + createdBy to overlay Firestore writes"
+    },
+    {
+      "hash": "9064aa05",
+      "message": "fix(dxf-viewer): overlay polygons invisible — DxfCanvas opaque bg covered LayerCanvas"
     }
   ]
 }
