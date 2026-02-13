@@ -470,7 +470,9 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       {...props} // 🎯 SPREAD: Περνάω τα extra props (data-canvas-type κ.λπ.)
       style={{
         ...canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled),
-        backgroundColor: CANVAS_THEME.DXF_CANVAS // ✅ ADR-004: Centralized canvas background
+        // 🔧 FIX (2026-02-13): Background moved to container div — DxfCanvas (z-10) must be transparent
+        // so LayerCanvas (z-0) colored overlays are visible through it
+        backgroundColor: 'transparent'
       }}
       onMouseDown={(e) => mouseHandlers.handleMouseDown(e)}
       onMouseMove={(e) => mouseHandlers.handleMouseMove(e)}

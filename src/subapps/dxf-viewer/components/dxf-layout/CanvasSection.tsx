@@ -634,11 +634,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // 🏢 ENTERPRISE (2026-01-25): Clear draft polygon when switching to select tool
   // Αποτρέπει το bug όπου η διαδικασία σχεδίασης συνεχίζεται μετά την αλλαγή tool
+  // 🔧 FIX (2026-02-13): Exclude overlayMode='draw' — in draw mode activeTool stays 'select'
+  // but the draft polygon must NOT be cleared while the user is actively drawing
   React.useEffect(() => {
-    if (activeTool === 'select' && draftPolygon.length > 0) {
+    if (activeTool === 'select' && overlayMode !== 'draw' && draftPolygon.length > 0) {
       setDraftPolygon([]);
     }
-  }, [activeTool, draftPolygon.length]);
+  }, [activeTool, draftPolygon.length, overlayMode]);
 
   // 🏢 ENTERPRISE (2026-02-01): Clear preview canvas when switching to non-drawing tool
   // FIX: Green grip ball (start point indicator) stayed visible after switching to Select tool
@@ -1576,7 +1578,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
         <div
           ref={containerRef}
-          className={`canvas-stack relative w-full h-full cursor-none ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`} // ADR-008 CAD-GRADE: cursor-none hides CSS cursor
+          className={`canvas-stack relative w-full h-full cursor-none bg-[var(--canvas-background-dxf)] ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`} // ADR-008 CAD-GRADE: cursor-none hides CSS cursor + 🔧 FIX (2026-02-13): Canvas background moved HERE (container) so LayerCanvas overlays are visible through transparent DxfCanvas
           onMouseMove={handleContainerMouseMove}
           onMouseDown={handleContainerMouseDown}
           onMouseUp={handleContainerMouseUp}
