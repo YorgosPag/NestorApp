@@ -1955,6 +1955,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 borderColor: globalRulerSettings.horizontal.color,
                 borderWidth: 1
               }}
+              // 🏢 ENTERPRISE (2026-02-13): AutoCAD-style marquee selection — forward to DxfCanvas (z-10)
+              // DxfCanvas intercepts ALL pointer events, so it MUST handle marquee selection
+              onLayerSelected={handleOverlayClick}
+              onMultiLayerSelected={handleMultiOverlayClick}
+              onEntitiesSelected={setSelectedEntityIds}
+              isGripDragging={draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
               onContextMenu={handleDrawingContextMenu} // 🏢 ADR-053: Right-click context menu

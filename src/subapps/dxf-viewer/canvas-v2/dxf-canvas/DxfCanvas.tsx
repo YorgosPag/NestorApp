@@ -67,6 +67,11 @@ interface DxfCanvasProps {
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void; // ✅ ZOOM SYSTEM INTEGRATION
   onCanvasClick?: (point: Point2D) => void; // 🎯 DRAWING TOOLS: Click handler for entity drawing
   onContextMenu?: (e: React.MouseEvent) => void; // 🏢 ADR-053: Right-click context menu for drawing tools
+  // 🏢 ENTERPRISE (2026-02-13): Marquee selection support — forwarded to useCentralizedMouseHandlers
+  onLayerSelected?: (layerId: string, position: Point2D) => void;
+  onMultiLayerSelected?: (layerIds: string[]) => void;
+  onEntitiesSelected?: (entityIds: string[]) => void;
+  isGripDragging?: boolean;
 }
 
 export interface DxfCanvasRef {
@@ -96,6 +101,11 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   onWheelZoom,
   onCanvasClick, // 🎯 DRAWING TOOLS: Click handler
   onContextMenu, // 🏢 ADR-053: Right-click context menu for drawing tools
+  // 🏢 ENTERPRISE (2026-02-13): Marquee selection support — forwarded to useCentralizedMouseHandlers
+  onLayerSelected,
+  onMultiLayerSelected,
+  onEntitiesSelected,
+  isGripDragging = false,
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -177,6 +187,13 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     onMouseMove,
     onWheelZoom,
     onCanvasClick, // 🎯 DRAWING TOOLS: Pass click handler
+    // 🏢 ENTERPRISE (2026-02-13): Marquee selection props — enables AutoCAD-style Window/Crossing selection
+    colorLayers,
+    onLayerSelected,
+    onMultiLayerSelected,
+    onEntitiesSelected,
+    canvasRef: canvasRef,
+    isGripDragging,
     hitTestCallback: (scene, screenPos, transform, viewport) => {
       try {
         // ✅ ENTERPRISE MIGRATION: Get service from registry

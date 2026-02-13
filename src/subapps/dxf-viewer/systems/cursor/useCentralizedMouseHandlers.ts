@@ -78,6 +78,8 @@ interface CentralizedMouseHandlersProps {
   // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback for measurement/drawing tools
   // Called on every mouse move during drawing mode to update preview line
   onDrawingHover?: (worldPos: Point2D) => void;
+  // 🏢 ENTERPRISE (2026-02-13): Callback for marquee-selected DXF entities (separate from layers)
+  onEntitiesSelected?: (entityIds: string[]) => void;
 }
 
 /**
@@ -101,7 +103,8 @@ export function useCentralizedMouseHandlers({
   canvasRef,
   onCanvasClick,
   isGripDragging = false, // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
-  onDrawingHover // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
+  onDrawingHover, // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
+  onEntitiesSelected // 🏢 ENTERPRISE (2026-02-13): DXF entity marquee selection callback
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -532,7 +535,11 @@ export function useCentralizedMouseHandlers({
       const hasMultiCallback = !!onMultiLayerSelected;
       const hasSingleCallback = !!onLayerSelected;
 
-      if (marqueeSnap && colorLayers && colorLayers.length > 0 && (hasMultiCallback || hasSingleCallback)) {
+      // 🔧 FIX (2026-02-13): Removed `colorLayers.length > 0` guard — marquee must also work
+      // for DXF entities even when no overlays exist. The UniversalMarqueeSelector handles
+      // both entity and color layer selection independently.
+      const hasEntityCallback = !!onEntitiesSelected;
+      if (marqueeSnap && (hasMultiCallback || hasSingleCallback || hasEntityCallback)) {
         // 🏢 ENTERPRISE (2026-01-30): Use fresh rect from unified snapshot
         // 🏢 ADR-105: Use centralized fallback tolerance
         const selectionResult = UniversalMarqueeSelector.performSelection(
@@ -541,7 +548,8 @@ export function useCentralizedMouseHandlers({
           transform,
           marqueeSnap.rect,
           {
-            colorLayers: colorLayers,
+            colorLayers: colorLayers ?? [],
+            entities: scene?.entities ?? [],
             tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
             enableDebugLogs: false,
             // 🏢 ENTERPRISE: Don't use individual callbacks in selector - we handle it below
@@ -551,14 +559,26 @@ export function useCentralizedMouseHandlers({
         );
 
         if (selectionResult.selectedIds.length > 0) {
-          if (hasMultiCallback) {
-            // Preferred: Call multi-selection callback with all IDs at once
-            onMultiLayerSelected(selectionResult.selectedIds);
-          } else if (hasSingleCallback) {
-            // Fallback: Call single selection callback for each ID (legacy behavior)
-            selectionResult.selectedIds.forEach(layerId => {
-              onLayerSelected(layerId, cursor.position!);
-            });
+          const breakdown = selectionResult.breakdown;
+          // 🏢 ENTERPRISE (2026-02-13): Route entity IDs and layer IDs to separate callbacks
+          const layerAndOverlayIds = [
+            ...(breakdown?.layerIds ?? []),
+            ...(breakdown?.overlayIds ?? [])
+          ];
+          const entityIds = breakdown?.entityIds ?? [];
+
+          if (layerAndOverlayIds.length > 0) {
+            if (hasMultiCallback) {
+              onMultiLayerSelected(layerAndOverlayIds);
+            } else if (hasSingleCallback) {
+              layerAndOverlayIds.forEach(layerId => {
+                onLayerSelected(layerId, cursor.position!);
+              });
+            }
+          }
+
+          if (entityIds.length > 0 && hasEntityCallback) {
+            onEntitiesSelected(entityIds);
           }
         } else {
           // 🏢 ENTERPRISE (2026-01-25): Check if this was a "click" (small drag) vs actual marquee
