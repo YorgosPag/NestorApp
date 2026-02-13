@@ -95,33 +95,42 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 👥 CONTACT_RELATIONSHIPS COLLECTION - STRICT OWNERSHIP
+    // 👥 CONTACT_RELATIONSHIPS COLLECTION - AUTHENTICATED ACCESS
+    // =========================================================================
+    // 📅 Updated: 2026-02-13 — Fixed broken rules (sourceContactId ≠ auth.uid)
+    // 🔒 Pattern: Same as contact_links — authenticated + createdBy ownership
+    // ⚠️ Previous rules compared contact doc IDs to auth UIDs (always failed)
     // =========================================================================
     match /contact_relationships/{relationshipId} {
 
-      // 📖 READ: Μόνο authenticated users που είναι source ή target
-      allow read: if request.auth != null
-                  && (resource.data.sourceContactId == request.auth.uid
-                      || resource.data.targetContactId == request.auth.uid);
+      // 📖 READ: Any authenticated user (relationships are internal business data)
+      // App-level filtering handles which relationships a user sees
+      allow read: if isAuthenticated();
 
-      // ✍️ CREATE: Μόνο authenticated users για δικές τους relationships
-      allow create: if request.auth != null
-                    && isValidRelationshipData(request.resource.data)
-                    && (request.resource.data.sourceContactId == request.auth.uid
-                        || request.resource.data.targetContactId == request.auth.uid)
-                    && resource == null;
+      // ✍️ CREATE: Authenticated with required fields
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll(['sourceContactId', 'targetContactId', 'relationshipType', 'status'])
+                    && request.resource.data.sourceContactId is string
+                    && request.resource.data.targetContactId is string
+                    && request.resource.data.relationshipType is string
+                    && request.resource.data.status is string;
 
-      // 📝 UPDATE: Μόνο owners με system field protection
-      allow update: if request.auth != null
-                    && isValidRelationshipData(request.resource.data)
-                    && (resource.data.sourceContactId == request.auth.uid
-                        || resource.data.targetContactId == request.auth.uid)
-                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
+      // 📝 UPDATE: Creator or super admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isSuperAdminOnly()
+                         || resource.data.createdBy == 'system'
+                       );
 
-      // 🗑️ DELETE: Μόνο owners
-      allow delete: if request.auth != null
-                    && (resource.data.sourceContactId == request.auth.uid
-                        || resource.data.targetContactId == request.auth.uid);
+      // 🗑️ DELETE: Creator or super admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isSuperAdminOnly()
+                         || resource.data.createdBy == 'system'
+                       );
     }
 
     // =========================================================================
@@ -2480,11 +2489,12 @@ service cloud.firestore {
     }
 
     // Relationship Data Validation
+    // 📅 Updated: 2026-02-13 — Expanded to match all 30+ RelationshipType values
     function isValidRelationshipData(data) {
       return data.keys().hasAll(['sourceContactId', 'targetContactId', 'relationshipType', 'status'])
              && data.sourceContactId is string && data.sourceContactId.size() > 0
              && data.targetContactId is string && data.targetContactId.size() > 0
-             && data.relationshipType in ['employee', 'manager', 'partner', 'client', 'vendor']
+             && data.relationshipType is string && data.relationshipType.size() > 0
              && data.status in ['active', 'inactive', 'pending', 'deleted'];
     }
 
