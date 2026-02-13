@@ -105,8 +105,6 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // 🔧 FIX: Simplified — removed stale-closure retry logic that used relationships.length
   const handleGlobalRefresh = React.useCallback(async () => {
     try {
-      console.log('🔴 DIAG[REFRESH] handleGlobalRefresh called for contactId:', contactId);
-
       // Clear organization tree cache if it exists
       if (shouldShowTree && typeof window !== 'undefined' && window.localStorage) {
         const orgCacheKeys = Object.keys(window.localStorage).filter(key =>
@@ -120,10 +118,8 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         refreshRelationships(),
         shouldShowTree ? refreshTree() : Promise.resolve()
       ]);
-
-      console.log('🔴 DIAG[REFRESH] ✅ Global refresh completed');
     } catch (err) {
-      console.log('🔴 DIAG[REFRESH] ❌ Global refresh FAILED:', err);
+      logger.error('Global refresh failed:', { error: err });
     }
   }, [refreshRelationships, refreshTree, shouldShowTree, contactId]);
 

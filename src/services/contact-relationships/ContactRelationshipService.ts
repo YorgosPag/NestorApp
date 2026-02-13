@@ -151,15 +151,7 @@ export class ContactRelationshipService {
    * 🔗 Create New Relationship
    */
   static async createRelationship(data: Partial<ContactRelationship>): Promise<ContactRelationship> {
-    console.log('🔴 DIAG[SERVICE] createRelationship called:', {
-      source: data.sourceContactId,
-      target: data.targetContactId,
-      type: data.relationshipType
-    });
-
     const result = await RelationshipCRUDService.createRelationship(data);
-
-    console.log('🔴 DIAG[SERVICE] CRUD create returned. Invalidating caches...');
 
     // Invalidate caches for both contacts so next fetch returns fresh data
     if (data.sourceContactId) {
@@ -169,8 +161,6 @@ export class ContactRelationshipService {
       RelationshipCacheAdapter.invalidateContact(data.targetContactId);
     }
     RelationshipCacheAdapter.invalidatePattern('search:*');
-
-    console.log('🔴 DIAG[SERVICE] Caches invalidated. Returning result ID:', result.id);
     return result;
   }
 
@@ -247,16 +237,12 @@ export class ContactRelationshipService {
     if (!includeInactive) {
       const cached = RelationshipCacheAdapter.getCachedContactRelationships(contactId);
       if (cached) {
-        console.log('🔴 DIAG[SERVICE-GET] Cache HIT for', contactId, '→', cached.length, 'relationships');
         return cached;
       }
-      console.log('🔴 DIAG[SERVICE-GET] Cache MISS for', contactId, '→ fetching from DB');
     }
 
     // Fetch από database
     const relationships = await RelationshipCRUDService.getContactRelationships(contactId, includeInactive);
-
-    console.log('🔴 DIAG[SERVICE-GET] DB returned', relationships.length, 'relationships for', contactId);
 
     // Cache result
     if (!includeInactive) {

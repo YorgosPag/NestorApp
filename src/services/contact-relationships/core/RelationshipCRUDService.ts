@@ -13,7 +13,6 @@
 import {
   ContactRelationship,
   RelationshipType,
-  isEmploymentRelationship,
   isGovernmentRelationship
 } from '@/types/contacts/relationships';
 import { Contact } from '@/types/contacts';
@@ -190,28 +189,21 @@ export class RelationshipCRUDService {
     }
 
     // Update organizational hierarchy if employment relationship
-    logger.info('🔄 CRUD: Checking if organizational hierarchy update needed...');
+    // 🔧 FIX: Inline check instead of isEmploymentRelationship() to avoid
+    // "Maximum call stack size exceeded" in production bundles
+    const employmentTypes: RelationshipType[] = [
+      'employee', 'manager', 'director', 'executive',
+      'intern', 'contractor', 'civil_servant', 'department_head', 'ministry_official'
+    ];
+    const isEmployment = employmentTypes.includes(relationship.relationshipType);
 
-    try {
-      logger.info('🔍 CRUD: Checking isEmploymentRelationship for type:', relationship.relationshipType);
-      const isEmployment = isEmploymentRelationship(relationship);
-      logger.info('🔍 CRUD: isEmploymentRelationship result:', isEmployment);
-
-      if (isEmployment) {
-        logger.info('🔄 CRUD: Updating organizational hierarchy...');
-        try {
-          await this.updateOrganizationalHierarchy(relationship);
-          logger.info('✅ CRUD: Organizational hierarchy updated successfully');
-        } catch (hierarchyError) {
-          logger.error('❌ CRUD: Organizational hierarchy update failed:', hierarchyError);
-          // Don't fail the main operation - hierarchy updates are optional
-        }
-      } else {
-        logger.info('ℹ️ CRUD: No organizational hierarchy update needed');
+    if (isEmployment) {
+      try {
+        await this.updateOrganizationalHierarchy(relationship);
+        logger.info('✅ CRUD: Organizational hierarchy updated');
+      } catch (hierarchyError) {
+        logger.warn('⚠️ CRUD: Organizational hierarchy update failed (non-blocking):', { error: hierarchyError });
       }
-    } catch (checkError) {
-      logger.error('❌ CRUD: Error checking employment relationship:', checkError);
-      // Continue without failing - this is optional logic
     }
 
     logger.info('✅ CRUD: Relationship created successfully', relationship.id);

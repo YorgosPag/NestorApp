@@ -268,7 +268,8 @@
         "save": "Saving...",
         "add": "Add",
         "update": "Update"
-      }
+      },
+      "pendingReminder": "Click \"Add\" to save the relationship. It will also be saved automatically when you save the contact."
     },
     "card": {
       "editTitle": "Edit relationship",

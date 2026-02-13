@@ -87,9 +87,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
         RequestDeduplicator.invalidate(contactId);
       }
 
-      console.log('🔴 DIAG[12] PROVIDER.loadRelationships called:', { contactId, forceRefresh });
       const data = await RequestDeduplicator.get(contactId);
-      console.log('🔴 DIAG[13] PROVIDER got data:', { count: data.length, ids: data.map(r => r.id) });
 
       setRelationships(prevRelationships => {
         const prevIds = new Set(prevRelationships.map(rel => rel.id));
@@ -100,15 +98,13 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
 
         if (hasChanged || forceRefresh) {
           onRelationshipsChange?.(data);
-          console.log('🔴 DIAG[14] PROVIDER: State UPDATED with', data.length, 'relationships');
           return data;
         }
-        console.log('🔴 DIAG[14] PROVIDER: Data unchanged, skipping update');
         return prevRelationships;
       });
 
     } catch (err) {
-      console.log('🔴 DIAG[ERROR] PROVIDER.loadRelationships THREW:', err);
+      logger.error('loadRelationships failed:', { error: err });
       setError('Σφάλμα φόρτωσης σχέσεων επαφής');
       setRelationships([]);
     } finally {
@@ -201,11 +197,9 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
    * 🏗️ Load relationships when contactId changes
    */
   useEffect(() => {
-    console.log('🔴 DIAG[PROVIDER-MOUNT] useEffect fired, contactId:', contactId);
     if (contactId && contactId !== 'new-contact' && contactId.trim() !== '') {
       loadRelationships();
     } else {
-      console.log('🔴 DIAG[PROVIDER-MOUNT] Skipping load — contactId invalid:', contactId);
       setRelationships([]);
       setError(null);
       setExpandedRelationships(new Set());

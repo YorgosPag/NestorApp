@@ -198,12 +198,6 @@ export const useRelationshipForm = (
    * 💾 Submit form (create or update relationship)
    */
   const handleSubmit = useCallback(async (e?: React.FormEvent | React.MouseEvent) => {
-    console.log('🔴 DIAG[3] useRelationshipForm.handleSubmit CALLED', {
-      contactId,
-      targetContactId: formData.targetContactId,
-      relationshipType: formData.relationshipType
-    });
-
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -215,11 +209,8 @@ export const useRelationshipForm = (
       setSuccessMessage(null);
 
       // Validate form data
-      console.log('🔴 DIAG[4] Starting async validateFormData...');
       const validationError = await validateFormData();
-      console.log('🔴 DIAG[5] validateFormData result:', validationError || 'PASSED');
       if (validationError) {
-        console.log('🔴 DIAG[5b] Validation FAILED:', validationError);
         setError(validationError);
         return;
       }
@@ -258,21 +249,11 @@ export const useRelationshipForm = (
       } });
 
       // Create or update relationship
-      console.log('🔴 DIAG[6] Calling ContactRelationshipService.createRelationship with:', {
-        sourceContactId: relationshipData.sourceContactId,
-        targetContactId: relationshipData.targetContactId,
-        relationshipType: relationshipData.relationshipType,
-        isEdit: !!editingId
-      });
-
       if (editingId) {
         await ContactRelationshipService.updateRelationship(editingId, relationshipData);
       } else {
-        const result = await ContactRelationshipService.createRelationship(relationshipData);
-        console.log('🔴 DIAG[7] createRelationship SUCCESS! ID:', result.id);
+        await ContactRelationshipService.createRelationship(relationshipData);
       }
-
-      console.log('🔴 DIAG[8] Save completed successfully, resetting form...');
 
       // Reset form state
       resetForm();
@@ -298,21 +279,14 @@ export const useRelationshipForm = (
 
       // Call success callback to refresh data
       if (onSuccess) {
-        console.log('🔴 DIAG[9] Calling onSuccess (handleGlobalRefresh)...');
         try {
           await onSuccess();
-          console.log('🔴 DIAG[10] onSuccess completed successfully');
         } catch (callbackError) {
-          console.log('🔴 DIAG[10] onSuccess FAILED:', callbackError);
+          logger.error('onSuccess callback failed:', { error: callbackError });
         }
-      } else {
-        console.log('🔴 DIAG[9] NO onSuccess callback provided!');
       }
 
-      console.log('🔴 DIAG[11] Form submission completed! 🎉');
-
     } catch (err) {
-      console.log('🔴 DIAG[ERROR] Form submission THREW:', err);
 
       // Check if this is specifically a Firebase INDEX error (should not block the form)
       // IMPORTANT: Only match actual index errors — do NOT match generic FirebaseError
