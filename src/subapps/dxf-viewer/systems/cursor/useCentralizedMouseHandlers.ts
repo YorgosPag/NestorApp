@@ -482,15 +482,6 @@ export function useCentralizedMouseHandlers({
     // Also skip if we just finished panning (wasPanning check)
     const isLeftClick = e.button === 0;
 
-    // 🔍 DEBUG (2026-02-13): Trace overlay drawing
-    console.log('🖱️ [mouseUp] click check', {
-      hasOnCanvasClick: !!onCanvasClick,
-      isLeftClick,
-      isSelecting: cursor.isSelecting,
-      wasPanning,
-      willCallOnCanvasClick: !!onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning,
-    });
-
     if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning) {
       // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Pass WORLD coordinates directly to onCanvasClick
       // PROBLEM (ROOT CAUSE IDENTIFIED):

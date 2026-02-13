@@ -1060,15 +1060,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [activeTool, overlayMode, overlayStore]);
 
   const handleCanvasClick = (worldPoint: Point2D) => {
-    // 🔍 DEBUG (2026-02-13): Trace overlay drawing issue
-    console.log('🖱️ [handleCanvasClick] ENTRY', {
-      overlayMode,
-      activeTool,
-      viewportReady,
-      isSavingPolygon,
-      worldPoint: { x: worldPoint.x.toFixed(2), y: worldPoint.y.toFixed(2) },
-      draftPolygonLength: draftPolygon.length,
-    });
     // 🏢 ADR-046: ENTERPRISE FIX - onCanvasClick now receives WORLD coordinates directly!
     //
     // PROBLEM (ROOT CAUSE - 2026-01-27):
@@ -1247,18 +1238,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // 🔧 FIX (2026-02-13): Removed `activeTool !== 'select'` guard — when overlay draw mode
     // is activated via OverlayModeButtons, only overlayMode changes; activeTool stays 'select'.
     if (overlayMode === 'draw') {
-      console.log('📍 [handleCanvasClick] OVERLAY DRAW block entered!', { isSavingPolygon });
       if (isSavingPolygon) return;
 
       // 🏢 ADR-046: worldPoint is already in WORLD coordinates - use directly!
       const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
 
       // 🎯 SIMPLIFIED (2026-01-24): Just add points - user saves with toolbar button
-      setDraftPolygon(prev => {
-        const updated = [...prev, worldPointArray];
-        console.log('📍 [handleCanvasClick] draftPolygon updated:', { newPoint: worldPointArray, totalPoints: updated.length });
-        return updated;
-      });
+      setDraftPolygon(prev => [...prev, worldPointArray]);
       return;
     }
 

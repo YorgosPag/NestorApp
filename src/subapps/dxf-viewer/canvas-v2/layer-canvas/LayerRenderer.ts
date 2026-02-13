@@ -220,6 +220,11 @@ export class LayerRenderer {
     // 🏢 ENTERPRISE: Store grip settings for use in polygon rendering
     this.currentGripSettings = options.gripSettings ?? null;
 
+    // 🏢 ENTERPRISE FIX (2026-02-01): Use ACTUAL canvas dimensions, not stale viewport prop!
+    // 🔧 FIX (2026-02-13): Moved BEFORE first usage — was causing ReferenceError (TDZ)
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
+
     // 🏢 ENTERPRISE (2026-01-25): Store transform/viewport for real-time drag preview
     this.transform = transform;
     this.viewport = actualViewport;
@@ -228,10 +233,6 @@ export class LayerRenderer {
 
     // Clear canvas using unified utils
     CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
-
-    // 🏢 ENTERPRISE FIX (2026-02-01): Use ACTUAL canvas dimensions, not stale viewport prop!
-    const canvasRect = this.canvas.getBoundingClientRect();
-    const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
 
     // 🏢 ADR-102: Origin Marker is now rendered ONLY by DxfRenderer (single source of truth)
     // This eliminates alignment issues between two canvases trying to render the same marker

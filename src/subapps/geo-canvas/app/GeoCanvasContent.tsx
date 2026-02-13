@@ -32,6 +32,7 @@ import ErrorReportingDashboard from '@/components/development/ErrorReportingDash
 import { useAnalytics } from '@/services/AnalyticsBridge';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
+import { useIsMobile } from '@/hooks/useMobile';
 import {
   draggablePanelContainer,
   fixedSidebarPanel
@@ -43,7 +44,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw, Menu, SlidersHorizontal } from 'lucide-react';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate } from '../types';
 import { generateLayerId } from '@/services/enterprise-id.service';
@@ -84,11 +92,14 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const isMobile = useIsMobile();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const { user } = useUserRole();
   const { setUserType, isCitizen, isProfessional, isTechnical } = useUserType();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
   const [showAlertDashboard, setShowAlertDashboard] = useState(false);
+  const [mobileStatusOpen, setMobileStatusOpen] = useState(false);
+  const [mobileWorkspaceOpen, setMobileWorkspaceOpen] = useState(false);
 
   // ✅ NEW: Address Search Marker State
   const [searchMarker, setSearchMarker] = useState<{
@@ -601,6 +612,157 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  const hasFloorPlanResult = Boolean(floorPlanUpload.result && floorPlanUpload.result.success);
+
+  const roleWorkspacePanel = isCitizen
+    ? (
+      <CitizenDrawingInterface
+        mapRef={mapRef}
+        onPolygonComplete={(polygon) => {
+          console.log('🏘️ Citizen polygon completed:', polygon);
+          // TODO: Integrate με alert system
+        }}
+        onLocationSelected={handleLocationSelected}
+        onAdminBoundarySelected={handleAdminBoundarySelected}
+        boundaryLayers={boundaryLayers}
+        onLayerToggle={handleLayerToggle}
+        onLayerOpacityChange={handleLayerOpacityChange}
+        onLayerStyleChange={handleLayerStyleChange}
+        onLayerRemove={handleLayerRemove}
+        onAddNewBoundary={handleAddNewBoundary}
+      />
+    )
+    : isProfessional
+      ? (
+        <ProfessionalDrawingInterface
+          mapRef={mapRef}
+          onPolygonComplete={(polygon) => {
+            console.log('🏢 Professional polygon completed:', polygon);
+            // TODO: Integrate με alert system
+          }}
+          onFloorPlanUploaded={(floorPlan) => {
+            console.log('📁 Professional floor plan uploaded:', floorPlan);
+            // TODO: Integrate με georeferencing system
+          }}
+        />
+      )
+      : isTechnical
+        ? (
+          <TechnicalDrawingInterface
+            mapRef={mapRef}
+            onPolygonComplete={(polygon) => {
+              console.log('🛠️ Technical polygon completed:', polygon);
+              // TODO: Integrate με alert system και DXF precision system
+            }}
+          />
+        )
+        : null;
+
+  const systemStatusContent = (
+    <div className="space-y-6">
+      <section>
+        <h3 className="text-lg font-semibold mb-4 text-blue-400">
+          {t('sidebar.phaseProgress.title')}
+        </h3>
+        <div className="space-y-3">
+          <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
+            <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase1Title')}</div>
+            <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase1Description')}</div>
+          </div>
+          <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
+            <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase2Title')}</div>
+            <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase2Description')}</div>
+          </div>
+          <div className={`p-3 ${colors.bg.hover} rounded`}>
+            <div className="text-sm font-medium text-yellow-400">{t('sidebar.phaseProgress.phase3Title')}</div>
+            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase3Description')}</div>
+          </div>
+          <div className={`p-3 ${colors.bg.hover} rounded`}>
+            <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase4Title')}</div>
+            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase4Description')}</div>
+          </div>
+          <div className={`p-3 ${colors.bg.hover} rounded`}>
+            <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase5Title')}</div>
+            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase5Description')}</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-semibold mb-4 text-green-400">
+          {t('sidebar.availableFeatures.title')}
+        </h3>
+        <ul className="space-y-2 text-sm list-none">
+          <li className="flex items-center space-x-2">
+            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
+            <span>{t('sidebar.availableFeatures.controlPointManagement')}</span>
+          </li>
+          <li className="flex items-center space-x-2">
+            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
+            <span>{t('sidebar.availableFeatures.affineTransformation')}</span>
+          </li>
+          <li className="flex items-center space-x-2">
+            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
+            <span>{t('sidebar.availableFeatures.accuracyValidation')}</span>
+          </li>
+          <li className="flex items-center space-x-2">
+            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
+            <span>{t('sidebar.availableFeatures.spatialDistributionAnalysis')}</span>
+          </li>
+          <li className="flex items-center space-x-2">
+            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
+            <span>{t('sidebar.availableFeatures.rmsErrorCalculation')}</span>
+          </li>
+          <li className="flex items-center space-x-2">
+            <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
+            <span>{t('sidebar.availableFeatures.coordinateTransformation')}</span>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-semibold mb-4 text-blue-400">
+          {t('sidebar.technicalSpecs.title')}
+        </h3>
+        <dl className="space-y-2 text-sm text-gray-300">
+          <div className="flex justify-between">
+            <dt>{t('sidebar.technicalSpecs.transformation')}</dt>
+            <dd className="text-blue-300">{t('sidebar.technicalSpecs.transformationValue')}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>{t('sidebar.technicalSpecs.accuracy')}</dt>
+            <dd className="text-green-300">{t('sidebar.technicalSpecs.accuracyValue')}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>{t('sidebar.technicalSpecs.crsSupport')}</dt>
+            <dd className="text-purple-300">{t('sidebar.technicalSpecs.crsSupportValue')}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>{t('sidebar.technicalSpecs.mathEngine')}</dt>
+            <dd className="text-yellow-300">{t('sidebar.technicalSpecs.mathEngineValue')}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>{t('sidebar.technicalSpecs.standards')}</dt>
+            <dd className="text-blue-300">{t('sidebar.technicalSpecs.standardsValue')}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-semibold mb-4 text-yellow-400">
+          {t('sidebar.comingNext.title')}
+        </h3>
+        <div className="space-y-2 text-sm text-gray-300">
+          <div>{t('sidebar.comingNext.maplibreIntegration')}</div>
+          <div>{t('sidebar.comingNext.interactiveCoordinatePicking')}</div>
+          <div>{t('sidebar.comingNext.realtimeTransformationPreview')}</div>
+          <div>{t('sidebar.comingNext.multipleBasemapLayers')}</div>
+          <div>{t('sidebar.comingNext.visualAccuracyIndicators')}</div>
+        </div>
+      </section>
+    </div>
+  );
+
   // Show loading while translations are being loaded
   if (isLoading) {
     return (
@@ -616,8 +778,8 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     <PolygonSystemProvider initialRole="citizen">
       <div className={`w-full h-full flex flex-col ${colors.bg.secondary} text-white`}>
       {/* HEADER SECTION */}
-      <header className={`${colors.bg.primary} ${quick.separatorH} p-4`}>
-        <div className="flex items-center justify-between">
+      <header className={`${colors.bg.primary} ${quick.separatorH} p-3 sm:p-4`}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
               <Globe className={iconSizes.lg} />
@@ -628,7 +790,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             </p>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             {/* Phase 2.3: Alert Management Dashboard */}
             <button
               onClick={() => setShowAlertDashboard(!showAlertDashboard)}
@@ -658,13 +820,37 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       </header>
 
       {/* 🗺️ MAIN CONTENT AREA */}
-      <main className="flex-1 flex">
+      <main className="flex-1 flex min-h-0">
 
         {/* 🎯 CENTER AREA - Map/Canvas */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0">
           {/* 🔧 TOP TOOLBAR */}
-          <nav className={`${colors.bg.primary} ${quick.separatorH} p-3`} role="toolbar">
-            <ul className="flex items-center space-x-4 list-none">
+          <nav className={`${colors.bg.primary} ${quick.separatorH} p-2 sm:p-3`} role="toolbar">
+            <ul className="flex flex-wrap items-center gap-2 sm:gap-4 list-none">
+              {isMobile && activeView === 'georeferencing' && (
+                <>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setMobileWorkspaceOpen(true)}
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
+                    >
+                      <Menu className={iconSizes.sm} />
+                      Panels
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setMobileStatusOpen(true)}
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
+                    >
+                      <SlidersHorizontal className={iconSizes.sm} />
+                      Status
+                    </button>
+                  </li>
+                </>
+              )}
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.view')}</span>
                 <Select
@@ -675,7 +861,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[150px] sm:w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -689,7 +875,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.crs')}</span>
                 <Select defaultValue="epsg4326">
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[150px] sm:w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -707,7 +893,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             {activeView === 'foundation' && (
               /* Phase 1: Foundation Display */
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center max-w-4xl p-8 w-full">
+                <div className="text-center max-w-4xl p-4 sm:p-8 w-full">
                   <div className="flex justify-center mb-6">
                     <Globe className="w-32 h-32 text-blue-400" />
                   </div>
@@ -744,7 +930,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6 text-left">
+                  <div className="grid grid-cols-1 gap-6 text-left lg:grid-cols-2">
                     <div className={`${colors.bg.primary} p-6 rounded-lg`}>
                       <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
                         <CheckCircle className={iconSizes.md} />
@@ -837,7 +1023,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 )}
 
                 {/* 🎛️ FLOOR PLAN CONTROLS */}
-                {floorPlanUpload.result && floorPlanUpload.result.success && (
+                {hasFloorPlanResult && !isMobile && (
                   <div
                     style={canvasUtilities.geoInteractive.positioning.topRight}
                   >
@@ -852,7 +1038,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 )}
 
                 {/* CONTROL POINT PICKER (STEP 2.2) */}
-                {floorPlanUpload.result && floorPlanUpload.result.success && (isProfessional || isTechnical) && (
+                {hasFloorPlanResult && !isMobile && (isProfessional || isTechnical) && (
                   <div
                     style={draggablePanelContainer(
                       { x: 16, y: 16 },
@@ -864,8 +1050,8 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   </div>
                 )}
 
-                {/* 🏘️ CITIZEN DRAWING INTERFACE (Phase 2.2.2) */}
-                {isCitizen && (
+                {/* Role-specific drawing interface */}
+                {roleWorkspacePanel && !isMobile && (
                   <div
                     style={draggablePanelContainer(
                       { x: 16, y: 16 },
@@ -873,63 +1059,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                       350
                     )}
                   >
-                    <CitizenDrawingInterface
-                      mapRef={mapRef}
-                      onPolygonComplete={(polygon) => {
-                        console.log('🏘️ Citizen polygon completed:', polygon);
-                        // TODO: Integrate με alert system
-                      }}
-                      onLocationSelected={handleLocationSelected}
-                      onAdminBoundarySelected={handleAdminBoundarySelected}
-                      boundaryLayers={boundaryLayers}
-                      onLayerToggle={handleLayerToggle}
-                      onLayerOpacityChange={handleLayerOpacityChange}
-                      onLayerStyleChange={handleLayerStyleChange}
-                      onLayerRemove={handleLayerRemove}
-                      onAddNewBoundary={handleAddNewBoundary}
-                    />
-                  </div>
-                )}
-
-                {/* 🏢 PROFESSIONAL DRAWING INTERFACE (Phase 2.2.3) */}
-                {isProfessional && (
-                  <div
-                    style={draggablePanelContainer(
-                      { x: 16, y: 16 },
-                      false,
-                      350
-                    )}
-                  >
-                    <ProfessionalDrawingInterface
-                      mapRef={mapRef}
-                      onPolygonComplete={(polygon) => {
-                        console.log('🏢 Professional polygon completed:', polygon);
-                        // TODO: Integrate με alert system
-                      }}
-                      onFloorPlanUploaded={(floorPlan) => {
-                        console.log('📁 Professional floor plan uploaded:', floorPlan);
-                        // TODO: Integrate με georeferencing system
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* 🛠️ TECHNICAL DRAWING INTERFACE (Phase 2.2.4) */}
-                {isTechnical && (
-                  <div
-                    style={draggablePanelContainer(
-                      { x: 16, y: 16 },
-                      false,
-                      350
-                    )}
-                  >
-                    <TechnicalDrawingInterface
-                      mapRef={mapRef}
-                      onPolygonComplete={(polygon) => {
-                        console.log('🛠️ Technical polygon completed:', polygon);
-                        // TODO: Integrate με alert system και DXF precision system
-                      }}
-                    />
+                    {roleWorkspacePanel}
                   </div>
                 )}
               </div>
@@ -938,136 +1068,83 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         </div>
 
         {/* RIGHT SIDEBAR - System Status */}
-        <aside className={`w-80 ${colors.bg.primary} ${quick.separatorV} p-4`}>
-          <div className="space-y-6">
-            {/* Phase Progress */}
-            <section>
-              <h3 className="text-lg font-semibold mb-4 text-blue-400">
-                {t('sidebar.phaseProgress.title')}
-              </h3>
-              <div className="space-y-3">
-                <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
-                  <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase1Title')}</div>
-                  <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase1Description')}</div>
-                </div>
-                <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
-                  <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase2Title')}</div>
-                  <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase2Description')}</div>
-                </div>
-                <div className={`p-3 ${colors.bg.hover} rounded`}>
-                  <div className="text-sm font-medium text-yellow-400">{t('sidebar.phaseProgress.phase3Title')}</div>
-                  <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase3Description')}</div>
-                </div>
-                <div className={`p-3 ${colors.bg.hover} rounded`}>
-                  <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase4Title')}</div>
-                  <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase4Description')}</div>
-                </div>
-                <div className={`p-3 ${colors.bg.hover} rounded`}>
-                  <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase5Title')}</div>
-                  <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase5Description')}</div>
-                </div>
-              </div>
-            </section>
-
-            {/* Current Features */}
-            <section>
-              <h3 className="text-lg font-semibold mb-4 text-green-400">
-                {t('sidebar.availableFeatures.title')}
-              </h3>
-              <ul className="space-y-2 text-sm list-none">
-                <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-                  <span>{t('sidebar.availableFeatures.controlPointManagement')}</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-                  <span>{t('sidebar.availableFeatures.affineTransformation')}</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-                  <span>{t('sidebar.availableFeatures.accuracyValidation')}</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-                  <span>{t('sidebar.availableFeatures.spatialDistributionAnalysis')}</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-                  <span>{t('sidebar.availableFeatures.rmsErrorCalculation')}</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true" />
-                  <span>{t('sidebar.availableFeatures.coordinateTransformation')}</span>
-                </li>
-              </ul>
-            </section>
-
-            {/* Technical Specs */}
-            <section>
-              <h3 className="text-lg font-semibold mb-4 text-blue-400">
-                {t('sidebar.technicalSpecs.title')}
-              </h3>
-              <dl className="space-y-2 text-sm text-gray-300">
-                <div className="flex justify-between">
-                  <dt>{t('sidebar.technicalSpecs.transformation')}</dt>
-                  <dd className="text-blue-300">{t('sidebar.technicalSpecs.transformationValue')}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t('sidebar.technicalSpecs.accuracy')}</dt>
-                  <dd className="text-green-300">{t('sidebar.technicalSpecs.accuracyValue')}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t('sidebar.technicalSpecs.crsSupport')}</dt>
-                  <dd className="text-purple-300">{t('sidebar.technicalSpecs.crsSupportValue')}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t('sidebar.technicalSpecs.mathEngine')}</dt>
-                  <dd className="text-yellow-300">{t('sidebar.technicalSpecs.mathEngineValue')}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>{t('sidebar.technicalSpecs.standards')}</dt>
-                  <dd className="text-blue-300">{t('sidebar.technicalSpecs.standardsValue')}</dd>
-                </div>
-              </dl>
-            </section>
-
-            {/* Next Steps */}
-            <section>
-              <h3 className="text-lg font-semibold mb-4 text-yellow-400">
-                {t('sidebar.comingNext.title')}
-              </h3>
-              <div className="space-y-2 text-sm text-gray-300">
-                <div>{t('sidebar.comingNext.maplibreIntegration')}</div>
-                <div>{t('sidebar.comingNext.interactiveCoordinatePicking')}</div>
-                <div>{t('sidebar.comingNext.realtimeTransformationPreview')}</div>
-                <div>{t('sidebar.comingNext.multipleBasemapLayers')}</div>
-                <div>{t('sidebar.comingNext.visualAccuracyIndicators')}</div>
-              </div>
-            </section>
-          </div>
-        </aside>
+        {!isMobile && (
+          <aside className={`w-80 ${colors.bg.primary} ${quick.separatorV} p-4`}>
+            {systemStatusContent}
+          </aside>
+        )}
       </main>
 
       {/* 📋 FOOTER STATUS */}
-      <footer className={`${colors.bg.primary} ${quick.separatorH} p-3`}>
-        <nav className="flex items-center justify-between text-sm">
-          <ul className="flex items-center space-x-4 list-none">
-            <li className="text-green-400">● {t('footer.status.active')}</li>
-            <li className="text-green-400">{t('footer.status.phase2DxfTransformation')}</li>
-            <li className="text-blue-400">{t('footer.status.georeferencingReady')}</li>
-          </ul>
+      {!isMobile && (
+        <footer className={`${colors.bg.primary} ${quick.separatorH} p-3`}>
+          <nav className="flex items-center justify-between text-sm">
+            <ul className="flex flex-wrap items-center gap-2 sm:gap-4 list-none">
+              <li className="text-green-400">● {t('footer.status.active')}</li>
+              <li className="text-green-400">{t('footer.status.phase2DxfTransformation')}</li>
+              <li className="text-blue-400">{t('footer.status.georeferencingReady')}</li>
+            </ul>
 
-          <section className="flex items-center space-x-4">
-            <span className="text-gray-400">
-              {t('sidebar.technicalSpecs.standardsValue')} | OGC Standards | {t('sidebar.technicalSpecs.mathEngineValue')}
-            </span>
-            <span className="text-blue-400 flex items-center gap-2">
-              <Globe className={iconSizes.sm} />
-              Pagonis-Nestor Geo-Canvas v2.0
-            </span>
-          </section>
-        </nav>
-      </footer>
+            <section className="flex items-center space-x-4">
+              <span className="text-gray-400">
+                {t('sidebar.technicalSpecs.standardsValue')} | OGC Standards | {t('sidebar.technicalSpecs.mathEngineValue')}
+              </span>
+              <span className="text-blue-400 flex items-center gap-2">
+                <Globe className={iconSizes.sm} />
+                Pagonis-Nestor Geo-Canvas v2.0
+              </span>
+            </section>
+          </nav>
+        </footer>
+      )}
+
+      {isMobile && activeView === 'georeferencing' && (
+        <>
+          <Sheet open={mobileWorkspaceOpen} onOpenChange={setMobileWorkspaceOpen}>
+            <SheetContent side="bottom" className="h-[78vh] p-0" aria-label="GeoCanvas Workspace Panels">
+              <SheetHeader className="p-4 pb-0">
+                <SheetTitle>GeoCanvas Panels</SheetTitle>
+                <SheetDescription>Touch-friendly access to tools and drawing panels.</SheetDescription>
+              </SheetHeader>
+              <div className="h-[calc(78vh-64px)] overflow-y-auto p-4 space-y-4">
+                {hasFloorPlanResult && (
+                  <section className={`p-3 rounded-lg ${colors.bg.primary} ${quick.card}`}>
+                    <FloorPlanControls
+                      visible={floorPlanVisible}
+                      opacity={floorPlanOpacity}
+                      fileName={floorPlanUpload.file?.name}
+                      onVisibilityChange={setFloorPlanVisible}
+                      onOpacityChange={setFloorPlanOpacity}
+                    />
+                  </section>
+                )}
+                {hasFloorPlanResult && (isProfessional || isTechnical) && (
+                  <section className={`p-3 rounded-lg ${colors.bg.primary} ${quick.card}`}>
+                    <FloorPlanControlPointPicker controlPoints={controlPoints} />
+                  </section>
+                )}
+                {roleWorkspacePanel && (
+                  <section className={`p-3 rounded-lg ${colors.bg.primary} ${quick.card}`}>
+                    {roleWorkspacePanel}
+                  </section>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Sheet open={mobileStatusOpen} onOpenChange={setMobileStatusOpen}>
+            <SheetContent side="bottom" className="h-[78vh] p-0" aria-label="GeoCanvas Status">
+              <SheetHeader className="p-4 pb-0">
+                <SheetTitle>System Status</SheetTitle>
+                <SheetDescription>Operational and technical status for GeoCanvas.</SheetDescription>
+              </SheetHeader>
+              <div className="h-[calc(78vh-64px)] overflow-y-auto p-4">
+                {systemStatusContent}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
 
       {/* 📁 FLOOR PLAN UPLOAD MODAL */}
       <FloorPlanUploadModal
@@ -1080,7 +1157,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       />
 
       {/* 🚨 ALERT MANAGEMENT DASHBOARD (Phase 2.3) */}
-      {showAlertDashboard && (
+      {showAlertDashboard && !isMobile && (
         <div
           style={fixedSidebarPanel('right', '480px')}
         >
