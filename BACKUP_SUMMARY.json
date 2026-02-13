@@ -1,54 +1,47 @@
 {
-  "category": "FIX",
-  "shortDescription": "DXF Viewer Audit Fixes — CRITICAL auth bypass + HIGH duplicate provider + MEDIUM constants + LOW cleanup",
-  "problem": "OpenAI audit report εντόπισε ευρήματα σε 4 επίπεδα σοβαρότητας στο DXF Viewer: auth bypass σε dev mode, duplicate CanvasProvider, hardcoded z-index/px τιμές, unconditional console.log, orphaned legacy files",
-  "cause": "Security oversight (dev bypass), code accumulation over time (dead code, hardcoded values, legacy files)",
+  "category": "FEATURE",
+  "shortDescription": "ADR-176: DXF Viewer Mobile Responsive Refactoring — 4 Phases Complete",
+  "problem": "Το DXF Viewer ήταν αποκλειστικά desktop-oriented: σταθερό sidebar 384px, toolbar flex-wrap χωρίς overflow, floating panels με absolute positioning, mouse-only drag. Σε mobile (375px) το UI βγαίνει εκτός οθόνης.",
+  "cause": "Δεν είχε σχεδιαστεί responsive layout — όλα τα components είχαν fixed widths και mouse-only interactions.",
   "filesChanged": [
-    "src/app/dxf/viewer/page.tsx (CRITICAL: removed dev auth bypass)",
-    "src/subapps/dxf-viewer/DxfViewerApp.tsx (HIGH: removed duplicate CanvasProvider + guarded LevelsSystem Firestore)",
-    "src/subapps/dxf-viewer/ui/color/EnterpriseColorDialog.tsx (MEDIUM: MODAL_Z_INDEX + Tailwind classes)",
-    "src/subapps/dxf-viewer/components/shared/BaseModal.tsx (MEDIUM: removed mock portalComponents)",
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx (MEDIUM: COORDINATE_LAYOUT constant)",
-    "src/subapps/dxf-viewer/app/DxfViewerContent.tsx (MEDIUM: 6 console.log → dlog)",
-    "src/subapps/dxf-viewer/config/modal-select-old.ts (DELETED)",
-    "src/subapps/dxf-viewer/afairesh_DXFcanvasRefactored.txt (DELETED)",
-    "docs/centralized-systems/reference/adrs/ADR-172-pre-production-audit-remediation.md (Phase 3 added)",
-    "docs/centralized-systems/reference/adrs/ADR-002-enterprise-z-index-hierarchy.md (DXF exception documented)",
-    "docs/centralized-systems/reference/adrs/ADR-020-centralized-auth-module.md (auth bypass fix logged)",
-    "docs/centralized-systems/reference/adrs/ADR-036-enterprise-structured-logging.md (DXF dlog system documented)"
+    "docs/centralized-systems/reference/adrs/ADR-176-dxf-viewer-mobile-responsive.md",
+    "docs/centralized-systems/reference/adr-index.md",
+    "src/constants/layout.ts",
+    "src/components/contacts/dynamic/hooks/useResponsiveLayout.ts",
+    "src/app/dxf/viewer/layout.tsx",
+    "src/subapps/dxf-viewer/layout/MobileSidebarDrawer.tsx",
+    "src/subapps/dxf-viewer/layout/MobilePanelManager.tsx",
+    "src/subapps/dxf-viewer/layout/SidebarSection.tsx",
+    "src/subapps/dxf-viewer/layout/FloatingPanelsSection.tsx",
+    "src/subapps/dxf-viewer/layout/MainContentSection.tsx",
+    "src/subapps/dxf-viewer/ui/toolbar/toolbar-responsive-config.ts",
+    "src/subapps/dxf-viewer/ui/toolbar/MobileToolbarLayout.tsx",
+    "src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx",
+    "src/subapps/dxf-viewer/ui/toolbar/ToolbarStatusBar.tsx",
+    "src/subapps/dxf-viewer/ui/toolbar/types.ts",
+    "src/subapps/dxf-viewer/config/panel-tokens.ts",
+    "src/subapps/dxf-viewer/app/DxfViewerContent.tsx",
+    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx",
+    "src/subapps/dxf-viewer/components/dxf-layout/ToolbarSection.tsx",
+    "src/subapps/dxf-viewer/integration/types.ts",
+    "src/subapps/dxf-viewer/hooks/gestures/usePinchZoom.ts",
+    "src/subapps/dxf-viewer/hooks/gestures/useTouchPan.ts",
+    "src/subapps/dxf-viewer/hooks/gestures/useLongPress.ts",
+    "src/hooks/useDraggable.ts"
   ],
-  "solution": {
-    "phase1_critical": "Removed NODE_ENV === 'development' bypass in AdminGuard — useUserRole() works in both environments",
-    "phase2_high": "Removed dead-code CanvasProvider from DxfViewerApp (DxfViewerContent has the real one). Guarded LevelsSystem enableFirestore to production-only",
-    "phase3_medium_constants": "EnterpriseColorDialog: hardcoded z-index → MODAL_Z_INDEX, inline pointerEvents/isolation → Tailwind. BaseModal: removed mock portalComponents → direct zIndex. CanvasSection: ?? 30 → COORDINATE_LAYOUT.RULER_TOP_HEIGHT",
-    "phase4_medium_logging": "6 console.log in DxfViewerContent.tsx → dlog('DxfViewerContent', ...) via UnifiedDebugManager",
-    "phase5_low": "git rm 2 orphaned legacy files (modal-select-old.ts, afairesh_DXFcanvasRefactored.txt)"
-  },
-  "testing": {
-    "typescript": "npx tsc --noEmit: 1 pre-existing error (buildingMappings.ts — unrelated), 0 new errors",
-    "preCommit": "All 5 commits passed pre-commit checks",
-    "deployment": "Pushed to Vercel: 5e14e3bd, dcaf00b7, 8b8be51c, 0919b259, cdb464f1"
-  },
-  "notes": [
-    "8 files modified, 2 files deleted, 4 ADRs updated",
-    "CRITICAL: Dev auth bypass could expose DXF viewer to non-admin users",
-    "CentralizedAutoSaveStatus Tailwind migration deferred (297-line style file — separate PR)",
-    "TypeScript 'errors' from audit report (isLlc, calculateEPETax) were stale — code compiles fine",
-    "Zero any, zero as any, zero @ts-ignore"
-  ],
+  "solution": "Υλοποίηση 4-phase responsive refactoring: Phase 1 (layout shell: sidebar drawer + compact toolbar + responsive hook), Phase 2 (touch gestures: pinch-zoom + touch pan + pointer events migration), Phase 3 (panel clamping + mobile tool config + long press), Phase 4 (ARIA roles + viewport meta + iOS safe areas). Desktop παραμένει αμετάβλητο.",
+  "testing": "npx tsc --noEmit → 0 errors. Desktop path unchanged (all changes behind layoutMode conditions).",
+  "notes": "Mobile = view + navigate only. Drawing/measure tools disabled σε mobile λόγω precision requirements. 9 νέα αρχεία, 15 τροποποιημένα, 1245 lines added.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
     "sessionDate": "2026-02-12"
   },
-  "relatedBackups": [
-    "backup-2026-02-10-pre-production-audit-phase2"
-  ],
+  "relatedBackups": [],
   "commits": [
-    { "hash": "5e14e3bd", "message": "fix: remove development auth bypass in DXF viewer" },
-    { "hash": "dcaf00b7", "message": "fix: remove duplicate CanvasProvider + guard LevelsSystem Firestore" },
-    { "hash": "8b8be51c", "message": "fix: replace hardcoded z-index/px values with centralized constants" },
-    { "hash": "0919b259", "message": "fix: replace console.log with centralized dlog debug system" },
-    { "hash": "cdb464f1", "message": "docs: update ADR-172, ADR-002, ADR-020, ADR-036 for DXF viewer audit fixes" }
+    {
+      "hash": "597a6ff8",
+      "message": "feat(ADR-176): DXF Viewer mobile responsive refactoring — all 4 phases"
+    }
   ]
 }
