@@ -13,7 +13,7 @@ import type { Contact, IndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes'; // 🏢 ENTERPRISE: Type-safe form data
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
-// 🏢 ENTERPRISE: Type guard for contacts with multiple photo URLs
+// 🏢 ENTERPRISE: Type guard for contacts with multiple photo URLs (used for gallery preview only)
 const getMultiplePhotoURLs = (contact: Contact): string[] => {
   if ('multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs)) {
     return (contact as IndividualContact).multiplePhotoURLs || [];
@@ -122,25 +122,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       formData = { ...formData, photoURL: savedPhotoURLs.photoURL, photoPreview: savedPhotoURLs.photoURL };
     }
 
-    // Additional multiplePhotoURLs conversion for backward compatibility
-    const multiplePhotoURLs = getMultiplePhotoURLs(contact);
-    if (multiplePhotoURLs.length > 0) {
-      const multiplePhotos = multiplePhotoURLs.map((url: string) => ({
-        file: null,
-        preview: undefined,
-        uploadUrl: url,
-        fileName: undefined,
-        isUploading: false,
-        uploadProgress: 0,
-        error: undefined
-      }));
-
-      return {
-        ...formData,
-        multiplePhotos: [...(formData.multiplePhotos || []), ...multiplePhotos]
-      };
-    }
-
+    // 🔧 FIX: multiplePhotoURLs → multiplePhotos conversion is now handled
+    // exclusively by individualMapper.ts (ADR-054). The previous code here
+    // concatenated the SAME photos again, causing duplicates in the UI.
+    // See: src/utils/contactForm/fieldMappers/individualMapper.ts (lines 43-81)
     return formData;
   }, [contact, savedPhotoURLs]);
 
