@@ -1827,8 +1827,10 @@ export const photoPreviewComponents = {
 
 export const photoPreviewLayout = {
   dialog: {
-    mobile: 'fixed inset-x-0 top-[env(safe-area-inset-top)] bottom-[env(safe-area-inset-bottom)] max-w-none w-screen rounded-none border-0 h-[calc(100vh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] pb-[max(env(safe-area-inset-bottom),5rem)]',
-    desktop: 'fixed inset-0 max-w-none w-screen h-screen rounded-none border-0'
+    // 🔧 FIX: Override DialogContent's default translate-x-[-50%] translate-y-[-50%] centering
+    // and its slide-in/out animations — fullscreen dialogs position via inset-0 instead.
+    mobile: 'fixed inset-x-0 top-[env(safe-area-inset-top)] bottom-[env(safe-area-inset-bottom)] max-w-none w-screen rounded-none border-0 h-[calc(100vh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] pb-[max(env(safe-area-inset-bottom),5rem)] !translate-x-0 !translate-y-0 !left-0 !top-auto !slide-in-from-left-0 !slide-in-from-top-0',
+    desktop: 'fixed inset-0 max-w-none w-screen h-screen rounded-none border-0 !translate-x-0 !translate-y-0 !left-0 !top-0'
   },
   image: {
     base: 'max-w-full max-h-full object-contain'
