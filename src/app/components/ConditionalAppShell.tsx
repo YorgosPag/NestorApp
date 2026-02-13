@@ -48,6 +48,7 @@ import { WebSocketProvider } from '@/contexts/WebSocketContext';
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { VoiceAIPanel } from '@/components/voice-ai/VoiceAIPanel';
 import { ToasterClient } from '@/components/ToasterClient';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 // 🚀 ENTERPRISE: Route prefetching system (SAP/Salesforce/Google pattern)
 import { preloadUserRoutes } from '@/utils/preloadRoutes';
@@ -141,17 +142,19 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               <SharedPropertiesProvider>
                 <NavigationProvider>
                   <PhotoPreviewProvider>
-                    <SidebarProvider>
-                      <div className={layout.shellAppContainer}>
-                        <AppSidebar />
-                        <SidebarInset className={layout.shellAppContent}>
-                          <AppHeader />
-                          <MainContentBridge>
-                            {children}
-                          </MainContentBridge>
-                        </SidebarInset>
-                      </div>
-                    </SidebarProvider>
+                    <TooltipProvider delayDuration={300}>
+                      <SidebarProvider>
+                        <div className={layout.shellAppContainer}>
+                          <AppSidebar />
+                          <SidebarInset className={layout.shellAppContent}>
+                            <AppHeader />
+                            <MainContentBridge>
+                              {children}
+                            </MainContentBridge>
+                          </SidebarInset>
+                        </div>
+                      </SidebarProvider>
+                    </TooltipProvider>
                   </PhotoPreviewProvider>
                 </NavigationProvider>
 
