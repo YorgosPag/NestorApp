@@ -590,6 +590,12 @@
       "contact": {
         "title": "Contact Information"
       },
+      "address": {
+        "title": "Address"
+      },
+      "communication": {
+        "title": "Communication"
+      },
       "services": {
         "title": "Responsibilities & Services"
       },

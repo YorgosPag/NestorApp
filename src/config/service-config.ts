@@ -15,8 +15,7 @@ import {
 import {
   SERVICE_ADMINISTRATIVE_INFO_LABELS,
   SERVICE_RESPONSIBILITIES_LABELS,
-  ADDRESS_INFO_FIELD_LABELS,
-  COMPANY_CONTACT_INFO_LABELS
+  ADDRESS_INFO_FIELD_LABELS
 } from '../constants/property-statuses-enterprise';
 //
 // Κεντρικοποιημένη διαμόρφωση για δημόσιες υπηρεσίες με tab layout
@@ -143,13 +142,14 @@ const administrativeSection: ServiceSectionConfig = {
 };
 
 /**
- * Στοιχεία Επικοινωνίας
+ * Διεύθυνση Υπηρεσίας
+ * Ξεχωριστό tab — ομοιόμορφο με individual/company address tabs
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
-const contactSection: ServiceSectionConfig = {
-  id: 'contact',
-  title: 'contacts.service.sections.contact.title',
-  icon: 'phone',
+const addressSection: ServiceSectionConfig = {
+  id: 'address',
+  title: 'contacts.service.sections.address.title',
+  icon: 'map-pin',
   fields: [
     {
       id: 'street',
@@ -183,27 +183,25 @@ const contactSection: ServiceSectionConfig = {
       maxLength: 5,
       required: true,
       helpText: 'contacts.common.fields.postalCode.helpText'
-    },
+    }
+  ]
+};
+
+/**
+ * Επικοινωνία (Dynamic arrays — phones, emails, websites, social media)
+ * Ξεχωριστό tab — ομοιόμορφο με individual/company communication tabs
+ * Custom renderer: DynamicContactArrays μέσω UnifiedContactTabbedSection
+ */
+const communicationSection: ServiceSectionConfig = {
+  id: 'communication',
+  title: 'contacts.service.sections.communication.title',
+  icon: 'smartphone',
+  fields: [
     {
-      id: 'phone',
-      type: 'tel',
-      label: COMPANY_CONTACT_INFO_LABELS.PHONE_CENTRAL,
-      placeholder: '2101234567',
-      helpText: 'contacts.service.fields.phone.helpText'
-    },
-    {
-      id: 'email',
-      type: 'email',
-      label: COMPANY_CONTACT_INFO_LABELS.EMAIL_CONTACT,
-      placeholder: 'info@service.gov.gr',
-      helpText: 'contacts.service.fields.email.helpText'
-    },
-    {
-      id: 'website',
-      type: 'url',
-      label: COMPANY_CONTACT_INFO_LABELS.WEBSITE,
-      placeholder: 'https://www.service.gov.gr',
-      helpText: 'contacts.service.fields.website.helpText'
+      id: 'communication',
+      type: 'input',
+      label: 'contacts.fields.communication'
+      // Dummy field — triggers DynamicContactArrays custom renderer
     }
   ]
 };
@@ -299,7 +297,8 @@ const bankingSection: ServiceSectionConfig = {
 export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   basicInfoSection,
   administrativeSection,
-  contactSection,
+  addressSection,
+  communicationSection,
   servicesSection,
   logoSection,
   relationshipsSection,
