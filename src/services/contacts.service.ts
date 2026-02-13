@@ -426,8 +426,12 @@ export class ContactsService {
       await this.updateContact(id, enterpriseData);
 
     } catch (error) {
-      logger.error('ENTERPRISE UPDATE: Failed to update contact', { error });
-      throw new Error('Failed to update contact');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('ENTERPRISE UPDATE: Failed to update contact', {
+        errorMessage,
+        contactId: id,
+      });
+      throw new Error(`Failed to update contact: ${errorMessage}`);
     }
   }
 
@@ -482,9 +486,16 @@ export class ContactsService {
 
       // 🛡️ ENTERPRISE: Remove UI-only fields that must NOT reach Firestore
       // File objects, preview blobs, and form-only UI state
+      // ΚΡΙΣΙΜΟ: multiplePhotos περιέχει File/Blob objects → Firestore τα ΑΠΟΡΡΙΠΤΕΙ
       const uiOnlyFields = [
         'logoFile', 'logoPreview', 'photoFile', 'photoPreview',
         'selectedProfilePhotoIndex', 'socialMediaArray',
+        'multiplePhotos',           // PhotoSlot[] με File objects — ΟΧΙ serializable
+        '_isLogoUploading',         // UI state tracking
+        '_isPhotoUploading',        // UI state tracking
+        '_forceDeleteLogo',         // UI state tracking
+        'activePersonaTab',         // UI tab state
+        'photoFileName',            // UI display name, δεν αποθηκεύεται
       ] as const;
       for (const field of uiOnlyFields) {
         delete udRecord[field];
@@ -517,8 +528,15 @@ export class ContactsService {
       });
 
     } catch (error) {
-      logger.error('CONTACTS SERVICE: Update failed', { error });
-      throw new Error('Failed to update contact');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorCode = (error as { code?: string })?.code ?? 'unknown';
+      logger.error('CONTACTS SERVICE: Update failed', {
+        errorMessage,
+        errorCode,
+        contactId: id,
+        fieldCount: Object.keys(updates).length,
+      });
+      throw new Error(`Failed to update contact: ${errorMessage}`);
     }
   }
 

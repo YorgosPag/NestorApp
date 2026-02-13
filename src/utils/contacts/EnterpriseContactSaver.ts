@@ -133,6 +133,7 @@ export class EnterpriseContactSaver {
     // Note: This removes from payload only. Service layer handles deleteField() for updates
     // ========================================================================
 
+    // 🧹 Remove flat address/contact fields (migrated to arrays)
     delete enterpriseData.street;
     delete enterpriseData.streetNumber;
     delete enterpriseData.city;
@@ -140,6 +141,18 @@ export class EnterpriseContactSaver {
     delete enterpriseData.website;
     delete enterpriseData.email;
     delete enterpriseData.phone;
+
+    // 🛡️ ENTERPRISE: Remove UI-only fields with non-serializable objects
+    // ΚΡΙΣΙΜΟ: multiplePhotos περιέχει File objects → Firestore ΑΠΟΡΡΙΠΤΕΙ
+    const uiFields = [
+      'multiplePhotos', 'photoFile', 'photoPreview', 'logoFile', 'logoPreview',
+      'selectedProfilePhotoIndex', 'socialMediaArray',
+      '_isLogoUploading', '_isPhotoUploading', '_forceDeleteLogo',
+      'activePersonaTab', 'photoFileName',
+    ] as const;
+    for (const field of uiFields) {
+      delete (enterpriseData as Record<string, unknown>)[field];
+    }
 
     logger.info('ENTERPRISE SAVER: Conversion complete');
     return enterpriseData as EnterpriseContactData;
