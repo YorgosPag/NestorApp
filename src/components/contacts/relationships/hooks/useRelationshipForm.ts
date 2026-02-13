@@ -304,10 +304,10 @@ export const useRelationshipForm = (
     } catch (err) {
       logger.error('Form submission error:', { error: err });
 
-      // Check if this is a Firebase index error (should not block the form)
+      // Check if this is specifically a Firebase INDEX error (should not block the form)
+      // IMPORTANT: Only match actual index errors — do NOT match generic FirebaseError
       const isFirebaseIndexError = err instanceof Error && (
         err.message.includes('query requires an index') ||
-        err.message.includes('FirebaseError') ||
         err.message.includes('failed-precondition')
       );
 
