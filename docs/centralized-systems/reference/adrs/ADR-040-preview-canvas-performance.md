@@ -71,6 +71,24 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-02-13: FIX - Canvas entity compression on F12 (DevTools resize)
+
+**Bug**: Όταν ο χρήστης πατούσε F12 για DevTools (ή resize browser), οι οντότητες (γραμμές, ορθογώνια, κύκλοι) **συμπιέζονταν/παραμορφώνονταν** αντί να αναπαράγονται σωστά.
+
+**Root Cause**: Και οι δύο renderers (DxfRenderer, LayerRenderer) υπολόγιζαν `actualViewport` μέσω `getBoundingClientRect()` αλλά **δεν το χρησιμοποιούσαν** για entity rendering — πέρναγαν το stale `viewport` prop (React state) στο `CoordinateTransforms.worldToScreen()`, με αποτέλεσμα λάθος Y-axis inversion.
+
+**Fix** — 5 αλλαγές `viewport` → `actualViewport`:
+
+| File | Line | Context |
+|------|------|---------|
+| `DxfRenderer.ts` | 101 | `renderEntityUnified()` call |
+| `DxfRenderer.ts` | 105 | `renderSelectionHighlights()` call |
+| `LayerRenderer.ts` | 225 | `this.viewport` instance storage |
+| `LayerRenderer.ts` | 248 | `renderUnified()` call |
+| `LayerRenderer.ts` | 252 | `renderLegacy()` call |
+
+**Pattern**: AutoCAD/Figma — Κατά τη μέθοδο render, πάντα χρήση **fresh DOM dimensions** (`getBoundingClientRect()`), ποτέ stale React state/props.
+
 ### 2026-02-13: CRITICAL FIX - Preview disappears during mouse movement
 
 **Bug**: Η δυναμική γραμμή (rubber-band) εξαφανιζόταν κατά τη μετακίνηση του σταυρονήματος και εμφανιζόταν μόνο όταν ο χρήστης σταματούσε.

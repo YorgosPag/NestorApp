@@ -98,11 +98,11 @@ export class DxfRenderer {
     // Render all entities
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
-      this.renderEntityUnified(entity, transform, viewport, options);
+      this.renderEntityUnified(entity, transform, actualViewport, options);
     }
 
     // Render selection highlights
-    this.renderSelectionHighlights(scene, transform, viewport, options);
+    this.renderSelectionHighlights(scene, transform, actualViewport, options);
 
     this.ctx.restore();
   }

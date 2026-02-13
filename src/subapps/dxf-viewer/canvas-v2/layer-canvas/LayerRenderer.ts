@@ -222,7 +222,7 @@ export class LayerRenderer {
 
     // 🏢 ENTERPRISE (2026-01-25): Store transform/viewport for real-time drag preview
     this.transform = transform;
-    this.viewport = viewport;
+    this.viewport = actualViewport;
 
     const startTime = performance.now();
 
@@ -245,11 +245,11 @@ export class LayerRenderer {
 
     if (useUnified) {
       // ✅ ΦΑΣΗ 7: Use unified rendering path
-      this.renderUnified(layers, transform, viewport, crosshairSettings, cursorSettings,
+      this.renderUnified(layers, transform, actualViewport, crosshairSettings, cursorSettings,
                         snapSettings, gridSettings, rulerSettings, selectionSettings, options);
     } else {
       // Legacy rendering path
-      this.renderLegacy(layers, transform, viewport, crosshairSettings, cursorSettings,
+      this.renderLegacy(layers, transform, actualViewport, crosshairSettings, cursorSettings,
                        snapSettings, gridSettings, rulerSettings, selectionSettings, options);
     }
 
