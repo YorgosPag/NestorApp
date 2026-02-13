@@ -1233,10 +1233,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
 
     // ✅ OVERLAY MODE: Use overlay system with draftPolygon (takes priority over unified drawing)
-    // 🏢 ENTERPRISE (2026-01-25): Block drawing when select tool is active
     // ⚠️ NOTE: This MUST come BEFORE the unified drawing check below,
     // because overlay mode uses its own polygon state (draftPolygon), not the unified engine.
-    if (overlayMode === 'draw' && activeTool !== 'select') {
+    // 🔧 FIX (2026-02-13): Removed `activeTool !== 'select'` guard — when overlay draw mode
+    // is activated via OverlayModeButtons, only overlayMode changes; activeTool stays 'select'.
+    if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
 
       // 🏢 ADR-046: worldPoint is already in WORLD coordinates - use directly!
