@@ -66,7 +66,13 @@ export class FirestoreRelationshipAdapter {
    * 💾 Save Relationship to Firestore
    */
   static async saveRelationship(relationship: ContactRelationship): Promise<void> {
-    logger.info('💾 FIRESTORE: Saving relationship', relationship.id);
+    console.log('🔴 DIAG[FS-SAVE] Saving relationship:', {
+      id: relationship.id,
+      source: relationship.sourceContactId,
+      target: relationship.targetContactId,
+      type: relationship.relationshipType,
+      status: relationship.status
+    });
     try {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
@@ -82,11 +88,13 @@ export class FirestoreRelationshipAdapter {
         updatedAt: serverTimestamp()
       };
 
+      console.log('🔴 DIAG[FS-SAVE] Writing to Firestore collection:', RELATIONSHIPS_COLLECTION, 'doc:', relationship.id);
+
       // Use setDoc with custom ID
       const docRef = doc(colRef, relationship.id);
       await setDoc(docRef, firestoreData);
 
-      logger.info('✅ FIRESTORE: Relationship saved successfully:', relationship.id);
+      console.log('🔴 DIAG[FS-SAVE] ✅ SUCCESS! Document written to Firestore');
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchRelationshipCreated({
@@ -99,7 +107,7 @@ export class FirestoreRelationshipAdapter {
         timestamp: Date.now(),
       });
     } catch (error) {
-      logger.error('❌ FIRESTORE: Error saving relationship:', error);
+      console.log('🔴 DIAG[FS-SAVE] ❌ FAILED:', error);
       throw error;
     }
   }
@@ -188,7 +196,7 @@ export class FirestoreRelationshipAdapter {
     try {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
-      logger.info('🔥 FIRESTORE: Fetching relationships for contact:', contactId);
+      console.log('🔴 DIAG[FS-GET] Querying relationships for contact:', contactId);
 
       // Query 1: Where this contact is the source
       const sourceQuery = query(
@@ -252,10 +260,10 @@ export class FirestoreRelationshipAdapter {
         return bTime - aTime; // Descending
       });
 
-      logger.info('✅ FIRESTORE: Query returned', relationships.length, 'relationships');
+      console.log('🔴 DIAG[FS-GET] Query returned', relationships.length, 'relationships:', relationships.map(r => ({ id: r.id, type: r.relationshipType, status: r.status })));
       return relationships;
     } catch (error) {
-      logger.error('❌ FIRESTORE: Error querying contact relationships:', error);
+      console.log('🔴 DIAG[FS-GET] ❌ Query FAILED:', error);
       return [];
     }
   }

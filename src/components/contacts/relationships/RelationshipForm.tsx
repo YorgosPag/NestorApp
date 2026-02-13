@@ -101,16 +101,31 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
       }
     });
 
-    setValidationErrors({ ...errors, ...formFieldErrors });
-    return Object.keys({ ...errors, ...formFieldErrors }).length === 0;
+    const allErrors = { ...errors, ...formFieldErrors };
+    setValidationErrors(allErrors);
+
+    console.log('🔴 DIAG[1] RelationshipForm.validateForm:', {
+      targetContactId: formData.targetContactId,
+      relationshipType: formData.relationshipType,
+      errors: allErrors,
+      errorCount: Object.keys(allErrors).length,
+      willPass: Object.keys(allErrors).length === 0
+    });
+
+    return Object.keys(allErrors).length === 0;
   };
 
   /**
    * 📤 Handle form submission με validation
    */
   const handleSubmit = () => {
-    if (validateForm()) {
+    console.log('🔴 DIAG[0] RelationshipForm.handleSubmit CALLED');
+    const isValid = validateForm();
+    if (isValid) {
+      console.log('🔴 DIAG[2] Validation PASSED → calling onSubmit()');
       onSubmit();
+    } else {
+      console.log('🔴 DIAG[2] Validation FAILED → onSubmit NOT called');
     }
   };
 

@@ -87,11 +87,11 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
         RequestDeduplicator.invalidate(contactId);
       }
 
-      logger.info('PROVIDER: Loading relationships for contact:', { data: contactId });
+      console.log('🔴 DIAG[12] PROVIDER.loadRelationships called:', { contactId, forceRefresh });
       const data = await RequestDeduplicator.get(contactId);
+      console.log('🔴 DIAG[13] PROVIDER got data:', { count: data.length, ids: data.map(r => r.id) });
 
       setRelationships(prevRelationships => {
-        // Compare by IDs only (timestamps may differ due to serverTimestamp)
         const prevIds = new Set(prevRelationships.map(rel => rel.id));
         const newIds = new Set(data.map(rel => rel.id));
 
@@ -100,17 +100,16 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
 
         if (hasChanged || forceRefresh) {
           onRelationshipsChange?.(data);
-          logger.info('PROVIDER: Relationships updated:', { data: data.length });
+          console.log('🔴 DIAG[14] PROVIDER: State UPDATED with', data.length, 'relationships');
           return data;
         }
-        logger.info('ℹPROVIDER: Relationships unchanged, skipping update');
+        console.log('🔴 DIAG[14] PROVIDER: Data unchanged, skipping update');
         return prevRelationships;
       });
 
     } catch (err) {
-      const errorMessage = 'Σφάλμα φόρτωσης σχέσεων επαφής';
-      setError(errorMessage);
-      logger.error('PROVIDER: Error loading relationships:', { error: err });
+      console.log('🔴 DIAG[ERROR] PROVIDER.loadRelationships THREW:', err);
+      setError('Σφάλμα φόρτωσης σχέσεων επαφής');
       setRelationships([]);
     } finally {
       setLoading(false);
@@ -202,10 +201,11 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
    * 🏗️ Load relationships when contactId changes
    */
   useEffect(() => {
+    console.log('🔴 DIAG[PROVIDER-MOUNT] useEffect fired, contactId:', contactId);
     if (contactId && contactId !== 'new-contact' && contactId.trim() !== '') {
       loadRelationships();
     } else {
-      // Clear state για new contacts
+      console.log('🔴 DIAG[PROVIDER-MOUNT] Skipping load — contactId invalid:', contactId);
       setRelationships([]);
       setError(null);
       setExpandedRelationships(new Set());
