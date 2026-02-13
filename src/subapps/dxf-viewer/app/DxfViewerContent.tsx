@@ -839,14 +839,18 @@ Check console for detailed metrics`;
   }, [levelManager.currentLevelId, overlayStore]);
 
   // 🔺 AUTO-ACTIVATE LAYERING TOOL when overlay is selected
-  // 🏢 ENTERPRISE (2026-01-25): Εξαίρεση για 'select' tool - δεν αλλάζει σε layering
-  // ώστε να μην γίνεται auto-zoom όταν επιλέγεται overlay με το select tool
   // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+  // 🔧 FIX (2026-02-13): Only auto-switch on NEW selection, not on every activeTool change.
+  // Previous code had [primarySelectedId, activeTool] deps → feedback loop: any tool change
+  // with a selected overlay immediately reverted back to 'layering'.
   const primarySelectedId = universalSelection.getPrimaryId();
+  const prevPrimarySelectedIdRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    // Αν είμαστε σε 'select' tool, ΔΕΝ αλλάζουμε σε layering (ο χρήστης θέλει απλή επιλογή)
-    if (primarySelectedId && activeTool !== 'layering' && activeTool !== 'select') {
-      // Αυτόματη ενεργοποίηση layering tool όταν επιλέγεται overlay
+    const isNewSelection = primarySelectedId !== null && primarySelectedId !== prevPrimarySelectedIdRef.current;
+    prevPrimarySelectedIdRef.current = primarySelectedId;
+
+    // Auto-switch to layering ONLY when a different overlay is first selected
+    if (isNewSelection && activeTool !== 'layering') {
       handleToolChange('layering');
     }
   }, [primarySelectedId, activeTool, handleToolChange]);
