@@ -67,3 +67,26 @@
 | **Fix** | Added a `prevPrimarySelectedIdRef` to track the previous selection. The effect now only auto-switches to 'layering' when a **new** overlay is selected (`primarySelectedId !== prevRef.current`), not on every `activeTool` change. Users can now freely switch tools after selecting an overlay. |
 | **File** | `src/subapps/dxf-viewer/app/DxfViewerContent.tsx` |
 | **Lesson** | Effects that auto-switch `activeTool` based on selection state must NOT include `activeTool` as a trigger for re-execution — this creates feedback loops. Use a ref to detect actual selection *changes* and only react to those. |
+
+### 2026-02-13 — Fix: Move tool drag flow (3 sub-fixes)
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Move tool on overlays: (a) second click re-initiated drag instead of ending it, (b) no visual drag preview during movement, (c) overlay deselected during drag |
+| **Root Cause (a)** | `handleCanvasClick` entered move tool hit-test on every click, including the second click meant to end the drag — this re-set `draggingOverlayBody` instead of letting `handleContainerMouseUp` finish the move |
+| **Root Cause (b)** | Drag preview position was only updated in LayerCanvas.onMouseMove (line 1802), which never fires because DxfCanvas (z-10) intercepts all pointer events |
+| **Root Cause (c)** | The deselection block at the end of `handleCanvasClick` cleared overlay selection during an active drag |
+| **Fix (a)** | Added `!draggingOverlayBody` guard to the move tool hit-test, and early return when `draggingOverlayBody` is set |
+| **Fix (b)** | Added drag preview update logic to `handleContainerMouseMove` (useCanvasMouse.ts) — the container div's mousemove handler is the only one that reliably fires |
+| **Fix (c)** | Added early return in handleCanvasClick when `activeTool === 'move' && draggingOverlayBody` |
+| **Files** | `CanvasSection.tsx`, `useCanvasMouse.ts` |
+| **Lesson** | The dual-canvas architecture means ALL mouse interaction must go through the container div handlers or DxfCanvas handlers (never LayerCanvas). Any drag-related state updates in LayerCanvas.onMouseMove must be duplicated in the container's mousemove handler. |
+
+### 2026-02-13 — Feature: Entity selection with Select tool
+
+| Field | Value |
+|-------|-------|
+| **Feature** | Click on drawn entities (lines, circles, rectangles, polylines, arcs) with the Select tool to select them — selected entities are highlighted with a dashed rectangle |
+| **Implementation** | Added point-proximity hit-testing in `handleCanvasClick` for `activeTool === 'select'`, using the same tolerance as Circle-TTT. Selection state stored in `selectedEntityIds` and passed to DxfCanvas via `renderOptions.selectedEntityIds`. DxfRenderer already had rendering support for `selectedEntityIds`. |
+| **Entity types** | Line, Polyline, LWPolyline, Circle, Arc, Rectangle, Rect |
+| **File** | `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` |
