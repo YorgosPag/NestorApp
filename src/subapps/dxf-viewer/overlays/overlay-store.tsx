@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { db } from '../../../lib/firebase';
 import { collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
 
 interface OverlayStoreState {
@@ -40,6 +41,9 @@ const OverlayStoreContext = createContext<(OverlayStoreState & OverlayStoreActio
 const COLLECTION_PREFIX = 'dxf-overlay-levels';
 
 export function OverlayStoreProvider({ children }: { children: React.ReactNode }) {
+  // 🔧 FIX (2026-02-13): Get authenticated user for companyId/createdBy — Firestore rules require these
+  const { user } = useAuth();
+
   const [state, setState] = useState<OverlayStoreState>({
     overlays: {},
     // 🏢 ENTERPRISE (2026-01-25): Selection state REMOVED - ADR-030
@@ -113,12 +117,14 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const polygonForFirestore = overlayData.polygon.map(([x, y]) => ({ x, y }));
 
     // 🔧 FIX (2026-01-24): Build object without undefined values - Firebase rejects undefined
+    // 🔧 FIX (2026-02-13): Include companyId + createdBy from auth — Firestore rules require these
     const newOverlay: Record<string, unknown> = {
       levelId: state.currentLevelId,
+      companyId: user?.companyId ?? null,
       status: overlayData.status || 'for-sale',
       kind: overlayData.kind || 'unit',
       polygon: polygonForFirestore,
-      createdBy: 'user@example.com',
+      createdBy: user?.uid ?? 'unknown',
     };
 
     // Only add optional fields if they have values
@@ -133,7 +139,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     });
 
     return docRef.id;
-  }, [state.currentLevelId]);
+  }, [state.currentLevelId, user]);
 
   const update = useCallback(async (id: string, patch: UpdateOverlayData): Promise<void> => {
     if (!state.currentLevelId) return;
@@ -177,12 +183,14 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const polygonForFirestore = overlay.polygon.map(([x, y]) => ({ x, y }));
 
     // 🏢 ENTERPRISE: Build clean document without undefined values
+    // 🔧 FIX (2026-02-13): Include companyId for Firestore rules compliance
     const overlayDoc: Record<string, unknown> = {
       levelId: overlay.levelId,
+      companyId: user?.companyId ?? null,
       status: overlay.status || 'for-sale',
       kind: overlay.kind || 'unit',
       polygon: polygonForFirestore,
-      createdBy: overlay.createdBy || 'user@example.com',
+      createdBy: overlay.createdBy || user?.uid || 'unknown',
       restoredAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -197,7 +205,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     await setDoc(docRef, overlayDoc);
 
     console.log(`✅ restore: Overlay ${overlay.id} restored successfully`);
-  }, []);
+  }, [user]);
 
   const duplicate = useCallback(async (id: string): Promise<string | null> => {
     const overlay = state.overlays[id];
