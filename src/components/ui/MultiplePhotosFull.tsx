@@ -270,14 +270,15 @@ export function MultiplePhotosFull({
                   // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
                   const currentFile = normalizedPhotos[index]?.file;
                   if (currentFile === file) {
-                    logger.info('SKIPPING - File unchanged for slot', { index });
+                    console.log('🔴 PHOTO DEBUG [Full.onFileChange] SKIP same file', index);
                     return;
                   }
 
-                  logger.info('File changed for slot', { index, fileName: file?.name });
-                  const newPhotos = [...normalizedPhotos];
-                  // 🔧 FIX: Αποθήκευση blob preview στο PhotoSlot ώστε να μην χαθεί σε re-render
                   const preview = file ? URL.createObjectURL(file) : undefined;
+                  console.log('🔴 PHOTO DEBUG [Full.onFileChange]', {
+                    index, name: file?.name, hasHandler: !!onPhotosChange
+                  });
+                  const newPhotos = [...normalizedPhotos];
                   newPhotos[index] = {
                     ...newPhotos[index],
                     file,
@@ -286,17 +287,21 @@ export function MultiplePhotosFull({
                     uploadProgress: 0,
                     error: undefined
                   };
-                  logger.info('Calling onPhotosChange', { photoCount: newPhotos.length });
                   if (onPhotosChange) {
                     onPhotosChange(newPhotos);
+                  } else {
+                    console.error('🔴 PHOTO BUG: onPhotosChange is undefined!');
                   }
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
-                  logger.info('Upload completed for slot', { index, success: result.success });
+                  console.log('🔴 PHOTO DEBUG [Full.onUploadComplete]', {
+                    index, success: result.success, hasUrl: !!result.url,
+                    urlStart: result.url?.substring(0, 50),
+                    hasHandler: !!onPhotosChangeRef.current
+                  });
 
-                  // 🔧 FIX: Use refs to avoid stale closures — upload completes asynchronously
-                  // and the render-time normalizedPhotos/onPhotosChange may be outdated.
+                  // 🔧 FIX: Use refs to avoid stale closures
                   const currentPhotos = normalizedPhotosRef.current;
                   const currentHandler = onPhotosChangeRef.current;
 
@@ -311,6 +316,11 @@ export function MultiplePhotosFull({
                       error: undefined
                     };
                     currentHandler(newPhotos);
+                    console.log('🔴 PHOTO DEBUG [Full.onUploadComplete] handler called with URL');
+                  } else {
+                    console.error('🔴 PHOTO BUG: onUploadComplete NOT updating', {
+                      success: result.success, hasUrl: !!result.url, hasHandler: !!currentHandler
+                    });
                   }
 
                   if (handleUploadComplete) {

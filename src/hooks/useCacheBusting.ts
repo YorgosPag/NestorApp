@@ -122,7 +122,8 @@ export function useCacheBusting() {
     if (!url) return url;
 
     if (url.startsWith('https://firebasestorage')) {
-      return `${url}?v=${photosKey}`;
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}v=${photosKey}`;
     }
 
     return url;

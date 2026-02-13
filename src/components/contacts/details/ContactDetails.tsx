@@ -67,6 +67,22 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     }
   }, [contact, savedPhotoURLs]);
 
+  // 🔴 BROWSER DEBUG: Track editedData.multiplePhotos changes
+  useEffect(() => {
+    const mp = (editedData as ContactFormData).multiplePhotos;
+    if (mp && Array.isArray(mp)) {
+      const filled = mp.filter((p: PhotoSlot) => p.file || p.uploadUrl || p.preview).length;
+      if (filled > 0) {
+        console.log('🔴 PHOTO DEBUG [ContactDetails] editedData.multiplePhotos UPDATED', {
+          length: mp.length, filled,
+          slots: mp.map((p: PhotoSlot, i: number) => ({
+            i, f: !!p.file, u: !!p.uploadUrl, p: !!p.preview
+          }))
+        });
+      }
+    }
+  }, [(editedData as ContactFormData).multiplePhotos]);
+
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
 
@@ -214,6 +230,14 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   // which can be stale when async uploads complete. This handler uses `prev =>` pattern
   // so it always operates on the latest state.
   const handleMultiplePhotosChange = useCallback((photos: PhotoSlot[]) => {
+    console.log('🔴 PHOTO DEBUG [ContactDetails] handleMultiplePhotosChange', {
+      photosCount: photos.length,
+      filled: photos.filter(p => p.file || p.uploadUrl || p.preview).length,
+      slots: photos.map((p, i) => ({
+        i, f: !!p.file, u: !!p.uploadUrl, p: !!p.preview,
+        pUrl: p.preview?.substring(0, 40)
+      }))
+    });
     setEditedData(prev => ({
       ...prev,
       multiplePhotos: photos

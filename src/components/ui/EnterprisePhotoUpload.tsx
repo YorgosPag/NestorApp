@@ -229,17 +229,19 @@ export function EnterprisePhotoUpload({
 
   const rawCurrentPreview = photoPreview || upload.previewUrl;
 
-  // 🔍 DEBUG: Log photo display values
+  // 🔴 BROWSER DEBUG: Log preview state to browser console (not filtered in production)
   React.useEffect(() => {
-    logger.info(`Photo display values [${purpose}]`, {
-      photoPreview,
-      uploadPreviewUrl: upload.previewUrl,
-      rawCurrentPreview,
-      photoFile,
-      currentFile: upload.currentFile,
-      uploadSuccess: upload.success
-    });
-  }, [purpose, photoPreview, upload.previewUrl, rawCurrentPreview, photoFile, upload.currentFile, upload.success]);
+    if (photoPreview || upload.previewUrl || photoFile) {
+      console.log(`🔴 PHOTO DEBUG [EnterprisePhotoUpload ${purpose}]`, {
+        photoPreview: photoPreview?.substring(0, 60),
+        uploadPreviewUrl: upload.previewUrl?.substring(0, 60),
+        rawCurrentPreview: rawCurrentPreview?.substring(0, 60),
+        hasPhotoFile: !!photoFile,
+        uploadSuccess: upload.success,
+        isUploading: upload.isUploading
+      });
+    }
+  }, [purpose, photoPreview, upload.previewUrl, rawCurrentPreview, photoFile, upload.success, upload.isUploading]);
 
   // 🔥 CONDITIONAL CACHE BUSTER: Μόνο όταν χρειάζεται (όχι πάντα)
   // ΠΡΟΒΛΗΜΑ: Browser cache κρατάει τις Firebase images για 1 χρόνο

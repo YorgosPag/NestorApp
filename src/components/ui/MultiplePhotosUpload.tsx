@@ -118,12 +118,16 @@ export function MultiplePhotosUpload({
       }
     }
 
-    logger.info('FORCED slots to exactly maxPhotos', {
-      maxPhotos,
-      originalLength: photos?.length || 0,
-      resultLength: result.length,
-      overflow: (photos?.length || 0) > maxPhotos
-    });
+    // 🔴 BROWSER DEBUG: Verify photos prop reaches MultiplePhotosUpload
+    const filledCount = result.filter(p => p.file || p.uploadUrl || p.preview).length;
+    if (filledCount > 0) {
+      console.log('🔴 PHOTO DEBUG [MultiplePhotosUpload] normalizedPhotos:', {
+        photosIsArray: Array.isArray(photos),
+        photosLength: photos?.length,
+        filledSlots: filledCount,
+        slots: result.map((p, i) => ({ i, f: !!p.file, u: !!p.uploadUrl, p: !!p.preview }))
+      });
+    }
 
     // Ensure exactly maxPhotos length - no overflow!
     return result.slice(0, maxPhotos);
