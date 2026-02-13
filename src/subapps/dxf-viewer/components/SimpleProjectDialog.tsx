@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Triangle, Building2, Folder, Building as BuildingIcon, Layers } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Triangle, Building2, Folder, Building as BuildingIcon, Layers, Plus, Info } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useProjectHierarchy, type Building, type Unit, type Floor } from '../contexts/ProjectHierarchyContext';
 import { useFloorplan } from '../../../contexts/FloorplanContext';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -116,6 +117,10 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   // 🏢 ENTERPRISE (2026-01-31): Floor selection state for floor-level floorplans
   const [selectedFloorId, setSelectedFloorId] = useState<string>('');
   const [floors, setFloors] = useState<Floor[]>([]);
+
+  // 🏢 ADR-179: Inline floor creation state
+  const [newFloorName, setNewFloorName] = useState<string>('');
+  const [isCreatingFloor, setIsCreatingFloor] = useState(false);
 
   // DXF Import Modal state
   const [showDxfModal, setShowDxfModal] = useState(false);
@@ -344,6 +349,45 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     setSelectedFloorId(floorId);
   };
 
+  /**
+   * 🏢 ADR-179: Inline floor creation — creates a floor via POST /api/floors
+   * and refreshes the floors list for the current building.
+   */
+  const handleCreateFloorInline = useCallback(async () => {
+    if (!newFloorName.trim() || !selectedBuildingId || !selectedProjectId) return;
+
+    setIsCreatingFloor(true);
+    try {
+      interface CreateFloorApiResponse {
+        success: boolean;
+        floor: Floor;
+        message?: string;
+        error?: string;
+      }
+
+      const result = await apiClient.post<CreateFloorApiResponse>('/api/floors', {
+        number: floors.length,
+        name: newFloorName.trim(),
+        buildingId: selectedBuildingId,
+        projectId: selectedProjectId,
+      });
+
+      if (result?.success && result.floor) {
+        console.log(`✅ [ADR-179] Floor created: ${result.floor.id}`);
+        // Refresh floors list and auto-select the new floor
+        await loadFloorsForBuilding(selectedBuildingId);
+        setSelectedFloorId(result.floor.id);
+        setNewFloorName('');
+      } else {
+        console.error('❌ [ADR-179] Failed to create floor:', result?.error);
+      }
+    } catch (error) {
+      console.error('❌ [ADR-179] Error creating floor:', error);
+    } finally {
+      setIsCreatingFloor(false);
+    }
+  }, [newFloorName, selectedBuildingId, selectedProjectId, floors.length]);
+
   const handleClose = () => {
     setCurrentStep('company');
     setSelectedCompanyId('');
@@ -355,6 +399,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     // 🏢 ENTERPRISE (2026-01-31): Reset floor state
     setSelectedFloorId('');
     setFloors([]);
+    // 🏢 ADR-179: Reset inline floor creation state
+    setNewFloorName('');
+    setIsCreatingFloor(false);
     onClose();
   };
 
@@ -1011,7 +1058,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             )}
           </div>
 
-          {/* Floorplan Options - Only shown when project is selected */}
+          {/* 🏢 ADR-179: Site Plan — single button for project-level site plan/topographic */}
           {currentStep === 'project' && selectedProjectId && (
             <ProjectModalContainer title={t('wizard.floorplanSections.selectForProject')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
               <ModalActions alignment="center">
@@ -1021,86 +1068,87 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   size="default"
                   className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
-                  {t('wizard.floorplanTypes.project')}
-                </Button>
-                <Button
-                  onClick={() => handleLoadFloorplan('parking')}
-                  variant="outline"
-                  size="default"
-                  className={MODAL_DIMENSIONS.BUTTONS.flex}
-                >
-                  {t('wizard.floorplanTypes.parking')}
+                  {t('wizard.floorplanTypes.sitePlan')}
                 </Button>
               </ModalActions>
               <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-                {t('wizard.floorplanSections.hintProject')}
+                {t('wizard.floorplanSections.hintSitePlan')}
               </p>
             </ProjectModalContainer>
           )}
 
-          {/* Building Floorplan Options - Only shown when building is selected */}
+          {/* 🏢 ADR-179: IFC-Compliant Floor Selection — always shown when building is selected */}
           {currentStep === 'building' && selectedBuildingId && (
-            <ProjectModalContainer title={t('wizard.floorplanSections.selectForBuilding')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
-              <ModalActions alignment="center">
-                <Button
-                  onClick={() => handleLoadFloorplan('building')}
-                  variant="default"
-                  size="default"
-                  className={MODAL_DIMENSIONS.BUTTONS.flex}
-                >
-                  {t('wizard.floorplanTypes.building')}
-                </Button>
-                <Button
-                  onClick={() => handleLoadFloorplan('storage')}
-                  variant="outline"
-                  size="default"
-                  className={MODAL_DIMENSIONS.BUTTONS.flex}
-                >
-                  {t('wizard.floorplanTypes.storage')}
-                </Button>
-              </ModalActions>
-              <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-                {t('wizard.floorplanSections.hintBuilding')}
-              </p>
-            </ProjectModalContainer>
-          )}
+            <ProjectModalContainer title={t('wizard.floorplanSections.selectFloorAndLoad')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('info')}`}>
+              {floors.length > 0 ? (
+                <>
+                  {/* Case A: Floors exist — dropdown + load button */}
+                  <div className={MODAL_SPACING.SECTIONS.betweenItems}>
+                    <label className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
+                      {t('wizard.labels.selectFloor')}
+                    </label>
+                    <Select value={selectedFloorId} onValueChange={handleFloorChange}>
+                      <SelectTrigger className={getSelectStyles().trigger}>
+                        <SelectValue placeholder={t('wizard.placeholders.floor')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {floors.map(floor => (
+                          <SelectItem key={floor.id} value={floor.id}>
+                            <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                              <Layers className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
+                              <span>{floor.name || t('wizard.counts.floorOrdinal', { floor: floor.number })}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-          {/* 🏢 ENTERPRISE (2026-01-31): Floor Selection - Only shown when building is selected and has floors */}
-          {currentStep === 'building' && selectedBuildingId && floors.length > 0 && (
-            <ProjectModalContainer title={t('wizard.floorplanSections.selectFloor')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('info')}`}>
-              <div className={MODAL_SPACING.SECTIONS.betweenItems}>
-                <label className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
-                  {t('wizard.labels.selectFloor')}
-                </label>
-                <Select value={selectedFloorId} onValueChange={handleFloorChange}>
-                  <SelectTrigger className={getSelectStyles().trigger}>
-                    <SelectValue placeholder={t('wizard.placeholders.floor')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {floors.map(floor => (
-                      <SelectItem key={floor.id} value={floor.id}>
-                        <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-                          <Layers className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
-                          <span>{floor.name || t('wizard.counts.floorOrdinal', { floor: floor.number })}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Floor Floorplan Button - Only when floor is selected */}
-              {selectedFloorId && (
-                <ModalActions alignment="center">
-                  <Button
-                    onClick={() => handleLoadFloorplan('floor')}
-                    variant="default"
-                    size="default"
-                    className={MODAL_DIMENSIONS.BUTTONS.flex}
-                  >
-                    {t('wizard.floorplanTypes.floor')}
-                  </Button>
-                </ModalActions>
+                  {/* Floor Floorplan Button — only when floor is selected */}
+                  {selectedFloorId && (
+                    <ModalActions alignment="center">
+                      <Button
+                        onClick={() => handleLoadFloorplan('floor')}
+                        variant="default"
+                        size="default"
+                        className={MODAL_DIMENSIONS.BUTTONS.flex}
+                      >
+                        {t('wizard.floorplanTypes.floor')}
+                      </Button>
+                    </ModalActions>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Case B: No floors — inline creation form */}
+                  <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                    <Info className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
+                    <p className={typography.body.sm}>
+                      {t('wizard.floorplanSections.noFloorsYet')}
+                    </p>
+                  </div>
+                  <div className={`${MODAL_SPACING.SECTIONS.betweenItems} ${MODAL_FLEX_PATTERNS.ROW.centerWithGap}`}>
+                    <Input
+                      value={newFloorName}
+                      onChange={(e) => setNewFloorName(e.target.value)}
+                      placeholder={t('wizard.floorplanSections.floorNamePlaceholder')}
+                      className={MODAL_DIMENSIONS.BUTTONS.flex}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCreateFloorInline();
+                      }}
+                      disabled={isCreatingFloor}
+                    />
+                    <Button
+                      onClick={handleCreateFloorInline}
+                      variant="default"
+                      size="default"
+                      disabled={!newFloorName.trim() || isCreatingFloor}
+                    >
+                      <Plus className={getIconSize('field')} />
+                      {t('wizard.floorplanSections.createFloor')}
+                    </Button>
+                  </div>
+                </>
               )}
               <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
                 {t('wizard.floorplanSections.hintFloor')}

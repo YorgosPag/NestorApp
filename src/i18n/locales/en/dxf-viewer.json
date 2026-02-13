@@ -257,6 +257,7 @@
       "unitsFound": "Found {count} units for the selected building"
     },
     "floorplanTypes": {
+      "sitePlan": "Site Plan",
       "project": "Project Floorplan",
       "parking": "Parking Floorplan",
       "building": "Building Floorplan",
@@ -265,14 +266,19 @@
       "floor": "Floor Plan"
     },
     "floorplanSections": {
-      "selectForProject": "Select Floorplan to Load",
+      "selectForProject": "Site Plan / Topographic Survey",
       "selectForBuilding": "Select Building Floorplan to Load",
+      "selectFloorAndLoad": "Select Floor & Load Floor Plan",
       "selectForUnit": "Select Unit Floorplan to Load",
       "selectFloor": "Select Floor for Floorplan",
+      "hintSitePlan": "Site-level plan/topographic survey — building positions, common areas",
       "hintProject": "The floorplan will be loaded to the canvas and the corresponding project tab",
       "hintBuilding": "The floorplan will be loaded to the canvas and building management",
       "hintUnit": "The floorplan will be loaded to the canvas and unit management",
-      "hintFloor": "The floorplan will be saved for the specific floor of the building"
+      "hintFloor": "The floorplan will be saved for the specific floor of the building",
+      "noFloorsYet": "No floors registered yet. Create the first one:",
+      "createFloor": "Create Floor",
+      "floorNamePlaceholder": "e.g. Ground Floor, 1st Floor, Basement"
     },
     "navigation": {
       "cancel": "Cancel",
