@@ -11,8 +11,7 @@
 import type { DxfImportResult, SceneModel } from '../types/scene';
 import { encodingService, type SupportedEncoding } from './encoding-service';
 import { calculateTightBounds } from '../utils/bounds-utils';
-/** DXF import timeout — matches PANEL_TOKENS.TIMING.IMPORT_TIMEOUT */
-const DXF_IMPORT_TIMEOUT_MS = 60_000;
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 export class DxfImportService {
   private worker: Worker | null = null;
@@ -49,7 +48,7 @@ export class DxfImportService {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
-      const importTimeout = DXF_IMPORT_TIMEOUT_MS;
+      const importTimeout = PANEL_LAYOUT.TIMING.IMPORT_TIMEOUT;
       const timeout = setTimeout(() => {
         console.error(`⌛ DXF import timeout after ${importTimeout / 1000} seconds`);
         resolve({
