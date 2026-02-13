@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Contact, IndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes'; // 🏢 ENTERPRISE: Type-safe form data
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 // 🏢 ENTERPRISE: Type guard for contacts with multiple photo URLs
 const getMultiplePhotoURLs = (contact: Contact): string[] => {
@@ -208,6 +209,17 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     }
   }, []);
 
+  // 🔧 FIX: Explicit multiplePhotos handler with functional updater to avoid stale closures.
+  // The fallback handler in createUnifiedPhotosChangeHandler closes over `formData`,
+  // which can be stale when async uploads complete. This handler uses `prev =>` pattern
+  // so it always operates on the latest state.
+  const handleMultiplePhotosChange = useCallback((photos: PhotoSlot[]) => {
+    setEditedData(prev => ({
+      ...prev,
+      multiplePhotos: photos
+    }));
+  }, []);
+
   const handleLogoChange = useCallback((file: File | null) => {
     if (file) {
       const preview = URL.createObjectURL(file);
@@ -293,6 +305,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           handleChange={handleFieldChange} // 🎯 Enable changes when editing
           handleSelectChange={handleSelectChange} // 🎯 Enable select changes when editing
           setFormData={isEditing ? setEditedData : undefined} // 🔧 FIX: Pass setFormData when in edit mode
+          handleMultiplePhotosChange={isEditing ? handleMultiplePhotosChange : undefined} // 🔧 FIX: Functional updater — no stale closures
           disabled={!isEditing} // 🎯 Enable editing when in edit mode
           relationshipsMode={isEditing ? "full" : "summary"} // 🎯 KEY: Full mode when editing, summary when viewing
           onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
