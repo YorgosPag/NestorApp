@@ -1232,16 +1232,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
     }
 
-    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
-    // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
-    if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
-      // 🏢 ADR-046: worldPoint is already in WORLD coordinates - no conversion needed!
-      drawingHandlersRef.current.onDrawingPoint(worldPoint);
-      return;
-    }
-
-    // ✅ OVERLAY MODE: Use legacy overlay system with draftPolygon
+    // ✅ OVERLAY MODE: Use overlay system with draftPolygon (takes priority over unified drawing)
     // 🏢 ENTERPRISE (2026-01-25): Block drawing when select tool is active
+    // ⚠️ NOTE: This MUST come BEFORE the unified drawing check below,
+    // because overlay mode uses its own polygon state (draftPolygon), not the unified engine.
     if (overlayMode === 'draw' && activeTool !== 'select') {
       if (isSavingPolygon) return;
 
@@ -1250,13 +1244,24 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
       // 🎯 SIMPLIFIED (2026-01-24): Just add points - user saves with toolbar button
       setDraftPolygon(prev => [...prev, worldPointArray]);
-    } else {
-      // 🏢 ENTERPRISE (2026-01-25): Only deselect overlay if clicking on EMPTY canvas space
-      // Do NOT deselect if:
-      // - A grip is selected (user might be about to drag)
-      // - User is hovering over a grip
-      // - Click was on the overlay itself (handled by handleOverlayClick)
-      // - Just finished a drag operation (prevent accidental deselection)
+      return;
+    }
+
+    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
+    // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
+    if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
+      // 🏢 ADR-046: worldPoint is already in WORLD coordinates - no conversion needed!
+      drawingHandlersRef.current.onDrawingPoint(worldPoint);
+      return;
+    }
+
+    // 🏢 ENTERPRISE (2026-01-25): Only deselect overlay if clicking on EMPTY canvas space
+    // Do NOT deselect if:
+    // - A grip is selected (user might be about to drag)
+    // - User is hovering over a grip
+    // - Click was on the overlay itself (handled by handleOverlayClick)
+    // - Just finished a drag operation (prevent accidental deselection)
+    {
       const isClickOnGrip = hoveredVertexInfo !== null || hoveredEdgeInfo !== null;
       const hasSelectedGrip = selectedGrip !== null;
       const justFinishedDrag = justFinishedDragRef.current;
