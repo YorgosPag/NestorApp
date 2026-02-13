@@ -1666,17 +1666,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 const throttle = gripHoverThrottleRef.current;
 
                 // 🚀 PERFORMANCE (2026-01-27): Increase throttle from 33ms to 100ms (10fps)
-                // Grip hover detection doesn't need 30fps - 10fps is smooth enough for visual feedback
+                // Grip hover detection doesn't need 30fps - 10fps is smooth enough for visual feedback.
+                // IMPORTANT: Apply this throttle ONLY in grip modes; drawing tools need full-rate hover updates
+                // for smooth preview rendering (line/rectangle/circle rubber-band feedback).
                 const GRIP_HOVER_THROTTLE_MS = 100;
-                const shouldUpdate = now - throttle.lastCheckTime >= GRIP_HOVER_THROTTLE_MS;
+                const shouldThrottleGripWork =
+                  isGripMode && (now - throttle.lastCheckTime < GRIP_HOVER_THROTTLE_MS);
 
-                if (!shouldUpdate) {
+                if (shouldThrottleGripWork) {
                   // 🚀 PERFORMANCE (2026-01-27): During drag, use RAF-throttled preview update
                   // Instead of setState on every mousemove, we use a ref + RAF for smooth animation
                   return; // Skip all other work until throttle period passes
                 }
 
-                throttle.lastCheckTime = now;
+                if (isGripMode) {
+                  throttle.lastCheckTime = now;
+                }
 
                 // Now do the throttled work
                 updateMouseCss(screenPoint);
