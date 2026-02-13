@@ -113,11 +113,19 @@ const flatSettings: GridSettings = {
 
 Για CSS z-index χρησιμοποίησε: `styles/DxfZIndexSystem.styles.ts`
 
+## 🔒 SELECTION Layer — Window/Crossing Marquee (2026-02-13)
+
+> **⚠️ ΜΗΝ ΤΡΟΠΟΠΟΙΗΘΕΙ**: Το SELECTION layer (z-index 300) χρησιμοποιείται για το AutoCAD-style
+> Window/Crossing marquee selection, το οποίο λειτουργεί **ΠΛΗΡΩΣ ΣΩΣΤΑ** (2026-02-13).
+> Η marquee rendering γίνεται ως step 4 μέσα στο RAF loop του DxfCanvas (μετά scene → grid → rulers → **selection box**).
+> Η αλλαγή z-index ή rendering order μπορεί να κάνει το selection box invisible.
+
 ## Related ADRs
 
 - **ADR-002**: Enterprise Z-Index Hierarchy (CSS z-index)
 - **ADR-134**: Centralized Opacity Constants
 - **ADR-004**: Canvas Theme System
+- **ADR-035**: Tool Overlay Mode Metadata (Window/Crossing changelog)
 
 ## References
 

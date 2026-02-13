@@ -42,3 +42,13 @@
   - Easy global adjustment if needed
   - Comment marker `// 🏢 ADR-105` for traceability
 - **Companion**: ADR-095 (Snap Tolerance), ADR-099 (Polygon & Measurement Tolerances)
+
+### 🔒 Marquee Selection Tolerance — ΛΕΙΤΟΥΡΓΕΙ ΣΩΣΤΑ (2026-02-13)
+
+> **⚠️ ΜΗΝ ΤΡΟΠΟΠΟΙΗΘΕΙ**: Το `HIT_TEST_FALLBACK` χρησιμοποιείται από τα:
+> - `useCentralizedMouseHandlers.ts` — marquee selection tolerance
+> - `UniversalMarqueeSelection.ts` — universal selection bounds
+>
+> Το AutoCAD-style Window/Crossing selection (μπλε window + πράσινο crossing) είναι **ΠΛΗΡΩΣ ΛΕΙΤΟΥΡΓΙΚΟ** (2026-02-13).
+> Υποστηρίζει: line, circle, arc, polyline, lwpolyline, rect, rectangle, angle-measurement, text.
+> Αλλαγή tolerance μπορεί να επηρεάσει την ακρίβεια marquee selection.

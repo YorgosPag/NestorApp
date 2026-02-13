@@ -9,6 +9,17 @@
 
 ---
 
+## 🔒 ΣΤΑΘΕΡΟ ΣΥΣΤΗΜΑ — Window/Crossing Selection (2026-02-13)
+
+> **⚠️ ΜΗΝ ΤΡΟΠΟΠΟΙΗΘΕΙ ΧΩΡΙΣ ΣΟΒΑΡΟ ΛΟΓΟ**
+>
+> Όλα τα bugs που αναφέρονται στο Changelog (overlay draw, move tool, marquee selection, entity highlights)
+> έχουν **ΔΙΟΡΘΩΘΕΙ ΚΑΙ ΔΟΚΙΜΑΣΤΕΙ** (2026-02-13). Το σύστημα είναι **ΠΛΗΡΩΣ ΛΕΙΤΟΥΡΓΙΚΟ**.
+> Οποιαδήποτε αλλαγή στα αρχεία `CanvasSection.tsx`, `DxfCanvas.tsx`, `useCentralizedMouseHandlers.ts`,
+> `DxfRenderer.ts`, ή `selection-duplicate-utils.ts` μπορεί να σπάσει την επιλογή.
+
+---
+
 ## Summary
 
 - **Property**: `preservesOverlayMode: boolean` in `ToolInfo`

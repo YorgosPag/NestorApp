@@ -297,6 +297,7 @@
 **Path**: `systems/selection/UniversalMarqueeSelection.ts`
 **Purpose**: Rectangle marquee selection (window/crossing)
 **Methods**: `startMarquee()`, `updateMarquee()`, `endMarquee()`, `getEntities()`
+**Status**: 🔒 STABLE (2026-02-13) — ΛΕΙΤΟΥΡΓΕΙ ΠΛΗΡΩΣ ΣΩΣΤΑ, ΜΗΝ ΤΡΟΠΟΠΟΙΗΘΕΙ
 
 ### SelectionSystem
 **Path**: `systems/selection/SelectionSystem.ts`

@@ -810,6 +810,22 @@ onDragEnd(entityId, delta) {
 
 ## 9. MULTI-SELECTION & MARQUEE SELECTION SYSTEM (2026-01-25)
 
+### 🔒 ΣΤΑΘΕΡΟ ΣΥΣΤΗΜΑ — ΛΕΙΤΟΥΡΓΕΙ ΠΛΗΡΩΣ ΣΩΣΤΑ (2026-02-13)
+
+> **⚠️ ΜΗΝ ΤΡΟΠΟΠΟΙΗΘΕΙ ΧΩΡΙΣ ΣΟΒΑΡΟ ΛΟΓΟ**
+>
+> Μετά από 8+ bug fixes (2026-02-13), το Window/Crossing selection system λειτουργεί **ΠΛΗΡΩΣ ΣΩΣΤΑ**.
+> Υποστηρίζει **ΟΛΟΥΣ** τους τύπους entities: line, circle, arc, polyline, lwpolyline, rect, rectangle, angle-measurement, text.
+> Υποστηρίζει επίσης color layer overlays ταυτόχρονα με drawn entities.
+>
+> **Κρίσιμες αρχιτεκτονικές σημειώσεις:**
+> - DxfCanvas (z-10) forward-ει ΟΛΑ τα marquee props στο `useCentralizedMouseHandlers`
+> - Marquee box rendering γίνεται ΜΕΣΑ στο RAF loop (step 4 στο `renderScene()`)
+> - ΔΥΟ ξεχωριστές `calculateEntityBounds()` (selection-utils + DxfRenderer) — πρέπει να μένουν σε sync
+> - `'rect'` ΚΑΙ `'rectangle'` πρέπει να υποστηρίζονται σε κάθε switch statement
+>
+> Αναλυτικό changelog: Βλ. [ADR-035](../../docs/centralized-systems/reference/adrs/ADR-035-tool-overlay-mode-metadata.md)
+
 ### 9.1 Overview
 
 Υλοποιήθηκε πλήρες **Multi-Selection System** για color overlays με:
@@ -1088,6 +1104,7 @@ for (const selectedOv of selectedOverlays) {
 |------|---------|---------|
 | 2026-01-25 | 1.0.0 | Initial document creation - Research & Architecture |
 | 2026-01-25 | 2.0.0 | Added Section 9: Multi-Selection & Marquee Selection System |
+| 2026-02-13 | 2.1.0 | Section 9: Marked as STABLE — 8+ bug fixes, full entity type support, DO NOT MODIFY |
 
 ---
 

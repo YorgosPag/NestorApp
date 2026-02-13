@@ -33,6 +33,36 @@ systems/selection/
 - Window/Crossing selection (AutoCAD pattern)
 - Multi-type support (DXF + Overlays)
 
+### 🔒 Window/Crossing Marquee Selection — ΛΕΙΤΟΥΡΓΕΙ ΣΩΣΤΑ, ΜΗΝ ΠΕΙΡΑΧΤΕΙ (2026-02-13)
+
+> **⚠️ ΣΤΑΘΕΡΟ ΣΥΣΤΗΜΑ — ΜΗΝ ΤΡΟΠΟΠΟΙΗΘΕΙ ΧΩΡΙΣ ΣΟΒΑΡΟ ΛΟΓΟ**
+>
+> Το AutoCAD-style Window/Crossing selection είναι **ΠΛΗΡΩΣ ΛΕΙΤΟΥΡΓΙΚΟ** (2026-02-13).
+> Μετά από 8+ bug fixes σε μία session, το σύστημα δουλεύει σωστά σε όλους τους τύπους entities.
+
+**Τι λειτουργεί:**
+- **Window Selection** (αριστερά→δεξιά, μπλε, solid): Επιλέγει entities **πλήρως εντός** του πλαισίου
+- **Crossing Selection** (δεξιά→αριστερά, πράσινο, dashed): Επιλέγει entities που **τέμνουν** το πλαίσιο
+- **Υποστηριζόμενοι τύποι**: line, circle, arc, polyline, lwpolyline, rect, rectangle, angle-measurement, text
+- **Οπτική ανάδραση**: Μπλε/πράσινο marquee box + dashed highlight rectangles γύρω από επιλεγμένα entities
+- **Overlays + Entities**: Επιλέγει ταυτόχρονα drawn entities ΚΑΙ color layer overlays
+
+**Κρίσιμα αρχεία (ΜΗΝ πειραχτούν χωρίς ανάγκη):**
+| Αρχείο | Ρόλος |
+|--------|-------|
+| `systems/selection/UniversalMarqueeSelection.ts` | Κεντρική selection logic (Window vs Crossing) |
+| `systems/cursor/useCentralizedMouseHandlers.ts` | Mouse event routing, marquee callbacks |
+| `canvas-v2/dxf-canvas/DxfCanvas.tsx` | RAF-synchronized marquee rendering + prop forwarding |
+| `canvas-v2/dxf-canvas/DxfRenderer.ts` | Visual selection highlight (dashed rectangles) |
+| `systems/selection/shared/selection-duplicate-utils.ts` | Entity bounds calculation (world coords) |
+| `components/dxf-layout/CanvasSection.tsx` | Callback wiring DxfCanvas ↔ selection state |
+
+**Αρχιτεκτονικές σημειώσεις:**
+- Λόγω dual-canvas z-index (DxfCanvas z-10 > LayerCanvas z-0), ΟΛΑ τα mouse events περνούν μέσω DxfCanvas
+- Marquee rendering ΠΡΕΠΕΙ να γίνεται μέσα στο RAF loop (όχι σε ξεχωριστό useEffect) — αλλιώς γίνεται invisible
+- Υπάρχουν **ΔΥΟ ξεχωριστές** `calculateEntityBounds()`: μία στο selection-utils (world coords) και μία στο DxfRenderer (screen coords) — πρέπει να παραμένουν σε sync
+- Οι τύποι `'rect'` και `'rectangle'` είναι ξεχωριστοί αλλά ισοδύναμοι — κάθε switch πρέπει να τους χειρίζεται και τους δύο
+
 ### Usage
 
 ```typescript
@@ -182,4 +212,4 @@ if (canUndo) undo();
 
 > **📍 Full Reference**: [centralized_systems.md](../../../src/subapps/dxf-viewer/docs/centralized_systems.md)
 >
-> **🔄 Last Updated**: 2026-01-31
+> **🔄 Last Updated**: 2026-02-13
