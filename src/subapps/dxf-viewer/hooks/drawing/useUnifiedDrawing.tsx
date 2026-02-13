@@ -618,7 +618,7 @@ export function useUnifiedDrawing() {
             ? !arcResult.counterclockwise
             : arcResult.counterclockwise;
           // 🔍 DEBUG: Log arc creation
-          console.log('🏗️ createEntityFromTool arc-sce:', {
+          console.debug('🏗️ createEntityFromTool arc-sce:', {
             startAngle: arcResult.startAngle,
             endAngle: arcResult.endAngle,
             counterclockwise: finalCounterclockwise,
@@ -638,7 +638,7 @@ export function useUnifiedDrawing() {
             counterclockwise: finalCounterclockwise,
           };
           // 🔍 DEBUG: Log the FULL entity object before returning
-          console.log('🏗️ createEntityFromTool arc-sce FULL ENTITY:', JSON.stringify(arcEntity, null, 2));
+          console.debug('🏗️ createEntityFromTool arc-sce FULL ENTITY:', JSON.stringify(arcEntity, null, 2));
           return arcEntity as ArcEntity;
         }
         break;
@@ -653,7 +653,7 @@ export function useUnifiedDrawing() {
    */
   const addPoint = useCallback((worldPoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }): boolean => {
     // 🔍 DEBUG (2026-01-31): Log addPoint for circle debugging
-    console.log('➕ [addPoint] Called', {
+    console.debug('➕ [addPoint] Called', {
       worldPoint,
       canAddPoint,
       currentTool: machineContext.toolType,
@@ -664,7 +664,7 @@ export function useUnifiedDrawing() {
     // 🏢 ENTERPRISE (2026-01-25): Use state machine guard instead of manual checks
     // State machine provides canAddPoint which handles all edge cases
     if (!canAddPoint) {
-      console.log('❌ [addPoint] BLOCKED - canAddPoint is false');
+      console.debug('❌ [addPoint] BLOCKED - canAddPoint is false');
       return false;
     }
 
@@ -753,7 +753,7 @@ export function useUnifiedDrawing() {
       const newEntity = createEntityFromTool(currentTool, newTempPoints);
 
       // 🔍 DEBUG (2026-01-31): Log entity creation for circle debugging
-      console.log('🏗️ [addPoint] Entity creation', {
+      console.debug('🏗️ [addPoint] Entity creation', {
         currentTool,
         pointsCount: newTempPoints.length,
         newEntity: newEntity ? { type: newEntity.type, id: newEntity.id } : null,
@@ -771,7 +771,7 @@ export function useUnifiedDrawing() {
 
       if (newEntity && effectiveLevelId) {
         // 🔍 DEBUG (2026-01-31): Log before completeEntity
-        console.log('✅ [addPoint] Calling completeEntity', {
+        console.debug('✅ [addPoint] Calling completeEntity', {
           entityType: newEntity.type,
           entityId: newEntity.id,
           effectiveLevelId,
@@ -794,7 +794,7 @@ export function useUnifiedDrawing() {
         });
       } else {
         // 🔍 DEBUG (2026-01-31): Log why completeEntity was NOT called
-        console.log('❌ [addPoint] completeEntity NOT called', {
+        console.debug('❌ [addPoint] completeEntity NOT called', {
           hasEntity: !!newEntity,
           effectiveLevelId
         });
@@ -1707,7 +1707,7 @@ export function useUnifiedDrawing() {
 
   const startDrawing = useCallback((tool: DrawingTool) => {
     // 🔍 DEBUG (2026-01-31): Log startDrawing for circle debugging
-    console.log('🚀 [startDrawing] Called with tool:', tool);
+    console.debug('🚀 [startDrawing] Called with tool:', tool);
 
     // Set preview mode when drawing starts
     setMode('preview');
@@ -1818,7 +1818,7 @@ export function useUnifiedDrawing() {
     // Only flip for arc tools
     if (currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
       arcFlippedRef.current = !arcFlippedRef.current;
-      console.log('🔄 [flipArcDirection] Arc flipped:', arcFlippedRef.current);
+      console.debug('🔄 [flipArcDirection] Arc flipped:', arcFlippedRef.current);
 
       // Force preview update by clearing and re-rendering
       // The next mouse move will apply the new flip state

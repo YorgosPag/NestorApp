@@ -82,7 +82,7 @@ export const usePrecisionPositioning = (
     if (!hasInitialized && elementRef.current) {
       const calculatedPosition = calculatePosition();
 
-      console.log('🎯 PRECISION POSITIONING CALCULATION:', {
+      console.debug('🎯 PRECISION POSITIONING CALCULATION:', {
         targetPoint: config.targetPoint,
         alignment: config.alignment,
         elementSize: elementRef.current ? {

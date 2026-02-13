@@ -20,7 +20,7 @@ export function useSceneManager(): SceneManagerState {
   const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
     // 🔍 DEBUG (2026-01-31): Log setLevelScene call
     const arcEntities = scene?.entities?.filter(e => e.type === 'arc') || [];
-    console.log('🗄️ [useSceneManager] setLevelScene called', {
+    console.debug('🗄️ [useSceneManager] setLevelScene called', {
       levelId,
       entityCount: scene?.entities?.length || 0,
       // 🔍 DEBUG: Check arc counterclockwise on SAVE
@@ -40,10 +40,10 @@ export function useSceneManager(): SceneManagerState {
       const prevScene = prev[levelId];
       // No-op αν δεν αλλάζει ο pointer (γλιτώνουμε rerender loops)
       if (prevScene === scene) {
-        console.log('🗄️ [useSceneManager] Scene pointer unchanged - skipping update');
+        console.debug('🗄️ [useSceneManager] Scene pointer unchanged - skipping update');
         return prev;
       }
-      console.log('🗄️ [useSceneManager] Updating levelScenes state', {
+      console.debug('🗄️ [useSceneManager] Updating levelScenes state', {
         levelId,
         prevEntityCount: prevScene?.entities?.length || 0,
         newEntityCount: scene?.entities?.length || 0
@@ -62,7 +62,7 @@ export function useSceneManager(): SceneManagerState {
           id: e.id,
           counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
         }));
-        console.log('🔍 [getLevelScene] Reading scene with arcs:', levelId, 'arcs:', JSON.stringify(arcsData));
+        console.debug('🔍 [getLevelScene] Reading scene with arcs:', levelId, 'arcs:', JSON.stringify(arcsData));
       }
     }
     return scene;

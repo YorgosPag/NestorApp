@@ -34,7 +34,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
    */
   const setLevelSceneWithAutoSave = useCallback((levelId: string, scene: SceneModel) => {
     // 🔍 DEBUG (2026-01-31): Log auto-save setLevelScene call
-    console.log('💾 [useAutoSaveSceneManager] setLevelSceneWithAutoSave called', {
+    console.debug('💾 [useAutoSaveSceneManager] setLevelSceneWithAutoSave called', {
       levelId,
       entityCount: scene?.entities?.length || 0
     });

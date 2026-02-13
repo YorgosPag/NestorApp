@@ -90,7 +90,7 @@ export const useKeyboardShortcuts = ({
         }
 
         // PRIORITY 2: Close color palette (fallback if not drawing)
-        console.log(`🎨 [useKeyboardShortcuts] ESC → Close color palette (fallback)`);
+        console.debug(`🎨 [useKeyboardShortcuts] ESC → Close color palette (fallback)`);
         onColorMenuClose();
         return;
       }

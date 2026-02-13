@@ -253,12 +253,12 @@ export function LevelPanel({
   // ✅ EVENT LISTENER: Ακούω για το layering activate event από overlay clicks
   React.useEffect(() => {
     const handleLayeringActivateEvent = (event: CustomEvent) => {
-      console.log('🎯 RECEIVED LAYERING ACTIVATE EVENT:', event.detail);
+      console.debug('🎯 RECEIVED LAYERING ACTIVATE EVENT:', event.detail);
 
       // Καλώ την ίδια function που καλείται στο level card click
       handleLayeringActivation();
 
-      console.log('✅ LAYERING ACTIVATION COMPLETED FROM EVENT');
+      console.debug('✅ LAYERING ACTIVATION COMPLETED FROM EVENT');
     };
 
     // Προσθήκη event listener

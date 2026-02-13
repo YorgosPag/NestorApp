@@ -117,7 +117,7 @@ export function completeEntity(
   options: CompleteEntityOptions
 ): CompleteEntityResult {
   // 🔍 DEBUG (2026-01-31): Log completeEntity call for circle debugging
-  console.log('📦 [completeEntity] Called', {
+  console.debug('📦 [completeEntity] Called', {
     entityType: entity?.type,
     entityId: entity?.id,
     levelId: options.levelId,
@@ -128,7 +128,7 @@ export function completeEntity(
 
   // 🛡️ GUARD: Validate entity
   if (!entity) {
-    console.log('❌ [completeEntity] Entity is null');
+    console.debug('❌ [completeEntity] Entity is null');
     return { success: false, entityId: '', error: 'Entity is null' };
   }
 
@@ -153,7 +153,7 @@ export function completeEntity(
   // 🔍 DEBUG: Check if arc has counterclockwise AFTER applyCompletionStyles
   // 🏢 ADR-102: Use centralized type guard
   if (isArcEntity(entity)) {
-    console.log('📦 [completeEntity] Arc entity AFTER applyCompletionStyles:', {
+    console.debug('📦 [completeEntity] Arc entity AFTER applyCompletionStyles:', {
       entityId: entity.id,
       counterclockwise: (entity as { counterclockwise?: boolean }).counterclockwise,
       fullEntity: JSON.stringify(entity, null, 2)
@@ -175,7 +175,7 @@ export function completeEntity(
     };
     setScene(levelId, finalScene);
     // 🔍 DEBUG (2026-01-31): Log scene update
-    console.log('✅ [completeEntity] Added to existing scene', {
+    console.debug('✅ [completeEntity] Added to existing scene', {
       levelId,
       previousCount: scene.entities.length,
       newCount: finalScene.entities.length
@@ -190,7 +190,7 @@ export function completeEntity(
     };
     setScene(levelId, finalScene);
     // 🔍 DEBUG (2026-01-31): Log new scene creation
-    console.log('✅ [completeEntity] Created new scene', {
+    console.debug('✅ [completeEntity] Created new scene', {
       levelId,
       entityCount: 1
     });
@@ -211,7 +211,7 @@ export function completeEntity(
   if (!skipEvent) {
     // 🔍 DEBUG: Check arc counterclockwise in finalScene BEFORE emit
     const arcEntitiesInFinalScene = finalScene.entities.filter(e => e.type === 'arc');
-    console.log('📤 [completeEntity] Emitting drawing:complete with finalScene', {
+    console.debug('📤 [completeEntity] Emitting drawing:complete with finalScene', {
       entityCount: finalScene.entities.length,
       entityId: entity.id,
       arcCount: arcEntitiesInFinalScene.length,

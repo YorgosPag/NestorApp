@@ -96,7 +96,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
         entities: [...(scene.entities || []), circleEntity]
       };
       levelManager.setLevelScene(levelId, updatedScene);
-      console.log('🎯 [CircleTTT] Circle added to scene:', circleEntity.id);
+      console.debug('🎯 [CircleTTT] Circle added to scene:', circleEntity.id);
     }
   });
 
@@ -131,7 +131,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
         entities: [...(scene.entities || []), lineEntity]
       };
       levelManager.setLevelScene(levelId, updatedScene);
-      console.log('🎯 [LinePerpendicular] Line added to scene:', lineEntity.id);
+      console.debug('🎯 [LinePerpendicular] Line added to scene:', lineEntity.id);
     }
   });
 
@@ -166,7 +166,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
         entities: [...(scene.entities || []), lineEntity]
       };
       levelManager.setLevelScene(levelId, updatedScene);
-      console.log('🎯 [LineParallel] Line added to scene:', lineEntity.id);
+      console.debug('🎯 [LineParallel] Line added to scene:', lineEntity.id);
     }
   });
 

@@ -277,7 +277,7 @@ export class DxfEntityParser {
     }
 
     // Log parsed header for debugging
-    console.log('📋 DXF HEADER parsed:', {
+    console.debug('📋 DXF HEADER parsed:', {
       insunits: header.insunits,
       insunitsName: DxfEntityParser.getUnitsName(header.insunits),
       dimscale: header.dimscale,
@@ -426,7 +426,7 @@ export class DxfEntityParser {
     // Log parsed DIMSTYLES for debugging
     const styleCount = Object.keys(dimStyles).length;
     if (styleCount > 1) {
-      console.log('📏 DXF DIMSTYLES parsed:', {
+      console.debug('📏 DXF DIMSTYLES parsed:', {
         count: styleCount,
         styles: Object.entries(dimStyles).map(([name, style]) => ({
           name,
@@ -598,7 +598,7 @@ export class DxfEntityParser {
     // Log parsed LAYERS for debugging
     const layerCount = Object.keys(layerColors).length;
     if (layerCount > 0) {
-      console.log('🎨 DXF LAYER COLORS parsed:', {
+      console.debug('🎨 DXF LAYER COLORS parsed:', {
         count: layerCount,
         layers: Object.entries(layerColors).map(([name, layer]) => ({
           name,

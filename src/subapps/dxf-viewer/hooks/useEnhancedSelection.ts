@@ -130,7 +130,7 @@ interface EntityWithLayer {
  */
 function debugLog(message: string, ...args: unknown[]): void {
   if (DEBUG_MODE) {
-    console.log(`[EnhancedSelection] ${message}`, ...args);
+    console.debug(`[EnhancedSelection] ${message}`, ...args);
   }
 }
 

@@ -176,7 +176,7 @@ export function usePerformanceOptimization(
     if (success) {
       // Update status after optimization
       setTimeout(updateStatus, PANEL_LAYOUT.TIMING.ELEMENT_REMOVE);
-      console.log(`✅ Optimization applied: ${actionId}`);
+      console.debug(`✅ Optimization applied: ${actionId}`);
     } else {
       console.warn(`❌ Failed to apply optimization: ${actionId}`);
     }
@@ -196,7 +196,7 @@ export function usePerformanceOptimization(
       await new Promise(resolve => setTimeout(resolve, PANEL_LAYOUT.TIMING.STATE_TRANSITION));
     }
 
-    console.log('✅ All optimizations applied');
+    console.debug('✅ All optimizations applied');
   }, [applyOptimization]);
 
   /**
@@ -205,7 +205,7 @@ export function usePerformanceOptimization(
   const clearAlerts = useCallback(() => {
     // This would clear alerts in the optimizer
     updateStatus();
-    console.log('🗑️ Performance alerts cleared');
+    console.debug('🗑️ Performance alerts cleared');
   }, [updateStatus]);
 
   /**
@@ -214,7 +214,7 @@ export function usePerformanceOptimization(
   const updateConfig = useCallback((config: PerformanceOptimizerConfig) => {
     dxfPerformanceOptimizer.updateConfig(config);
     updateStatus();
-    console.log('⚙️ Performance config updated');
+    console.debug('⚙️ Performance config updated');
   }, [updateStatus]);
 
   /**
@@ -228,7 +228,7 @@ export function usePerformanceOptimization(
       const endTime = performance.now();
       const renderTime = endTime - startTime;
 
-      console.log(`📏 Manual performance measurement: ${renderTime.toFixed(2)}ms`);
+      console.debug(`📏 Manual performance measurement: ${renderTime.toFixed(2)}ms`);
       updateStatus();
     });
   }, [updateStatus]);
@@ -339,7 +339,7 @@ export function usePerformanceOptimization(
 
     const handleOptimizationApplied = (event: Event) => {
       const customEvent = event as OptimizationAppliedEvent;
-      console.log('✅ Optimization Applied:', customEvent.detail);
+      console.debug('✅ Optimization Applied:', customEvent.detail);
       updateStatus();
     };
 

@@ -70,7 +70,7 @@ export function useColorMenuState() {
       ids,
     });
 
-    console.log('[useColorMenuState] Opened menu:', { position: validated, entityCount: ids.length });
+    console.debug('[useColorMenuState] Opened menu:', { position: validated, entityCount: ids.length });
   }, []);
 
   // ✅ ENTERPRISE: Close menu

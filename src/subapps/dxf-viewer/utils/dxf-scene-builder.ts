@@ -128,7 +128,7 @@ export class DxfSceneBuilder {
       name,
       color: layer.color
     }));
-    console.log('🎨 COLOR ASSIGNMENT SUMMARY:', {
+    console.debug('🎨 COLOR ASSIGNMENT SUMMARY:', {
       totalEntities: entities.length,
       byLayerColors: byLayerColorCount,
       explicitColors: explicitColorCount,
@@ -426,7 +426,7 @@ export class DxfSceneBuilder {
     // Log για debugging
     const totalFixed = normalizedCount + unitScaledCount + annoScaleDetectedCount;
     if (totalFixed > 0) {
-      console.log(`📏 TEXT NORMALIZATION COMPLETE:`, {
+      console.debug(`📏 TEXT NORMALIZATION COMPLETE:`, {
         totalFixed,
         unitScaled: unitScaledCount,
         annoScaleDetected: annoScaleDetectedCount,

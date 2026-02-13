@@ -116,7 +116,7 @@ export function useLineParallel(options: {
       currentStep: 0,
       error: null,
     });
-    console.log('⫽ [LineParallel] Activated - waiting for reference line');
+    console.debug('⫽ [LineParallel] Activated - waiting for reference line');
   }, []);
 
   const deactivate = useCallback(() => {
@@ -126,7 +126,7 @@ export function useLineParallel(options: {
       currentStep: 0,
       error: null,
     });
-    console.log('⫽ [LineParallel] Deactivated');
+    console.debug('⫽ [LineParallel] Deactivated');
   }, []);
 
   const reset = useCallback(() => {
@@ -136,7 +136,7 @@ export function useLineParallel(options: {
       currentStep: 0,
       error: null,
     }));
-    console.log('⫽ [LineParallel] Reset - waiting for reference line');
+    console.debug('⫽ [LineParallel] Reset - waiting for reference line');
   }, []);
 
   // ============================================================================
@@ -234,7 +234,7 @@ export function useLineParallel(options: {
       return false;
     }
 
-    console.log('⫽ [LineParallel] Reference line selected:', selectedLine);
+    console.debug('⫽ [LineParallel] Reference line selected:', selectedLine);
 
     setState(prev => ({
       ...prev,
@@ -285,7 +285,7 @@ export function useLineParallel(options: {
       color: UI_COLORS.BRIGHT_GREEN, // 🏢 ENTERPRISE: Consistent green color for new entities
     };
 
-    console.log('⫽ [LineParallel] Line created:', lineEntity);
+    console.debug('⫽ [LineParallel] Line created:', lineEntity);
 
     // Notify via callback
     onLineCreated?.(lineEntity);

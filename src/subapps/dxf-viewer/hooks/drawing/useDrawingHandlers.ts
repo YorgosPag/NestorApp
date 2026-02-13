@@ -177,7 +177,7 @@ export function useDrawingHandlers(
   const onDrawingPoint = useCallback((p: Pt) => {
     // 🔍 DEBUG (2026-01-31): Log drawing point for circle debugging
     if (DEBUG_DRAWING_HANDLERS) {
-      console.log('🎯 [onDrawingPoint]', {
+      console.debug('🎯 [onDrawingPoint]', {
         activeTool,
         point: p,
         drawingState: drawingState.currentTool,
@@ -230,7 +230,7 @@ export function useDrawingHandlers(
   const onDrawingHover = useCallback((p: Pt | null) => {
     // 🔍 STOP 1 DEBUG TRACE (2026-02-01): Comprehensive preview flow tracing
     if (DEBUG_DRAWING_HANDLERS) {
-      console.log('🔍 [onDrawingHover] ENTRY', {
+      console.debug('🔍 [onDrawingHover] ENTRY', {
         activeTool,
         hasPoint: !!p,
         worldPos: p ? `(${p.x.toFixed(2)}, ${p.y.toFixed(2)})` : 'null',
@@ -261,7 +261,7 @@ export function useDrawingHandlers(
 
         // 🔍 DEBUG TRACE: Log preview entity details
         if (DEBUG_DRAWING_HANDLERS) {
-          console.log('🔍 [onDrawingHover] PREVIEW ENTITY', {
+          console.debug('🔍 [onDrawingHover] PREVIEW ENTITY', {
             entityType: previewEntity?.type,
             hasEntity: !!previewEntity,
             callingDrawPreview: !!previewEntity,

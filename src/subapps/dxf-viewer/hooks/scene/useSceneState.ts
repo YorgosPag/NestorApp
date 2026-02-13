@@ -32,7 +32,7 @@ export function useSceneState() {
   const currentScene = currentLevelId ? getLevelScene(currentLevelId) : null;
 
   // 🔍 DEBUG (2026-01-31): Log currentScene for circle debugging
-  console.log('📊 [useSceneState] currentScene computed', {
+  console.debug('📊 [useSceneState] currentScene computed', {
     currentLevelId,
     hasScene: !!currentScene,
     entityCount: currentScene?.entities?.length || 0
@@ -72,16 +72,16 @@ export function useSceneState() {
   // Scene change handler
   // 🔍 DEBUG (2026-01-31): Log scene change for debugging
   const handleSceneChange = useCallback((scene: SceneModel) => {
-    console.log('🎬 [useSceneState] handleSceneChange called', {
+    console.debug('🎬 [useSceneState] handleSceneChange called', {
       currentLevelId,
       entityCount: scene?.entities?.length || 0,
       hasSetLevelScene: !!setLevelScene
     });
     if (currentLevelId) {
       setLevelScene(currentLevelId, scene);
-      console.log('✅ [useSceneState] setLevelScene completed');
+      console.debug('✅ [useSceneState] setLevelScene completed');
     } else {
-      console.log('⚠️ [useSceneState] No currentLevelId - skipping setLevelScene');
+      console.debug('⚠️ [useSceneState] No currentLevelId - skipping setLevelScene');
     }
   }, [currentLevelId, setLevelScene]);
 

@@ -28,7 +28,7 @@
  *   isGripDragging,
  * } = useGripMovement({
  *   entityId: selectedEntity.id,
- *   onGripMove: (delta) => console.log('Grip moved by', delta),
+ *   onGripMove: (delta) => console.debug('Grip moved by', delta),
  * });
  * ```
  *
@@ -183,7 +183,7 @@ const INITIAL_GRIP_STATE: GripDragState = {
  */
 function debugLog(message: string, ...args: unknown[]): void {
   if (DEBUG_MODE) {
-    console.log(`[GripMovement] ${message}`, ...args);
+    console.debug(`[GripMovement] ${message}`, ...args);
   }
 }
 

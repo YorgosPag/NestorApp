@@ -187,7 +187,7 @@ export interface UseMovementOperationsReturn {
  */
 function debugLog(message: string, ...args: unknown[]): void {
   if (DEBUG_MODE) {
-    console.log(`[MovementOps] ${message}`, ...args);
+    console.debug(`[MovementOps] ${message}`, ...args);
   }
 }
 

@@ -107,7 +107,7 @@ export function useCircleTTT(options: {
       currentStep: 0,
       error: null,
     });
-    console.log('🎯 [CircleTTT] Activated - waiting for 1st line');
+    console.debug('🎯 [CircleTTT] Activated - waiting for 1st line');
   }, []);
 
   const deactivate = useCallback(() => {
@@ -117,7 +117,7 @@ export function useCircleTTT(options: {
       currentStep: 0,
       error: null,
     });
-    console.log('🎯 [CircleTTT] Deactivated');
+    console.debug('🎯 [CircleTTT] Deactivated');
   }, []);
 
   const reset = useCallback(() => {
@@ -127,7 +127,7 @@ export function useCircleTTT(options: {
       currentStep: 0,
       error: null,
     }));
-    console.log('🎯 [CircleTTT] Reset - waiting for 1st line');
+    console.debug('🎯 [CircleTTT] Reset - waiting for 1st line');
   }, []);
 
   // ============================================================================
@@ -252,7 +252,7 @@ export function useCircleTTT(options: {
     const newSelectedLines = [...currentState.selectedLines, selectedLine];
     const newStep = newSelectedLines.length;
 
-    console.log(`🎯 [CircleTTT] Line ${newStep}/3 selected:`, selectedLine);
+    console.debug(`🎯 [CircleTTT] Line ${newStep}/3 selected:`, selectedLine);
 
     // If we have 3 lines, calculate and create the circle
     if (newSelectedLines.length === 3) {
@@ -283,7 +283,7 @@ export function useCircleTTT(options: {
         layer: currentLevelId,
       };
 
-      console.log('🎯 [CircleTTT] Circle created:', circleEntity);
+      console.debug('🎯 [CircleTTT] Circle created:', circleEntity);
 
       // Notify via callback
       onCircleCreated?.(circleEntity);

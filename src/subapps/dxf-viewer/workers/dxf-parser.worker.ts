@@ -11,7 +11,7 @@ interface WorkerMessage {
 // Main DXF content parser using working DxfSceneBuilder
 function parseDxfContent(content: string, filename: string): DxfImportResult {
   const startTime = performance.now();
-  console.log('🔧 Worker: Received parse request for:', filename);
+  console.debug('🔧 Worker: Received parse request for:', filename);
   
   try {
     // Build scene using working DxfSceneBuilder (not broken npm parser)
@@ -23,7 +23,7 @@ function parseDxfContent(content: string, filename: string): DxfImportResult {
     }
     
     const parseTimeMs = performance.now() - startTime;
-    console.log(`✅ Worker: Parse completed in ${parseTimeMs.toFixed(2)}ms`);
+    console.debug(`✅ Worker: Parse completed in ${parseTimeMs.toFixed(2)}ms`);
     
     return {
       success: true,
@@ -117,4 +117,4 @@ self.onerror = (error) => {
 };
 
 // Log worker startup
-console.log('🚀 DXF Parser Worker initialized and ready');
+console.debug('🚀 DXF Parser Worker initialized and ready');

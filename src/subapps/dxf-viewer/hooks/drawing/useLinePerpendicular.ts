@@ -129,7 +129,7 @@ export function useLinePerpendicular(options: {
       currentStep: 0,
       error: null,
     });
-    console.log('📐 [LinePerpendicular] Activated - waiting for reference line');
+    console.debug('📐 [LinePerpendicular] Activated - waiting for reference line');
   }, []);
 
   const deactivate = useCallback(() => {
@@ -139,7 +139,7 @@ export function useLinePerpendicular(options: {
       currentStep: 0,
       error: null,
     });
-    console.log('📐 [LinePerpendicular] Deactivated');
+    console.debug('📐 [LinePerpendicular] Deactivated');
   }, []);
 
   const reset = useCallback(() => {
@@ -149,7 +149,7 @@ export function useLinePerpendicular(options: {
       currentStep: 0,
       error: null,
     }));
-    console.log('📐 [LinePerpendicular] Reset - waiting for reference line');
+    console.debug('📐 [LinePerpendicular] Reset - waiting for reference line');
   }, []);
 
   // ============================================================================
@@ -247,7 +247,7 @@ export function useLinePerpendicular(options: {
       return false;
     }
 
-    console.log('📐 [LinePerpendicular] Reference line selected:', selectedLine);
+    console.debug('📐 [LinePerpendicular] Reference line selected:', selectedLine);
 
     setState(prev => ({
       ...prev,
@@ -299,7 +299,7 @@ export function useLinePerpendicular(options: {
       color: UI_COLORS.BRIGHT_GREEN, // 🏢 ENTERPRISE: Consistent green color for new entities
     };
 
-    console.log('📐 [LinePerpendicular] Line created:', lineEntity);
+    console.debug('📐 [LinePerpendicular] Line created:', lineEntity);
 
     // Notify via callback
     onLineCreated?.(lineEntity);

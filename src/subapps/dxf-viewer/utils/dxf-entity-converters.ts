@@ -541,7 +541,7 @@ export function convertDimension(
   const textHeight = baseDimtxt * dimscale;
 
   // 🔧 DEBUG LOG: Uncomment to diagnose dimension height issues
-  console.log('📐 DIM HEIGHT CALC:', {
+  console.debug('📐 DIM HEIGHT CALC:', {
     entityId: `dimension_${index}`,
     code140: data['140'] || '(none)',
     styleName,

@@ -20,8 +20,8 @@
  * ```tsx
  * const { isDragging, startDrag, updateDrag, endDrag } = useEntityDrag({
  *   selectedEntityIds,
- *   onDragStart: () => console.log('Started dragging'),
- *   onDragEnd: (delta) => console.log('Dragged by', delta),
+ *   onDragStart: () => console.debug('Started dragging'),
+ *   onDragEnd: (delta) => console.debug('Dragged by', delta),
  * });
  *
  * // In canvas mouse handlers:
@@ -139,7 +139,7 @@ export interface UseEntityDragReturn {
  */
 function debugLog(message: string, ...args: unknown[]): void {
   if (DEBUG_MODE) {
-    console.log(`[EntityDrag] ${message}`, ...args);
+    console.debug(`[EntityDrag] ${message}`, ...args);
   }
 }
 
