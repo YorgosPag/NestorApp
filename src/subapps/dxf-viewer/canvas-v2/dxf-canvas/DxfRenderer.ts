@@ -255,8 +255,54 @@ export class DxfRenderer {
         };
       }
 
+      case 'arc': {
+        // 🏢 ENTERPRISE (2026-02-13): Arc highlight — bounding circle of the arc
+        const arcCenter = CoordinateTransforms.worldToScreen(entity.center, transform, viewport);
+        const arcScreenRadius = entity.radius * transform.scale;
+        return {
+          min: { x: arcCenter.x - arcScreenRadius, y: arcCenter.y - arcScreenRadius },
+          max: { x: arcCenter.x + arcScreenRadius, y: arcCenter.y + arcScreenRadius }
+        };
+      }
+
+      case 'polyline': {
+        // 🏢 ENTERPRISE (2026-02-13): Polyline/polygon highlight — bounds from all vertices
+        if (!entity.vertices || entity.vertices.length === 0) return null;
+        const screenVerts = entity.vertices.map(v => CoordinateTransforms.worldToScreen(v, transform, viewport));
+        let minX = screenVerts[0].x, minY = screenVerts[0].y;
+        let maxX = screenVerts[0].x, maxY = screenVerts[0].y;
+        for (let i = 1; i < screenVerts.length; i++) {
+          minX = Math.min(minX, screenVerts[i].x);
+          minY = Math.min(minY, screenVerts[i].y);
+          maxX = Math.max(maxX, screenVerts[i].x);
+          maxY = Math.max(maxY, screenVerts[i].y);
+        }
+        return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
+      }
+
+      case 'angle-measurement': {
+        // 🏢 ENTERPRISE (2026-02-13): Angle measurement highlight — bounds from 3 points
+        const v = CoordinateTransforms.worldToScreen(entity.vertex, transform, viewport);
+        const p1 = CoordinateTransforms.worldToScreen(entity.point1, transform, viewport);
+        const p2 = CoordinateTransforms.worldToScreen(entity.point2, transform, viewport);
+        return {
+          min: { x: Math.min(v.x, p1.x, p2.x), y: Math.min(v.y, p1.y, p2.y) },
+          max: { x: Math.max(v.x, p1.x, p2.x), y: Math.max(v.y, p1.y, p2.y) }
+        };
+      }
+
+      case 'text': {
+        // 🏢 ENTERPRISE (2026-02-13): Text highlight — approximate from position and height
+        const textPos = CoordinateTransforms.worldToScreen(entity.position, transform, viewport);
+        const screenHeight = entity.height * transform.scale;
+        return {
+          min: { x: textPos.x, y: textPos.y - screenHeight },
+          max: { x: textPos.x + screenHeight * 4, y: textPos.y } // Approximate width = 4x height
+        };
+      }
+
       default:
-        return null; // TODO: Implement για άλλους τύπους
+        return null;
     }
   }
 

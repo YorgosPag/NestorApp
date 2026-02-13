@@ -164,6 +164,19 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       };
     case 'polyline':
       return calculateVerticesBounds(entity.vertices);
+    case 'lwpolyline':
+      // 🏢 ENTERPRISE (2026-02-13): LWPolyline fallthrough to polyline — same vertex-based bounds
+      return calculateVerticesBounds((entity as unknown as { vertices: Point2D[] }).vertices);
+    case 'arc': {
+      // 🏢 ENTERPRISE (2026-02-13): Arc bounds — use center ± radius (bounding circle)
+      const arcCenter = ('center' in entity ? entity.center : undefined) as Point2D | undefined;
+      const arcRadius = ('radius' in entity ? entity.radius : undefined) as number | undefined;
+      if (!arcCenter || arcRadius === undefined) return null;
+      return {
+        min: { x: arcCenter.x - arcRadius, y: arcCenter.y - arcRadius },
+        max: { x: arcCenter.x + arcRadius, y: arcCenter.y + arcRadius }
+      };
+    }
     case 'rect':
     case 'rectangle': {
       // Handle both corner-based and vertex-based rectangles
