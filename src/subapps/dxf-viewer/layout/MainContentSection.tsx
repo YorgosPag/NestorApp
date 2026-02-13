@@ -117,7 +117,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
 }) => {
   return (
     <div
-      className=""
+      className="min-w-0 overflow-hidden"
       style={getMainContentSectionStyles()}
     >
       {/* DEBUG TOOLBAR - Development only */}
