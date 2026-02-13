@@ -1012,8 +1012,16 @@ export function calculatePolygonCentroid(points: Point2D[]): Point2D {
   if (points.length === 0) return ZERO_VECTOR;
   if (points.length === 1) return { ...points[0] };
 
-  const area = calculatePolygonArea(points);
-  if (area === 0) {
+  // 🎯 FIX (2026-02-13): Χρήση SIGNED area αντί absolute — ο τύπος centroid
+  // απαιτεί signed area για σωστό πρόσημο. Με abs area, CW-wound polygons
+  // (κανονική φορά στο canvas Y-down) δίνουν centroid σε αντίθετη θέση (off-screen).
+  let signedArea2 = 0; // = 2 × signed area
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    signedArea2 += points[i].x * points[j].y - points[j].x * points[i].y;
+  }
+
+  if (Math.abs(signedArea2) < 1e-10) {
     // Degenerate polygon - return average of points
     // 🏢 ADR-118: Use centralized ZERO_VECTOR for accumulator initialization
     const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { ...ZERO_VECTOR });
@@ -1030,7 +1038,8 @@ export function calculatePolygonCentroid(points: Point2D[]): Point2D {
     cy += (points[i].y + points[j].y) * cross;
   }
 
-  const factor = 1 / (6 * area);
+  // factor = 1/(6A) = 1/(6 × signedArea2/2) = 1/(3 × signedArea2)
+  const factor = 1 / (3 * signedArea2);
   return {
     x: cx * factor,
     y: cy * factor
