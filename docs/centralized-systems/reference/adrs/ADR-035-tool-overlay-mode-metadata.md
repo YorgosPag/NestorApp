@@ -57,3 +57,13 @@
 | **Fix** | Added point-in-polygon hit-test in `handleCanvasClick` for `activeTool === 'move'`: iterates over `currentOverlays`, tests if `worldPoint` is inside each polygon using `isPointInPolygon()`, and calls `handleOverlayClick()` on match to initiate body drag. |
 | **File** | `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` |
 | **Lesson** | Due to z-index stacking (DxfCanvas z-10 > LayerCanvas z-0), any overlay interaction that previously relied on LayerCanvas mouse handlers MUST be duplicated in the DxfCanvas click path (`handleCanvasClick`). This is a fundamental architectural constraint of the dual-canvas system. |
+
+### 2026-02-13 — Fix: Layering tool permanently locked after overlay selection
+
+| Field | Value |
+|-------|-------|
+| **Bug** | After selecting an overlay from the left panel ("Επίπεδα Έργου"), the "Επίπεδα" toolbar button became permanently active — clicking any other tool had no effect, always reverting to layering |
+| **Root Cause** | `DxfViewerContent.tsx` had a `useEffect` (line ~846) that auto-activated the layering tool when an overlay was selected. It included `activeTool` in its dependency array, creating a feedback loop: user changes tool → effect fires → `primarySelectedId` still set + `activeTool !== 'layering'` → forces back to 'layering'. Only 'select' was excluded. |
+| **Fix** | Added a `prevPrimarySelectedIdRef` to track the previous selection. The effect now only auto-switches to 'layering' when a **new** overlay is selected (`primarySelectedId !== prevRef.current`), not on every `activeTool` change. Users can now freely switch tools after selecting an overlay. |
+| **File** | `src/subapps/dxf-viewer/app/DxfViewerContent.tsx` |
+| **Lesson** | Effects that auto-switch `activeTool` based on selection state must NOT include `activeTool` as a trigger for re-execution — this creates feedback loops. Use a ref to detect actual selection *changes* and only react to those. |
