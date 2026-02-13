@@ -193,6 +193,7 @@
 | **ADR-175** | Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ) | ✅ PHASE_1B_IMPLEMENTED | 2026-02-12 | Construction Management / BOQ | [📄](./adrs/ADR-175-quantity-surveying-measurements-system.md) |
 | **ADR-176** | DXF Viewer Mobile Responsive Refactoring | ✅ APPROVED | 2026-02-12 | UI Components | [📄](./adrs/ADR-176-dxf-viewer-mobile-responsive.md) |
 | **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ IMPLEMENTED | 2026-02-13 | UI Components / Data Quality | [📄](./adrs/ADR-177-employer-picker-entity-linking.md) |
+| **ADR-178** | Contact Relationship Auto-Save UX (PendingRelationshipGuard) | ✅ IMPLEMENTED | 2026-02-13 | UX / Contact Relationships | [📄](./adrs/ADR-178-contact-relationship-auto-save-ux.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -341,6 +342,8 @@
 | **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-129-layer-entity-filtering-centralization.md) |
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-130-default-layer-name-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | [View](./adrs/ADR-167-enterprise-project-address-system.md) |
+| **ADR-177** | Employer Picker — Entity Linking with Company Contacts | ✅ IMPLEMENTED | [View](./adrs/ADR-177-employer-picker-entity-linking.md) |
+| **ADR-178** | Contact Relationship Auto-Save UX (PendingRelationshipGuard) | ✅ IMPLEMENTED | [View](./adrs/ADR-178-contact-relationship-auto-save-ux.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
 
 ---
