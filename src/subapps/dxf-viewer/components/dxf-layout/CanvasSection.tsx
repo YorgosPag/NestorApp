@@ -33,6 +33,8 @@ import { pointToLineDistance } from '../../rendering/entities/shared/geometry-ut
 import { MOVEMENT_DETECTION, POLYGON_TOLERANCES, TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
+// 🔧 FIX (2026-02-13): Point-in-polygon hit-test for move tool overlay detection
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
 import { useGripStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Centralized tool detection (Single Source of Truth)
@@ -1256,6 +1258,20 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       // 🏢 ADR-046: worldPoint is already in WORLD coordinates - no conversion needed!
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
       return;
+    }
+
+    // 🔧 FIX (2026-02-13): Move tool — hit-test overlays and start body drag
+    // DxfCanvas (z-10) captures mouse events, but overlay hit-testing only exists in LayerCanvas.
+    // Since LayerCanvas (z-0) never receives pointer events, we do the hit-test here.
+    if (activeTool === 'move') {
+      for (const overlay of currentOverlays) {
+        if (!overlay.polygon || overlay.polygon.length < 3) continue;
+        const vertices = overlay.polygon.map(([x, y]) => ({ x, y }));
+        if (isPointInPolygon(worldPoint, vertices)) {
+          handleOverlayClick(overlay.id, worldPoint);
+          return;
+        }
+      }
     }
 
     // 🏢 ENTERPRISE (2026-01-25): Only deselect overlay if clicking on EMPTY canvas space
