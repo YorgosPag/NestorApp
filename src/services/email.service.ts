@@ -50,7 +50,6 @@ export interface EmailResponse {
 
 // Legacy sample send for existing functionality
 const sampleSend = async (payload: EmailPayload) => {
-    console.log('📧 LEGACY EMAIL:', payload.subject);
     await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
     return { success: true };
 };
@@ -65,10 +64,10 @@ export class EmailService {
    * Send property share emails (NEW ENTERPRISE METHOD)
    */
   static async sendPropertyShareEmail(emailRequest: EmailRequest): Promise<EmailResponse> {
-    console.log('🔍 DEBUG: EmailService.sendPropertyShareEmail called');
-    console.log('🔍 DEBUG: RESEND_API_KEY exists:', !!RESEND_API_KEY);
-    console.log('🔍 DEBUG: resend object:', !!resend);
-    console.log('🔍 DEBUG: NODE_ENV:', NODE_ENV);
+    console.debug('🔍 DEBUG: EmailService.sendPropertyShareEmail called');
+    console.debug('🔍 DEBUG: RESEND_API_KEY exists:', !!RESEND_API_KEY);
+    console.debug('🔍 DEBUG: resend object:', !!resend);
+    console.debug('🔍 DEBUG: NODE_ENV:', NODE_ENV);
 
     const {
       recipients,
@@ -95,9 +94,9 @@ export class EmailService {
 
     // Check if Resend is properly configured
     if (!resend) {
-      console.log('🧪 ENTERPRISE EMAIL SERVICE: Development mode - No API key');
-      console.log('📧 Recipients:', recipients);
-      console.log('📝 Property:', { title: propertyTitle, url: propertyUrl, template: templateType });
+      console.debug('🧪 ENTERPRISE EMAIL SERVICE: Development mode - No API key');
+      console.debug('📧 Recipients:', recipients);
+      console.debug('📝 Property:', { title: propertyTitle, url: propertyUrl, template: templateType });
 
       return {
         success: true,
@@ -148,7 +147,7 @@ export class EmailService {
         ]
       });
 
-      console.log('✅ ENTERPRISE EMAIL SENT:', {
+      console.debug('✅ ENTERPRISE EMAIL SENT:', {
         id: result.data?.id,
         recipients: recipients.length,
         template: templateType
