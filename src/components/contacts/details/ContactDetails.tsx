@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Users, Edit, Check, X } from 'lucide-react';
 import { useActionMessages } from '@/hooks/useEnterpriseMessages';
@@ -46,10 +46,25 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
   const [activeTab, setActiveTab] = useState<string>('basicInfo'); // 🏢 ENTERPRISE: Track active tab
+  // 🖼️ OPTIMISTIC PHOTO STATE: Preserve photo URLs between save and contact refresh
+  const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
   const photoModal = useGlobalPhotoPreview();
 
   // 🏢 ENTERPRISE: Check if current tab is a subcollection tab
   const isSubcollectionTab = SUBCOLLECTION_TABS.includes(activeTab);
+
+  // 🖼️ OPTIMISTIC: Clear saved photo URLs once the contact prop catches up
+  useEffect(() => {
+    if (!contact || (!savedPhotoURLs.logoURL && !savedPhotoURLs.photoURL)) return;
+
+    const contactRecord = contact as unknown as Record<string, unknown>;
+    const hasLogo = !savedPhotoURLs.logoURL || contactRecord.logoURL === savedPhotoURLs.logoURL;
+    const hasPhoto = !savedPhotoURLs.photoURL || contactRecord.photoURL === savedPhotoURLs.photoURL;
+
+    if (hasLogo && hasPhoto) {
+      setSavedPhotoURLs({});
+    }
+  }, [contact, savedPhotoURLs]);
 
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -79,6 +94,17 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       website: mappingResult.formData.website
     });
 
+    let formData = mappingResult.formData;
+
+    // 🖼️ OPTIMISTIC: Merge saved photo URLs if the contact hasn't refreshed yet
+    // This prevents the photo from disappearing between save and async contact refresh
+    if (savedPhotoURLs.logoURL && !formData.logoURL) {
+      formData = { ...formData, logoURL: savedPhotoURLs.logoURL, logoPreview: savedPhotoURLs.logoURL };
+    }
+    if (savedPhotoURLs.photoURL && !formData.photoURL) {
+      formData = { ...formData, photoURL: savedPhotoURLs.photoURL, photoPreview: savedPhotoURLs.photoURL };
+    }
+
     // Additional multiplePhotoURLs conversion for backward compatibility
     const multiplePhotoURLs = getMultiplePhotoURLs(contact);
     if (multiplePhotoURLs.length > 0) {
@@ -93,13 +119,13 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       }));
 
       return {
-        ...mappingResult.formData,
-        multiplePhotos: [...(mappingResult.formData.multiplePhotos || []), ...multiplePhotos]
+        ...formData,
+        multiplePhotos: [...(formData.multiplePhotos || []), ...multiplePhotos]
       };
     }
 
-    return mappingResult.formData;
-  }, [contact]);
+    return formData;
+  }, [contact, savedPhotoURLs]);
 
   // 🎯 EDIT MODE HANDLERS
   const handleStartEdit = useCallback(() => {
@@ -122,6 +148,16 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     try {
       // 🏢 ENTERPRISE: Use new form-to-arrays conversion method
       await ContactsService.updateContactFromForm(contact.id, editedData);
+
+      // 🖼️ OPTIMISTIC: Preserve photo URLs so they remain visible while async refresh loads
+      const editedFormData = editedData as Partial<ContactFormData>;
+      const newSavedPhotos: { logoURL?: string; photoURL?: string } = {};
+      if (editedFormData.logoURL) newSavedPhotos.logoURL = editedFormData.logoURL;
+      if (editedFormData.photoURL) newSavedPhotos.photoURL = editedFormData.photoURL;
+      if (newSavedPhotos.logoURL || newSavedPhotos.photoURL) {
+        setSavedPhotoURLs(newSavedPhotos);
+      }
+
       setIsEditing(false);
       setEditedData({});
 
@@ -151,6 +187,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     setEditedData(prev => ({
       ...prev,
       logoURL,
+      logoPreview: logoURL,
       logoFile: null
     }));
   }, []);
@@ -159,6 +196,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     setEditedData(prev => ({
       ...prev,
       photoURL,
+      photoPreview: photoURL,
       photoFile: null
     }));
   }, []);
