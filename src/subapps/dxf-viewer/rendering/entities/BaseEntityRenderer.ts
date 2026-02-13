@@ -715,10 +715,11 @@ export abstract class BaseEntityRenderer {
     const dCCW = norm(a2 - a1);  // Counter-clockwise distance
     const dCW = TAU - dCCW;       // Clockwise distance
 
-    // 🎯 ΣΩΣΤΗ ΛΟΓΙΚΗ: Επιλέγουμε την κατεύθυνση που δίνει το ΜΙΚΡΟΤΕΡΟ τόξο (εσωτερική γωνία)
-    // - Αν dCCW < π, το CCW path είναι μικρότερο → useCCW = true
-    // - Αν dCCW > π, το CW path είναι μικρότερο → useCCW = false
-    const useCCW = dCCW < Math.PI;
+    // 🎯 FIX (2026-02-13): Επιλέγουμε την κατεύθυνση που δίνει το ΜΙΚΡΟΤΕΡΟ τόξο (εσωτερική γωνία)
+    // dCCW = CW angular distance (canvas Y-down: increasing angle = clockwise)
+    // - Αν dCCW < π, η CW πορεία είναι κοντή → useCCW = false (σχέδιασε CW = μικρό τόξο)
+    // - Αν dCCW > π, η CW πορεία είναι μακρά → useCCW = true (σχέδιασε CCW = μικρό τόξο)
+    const useCCW = dCCW > Math.PI;
 
     this.ctx.save();
     this.applyArcStyle();
