@@ -9,7 +9,6 @@ import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Typ
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // UI_COLORS, RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS — removed: dashed selection overlay replaced by inline grips
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 // 🏢 ENTERPRISE: Refresh cached bounds before render to prevent stale clear/draw mismatch
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 // 🏢 ADR-102: Centralized Origin Markers
@@ -73,13 +72,14 @@ export class DxfRenderer {
       selectedEntityIds: []
     }
   ): void {
-    // 🔧 FIX (2026-02-15): Refresh cached bounds BEFORE clearCanvas to prevent stale mismatch
-    // Root cause: clearCanvas used cached (stale) dims while draw used fresh dims → residual strips
+    // 🔧 FIX (2026-02-15): Use FRESH bounds for both clear AND draw — single source of truth
+    // Root cause: CanvasUtils.clearCanvas re-fetches from cache internally, which is fragile.
+    // Direct clearRect with the same rect used for rendering eliminates any implicit dependency.
     const canvasRect = canvasBoundsService.refreshBounds(this.canvas);
     const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
 
-    // Clear canvas (now uses same fresh cached bounds)
-    CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
+    // Clear canvas using exact same fresh dimensions as rendering viewport
+    this.ctx.clearRect(0, 0, canvasRect.width, canvasRect.height);
 
     // 🏢 ADR-102: Centralized Origin Marker (Single Source of Truth)
     // Only DxfCanvas renders the origin marker - eliminates dual-canvas alignment issues

@@ -69,21 +69,37 @@ export class CanvasUtils {
    * Καθαρισμός canvas με σωστή διάσταση (CSS dimensions, όχι backing store)
    * 🔧 FIXED: Use logical dimensions, not physical backing store dimensions
    * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
+   *
+   * ⚠️ RENDER-LOOP CALLERS: Prefer passing explicit `dimensions` to avoid
+   * stale cache mismatch between clear and draw phases (see ADR residue fix 2026-02-15).
+   *
+   * @param dimensions - Optional pre-fetched {width, height}. When provided,
+   *   bypasses CanvasBoundsService cache entirely — caller guarantees freshness.
    */
   static clearCanvas(
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
-    backgroundColor = UI_COLORS.TRANSPARENT
+    backgroundColor = UI_COLORS.TRANSPARENT,
+    dimensions?: { width: number; height: number }
   ): void {
-    // ✅ SAFETY: Check if canvas is valid before proceeding
-    if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
-      console.error('CanvasUtils.clearCanvas: Invalid canvas element provided');
-      return;
+    let logicalWidth: number;
+    let logicalHeight: number;
+
+    if (dimensions) {
+      // 🔧 Explicit dimensions — caller owns freshness (render-loop safe)
+      logicalWidth = dimensions.width;
+      logicalHeight = dimensions.height;
+    } else {
+      // ✅ SAFETY: Check if canvas is valid before proceeding
+      if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
+        console.error('CanvasUtils.clearCanvas: Invalid canvas element provided');
+        return;
+      }
+      // 🏢 ENTERPRISE: Use cached bounds service (OK for non-render-loop callers)
+      const rect = canvasBoundsService.getBounds(canvas);
+      logicalWidth = rect.width;
+      logicalHeight = rect.height;
     }
-    // 🏢 ENTERPRISE: Use cached bounds service
-    const rect = canvasBoundsService.getBounds(canvas);
-    const logicalWidth = rect.width;
-    const logicalHeight = rect.height;
 
     if (backgroundColor !== UI_COLORS.TRANSPARENT) {
       ctx.fillStyle = backgroundColor;

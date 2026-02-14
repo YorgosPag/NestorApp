@@ -849,11 +849,16 @@ Check console for detailed metrics`;
     const isNewSelection = primarySelectedId !== null && primarySelectedId !== prevPrimarySelectedIdRef.current;
     prevPrimarySelectedIdRef.current = primarySelectedId;
 
-    // Auto-switch to layering ONLY when a different overlay is first selected
+    // Auto-switch to layering ONLY when a different OVERLAY is first selected
+    // 🔧 FIX (2026-02-15): Gate by selection type — dxf-entity clicks stay in current tool
     if (isNewSelection && activeTool !== 'layering') {
-      handleToolChange('layering');
+      const primaryEntry = universalSelection.context.universalSelection.get(primarySelectedId!);
+      const isOverlaySelection = primaryEntry?.type === 'overlay' || primaryEntry?.type === 'region';
+      if (isOverlaySelection) {
+        handleToolChange('layering');
+      }
     }
-  }, [primarySelectedId, activeTool, handleToolChange]);
+  }, [primarySelectedId, activeTool, handleToolChange, universalSelection]);
 
 
   // 🔺 Bridge overlay edit mode to grip editing system (with guard to prevent loops)
