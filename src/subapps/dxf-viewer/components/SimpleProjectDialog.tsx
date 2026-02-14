@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Triangle, Building2, Folder, Building as BuildingIcon, Layers, Plus, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Triangle, Building2, Folder, Building as BuildingIcon, Layers, Info } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
 import { useProjectHierarchy, type Building, type Unit, type Floor } from '../contexts/ProjectHierarchyContext';
 import { useFloorplan } from '../../../contexts/FloorplanContext';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -118,11 +118,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const [selectedFloorId, setSelectedFloorId] = useState<string>('');
   const [floors, setFloors] = useState<Floor[]>([]);
 
-  // 🏢 ADR-179/ADR-180: Inline floor creation state
-  const [newFloorName, setNewFloorName] = useState<string>('');
-  const [newFloorNumber, setNewFloorNumber] = useState<string>('0');
-  const [newFloorElevation, setNewFloorElevation] = useState<string>('');
-  const [isCreatingFloor, setIsCreatingFloor] = useState(false);
+  // 🏢 ADR-181: Inline floor creation REMOVED from wizard (selection-only pattern)
+  // Floor creation is now done via Building Details → Floors tab
 
   // DXF Import Modal state
   const [showDxfModal, setShowDxfModal] = useState(false);
@@ -381,50 +378,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     setSelectedFloorId(floorId);
   };
 
-  /**
-   * 🏢 ADR-179: Inline floor creation — creates a floor via POST /api/floors
-   * and refreshes the floors list for the current building.
-   */
-  const handleCreateFloorInline = useCallback(async () => {
-    if (!newFloorName.trim() || !selectedBuildingId || !selectedProjectId) return;
-
-    setIsCreatingFloor(true);
-    try {
-      interface CreateFloorApiResponse {
-        success: boolean;
-        floor: Floor;
-        message?: string;
-        error?: string;
-      }
-
-      const floorNumber = parseInt(newFloorNumber, 10);
-      const elevation = newFloorElevation ? parseFloat(newFloorElevation) : undefined;
-
-      const result = await apiClient.post<CreateFloorApiResponse>('/api/floors', {
-        number: isNaN(floorNumber) ? floors.length : floorNumber,
-        name: newFloorName.trim(),
-        buildingId: selectedBuildingId,
-        projectId: selectedProjectId,
-        ...(elevation !== undefined ? { elevation } : {}),
-      });
-
-      if (result?.success && result.floor) {
-        console.log(`✅ [ADR-180] Floor created: ${result.floor.id}`);
-        // Refresh floors list and auto-select the new floor
-        await loadFloorsForBuilding(selectedBuildingId);
-        setSelectedFloorId(result.floor.id);
-        setNewFloorName('');
-        setNewFloorNumber('0');
-        setNewFloorElevation('');
-      } else {
-        console.error('❌ [ADR-180] Failed to create floor:', result?.error);
-      }
-    } catch (error) {
-      console.error('❌ [ADR-180] Error creating floor:', error);
-    } finally {
-      setIsCreatingFloor(false);
-    }
-  }, [newFloorName, newFloorNumber, newFloorElevation, selectedBuildingId, selectedProjectId, floors.length]);
+  // 🏢 ADR-181: handleCreateFloorInline REMOVED — floor creation moved to Building Details → Floors tab
+  // Wizard follows enterprise selection-only pattern (Autodesk/SAP/Revit)
 
   const handleClose = () => {
     setCurrentStep('company');
@@ -437,11 +392,6 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     // 🏢 ENTERPRISE (2026-01-31): Reset floor state
     setSelectedFloorId('');
     setFloors([]);
-    // 🏢 ADR-179/ADR-180: Reset inline floor creation state
-    setNewFloorName('');
-    setNewFloorNumber('0');
-    setNewFloorElevation('');
-    setIsCreatingFloor(false);
     onClose();
   };
 
@@ -1160,52 +1110,12 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </>
               ) : (
                 <>
-                  {/* Case B: No floors — inline creation form (ADR-180: number + name + elevation) */}
+                  {/* Case B: No floors — guide user to Building Details (ADR-181: selection-only wizard) */}
                   <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                     <Info className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
                     <p className={typography.body.sm}>
-                      {t('wizard.floorplanSections.noFloorsYet')}
+                      {t('wizard.floorplanSections.noFloorsGuide')}
                     </p>
-                  </div>
-                  <div className={`${MODAL_SPACING.SECTIONS.betweenItems} ${MODAL_FLEX_PATTERNS.ROW.centerWithGap}`}>
-                    <Input
-                      type="number"
-                      value={newFloorNumber}
-                      onChange={(e) => setNewFloorNumber(e.target.value)}
-                      placeholder={t('wizard.floorplanSections.floorNumberPlaceholder')}
-                      className="w-20"
-                      disabled={isCreatingFloor}
-                    />
-                    <Input
-                      value={newFloorName}
-                      onChange={(e) => setNewFloorName(e.target.value)}
-                      placeholder={t('wizard.floorplanSections.floorNamePlaceholder')}
-                      className={MODAL_DIMENSIONS.BUTTONS.flex}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleCreateFloorInline();
-                      }}
-                      disabled={isCreatingFloor}
-                    />
-                  </div>
-                  <div className={`${MODAL_SPACING.SECTIONS.betweenItems} ${MODAL_FLEX_PATTERNS.ROW.centerWithGap}`}>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={newFloorElevation}
-                      onChange={(e) => setNewFloorElevation(e.target.value)}
-                      placeholder={t('wizard.floorplanSections.floorElevationPlaceholder')}
-                      className="w-36"
-                      disabled={isCreatingFloor}
-                    />
-                    <Button
-                      onClick={handleCreateFloorInline}
-                      variant="default"
-                      size="default"
-                      disabled={!newFloorName.trim() || isCreatingFloor}
-                    >
-                      <Plus className={getIconSize('field')} />
-                      {t('wizard.floorplanSections.createFloor')}
-                    </Button>
                   </div>
                 </>
               )}

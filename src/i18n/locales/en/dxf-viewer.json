@@ -277,6 +277,7 @@
       "hintUnit": "The floorplan will be loaded to the canvas and unit management",
       "hintFloor": "The floorplan will be saved for the specific floor of the building",
       "noFloorsYet": "No floors registered yet. Create the first one:",
+      "noFloorsGuide": "No floors in this building. Create floors via Buildings → Floors tab.",
       "createFloor": "Create Floor",
       "floorNamePlaceholder": "e.g. Ground Floor, 1st Floor, Basement",
       "floorNumber": "Level #",
