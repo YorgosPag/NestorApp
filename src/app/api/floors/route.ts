@@ -197,6 +197,7 @@ interface CreateFloorRequest {
   projectId: string | number;
   projectName?: string;
   units?: number;
+  elevation?: number;
 }
 
 type FloorCreateSuccess = {
@@ -285,6 +286,7 @@ export const POST = withStandardRateLimit(
           projectName: body.projectName || '',
           companyId: ctx.companyId,  // 🔒 Tenant isolation
           units: body.units || 0,
+          elevation: body.elevation ?? null,  // 🏢 ADR-180: IFC elevation (metres)
           createdAt: now,
           createdBy: ctx.uid
         };
@@ -324,5 +326,117 @@ export const POST = withStandardRateLimit(
   );
 
   return handler(request);
+  }
+);
+
+// =============================================================================
+// 🏢 ENTERPRISE: PATCH - Update floor (name, number, elevation)
+// ADR-180: IFC-Compliant Floor Management
+// =============================================================================
+
+interface UpdateFloorRequest {
+  floorId: string;
+  number?: number;
+  name?: string;
+  elevation?: number | null;
+}
+
+type FloorUpdateResponse = { success: true; message: string } | { success: false; error: string; details?: string };
+
+export const PATCH = withStandardRateLimit(
+  async (request: NextRequest) => {
+    const handler = withAuth<FloorUpdateResponse>(
+      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorUpdateResponse>> => {
+        try {
+          const body = await req.json() as UpdateFloorRequest;
+
+          if (!body.floorId || typeof body.floorId !== 'string') {
+            return NextResponse.json({ success: false, error: 'Floor ID is required' }, { status: 400 });
+          }
+
+          const db = getAdminFirestore();
+          const floorRef = db.collection(COLLECTIONS.FLOORS).doc(body.floorId);
+          const floorDoc = await floorRef.get();
+
+          if (!floorDoc.exists) {
+            return NextResponse.json({ success: false, error: 'Floor not found' }, { status: 404 });
+          }
+
+          const floorData = floorDoc.data();
+          if (floorData?.companyId !== ctx.companyId) {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+          }
+
+          const updates: Record<string, unknown> = {};
+          if (body.name !== undefined) updates.name = body.name;
+          if (body.number !== undefined) updates.number = body.number;
+          if (body.elevation !== undefined) updates.elevation = body.elevation ?? null;
+
+          if (Object.keys(updates).length === 0) {
+            return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
+          }
+
+          updates.updatedAt = new Date().toISOString();
+          updates.updatedBy = ctx.uid;
+
+          await floorRef.update(updates);
+          logger.info('[Floors/Update] Floor updated', { floorId: body.floorId });
+
+          return NextResponse.json({ success: true, message: `Floor "${body.floorId}" updated` });
+        } catch (error) {
+          logger.error('[Floors/Update] Error', { error: error instanceof Error ? error.message : 'Unknown' });
+          return NextResponse.json({ success: false, error: 'Failed to update floor', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 });
+        }
+      },
+      { permissions: 'projects:floors:view' }
+    );
+    return handler(request);
+  }
+);
+
+// =============================================================================
+// 🏢 ENTERPRISE: DELETE - Remove floor
+// ADR-180: IFC-Compliant Floor Management
+// =============================================================================
+
+type FloorDeleteResponse = { success: true; message: string } | { success: false; error: string; details?: string };
+
+export const DELETE = withStandardRateLimit(
+  async (request: NextRequest) => {
+    const handler = withAuth<FloorDeleteResponse>(
+      async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorDeleteResponse>> => {
+        try {
+          const { searchParams } = new URL(request.url);
+          const floorId = searchParams.get('floorId');
+
+          if (!floorId) {
+            return NextResponse.json({ success: false, error: 'Floor ID is required' }, { status: 400 });
+          }
+
+          const db = getAdminFirestore();
+          const floorRef = db.collection(COLLECTIONS.FLOORS).doc(floorId);
+          const floorDoc = await floorRef.get();
+
+          if (!floorDoc.exists) {
+            return NextResponse.json({ success: false, error: 'Floor not found' }, { status: 404 });
+          }
+
+          const floorData = floorDoc.data();
+          if (floorData?.companyId !== ctx.companyId) {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+          }
+
+          await floorRef.delete();
+          logger.info('[Floors/Delete] Floor deleted', { floorId, userId: ctx.uid });
+
+          return NextResponse.json({ success: true, message: `Floor "${floorId}" deleted` });
+        } catch (error) {
+          logger.error('[Floors/Delete] Error', { error: error instanceof Error ? error.message : 'Unknown' });
+          return NextResponse.json({ success: false, error: 'Failed to delete floor', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 });
+        }
+      },
+      { permissions: 'projects:floors:view' }
+    );
+    return handler(request);
   }
 );

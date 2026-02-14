@@ -22,6 +22,7 @@ import {
   Zap
 } from 'lucide-react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 const logger = createModuleLogger('useRelationshipStatistics');
 
 // ============================================================================
@@ -41,6 +42,7 @@ export function useRelationshipStatistics(
   relationships: ContactRelationship[],
   contactId: string
 ) {
+  const { t } = useTranslation('contacts');
   // ============================================================================
   // MEMOIZED CALCULATIONS
   // ============================================================================
@@ -85,25 +87,25 @@ export function useRelationshipStatistics(
     return [
       // 🔝 Πάνω σειρά (4 κάρτες) - Βασικά Στοιχεία
       {
-        title: "relationships.stats.totalRelationships",
+        title: t("relationships.stats.totalRelationships"),
         value: stats.total,
         icon: Users,
         color: "blue"
       },
       {
-        title: "relationships.stats.employees",
+        title: t("relationships.stats.employees"),
         value: stats.employees,
         icon: Briefcase,
         color: "green"
       },
       {
-        title: "relationships.stats.shareholders",
+        title: t("relationships.stats.shareholders"),
         value: stats.shareholders,
         icon: Award,
         color: "purple"
       },
       {
-        title: "relationships.stats.consultants",
+        title: t("relationships.stats.consultants"),
         value: stats.consultants,
         icon: Zap,
         color: "orange"
@@ -111,31 +113,31 @@ export function useRelationshipStatistics(
 
       // 🔽 Κάτω σειρά (4 κάρτες) - Λεπτομέρειες
       {
-        title: "relationships.stats.management",
+        title: t("relationships.stats.management"),
         value: stats.management.total,
         icon: UserCheck,
         color: "indigo"
       },
       {
-        title: "relationships.stats.recent",
+        title: t("relationships.stats.recent"),
         value: stats.recent,
         icon: Calendar,
         color: "pink"
       },
       {
-        title: "relationships.stats.key",
+        title: t("relationships.stats.key"),
         value: stats.key,
         icon: Star,
         color: "yellow"
       },
       {
-        title: "relationships.stats.departments",
+        title: t("relationships.stats.departments"),
         value: stats.departments,
         icon: Target,
         color: "cyan"
       }
     ];
-  }, [stats]);
+  }, [stats, t]);
 
   // ============================================================================
   // DEBUG LOGGING

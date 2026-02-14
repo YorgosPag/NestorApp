@@ -215,7 +215,11 @@
       "hintFloor": "Η κάτοψη θα αποθηκευτεί για τον συγκεκριμένο όροφο του κτιρίου",
       "noFloorsYet": "Δεν υπάρχουν καταχωρημένοι όροφοι. Δημιουργήστε τον πρώτο:",
       "createFloor": "Δημιουργία Ορόφου",
-      "floorNamePlaceholder": "π.χ. Ισόγειο, 1ος Όροφος, Υπόγειο"
+      "floorNamePlaceholder": "π.χ. Ισόγειο, 1ος Όροφος, Υπόγειο",
+      "floorNumber": "Αρ. Στάθμης",
+      "floorElevation": "Υψόμετρο (m)",
+      "floorNumberPlaceholder": "π.χ. 0",
+      "floorElevationPlaceholder": "π.χ. 0.00"
     },
     "navigation": {
       "cancel": "Ακύρωση",

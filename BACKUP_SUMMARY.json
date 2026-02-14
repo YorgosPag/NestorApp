@@ -1,34 +1,27 @@
 {
   "category": "FEATURE",
-  "shortDescription": "Contact Relationship Auto-Save UX + ADR Documentation",
-  "problem": "Users filling relationship form data and clicking main contact Save without clicking the separate Add button inside the relationship form — data was silently lost. 5+ debugging sessions before discovering this was a UX issue, not a technical bug.",
-  "cause": "Two independent save actions existed (relationship Add vs contact Save) without clear guidance. Users expected the main Save to cover everything.",
+  "shortDescription": "Communication tab added for company contacts",
+  "problem": "Τα νομικά πρόσωπα (company) δεν είχαν καρτέλα Επικοινωνία ενώ τα φυσικά πρόσωπα (individual) είχαν. Τα δεδομένα (phones, emails, websites, socialMedia) υποστηρίζονταν ήδη στο data model αλλά δεν εμφανίζονταν στο UI.",
+  "cause": "Δεν υπήρχε communicationSection στο section-registry.ts των company GEMI sections. Επιπλέον, ο renderer δεν πέρναγε σωστά το disabled prop στο DynamicContactArrays.",
   "filesChanged": [
-    "src/utils/pending-relationship-guard.ts",
-    "src/components/contacts/relationships/ContactRelationshipManager.tsx",
-    "src/components/contacts/details/ContactDetails.tsx",
-    "src/components/contacts/relationships/RelationshipForm.tsx",
-    "src/components/contacts/relationships/hooks/useRelationshipForm.ts",
-    "src/components/contacts/relationships/context/RelationshipProvider.tsx",
-    "src/services/contact-relationships/ContactRelationshipService.ts",
-    "src/services/contact-relationships/adapters/FirestoreRelationshipAdapter.ts",
-    "src/services/contact-relationships/core/RelationshipCRUDService.ts",
-    "src/i18n/locales/el/contacts.json",
-    "src/i18n/locales/en/contacts.json",
-    "docs/centralized-systems/reference/adrs/ADR-178-contact-relationship-auto-save-ux.md",
-    "docs/centralized-systems/reference/adr-index.md"
+    "src/config/company-gemi/core/section-registry.ts",
+    "src/components/ContactFormSections/UnifiedContactTabbedSection.tsx",
+    "src/i18n/locales/el/forms.json",
+    "src/i18n/locales/en/forms.json"
   ],
-  "solution": "1. Created PendingRelationshipGuard (Service Locator pattern module singleton) that tracks dirty state of relationship form. 2. ContactRelationshipManager registers its handleSubmit callback on mount. 3. ContactDetails.handleSaveEdit() calls submitPending() before saving contact — auto-submits pending relationship. 4. Added amber warning banner in RelationshipForm when data is pending. 5. Fixed stack overflow in isEmploymentRelationship (inline check). 6. Removed 40+ diagnostic console.logs from 6 files. 7. Added i18n keys for pendingReminder (EL+EN). 8. Created ADR-178 with full flow documentation.",
-  "testing": "TypeScript compilation: 0 errors. Verified all DIAG console.logs removed. ADR-178 created with complete architecture documentation.",
-  "notes": "Root cause of 5+ sessions of 'relationships dont work' was a UX issue — user never clicked Add button. The PendingRelationshipGuard now bridges this gap. Stack overflow in production was caused by isEmploymentRelationship import (likely circular dependency in tree-shaking).",
+  "solution": "1) Προσθήκη communicationSection στο section-registry.ts (order 2.5, μετά addresses) | 2) Fix disabled prop fallback: fieldDisabled ?? disabled στο UnifiedContactTabbedSection | 3) Προσθήκη i18n keys (el/en) για sections.communication και sectionDescriptions.communication",
+  "testing": "TypeScript compilation: 0 errors. Ο GenericFormTabRenderer ήδη κάνει dispatch customRenderers[section.id] για communication. Το DynamicContactArrays είναι generic.",
+  "notes": "Δεν χρειάστηκαν αλλαγές σε GenericFormTabRenderer, DynamicContactArrays, companyMapper ή EnterpriseContactSaver — όλα ήδη υποστήριζαν το communication section.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
-    "assistant": "Claude Code (Anthropic AI)",
-    "sessionDate": "2026-02-13"
+    "assistant": "Claude Opus 4.6",
+    "sessionDate": "2026-02-14"
   },
   "relatedBackups": [],
   "commits": [
-    { "hash": "49b80a4a", "message": "feat(relationships): auto-save pending relationships on contact save" },
-    { "hash": "04cd1843", "message": "docs: add ADR-178 — Contact Relationship Auto-Save UX (PendingRelationshipGuard)" }
+    {
+      "hash": "556617e6",
+      "message": "feat(contacts): add Communication tab for company contacts"
+    }
   ]
 }

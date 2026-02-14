@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Lead data can come from Opportunity which has optional fields
 interface SendEmailModalProps {
@@ -20,7 +20,7 @@ interface SendEmailModalProps {
 }
 
 export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: SendEmailModalProps) {
-  const { t } = useTranslation('email');
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -62,9 +62,9 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <template.icon className={iconSizes.sm} />
-                    <span className="font-medium">{template.name}</span>
+                    <span className="font-medium">{t(template.name)}</span>
                   </div>
-                  <p className={`text-xs ${colors.text.muted}`}>{template.description}</p>
+                  <p className={`text-xs ${colors.text.muted}`}>{t(template.description)}</p>
                 </button>
               ))}
             </div>

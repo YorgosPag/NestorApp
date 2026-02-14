@@ -9,11 +9,13 @@ import {
 } from '@/services/opportunities.service';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('useOpportunities');
 
 export function useOpportunities() {
     const notifications = useNotifications();
+    const { t } = useTranslation('crm');
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -26,12 +28,13 @@ export function useOpportunities() {
             const fetchedOpportunities = await apiGetOpportunities();
             setOpportunities(fetchedOpportunities);
         } catch (err) {
-            setError("opportunities.errors.loadFailed");
-            notifications.error("opportunities.errors.loadFailed");
+            const loadErrorMessage = t("opportunities.errors.loadFailed");
+            setError(loadErrorMessage);
+            notifications.error(loadErrorMessage);
         } finally {
             setLoading(false);
         }
-    }, [notifications]);
+    }, [notifications, t]);
     
     const addOpportunity = async (data: Partial<Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>>) => {
         try {
@@ -47,12 +50,12 @@ export function useOpportunities() {
           };
           await apiAddOpportunity(opportunityData);
     
-          notifications.success("opportunities.status.addSuccess");
+          notifications.success(t("opportunities.messages.addSuccess"));
 
           fetchOpportunities();
         } catch (error) {
           logger.error('Error adding opportunity', { error });
-          notifications.error("opportunities.errors.addFailed");
+          notifications.error(t("opportunities.errors.addFailed"));
           throw error;
         }
       };
@@ -60,10 +63,10 @@ export function useOpportunities() {
     const deleteOpportunity = async (id: string, name: string) => {
         try {
             await apiDeleteOpportunity(id);
-            notifications.success("opportunities.status.deleteSuccess");
+            notifications.success(t("opportunities.messages.deleteSuccess"));
             fetchOpportunities();
         } catch (error) {
-            notifications.error("opportunities.errors.deleteFailed");
+            notifications.error(t("opportunities.errors.deleteFailed"));
             logger.error('Error deleting opportunity', { error });
             throw error;
         }

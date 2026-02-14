@@ -286,6 +286,16 @@
       "showLess": "Show less",
       "showAll": "Show all ({count} more)"
     },
+    "stats": {
+      "totalRelationships": "Total Relationships",
+      "employees": "Employees",
+      "shareholders": "Shareholders",
+      "consultants": "Consultants",
+      "management": "Management",
+      "recent": "Recent",
+      "key": "Key",
+      "departments": "Departments"
+    },
     "manager": {
       "totalCount": "Total: {count} relationships",
       "refreshData": "Refresh data",

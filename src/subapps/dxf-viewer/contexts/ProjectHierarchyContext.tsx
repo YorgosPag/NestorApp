@@ -37,6 +37,7 @@ export interface Floor {
   id: string;
   number: number;
   name: string;
+  elevation?: number;
   units: Unit[];
 }
 

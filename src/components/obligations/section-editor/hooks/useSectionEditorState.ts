@@ -2,12 +2,14 @@
 
 import { useState, useCallback } from "react";
 import type { ObligationSection } from "@/types/obligations";
+import { useTranslation } from "@/i18n/hooks/useTranslation";
 
 export function useSectionEditorState(
   initial: ObligationSection,
   onSave: (s: ObligationSection) => void,
   onCancel?: () => void
 ) {
+  const { t } = useTranslation("obligations");
   const [editedSection, setEditedSection] = useState<ObligationSection>(initial);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -25,13 +27,13 @@ export function useSectionEditorState(
   // 🌐 i18n: Confirm message converted to i18n key - 2026-01-18
   const handleCancel = useCallback(() => {
     if (hasUnsavedChanges) {
-      const confirmLeave = window.confirm("obligations.editor.confirmLeave");
+      const confirmLeave = window.confirm(t("sectionEditor.confirmLeave"));
       if (!confirmLeave) return;
     }
     setEditedSection(initial);
     setHasUnsavedChanges(false);
     onCancel?.();
-  }, [hasUnsavedChanges, initial, onCancel]);
+  }, [hasUnsavedChanges, initial, onCancel, t]);
 
   return { editedSection, hasUnsavedChanges, updateSection, handleSave, handleCancel };
 }

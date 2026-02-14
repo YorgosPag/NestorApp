@@ -404,11 +404,12 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
   },
 
   floors: {
-    description: 'Όροφοι κτηρίων',
+    description: 'Όροφοι κτηρίων (IFC IfcBuildingStorey)',
     fields: {
       name: 'string',
       buildingId: 'string (->buildings)',
       number: 'number',
+      elevation: 'number?',
       companyId: 'string?',
     },
   },

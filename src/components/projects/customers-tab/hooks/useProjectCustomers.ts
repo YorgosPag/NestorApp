@@ -5,6 +5,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectCustomer } from "@/types/project";
 import type { UseProjectCustomersState } from "../types";
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('useProjectCustomers');
 
@@ -41,6 +42,7 @@ export function useProjectCustomers(
   options: UseProjectCustomersOptions = {}
 ): UseProjectCustomersReturn {
   const { enabled = true } = options;
+  const { t } = useTranslation('projects');
 
   const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,7 +87,7 @@ export function useProjectCustomers(
     } catch (e) {
       logger.error('Failed to fetch project customers', { error: e });
       // 🌐 i18n: Error message converted to i18n key - 2026-01-18
-      const errorMessage = e instanceof Error ? e.message : "projects.customers.errors.loadFailed";
+      const errorMessage = e instanceof Error ? e.message : t("customers.errors.loadFailed");
       if (mountedRef.current) {
         setError(errorMessage);
       }

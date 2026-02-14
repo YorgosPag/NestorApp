@@ -278,7 +278,11 @@
       "hintFloor": "The floorplan will be saved for the specific floor of the building",
       "noFloorsYet": "No floors registered yet. Create the first one:",
       "createFloor": "Create Floor",
-      "floorNamePlaceholder": "e.g. Ground Floor, 1st Floor, Basement"
+      "floorNamePlaceholder": "e.g. Ground Floor, 1st Floor, Basement",
+      "floorNumber": "Level #",
+      "floorElevation": "Elevation (m)",
+      "floorNumberPlaceholder": "e.g. 0",
+      "floorElevationPlaceholder": "e.g. 0.00"
     },
     "navigation": {
       "cancel": "Cancel",

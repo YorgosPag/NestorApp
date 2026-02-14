@@ -6,6 +6,7 @@ import type { UseProjectStructureState } from "../types";
 // 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
 import type { ProjectStructure } from "@/services/projects/contracts";
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('useProjectStructure');
 
@@ -42,6 +43,7 @@ export function useProjectStructure(
   options: UseProjectStructureOptions = {}
 ): UseProjectStructureReturn {
   const { enabled = true } = options;
+  const { t } = useTranslation('projects');
 
   const [structure, setStructure] = useState<ProjectStructure | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,7 +84,7 @@ export function useProjectStructure(
     } catch (e) {
       logger.error('Failed to fetch project structure', { error: e });
       // 🌐 i18n: Error message converted to i18n key - 2026-01-18
-      const errorMessage = e instanceof Error ? e.message : "projects.structure.errors.loadFailed";
+      const errorMessage = e instanceof Error ? e.message : t("structure.errors.loadFailed");
       if (mountedRef.current) {
         setError(errorMessage);
       }

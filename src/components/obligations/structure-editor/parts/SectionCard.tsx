@@ -90,7 +90,7 @@ export function SectionCard({
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(categoryLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                      <SelectItem key={value} value={value}>{t(label)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -103,7 +103,7 @@ export function SectionCard({
               <div className="cursor-pointer" onClick={() => handlers.startEditing('section', section.id)}>
                 <CardTitle className="text-base">{section.title || <span className="text-muted-foreground italic">{t('section.noTitle')}</span>}</CardTitle>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">{categoryLabels[section.category]}</Badge>
+                  <Badge variant="secondary" className="text-xs">{t(categoryLabels[section.category])}</Badge>
                   {section.isRequired && <Badge variant="destructive" className="text-xs">{t('section.required')}</Badge>}
                 </div>
               </div>

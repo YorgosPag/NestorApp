@@ -286,6 +286,16 @@
       "showLess": "Προβολή λίγων",
       "showAll": "Προβολή όλων ({count} ακόμα)"
     },
+    "stats": {
+      "totalRelationships": "Σύνολο Σχέσεων",
+      "employees": "Εργαζόμενοι",
+      "shareholders": "Μέτοχοι",
+      "consultants": "Σύμβουλοι",
+      "management": "Διοίκηση",
+      "recent": "Πρόσφατες",
+      "key": "Βασικές",
+      "departments": "Τμήματα"
+    },
     "manager": {
       "totalCount": "Σύνολο: {count} σχέσεις",
       "refreshData": "Ανανέωση δεδομένων",

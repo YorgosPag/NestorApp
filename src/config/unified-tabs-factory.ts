@@ -371,12 +371,21 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'GeneralTabContent'
           },
           {
+            id: 'floors',
+            value: 'floors',
+            icon: 'layers',
+            description: 'tabs.descriptions.floorsManagement',
+            order: 2,
+            enabled: true,
+            component: 'FloorsTabContent'
+          },
+          {
             id: 'floorplan',
             value: 'floorplan',
             // 🏢 ENTERPRISE: Primary concept = Κάτοψη (floor plan), NOT building context
             icon: 'layout-grid',
             description: 'tabs.floorplan.description',
-            order: 2,
+            order: 3,
             enabled: true,
             component: 'FloorplanViewerTab',
             componentProps: {
@@ -389,7 +398,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'timeline',
             icon: 'calendar',
             description: 'Χρονοδιάγραμμα και ιστορικό κτιρίου',
-            order: 3,
+            order: 4,
             enabled: true,
             component: 'TimelineTabContent'
           },
@@ -398,7 +407,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'analytics',
             icon: 'bar-chart-3',
             description: 'Αναλυτικά στοιχεία και στατιστικά',
-            order: 4,
+            order: 5,
             enabled: true,
             component: 'AnalyticsTabContent'
           },
@@ -407,7 +416,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'storage',
             icon: 'warehouse',
             description: 'Διαχείριση αποθηκών και αποθεματικών',
-            order: 5,
+            order: 6,
             enabled: true,
             component: 'StorageTab'
           },
@@ -416,7 +425,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'contracts',
             icon: 'file-signature',
             description: 'tabs.contracts.description',
-            order: 6,
+            order: 7,
             enabled: true,
             component: 'PlaceholderTab',
             componentProps: {
@@ -429,7 +438,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'protocols',
             icon: 'clipboard-check',
             description: 'tabs.protocols.description',
-            order: 7,
+            order: 8,
             enabled: true,
             component: 'PlaceholderTab',
             componentProps: {
@@ -442,7 +451,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'photos',
             icon: 'camera',
             description: 'Φωτογραφίες κτιρίου και εργασιών',
-            order: 8,
+            order: 9,
             enabled: true,
             component: 'PhotosTabContent'
           },
@@ -451,7 +460,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'customers',
             icon: 'users',
             description: 'Πελάτες που έχουν αγοράσει μονάδες σε αυτό το κτίριο',
-            order: 9,
+            order: 10,
             enabled: true,
             component: 'BuildingCustomersTab'
           },
@@ -460,7 +469,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'videos',
             icon: 'play-circle',
             description: 'Videos κτιρίου και εργασιών',
-            order: 10,
+            order: 11,
             enabled: true,
             component: 'VideosTabContent'
           },
@@ -469,7 +478,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'measurements',
             icon: 'ruler',
             description: 'Επιμετρήσεις εργασιών και κοστολόγηση',
-            order: 11,
+            order: 12,
             enabled: true,
             component: 'MeasurementsTabContent'
           }

@@ -765,7 +765,8 @@
       "contributors": "Contributors",
       "projectDocuments": "Project Documents",
       "ika": "IKA",
-      "measurements": "Measurements"
+      "measurements": "Measurements",
+      "floorsManagement": "Floors"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -781,7 +782,27 @@
       "ika": "IKA data and insurance obligations",
       "photos": "Progress and completed project photos",
       "videos": "Presentation and documentation videos",
-      "measurements": "Quantity surveying and cost tracking per building"
+      "measurements": "Quantity surveying and cost tracking per building",
+      "floorsManagement": "Building floor management — level number, elevation"
+    },
+    "floors": {
+      "title": "Building Floors",
+      "addFloor": "New Floor",
+      "number": "Level #",
+      "name": "Level Name",
+      "elevation": "Elevation (m)",
+      "elevationUnit": "m",
+      "units": "Units",
+      "actions": "Actions",
+      "empty": "No floors registered.",
+      "total": "Total: {count} floors",
+      "deleteConfirm": "Do you want to delete the floor \"{name}\"?",
+      "numberPlaceholder": "e.g. -1, 0, 1",
+      "namePlaceholder": "e.g. Basement, Ground, 1st",
+      "elevationPlaceholder": "e.g. 0.00",
+      "editSuccess": "Floor updated",
+      "deleteSuccess": "Floor deleted",
+      "createSuccess": "Floor created"
     },
     "measurements": {
       "title": "Measurements",

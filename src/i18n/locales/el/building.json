@@ -765,7 +765,8 @@
       "contributors": "Συντελεστές",
       "projectDocuments": "Έγγραφα Έργου",
       "ika": "IKA",
-      "measurements": "Επιμετρήσεις"
+      "measurements": "Επιμετρήσεις",
+      "floorsManagement": "Όροφοι"
     },
     "descriptions": {
       "projectGeneral": "Βασικές πληροφορίες και στοιχεία του έργου",
@@ -781,7 +782,27 @@
       "ika": "Στοιχεία IKA και ασφαλιστικές υποχρεώσεις",
       "photos": "Φωτογραφίες προόδου και ολοκληρωμένου έργου",
       "videos": "Βίντεο παρουσίασης και τεκμηρίωσης του έργου",
-      "measurements": "Επιμετρήσεις εργασιών και υλικών ανά κτίριο"
+      "measurements": "Επιμετρήσεις εργασιών και υλικών ανά κτίριο",
+      "floorsManagement": "Διαχείριση ορόφων κτιρίου — αριθμός στάθμης, υψόμετρο"
+    },
+    "floors": {
+      "title": "Όροφοι Κτιρίου",
+      "addFloor": "Νέος Όροφος",
+      "number": "Αρ. Στάθμης",
+      "name": "Όνομα Στάθμης",
+      "elevation": "Υψόμετρο (m)",
+      "elevationUnit": "m",
+      "units": "Μονάδες",
+      "actions": "Ενέργειες",
+      "empty": "Δεν υπάρχουν καταχωρημένοι όροφοι.",
+      "total": "Σύνολο: {count} όροφοι",
+      "deleteConfirm": "Θέλετε να διαγράψετε τον όροφο \"{name}\";",
+      "numberPlaceholder": "π.χ. -1, 0, 1",
+      "namePlaceholder": "π.χ. Υπόγειο, Ισόγειο",
+      "elevationPlaceholder": "π.χ. 0.00",
+      "editSuccess": "Ο όροφος ενημερώθηκε",
+      "deleteSuccess": "Ο όροφος διαγράφηκε",
+      "createSuccess": "Ο όροφος δημιουργήθηκε"
     },
     "measurements": {
       "title": "Επιμετρήσεις",

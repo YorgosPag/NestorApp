@@ -118,8 +118,10 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const [selectedFloorId, setSelectedFloorId] = useState<string>('');
   const [floors, setFloors] = useState<Floor[]>([]);
 
-  // 🏢 ADR-179: Inline floor creation state
+  // 🏢 ADR-179/ADR-180: Inline floor creation state
   const [newFloorName, setNewFloorName] = useState<string>('');
+  const [newFloorNumber, setNewFloorNumber] = useState<string>('0');
+  const [newFloorElevation, setNewFloorElevation] = useState<string>('');
   const [isCreatingFloor, setIsCreatingFloor] = useState(false);
 
   // DXF Import Modal state
@@ -365,28 +367,34 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         error?: string;
       }
 
+      const floorNumber = parseInt(newFloorNumber, 10);
+      const elevation = newFloorElevation ? parseFloat(newFloorElevation) : undefined;
+
       const result = await apiClient.post<CreateFloorApiResponse>('/api/floors', {
-        number: floors.length,
+        number: isNaN(floorNumber) ? floors.length : floorNumber,
         name: newFloorName.trim(),
         buildingId: selectedBuildingId,
         projectId: selectedProjectId,
+        ...(elevation !== undefined ? { elevation } : {}),
       });
 
       if (result?.success && result.floor) {
-        console.log(`✅ [ADR-179] Floor created: ${result.floor.id}`);
+        console.log(`✅ [ADR-180] Floor created: ${result.floor.id}`);
         // Refresh floors list and auto-select the new floor
         await loadFloorsForBuilding(selectedBuildingId);
         setSelectedFloorId(result.floor.id);
         setNewFloorName('');
+        setNewFloorNumber('0');
+        setNewFloorElevation('');
       } else {
-        console.error('❌ [ADR-179] Failed to create floor:', result?.error);
+        console.error('❌ [ADR-180] Failed to create floor:', result?.error);
       }
     } catch (error) {
-      console.error('❌ [ADR-179] Error creating floor:', error);
+      console.error('❌ [ADR-180] Error creating floor:', error);
     } finally {
       setIsCreatingFloor(false);
     }
-  }, [newFloorName, selectedBuildingId, selectedProjectId, floors.length]);
+  }, [newFloorName, newFloorNumber, newFloorElevation, selectedBuildingId, selectedProjectId, floors.length]);
 
   const handleClose = () => {
     setCurrentStep('company');
@@ -399,8 +407,10 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     // 🏢 ENTERPRISE (2026-01-31): Reset floor state
     setSelectedFloorId('');
     setFloors([]);
-    // 🏢 ADR-179: Reset inline floor creation state
+    // 🏢 ADR-179/ADR-180: Reset inline floor creation state
     setNewFloorName('');
+    setNewFloorNumber('0');
+    setNewFloorElevation('');
     setIsCreatingFloor(false);
     onClose();
   };
@@ -1120,7 +1130,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </>
               ) : (
                 <>
-                  {/* Case B: No floors — inline creation form */}
+                  {/* Case B: No floors — inline creation form (ADR-180: number + name + elevation) */}
                   <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                     <Info className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
                     <p className={typography.body.sm}>
@@ -1129,6 +1139,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   </div>
                   <div className={`${MODAL_SPACING.SECTIONS.betweenItems} ${MODAL_FLEX_PATTERNS.ROW.centerWithGap}`}>
                     <Input
+                      type="number"
+                      value={newFloorNumber}
+                      onChange={(e) => setNewFloorNumber(e.target.value)}
+                      placeholder={t('wizard.floorplanSections.floorNumberPlaceholder')}
+                      className="w-20"
+                      disabled={isCreatingFloor}
+                    />
+                    <Input
                       value={newFloorName}
                       onChange={(e) => setNewFloorName(e.target.value)}
                       placeholder={t('wizard.floorplanSections.floorNamePlaceholder')}
@@ -1136,6 +1154,17 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleCreateFloorInline();
                       }}
+                      disabled={isCreatingFloor}
+                    />
+                  </div>
+                  <div className={`${MODAL_SPACING.SECTIONS.betweenItems} ${MODAL_FLEX_PATTERNS.ROW.centerWithGap}`}>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newFloorElevation}
+                      onChange={(e) => setNewFloorElevation(e.target.value)}
+                      placeholder={t('wizard.floorplanSections.floorElevationPlaceholder')}
+                      className="w-36"
                       disabled={isCreatingFloor}
                     />
                     <Button

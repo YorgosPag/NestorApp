@@ -5,6 +5,7 @@ import { emailTemplates, getTemplateContent } from "../utils/emailTemplates";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('useSendEmailModal');
 
@@ -12,6 +13,7 @@ const logger = createModuleLogger('useSendEmailModal');
 type Lead = { id?: string; fullName?: string; email?: string };
 
 export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEmailSent?: () => void) {
+  const { t } = useTranslation('crm');
   const [formData, setFormData] = useState({
     templateType: "custom",
     subject: "",
@@ -23,14 +25,17 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
   const templates = emailTemplates(lead?.fullName);
 
   const handleTemplateChange = useCallback((templateId: string) => {
-    const t = templates.find(x => x.id === templateId);
+    const selectedTemplate = templates.find(x => x.id === templateId);
     setFormData(prev => ({
       ...prev,
       templateType: templateId,
-      subject: t?.defaultSubject || "",
-      message: getTemplateContent(templateId, lead?.fullName),
+      subject: selectedTemplate?.defaultSubject ? t(selectedTemplate.defaultSubject) : "",
+      message: (() => {
+        const contentKey = getTemplateContent(templateId, lead?.fullName);
+        return contentKey ? t(contentKey, { fullName: lead?.fullName || "" }) : "";
+      })(),
     }));
-  }, [templates, lead?.fullName]);
+  }, [templates, lead?.fullName, t]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -72,15 +77,15 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
     // 🌐 i18n: Validation messages converted to i18n keys - 2026-01-18
     // Note: Components using this hook should translate these keys with t()
     if (!formData.subject.trim()) {
-      toast.error("email.validation.subjectRequired");
+      toast.error(t("email.validation.subjectRequired"));
       return;
     }
     if (!formData.message.trim()) {
-      toast.error("email.validation.messageRequired");
+      toast.error(t("email.validation.messageRequired"));
       return;
     }
     if (!lead?.email) {
-      toast.error("email.validation.leadNoEmail");
+      toast.error(t("email.validation.leadNoEmail"));
       return;
     }
 
@@ -102,7 +107,7 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
       const result = await sendEmailViaAPI(emailPayload);
       
       if (result.success) {
-        toast.success("email.status.sentSuccess");
+        toast.success(t("email.status.sentSuccess"));
         
         // Reset form
         setFormData({
@@ -118,13 +123,13 @@ export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEm
       
     } catch (error: unknown) {
       // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
-      const errorMessage = error instanceof Error ? error.message : "email.errors.unknown";
-      toast.error(`email.errors.sendFailed`);
+      const errorMessage = error instanceof Error ? error.message : t("email.errors.unknown");
+      toast.error(t("email.errors.sendFailed", { error: errorMessage }));
       logger.error('Email send error', { error });
     } finally {
       setLoading(false);
     }
-  }, [formData, lead, onClose, onEmailSent, sendEmailViaAPI]);
+  }, [formData, lead, onClose, onEmailSent, sendEmailViaAPI, t]);
 
   return { 
     formData, 

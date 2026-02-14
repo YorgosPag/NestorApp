@@ -240,6 +240,9 @@
     "soldLabel": "Sold",
     "salesPctLabel": "% Sales",
     "error": "Error",
+    "errors": {
+      "loadFailed": "Failed to load project structure"
+    },
     "loadingCustomers": "Loading customers list...",
     "notFound": "Project structure not found.",
     "buildings": "buildings",
@@ -277,6 +280,9 @@
     "title": "Project Customers",
     "titleWithCount": "Project Customers ({count})",
     "loading": "Loading customers...",
+    "errors": {
+      "loadFailed": "Failed to load project customers"
+    },
     "errorPrefix": "Error loading:",
     "emptyTitle": "No customers",
     "emptyDescription": "No customers registered for this project.",
