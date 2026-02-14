@@ -643,54 +643,64 @@ export function useCentralizedMouseHandlers({
 
           const isSmallSelection = selectionWidth < MIN_MARQUEE_SIZE && selectionHeight < MIN_MARQUEE_SIZE;
 
-          if (isSmallSelection && colorLayers && colorLayers.length > 0) {
-            // 🎯 SINGLE CLICK: Do point-in-polygon hit-test for layer selection
-            // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot for consistent transforms
+          if (isSmallSelection) {
+            // 🏢 SSoT (2026-02-15): Unified point-click pipeline
+            // Priority: overlay polygon → DXF entity (via HitTester) → fallback canvasClick
             const canvas = canvasRef?.current ?? null;
             const hitTestSnap = getPointerSnapshotFromElement(canvas);
             if (!hitTestSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
             const worldPoint = screenToWorldWithSnapshot(cursor.position, transform, hitTestSnap);
 
-            // Check each layer for point containment
+            // Step 1: Check overlay polygons (point-in-polygon)
             let hitLayerId: string | null = null;
-            for (const layer of colorLayers) {
-              if (!layer.polygons || layer.polygons.length === 0) continue;
+            if (colorLayers && colorLayers.length > 0) {
+              for (const layer of colorLayers) {
+                if (!layer.polygons || layer.polygons.length === 0) continue;
 
-              for (const polygon of layer.polygons) {
-                if (!polygon.vertices || polygon.vertices.length < 3) continue;
+                for (const polygon of layer.polygons) {
+                  if (!polygon.vertices || polygon.vertices.length < 3) continue;
 
-                // Point-in-polygon test using ray casting algorithm
-                const vertices = polygon.vertices;
-                let inside = false;
-                for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-                  const xi = vertices[i].x, yi = vertices[i].y;
-                  const xj = vertices[j].x, yj = vertices[j].y;
+                  // Point-in-polygon test using ray casting algorithm
+                  const vertices = polygon.vertices;
+                  let inside = false;
+                  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+                    const xi = vertices[i].x, yi = vertices[i].y;
+                    const xj = vertices[j].x, yj = vertices[j].y;
 
-                  if (((yi > worldPoint.y) !== (yj > worldPoint.y)) &&
-                      (worldPoint.x < (xj - xi) * (worldPoint.y - yi) / (yj - yi) + xi)) {
-                    inside = !inside;
+                    if (((yi > worldPoint.y) !== (yj > worldPoint.y)) &&
+                        (worldPoint.x < (xj - xi) * (worldPoint.y - yi) / (yj - yi) + xi)) {
+                      inside = !inside;
+                    }
+                  }
+
+                  if (inside) {
+                    hitLayerId = layer.id;
+                    break;
                   }
                 }
-
-                if (inside) {
-                  hitLayerId = layer.id;
-                  break;
-                }
+                if (hitLayerId) break;
               }
-              if (hitLayerId) break;
             }
 
             if (hitLayerId) {
+              // Overlay hit — route to overlay selection callbacks
               if (hasMultiCallback) {
                 onMultiLayerSelected([hitLayerId]);
               } else if (hasSingleCallback) {
                 onLayerSelected(hitLayerId, cursor.position);
               }
-            } else {
-              // 🏢 ADR-046: Pass WORLD coordinates to onCanvasClick
-              if (onCanvasClick && cursor.position) {
-                onCanvasClick(worldPoint); // worldPoint already calculated above (line 534)
+            } else if (hitTestCallback && onEntitySelect) {
+              // Step 2: SSoT entity hit-test via HitTester (same pipeline as hover)
+              const hitResult = hitTestCallback(scene, cursor.position, transform, hitTestSnap.viewport);
+              if (hitResult) {
+                onEntitySelect(hitResult);
+              } else if (onCanvasClick) {
+                // Step 3: Nothing hit — fallback to canvasClick (deselection path)
+                onCanvasClick(worldPoint);
               }
+            } else if (onCanvasClick) {
+              // Fallback: No hit-test available — route to canvasClick
+              onCanvasClick(worldPoint);
             }
           } else {
             // 🏢 ENTERPRISE (2026-01-25): When marquee selects nothing, trigger canvas click for deselection

@@ -42,11 +42,9 @@ import { isDrawingTool, isMeasurementTool, isInteractiveTool, isInDrawingMode } 
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import {
-  isLineEntity, isPolylineEntity, isCircleEntity, isArcEntity,
-  isRectangleEntity, isRectEntity, isLWPolylineEntity,
+  isLineEntity, isPolylineEntity,
   type Entity
 } from '../../types/entities';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { useZoom } from '../../systems/zoom';
 import {
   CoordinateTransforms,
@@ -289,6 +287,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
+  // 🏢 ENTERPRISE (2026-02-15): SSoT entity selection — track if mouseDown selected an entity
+  // Prevents handleCanvasClick from deselecting what was just selected
+  const entitySelectedOnMouseDownRef = useRef(false);
   // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting (unified pipeline)
   const [hoveredOverlayId, setHoveredOverlayId] = useState<string | null>(null);
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
@@ -1299,83 +1300,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       return;
     }
 
-    // 🏢 ENTERPRISE (2026-02-13): Entity hit-test for Select tool — click to select drawn entities
-    // Pattern: Same tolerance and hit-test approach as Circle-TTT (line 1092), extended to all entity types
-    if (activeTool === 'select') {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-        let hitEntityId: string | null = null;
-
-        for (const entity of scene.entities) {
-          const e = entity as unknown as Entity;
-          let isHit = false;
-
-          if (isLineEntity(e)) {
-            isHit = pointToLineDistance(worldPoint, e.start, e.end) <= hitTolerance;
-          } else if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
-            const verts = (e as { vertices: Point2D[]; closed?: boolean }).vertices;
-            if (verts && verts.length >= 2) {
-              for (let i = 0; i < verts.length - 1; i++) {
-                if (pointToLineDistance(worldPoint, verts[i], verts[i + 1]) <= hitTolerance) {
-                  isHit = true;
-                  break;
-                }
-              }
-              if (!isHit && (e as { closed?: boolean }).closed && verts.length > 2) {
-                isHit = pointToLineDistance(worldPoint, verts[verts.length - 1], verts[0]) <= hitTolerance;
-              }
-            }
-          } else if (isCircleEntity(e)) {
-            const dist = calculateDistance(worldPoint, e.center);
-            isHit = Math.abs(dist - e.radius) <= hitTolerance;
-          } else if (isArcEntity(e)) {
-            const dist = calculateDistance(worldPoint, e.center);
-            if (Math.abs(dist - e.radius) <= hitTolerance) {
-              // Check if point is within arc angle range
-              const angle = Math.atan2(worldPoint.y - e.center.y, worldPoint.x - e.center.x);
-              const normalizedAngle = ((angle * 180 / Math.PI) % 360 + 360) % 360;
-              const startDeg = ((e.startAngle % 360) + 360) % 360;
-              const endDeg = ((e.endAngle % 360) + 360) % 360;
-              if (startDeg <= endDeg) {
-                isHit = normalizedAngle >= startDeg && normalizedAngle <= endDeg;
-              } else {
-                isHit = normalizedAngle >= startDeg || normalizedAngle <= endDeg;
-              }
-            }
-          } else if (isRectangleEntity(e) || isRectEntity(e)) {
-            const rect = e as { x: number; y: number; width: number; height: number };
-            // Check proximity to rectangle edges (4 sides)
-            const corners = [
-              { x: rect.x, y: rect.y },
-              { x: rect.x + rect.width, y: rect.y },
-              { x: rect.x + rect.width, y: rect.y + rect.height },
-              { x: rect.x, y: rect.y + rect.height },
-            ];
-            for (let i = 0; i < 4; i++) {
-              if (pointToLineDistance(worldPoint, corners[i], corners[(i + 1) % 4]) <= hitTolerance) {
-                isHit = true;
-                break;
-              }
-            }
-          }
-
-          if (isHit) {
-            hitEntityId = entity.id;
-            break;
-          }
-        }
-
-        if (hitEntityId) {
-          setSelectedEntityIds([hitEntityId]);
-          universalSelection.select(hitEntityId, 'dxf-entity');
-          return;
-        }
-      }
-    }
+    // 🏢 SSoT (2026-02-15): Duplicate entity hit-test REMOVED — selection now handled by
+    // DxfCanvas → useCentralizedMouseHandlers → HitTester (single pipeline).
+    // The old code here used rect.x/y/width/height which doesn't match rectangle entities
+    // (they use corner1/corner2). The SSoT HitTester converts rectangles to polylines correctly.
 
     // 🏢 ENTERPRISE (2026-01-25): Only deselect overlay if clicking on EMPTY canvas space
     // Do NOT deselect if:
@@ -1388,13 +1316,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       const hasSelectedGrip = selectedGrip !== null;
       const justFinishedDrag = justFinishedDragRef.current;
 
-      if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag) {
+      if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag && !entitySelectedOnMouseDownRef.current) {
         // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
         universalSelection.clearByType('overlay');
         universalSelection.clearByType('dxf-entity');
         setSelectedGrips([]); // Clear grip selection when clicking empty space
         setSelectedEntityIds([]); // Clear entity selection
       }
+      // 🏢 SSoT (2026-02-15): Reset ref after handling — ready for next click cycle
+      entitySelectedOnMouseDownRef.current = false;
     }
   };
 
@@ -2001,6 +1931,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               }}
               onHoverEntity={setHoveredEntityId}
               onHoverOverlay={setHoveredOverlayId}
+              onEntitySelect={(entityId) => {
+                // 🏢 SSoT (2026-02-15): Single pipeline for entity selection
+                // HitTester → useCentralizedMouseHandlers.mouseDown → onEntitySelect
+                if (entityId) {
+                  setSelectedEntityIds([entityId]);
+                  universalSelection.clearByType('dxf-entity');
+                  universalSelection.select(entityId, 'dxf-entity');
+                  entitySelectedOnMouseDownRef.current = true;
+                } else {
+                  entitySelectedOnMouseDownRef.current = false;
+                }
+              }}
               isGripDragging={draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
