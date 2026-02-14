@@ -136,7 +136,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
       <div className={`text-center ${colors.text.danger} py-8`}>
         <Building2 className={`${iconSizes.xl} mx-auto mb-2`} />
         <p className="font-medium">{t('relationships.organizationTree.loadError')}</p>
-        <p className={`text-sm ${colors.text.muted} mt-1`}>{error}</p>
+        <p className={`text-sm ${colors.text.muted} mt-1`}>{t(error || '', { defaultValue: error || '' })}</p>
       </div>
     );
   };

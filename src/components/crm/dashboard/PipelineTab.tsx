@@ -83,7 +83,7 @@ export function PipelineTab() {
               </div>
           ) : error ? (
               <div className={`${colors.bg.error} ${getStatusBorder('error')} rounded-lg p-4`}>
-                  <p className="text-red-600">{error}</p>
+                  <p className="text-red-600">{t(error, { defaultValue: error })}</p>
                   <button
                   onClick={fetchOpportunities}
                   className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}

@@ -39,7 +39,7 @@ export default function CommunicationsHistory({ contactId }: CommunicationsHisto
 
   if (error) return (
     <section className={`${colors.bg.error} ${getStatusBorder('error')} p-4`} role="alert" aria-label={t('history.aria.errorSection')}>
-      <p className={`${colors.text.error} text-sm`}>{error}</p>
+      <p className={`${colors.text.error} text-sm`}>{t(error || '', { defaultValue: error || '' })}</p>
       <button onClick={fetchCommunications} className={`mt-2 px-3 py-1 ${colors.bg.error} text-white rounded text-sm ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE}`}>
         {t('history.retry')}
       </button>

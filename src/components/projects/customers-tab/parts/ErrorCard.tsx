@@ -24,7 +24,7 @@ export function ErrorCard({ message }: ErrorCardProps) {
         <CardTitle className={cn(typography.card.titleCompact, 'text-destructive')}>{t('structure.error')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>{message}</p>
+        <p>{t(message, { defaultValue: message })}</p>
       </CardContent>
     </Card>
   );

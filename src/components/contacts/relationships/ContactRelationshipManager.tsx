@@ -247,7 +247,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <Alert variant="destructive">
             <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
-              <strong>{t('relationships.manager.errors.listError')}:</strong> {listError}
+              {t(listError, { defaultValue: t('relationships.manager.errors.listError') })}
             </AlertDescription>
           </Alert>
         )}
@@ -256,7 +256,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <Alert variant="destructive">
             <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
-              <strong>{t('relationships.manager.errors.formError')}:</strong> {formError}
+              {t(formError, { defaultValue: t('relationships.manager.errors.formError') })}
             </AlertDescription>
           </Alert>
         )}
@@ -265,7 +265,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <Alert variant="destructive">
             <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
-              <strong>{t('relationships.manager.errors.treeError')}:</strong> {treeError}
+              {t(treeError, { defaultValue: t('relationships.manager.errors.treeError') })}
             </AlertDescription>
           </Alert>
         )}

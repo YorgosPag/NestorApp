@@ -8,6 +8,7 @@ import { getTotals } from './utils/selectors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { LoadingSkeleton } from './parts/LoadingSkeleton';
 import { EmptyState } from './parts/EmptyState';
@@ -19,6 +20,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
   const { structure, loading, error } = useProjectStructure(projectId);
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('projects');
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -26,7 +28,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
 
   if (error) {
     return (
-      <div className={cn(spacing.padding.md, "text-center", colors.text.error)}>{error}</div>
+      <div className={cn(spacing.padding.md, "text-center", colors.text.error)}>{t(error, { defaultValue: error })}</div>
     );
   }
 

@@ -2,9 +2,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCommunicationsByContact } from '@/services/communications.service';
 import type { Communication } from '@/types/crm';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function useCommunicationsHistory(contactId?: string) {
   // 🏢 ENTERPRISE: Proper type instead of any[]
+  const { t } = useTranslation('communications');
   const [communications, setCommunications] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string|null>(null);
@@ -25,13 +27,13 @@ export function useCommunicationsHistory(contactId?: string) {
       }
     } catch (err) {
       // 🌐 i18n: Error message converted to i18n key - 2026-01-18
-      if (isMounted) setError('communications.errors.loadFailed');
+      if (isMounted) setError(t('history.loadError', { defaultValue: 'Failed to load communications history' }));
       // Error logging removed
     } finally {
       if (isMounted) setLoading(false);
     }
     return () => { isMounted = false; };
-  }, [contactId]);
+  }, [contactId, t]);
 
   useEffect(() => { fetchCommunications(); }, [fetchCommunications]);
 

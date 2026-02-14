@@ -56,7 +56,7 @@ export const useOrganizationTree = (
       logger.info('Organization tree loaded successfully');
 
     } catch (err) {
-      const errorMessage = 'Σφάλμα φόρτωσης οργανωτικού διαγράμματος';
+      const errorMessage = 'relationships.organizationTree.loadError';
       setError(errorMessage);
       logger.error('Error loading organization tree', {
         error: err,

@@ -105,7 +105,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
 
     } catch (err) {
       logger.error('loadRelationships failed:', { error: err });
-      setError('Σφάλμα φόρτωσης σχέσεων επαφής');
+      setError('relationships.manager.errors.listError');
       setRelationships([]);
     } finally {
       setLoading(false);
@@ -162,7 +162,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
 
       logger.info('PROVIDER: Relationship deleted successfully');
     } catch (err) {
-      const errorMessage = 'Σφάλμα διαγραφής σχέσης';
+      const errorMessage = 'relationships.errors.saveFailed';
       setError(errorMessage);
       logger.error('PROVIDER: Error deleting relationship:', { error: err });
 

@@ -96,7 +96,7 @@ export function useProjectCustomers(
         setLoading(false);
       }
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   // 🏢 ENTERPRISE: Manual refetch capability
   const refetch = useCallback(async () => {
@@ -127,7 +127,7 @@ export function useProjectCustomers(
       setError(null);
       setIsFetched(false);
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   return {
     customers,

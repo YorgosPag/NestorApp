@@ -1,6 +1,7 @@
 {
   "history": {
     "loading": "Loading communications...",
+    "loadError": "Failed to load communications",
     "retry": "Retry",
     "noData": "No communications",
     "emptyHint": "Communications history will appear here",

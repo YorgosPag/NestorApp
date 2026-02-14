@@ -181,7 +181,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
             <Alert variant="destructive" className="mt-4">
               <AlertTriangle className={iconSizes.sm} />
               <AlertDescription className={designSystem.getTypographyClass('sm', 'medium')}>
-                {error}
+                {t(error, { defaultValue: error })}
               </AlertDescription>
             </Alert>
           )}

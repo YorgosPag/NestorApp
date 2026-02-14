@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   ContactRelationship,
   RelationshipType,
@@ -62,6 +63,7 @@ export const useRelationshipForm = (
   // STATE MANAGEMENT
   // ============================================================================
 
+  const { t } = useTranslation('contacts');
   const [formData, setFormData] = useState<RelationshipFormData>(createInitialFormData());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +213,7 @@ export const useRelationshipForm = (
       // Validate form data
       const validationError = await validateFormData();
       if (validationError) {
-        setError(validationError);
+        setError(t(validationError, { defaultValue: validationError }));
         return;
       }
 
@@ -259,12 +261,12 @@ export const useRelationshipForm = (
       resetForm();
 
       // Show success message
-      const message = editingId
-        ? 'relationships.status.updateSuccess'
-        : 'relationships.status.createSuccess';
+      const successText = editingId
+        ? t('relationships.status.updateSuccess', { defaultValue: t('relationships.manager.addRelationship') })
+        : t('relationships.status.createSuccess', { defaultValue: t('relationships.manager.addRelationship') });
 
-      setSuccessMessage(message);
-      logger.info('SUCCESS:', { data: message });
+      setSuccessMessage(successText);
+      logger.info('SUCCESS:', { data: successText });
 
       // Auto-hide success message after 5 seconds
       setTimeout(() => {
@@ -301,11 +303,11 @@ export const useRelationshipForm = (
         logger.warn('Firebase index error detected, but relationship likely saved successfully');
 
         // Show success message instead of error
-        const message = editingId
-          ? 'relationships.status.updateSuccess'
-          : 'relationships.status.createSuccess';
+        const successText = editingId
+          ? t('relationships.status.updateSuccess', { defaultValue: t('relationships.manager.addRelationship') })
+          : t('relationships.status.createSuccess', { defaultValue: t('relationships.manager.addRelationship') });
 
-        setSuccessMessage(message);
+        setSuccessMessage(successText);
         resetForm();
 
         // Auto-hide success message after 5 seconds
@@ -327,16 +329,16 @@ export const useRelationshipForm = (
 
       // Handle actual errors
       if (err instanceof Error && err.message.includes('already exists')) {
-        setError('relationships.errors.alreadyExists');
+        setError(t('relationships.errors.alreadyExists', { defaultValue: t('relationships.manager.errors.formError') }));
       } else if (err instanceof Error && err.message.includes('not found')) {
-        setError('relationships.errors.contactsNotFound');
+        setError(t('relationships.errors.contactsNotFound', { defaultValue: t('relationships.manager.errors.formError') }));
       } else {
-        setError('relationships.errors.saveFailed');
+        setError(t('relationships.errors.saveFailed', { defaultValue: t('relationships.manager.errors.formError') }));
       }
     } finally {
       setLoading(false);
     }
-  }, [contactId, formData, editingId, validateFormData, onSuccess]);
+  }, [contactId, formData, editingId, validateFormData, onSuccess, t]);
 
   /**
    * ✏️ Start editing an existing relationship

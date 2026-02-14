@@ -127,30 +127,24 @@ export function NotificationProvider({
     // If message contains spaces, it's already a human-readable string
     if (!message || message.includes(' ')) return message;
 
-    const knownNamespaces = ['contacts', 'common', 'building', 'projects', 'units'];
-
-    for (const ns of knownNamespaces) {
-      // Pattern 1: "contacts.submission.createSuccess" → ns="contacts", key="submission.createSuccess"
-      if (message.startsWith(`${ns}.`)) {
-        const key = message.slice(ns.length + 1);
-        if (i18n.exists(key, { ns })) {
-          return i18n.t(key, { ns });
-        }
-      }
-
-      // Pattern 2: "validation.contacts.individual.nameRequired" → ns="contacts", key="validation.individual.nameRequired"
-      const nsInfix = `.${ns}.`;
-      if (message.includes(nsInfix)) {
-        const key = message.replace(nsInfix, '.');
-        if (i18n.exists(key, { ns })) {
-          return i18n.t(key, { ns });
-        }
-      }
-    }
-
-    // Fallback: try with default namespace
+    // Default namespace attempt first
     if (i18n.exists(message)) {
       return i18n.t(message);
+    }
+
+    // Try every possible namespace split in dotted keys.
+    // Example:
+    // - "contacts.submission.createSuccess" -> ns=contacts, key=submission.createSuccess
+    // - "validation.contacts.individual.nameRequired" -> ns=contacts, key=individual.nameRequired
+    const parts = message.split('.');
+    if (parts.length > 1) {
+      for (let i = 0; i < parts.length - 1; i += 1) {
+        const ns = parts[i];
+        const key = parts.slice(i + 1).join('.');
+        if (i18n.exists(key, { ns })) {
+          return i18n.t(key, { ns });
+        }
+      }
     }
 
     return message;

@@ -1,17 +1,26 @@
 {
   "category": "FEATURE",
-  "shortDescription": "Communication tab added for company contacts",
-  "problem": "Τα νομικά πρόσωπα (company) δεν είχαν καρτέλα Επικοινωνία ενώ τα φυσικά πρόσωπα (individual) είχαν. Τα δεδομένα (phones, emails, websites, socialMedia) υποστηρίζονταν ήδη στο data model αλλά δεν εμφανίζονταν στο UI.",
-  "cause": "Δεν υπήρχε communicationSection στο section-registry.ts των company GEMI sections. Επιπλέον, ο renderer δεν πέρναγε σωστά το disabled prop στο DynamicContactArrays.",
+  "shortDescription": "ADR-181: IFC-Compliant Floor Management System — Floors tab, elevation field, PATCH/DELETE API",
+  "problem": "Η inline φόρμα δημιουργίας ορόφου στο DXF wizard ζητούσε μόνο κείμενο (name) — έλειπε ο αριθμός στάθμης (number) και το υψόμετρο (elevation). Επίσης δεν υπήρχε tab 'Όροφοι' στα building details.",
+  "cause": "Ο αρχικός σχεδιασμός (ADR-179) υλοποίησε μόνο floor-first import χωρίς πλήρες floor management. Κατά IFC 4.3 (IfcBuildingStorey), ένας όροφος χρειάζεται name, number ΚΑΙ elevation.",
   "filesChanged": [
-    "src/config/company-gemi/core/section-registry.ts",
-    "src/components/ContactFormSections/UnifiedContactTabbedSection.tsx",
-    "src/i18n/locales/el/forms.json",
-    "src/i18n/locales/en/forms.json"
+    "src/config/firestore-schema-map.ts",
+    "src/app/api/floors/route.ts",
+    "src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx",
+    "src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx",
+    "src/components/building-management/tabs/FloorsTabContent.tsx",
+    "src/config/unified-tabs-factory.ts",
+    "src/components/generic/mappings/buildingMappings.ts",
+    "src/i18n/locales/el/building.json",
+    "src/i18n/locales/en/building.json",
+    "src/i18n/locales/el/dxf-viewer.json",
+    "src/i18n/locales/en/dxf-viewer.json",
+    "docs/centralized-systems/reference/adrs/ADR-181-ifc-floor-management-system.md",
+    "docs/centralized-systems/reference/adr-index.md"
   ],
-  "solution": "1) Προσθήκη communicationSection στο section-registry.ts (order 2.5, μετά addresses) | 2) Fix disabled prop fallback: fieldDisabled ?? disabled στο UnifiedContactTabbedSection | 3) Προσθήκη i18n keys (el/en) για sections.communication και sectionDescriptions.communication",
-  "testing": "TypeScript compilation: 0 errors. Ο GenericFormTabRenderer ήδη κάνει dispatch customRenderers[section.id] για communication. Το DynamicContactArrays είναι generic.",
-  "notes": "Δεν χρειάστηκαν αλλαγές σε GenericFormTabRenderer, DynamicContactArrays, companyMapper ή EnterpriseContactSaver — όλα ήδη υποστήριζαν το communication section.",
+  "solution": "1) Firestore schema + Floor interface + API: elevation field | 2) API: PATCH (update) + DELETE (remove) endpoints | 3) FloorsTabContent: πίνακας ορόφων με inline add/edit/delete | 4) Tab registration: unified-tabs-factory (order 2) + buildingMappings | 5) DXF Wizard: inline form 1→3 inputs (number + name + elevation) | 6) i18n: 19 νέα keys (el+en)",
+  "testing": "TypeScript compilation: 0 errors (npx tsc --noEmit)",
+  "notes": "ADR-180 ήταν ήδη κατειλημμένο (Dashboard Home) — χρησιμοποιήθηκε ADR-181. Reused existing tabs.labels.floors i18n key. API PATCH/DELETE follow buildings route pattern.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -20,8 +29,8 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "556617e6",
-      "message": "feat(contacts): add Communication tab for company contacts"
+      "hash": "31cc0056",
+      "message": "chore: safety checkpoint before vercel deploy (i18n and app updates)"
     }
   ]
 }
