@@ -128,15 +128,25 @@ export class PhaseManager {
       };
     }
 
-    // Interactive states (hover/selection)
-    if (options.hovered || options.selected) {
+    // Hover highlighting (AutoCAD-style glow — only when NOT selected)
+    if (options.hovered && !options.selected) {
       return {
-        phase: options.hovered ? 'preview' : 'normal',
+        phase: 'highlighted',
         isActive: true,
-        priority: options.selected ? 3 : 2,
+        priority: 2,
+        context: { fromEntity: true, hasPreview: false }
+      };
+    }
+
+    // Interactive states (selection)
+    if (options.selected) {
+      return {
+        phase: 'normal',
+        isActive: true,
+        priority: 3,
         context: {
           fromEntity: true,
-          hasPreview: options.hovered
+          hasPreview: false
         },
         gripState: this.getGripState(entity)
       };
@@ -172,6 +182,10 @@ export class PhaseManager {
 
       case 'measurement':
         this.applyMeasurementStyle();
+        break;
+
+      case 'highlighted':
+        this.applyHighlightedStyle(entity);
         break;
     }
   }
@@ -300,6 +314,20 @@ export class PhaseManager {
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
     this.ctx.setLineDash([]);
     this.ctx.strokeStyle = UI_COLORS.WHITE;
+  }
+
+  /**
+   * Apply highlighted phase styling (AutoCAD-style hover glow)
+   * Entity retains its original color but gets a yellow shadow glow effect
+   */
+  private applyHighlightedStyle(entity: Entity): void {
+    this.ctx.strokeStyle = entity.color || '#FFFFFF';
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044: Slightly thicker than normal
+    this.ctx.setLineDash([]);
+    this.ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119
+    // AutoCAD-style glow
+    this.ctx.shadowColor = UI_COLORS.ENTITY_HOVER_GLOW;
+    this.ctx.shadowBlur = 8;
   }
 
   // ==========================================================================

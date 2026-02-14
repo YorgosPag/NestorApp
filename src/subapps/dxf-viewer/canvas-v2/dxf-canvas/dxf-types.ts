@@ -78,6 +78,7 @@ export interface DxfRenderOptions {
   showLayerNames: boolean;
   wireframeMode: boolean;
   selectedEntityIds: string[];
+  hoveredEntityId?: string | null;
 }
 
 // === DXF SELECTION ===

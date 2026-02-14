@@ -80,6 +80,8 @@ interface CentralizedMouseHandlersProps {
   onDrawingHover?: (worldPos: Point2D) => void;
   // 🏢 ENTERPRISE (2026-02-13): Callback for marquee-selected DXF entities (separate from layers)
   onEntitiesSelected?: (entityIds: string[]) => void;
+  // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover entity highlighting
+  onHoverEntity?: (entityId: string | null) => void;
 }
 
 /**
@@ -104,7 +106,8 @@ export function useCentralizedMouseHandlers({
   onCanvasClick,
   isGripDragging = false, // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
   onDrawingHover, // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
-  onEntitiesSelected // 🏢 ENTERPRISE (2026-02-13): DXF entity marquee selection callback
+  onEntitiesSelected, // 🏢 ENTERPRISE (2026-02-13): DXF entity marquee selection callback
+  onHoverEntity // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -163,6 +166,9 @@ export function useCentralizedMouseHandlers({
   // 🚀 PERFORMANCE (2026-01-27): Separate throttle for cursor context updates
   // This reduces React re-renders from CursorSystem context consumers
   const cursorThrottleRef = useRef<{ lastUpdateTime: number }>({ lastUpdateTime: 0 });
+
+  // 🏢 ENTERPRISE (2026-02-14): Throttle ref for hover highlighting (~30fps)
+  const hoverThrottleRef = useRef<number>(0);
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για local caching
 
@@ -410,6 +416,17 @@ export function useCentralizedMouseHandlers({
       }
     }
 
+    // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting — throttled hit-test on mouse move
+    if (onHoverEntity && hitTestCallback && activeTool === 'select' && !panStateRef.current.isPanning && !cursor.isSelecting) {
+      const HOVER_THROTTLE_MS = 32; // ~30fps — smooth enough for visual hover feedback
+      const hoverNow = performance.now();
+      if (hoverNow - hoverThrottleRef.current >= HOVER_THROTTLE_MS) {
+        hoverThrottleRef.current = hoverNow;
+        const hitEntityId = hitTestCallback(scene, screenPos, transform, freshViewport);
+        onHoverEntity(hitEntityId);
+      }
+    }
+
     // Handle selection update - disable in pan mode
     if (cursor.isSelecting && activeTool !== 'pan') { // 🔥 No selection update in pan mode
       cursor.updateSelection(screenPos);
@@ -442,7 +459,7 @@ export function useCentralizedMouseHandlers({
     // Pan with MIDDLE button (handled above) or WHEEL (ZoomManager) is the CAD standard
     // The old code was: shouldPan = cursor.isDown && button === 0 && activeTool !== 'select'
     // This incorrectly made ALL tools except 'select' pan instead of executing their function
-  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover]);
+  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, hitTestCallback, scene]);
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
   // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Use e.currentTarget for consistent viewport
@@ -682,6 +699,9 @@ export function useCentralizedMouseHandlers({
 
     cursor.setMouseDown(false);
 
+    // 🏢 ENTERPRISE (2026-02-14): Clear hover on mouse leave
+    onHoverEntity?.(null);
+
     // 🚀 CLEANUP PAN STATE on mouse leave
     const panState = panStateRef.current;
     if (panState.isPanning) {
@@ -692,7 +712,7 @@ export function useCentralizedMouseHandlers({
         panState.animationId = null;
       }
     }
-  }, [cursor]);
+  }, [cursor, onHoverEntity]);
 
   // ✅ WHEEL HANDLER - CAD-style zoom
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {

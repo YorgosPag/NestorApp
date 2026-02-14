@@ -115,16 +115,18 @@ export class DxfRenderer {
     options: DxfRenderOptions
   ): void {
     const isSelected = options.selectedEntityIds.includes(entity.id);
+    const isHovered = options.hoveredEntityId === entity.id;
 
     const entityModel: EntityModel = this.toEntityModel(entity, isSelected);
 
     // ✅ COMPOSITE RENDERING: Ένα κεντρικό call αντί για switch
     const renderOptions: RenderOptions = {
-      phase: isSelected ? 'selected' : 'normal',
+      phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,
       viewport,
       showGrips: isSelected,
       grips: isSelected, // ✅ FIX: Enables grip rendering in renderWithPhases
+      hovered: isHovered, // AutoCAD-style hover highlighting
       alpha: entity.visible ? 1.0 : 0.3
     };
 

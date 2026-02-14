@@ -283,6 +283,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [isSavingPolygon, setIsSavingPolygon] = useState(false);
   // 🏢 ENTERPRISE (2026-02-13): Selected drawn entity IDs for DxfCanvas highlight rendering
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
+  const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
   const eventBus = useEventBus();
 
@@ -1924,7 +1926,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds
-              renderOptions={{ showGrid: false, showLayerNames: false, wireframeMode: false, selectedEntityIds }} // 🏢 ENTERPRISE (2026-02-13): Entity selection highlight
+              renderOptions={{ showGrid: false, showLayerNames: false, wireframeMode: false, selectedEntityIds, hoveredEntityId }} // 🏢 ENTERPRISE (2026-02-14): Entity selection + hover highlight
               crosshairSettings={crosshairSettings} // ✅ RESTORED: Crosshair enabled
               gridSettings={gridSettings} // ✅ RESTORED: Grid enabled
               rulerSettings={{
@@ -1960,6 +1962,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               onLayerSelected={handleOverlayClick}
               onMultiLayerSelected={handleMultiOverlayClick}
               onEntitiesSelected={setSelectedEntityIds}
+              onHoverEntity={setHoveredEntityId}
               isGripDragging={draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!

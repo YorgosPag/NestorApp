@@ -72,6 +72,7 @@ interface DxfCanvasProps {
   onMultiLayerSelected?: (layerIds: string[]) => void;
   onEntitiesSelected?: (entityIds: string[]) => void;
   isGripDragging?: boolean;
+  onHoverEntity?: (entityId: string | null) => void;
 }
 
 export interface DxfCanvasRef {
@@ -106,6 +107,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   onMultiLayerSelected,
   onEntitiesSelected,
   isGripDragging = false,
+  onHoverEntity,
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -214,6 +216,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     onEntitiesSelected,
     canvasRef: canvasRef,
     isGripDragging,
+    onHoverEntity,
     hitTestCallback: (scene, screenPos, transform, viewport) => {
       try {
         // ✅ ENTERPRISE MIGRATION: Get service from registry

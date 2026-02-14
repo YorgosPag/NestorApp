@@ -20,7 +20,7 @@ import type { Entity } from '../../types/entities';
  * - preview: Preview/draft rendering (dashed lines, preview colors)
  * - measurement: Measurement display mode (with dimensions)
  */
-export type RenderingPhase = 'normal' | 'preview' | 'measurement';
+export type RenderingPhase = 'normal' | 'preview' | 'measurement' | 'highlighted';
 
 /**
  * Grip interaction temperature states (AutoCAD/BricsCAD standard)

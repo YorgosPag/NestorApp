@@ -64,6 +64,7 @@ const UI_COLORS_BASE = {
   DEFAULT_ENTITY: '#FFFFFF',
   SELECTED_ENTITY: '#ffffff',
   HOVERED_ENTITY: '#ffffff',
+  ENTITY_HOVER_GLOW: '#FFFF00',  // AutoCAD-style yellow glow on crosshair hover
   HIGHLIGHTED_ENTITY: '#FF3B30',
   
   // Drawing colors
