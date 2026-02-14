@@ -8,10 +8,7 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
-// 🏢 ADR-097: Centralized Line Dash Patterns
-import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
+// UI_COLORS, RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS — removed: dashed selection overlay replaced by inline grips
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 // 🏢 ADR-102: Centralized Origin Markers
 import { renderOriginMarker } from '../../rendering/ui/origin/OriginMarkerUtils';
@@ -126,7 +123,8 @@ export class DxfRenderer {
       phase: isSelected ? 'selected' : 'normal',
       transform,
       viewport,
-      showGrips: isSelected, // ✅ FIX: Show grips for selected entities
+      showGrips: isSelected,
+      grips: isSelected, // ✅ FIX: Enables grip rendering in renderWithPhases
       alpha: entity.visible ? 1.0 : 0.3
     };
 
@@ -195,36 +193,18 @@ export class DxfRenderer {
   }
 
   /**
-   * Render selection highlights
-   * 🚨 TODO Φάση 2.4: Θα μεταφερθεί στο SelectionRenderer για πλήρη deduplication
+   * Render selection highlights — grips are now rendered per-entity via renderWithPhases.
+   * This method is kept as a no-op to avoid removing the call site.
+   * The dashed orange bounding box has been replaced by proper AutoCAD-style grips.
    */
   private renderSelectionHighlights(
-    scene: DxfScene,
-    transform: ViewTransform,
-    viewport: Viewport,
-    options: DxfRenderOptions
+    _scene: DxfScene,
+    _transform: ViewTransform,
+    _viewport: Viewport,
+    _options: DxfRenderOptions
   ): void {
-    if (options.selectedEntityIds.length === 0) return;
-
-    this.ctx.save();
-    this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
-    this.ctx.setLineDash([...LINE_DASH_PATTERNS.SELECTION]); // 🏢 ADR-097: Centralized selection pattern
-
-    for (const entityId of options.selectedEntityIds) {
-      const entity = scene.entities.find(e => e.id === entityId);
-      if (!entity) continue;
-
-      // Simple selection box για τώρα - θα βελτιωθεί στη Φάση 2.4
-      const bounds = this.calculateEntityBounds(entity, transform, viewport);
-      if (bounds) {
-        this.ctx.strokeRect(bounds.min.x - 2, bounds.min.y - 2,
-                           bounds.max.x - bounds.min.x + 4,
-                           bounds.max.y - bounds.min.y + 4);
-      }
-    }
-
-    this.ctx.restore();
+    // Grips are now rendered inline during entity rendering (options.grips = true)
+    // No additional selection overlay needed
   }
 
   /**
