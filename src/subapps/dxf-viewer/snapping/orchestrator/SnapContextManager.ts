@@ -35,7 +35,6 @@ export class SnapContextManager {
       entities,
       worldRadiusAt: (point: Point2D) => this.worldRadiusAt(point),
       worldRadiusForType: (point: Point2D, snapType: ExtendedSnapType) => this.worldRadiusForType(point, snapType),
-      pixelTolerance: this.settings.pixelTolerance,
       perModePxTolerance: this.settings.perModePxTolerance as Record<ExtendedSnapType, number> | undefined,
       excludeEntityId,
       maxCandidates: 50 // Configurable limit

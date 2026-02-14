@@ -17,7 +17,7 @@ import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-079: Centralized Axis Detection Constants
-import { AXIS_DETECTION } from '../../config/tolerance-config';
+import { AXIS_DETECTION, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 /**
  * 🏢 ENTERPRISE GRID SNAP ENGINE
@@ -81,7 +81,7 @@ export class GridSnapEngine extends BaseSnapEngine {
         nearestGridPoint,
         isMajor ? 'Grid (Major)' : 'Grid',
         distance,
-        isMajor ? 5 : 10, // Major points have higher priority (lower number)
+        isMajor ? SNAP_ENGINE_PRIORITIES.GRID_MAJOR : SNAP_ENGINE_PRIORITIES.GRID_MINOR,
         undefined // No entity ID for grid points
       ));
 

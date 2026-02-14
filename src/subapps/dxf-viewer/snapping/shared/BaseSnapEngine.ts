@@ -14,7 +14,6 @@ export interface SnapEngineContext {
   entities: EntityModel[];
   worldRadiusAt: (point: Point2D) => number;
   worldRadiusForType: (point: Point2D, snapType: ExtendedSnapType) => number;
-  pixelTolerance: number;
   perModePxTolerance?: Record<ExtendedSnapType, number>;
   excludeEntityId?: string;
   maxCandidates: number;

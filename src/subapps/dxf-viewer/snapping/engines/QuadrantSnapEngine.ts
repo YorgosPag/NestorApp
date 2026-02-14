@@ -7,6 +7,8 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
+// 🏢 ADR-087: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class QuadrantSnapEngine extends BaseSnapEngine {
 
@@ -27,7 +29,7 @@ export class QuadrantSnapEngine extends BaseSnapEngine {
       {
         snapType: ExtendedSnapType.QUADRANT,
         displayName: 'Quadrant',
-        priority: 6  // Medium priority
+        priority: SNAP_ENGINE_PRIORITIES.QUADRANT
       },
       (center, radius, _) => this.getCircleQuadrants(center, radius)
     );

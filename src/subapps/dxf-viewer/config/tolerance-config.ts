@@ -337,12 +337,16 @@ export const RULER_CONFIG = {
  * 1 = Very High (Midpoint, Node) - Important construction points
  * 2 = High (Insertion) - Text/block insertion points
  * 3 = Medium (Center) - Circle/arc centers
- * 4 = Medium-Low (Parallel) - Parallel line construction
- * 5 = Low (Extension) - Line extension points
- * 7 = Very Low (Ortho) - Orthogonal constraints
- * 8 = Fallback (Nearest) - Last resort nearest point
- *
- * Note: Gap at 6 reserved for future engines (e.g., Tangent, Quadrant)
+ * 4 = Tangent - Tangent points on circles/arcs
+ * 5 = Perpendicular - Perpendicular foot on lines/circles
+ * 6 = Medium-Low (Parallel) - Parallel line construction
+ * 7 = Quadrant - Circle quadrant points (0°, 90°, 180°, 270°)
+ * 8 = Low (Extension) - Line extension points
+ * 9 = Very Low (Ortho) - Orthogonal constraints
+ * 10 = Fallback (Nearest) - Last resort nearest point
+ * 11 = Near - General purpose sampling fallback
+ * 12 = Grid Major - Major grid intersection points
+ * 13 = Grid Minor - Minor grid intersection points
  *
  * @example
  * import { SNAP_ENGINE_PRIORITIES } from '../config/tolerance-config';
@@ -361,14 +365,26 @@ export const SNAP_ENGINE_PRIORITIES = {
   INSERTION: 2,
   /** Medium priority - circle/arc/rectangle centers */
   CENTER: 3,
-  /** Medium-low priority - parallel line construction */
-  PARALLEL: 4,
-  /** Low priority - line extension points */
-  EXTENSION: 5,
-  /** Very low priority - orthogonal constraints */
-  ORTHO: 7,
-  /** Fallback priority - nearest point on any entity */
-  NEAREST: 8,
+  /** Tangent points on circles/arcs */
+  TANGENT: 4,
+  /** Perpendicular foot on lines/circles */
+  PERPENDICULAR: 5,
+  /** Parallel line construction */
+  PARALLEL: 6,
+  /** Circle quadrant points (0°, 90°, 180°, 270°) */
+  QUADRANT: 7,
+  /** Line extension points */
+  EXTENSION: 8,
+  /** Orthogonal constraints */
+  ORTHO: 9,
+  /** Nearest point on entity */
+  NEAREST: 10,
+  /** General purpose near-sampling fallback */
+  NEAR: 11,
+  /** Major grid intersection points */
+  GRID_MAJOR: 12,
+  /** Minor grid intersection points */
+  GRID_MINOR: 13,
 } as const;
 
 // ===== SNAP UI OFFSETS =====

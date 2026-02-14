@@ -12,6 +12,8 @@ import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
 import { calculateDistance, calculateAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-087: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class TangentSnapEngine extends BaseSnapEngine {
 
@@ -33,7 +35,7 @@ export class TangentSnapEngine extends BaseSnapEngine {
       {
         snapType: ExtendedSnapType.TANGENT,
         displayName: 'Tangent',
-        priority: 3  // High priority for precision
+        priority: SNAP_ENGINE_PRIORITIES.TANGENT
       },
       (center, radius, _entity) => this.getTangentPoints(center, radius, cursorPoint)
     );

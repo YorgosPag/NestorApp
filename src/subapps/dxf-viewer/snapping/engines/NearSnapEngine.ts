@@ -14,6 +14,8 @@ import { findEntityBasedSnapCandidates, processRectangleSnapping, LegacyRectangl
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../rendering/primitives/canvasPaths';
+// 🏢 ADR-087: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class NearSnapEngine extends BaseSnapEngine {
 
@@ -36,7 +38,7 @@ export class NearSnapEngine extends BaseSnapEngine {
       {
         snapType: ExtendedSnapType.NEAR,
         displayName: 'Near',
-        priority: 9  // Lower priority - general purpose fallback
+        priority: SNAP_ENGINE_PRIORITIES.NEAR
       },
       (entity, cursorPoint, radius) => {
         const richPoints = this.getNearPoints(entity as EntityModel, cursorPoint, radius);

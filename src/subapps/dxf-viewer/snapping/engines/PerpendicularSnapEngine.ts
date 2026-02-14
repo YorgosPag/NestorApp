@@ -23,7 +23,7 @@ import {
   isCircleEntity
 } from '../../types/entities';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
-import { SNAP_RADIUS_MULTIPLIERS } from '../../config/tolerance-config';
+import { SNAP_RADIUS_MULTIPLIERS, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class PerpendicularSnapEngine extends BaseSnapEngine {
 
@@ -45,7 +45,7 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       {
         snapType: ExtendedSnapType.PERPENDICULAR,
         displayName: 'Perpendicular',
-        priority: 4  // Medium-high priority
+        priority: SNAP_ENGINE_PRIORITIES.PERPENDICULAR
       },
       (entity, cursorPoint, _) => {
         // Extract only Point2D from the rich point data structure

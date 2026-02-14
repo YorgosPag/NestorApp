@@ -11,10 +11,11 @@ import { type SnapCandidate, type ProSnapSettings, type ProSnapResult } from '..
 
 export class SnapCandidateProcessor {
   private candidateIndex = 0;
+  private lastCandidateCount = 1;
 
   processResults(
-    cursorPoint: Point2D, 
-    candidates: SnapCandidate[], 
+    cursorPoint: Point2D,
+    candidates: SnapCandidate[],
     settings: ProSnapSettings
   ): ProSnapResult {
     if (candidates.length === 0) {
@@ -23,7 +24,8 @@ export class SnapCandidateProcessor {
 
     // Ταξινόμηση candidates κατά priority και απόσταση
     const sortedCandidates = this.sortCandidates(candidates);
-    
+    this.lastCandidateCount = sortedCandidates.length;
+
     // Hysteresis για σταθεροποίηση της επιλογής
     let bestCandidate = sortedCandidates[0];
     
@@ -68,7 +70,7 @@ export class SnapCandidateProcessor {
   }
 
   cycleCandidates(): void {
-    this.candidateIndex = (this.candidateIndex + 1) % 10; // Arbitrary limit
+    this.candidateIndex = (this.candidateIndex + 1) % Math.max(1, this.lastCandidateCount);
   }
 
   resetCandidateIndex(): void {

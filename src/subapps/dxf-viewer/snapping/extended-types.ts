@@ -92,13 +92,12 @@ export interface ProSnapSettings {
   gridStep: number;
   orthogonalOnly: boolean;
   tabCycling: boolean;
-  pixelTolerance: number;
   perModePxTolerance?: PerModeTolerance; // διαφορετικές ανοχές ανά mode
 }
 
 // Default settings για Pro Snap Engine
 export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
-  enabled: true,
+  enabled: false,
   snapDistance: 12,
   enabledTypes: new Set([
     ExtendedSnapType.AUTO,
@@ -131,7 +130,6 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
   gridStep: 50,
   orthogonalOnly: false,
   tabCycling: true,
-  pixelTolerance: 12,
   // Βελτιστοποιημένες ανοχές ανά mode (industry best practices)
   perModePxTolerance: {
     [ExtendedSnapType.ENDPOINT]: 10,      // στενή ακτίνα για ακρίβεια
