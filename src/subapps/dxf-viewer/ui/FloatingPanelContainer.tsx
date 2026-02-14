@@ -25,6 +25,7 @@ import { usePanelContentRenderer } from './hooks/usePanelContentRenderer';
 import { usePanelDescription } from './hooks/usePanelDescription';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+import { DxfBreadcrumb } from './components/DxfBreadcrumb';
 
 interface FloatingPanelContainerProps {
   sceneModel: SceneModel | null;
@@ -126,6 +127,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     // 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds
     // 🧪 TEST: Removed quick.card to hide outer border
     <div className={`${PANEL_LAYOUT.WIDTH.PANEL_LG} ${PANEL_LAYOUT.HEIGHT.FULL} flex flex-col ${colors.bg.card} rounded-lg relative`}>
+      {/* 🏢 ENTERPRISE: Breadcrumb — Ιεραρχία τοποθεσίας σχεδίου (Εταιρεία → Έργο → Κτίριο → Όροφος) */}
+      <DxfBreadcrumb />
       {/* 🏢 ENTERPRISE: Only bottom border on tabs container (quick.borderB) */}
       <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${colors.bg.card} ${quick.borderB}`}>
         <PanelTabs
