@@ -232,7 +232,15 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     if (currentStep === 'company' && selectedCompanyId) {
 
       setCurrentStep('project');
-      
+      // 🏢 ADR-181 FIX: Reset downstream state when moving forward
+      setSelectedProjectId('');
+      setSelectedBuildingId('');
+      setBuildings([]);
+      setFloors([]);
+      setSelectedFloorId('');
+      setUnits([]);
+      setSelectedUnitId('');
+
       // Load projects for the selected company
       try {
         await loadProjectsForCompany(selectedCompanyId);
@@ -243,13 +251,19 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     } else if (currentStep === 'project' && selectedProjectId) {
 
       setCurrentStep('building');
-      
+      // 🏢 ADR-181 FIX: Reset downstream state
+      setSelectedBuildingId('');
+      setFloors([]);
+      setSelectedFloorId('');
+      setUnits([]);
+      setSelectedUnitId('');
+
       // Load buildings for the selected project
       await loadBuildingsForProject(selectedProjectId);
     } else if (currentStep === 'building' && selectedBuildingId) {
 
       setCurrentStep('unit');
-      
+
       // Units are already loaded by handleBuildingChange
     }
   };
@@ -257,27 +271,43 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const handleBack = () => {
     if (currentStep === 'project') {
       setCurrentStep('company');
+      // 🏢 ADR-181 FIX: Reset all downstream state when going back
+      setSelectedProjectId('');
+      setSelectedBuildingId('');
+      setBuildings([]);
+      setFloors([]);
+      setSelectedFloorId('');
+      setUnits([]);
+      setSelectedUnitId('');
     } else if (currentStep === 'building') {
       setCurrentStep('project');
+      // 🏢 ADR-181 FIX: Reset building + downstream state
+      setSelectedBuildingId('');
+      setFloors([]);
+      setSelectedFloorId('');
+      setUnits([]);
+      setSelectedUnitId('');
     } else if (currentStep === 'unit') {
       setCurrentStep('building');
+      // 🏢 ADR-181 FIX: Reset unit state
+      setSelectedUnitId('');
     }
   };
 
   const handleBuildingChange = async (buildingId: string) => {
 
     setSelectedBuildingId(buildingId);
+    // 🏢 ADR-181 FIX: Clear stale floors IMMEDIATELY before API call
+    setFloors([]);
+    setSelectedFloorId('');
+    setUnits([]);
+    setSelectedUnitId('');
 
-    // Load units for selected building
+    // Load units and floors for selected building
     if (buildingId) {
       await loadUnitsForBuilding(buildingId);
       // 🏢 ENTERPRISE (2026-01-31): Load floors from separate Firestore collection via API
       await loadFloorsForBuilding(buildingId);
-    } else {
-      setUnits([]);
-      setSelectedUnitId('');
-      setFloors([]);
-      setSelectedFloorId('');
     }
   };
 
