@@ -193,7 +193,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           selectedOverlayId={universalSelection.getPrimaryId()}
           onDuplicate={() => {}}
           onDelete={handleDelete}
-          canDelete={universalSelection.getByType('overlay').length > 0}
+          canDelete={universalSelection.getByType('overlay').length > 0 || universalSelection.getByType('dxf-entity').length > 0}
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={() => handleAction('undo')}

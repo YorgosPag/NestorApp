@@ -90,8 +90,12 @@ import {
   DeleteOverlayCommand,
   DeleteMultipleOverlaysCommand,
   DeleteOverlayVertexCommand,
-  DeleteMultipleOverlayVerticesCommand
+  DeleteMultipleOverlayVerticesCommand,
+  DeleteEntityCommand,
+  DeleteMultipleEntitiesCommand
 } from '../../core/commands';
+// 🏢 ENTERPRISE (2026-02-15): Adapter for DXF entity deletion via Command Pattern
+import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
@@ -1571,8 +1575,27 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       return true;
     }
 
+    // PRIORITY 3: Delete selected DXF entities with UNDO SUPPORT
+    // 🏢 ENTERPRISE (2026-02-15): Reuse existing DeleteEntityCommand + LevelSceneManagerAdapter
+    const selectedDxfEntityIds = universalSelectionRef.current.getIdsByType('dxf-entity');
+    if (selectedDxfEntityIds.length > 0 && levelManager.currentLevelId) {
+      const adapter = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId
+      );
+      if (selectedDxfEntityIds.length === 1) {
+        executeCommand(new DeleteEntityCommand(selectedDxfEntityIds[0], adapter));
+      } else {
+        executeCommand(new DeleteMultipleEntitiesCommand(selectedDxfEntityIds, adapter));
+      }
+      universalSelectionRef.current.clearByType('dxf-entity');
+      setSelectedEntityIds([]);
+      return true;
+    }
+
     return false;
-  }, [selectedGrips, executeCommand]); // 🏢 ENTERPRISE: No tool dependency - delete works in all modes
+  }, [selectedGrips, executeCommand, levelManager]); // 🏢 ENTERPRISE: No tool dependency - delete works in all modes
 
   // 🏢 ENTERPRISE (2026-01-26): Listen for delete command from floating toolbar - ADR-032
   React.useEffect(() => {
@@ -1964,7 +1987,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               // DxfCanvas intercepts ALL pointer events, so it MUST handle marquee selection
               onLayerSelected={handleOverlayClick}
               onMultiLayerSelected={handleMultiOverlayClick}
-              onEntitiesSelected={setSelectedEntityIds}
+              onEntitiesSelected={(entityIds) => {
+                setSelectedEntityIds(entityIds);
+                // 🏢 ENTERPRISE (2026-02-15): Sync marquee selection → universalSelection
+                // Without this, Delete/Backspace cannot find DXF entities selected via marquee
+                universalSelection.clearByType('dxf-entity');
+                if (entityIds.length > 0) {
+                  universalSelection.selectMultiple(
+                    entityIds.map(id => ({ id, type: 'dxf-entity' as const }))
+                  );
+                }
+              }}
               onHoverEntity={setHoveredEntityId}
               onHoverOverlay={setHoveredOverlayId}
               isGripDragging={draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null}
