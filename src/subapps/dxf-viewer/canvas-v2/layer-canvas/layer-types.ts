@@ -52,6 +52,8 @@ export interface ColorLayer {
     /** Original positions for each dragging vertex index - IMMUTABLE during drag */
     originalPositions: Map<number, Point2D>;
   };
+  // 🏢 ENTERPRISE (2026-02-15): Hover highlighting for overlay polygons (yellow glow)
+  isHovered?: boolean;
 }
 
 export interface LayerPolygon {

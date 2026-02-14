@@ -109,6 +109,8 @@ export interface UseOverlayLayersProps {
   transformScale: number;
   /** Current status for draft polygon */
   currentStatus: OverlayStatus;
+  /** 🏢 ENTERPRISE (2026-02-15): ID of hovered overlay for yellow glow highlight */
+  hoveredOverlayId?: string | null;
 }
 
 /**
@@ -174,6 +176,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     mouseWorld,
     transformScale,
     currentStatus,
+    hoveredOverlayId,
   } = props;
 
   // ============================================================================
@@ -236,6 +239,8 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
             .filter(g => g.overlayId === overlay.id && g.type === 'edge-midpoint')
             .map(g => g.index),
           // Drag state
+          // 🏢 ENTERPRISE (2026-02-15): Hover state for overlay yellow glow
+          isHovered: hoveredOverlayId === overlay.id,
           isDragging: draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id,
           dragPreviewPosition: (draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id)
             ? dragPreviewPosition ?? undefined
@@ -262,6 +267,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     draggingVertices,
     draggingEdgeMidpoint,
     dragPreviewPosition,
+    hoveredOverlayId,
   ]);
 
   // ============================================================================

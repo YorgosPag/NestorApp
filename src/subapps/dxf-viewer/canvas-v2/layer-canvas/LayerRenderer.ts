@@ -610,6 +610,18 @@ export class LayerRenderer {
       // Debug disabled: console.log('🔍 Applied selection highlight');
     }
 
+    // 🏢 ENTERPRISE (2026-02-15): Hover highlight — yellow glow (AutoCAD-style)
+    // Only show when hovered AND not already selected (selection takes priority)
+    if (layer.isHovered && !polygon.selected) {
+      this.ctx.save();
+      this.ctx.shadowColor = UI_COLORS.ENTITY_HOVER_GLOW;
+      this.ctx.shadowBlur = 8;
+      this.ctx.strokeStyle = layer.color || UI_COLORS.WHITE;
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
     // 🏢 ENTERPRISE (2026-01-25): Vertex grips using CENTRALIZED GripSettings
     // Pattern: Autodesk/SAP - Single Source of Truth for grip appearance
     if (layer.showGrips && polygon.vertices.length >= 1) {

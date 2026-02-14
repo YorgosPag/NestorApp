@@ -28,6 +28,8 @@ import { isInDrawingMode } from '../tools/ToolStateManager';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 ENTERPRISE (2026-02-15): Point-in-polygon for overlay hover detection
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 
 // 🏢 ENTERPRISE: Type-safe snap result interface
 export interface SnapResultItem {
@@ -82,6 +84,8 @@ interface CentralizedMouseHandlersProps {
   onEntitiesSelected?: (entityIds: string[]) => void;
   // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover entity highlighting
   onHoverEntity?: (entityId: string | null) => void;
+  // 🏢 ENTERPRISE (2026-02-15): Overlay polygon hover highlighting (unified pipeline)
+  onHoverOverlay?: (overlayId: string | null) => void;
 }
 
 /**
@@ -107,7 +111,8 @@ export function useCentralizedMouseHandlers({
   isGripDragging = false, // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
   onDrawingHover, // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
   onEntitiesSelected, // 🏢 ENTERPRISE (2026-02-13): DXF entity marquee selection callback
-  onHoverEntity // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
+  onHoverEntity, // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
+  onHoverOverlay // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -416,14 +421,46 @@ export function useCentralizedMouseHandlers({
       }
     }
 
-    // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting — throttled hit-test on mouse move
-    if (onHoverEntity && hitTestCallback && activeTool === 'select' && !panStateRef.current.isPanning && !cursor.isSelecting) {
+    // 🏢 ENTERPRISE (2026-02-14/15): Unified hover highlighting — DXF entities > overlay priority
+    if (activeTool === 'select' && !panStateRef.current.isPanning && !cursor.isSelecting) {
       const HOVER_THROTTLE_MS = 32; // ~30fps — smooth enough for visual hover feedback
       const hoverNow = performance.now();
       if (hoverNow - hoverThrottleRef.current >= HOVER_THROTTLE_MS) {
         hoverThrottleRef.current = hoverNow;
-        const hitEntityId = hitTestCallback(scene, screenPos, transform, freshViewport);
-        onHoverEntity(hitEntityId);
+
+        // Step 1: Test DXF entities first (highest priority)
+        let hitEntityId: string | null = null;
+        if (onHoverEntity && hitTestCallback) {
+          hitEntityId = hitTestCallback(scene, screenPos, transform, freshViewport);
+          onHoverEntity(hitEntityId);
+        }
+
+        // Step 2: If no DXF hit, test overlay polygons (lower priority)
+        if (onHoverOverlay && colorLayers && colorLayers.length > 0) {
+          if (hitEntityId) {
+            // DXF entity takes priority — clear overlay hover
+            onHoverOverlay(null);
+          } else {
+            // Convert screen → world for polygon intersection test
+            const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
+            let hitOverlayId: string | null = null;
+
+            // Iterate in reverse zIndex order (top layer first)
+            for (let i = colorLayers.length - 1; i >= 0; i--) {
+              const layer = colorLayers[i];
+              if (!layer.visible || layer.polygons.length === 0) continue;
+              for (const polygon of layer.polygons) {
+                if (polygon.vertices.length >= 3 && isPointInPolygon(worldPos, polygon.vertices)) {
+                  hitOverlayId = layer.id;
+                  break;
+                }
+              }
+              if (hitOverlayId) break;
+            }
+
+            onHoverOverlay(hitOverlayId);
+          }
+        }
       }
     }
 
@@ -459,7 +496,7 @@ export function useCentralizedMouseHandlers({
     // Pan with MIDDLE button (handled above) or WHEEL (ZoomManager) is the CAD standard
     // The old code was: shouldPan = cursor.isDown && button === 0 && activeTool !== 'select'
     // This incorrectly made ALL tools except 'select' pan instead of executing their function
-  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, hitTestCallback, scene]);
+  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers]);
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
   // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Use e.currentTarget for consistent viewport

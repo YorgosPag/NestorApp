@@ -285,6 +285,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
+  // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting (unified pipeline)
+  const [hoveredOverlayId, setHoveredOverlayId] = useState<string | null>(null);
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
   const eventBus = useEventBus();
 
@@ -708,6 +710,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     mouseWorld,
     transformScale: transform.scale,
     currentStatus,
+    hoveredOverlayId,
   });
 
   // === 🎨 DRAWING SYSTEM ===
@@ -1963,6 +1966,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               onMultiLayerSelected={handleMultiOverlayClick}
               onEntitiesSelected={setSelectedEntityIds}
               onHoverEntity={setHoveredEntityId}
+              onHoverOverlay={setHoveredOverlayId}
               isGripDragging={draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!

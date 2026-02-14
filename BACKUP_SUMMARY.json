@@ -1,36 +1,25 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "ADR-181: IFC-Compliant Floor Management System — Floors tab, elevation field, PATCH/DELETE API",
-  "problem": "Η inline φόρμα δημιουργίας ορόφου στο DXF wizard ζητούσε μόνο κείμενο (name) — έλειπε ο αριθμός στάθμης (number) και το υψόμετρο (elevation). Επίσης δεν υπήρχε tab 'Όροφοι' στα building details.",
-  "cause": "Ο αρχικός σχεδιασμός (ADR-179) υλοποίησε μόνο floor-first import χωρίς πλήρες floor management. Κατά IFC 4.3 (IfcBuildingStorey), ένας όροφος χρειάζεται name, number ΚΑΙ elevation.",
+  "category": "FIX",
+  "shortDescription": "Canvas residue hardening — eliminate implicit cache dependency in DxfRenderer + CanvasUtils",
+  "problem": "Colored overlay layers left residual artifacts (ghost strips) at the bottom of the screen when zooming. The initial fix (fe5c3f64) addressed LayerRenderer but DxfRenderer still had a fragile implicit cache dependency.",
+  "cause": "DxfRenderer.render() called refreshBounds() then CanvasUtils.clearCanvas() which re-fetched from CanvasBoundsService cache internally — fragile coupling. If cache expired between the two calls, clear and draw would use different dimensions.",
   "filesChanged": [
-    "src/config/firestore-schema-map.ts",
-    "src/app/api/floors/route.ts",
-    "src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx",
-    "src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx",
-    "src/components/building-management/tabs/FloorsTabContent.tsx",
-    "src/config/unified-tabs-factory.ts",
-    "src/components/generic/mappings/buildingMappings.ts",
-    "src/i18n/locales/el/building.json",
-    "src/i18n/locales/en/building.json",
-    "src/i18n/locales/el/dxf-viewer.json",
-    "src/i18n/locales/en/dxf-viewer.json",
-    "docs/centralized-systems/reference/adrs/ADR-181-ifc-floor-management-system.md",
-    "docs/centralized-systems/reference/adr-index.md"
+    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts",
+    "src/subapps/dxf-viewer/rendering/canvas/utils/CanvasUtils.ts"
   ],
-  "solution": "1) Firestore schema + Floor interface + API: elevation field | 2) API: PATCH (update) + DELETE (remove) endpoints | 3) FloorsTabContent: πίνακας ορόφων με inline add/edit/delete | 4) Tab registration: unified-tabs-factory (order 2) + buildingMappings | 5) DXF Wizard: inline form 1→3 inputs (number + name + elevation) | 6) i18n: 19 νέα keys (el+en)",
-  "testing": "TypeScript compilation: 0 errors (npx tsc --noEmit)",
-  "notes": "ADR-180 ήταν ήδη κατειλημμένο (Dashboard Home) — χρησιμοποιήθηκε ADR-181. Reused existing tabs.labels.floors i18n key. API PATCH/DELETE follow buildings route pattern.",
+  "solution": "1) DxfRenderer: replaced CanvasUtils.clearCanvas() with direct ctx.clearRect() using fresh canvasRect (same pattern as LayerRenderer) | 2) Removed unused CanvasUtils import from DxfRenderer | 3) Added optional 'dimensions' parameter to CanvasUtils.clearCanvas() so render-loop callers can bypass cache | 4) Full audit of all 7 canvas clear paths — only DxfRenderer and LayerRenderer are in the main render loop",
+  "testing": "TypeScript compilation: 0 errors (npx tsc --noEmit). Full audit of all canvas clear paths confirmed no other stale-bounds risks.",
+  "notes": "Based on OpenAI Codex deep investigation report (dxf-overlay-residue-deep-investigation-2026-02-14-2.md). Applied hardening recommendations 1-3 from Section 7. PreviewRenderer uses identity transform reset + backing store dims (correct pattern). Overlay-drawing, Canvas2DContext, EntityRendererComposite, CanvasManager are not in main render loop — safe.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-02-14"
+    "sessionDate": "2026-02-15"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "31cc0056",
-      "message": "chore: safety checkpoint before vercel deploy (i18n and app updates)"
+      "hash": "04d573b0",
+      "message": "fix(dxf-viewer): prevent entity click from auto-opening layering toolbar (includes residue hardening)"
     }
   ]
 }

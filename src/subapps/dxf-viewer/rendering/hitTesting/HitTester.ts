@@ -10,6 +10,8 @@ import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
 // 🏢 ADR-071: Centralized geometry utilities
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
+// 🏢 ENTERPRISE (2026-02-15): Centralized point-in-polygon for closed polyline/area hit-test
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-109: Centralized Distance Calculation
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-095: Centralized Snap Tolerance
@@ -529,6 +531,9 @@ export class HitTester {
       case 'rectangle':
       case 'rect':
         return this.hitTestRectangle(entity, point, tolerance);
+      // 🏢 ENTERPRISE (2026-02-15): Angle measurement hit-test — test both arm segments
+      case 'angle-measurement':
+        return this.hitTestAngleMeasurement(entity, point, tolerance);
       default:
         // Generic hit test - point inside bounds
         return {
@@ -587,20 +592,32 @@ export class HitTester {
   private hitTestPolyline(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
     // ✅ ENTERPRISE FIX: Type-safe property access
     if (!('vertices' in entity)) return null;
-    const polylineEntity = entity as { vertices: Point2D[] };
+    const polylineEntity = entity as { vertices: Point2D[]; closed?: boolean };
     const vertices = polylineEntity.vertices;
     if (!vertices || vertices.length < 2) return null;
 
-    for (let i = 0; i < vertices.length - 1; i++) {
-      const distance = pointToLineDistance(point, vertices[i], vertices[i + 1]);
+    // Test edge proximity (all segments including closing edge for closed polylines)
+    const edgeCount = polylineEntity.closed ? vertices.length : vertices.length - 1;
+    for (let i = 0; i < edgeCount; i++) {
+      const nextIndex = (i + 1) % vertices.length;
+      const distance = pointToLineDistance(point, vertices[i], vertices[nextIndex]);
 
       if (distance <= tolerance) {
         return {
           hitType: 'entity',
-          hitPoint: this.closestPointOnLine(point, vertices[i], vertices[i + 1]),
+          hitPoint: this.closestPointOnLine(point, vertices[i], vertices[nextIndex]),
           edgeIndex: i
         };
       }
+    }
+
+    // 🏢 ENTERPRISE (2026-02-15): For closed polylines (area measurements), also detect
+    // cursor inside the polygon body — not just near edges
+    if (polylineEntity.closed && vertices.length >= 3 && isPointInPolygon(point, vertices)) {
+      return {
+        hitType: 'entity',
+        hitPoint: point
+      };
     }
 
     return null;
@@ -640,6 +657,39 @@ export class HitTester {
           edgeIndex: i
         };
       }
+    }
+
+    return null;
+  }
+
+  /**
+   * 🏢 ENTERPRISE (2026-02-15): Angle measurement hit testing
+   * AngleMeasurementEntity has vertex (center), point1, point2 — two arm segments
+   * Hit if cursor is near either arm (vertex→point1 or vertex→point2)
+   */
+  private hitTestAngleMeasurement(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+    // ✅ Type-safe property access for angle measurement
+    if (!('vertex' in entity) || !('point1' in entity) || !('point2' in entity)) {
+      return null;
+    }
+    const angleMeasurement = entity as { vertex: Point2D; point1: Point2D; point2: Point2D };
+
+    // Test arm 1: vertex → point1
+    const distArm1 = pointToLineDistance(point, angleMeasurement.vertex, angleMeasurement.point1);
+    if (distArm1 <= tolerance) {
+      return {
+        hitType: 'entity',
+        hitPoint: this.closestPointOnLine(point, angleMeasurement.vertex, angleMeasurement.point1)
+      };
+    }
+
+    // Test arm 2: vertex → point2
+    const distArm2 = pointToLineDistance(point, angleMeasurement.vertex, angleMeasurement.point2);
+    if (distArm2 <= tolerance) {
+      return {
+        hitType: 'entity',
+        hitPoint: this.closestPointOnLine(point, angleMeasurement.vertex, angleMeasurement.point2)
+      };
     }
 
     return null;
