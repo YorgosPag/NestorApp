@@ -8,7 +8,8 @@
     }
   },
   "page": {
-    "title": "Πίνακας CRM"
+    "title": "Πίνακας CRM",
+    "subtitle": "Διαχείριση πελατειακών σχέσεων και pipeline πωλήσεων"
   },
   "tabs": {
     "overview": {
@@ -122,6 +123,15 @@
       "edit": "Επεξεργασία",
       "delete": "Διαγραφή",
       "view": "Προβολή"
+    },
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης ευκαιριών",
+      "addFailed": "Δεν ήταν δυνατή η δημιουργία ευκαιρίας",
+      "deleteFailed": "Δεν ήταν δυνατή η διαγραφή ευκαιρίας"
+    },
+    "messages": {
+      "addSuccess": "Η ευκαιρία δημιουργήθηκε επιτυχώς",
+      "deleteSuccess": "Η ευκαιρία διαγράφηκε επιτυχώς"
     }
   },
   "dashboard": {
@@ -400,6 +410,17 @@
     "empty": {
       "title": "Δεν υπάρχουν leads",
       "subtitle": "Προσθέστε το πρώτο σας lead για να ξεκινήσετε!"
+    },
+    "confirm": {
+      "deleteMessage": "Είστε σίγουροι ότι θέλετε να διαγράψετε το lead \"{name}\";"
+    },
+    "status": {
+      "deleteSuccess": "Το lead \"{name}\" διαγράφηκε επιτυχώς"
+    },
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης leads",
+      "deleteFailed": "Δεν ήταν δυνατή η διαγραφή του lead",
+      "noEmail": "Δεν υπάρχει διαθέσιμο email για το συγκεκριμένο lead"
     }
   },
   "pipeline": {
@@ -413,6 +434,59 @@
     "empty": {
       "title": "Δεν υπάρχουν ευκαιρίες",
       "subtitle": "Προσθέστε την πρώτη σας ευκαιρία για να ξεκινήσετε!"
+    }
+  },
+  "email": {
+    "modal": {
+      "title": "Αποστολή Email",
+      "to": "Προς",
+      "selectType": "Επιλέξτε τύπο email",
+      "subjectLabel": "Θέμα",
+      "subjectPlaceholder": "Γράψτε το θέμα...",
+      "contentLabel": "Περιεχόμενο",
+      "contentPlaceholder": "Γράψτε το μήνυμά σας...",
+      "sending": "Αποστολή...",
+      "send": "Αποστολή",
+      "cancel": "Ακύρωση"
+    },
+    "templates": {
+      "welcome": {
+        "name": "Καλωσόρισμα",
+        "description": "Email πρώτης επικοινωνίας",
+        "subject": "Καλώς ήρθατε"
+      },
+      "followup": {
+        "name": "Follow-up",
+        "description": "Υπενθύμιση επαφής",
+        "subject": "Follow-up για τη συνεργασία μας"
+      },
+      "appointment": {
+        "name": "Ραντεβού",
+        "description": "Επιβεβαίωση ραντεβού",
+        "subject": "Επιβεβαίωση ραντεβού"
+      },
+      "proposal": {
+        "name": "Πρόταση",
+        "description": "Αποστολή εμπορικής πρότασης",
+        "subject": "Εμπορική πρόταση"
+      },
+      "custom": {
+        "name": "Προσαρμοσμένο",
+        "description": "Γράψτε email από την αρχή",
+        "subject": ""
+      }
+    },
+    "validation": {
+      "subjectRequired": "Το θέμα είναι υποχρεωτικό",
+      "messageRequired": "Το περιεχόμενο είναι υποχρεωτικό",
+      "leadNoEmail": "Η επαφή δεν διαθέτει email"
+    },
+    "status": {
+      "sentSuccess": "Το email στάλθηκε επιτυχώς"
+    },
+    "errors": {
+      "sendFailed": "Αποτυχία αποστολής email: {error}",
+      "unknown": "Άγνωστο σφάλμα"
     }
   },
   "contactCard": {

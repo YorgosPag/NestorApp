@@ -11,16 +11,16 @@ import { cn, getSpacingClass } from '@/lib/design-system';
 
 // 🌐 i18n: CRM sections use i18n keys
 const crmSectionKeys = [
-    { titleKey: 'crm.sections.dashboard.title', href: '/crm/dashboard', icon: BarChart, descKey: 'crm.sections.dashboard.description' },
-    { titleKey: 'crm.sections.customers.title', href: '/crm/customers', icon: Users, descKey: 'crm.sections.customers.description' },
-    { titleKey: 'crm.sections.communications.title', href: '/crm/communications', icon: Phone, descKey: 'crm.sections.communications.description' },
-    { titleKey: 'crm.sections.emailAnalytics.title', href: '/crm/email-analytics', icon: BarChart3, descKey: 'crm.sections.emailAnalytics.description' },
-    { titleKey: 'crm.sections.leads.title', href: '/crm/leads', icon: Target, descKey: 'crm.sections.leads.description' },
-    { titleKey: 'crm.sections.tasks.title', href: '/crm/tasks', icon: ClipboardList, descKey: 'crm.sections.tasks.description' },
-    { titleKey: 'crm.sections.calendar.title', href: '/crm/calendar', icon: CalendarDays, descKey: 'crm.sections.calendar.description' },
-    { titleKey: 'crm.sections.pipeline.title', href: '/crm/pipeline', icon: Filter, descKey: 'crm.sections.pipeline.description' },
-    { titleKey: 'crm.sections.teams.title', href: '/crm/teams', icon: Users2, descKey: 'crm.sections.teams.description' },
-    { titleKey: 'crm.sections.notifications.title', href: '/crm/notifications', icon: Bell, descKey: 'crm.sections.notifications.description' },
+    { titleKey: 'sections.dashboard.title', href: '/crm/dashboard', icon: BarChart, descKey: 'sections.dashboard.description' },
+    { titleKey: 'sections.customers.title', href: '/crm/customers', icon: Users, descKey: 'sections.customers.description' },
+    { titleKey: 'sections.communications.title', href: '/crm/communications', icon: Phone, descKey: 'sections.communications.description' },
+    { titleKey: 'sections.emailAnalytics.title', href: '/crm/email-analytics', icon: BarChart3, descKey: 'sections.emailAnalytics.description' },
+    { titleKey: 'sections.leads.title', href: '/crm/leads', icon: Target, descKey: 'sections.leads.description' },
+    { titleKey: 'sections.tasks.title', href: '/crm/tasks', icon: ClipboardList, descKey: 'sections.tasks.description' },
+    { titleKey: 'sections.calendar.title', href: '/crm/calendar', icon: CalendarDays, descKey: 'sections.calendar.description' },
+    { titleKey: 'sections.pipeline.title', href: '/crm/pipeline', icon: Filter, descKey: 'sections.pipeline.description' },
+    { titleKey: 'sections.teams.title', href: '/crm/teams', icon: Users2, descKey: 'sections.teams.description' },
+    { titleKey: 'sections.notifications.title', href: '/crm/notifications', icon: Bell, descKey: 'sections.notifications.description' },
 ]
 
 export default function CrmPage() {

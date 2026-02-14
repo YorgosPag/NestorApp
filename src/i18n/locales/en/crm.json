@@ -8,7 +8,8 @@
     }
   },
   "page": {
-    "title": "CRM Dashboard"
+    "title": "CRM Dashboard",
+    "subtitle": "Customer relationship management and sales pipeline"
   },
   "tabs": {
     "overview": {
@@ -122,6 +123,15 @@
       "edit": "Edit",
       "delete": "Delete",
       "view": "View"
+    },
+    "errors": {
+      "loadFailed": "Failed to load opportunities",
+      "addFailed": "Failed to create opportunity",
+      "deleteFailed": "Failed to delete opportunity"
+    },
+    "messages": {
+      "addSuccess": "Opportunity created successfully",
+      "deleteSuccess": "Opportunity deleted successfully"
     }
   },
   "dashboard": {
@@ -400,6 +410,17 @@
     "empty": {
       "title": "No leads found",
       "subtitle": "Add your first lead to get started!"
+    },
+    "confirm": {
+      "deleteMessage": "Are you sure you want to delete lead \"{name}\"?"
+    },
+    "status": {
+      "deleteSuccess": "Lead \"{name}\" was deleted successfully"
+    },
+    "errors": {
+      "loadFailed": "Failed to load leads",
+      "deleteFailed": "Failed to delete lead",
+      "noEmail": "No email is available for this lead"
     }
   },
   "pipeline": {
@@ -413,6 +434,59 @@
     "empty": {
       "title": "No opportunities",
       "subtitle": "Add your first opportunity to get started!"
+    }
+  },
+  "email": {
+    "modal": {
+      "title": "Send Email",
+      "to": "To",
+      "selectType": "Select email type",
+      "subjectLabel": "Subject",
+      "subjectPlaceholder": "Enter subject...",
+      "contentLabel": "Content",
+      "contentPlaceholder": "Write your message...",
+      "sending": "Sending...",
+      "send": "Send",
+      "cancel": "Cancel"
+    },
+    "templates": {
+      "welcome": {
+        "name": "Welcome",
+        "description": "First contact email",
+        "subject": "Welcome"
+      },
+      "followup": {
+        "name": "Follow-up",
+        "description": "Follow-up reminder",
+        "subject": "Following up on our conversation"
+      },
+      "appointment": {
+        "name": "Appointment",
+        "description": "Appointment confirmation",
+        "subject": "Appointment confirmation"
+      },
+      "proposal": {
+        "name": "Proposal",
+        "description": "Commercial proposal email",
+        "subject": "Commercial proposal"
+      },
+      "custom": {
+        "name": "Custom",
+        "description": "Write an email from scratch",
+        "subject": ""
+      }
+    },
+    "validation": {
+      "subjectRequired": "Subject is required",
+      "messageRequired": "Message is required",
+      "leadNoEmail": "The selected contact has no email"
+    },
+    "status": {
+      "sentSuccess": "Email sent successfully"
+    },
+    "errors": {
+      "sendFailed": "Failed to send email: {error}",
+      "unknown": "Unknown error"
     }
   },
   "contactCard": {
