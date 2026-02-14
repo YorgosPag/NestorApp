@@ -17,7 +17,11 @@ This repository uses `Local_Protocol.txt` as the single, binding source of truth
 - **DO NOT run locally**: `lint`, `tests`, `build` — these are extremely heavy (4-14 GB RAM) and freeze the machine. They run on Vercel/CI servers after `git push`.
 - Stop immediately if compliance is not possible; do not proceed without an explicit waiver and remediation plan.
 
+## Deployment
+- **ONLY use `git push origin main`** for deployment — Vercel auto-deploys from GitHub.
+- **NEVER run `npx vercel`, `npx vercel --prod`, or `vercel deploy`** — these execute a full `next build` locally (4-8 GB RAM, 5-10 min) and freeze the machine. The Vercel servers do the build remotely after git push.
+
 ## Working mode
 - Prefer small, single-topic diffs.
 - Always provide evidence (commands run + results) for the typecheck gate.
-- **NEVER run `pnpm lint`, `pnpm test`, `pnpm build`, or `pnpm run enterprise:validate` locally** — the dev machine has 4 cores / 24 GB RAM and these commands cause system freeze.
+- **NEVER run locally**: `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm run enterprise:validate`, `npx vercel` — the dev machine has 4 cores / 24 GB RAM and these commands cause system freeze.
