@@ -1603,8 +1603,9 @@ export function useUnifiedDrawing() {
         extendedPolyline.isOverlayPreview = localState.isOverlayMode === true;
         applyPreviewSettings(extendedPolyline as unknown as Record<string, unknown>);
 
-        // 🎯 ADR-047: Highlight first point for measure-area when 3+ points (close indicator)
-        if (currentTool === 'measure-area' && worldPoints.length >= 3) {
+        // 🎯 ADR-047: Highlight first point for polygon-based tools when 3+ points (close indicator)
+        // 🏢 ENTERPRISE: Unified green indicator for ALL closable tools (polygon, measure-area, overlays)
+        if ((currentTool === 'measure-area' || currentTool === 'polygon') && worldPoints.length >= 3) {
           extendedPolyline.previewGripPoints = [
             { position: worldPoints[0], type: 'close', color: UI_COLORS.BRIGHT_GREEN }, // 🟢 Green circle = clickable close point
             { position: snappedPoint, type: 'cursor' }

@@ -183,6 +183,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   // 🎯 MODE CHANGE HANDLER
   const handleModeChange = (newMode: OverlayEditorMode) => {
     if (newMode === 'draw') {
+      // 🎯 ENTERPRISE: Set activeTool to 'polygon' so DrawingContextMenu appears (right-click → Close)
+      props.onToolChange('polygon');
       props.onModeChange(newMode);
 
       const validStatus = Object.keys(STATUS_COLORS_MAPPING).includes(props.currentStatus as string)

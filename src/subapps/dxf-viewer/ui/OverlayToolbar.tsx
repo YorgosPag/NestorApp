@@ -96,6 +96,8 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
 
   const handleModeChange = (newMode: OverlayEditorMode) => {
     if (newMode === 'draw') {
+      // 🎯 ENTERPRISE: Set activeTool to 'polygon' so DrawingContextMenu appears (right-click → Close)
+      onToolChange?.('polygon');
       // Ενημέρωση του overlayMode state πρώτα για toolbar visibility
       onModeChange(newMode);
       

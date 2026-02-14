@@ -188,18 +188,25 @@ export function useDrawingHandlers(
 
     // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern)
     // CRITICAL: Check distance BEFORE snap, using RAW point!
-    const isAreaTool = activeTool === 'measure-area';
+    // 🏢 ENTERPRISE: Unified close detection for ALL polygon-based tools (polygon, measure-area, overlays)
+    const isClosableTool = activeTool === 'measure-area' || activeTool === 'polygon';
     const hasMinPoints = drawingState.tempPoints.length >= 3; // Need at least 3 points to close
 
-    if (isAreaTool && hasMinPoints && drawingState.tempPoints[0]) {
+    if (isClosableTool && hasMinPoints && drawingState.tempPoints[0]) {
       const firstPoint = drawingState.tempPoints[0];
       const distance = calculateDistance(p, firstPoint); // ✅ Use RAW point, NOT snapped!
 
       if (distance < POLYGON_TOLERANCES.CLOSE_DETECTION) {
         // 🎯 AUTO-CLOSE: User clicked near first point - close the polygon!
-        const newEntity = finishPolyline();
-        if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
-          onEntityCreated(newEntity as Entity);
+        // Ίδιο pattern με onDrawingDoubleClick — overlay completion first
+        const { toolStyleStore } = require('../../stores/ToolStyleStore');
+        const isOverlayCompletion = toolStyleStore.triggerOverlayCompletion();
+
+        if (!isOverlayCompletion) {
+          const newEntity = finishPolyline();
+          if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
+            onEntityCreated(newEntity as Entity);
+          }
         }
         // 🏢 ENTERPRISE: Use centralized tool completion logic via ToolStateStore
         handleToolCompletion(activeTool);
