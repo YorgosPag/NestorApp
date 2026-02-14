@@ -1,15 +1,20 @@
 {
-  "category": "FIX",
-  "shortDescription": "Canvas residue hardening — eliminate implicit cache dependency in DxfRenderer + CanvasUtils",
-  "problem": "Colored overlay layers left residual artifacts (ghost strips) at the bottom of the screen when zooming. The initial fix (fe5c3f64) addressed LayerRenderer but DxfRenderer still had a fragile implicit cache dependency.",
-  "cause": "DxfRenderer.render() called refreshBounds() then CanvasUtils.clearCanvas() which re-fetched from CanvasBoundsService cache internally — fragile coupling. If cache expired between the two calls, clear and draw would use different dimensions.",
+  "category": "FEATURE",
+  "shortDescription": "Unified hover highlighting — DXF entities, overlays & measurements",
+  "problem": "Overlay polygons, angle measurements, and area measurements (closed polylines) did not highlight on mouse hover. Only DXF line entities had hover support.",
+  "cause": "1) HitTester switch/case missing 'angle-measurement' type | 2) hitTestPolyline only tested edge proximity, not polygon interior for closed polylines | 3) LayerRenderer had no hover glow rendering | 4) No hover detection pipeline existed for overlay polygons",
   "filesChanged": [
-    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts",
-    "src/subapps/dxf-viewer/rendering/canvas/utils/CanvasUtils.ts"
+    "src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts",
+    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/layer-types.ts",
+    "src/subapps/dxf-viewer/hooks/layers/useOverlayLayers.ts",
+    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts",
+    "src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts",
+    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx",
+    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx"
   ],
-  "solution": "1) DxfRenderer: replaced CanvasUtils.clearCanvas() with direct ctx.clearRect() using fresh canvasRect (same pattern as LayerRenderer) | 2) Removed unused CanvasUtils import from DxfRenderer | 3) Added optional 'dimensions' parameter to CanvasUtils.clearCanvas() so render-loop callers can bypass cache | 4) Full audit of all 7 canvas clear paths — only DxfRenderer and LayerRenderer are in the main render loop",
-  "testing": "TypeScript compilation: 0 errors (npx tsc --noEmit). Full audit of all canvas clear paths confirmed no other stale-bounds risks.",
-  "notes": "Based on OpenAI Codex deep investigation report (dxf-overlay-residue-deep-investigation-2026-02-14-2.md). Applied hardening recommendations 1-3 from Section 7. PreviewRenderer uses identity transform reset + backing store dims (correct pattern). Overlay-drawing, Canvas2DContext, EntityRendererComposite, CanvasManager are not in main render loop — safe.",
+  "solution": "Phase 1: Added hitTestAngleMeasurement() for angle measurement arms + fixed hitTestPolyline to test closing edge + interior with isPointInPolygon for closed polylines | Phase 2: Added isHovered to ColorLayer type, mapped hoveredOverlayId in useOverlayLayers, rendered yellow glow in LayerRenderer | Phase 3: Extended useCentralizedMouseHandlers with unified hover pipeline (DXF > overlay priority), wired onHoverOverlay through DxfCanvas to CanvasSection state",
+  "testing": "TypeScript compilation: 0 errors (npx tsc --noEmit)",
+  "notes": "Unified hover pipeline: DXF entities have higher priority than overlays. When DXF entity is hovered, overlay hover is cleared. Overlay detection uses isPointInPolygon from centralized GeometryUtils. Reverse zIndex iteration ensures top layer hit first.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -18,8 +23,8 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "04d573b0",
-      "message": "fix(dxf-viewer): prevent entity click from auto-opening layering toolbar (includes residue hardening)"
+      "hash": "32b21b58",
+      "message": "feat(dxf-viewer): unified hover highlighting for DXF entities, overlays & measurements"
     }
   ]
 }

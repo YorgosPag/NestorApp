@@ -456,7 +456,9 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
       const isPanToolActive = activeTool === 'pan';
 
       // ✅ LAYER PERSISTENCE: Show colored layers βασει persistent state
-      let filteredLayers = layersVisible ? layers : []; // Layers βασει persistent visibility
+      // 🏢 ENTERPRISE (2026-02-15): Draft layers always visible even when layersVisible=false
+      // This ensures the draw preview (grips, rubber-band) is never hidden by the layers toggle
+      let filteredLayers = layersVisible ? layers : layers.filter(l => l.isDraft);
 
       // 🏢 ENTERPRISE (2027-01-27): Apply drag delta for ghost rendering - Unified Toolbar Integration
       // When move tool is active and user is dragging, render overlay at new position

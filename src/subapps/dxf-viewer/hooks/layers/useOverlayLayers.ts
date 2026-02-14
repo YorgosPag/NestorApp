@@ -111,6 +111,8 @@ export interface UseOverlayLayersProps {
   currentStatus: OverlayStatus;
   /** 🏢 ENTERPRISE (2026-02-15): ID of hovered overlay for yellow glow highlight */
   hoveredOverlayId?: string | null;
+  /** 🏢 ENTERPRISE (2026-02-15): Overlay mode for rubber-band preview in draw mode */
+  overlayMode?: 'select' | 'draw' | 'edit';
 }
 
 /**
@@ -177,6 +179,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     transformScale,
     currentStatus,
     hoveredOverlayId,
+    overlayMode,
   } = props;
 
   // ============================================================================
@@ -298,6 +301,12 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     const fillColor = statusColors?.fill ?? UI_COLORS.PRIMARY_FILL_30;
     const strokeColor = statusColors?.stroke ?? UI_COLORS.BUTTON_PRIMARY;
 
+    // 🏢 ENTERPRISE (2026-02-15): Rubber-band preview — append mouseWorld as virtual last vertex
+    // This creates the line from last placed point to the current cursor position
+    const previewVertices: Array<[number, number]> = (mouseWorld && overlayMode === 'draw')
+      ? [...draftPolygon, [mouseWorld.x, mouseWorld.y]]
+      : draftPolygon;
+
     return {
       id: 'draft-polygon-preview',
       name: 'Draft Polygon (Preview)',
@@ -311,14 +320,14 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
       isNearFirstPoint: isNearFirstPoint,
       polygons: [{
         id: 'draft-polygon-preview-0',
-        vertices: draftPolygon.map(([x, y]) => ({ x, y })),
+        vertices: previewVertices.map(([x, y]) => ({ x, y })),
         fillColor: fillColor,
         strokeColor: strokeColor,
         strokeWidth: 2,
         selected: false
       }]
     };
-  }, [draftPolygon, currentStatus, isNearFirstPoint]);
+  }, [draftPolygon, currentStatus, isNearFirstPoint, mouseWorld, overlayMode]);
 
   // ============================================================================
   // COMBINED LAYERS

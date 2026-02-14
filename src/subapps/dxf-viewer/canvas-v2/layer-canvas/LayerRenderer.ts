@@ -476,7 +476,9 @@ export class LayerRenderer {
     viewport: Viewport
   ): void {
     if (polygon.vertices.length < 3) {
-      // console.log('🔍 Skipping polygon - not enough vertices:', polygon.vertices.length);
+      if (!layer.isDraft) return; // Non-draft polygons: skip as before
+      // 🏢 ENTERPRISE (2026-02-15): Draft polygons with <3 vertices — render partial preview
+      this.renderDraftPartial(polygon, layer, transform, viewport);
       return;
     }
 
@@ -787,6 +789,84 @@ export class LayerRenderer {
           this.ctx.lineTo(drawMidX - outerSize, drawMidY);
           this.ctx.closePath();
           this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE (2026-02-15): Render partial draft polygon with <3 vertices
+   * Shows grip points and line segments during the first 2 clicks of polygon drawing.
+   * Uses the same grip rendering pattern as the main renderPolygon method.
+   */
+  private renderDraftPartial(
+    polygon: {
+      vertices: Point2D[];
+      fillColor?: string;
+      strokeColor?: string;
+      strokeWidth: number;
+      selected?: boolean;
+    },
+    layer: ColorLayer,
+    transform: ViewTransform,
+    viewport: Viewport
+  ): void {
+    const screenVertices = polygon.vertices.map((vertex: Point2D) =>
+      CoordinateTransforms.worldToScreen(vertex, transform, viewport)
+    );
+
+    // Draw line segments for 2+ vertices (open polyline, no closePath)
+    if (screenVertices.length >= 2) {
+      this.ctx.save();
+      const strokeColor = polygon.strokeColor || layer.color || UI_COLORS.BUTTON_PRIMARY;
+      this.ctx.strokeStyle = strokeColor;
+      this.ctx.lineWidth = polygon.strokeWidth;
+      this.ctx.beginPath();
+      this.ctx.moveTo(screenVertices[0].x, screenVertices[0].y);
+      for (let i = 1; i < screenVertices.length; i++) {
+        this.ctx.lineTo(screenVertices[i].x, screenVertices[i].y);
+      }
+      this.ctx.stroke(); // Open polyline — no closePath
+      this.ctx.restore();
+    }
+
+    // Draw vertex grips (reuse same grip rendering pattern from renderPolygon)
+    if (layer.showGrips) {
+      const gripSettings = this.currentGripSettings;
+      const dpiScale = gripSettings?.dpiScale ?? 1.0;
+      const baseSize = (gripSettings?.gripSize ?? 5) * dpiScale;
+
+      // 🏢 ADR-075: Centralized grip size multipliers
+      const GRIP_SIZE_COLD = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.COLD);
+      const GRIP_SIZE_HOT = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.HOT);
+      const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.GRIP_DEFAULT;
+      const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT;
+      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK;
+
+      for (let i = 0; i < screenVertices.length; i++) {
+        const vertex = screenVertices[i];
+        const isFirstGrip = i === 0;
+        const isCloseHighlighted = isFirstGrip && layer.isNearFirstPoint;
+        const gripSize = isCloseHighlighted ? GRIP_SIZE_HOT : GRIP_SIZE_COLD;
+        const fillColor = isCloseHighlighted ? GRIP_COLOR_HOT : GRIP_COLOR_COLD;
+
+        this.ctx.save();
+        this.ctx.fillStyle = fillColor;
+        this.ctx.strokeStyle = GRIP_COLOR_CONTOUR;
+        this.ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE;
+
+        const halfSize = gripSize / 2;
+        this.ctx.fillRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
+        this.ctx.strokeRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
+
+        if (isCloseHighlighted) {
+          this.ctx.strokeStyle = GRIP_COLOR_HOT;
+          this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+          const outerSize = gripSize + 6;
+          const outerHalf = outerSize / 2;
+          this.ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
         }
 
         this.ctx.restore();

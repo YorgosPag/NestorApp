@@ -715,6 +715,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     transformScale: transform.scale,
     currentStatus,
     hoveredOverlayId,
+    overlayMode,
   });
 
   // === 🎨 DRAWING SYSTEM ===
