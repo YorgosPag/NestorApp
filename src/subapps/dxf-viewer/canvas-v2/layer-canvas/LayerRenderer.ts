@@ -44,10 +44,11 @@ import { TOLERANCE_CONFIG, RULER_CONFIG } from '../../config/tolerance-config';
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import type { CanvasInstance } from '../../rendering/canvas/core/CanvasManager';
 import type { CanvasEventSystem } from '../../rendering/canvas/core/CanvasEventSystem';
 import type { CanvasSettings } from '../../rendering/canvas/core/CanvasSettings';
+// 🏢 ENTERPRISE: Refresh cached bounds before render to prevent stale clear/draw mismatch
+import { canvasBoundsService } from '../../services/CanvasBoundsService';
 
 // ✅ REMOVED: LegacyCrosshairAdapter, LegacyCursorAdapter - now handled in DxfCanvas
 import { LegacySnapAdapter } from '../../rendering/ui/snap/LegacySnapAdapter';
@@ -222,7 +223,9 @@ export class LayerRenderer {
 
     // 🏢 ENTERPRISE FIX (2026-02-01): Use ACTUAL canvas dimensions, not stale viewport prop!
     // 🔧 FIX (2026-02-13): Moved BEFORE first usage — was causing ReferenceError (TDZ)
-    const canvasRect = this.canvas.getBoundingClientRect();
+    // 🔧 FIX (2026-02-15): Refresh cached bounds BEFORE clearCanvas to prevent stale mismatch
+    // Root cause: clearCanvas used cached (stale) dims while draw used fresh dims → residual strips
+    const canvasRect = canvasBoundsService.refreshBounds(this.canvas);
     const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
 
     // 🏢 ENTERPRISE (2026-01-25): Store transform/viewport for real-time drag preview
@@ -231,8 +234,11 @@ export class LayerRenderer {
 
     const startTime = performance.now();
 
-    // Clear canvas using unified utils
-    CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
+    // 🔧 FIX (2026-02-15): Clear canvas using FRESH canvasRect dimensions
+    // CanvasUtils.clearCanvas uses cached bounds (CanvasBoundsService, 5s TTL)
+    // which can differ from the fresh canvasRect used for rendering.
+    // Mismatch → bottom/right strip not cleared → visible residue on zoom/pan.
+    this.ctx.clearRect(0, 0, canvasRect.width, canvasRect.height);
 
     // 🏢 ADR-102: Origin Marker is now rendered ONLY by DxfRenderer (single source of truth)
     // This eliminates alignment issues between two canvases trying to render the same marker
