@@ -83,6 +83,10 @@ export interface ProjectHierarchyActions {
   selectProject: (projectId: string) => void;
   selectBuilding: (buildingId: string) => void;
   selectFloor: (floorId: string) => void;
+  /** Direct setter — bypasses lookup, sets building object directly (e.g. from SimpleProjectDialog) */
+  setBuildingDirect: (building: Building | null) => void;
+  /** Direct setter — bypasses lookup, sets floor object directly (e.g. from SimpleProjectDialog) */
+  setFloorDirect: (floor: Floor | null) => void;
   getAvailableDestinations: () => DestinationOption[];
 }
 
@@ -347,11 +351,28 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
   const selectFloor = (floorId: string) => {
     if (!hierarchy.selectedBuilding) return;
-    
+
     const floor = hierarchy.selectedBuilding.floors.find(f => f.id === floorId);
     setHierarchy(prev => ({
       ...prev,
       selectedFloor: floor || null
+    }));
+  };
+
+  // Direct setters — bypass lookup, accept objects directly
+  // Used by SimpleProjectDialog which loads buildings/floors from separate APIs
+  const setBuildingDirect = (building: Building | null) => {
+    setHierarchy(prev => ({
+      ...prev,
+      selectedBuilding: building,
+      selectedFloor: null
+    }));
+  };
+
+  const setFloorDirect = (floor: Floor | null) => {
+    setHierarchy(prev => ({
+      ...prev,
+      selectedFloor: floor
     }));
   };
 
@@ -456,6 +477,8 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     selectProject,
     selectBuilding,
     selectFloor,
+    setBuildingDirect,
+    setFloorDirect,
     getAvailableDestinations
   };
 

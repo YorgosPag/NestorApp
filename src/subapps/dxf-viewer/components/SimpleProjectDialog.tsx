@@ -86,7 +86,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     loadCompanies,
     selectCompany,
     loadProjectsForCompany,
-    selectProject
+    selectProject,
+    setBuildingDirect,
+    setFloorDirect
   } = useProjectHierarchy();
 
   const { getStatusBorder } = useBorderTokens();
@@ -294,6 +296,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const handleBuildingChange = async (buildingId: string) => {
 
     setSelectedBuildingId(buildingId);
+    // 🏢 ENTERPRISE: Sync with ProjectHierarchyContext for breadcrumb display
+    const building = buildings.find(b => b.id === buildingId) ?? null;
+    setBuildingDirect(building);
     // 🏢 ADR-181 FIX: Clear stale floors IMMEDIATELY before API call
     setFloors([]);
     setSelectedFloorId('');
@@ -376,6 +381,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const handleFloorChange = (floorId: string) => {
     console.log(`🏢 [SimpleProjectDialog] Floor selected: ${floorId}`);
     setSelectedFloorId(floorId);
+    // 🏢 ENTERPRISE: Sync with ProjectHierarchyContext for breadcrumb display
+    const floor = floors.find(f => f.id === floorId) ?? null;
+    setFloorDirect(floor);
   };
 
   // 🏢 ADR-181: handleCreateFloorInline REMOVED — floor creation moved to Building Details → Floors tab
