@@ -19,9 +19,11 @@ interface HeaderProps {
     lastSaved: Date | null;
     setIsEditing: (isEditing: boolean) => void;
     handleSave: () => void;
+    /** When true, Edit/Save/Cancel buttons are hidden (parent header controls them) */
+    hideEditControls?: boolean;
 }
 
-export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditing, handleSave }: HeaderProps) {
+export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditing, handleSave, hideEditControls }: HeaderProps) {
   // 🏢 ENTERPRISE: Centralized systems
   const { t } = useTranslation('building');
   const buttonPatterns = useButtonPatterns();
@@ -70,25 +72,28 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        {!isEditing ? (
-          <Button {...buttonPatterns.actions.edit} onClick={() => setIsEditing(true)}>
-            <Edit className={`${iconSizes.sm} mr-2`} />
-            {t('tabs.general.header.edit')}
-          </Button>
-        ) : (
-          <>
-            <Button {...buttonPatterns.actions.cancel} onClick={() => setIsEditing(false)}>
-              <X className={`${iconSizes.sm} mr-2`} />
-              {t('tabs.general.header.cancel')}
+      {/* Edit controls only when NOT parent-controlled */}
+      {!hideEditControls && (
+        <div className="flex items-center gap-2">
+          {!isEditing ? (
+            <Button {...buttonPatterns.actions.edit} onClick={() => setIsEditing(true)}>
+              <Edit className={`${iconSizes.sm} mr-2`} />
+              {t('tabs.general.header.edit')}
             </Button>
-            <Button size="sm" onClick={handleSave}>
-              <Save className={`${iconSizes.sm} mr-2`} />
-              {t('tabs.general.header.save')}
-            </Button>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <Button {...buttonPatterns.actions.cancel} onClick={() => setIsEditing(false)}>
+                <X className={`${iconSizes.sm} mr-2`} />
+                {t('tabs.general.header.cancel')}
+              </Button>
+              <Button size="sm" onClick={handleSave}>
+                <Save className={`${iconSizes.sm} mr-2`} />
+                {t('tabs.general.header.save')}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

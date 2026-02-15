@@ -4,7 +4,7 @@ import React from 'react';
 import type { Building } from '../BuildingsPageContent';
 import type { BuildingTabConfig } from '@/config/building-tabs-config';
 
-// 🏢 ENTERPRISE: Window type extension for debugging
+// ENTERPRISE: Window type extension for debugging
 declare global {
   interface Window {
     getSortedBuildingTabs?: () => BuildingTabConfig[];
@@ -13,7 +13,7 @@ declare global {
   }
 }
 import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
-// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+// ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
 import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
 import { BUILDING_COMPONENT_MAPPING } from '@/components/generic/mappings/buildingMappings';
 import { getSortedBuildingTabs } from '../../../config/building-tabs-config';
@@ -23,9 +23,15 @@ const logger = createModuleLogger('BuildingTabs');
 
 interface BuildingTabsProps {
     building: Building;
+    /** Whether inline editing is active (controlled by parent header) */
+    isEditing?: boolean;
+    /** Callback when editing state changes (from child tab components) */
+    onEditingChange?: (editing: boolean) => void;
+    /** Ref for save delegation — GeneralTabContent registers its save here */
+    saveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-export function BuildingTabs({ building }: BuildingTabsProps) {
+export function BuildingTabs({ building, isEditing, onEditingChange, saveRef }: BuildingTabsProps) {
     // Load building floorplans from Firestore
     const {
         buildingFloorplan,
@@ -83,7 +89,7 @@ export function BuildingTabs({ building }: BuildingTabsProps) {
             componentMapping={BUILDING_COMPONENT_MAPPING}
             defaultTab="general"
             theme="default"
-            // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
+            // ENTERPRISE: i18n - Use building namespace for tab labels
             translationNamespace="building"
             additionalData={{
                 buildingFloorplan,
@@ -93,7 +99,10 @@ export function BuildingTabs({ building }: BuildingTabsProps) {
                 refetchFloorplans
             }}
             globalProps={{
-                buildingId: building.id
+                buildingId: building.id,
+                isEditing,
+                onEditingChange,
+                onSaveRef: saveRef,
             }}
         />
     );

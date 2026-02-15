@@ -617,6 +617,9 @@
   "details": {
     "viewBuilding": "View Building",
     "editBuilding": "Edit",
+    "saveBuilding": "Save",
+    "cancelEdit": "Cancel",
+    "saving": "Saving...",
     "percentComplete": "{percent}% complete"
   },
   "pages": {

@@ -617,6 +617,9 @@
   "details": {
     "viewBuilding": "Προβολή Κτιρίου",
     "editBuilding": "Επεξεργασία",
+    "saveBuilding": "Αποθήκευση",
+    "cancelEdit": "Ακύρωση",
+    "saving": "Αποθηκεύεται...",
     "percentComplete": "{percent}% ολοκληρωμένο"
   },
   "pages": {
