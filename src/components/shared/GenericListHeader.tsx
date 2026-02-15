@@ -84,6 +84,7 @@ export function GenericListHeader({
                     icon={icon}
                     title={entityName}
                     count={itemCount}
+                    headingLevel="h2"
                     className="!p-0 !border-0 !bg-transparent" // Override default styling to match original
                 />
             </div>

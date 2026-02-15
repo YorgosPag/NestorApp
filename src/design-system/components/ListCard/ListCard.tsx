@@ -202,7 +202,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       tabIndex={tabIndex}
       aria-label={ariaLabel || title}
       aria-describedby={ariaDescribedBy}
-      aria-selected={isSelected}
+      aria-pressed={isSelected}
     >
       {/* ================================================================== */}
       {/* 🏢 HOVER ACTIONS */}
@@ -221,7 +221,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
               type="button"
               onClick={handleFavoriteClick}
               className={cn(
-                `${spacing.padding.xs} rounded-md transition-colors`,
+                `${spacing.padding.sm} rounded-md transition-colors`,
                 isFavorite
                   ? 'text-yellow-500'
                   : cn(colors.text.muted, 'hover:text-yellow-500')
@@ -241,7 +241,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
               onClick={(e) => handleActionClick(e, action)}
               disabled={action.disabled}
               className={cn(
-                `${spacing.padding.xs} rounded-md transition-colors`,
+                `${spacing.padding.sm} rounded-md transition-colors`,
                 colors.text.muted,
                 'hover:text-primary',
                 action.disabled && 'opacity-50 cursor-not-allowed',

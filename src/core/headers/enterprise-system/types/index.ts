@@ -136,6 +136,8 @@ export interface SectionHeaderProps {
   actions?: React.ReactNode;
   className?: string;
   variant?: 'default' | 'compact' | 'minimal';
+  /** 🏢 ENTERPRISE A11Y: Semantic heading level for proper document outline */
+  headingLevel?: 'h2' | 'h3' | 'h4' | 'span';
 }
 
 export interface MobileCompactHeaderProps {

@@ -208,13 +208,13 @@ export const MODAL_SELECT_NAVIGATION_SORT_OPTIONS = {
  * 🏢 ENTERPRISE: Now uses i18n keys - translations in building.json
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
-  buildings: 'toolbar.search.placeholder',
-  projects: 'toolbar.search.placeholder',
-  contacts: 'toolbar.search.placeholder',
-  units: 'toolbar.search.placeholder',
-  storages: 'toolbar.search.placeholder',
-  parking: 'toolbar.search.placeholder',
-  communications: 'toolbar.search.placeholder'
+  buildings: 'placeholders.searchBuildings',
+  projects: 'placeholders.searchProjects',
+  contacts: 'placeholders.searchContacts',
+  units: 'placeholders.searchUnits',
+  storages: 'placeholders.searchStorages',
+  parking: 'placeholders.searchParking',
+  communications: 'placeholders.searchCommunications'
 } as const;
 
 /**

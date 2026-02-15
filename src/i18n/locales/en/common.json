@@ -427,6 +427,9 @@
     "searchProjects": "Search projects...",
     "searchContacts": "Search contacts...",
     "searchContact": "Search contact...",
+    "searchStorages": "Search storages...",
+    "searchParking": "Search parking spaces...",
+    "searchCommunications": "Search communications...",
     "selectOption": "Select an option",
     "enterText": "Enter text",
     "clickToEdit": "Click to edit..."

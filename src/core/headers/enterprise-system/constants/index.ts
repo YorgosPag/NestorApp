@@ -180,7 +180,7 @@ const SEARCH_PLACEHOLDERS = {
   get default() { return i18n.t('search.placeholder.default', { ns: 'common' }); },
   get contacts() { return i18n.t('search.placeholder.contacts', { ns: 'common' }); },
   get projects() { return i18n.t('search.placeholder.projects', { ns: 'common' }); },
-  get buildings() { return i18n.t('search.placeholder.buildings', { ns: 'common' }); },
+  get buildings() { return i18n.t('search.placeholder', { ns: 'common' }); },
   get files() { return i18n.t('search.placeholder.files', { ns: 'common' }); }
 };
 

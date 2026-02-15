@@ -93,10 +93,10 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
 
     return (
         <div className="mt-4">
-            <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
+            <h3 className="font-semibold mb-2 text-sm flex items-center gap-2">
                 <Briefcase className={`${iconSizes.sm} text-muted-foreground`}/>
                 {t('projects.title')}
-            </h4>
+            </h3>
             <div className={quick.card}>
                 <Table>
                     <TableHeader>

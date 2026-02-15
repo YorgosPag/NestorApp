@@ -31,7 +31,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
     return (
       <div className="space-y-4">
         <div className={`p-4 ${quick.card} space-y-3`}>
-            <h4 className="font-semibold text-sm">{t('details.contactInfo.title')}</h4>
+            <h3 className="font-semibold text-sm">{t('details.contactInfo.title')}</h3>
             {email && (
                 <div className="flex items-center gap-2 text-sm">
                     <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.email.color)} />
@@ -64,7 +64,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
         </div>
          {(contact.type === CONTACT_TYPES.COMPANY || contact.type === CONTACT_TYPES.INDIVIDUAL) && (
             <div className={`p-4 ${quick.card}`}>
-                <h4 className="font-semibold mb-2 text-sm">{t('details.taxInfo.title')}</h4>
+                <h3 className="font-semibold mb-2 text-sm">{t('details.taxInfo.title')}</h3>
                 <div className="text-sm">
                     <strong>{t('details.taxInfo.vatNumber')}</strong> {(() => {
                       // 🏢 ENTERPRISE: Type-safe VAT number access using type guards

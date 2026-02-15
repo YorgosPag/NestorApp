@@ -19,7 +19,8 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   count,
   actions,
   className,
-  variant = 'default'
+  variant = 'default',
+  headingLevel = 'span'
 }) => {
   const iconSizes = useIconSizes();
 
@@ -44,13 +45,16 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
     variant === 'minimal' ? iconSizes.xs : iconSizes.sm
   );
 
+  // 🏢 ENTERPRISE A11Y: Proper heading level for semantic document outline
+  const TitleTag = headingLevel;
+
   return (
     <div className={containerClasses}>
       {icon && React.createElement(icon, { className: iconClasses })}
       <div className="flex flex-col">
-        <span className={titleClasses}>
+        <TitleTag className={titleClasses}>
           {displayTitle}
-        </span>
+        </TitleTag>
         {subtitle && (
           <span className="text-xs text-muted-foreground">
             {subtitle}

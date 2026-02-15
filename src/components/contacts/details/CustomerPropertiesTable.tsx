@@ -67,10 +67,10 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
     return (
         <div className="mt-4">
             <div className="flex justify-between items-center mb-2">
-                <h4 className="font-semibold text-sm flex items-center gap-2">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
                     <UnitIcon className={`${iconSizes.sm} ${unitColor}`}/>
                     {t('properties.title', { count: properties.length })}
-                </h4>
+                </h3>
                 <Button variant="outline" size="sm" onClick={onAddUnit}>
                     <Plus className={`${iconSizes.sm} mr-2`}/>
                     {t('properties.addProperty')}

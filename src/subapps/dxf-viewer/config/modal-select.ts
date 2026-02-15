@@ -246,13 +246,13 @@ export const MODAL_SELECT_NAVIGATION_SORT_OPTIONS = {
 // 🌐 i18n: Search placeholders converted to i18n keys - 2026-01-19
 // Keys reference common:search.placeholder.* namespace
 export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
-  buildings: 'common:search.placeholder.buildings',
-  projects: 'common:search.placeholder.projects',
-  contacts: 'common:search.placeholder.contacts',
-  units: 'common:search.placeholder.units',
-  storages: 'common:search.placeholder.storages',
-  parking: 'common:search.placeholder.parking',
-  communications: 'common:search.placeholder.communications'
+  buildings: 'placeholders.searchBuildings',
+  projects: 'placeholders.searchProjects',
+  contacts: 'placeholders.searchContacts',
+  units: 'placeholders.searchUnits',
+  storages: 'placeholders.searchStorages',
+  parking: 'placeholders.searchParking',
+  communications: 'placeholders.searchCommunications'
 } as const;
 
 export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {

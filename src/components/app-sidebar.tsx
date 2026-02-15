@@ -107,10 +107,10 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter className="border-t border-sidebar-border">
-                <nav aria-label={t('legal.legalLinks', { defaultValue: 'Legal links' })} className="flex flex-wrap gap-x-3 gap-y-1 px-1 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                    <a href="/privacy-policy" className="hover:underline min-h-[24px] inline-flex items-center">{t('legal.privacyPolicy')}</a>
-                    <a href="/terms" className="hover:underline min-h-[24px] inline-flex items-center">{t('legal.termsOfService')}</a>
-                    <a href="/data-deletion" className="hover:underline min-h-[24px] inline-flex items-center">{t('legal.dataDeletion')}</a>
+                <nav aria-label={t('legal.legalLinks', { defaultValue: 'Legal links' })} className="flex flex-wrap gap-x-4 gap-y-1 px-2 py-1.5 text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
+                    <a href="/privacy-policy" className="hover:underline hover:text-sidebar-foreground min-h-[24px] min-w-[24px] px-0.5 py-0.5 inline-flex items-center transition-colors">{t('legal.privacyPolicy')}</a>
+                    <a href="/terms" className="hover:underline hover:text-sidebar-foreground min-h-[24px] min-w-[24px] px-0.5 py-0.5 inline-flex items-center transition-colors">{t('legal.termsOfService')}</a>
+                    <a href="/data-deletion" className="hover:underline hover:text-sidebar-foreground min-h-[24px] min-w-[24px] px-0.5 py-0.5 inline-flex items-center transition-colors">{t('legal.dataDeletion')}</a>
                 </nav>
             </SidebarFooter>
 

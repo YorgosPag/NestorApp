@@ -14,7 +14,6 @@ import {
 import { Search, BarChart3 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageType, StorageStatus } from '@/types/storage';
-import { STORAGE_FILTER_LABELS, STORAGE_STATUS_LABELS, STORAGE_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -38,6 +37,7 @@ export function StorageTabFilters({
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
+
     return (
         <Card>
             <CardContent className="p-4">
@@ -54,25 +54,25 @@ export function StorageTabFilters({
 
                     <Select value={filterType} onValueChange={(val) => onFilterTypeChange(val as StorageType | 'all')}>
                         <SelectTrigger>
-                            <SelectValue placeholder={STORAGE_FILTER_LABELS.ALL_TYPES} />
+                            <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">{STORAGE_FILTER_LABELS.ALL_TYPES}</SelectItem>
-                            <SelectItem value="storage">{STORAGE_TYPE_LABELS.storage}</SelectItem>
-                            <SelectItem value="parking">{STORAGE_TYPE_LABELS.parking}</SelectItem>
+                            <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
+                            <SelectItem value="storage">{t('pages.storage.typeLabels.storage')}</SelectItem>
+                            <SelectItem value="parking">{t('pages.storage.typeLabels.parking')}</SelectItem>
                         </SelectContent>
                     </Select>
 
                     <Select value={filterStatus} onValueChange={(val) => onFilterStatusChange(val as StorageStatus | 'all')}>
                         <SelectTrigger>
-                            <SelectValue placeholder={STORAGE_FILTER_LABELS.ALL_STATUSES} />
+                            <SelectValue placeholder={t('allStatuses', { ns: 'filters' })} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">{STORAGE_FILTER_LABELS.ALL_STATUSES}</SelectItem>
-                            <SelectItem value="available">{STORAGE_STATUS_LABELS.available}</SelectItem>
-                            <SelectItem value="sold">{STORAGE_STATUS_LABELS.sold}</SelectItem>
-                            <SelectItem value="reserved">{STORAGE_STATUS_LABELS.reserved}</SelectItem>
-                            <SelectItem value="maintenance">{STORAGE_STATUS_LABELS.maintenance}</SelectItem>
+                            <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
+                            <SelectItem value="available">{t('pages.storage.statusLabels.available')}</SelectItem>
+                            <SelectItem value="sold">{t('pages.storage.statusLabels.sold')}</SelectItem>
+                            <SelectItem value="reserved">{t('pages.storage.statusLabels.reserved')}</SelectItem>
+                            <SelectItem value="maintenance">{t('pages.storage.statusLabels.maintenance')}</SelectItem>
                         </SelectContent>
                     </Select>
 

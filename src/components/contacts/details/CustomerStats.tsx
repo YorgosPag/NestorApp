@@ -90,7 +90,7 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
 
   return (
     <div>
-      <h4 className="text-sm font-semibold mb-2">{t('stats.title')}</h4>
+      <h3 className="text-sm font-semibold mb-2">{t('stats.title')}</h3>
       <UnifiedDashboard
         stats={dashboardStats}
         columns={3}
