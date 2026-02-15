@@ -694,8 +694,14 @@ export function useCentralizedMouseHandlers({
               const hitResult = hitTestCallback(scene, cursor.position, transform, hitTestSnap.viewport);
               if (hitResult) {
                 onEntitySelect(hitResult);
-              } else if (onCanvasClick) {
-                // Step 3: Nothing hit — fallback to canvasClick (deselection path)
+              }
+              // 🏢 ENTERPRISE (2026-02-15): ALWAYS route to onCanvasClick so grip handlers
+              // in CanvasSection get a chance to fire. Without this, clicking on a grip that
+              // overlaps the entity body routes only to onEntitySelect and handleGripClick
+              // never runs — making grip activation impossible.
+              // When entity IS hit: entitySelectedOnMouseDownRef guards against accidental deselection.
+              // When entity is NOT hit: falls through to deselection path (existing behavior).
+              if (onCanvasClick) {
                 onCanvasClick(worldPoint);
               }
             } else if (onCanvasClick) {
