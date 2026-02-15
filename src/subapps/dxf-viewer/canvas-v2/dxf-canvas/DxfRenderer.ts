@@ -58,6 +58,14 @@ export class DxfRenderer {
   }
 
   /**
+   * Set grip interaction state (hovered/active grip) for AutoCAD-style visual feedback.
+   * Delegates to EntityRendererComposite → BaseEntityRenderer pipeline.
+   */
+  setGripInteractionState(state: { hovered?: { entityId: string; gripIndex: number }; active?: { entityId: string; gripIndex: number } }): void {
+    this.entityComposite.setGripInteractionState(state);
+  }
+
+  /**
    * Κύρια render method
    * ✅ ΕΝΗΜΕΡΩΜΕΝΟ: Χρησιμοποιεί composite για entity rendering
    */
@@ -95,6 +103,14 @@ export class DxfRenderer {
     // ✅ ΝΕΟ: Update composite settings
     this.entityComposite.setTransform(transform);
 
+    // 🏢 GRIP EDITING: Update grip interaction state for visual feedback (always set, even when empty)
+    // Map DxfRenderOptions field names (hoveredGrip/activeGrip) → pipeline field names (hovered/active)
+    const gripOpts = options.gripInteractionState;
+    this.setGripInteractionState(gripOpts
+      ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip }
+      : {}
+    );
+
     // Render all entities
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
@@ -120,7 +136,10 @@ export class DxfRenderer {
     const isSelected = options.selectedEntityIds.includes(entity.id);
     const isHovered = options.hoveredEntityId === entity.id;
 
-    const entityModel: EntityModel = this.toEntityModel(entity, isSelected);
+    // 🏢 GRIP EDITING: Apply drag preview delta to entity geometry before rendering
+    const renderedEntity = this.applyDragPreview(entity, options.dragPreview);
+
+    const entityModel: EntityModel = this.toEntityModel(renderedEntity, isSelected);
 
     // ✅ COMPOSITE RENDERING: Ένα κεντρικό call αντί για switch
     const renderOptions: RenderOptions = {
@@ -135,6 +154,76 @@ export class DxfRenderer {
 
     // 🚀 ΑΥΤΟ ΑΝΤΙΚΑΘΙΣΤΑ ΤΟ SWITCH STATEMENT!
     this.entityComposite.render(entityModel, renderOptions);
+  }
+
+  /**
+   * Apply drag preview delta to an entity for live preview during grip editing.
+   * Returns a cloned entity with modified geometry (original entity is NOT mutated).
+   *
+   * - movesEntity=true: offset ALL coordinates by delta (move entire entity)
+   * - movesEntity=false: offset only the specific vertex/grip by delta (stretch)
+   */
+  private applyDragPreview(
+    entity: DxfEntityUnion,
+    preview?: DxfRenderOptions['dragPreview']
+  ): DxfEntityUnion {
+    if (!preview || preview.entityId !== entity.id) return entity;
+
+    const { delta, gripIndex, movesEntity } = preview;
+    if (delta.x === 0 && delta.y === 0) return entity;
+
+    const offsetPoint = (p: Point2D): Point2D => ({
+      x: p.x + delta.x,
+      y: p.y + delta.y,
+    });
+
+    if (movesEntity) {
+      // Move ALL coordinates
+      switch (entity.type) {
+        case 'line':
+          return { ...entity, start: offsetPoint(entity.start), end: offsetPoint(entity.end) };
+        case 'circle':
+          return { ...entity, center: offsetPoint(entity.center) };
+        case 'polyline':
+          return { ...entity, vertices: entity.vertices.map(offsetPoint) };
+        case 'arc':
+          return { ...entity, center: offsetPoint(entity.center) };
+        case 'text':
+          return { ...entity, position: offsetPoint(entity.position) };
+        case 'angle-measurement':
+          return {
+            ...entity,
+            vertex: offsetPoint(entity.vertex),
+            point1: offsetPoint(entity.point1),
+            point2: offsetPoint(entity.point2),
+          };
+      }
+    }
+
+    // Stretch: move only the specific vertex
+    switch (entity.type) {
+      case 'line': {
+        if (gripIndex === 0) return { ...entity, start: offsetPoint(entity.start) };
+        if (gripIndex === 1) return { ...entity, end: offsetPoint(entity.end) };
+        return entity;
+      }
+      case 'polyline': {
+        if (gripIndex < entity.vertices.length) {
+          const vertices = [...entity.vertices];
+          vertices[gripIndex] = offsetPoint(vertices[gripIndex]);
+          return { ...entity, vertices };
+        }
+        return entity;
+      }
+      case 'angle-measurement': {
+        if (gripIndex === 0) return { ...entity, vertex: offsetPoint(entity.vertex) };
+        if (gripIndex === 1) return { ...entity, point1: offsetPoint(entity.point1) };
+        if (gripIndex === 2) return { ...entity, point2: offsetPoint(entity.point2) };
+        return entity;
+      }
+      default:
+        return entity;
+    }
   }
 
   private toEntityModel(entity: DxfEntityUnion, isSelected: boolean): Entity {

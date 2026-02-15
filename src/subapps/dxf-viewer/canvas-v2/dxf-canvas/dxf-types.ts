@@ -79,6 +79,18 @@ export interface DxfRenderOptions {
   wireframeMode: boolean;
   selectedEntityIds: string[];
   hoveredEntityId?: string | null;
+  /** Grip interaction state for visual feedback (hovered/active grip coloring) */
+  gripInteractionState?: {
+    hoveredGrip?: { entityId: string; gripIndex: number };
+    activeGrip?: { entityId: string; gripIndex: number };
+  };
+  /** Live preview data during grip following mode */
+  dragPreview?: {
+    entityId: string;
+    gripIndex: number;
+    delta: Point2D;
+    movesEntity: boolean;
+  };
 }
 
 // === DXF SELECTION ===
