@@ -316,8 +316,11 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
       y: e.clientY - rect.top
     };
 
-    // 🚀 IMMEDIATE: Update immediate store for zero-latency crosshair
-    setImmediatePosition(screenPos);
+    // 🏢 SSoT FIX (2026-02-15): setImmediatePosition REMOVED from container handler.
+    // The DxfCanvas handler (useCentralizedMouseHandlers:304) already calls setImmediatePosition.
+    // Due to event bubbling, container's handler fires AFTER DxfCanvas's handler, overwriting
+    // the position with container-relative coords. Since click (handleMouseUp) uses DxfCanvas
+    // element (e.currentTarget), crosshair must also use DxfCanvas coords for alignment.
     // React state update (for components that need it)
     updatePosition(screenPos);
     // Update CSS coordinates

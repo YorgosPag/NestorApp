@@ -252,11 +252,16 @@ export class LayerRenderer {
 
     if (useUnified) {
       // ✅ ΦΑΣΗ 7: Use unified rendering path
-      this.renderUnified(layers, transform, actualViewport, crosshairSettings, cursorSettings,
+      // 🏢 SSoT FIX (2026-02-15): Use `viewport` parameter (container-based SSoT) for coordinate
+      // transforms (worldToScreen). `actualViewport` stays ONLY for clearRect (line 241) which
+      // needs actual canvas pixel dimensions. The worldToScreen formula must use the SAME viewport
+      // as screenToWorld (click handler) to prevent click↔render offset.
+      this.renderUnified(layers, transform, viewport, crosshairSettings, cursorSettings,
                         snapSettings, gridSettings, rulerSettings, selectionSettings, options);
     } else {
       // Legacy rendering path
-      this.renderLegacy(layers, transform, actualViewport, crosshairSettings, cursorSettings,
+      // 🏢 SSoT FIX (2026-02-15): Same as above — use container viewport for coordinate consistency
+      this.renderLegacy(layers, transform, viewport, crosshairSettings, cursorSettings,
                        snapSettings, gridSettings, rulerSettings, selectionSettings, options);
     }
 
