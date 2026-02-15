@@ -107,6 +107,8 @@ import { useSpecialTools } from '../../hooks/tools';
 import { useGripSystem } from '../../hooks/grips';
 // 🏢 ADR-119: UnifiedFrameScheduler for centralized RAF management
 import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
+// 🏢 ENTERPRISE (2026-02-15): AutoCAD-style grip interaction for DXF entities
+import { useDxfGripInteraction } from '../../hooks/useDxfGripInteraction';
 // ADR-176: Touch gestures + responsive layout
 import { usePinchZoom } from '../../hooks/gestures/usePinchZoom';
 import { useTouchPan } from '../../hooks/gestures/useTouchPan';
@@ -918,6 +920,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     bounds: props.currentScene?.bounds ?? null // ✅ FIX: Convert undefined to null for type compatibility
   };
 
+  // 🏢 ENTERPRISE (2026-02-15): AutoCAD-style grip interaction for DXF entities
+  // Manages state machine: idle → hovering → warm → following → commit/cancel
+  const dxfGripInteraction = useDxfGripInteraction({
+    selectedEntityIds,
+    dxfScene,
+    transform,
+    enabled: activeTool === 'select',
+  });
 
   // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
   React.useEffect(() => {
@@ -1103,6 +1113,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (!viewportReady) {
       console.warn('🚫 [CanvasSection] Click blocked: viewport not ready', viewport);
       return;
+    }
+
+    // 🏢 ENTERPRISE (2026-02-15): AutoCAD-style grip click handling
+    // Grip clicks have priority over all drawing tools.
+    // In "following" state, click commits the new position; otherwise, click activates the grip.
+    if (dxfGripInteraction.handleGripClick(worldPoint)) {
+      return; // Consumed by grip interaction — don't process further
     }
 
     // 🏢 ENTERPRISE (2026-01-31): Circle TTT entity picking mode
@@ -1562,6 +1579,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
       switch (e.key) {
         case 'Escape':
+          // 🏢 ENTERPRISE (2026-02-15): Escape cancels grip following mode first
+          if (dxfGripInteraction.handleGripEscape()) {
+            break; // Consumed by grip interaction
+          }
           setDraftPolygon([]);
           // 🏢 ENTERPRISE: Escape also clears grip selection
           if (selectedGrips.length > 0) {
@@ -1883,7 +1904,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds
-              renderOptions={{ showGrid: false, showLayerNames: false, wireframeMode: false, selectedEntityIds, hoveredEntityId }} // 🏢 ENTERPRISE (2026-02-14): Entity selection + hover highlight
+              renderOptions={{
+                showGrid: false,
+                showLayerNames: false,
+                wireframeMode: false,
+                selectedEntityIds,
+                hoveredEntityId,
+                gripInteractionState: dxfGripInteraction.gripInteractionState,
+                dragPreview: dxfGripInteraction.dragPreview ?? undefined,
+              }} // 🏢 ENTERPRISE (2026-02-14): Entity selection + hover highlight + grip editing
               crosshairSettings={crosshairSettings} // ✅ RESTORED: Crosshair enabled
               gridSettings={gridSettings} // ✅ RESTORED: Grid enabled
               rulerSettings={{
@@ -1955,6 +1984,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               }}
               onWheelZoom={zoomSystem.handleWheelZoom} // ✅ CONNECT ZOOM SYSTEM
               onMouseMove={(screenPos, worldPos) => {
+                // 🏢 ENTERPRISE (2026-02-15): Grip hover/following detection (priority over other handlers)
+                if (worldPos) {
+                  dxfGripInteraction.handleGripMouseMove(worldPos, screenPos);
+                }
+
                 // ✅ ΔΙΟΡΘΩΣΗ: Περνάω το worldPos στο props.onMouseMove για cursor-centered zoom
                 // Note: event is not available in this context, so we create a minimal mock event
                 if (props.onMouseMove && worldPos) {
