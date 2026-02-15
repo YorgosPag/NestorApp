@@ -254,16 +254,33 @@ export function MultiplePhotosCompact({
 
                   logger.info('File changed for slot', { index, fileName: file?.name });
                   const newPhotos = [...normalizedPhotos];
-                  // 🔧 FIX: Αποθήκευση blob preview στο PhotoSlot ώστε να μην χαθεί σε re-render
-                  const preview = file ? URL.createObjectURL(file) : undefined;
-                  newPhotos[index] = {
-                    ...newPhotos[index],
-                    file,
-                    preview,
-                    isUploading: false,
-                    uploadProgress: 0,
-                    error: undefined
-                  };
+
+                  if (file) {
+                    // 🔧 FIX: Αποθήκευση blob preview στο PhotoSlot ώστε να μην χαθεί σε re-render
+                    const preview = URL.createObjectURL(file);
+                    newPhotos[index] = {
+                      ...newPhotos[index],
+                      file,
+                      preview,
+                      isUploading: false,
+                      uploadProgress: 0,
+                      error: undefined
+                    };
+                  } else {
+                    // 🏢 FIX (2026-02-16): Clear ALL photo data including uploadUrl
+                    // Previously only file/preview were cleared, leaving uploadUrl intact
+                    // which caused the photo to remain visible even after deletion.
+                    newPhotos[index] = {
+                      file: null,
+                      preview: undefined,
+                      uploadUrl: undefined,
+                      fileName: undefined,
+                      isUploading: false,
+                      uploadProgress: 0,
+                      error: undefined
+                    };
+                  }
+
                   if (onPhotosChange) {
                     onPhotosChange(newPhotos);
                   }
@@ -274,16 +291,32 @@ export function MultiplePhotosCompact({
                   const currentPhotos = normalizedPhotosRef.current;
                   const currentHandler = onPhotosChangeRef.current;
 
-                  if (result.success && result.url && currentHandler) {
+                  if (result.success && currentHandler) {
                     const newPhotos = [...currentPhotos];
-                    newPhotos[index] = {
-                      ...newPhotos[index],
-                      uploadUrl: result.url,
-                      preview: result.url,
-                      isUploading: false,
-                      uploadProgress: 100,
-                      error: undefined
-                    };
+
+                    if (result.url) {
+                      // Upload successful — store URL
+                      newPhotos[index] = {
+                        ...newPhotos[index],
+                        uploadUrl: result.url,
+                        preview: result.url,
+                        isUploading: false,
+                        uploadProgress: 100,
+                        error: undefined
+                      };
+                    } else {
+                      // 🏢 FIX (2026-02-16): Photo removal — empty URL means delete
+                      newPhotos[index] = {
+                        file: null,
+                        preview: undefined,
+                        uploadUrl: undefined,
+                        fileName: undefined,
+                        isUploading: false,
+                        uploadProgress: 0,
+                        error: undefined
+                      };
+                    }
+
                     currentHandler(newPhotos);
                   }
 

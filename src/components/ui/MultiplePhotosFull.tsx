@@ -270,57 +270,71 @@ export function MultiplePhotosFull({
                   // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
                   const currentFile = normalizedPhotos[index]?.file;
                   if (currentFile === file) {
-                    console.log('🔴 PHOTO DEBUG [Full.onFileChange] SKIP same file', index);
                     return;
                   }
 
-                  const preview = file ? URL.createObjectURL(file) : undefined;
-                  console.log('🔴 PHOTO DEBUG [Full.onFileChange]', {
-                    index, name: file?.name, hasHandler: !!onPhotosChange
-                  });
                   const newPhotos = [...normalizedPhotos];
-                  newPhotos[index] = {
-                    ...newPhotos[index],
-                    file,
-                    preview,
-                    isUploading: false,
-                    uploadProgress: 0,
-                    error: undefined
-                  };
+
+                  if (file) {
+                    const preview = URL.createObjectURL(file);
+                    newPhotos[index] = {
+                      ...newPhotos[index],
+                      file,
+                      preview,
+                      isUploading: false,
+                      uploadProgress: 0,
+                      error: undefined
+                    };
+                  } else {
+                    // 🏢 FIX (2026-02-16): Clear ALL photo data including uploadUrl
+                    newPhotos[index] = {
+                      file: null,
+                      preview: undefined,
+                      uploadUrl: undefined,
+                      fileName: undefined,
+                      isUploading: false,
+                      uploadProgress: 0,
+                      error: undefined
+                    };
+                  }
+
                   if (onPhotosChange) {
                     onPhotosChange(newPhotos);
-                  } else {
-                    console.error('🔴 PHOTO BUG: onPhotosChange is undefined!');
                   }
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
-                  console.log('🔴 PHOTO DEBUG [Full.onUploadComplete]', {
-                    index, success: result.success, hasUrl: !!result.url,
-                    urlStart: result.url?.substring(0, 50),
-                    hasHandler: !!onPhotosChangeRef.current
-                  });
-
                   // 🔧 FIX: Use refs to avoid stale closures
                   const currentPhotos = normalizedPhotosRef.current;
                   const currentHandler = onPhotosChangeRef.current;
 
-                  if (result.success && result.url && currentHandler) {
+                  if (result.success && currentHandler) {
                     const newPhotos = [...currentPhotos];
-                    newPhotos[index] = {
-                      ...newPhotos[index],
-                      uploadUrl: result.url,
-                      preview: result.url,
-                      isUploading: false,
-                      uploadProgress: 100,
-                      error: undefined
-                    };
+
+                    if (result.url) {
+                      // Upload successful — store URL
+                      newPhotos[index] = {
+                        ...newPhotos[index],
+                        uploadUrl: result.url,
+                        preview: result.url,
+                        isUploading: false,
+                        uploadProgress: 100,
+                        error: undefined
+                      };
+                    } else {
+                      // 🏢 FIX (2026-02-16): Photo removal — empty URL means delete
+                      newPhotos[index] = {
+                        file: null,
+                        preview: undefined,
+                        uploadUrl: undefined,
+                        fileName: undefined,
+                        isUploading: false,
+                        uploadProgress: 0,
+                        error: undefined
+                      };
+                    }
+
                     currentHandler(newPhotos);
-                    console.log('🔴 PHOTO DEBUG [Full.onUploadComplete] handler called with URL');
-                  } else {
-                    console.error('🔴 PHOTO BUG: onUploadComplete NOT updating', {
-                      success: result.success, hasUrl: !!result.url, hasHandler: !!currentHandler
-                    });
                   }
 
                   if (handleUploadComplete) {

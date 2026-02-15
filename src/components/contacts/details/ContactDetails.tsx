@@ -56,6 +56,15 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   // 🏢 ENTERPRISE: Check if current tab is a subcollection tab
   const isSubcollectionTab = SUBCOLLECTION_TABS.includes(activeTab);
 
+  // 🏢 FIX (2026-02-16): Reset edit mode when switching contacts to prevent
+  // cross-contact photo leakage. Without this, editedData from Contact A persists
+  // when navigating to Contact B, causing photos to appear on the wrong contact.
+  useEffect(() => {
+    setIsEditing(false);
+    setEditedData({});
+    setSavedPhotoURLs({});
+  }, [contact?.id]);
+
   // 🖼️ OPTIMISTIC: Clear saved photo URLs once the contact prop catches up
   useEffect(() => {
     if (!contact || (!savedPhotoURLs.logoURL && !savedPhotoURLs.photoURL)) return;
