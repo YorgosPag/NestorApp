@@ -776,6 +776,9 @@
     "percentageComplete": "{percentage}% complete",
     "tabs": {
       "basicInfo": "Basic Information",
+      "details": "Details",
+      "features": "Features",
+      "featuresDescription": "Permits, financing, and other project feature flags",
       "structure": "Project Structure",
       "location": "Location & Map",
       "permits": "Permits & Status",

@@ -20,6 +20,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+// Note: useEffect still used for resetForm on open
 import {
   Dialog,
   DialogContent,
@@ -59,7 +60,6 @@ import { useProjectForm } from '@/hooks/useProjectForm';
 import { getAllActiveCompanies } from '@/services/companies.service';
 import type { CompanyContact } from '@/types/contacts';
 import type {
-  Project,
   ProjectStatus,
   ProjectType,
   ProjectPriority,
@@ -69,7 +69,6 @@ import type {
 // 🏢 ENTERPRISE: Address system (ADR-167)
 import type { ProjectAddress } from '@/types/project/addresses';
 import { AddressFormSection, AddressCard } from '@/components/shared/addresses';
-import { migrateLegacyAddress } from '@/types/project/address-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('AddProjectDialog');
@@ -82,8 +81,6 @@ interface AddProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProjectAdded?: () => void;
-  /** 🏢 ENTERPRISE: Project to edit (null for new project) - ADR-087 */
-  editProject?: Project | null;
 }
 
 // =============================================================================
@@ -126,7 +123,6 @@ export function AddProjectDialog({
   open,
   onOpenChange,
   onProjectAdded,
-  editProject,
 }: AddProjectDialogProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
@@ -134,10 +130,7 @@ export function AddProjectDialog({
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
 
-  // 🏢 ENTERPRISE: Edit mode detection (ADR-087)
-  const isEditMode = !!editProject;
-
-  // 🏢 ENTERPRISE: Form state management
+  // 🏢 ENTERPRISE: Form state management (CREATE-ONLY — edit happens inline in GeneralProjectTab)
   const {
     formData,
     setFormData,
@@ -153,7 +146,7 @@ export function AddProjectDialog({
     handleAddAddress,
     handleSetPrimary,
     handleRemoveAddress,
-  } = useProjectForm({ onProjectAdded, onOpenChange, editProject });
+  } = useProjectForm({ onProjectAdded, onOpenChange });
 
   // 🏢 ENTERPRISE: Companies for dropdown
   const [companies, setCompanies] = useState<CompanyContact[]>([]);
@@ -176,47 +169,12 @@ export function AddProjectDialog({
     }
   }, [open]);
 
-  // 🏢 ENTERPRISE: Populate form when editing (ADR-087)
+  // 🏢 ENTERPRISE: Reset form when opening dialog (CREATE-ONLY)
   useEffect(() => {
-    if (open && editProject) {
-      setFormData({
-        name: editProject.name || '',
-        title: editProject.title || '',
-        status: editProject.status || 'planning',
-        companyId: editProject.companyId || '',
-        company: editProject.company || '',
-        address: editProject.address || '',
-        city: editProject.city || '',
-        description: editProject.description || '',
-        // 🏢 ENTERPRISE: Lazy migration for addresses (ADR-167)
-        addresses: editProject.addresses ||
-          (editProject.address && editProject.city
-            ? migrateLegacyAddress(editProject.address, editProject.city)
-            : []),
-        location: editProject.location || '',
-        client: editProject.client || '',
-        type: editProject.type || '',
-        priority: editProject.priority || '',
-        riskLevel: editProject.riskLevel || '',
-        complexity: editProject.complexity || '',
-        budget: editProject.budget || '',
-        totalValue: editProject.totalValue || '',
-        totalArea: editProject.totalArea || '',
-        duration: editProject.duration || '',
-        startDate: editProject.startDate || '',
-        completionDate: editProject.completionDate || '',
-        hasPermits: editProject.hasPermits || false,
-        hasFinancing: editProject.hasFinancing || false,
-        isEcological: editProject.isEcological || false,
-        hasSubcontractors: editProject.hasSubcontractors || false,
-        isActive: editProject.isActive ?? true,
-        hasIssues: editProject.hasIssues || false,
-      });
-    } else if (open && !editProject) {
-      // Reset form when opening for new project
+    if (open) {
       resetForm();
     }
-  }, [open, editProject, setFormData, resetForm]);
+  }, [open, resetForm]);
 
   // Handle company selection with name sync
   const handleCompanySelect = (companyId: string) => {
@@ -242,11 +200,10 @@ export function AddProjectDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className={iconSizes.md} />
-            {isEditMode ? t('dialog.editTitle') : t('dialog.addTitle')}
-            {isEditMode && editProject?.name && ` - ${editProject.name}`}
+            {t('dialog.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditMode ? t('dialog.editDescription') : t('dialog.addDescription')}
+            {t('dialog.addDescription')}
           </DialogDescription>
         </DialogHeader>
 
