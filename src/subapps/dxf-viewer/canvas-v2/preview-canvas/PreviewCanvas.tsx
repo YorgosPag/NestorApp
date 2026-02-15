@@ -286,19 +286,8 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     return (
       <canvas
         ref={canvasRef}
-        className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-        style={{
-          ...style,
-          width: '100%',
-          height: '100%',
-          // 🏢 ENTERPRISE: z-index between DxfCanvas (z-10) and CrosshairOverlay (z-20)
-          zIndex: 15,
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          // Transparent background - preview only
-          background: 'transparent',
-        }}
+        className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} absolute inset-0 w-full h-full z-[15]`}
+        style={style}
         data-testid="preview-canvas"
       />
     );

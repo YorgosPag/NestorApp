@@ -6,7 +6,7 @@ import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 // ✅ CURSOR SETTINGS: Import από κεντρικό system αντί για duplicate
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
-import { UI_COLORS } from '../../config/color-config';
+import { UI_COLORS, PREVIEW_DEFAULTS } from '../../config/color-config';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-142: Centralized Default Font Size
@@ -2074,14 +2074,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             viewport={viewport}
             isActive={isInDrawingMode(activeTool, overlayMode)}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-            defaultOptions={{
-              color: '#00FF00', // Green preview (AutoCAD standard)
-              lineWidth: 1,
-              opacity: 0.9,
-              showGrips: true,
-              gripSize: 6,
-              gripColor: '#00FF00',
-            }}
+            defaultOptions={PREVIEW_DEFAULTS}
           />
 
           {/* ✅ ADR-008: CrosshairOverlay - INTERNAL mouse tracking for pixel-perfect alignment */}

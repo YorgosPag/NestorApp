@@ -173,9 +173,6 @@ class EventBusCore {
       });
     }
 
-    // Backward compatibility - also dispatch as CustomEvent
-    const customEvent = new CustomEvent(eventType, { detail: payload });
-    window.dispatchEvent(customEvent);
   }
 
   /**

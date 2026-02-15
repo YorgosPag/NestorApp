@@ -675,3 +675,26 @@ export const GHOST_COLORS = {
 } as const;
 
 export type GhostColorKey = keyof typeof GHOST_COLORS;
+
+// ============================================================================
+// 🏢 PREVIEW CANVAS DEFAULTS (AutoCAD Standard)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Preview Canvas Default Render Options
+ *
+ * Centralized defaults for PreviewCanvas drawing previews.
+ * AutoCAD standard: bright green preview lines with grip visualization.
+ *
+ * @see PreviewCanvas.tsx (defaultOptions prop)
+ * @see CanvasSection.tsx (consumer)
+ * @since 2026-02-15
+ */
+export const PREVIEW_DEFAULTS = {
+  color: UI_COLORS.BRIGHT_GREEN,
+  lineWidth: 1,
+  opacity: OPACITY.HIGH,
+  showGrips: true,
+  gripSize: 6,
+  gripColor: UI_COLORS.BRIGHT_GREEN,
+} as const;

@@ -118,6 +118,10 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   const universalSelection = useUniversalSelection();
 
+  // 🏢 Type-safe overlay selection — only overlay IDs, not dxf-entities
+  const selectedOverlayId = universalSelection.getIdsByType('overlay')[0] ?? null;
+  const selectedOverlay = selectedOverlayId ? overlayStore.overlays[selectedOverlayId] ?? null : null;
+
   // 🏢 ENTERPRISE (2026-01-26): Event Bus for delete command - ADR-032
   const eventBus = useEventBus();
 
@@ -190,7 +194,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           onKindChange={setOverlayKind}
           snapEnabled={snapEnabled}
           onSnapToggle={() => handleAction('toggle-snap')}
-          selectedOverlayId={universalSelection.getPrimaryId()}
+          selectedOverlayId={selectedOverlayId}
           onDuplicate={() => {}}
           onDelete={handleDelete}
           canDelete={universalSelection.getByType('overlay').length > 0 || universalSelection.getByType('dxf-entity').length > 0}
@@ -206,7 +210,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
       {/* DRAGGABLE OVERLAY PROPERTIES - Only when overlay is selected */}
       {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
       <DraggableOverlayProperties
-        overlay={universalSelection.getPrimaryId() ? overlayStore.overlays[universalSelection.getPrimaryId()!] ?? null : null}
+        overlay={selectedOverlay}
         onUpdate={(overlayId, updates) =>
           overlayStore.update(overlayId, updates)
         }

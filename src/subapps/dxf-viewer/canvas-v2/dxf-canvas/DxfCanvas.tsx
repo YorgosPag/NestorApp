@@ -497,12 +497,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       ref={canvasRef}
       className={`dxf-canvas ${className}`}
       {...props} // 🎯 SPREAD: Περνάω τα extra props (data-canvas-type κ.λπ.)
-      style={{
-        ...canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled),
-        // 🔧 FIX (2026-02-13): Background moved to container div — DxfCanvas (z-10) must be transparent
-        // so LayerCanvas (z-0) colored overlays are visible through it
-        backgroundColor: 'transparent'
-      }}
+      style={canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled)}
       onMouseDown={(e) => mouseHandlers.handleMouseDown(e)}
       onMouseMove={(e) => mouseHandlers.handleMouseMove(e)}
       onMouseUp={mouseHandlers.handleMouseUp}
