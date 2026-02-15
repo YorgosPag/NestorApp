@@ -9,6 +9,7 @@ import { ExtendedSnapType } from '../extended-types';
 import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../extended-types';
 import type { Point2D } from '../../rendering/types/Types';
+import { dlog, dwarn } from '../../debug';
 
 // Debug interface for entity inspection
 interface EntityDebugInfo {
@@ -59,17 +60,17 @@ export const useSnapManager = (
 
   // Initialize SnapManager
   useEffect(() => {
-    if (DEBUG_SNAP_MANAGER) console.log('🔍 [useSnapManager] Initialize effect, canvasRef.current:', !!canvasRef.current);
+    if (DEBUG_SNAP_MANAGER) dlog('Snap', '[useSnapManager] Initialize effect, canvasRef.current:', !!canvasRef.current);
     if (!canvasRef.current) return;
 
     snapManagerRef.current = new SnapManager();
-    if (DEBUG_SNAP_MANAGER) console.log('✅ [useSnapManager] SnapManager created:', snapManagerRef.current);
+    if (DEBUG_SNAP_MANAGER) dlog('Snap', '[useSnapManager] SnapManager created:', snapManagerRef.current);
 
     return () => {
       if (snapManagerRef.current) {
         snapManagerRef.current.dispose();
         snapManagerRef.current = null;
-        if (DEBUG_SNAP_MANAGER) console.log('🗑️ [useSnapManager] SnapManager disposed');
+        if (DEBUG_SNAP_MANAGER) dlog('Snap', '[useSnapManager] SnapManager disposed');
       }
     };
   }, [canvasRef]);
@@ -103,7 +104,7 @@ export const useSnapManager = (
   // Update scene when it changes (including overlay entities)
   useEffect(() => {
     if (DEBUG_SNAP_MANAGER) {
-      console.log('🔍 [useSnapManager] Scene effect triggered:', {
+      dlog('Snap', '[useSnapManager] Scene effect triggered:', {
         hasSnapManager: !!snapManagerRef.current,
         hasScene: !!scene,
         sceneEntities: scene?.entities?.length ?? 0,
@@ -119,13 +120,13 @@ export const useSnapManager = (
       const allEntities = [...dxfEntities, ...overlayEnts];
 
       if (DEBUG_SNAP_MANAGER) {
-        console.log('🔍 [useSnapManager] Combined entities:', allEntities.length);
+        dlog('Snap', '[useSnapManager] Combined entities:', allEntities.length);
       }
 
       // Only initialize if we have entities - avoid spam with empty scenes
       if (allEntities.length === 0) {
         if (DEBUG_SNAP_MANAGER) {
-          console.log('🔍 [useSnapManager] No entities to initialize - skipping');
+          dlog('Snap', '[useSnapManager] No entities to initialize - skipping');
         }
         return;
       }
@@ -156,19 +157,19 @@ export const useSnapManager = (
             }
           }
         } catch (error) {
-          if (DEBUG_SNAP_MANAGER) console.warn('🔺 Could not set viewport:', error);
+          if (DEBUG_SNAP_MANAGER) dwarn('Snap', 'Could not set viewport:', error);
           // Continue without viewport - better than crashing
         }
       }
       
       if (DEBUG_SNAP_MANAGER) {
-        console.log('🔍 [useSnapManager] Calling initialize with', allEntities.length, 'entities');
+        dlog('Snap', '[useSnapManager] Calling initialize with', allEntities.length, 'entities');
       }
 
       snapManagerRef.current.initialize(allEntities);
 
       if (DEBUG_SNAP_MANAGER) {
-        console.log('🔍 [useSnapManager] initialize() completed');
+        dlog('Snap', '[useSnapManager] initialize() completed');
       }
 
       if (allEntities.length > 0) {
@@ -179,7 +180,7 @@ export const useSnapManager = (
         }, {} as Record<string, number>);
 
         if (DEBUG_SNAP_MANAGER) {
-          console.log('🔍 [useSnapManager] Entity types:', entityTypes);
+          dlog('Snap', '[useSnapManager] Entity types:', entityTypes);
         }
 
         // Sample first few entities to see their structure
@@ -223,12 +224,12 @@ export const useSnapManager = (
     snapManager: snapManagerRef.current,
     findSnapPoint: (worldX: number, worldY: number) => {
       if (DEBUG_SNAP_MANAGER) {
-        console.log('🔍 [useSnapManager.findSnapPoint] Called with:', { worldX, worldY });
-        console.log('🔍 [useSnapManager.findSnapPoint] snapManagerRef.current:', !!snapManagerRef.current);
+        dlog('Snap', '[useSnapManager.findSnapPoint] Called with:', { worldX, worldY });
+        dlog('Snap', '[useSnapManager.findSnapPoint] snapManagerRef.current:', !!snapManagerRef.current);
       }
       const result = snapManagerRef.current?.findSnapPoint({ x: worldX, y: worldY }) || null;
       if (DEBUG_SNAP_MANAGER) {
-        console.log('🔍 [useSnapManager.findSnapPoint] Result:', result);
+        dlog('Snap', '[useSnapManager.findSnapPoint] Result:', result);
       }
       return result;
     }

@@ -11,6 +11,8 @@
  * @since 2026-01-31
  */
 
+import { dwarn, derr } from '../debug';
+
 // ============================================================================
 // STORAGE KEYS REGISTRY
 // ============================================================================
@@ -91,7 +93,7 @@ export function storageGet<T>(key: StorageKey, defaultValue: T): T {
     if (stored === null) return defaultValue;
     return JSON.parse(stored) as T;
   } catch (error) {
-    console.warn(`[StorageService] Failed to get "${key}":`, error);
+    dwarn('Storage', `Failed to get "${key}":`, error);
     return defaultValue;
   }
 }
@@ -116,9 +118,9 @@ export function storageSet<T>(key: StorageKey, value: T): boolean {
   } catch (error) {
     // Handle quota exceeded
     if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.error(`[StorageService] Quota exceeded for "${key}"`);
+      derr('Storage', `Quota exceeded for "${key}"`);
     } else {
-      console.warn(`[StorageService] Failed to set "${key}":`, error);
+      dwarn('Storage', `Failed to set "${key}":`, error);
     }
     return false;
   }
@@ -208,7 +210,7 @@ export class StorageManager {
       sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
 
     } catch (error) {
-      console.error('❌ Error clearing browser storage:', error);
+      derr('Storage', 'Error clearing browser storage:', error);
     }
   }
 
@@ -233,7 +235,7 @@ export class StorageManager {
         }
       }
     } catch (error) {
-      console.error('❌ Error clearing IndexedDB:', error);
+      derr('Storage', 'Error clearing IndexedDB:', error);
     }
   }
 
@@ -246,7 +248,7 @@ export class StorageManager {
       deleteReq.onsuccess = () => resolve();
       deleteReq.onerror = () => reject(deleteReq.error);
       deleteReq.onblocked = () => {
-        console.warn(`Database ${name} deletion blocked. Close all tabs and try again.`);
+        dwarn('Storage', `Database ${name} deletion blocked. Close all tabs and try again.`);
         resolve(); // Don't reject, just warn
       };
     });
@@ -273,7 +275,7 @@ export class StorageManager {
       }
 
     } catch (error) {
-      console.error('❌ Error during complete storage cleanup:', error);
+      derr('Storage', 'Error during complete storage cleanup:', error);
       throw error;
     }
   }
@@ -286,7 +288,7 @@ export class StorageManager {
       const { available } = await this.checkStorageQuota();
       return available > requiredBytes;
     } catch (error) {
-      console.warn('Could not check storage quota:', error);
+      dwarn('Storage', 'Could not check storage quota:', error);
       return true; // Assume it's okay if we can't check
     }
   }
@@ -342,7 +344,7 @@ export class StorageErrorHandler {
       return false; // Not a storage error
     }
 
-    console.error('🚨 Storage error detected:', error);
+    derr('Storage', 'Storage error detected:', error);
     
     try {
       // Report current usage
@@ -367,7 +369,7 @@ export class StorageErrorHandler {
       
       return false;
     } catch (cleanupError) {
-      console.error('❌ Error during storage cleanup:', cleanupError);
+      derr('Storage', 'Error during storage cleanup:', cleanupError);
       alert('Δεν μπόρεσα να καθαρίσω το storage. Παρακαλώ καθαρίστε το browser cache manually από τις ρυθμίσεις.');
       return false;
     }
@@ -388,7 +390,7 @@ export async function withStorageErrorHandling<T>(
     
     if (!handled) {
       // If it's not a storage error or couldn't be handled, rethrow
-      console.error(errorMessage || 'Operation failed:', error);
+      derr('Storage', errorMessage || 'Operation failed:', error);
       throw error;
     }
     

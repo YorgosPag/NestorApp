@@ -15,6 +15,7 @@ import { useNotifications } from '../../../../providers/NotificationProvider';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
+import { dlog, dwarn, derr } from '../../debug';
 
 export function useSceneState() {
   const canvasOps = useCanvasOperations();
@@ -32,7 +33,7 @@ export function useSceneState() {
   const currentScene = currentLevelId ? getLevelScene(currentLevelId) : null;
 
   // 🔍 DEBUG (2026-01-31): Log currentScene for circle debugging
-  console.debug('📊 [useSceneState] currentScene computed', {
+  dlog('SceneState', '📊 [useSceneState] currentScene computed', {
     currentLevelId,
     hasScene: !!currentScene,
     entityCount: currentScene?.entities?.length || 0
@@ -72,16 +73,16 @@ export function useSceneState() {
   // Scene change handler
   // 🔍 DEBUG (2026-01-31): Log scene change for debugging
   const handleSceneChange = useCallback((scene: SceneModel) => {
-    console.debug('🎬 [useSceneState] handleSceneChange called', {
+    dlog('SceneState', '🎬 [useSceneState] handleSceneChange called', {
       currentLevelId,
       entityCount: scene?.entities?.length || 0,
       hasSetLevelScene: !!setLevelScene
     });
     if (currentLevelId) {
       setLevelScene(currentLevelId, scene);
-      console.debug('✅ [useSceneState] setLevelScene completed');
+      dlog('SceneState', '✅ [useSceneState] setLevelScene completed');
     } else {
-      console.debug('⚠️ [useSceneState] No currentLevelId - skipping setLevelScene');
+      dlog('SceneState', '⚠️ [useSceneState] No currentLevelId - skipping setLevelScene');
     }
   }, [currentLevelId, setLevelScene]);
 
@@ -91,7 +92,7 @@ export function useSceneState() {
     
     // If no level is selected, use the first available level or create one
     if (!targetLevelId) {
-      console.warn('No level selected for import. Checking available levels...');
+      dwarn('SceneState', 'No level selected for import. Checking available levels...');
       
       // First check if we have any levels available
       const availableLevels = levels;
@@ -101,7 +102,7 @@ export function useSceneState() {
         // Auto-select this level
         setCurrentLevel?.(targetLevelId);
       } else {
-        console.warn('No levels available. Creating default level...');
+        dwarn('SceneState', 'No levels available. Creating default level...');
         try {
           // Try to create a default level if none exists
           const levelId = await addLevel?.('Ισόγειο', true);
@@ -111,12 +112,12 @@ export function useSceneState() {
           } else {
             // If we can't create a level, use fallback
             targetLevelId = 'default';
-            console.warn('⚠️ Using fallback level ID: default');
+            dwarn('SceneState', '⚠️ Using fallback level ID: default');
           }
         } catch (error) {
-          console.error('❌ Failed to create default level:', error);
+          derr('SceneState', '❌ Failed to create default level:', error);
           targetLevelId = 'default';
-          console.warn('⚠️ Using fallback level ID: default');
+          dwarn('SceneState', '⚠️ Using fallback level ID: default');
         }
       }
     }
@@ -135,7 +136,7 @@ export function useSceneState() {
         // Scene rendering is handled by Canvas V2 system
         setTimeout(() => canvasOps.fitToView(), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
       } else {
-        console.error('❌ DXF import returned null scene');
+        derr('SceneState', '❌ DXF import returned null scene');
         const errorMessage = importError ? `DXF Import Error: ${importError}` : 'Failed to import DXF file. Please check the file format and try again.';
         notifications.error(errorMessage, {
           duration: 6000,
@@ -149,7 +150,7 @@ export function useSceneState() {
         });
       }
     } catch (error) {
-      console.error('⛔ Error importing DXF file:', error);
+      derr('SceneState', '⛔ Error importing DXF file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const fullMessage = `Error importing DXF file: ${errorMessage}`;
       notifications.error(fullMessage, {

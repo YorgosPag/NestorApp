@@ -56,7 +56,7 @@ import { serviceRegistry } from '../../services';
 // 🏢 ENTERPRISE (2026-01-30): canvasBoundsService kept ONLY for ResizeObserver cache clearing
 // NOT used for coordinate transforms - using getPointerSnapshotFromElement instead
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
-import { dlog } from '../../debug';
+import { dlog, dwarn, derr } from '../../debug';
 // ✅ ADR-006 FIX: Import CrosshairOverlay για crosshair rendering
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 // 🏢 ADR-040: PreviewCanvas for direct preview rendering (performance optimization)
@@ -139,7 +139,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🏢 ENTERPRISE: Ensure CanvasProvider is in the component tree (ADR-043)
   // Development warning for architectural violations
   if (process.env.NODE_ENV === 'development' && !canvasContext) {
-    console.warn('[CanvasSection] ⚠️ ARCHITECTURE WARNING: CanvasProvider not found. Zoom buttons and centralized canvas operations may not work correctly.');
+    dwarn('CanvasSection', '⚠️ ARCHITECTURE WARNING: CanvasProvider not found. Zoom buttons and centralized canvas operations may not work correctly.');
   }
 
   // 🏢 ENTERPRISE (2026-01-27): ALWAYS use context ref - NO fallback!
@@ -148,7 +148,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const dxfCanvasRef = canvasContext?.dxfRef;
 
   if (!dxfCanvasRef) {
-    console.error('[CanvasSection] 🚨 CRITICAL: CanvasContext.dxfRef is null! Zoom buttons will not work!');
+    derr('CanvasSection', '🚨 CRITICAL: CanvasContext.dxfRef is null! Zoom buttons will not work!');
   }
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   // 🏢 ADR-040: PreviewCanvas ref for direct preview rendering (bypasses React state)
@@ -160,7 +160,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const defaultTransform = useMemo(() => ({ scale: 1, offsetX: 0, offsetY: 0 }), []);
   const transform = canvasContext?.transform || defaultTransform;
   const contextSetTransform = canvasContext?.setTransform || (() => {
-    console.error('[CanvasSection] setTransform called but CanvasContext not available');
+    derr('CanvasSection', 'setTransform called but CanvasContext not available');
   });
 
   // ✅ CENTRALIZED VIEWPORT: Single source of truth για viewport dimensions
@@ -226,7 +226,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // 🏢 ENTERPRISE (2026-01-27): Only log ERRORS for critical state issues
   if (!showDxfCanvas) {
-    console.error('[CanvasSection] 🚨 CRITICAL: DxfCanvas is HIDDEN! showDxfCanvas =', showDxfCanvas, '- Zoom buttons will NOT work!');
+    derr('CanvasSection', '🚨 CRITICAL: DxfCanvas is HIDDEN! showDxfCanvas =', showDxfCanvas, '- Zoom buttons will NOT work!');
   }
 
 
@@ -443,7 +443,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         retryCount++;
         setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY);
       } else {
-        console.warn('⚠️ [Viewport] Container not available after', maxRetries, 'retries');
+        dwarn('CanvasSection', '⚠️ Viewport container not available after', maxRetries, 'retries');
       }
     };
 
@@ -845,7 +845,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
   // 🔍 DEBUG (2026-01-31): Log props.currentScene for circle debugging
-  console.log('📋 [CanvasSection] props.currentScene', {
+  dlog('CanvasSection', '📋 props.currentScene', {
     hasScene: !!props.currentScene,
     entityCount: props.currentScene?.entities?.length || 0,
     entityTypes: props.currentScene?.entities?.map(e => e.type) || []
@@ -935,7 +935,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             return { ...base, type: 'polyline' as const, vertices, closed: true } as DxfEntityUnion;
           }
           default:
-            console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);
+            dwarn('CanvasSection', '🔍 Unsupported entity type for DxfCanvas:', entity.type);
             return null;
         }
       }).filter(Boolean) as DxfEntityUnion[] || []),
@@ -1033,7 +1033,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     const container = containerRef.current;
     const snap = getPointerSnapshotFromElement(container);
     if (!snap) {
-      console.warn('[CanvasSection] fitViewToBounds: Cannot fit - viewport not ready');
+      dwarn('CanvasSection', 'fitViewToBounds: Cannot fit - viewport not ready');
       return; // 🏢 Fail-fast: Cannot fit without valid viewport
     }
     const result = fitToView.calculateFitToViewFromBounds(bounds, snap.viewport, { padding: 0.1 });
@@ -1057,7 +1057,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     try {
       await overlayStore.addVertex(overlayId, insertIndex, vertex);
     } catch (error) {
-      console.error('Failed to add vertex:', error);
+      derr('CanvasSection', 'Failed to add vertex:', error);
     }
   };
 
@@ -1139,7 +1139,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // 🏢 ADR-045: Block interactions until viewport is ready
     // This guard is still useful to prevent early initialization issues
     if (!viewportReady) {
-      console.warn('🚫 [CanvasSection] Click blocked: viewport not ready', viewport);
+      dwarn('CanvasSection', '🚫 Click blocked: viewport not ready', viewport);
       return;
     }
 
@@ -1204,7 +1204,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               // Pass entity to Circle TTT handler
               const accepted = circleTTT.onEntityClick(entity as import('../../types/scene').AnySceneEntity, worldPoint);
               if (accepted) {
-                console.log('🎯 [CanvasSection] Circle TTT entity accepted:', entity.id);
+                dlog('CanvasSection', '🎯 Circle TTT entity accepted:', entity.id);
                 return; // Entity was accepted, don't process further
               }
             }
@@ -1212,7 +1212,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         }
 
         // No entity hit - show feedback
-        console.log('🎯 [CanvasSection] Circle TTT: No line/polyline found at click point');
+        dlog('CanvasSection', '🎯 Circle TTT: No line/polyline found at click point');
       }
       return; // Don't process as regular canvas click
     }
@@ -1242,13 +1242,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   worldPoint
                 );
                 if (accepted) {
-                  console.log('🎯 [CanvasSection] LinePerpendicular entity accepted:', entity.id);
+                  dlog('CanvasSection', '🎯 LinePerpendicular entity accepted:', entity.id);
                   return;
                 }
               }
             }
           }
-          console.log('🎯 [CanvasSection] LinePerpendicular: No line found at click point');
+          dlog('CanvasSection', '🎯 LinePerpendicular: No line found at click point');
         }
         return;
       } else if (linePerpendicular.currentStep === 1) {
@@ -1283,13 +1283,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   worldPoint
                 );
                 if (accepted) {
-                  console.log('🎯 [CanvasSection] LineParallel entity accepted:', entity.id);
+                  dlog('CanvasSection', '🎯 LineParallel entity accepted:', entity.id);
                   return;
                 }
               }
             }
           }
-          console.log('🎯 [CanvasSection] LineParallel: No line found at click point');
+          dlog('CanvasSection', '🎯 LineParallel: No line found at click point');
         }
         return;
       } else if (lineParallel.currentStep === 1) {
@@ -1386,12 +1386,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const finishDrawingWithPolygon = async (polygon: Array<[number, number]>) => {
     // 🔧 FIX: Better error handling - notify user if level is not selected
     if (polygon.length < 3) {
-      console.warn('⚠️ Cannot save polygon - need at least 3 points');
+      dwarn('CanvasSection', '⚠️ Cannot save polygon - need at least 3 points');
       return false;
     }
 
     if (!levelManager.currentLevelId) {
-      console.error('❌ Cannot save polygon - no level selected!');
+      derr('CanvasSection', '❌ Cannot save polygon - no level selected!');
       // TODO: Show notification to user
       alert('Παρακαλώ επιλέξτε ένα επίπεδο (Level) πρώτα για να αποθηκευτεί το polygon.');
       return false;
@@ -1408,7 +1408,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
       return true;
     } catch (error) {
-      console.error('Failed to create overlay:', error);
+      derr('CanvasSection', 'Failed to create overlay:', error);
       return false;
     }
     // Note: setDraftPolygon([]) is done in the calling setDraftPolygon callback
@@ -1466,7 +1466,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         const container = containerRef.current;
         const snap = getPointerSnapshotFromElement(container);
         if (!snap) {
-          console.warn('[CanvasSection] handleFitToView: Cannot fit - viewport not ready');
+          dwarn('CanvasSection', 'handleFitToView: Cannot fit - viewport not ready');
           return; // 🏢 Fail-fast: Cannot fit without valid viewport
         }
 
@@ -1480,14 +1480,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
             // 🛡️ GUARD: Check for NaN values before applying transform
             if (isNaN(scale) || isNaN(offsetX) || isNaN(offsetY)) {
-              console.error('🚨 Shift+1 failed: Invalid transform (NaN values)');
+              derr('CanvasSection', '🚨 Shift+1 failed: Invalid transform (NaN values)');
               return;
             }
 
             setTransform(zoomResult.transform);
           }
         } catch (error) {
-          console.error('🚨 Shift+1 failed:', error);
+          derr('CanvasSection', '🚨 Shift+1 failed:', error);
         }
       }
     };
@@ -2120,7 +2120,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
                 zoomSystem.zoomToFit(combinedBounds, viewport, true);
               } else {
-                console.warn('🚨 [ZoomToFit] Invalid bounds or viewport!', { combinedBounds, viewport });
+                dwarn('CanvasSection', '🚨 ZoomToFit: Invalid bounds or viewport!', { combinedBounds, viewport });
               }
             }}
             onZoom100={() => zoomSystem.zoomTo100()}

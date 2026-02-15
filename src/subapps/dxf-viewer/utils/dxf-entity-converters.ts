@@ -45,6 +45,8 @@ import {
   extractEntityColor
 } from './dxf-converter-helpers';
 
+import { dlog, dwarn } from '../debug';
+
 // Re-export types for backward compatibility
 export type { EntityData, TextAlignment, EntityConverter } from './dxf-converter-helpers';
 
@@ -86,7 +88,7 @@ export function convertLine(
   const y2 = parseFloat(data['21']);
 
   if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
-    console.warn(`⚠️ Skipping LINE ${index}: missing coordinates`, {
+    dwarn('EntityConverter', `⚠️ Skipping LINE ${index}: missing coordinates`, {
       x1, y1, x2, y2, available: Object.keys(data)
     });
     return null;
@@ -122,7 +124,7 @@ export function convertLwPolyline(
   const vertices = parseVerticesFromData(data);
 
   if (vertices.length < 2) {
-    console.warn(`⚠️ Skipping LWPOLYLINE ${index}: insufficient vertices`, vertices.length);
+    dwarn('EntityConverter', `⚠️ Skipping LWPOLYLINE ${index}: insufficient vertices`, vertices.length);
     return null;
   }
 
@@ -161,7 +163,7 @@ export function convertCircle(
   const radius = parseFloat(data['40']);
 
   if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
-    console.warn(`⚠️ Skipping CIRCLE ${index}: invalid parameters`, {
+    dwarn('EntityConverter', `⚠️ Skipping CIRCLE ${index}: invalid parameters`, {
       centerX, centerY, radius
     });
     return null;
@@ -202,7 +204,7 @@ export function convertArc(
   const endAngle = parseFloat(data['51']) || 360;
 
   if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
-    console.warn(`⚠️ Skipping ARC ${index}: invalid parameters`, {
+    dwarn('EntityConverter', `⚠️ Skipping ARC ${index}: invalid parameters`, {
       centerX, centerY, radius
     });
     return null;
@@ -244,7 +246,7 @@ export function convertEllipse(
   const ratio = parseFloat(data['40']) || 1;
 
   if (isNaN(centerX) || isNaN(centerY)) {
-    console.warn(`⚠️ Skipping ELLIPSE ${index}: invalid center`, { centerX, centerY });
+    dwarn('EntityConverter', `⚠️ Skipping ELLIPSE ${index}: invalid center`, { centerX, centerY });
     return null;
   }
 
@@ -255,7 +257,7 @@ export function convertEllipse(
   const approxRadius = (majorRadius + minorRadius) / 2;
 
   if (approxRadius <= 0) {
-    console.warn(`⚠️ Skipping ELLIPSE ${index}: invalid radius`, { approxRadius });
+    dwarn('EntityConverter', `⚠️ Skipping ELLIPSE ${index}: invalid radius`, { approxRadius });
     return null;
   }
 
@@ -306,7 +308,7 @@ export function convertText(
   const alignment = mapHorizontalAlignment(horizontalJustification);
 
   if (isNaN(x) || isNaN(y) || text.trim() === '') {
-    console.warn(`⚠️ Skipping TEXT ${index}: missing position or text`, { x, y, text });
+    dwarn('EntityConverter', `⚠️ Skipping TEXT ${index}: missing position or text`, { x, y, text });
     return null;
   }
 
@@ -360,7 +362,7 @@ export function convertMText(
   const alignment = mapMTextAlignment(attachmentPoint);
 
   if (isNaN(x) || isNaN(y) || text.trim() === '') {
-    console.warn(`⚠️ Skipping MTEXT ${index}: missing position or text`, { x, y, text });
+    dwarn('EntityConverter', `⚠️ Skipping MTEXT ${index}: missing position or text`, { x, y, text });
     return null;
   }
 
@@ -403,7 +405,7 @@ export function convertSpline(
   const vertices = parseVerticesFromData(data);
 
   if (vertices.length < 2) {
-    console.warn(`⚠️ Skipping SPLINE ${index}: insufficient control points`, vertices.length);
+    dwarn('EntityConverter', `⚠️ Skipping SPLINE ${index}: insufficient control points`, vertices.length);
     return null;
   }
 
@@ -541,7 +543,7 @@ export function convertDimension(
   const textHeight = baseDimtxt * dimscale;
 
   // 🔧 DEBUG LOG: Uncomment to diagnose dimension height issues
-  console.debug('📐 DIM HEIGHT CALC:', {
+  dlog('EntityConverter', '📐 DIM HEIGHT CALC:', {
     entityId: `dimension_${index}`,
     code140: data['140'] || '(none)',
     styleName,
@@ -610,7 +612,7 @@ export function convertDimension(
     };
   }
 
-  console.warn(`⚠️ Skipping DIMENSION ${index}: insufficient coordinate data`);
+  dwarn('EntityConverter', `⚠️ Skipping DIMENSION ${index}: insufficient coordinate data`);
   return null;
 }
 

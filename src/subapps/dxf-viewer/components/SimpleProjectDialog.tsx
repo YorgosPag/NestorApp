@@ -62,6 +62,8 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Debug system for production-silent logging
+import { dlog, dwarn, derr } from '../debug';
 
 interface SimpleProjectDialogProps {
   isOpen: boolean;
@@ -145,11 +147,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
         return result.scene;
       } else {
-        console.warn('⚠️ DXF parsing failed for project tab:', result.error);
+        dwarn('ProjectDialog', '⚠️ DXF parsing failed for project tab:', result.error);
         return null;
       }
     } catch (error) {
-      console.error('❌ Error parsing DXF for project tab:', error);
+      derr('ProjectDialog', '❌ Error parsing DXF for project tab:', error);
       return null;
     }
   };
@@ -163,7 +165,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     // 3. Not currently loading
     // 4. No previous error (prevents infinite retry loop)
     if (isOpen && (!companies || companies.length === 0) && !loading && !error) {
-      console.log('🔄 [SimpleProjectDialog] Loading companies - dialog opened');
+      dlog('ProjectDialog', '🔄 Loading companies - dialog opened');
       loadCompanies();
     }
   }, [isOpen, companies?.length, loading, error, loadCompanies]);
@@ -188,7 +190,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
    */
   const loadBuildingsForProject = async (projectId: string) => {
     try {
-      console.log(`🔄 [SimpleProjectDialog] Loading buildings for project: ${projectId}`);
+      dlog('ProjectDialog', `🔄 Loading buildings for project: ${projectId}`);
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       interface BuildingsApiResponse {
@@ -200,13 +202,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
       if (result?.buildings && result.buildings.length > 0) {
         setBuildings(result.buildings);
-        console.log(`✅ [SimpleProjectDialog] Loaded ${result.buildings.length} buildings for project`);
+        dlog('ProjectDialog', `✅ Loaded ${result.buildings.length} buildings for project`);
       } else {
         setBuildings([]);
-        console.log(`⚠️ [SimpleProjectDialog] No buildings found for project: ${projectId}`);
+        dlog('ProjectDialog', `⚠️ No buildings found for project: ${projectId}`);
       }
     } catch (error) {
-      console.error('❌ [SimpleProjectDialog] Error loading buildings for project:', error);
+      derr('ProjectDialog', '❌ Error loading buildings for project:', error);
       setBuildings([]);
     }
   };
@@ -245,7 +247,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         await loadProjectsForCompany(selectedCompanyId);
 
       } catch (error) {
-        console.error('🔺 Failed to load projects:', error);
+        derr('ProjectDialog', '🔺 Failed to load projects:', error);
       }
     } else if (currentStep === 'project' && selectedProjectId) {
 
@@ -319,7 +321,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
    */
   const loadFloorsForBuilding = async (buildingId: string) => {
     try {
-      console.log(`🔄 [SimpleProjectDialog] Loading floors for building: ${buildingId}`);
+      dlog('ProjectDialog', `🔄 Loading floors for building: ${buildingId}`);
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       interface FloorsApiResponse {
@@ -331,20 +333,20 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
       if (result?.floors && result.floors.length > 0) {
         setFloors(result.floors);
-        console.log(`✅ [SimpleProjectDialog] Loaded ${result.floors.length} floors for building`);
+        dlog('ProjectDialog', `✅ Loaded ${result.floors.length} floors for building`);
       } else {
         setFloors([]);
-        console.log(`⚠️ [SimpleProjectDialog] No floors found for building: ${buildingId}`);
+        dlog('ProjectDialog', `⚠️ No floors found for building: ${buildingId}`);
       }
     } catch (error) {
-      console.error('❌ [SimpleProjectDialog] Error loading floors for building:', error);
+      derr('ProjectDialog', '❌ Error loading floors for building:', error);
       setFloors([]);
     }
   };
 
   const loadUnitsForBuilding = async (buildingId: string) => {
     try {
-      console.log(`🔄 [SimpleProjectDialog] Loading units for building: ${buildingId}`);
+      dlog('ProjectDialog', `🔄 Loading units for building: ${buildingId}`);
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       interface UnitsApiResponse {
@@ -360,14 +362,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       );
 
       setUnits(buildingUnits);
-      console.log(`✅ [SimpleProjectDialog] Loaded ${buildingUnits.length} units for building`);
+      dlog('ProjectDialog', `✅ Loaded ${buildingUnits.length} units for building`);
 
       if (buildingUnits.length === 0) {
         const allBuildingIds = [...new Set((result?.units || []).map((u: Unit) => u.buildingId))];
-        console.log(`⚠️ [SimpleProjectDialog] No units found. Available building IDs:`, allBuildingIds);
+        dlog('ProjectDialog', `⚠️ No units found. Available building IDs:`, allBuildingIds);
       }
     } catch (error) {
-      console.error('❌ [SimpleProjectDialog] Error loading units for building:', error);
+      derr('ProjectDialog', '❌ Error loading units for building:', error);
       setUnits([]);
     }
   };
@@ -379,7 +381,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
   // 🏢 ENTERPRISE (2026-01-31): Floor selection handler
   const handleFloorChange = (floorId: string) => {
-    console.log(`🏢 [SimpleProjectDialog] Floor selected: ${floorId}`);
+    dlog('ProjectDialog', `🏢 Floor selected: ${floorId}`);
     setSelectedFloorId(floorId);
     // 🏢 ENTERPRISE: Sync with ProjectHierarchyContext for breadcrumb display
     const floor = floors.find(f => f.id === floorId) ?? null;
@@ -406,21 +408,21 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   // ✅ ENTERPRISE: Inner function to perform the actual import (used by both fresh import and confirmed replacement)
   const performFloorplanImport = async (file: File, encoding: string, type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => {
     // 🏢 ENTERPRISE: Clear PDF background when loading DXF (only one floorplan at a time)
-    console.log('🔺 [DXF Import] Clearing PDF background before loading DXF...');
+    dlog('ProjectDialog', '🔺 Clearing PDF background before loading DXF...');
     unloadPdf();
     setPdfEnabled(false);
 
     // Use the same mechanism as Upload DXF File button to load to canvas
-    console.log('🔺 SimpleProjectDialog calling onFileImport with file:', {
+    dlog('ProjectDialog', '🔺 Calling onFileImport with file:', {
       fileName: file.name,
       hasOnFileImport: !!onFileImport
     });
 
     if (onFileImport) {
       await onFileImport(file);
-      console.log('🔺 SimpleProjectDialog onFileImport completed');
+      dlog('ProjectDialog', '🔺 onFileImport completed');
     } else {
-      console.warn('🔺 SimpleProjectDialog: onFileImport callback not provided!');
+      dwarn('ProjectDialog', '🔺 onFileImport callback not provided!');
     }
 
     // Also parse and store for project tab using real DXF parser with encoding
@@ -528,10 +530,10 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           });
         }
       } else {
-        console.error(`❌ Failed to save ${type} floorplan to Firestore`);
+        derr('ProjectDialog', `❌ Failed to save ${type} floorplan to Firestore`);
       }
     } else {
-      console.warn('⚠️ Could not parse DXF for project tab - no scene data');
+      dwarn('ProjectDialog', '⚠️ Could not parse DXF for project tab - no scene data');
     }
 
     // Close modals after processing
@@ -561,7 +563,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         );
       }
     } catch (error) {
-      console.error('❌ Failed to import floorplan after confirmation:', error);
+      derr('ProjectDialog', '❌ Failed to import floorplan after confirmation:', error);
     } finally {
       setPendingImportData(null);
     }
@@ -575,7 +577,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
   // Handle DXF import with encoding from modal
   const handleDxfImportFromModal = async (file: File, encoding: string) => {
-    console.log('🔺 SimpleProjectDialog.handleDxfImportFromModal called:', {
+    dlog('ProjectDialog', '🔺 handleDxfImportFromModal called:', {
       fileName: file.name,
       encoding,
       currentStep,
@@ -632,7 +634,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       await performFloorplanImport(file, encoding, type);
 
     } catch (error) {
-      console.error(`❌ Failed to load ${type} floorplan:`, error);
+      derr('ProjectDialog', `❌ Failed to load ${type} floorplan:`, error);
     }
   };
 
@@ -647,7 +649,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
    * Loads PDF as background layer AND saves to FloorplanService for persistent storage
    */
   const handlePdfImportFromModal = async (file: File) => {
-    console.log('📄 [SimpleProjectDialog] Importing PDF:', file.name);
+    dlog('ProjectDialog', '📄 Importing PDF:', file.name);
 
     const type = currentFloorplanType;
 
@@ -686,7 +688,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       await performPdfFloorplanImport(file, type);
 
     } catch (error) {
-      console.error('❌ [SimpleProjectDialog] Failed to import PDF:', error);
+      derr('ProjectDialog', '❌ Failed to import PDF:', error);
     }
   };
 
@@ -695,16 +697,16 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
    * Renders PDF, saves to Firestore, and loads to background store
    */
   const performPdfFloorplanImport = async (file: File, type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => {
-    console.log('📄 [SimpleProjectDialog] Performing PDF floorplan import:', file.name, type);
+    dlog('ProjectDialog', '📄 Performing PDF floorplan import:', file.name, type);
 
     // 🏢 ENTERPRISE: Clear DXF scene when loading PDF (only one floorplan at a time)
-    console.log('📄 [PDF Import] Clearing DXF scene before loading PDF...');
+    dlog('ProjectDialog', '📄 Clearing DXF scene before loading PDF...');
     unifiedSceneManager.resetScene('pdf-import');
 
     // Load PDF to background store (renders the PDF)
-    console.log('📄 [PDF Import] Loading PDF to background store...');
+    dlog('ProjectDialog', '📄 Loading PDF to background store...');
     await loadPdfToBackground(file);
-    console.log('📄 [PDF Import] loadPdfToBackground completed');
+    dlog('ProjectDialog', '📄 loadPdfToBackground completed');
 
     // Enable PDF background display
     setPdfEnabled(true);
@@ -714,7 +716,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
     // 🏢 ENTERPRISE: Get rendered image and dimensions from store
     const pdfState = usePdfBackgroundStore.getState();
-    console.log('📄 [PDF Import] Store state after load:', {
+    dlog('ProjectDialog', '📄 Store state after load:', {
       hasDocumentInfo: !!pdfState.documentInfo,
       hasRenderedImageUrl: !!pdfState.renderedImageUrl,
       isLoading: pdfState.isLoading,
@@ -725,15 +727,15 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     const pdfDimensions = pdfState.pageDimensions;
 
     if (!pdfImageUrl) {
-      console.error('❌ [SimpleProjectDialog] PDF rendering failed - no image URL');
-      console.error('❌ [SimpleProjectDialog] Store error:', pdfState.error);
+      derr('ProjectDialog', '❌ PDF rendering failed - no image URL');
+      derr('ProjectDialog', '❌ Store error:', pdfState.error);
       return;
     }
 
     // 🏢 ENTERPRISE: Check if PDF image is too large for Firestore (1MB limit)
     const imageSizeKB = Math.round(pdfImageUrl.length / 1024);
     const imageSizeMB = (pdfImageUrl.length / (1024 * 1024)).toFixed(2);
-    console.log('📄 [SimpleProjectDialog] PDF rendered:', {
+    dlog('ProjectDialog', '📄 PDF rendered:', {
       hasImageUrl: !!pdfImageUrl,
       dimensions: pdfDimensions,
       imageUrlLength: pdfImageUrl.length,
@@ -742,7 +744,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     });
 
     if (pdfImageUrl.length > 900000) {
-      console.warn('⚠️ [SimpleProjectDialog] PDF image is very large:', imageSizeMB, 'MB - may exceed Firestore limit');
+      dwarn('ProjectDialog', '⚠️ PDF image is very large:', imageSizeMB, 'MB - may exceed Firestore limit');
     }
 
     // 🏢 ENTERPRISE: Create FloorplanData for PDF storage
@@ -809,7 +811,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     }
 
     if (saved) {
-      console.log('✅ [SimpleProjectDialog] PDF floorplan saved to Firestore');
+      dlog('ProjectDialog', '✅ PDF floorplan saved to Firestore');
 
       // 🏢 ENTERPRISE: Store in context for immediate access
       // Context uses narrower type for project-level floorplans only
@@ -837,7 +839,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         });
       }
     } else {
-      console.error(`❌ [SimpleProjectDialog] Failed to save PDF ${type} floorplan to Firestore`);
+      derr('ProjectDialog', `❌ Failed to save PDF ${type} floorplan to Firestore`);
     }
 
     // Close modals after processing
@@ -1251,7 +1253,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               <Button
                 variant="default"
                 size="default"
-                onClick={() => console.log('Ready for unit floorplan selection:', selectedUnitId)}
+                onClick={() => dlog('ProjectDialog', 'Ready for unit floorplan selection:', selectedUnitId)}
                 disabled={!selectedUnitId}
               >
                 {t('wizard.navigation.ready')}

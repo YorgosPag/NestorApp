@@ -23,6 +23,7 @@
  */
 
 import { serviceRegistry, type ServiceName } from './ServiceRegistry';
+import { dlog, dwarn, derr } from '../debug';
 
 // ✅ ENTERPRISE: Window interface extension for debug helpers
 declare global {
@@ -141,12 +142,12 @@ export class ServiceHealthMonitor {
    */
   public start(): void {
     if (this.intervalId !== null) {
-      console.warn('🏥 Health monitor already running');
+      dwarn('ServiceHealth', '🏥 Health monitor already running');
       return;
     }
 
     if (!this.config.enabled) {
-      console.log('🏥 Health monitor disabled in config');
+      dlog('ServiceHealth', '🏥 Health monitor disabled in config');
       return;
     }
 
@@ -162,7 +163,7 @@ export class ServiceHealthMonitor {
       });
     }, this.config.intervalMs);
 
-    console.log(`🏥 Health monitor started (interval: ${this.config.intervalMs}ms)`);
+    dlog('ServiceHealth', `🏥 Health monitor started (interval: ${this.config.intervalMs}ms)`);
   }
 
   /**
@@ -172,7 +173,7 @@ export class ServiceHealthMonitor {
     if (this.intervalId !== null) {
       window.clearInterval(this.intervalId);
       this.intervalId = null;
-      console.log('🏥 Health monitor stopped');
+      dlog('ServiceHealth', '🏥 Health monitor stopped');
     }
   }
 
@@ -356,7 +357,7 @@ export class ServiceHealthMonitor {
       try {
         listener(report);
       } catch (error) {
-        console.error('🏥 Health monitor listener error:', error);
+        derr('ServiceHealth', '🏥 Health monitor listener error:', error);
       }
     }
   }

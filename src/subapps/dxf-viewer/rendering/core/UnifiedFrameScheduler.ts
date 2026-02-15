@@ -122,6 +122,8 @@ const DEFAULT_CONFIG: SchedulerConfig = {
   collectMetrics: true,
 };
 
+import { dlog, dwarn, derr } from '../../debug';
+
 const FRAME_TIME_60FPS = 1000 / 60; // ~16.67ms
 const FPS_SAMPLE_SIZE = 60; // Average over 60 frames
 
@@ -196,7 +198,7 @@ class UnifiedFrameSchedulerImpl {
     isDirty?: DirtyCheckFn
   ): () => void {
     if (this.systems.has(id)) {
-      console.warn(`[UnifiedFrameScheduler] System "${id}" already registered, replacing...`);
+      dwarn('FrameScheduler', `System "${id}" already registered, replacing...`);
     }
 
     const system: RenderSystem = {
@@ -218,7 +220,7 @@ class UnifiedFrameSchedulerImpl {
     this.systems.set(id, system);
 
     if (this.config.debug) {
-      console.log(`[UnifiedFrameScheduler] Registered: ${name} (priority: ${priority})`);
+      dlog('FrameScheduler', `Registered: ${name} (priority: ${priority})`);
     }
 
     // Auto-start if this is the first system
@@ -238,7 +240,7 @@ class UnifiedFrameSchedulerImpl {
     if (system) {
       this.systems.delete(id);
       if (this.config.debug) {
-        console.log(`[UnifiedFrameScheduler] Unregistered: ${system.name}`);
+        dlog('FrameScheduler', `Unregistered: ${system.name}`);
       }
     }
 
@@ -267,7 +269,7 @@ class UnifiedFrameSchedulerImpl {
     if (system) {
       system.forceDirty = true;
       if (this.config.debug) {
-        console.log(`[UnifiedFrameScheduler] markDirty: ${system.name}`);
+        dlog('FrameScheduler', `markDirty: ${system.name}`);
       }
     }
   }
@@ -293,7 +295,7 @@ class UnifiedFrameSchedulerImpl {
     }
 
     if (this.config.debug) {
-      console.log(`[UnifiedFrameScheduler] markAllCanvasDirty: ${canvasSystemIds.length} systems marked`);
+      dlog('FrameScheduler', `markAllCanvasDirty: ${canvasSystemIds.length} systems marked`);
     }
   }
 
@@ -312,7 +314,7 @@ class UnifiedFrameSchedulerImpl {
     }
 
     if (this.config.debug) {
-      console.log(`[UnifiedFrameScheduler] markSystemsDirty: ${systemIds.join(', ')}`);
+      dlog('FrameScheduler', `markSystemsDirty: ${systemIds.join(', ')}`);
     }
   }
 
@@ -357,7 +359,7 @@ class UnifiedFrameSchedulerImpl {
           // Reset dirty flags - prevent RAF loop from re-rendering
           system.forceDirty = false;
         } catch (error) {
-          console.error(`[UnifiedFrameScheduler] forceImmediateRenderAll error in ${id}:`, error);
+          derr('FrameScheduler', `forceImmediateRenderAll error in ${id}:`, error);
         }
       }
     }
@@ -411,7 +413,7 @@ class UnifiedFrameSchedulerImpl {
     }
 
     if (this.config.debug) {
-      console.log(`[UnifiedFrameScheduler] scheduleOnce: ${id}`);
+      dlog('FrameScheduler', `scheduleOnce: ${id}`);
     }
   }
 
@@ -457,14 +459,14 @@ class UnifiedFrameSchedulerImpl {
           try {
             callback();
           } catch (error) {
-            console.error(`[UnifiedFrameScheduler] Error in scheduleOnceDelayed "${id}":`, error);
+            derr('FrameScheduler', `Error in scheduleOnceDelayed "${id}":`, error);
           }
         });
       }, delayMs);
     });
 
     if (this.config.debug) {
-      console.log(`[UnifiedFrameScheduler] scheduleOnceDelayed: ${id} (${delayMs}ms)`);
+      dlog('FrameScheduler', `scheduleOnceDelayed: ${id} (${delayMs}ms)`);
     }
 
     // Return cancel function
@@ -510,12 +512,12 @@ class UnifiedFrameSchedulerImpl {
       try {
         callback();
       } catch (error) {
-        console.error(`[UnifiedFrameScheduler] Error in scheduleOnce "${id}":`, error);
+        derr('FrameScheduler', `Error in scheduleOnce "${id}":`, error);
       }
     }
 
     if (this.config.debug && callbackEntries.length > 0) {
-      console.log(`[UnifiedFrameScheduler] Executed ${callbackEntries.length} one-shot callbacks`);
+      dlog('FrameScheduler', `Executed ${callbackEntries.length} one-shot callbacks`);
     }
   }
 
@@ -536,7 +538,7 @@ class UnifiedFrameSchedulerImpl {
     this.isFirstFrame = true; // 🏢 FIX: Reset first frame flag
 
     if (this.config.debug) {
-      console.log('[UnifiedFrameScheduler] Started');
+      dlog('FrameScheduler', 'Started');
     }
 
     this.scheduleFrame();
@@ -556,7 +558,7 @@ class UnifiedFrameSchedulerImpl {
     }
 
     if (this.config.debug) {
-      console.log('[UnifiedFrameScheduler] Stopped');
+      dlog('FrameScheduler', 'Stopped');
     }
   }
 
@@ -683,7 +685,7 @@ class UnifiedFrameSchedulerImpl {
         try {
           system.render(deltaTime, this.frameNumber);
         } catch (error) {
-          console.error(`[UnifiedFrameScheduler] Error in ${system.name}:`, error);
+          derr('FrameScheduler', `Error in ${system.name}:`, error);
         }
 
         const renderTime = performance.now() - renderStart;
@@ -734,15 +736,15 @@ class UnifiedFrameSchedulerImpl {
         try {
           listener(this.currentMetrics);
         } catch (error) {
-          console.error('[UnifiedFrameScheduler] Error in frame listener:', error);
+          derr('FrameScheduler', 'Error in frame listener:', error);
         }
       }
     }
 
     // === DEBUG OUTPUT ===
     if (this.config.debug && this.frameNumber % 60 === 0) {
-      console.log(
-        `[UnifiedFrameScheduler] Frame ${this.frameNumber}: ` +
+      dlog('FrameScheduler',
+        `Frame ${this.frameNumber}: ` +
           `${renderedCount}/${sortedSystems.length} rendered, ` +
           `${skippedCount} skipped, ` +
           `${totalFrameTime.toFixed(2)}ms, ` +

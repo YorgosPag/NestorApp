@@ -5,6 +5,8 @@ const DEBUG_PROJECT_HIERARCHY = false;
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+// 🏢 ENTERPRISE: Centralized debug system
+import { dlog, dwarn, derr } from '../debug';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { CompanyContact } from '../../../types/contacts';
@@ -128,12 +130,12 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
   const loadCompanies = async () => {
     // 🔐 ENTERPRISE: Auth-ready gating - don't attempt API calls without authentication
     if (authLoading) {
-      console.log('⏳ [ProjectHierarchy] Waiting for auth state...');
+      dlog('ProjectHierarchy', 'Waiting for auth state...');
       return; // Will be called again when auth is ready via useEffect
     }
 
     if (!user) {
-      console.log('🔒 [ProjectHierarchy] User not authenticated - skipping company load');
+      dlog('ProjectHierarchy', 'User not authenticated - skipping company load');
       return; // User not logged in - don't attempt API call
     }
 
@@ -147,7 +149,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     setHierarchy(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      console.log('🔄 [ProjectHierarchy] Starting to load companies via Enterprise API Client...');
+      dlog('ProjectHierarchy', 'Starting to load companies via Enterprise API Client...');
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       // apiClient automatically:
@@ -165,7 +167,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
       // apiClient.get() unwraps the canonical { success: true, data: T } response automatically
       const companies = result?.companies || [];
-      console.log('✅ [ProjectHierarchy] Companies loaded successfully:', companies.length);
+      dlog('ProjectHierarchy', 'Companies loaded successfully:', companies.length);
 
       // Remove duplicates by id AND by companyName (multiple deduplication strategies)
       const uniqueCompanies = companies.reduce((unique: CompanyContact[], company: CompanyContact) => {
@@ -178,12 +180,12 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
           unique.push(company);
         } else {
           if (duplicateById) {
-            console.warn(`🏢 Duplicate company by ID found: ${company.companyName} (${company.id})`);
+            dwarn('ProjectHierarchy', `Duplicate company by ID found: ${company.companyName} (${company.id})`);
           }
           if (duplicateByName) {
             // Only log first occurrence to reduce noise
             if (!unique.some(u => u.companyName === company.companyName)) {
-              console.warn(`🏢 Duplicate company by NAME found: ${company.companyName}`);
+              dwarn('ProjectHierarchy', `Duplicate company by NAME found: ${company.companyName}`);
             }
           }
         }
@@ -200,13 +202,13 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       companiesLoadedRef.current = true;
 
     } catch (error) {
-      console.error('❌ [ProjectHierarchy] Error loading companies:', error);
+      derr('ProjectHierarchy', 'Error loading companies:', error);
 
       // Enhanced error details for debugging
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : 'No stack trace';
 
-      console.error('❌ [ProjectHierarchy] Error details:', {
+      derr('ProjectHierarchy', 'Error details:', {
         message: errorMessage,
         stack: errorStack,
         type: typeof error,
@@ -246,7 +248,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     try {
       // Find the company details for better logging
       const company = hierarchy.companies.find(c => c.id === companyId);
-      console.log(`🔄 [ProjectHierarchy] Loading projects for company: ${company?.companyName || companyId}`);
+      dlog('ProjectHierarchy', `Loading projects for company: ${company?.companyName || companyId}`);
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       interface ProjectsApiResponse {
@@ -313,7 +315,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       }));
 
     } catch (error) {
-      console.error('Error loading projects from Firestore:', error);
+      derr('ProjectHierarchy', 'Error loading projects from Firestore:', error);
       setHierarchy(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to load projects from Firestore',
@@ -437,7 +439,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     // Only load when auth is ready and user is logged in
     if (!authLoading && user) {
-      console.log('✅ [ProjectHierarchy] Auth ready - loading companies...');
+      dlog('ProjectHierarchy', 'Auth ready - loading companies...');
       loadProjects();
     }
   }, [user, authLoading]);
@@ -446,7 +448,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
   // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
   useEffect(() => {
     const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
-      console.log('🔄 [ProjectHierarchy] Applying update for project:', payload.projectId);
+      dlog('ProjectHierarchy', 'Applying update for project:', payload.projectId);
 
       setHierarchy(prev => ({
         ...prev,

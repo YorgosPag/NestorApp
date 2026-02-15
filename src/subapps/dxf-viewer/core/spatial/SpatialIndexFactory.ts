@@ -36,6 +36,7 @@ import { SpatialIndexType } from './ISpatialIndex';
 import { SpatialUtils } from './SpatialUtils';
 import { QuadTreeSpatialIndex } from './QuadTreeSpatialIndex';
 import { GridSpatialIndex } from './GridSpatialIndex';
+import { dwarn } from '../../debug';
 
 /**
  * Default configurations για διαφορετικά use cases
@@ -214,50 +215,50 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
   }
 
   insert(_item: SpatialItem): void {
-    console.warn('🚧 PlaceholderSpatialIndex.insert() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.insert() - not implemented');
   }
 
   remove(_itemId: string): boolean {
-    console.warn('🚧 PlaceholderSpatialIndex.remove() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.remove() - not implemented');
     return false;
   }
 
   update(_item: SpatialItem): boolean {
-    console.warn('🚧 PlaceholderSpatialIndex.update() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.update() - not implemented');
     return false;
   }
 
   clear(): void {
-    console.warn('🚧 PlaceholderSpatialIndex.clear() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.clear() - not implemented');
   }
 
   queryNear(_center: Point2D, _radius: number, _options?: SpatialQueryOptions): SpatialQueryResult[] {
-    console.warn('🚧 PlaceholderSpatialIndex.queryNear() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.queryNear() - not implemented');
     return [];
   }
 
   queryBounds(_bounds: SpatialBounds, _options?: SpatialQueryOptions): SpatialQueryResult[] {
-    console.warn('🚧 PlaceholderSpatialIndex.queryBounds() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.queryBounds() - not implemented');
     return [];
   }
 
   queryClosest(_point: Point2D, _options?: SpatialQueryOptions): SpatialQueryResult | null {
-    console.warn('🚧 PlaceholderSpatialIndex.queryClosest() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.queryClosest() - not implemented');
     return null;
   }
 
   hitTest(_point: Point2D, _tolerance?: number): SpatialQueryResult | null {
-    console.warn('🚧 PlaceholderSpatialIndex.hitTest() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.hitTest() - not implemented');
     return null;
   }
 
   querySnap(_point: Point2D, _tolerance: number, _snapType: 'endpoint' | 'midpoint' | 'center'): SpatialQueryResult[] {
-    console.warn('🚧 PlaceholderSpatialIndex.querySnap() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.querySnap() - not implemented');
     return [];
   }
 
   querySelection(_bounds: SpatialBounds, _selectionType: 'window' | 'crossing'): SpatialQueryResult[] {
-    console.warn('🚧 PlaceholderSpatialIndex.querySelection() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.querySelection() - not implemented');
     return [];
   }
 
@@ -271,7 +272,7 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
   }
 
   optimize(): void {
-    console.warn('🚧 PlaceholderSpatialIndex.optimize() - not implemented');
+    dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.optimize() - not implemented');
   }
 
   debug(): SpatialDebugInfo {

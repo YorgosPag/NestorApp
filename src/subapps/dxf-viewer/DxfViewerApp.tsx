@@ -1,6 +1,10 @@
 /// <reference path="./types/dxf-modules.d.ts" />
 'use client';
 import React from 'react';
+import { installProductionConsoleGuard } from './utils/production-console-guard';
+
+// Layer 1: Silence console.log/warn/debug in production builds
+installProductionConsoleGuard();
 import { NotificationProvider } from '../../providers/NotificationProvider';
 // CoordProvider removed - using only RulersGrid system now
 import { GripProvider } from './providers/GripProvider';

@@ -14,6 +14,7 @@ import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
+import { dlog, derr } from '../../../debug';
 
 /**
  * Overlay store interface for command operations
@@ -62,11 +63,11 @@ export class DeleteOverlayCommand implements ICommand {
       // Fire-and-forget async operation
       // Firestore real-time listener will update UI
       this.overlayStore.remove(this.overlayId).catch((error: unknown) => {
-        console.error('❌ DeleteOverlayCommand.execute failed:', error);
+        derr('Commands', 'DeleteOverlayCommand.execute failed:', error);
       });
 
       this.wasExecuted = true;
-      console.log(`🗑️ DeleteOverlayCommand: Executed for overlay ${this.overlayId}`);
+      dlog('Commands', `DeleteOverlayCommand: Executed for overlay ${this.overlayId}`);
     }
   }
 
@@ -78,10 +79,10 @@ export class DeleteOverlayCommand implements ICommand {
     if (this.overlaySnapshot && this.wasExecuted) {
       // Fire-and-forget async operation
       this.overlayStore.restore(this.overlaySnapshot).catch((error: unknown) => {
-        console.error('❌ DeleteOverlayCommand.undo failed:', error);
+        derr('Commands', 'DeleteOverlayCommand.undo failed:', error);
       });
 
-      console.log(`↩️ DeleteOverlayCommand: Undo - restored overlay ${this.overlayId}`);
+      dlog('Commands', `DeleteOverlayCommand: Undo - restored overlay ${this.overlayId}`);
     }
   }
 
@@ -92,10 +93,10 @@ export class DeleteOverlayCommand implements ICommand {
     if (this.overlaySnapshot) {
       // Fire-and-forget async operation
       this.overlayStore.remove(this.overlaySnapshot.id).catch((error: unknown) => {
-        console.error('❌ DeleteOverlayCommand.redo failed:', error);
+        derr('Commands', 'DeleteOverlayCommand.redo failed:', error);
       });
 
-      console.log(`↪️ DeleteOverlayCommand: Redo - deleted overlay ${this.overlayId}`);
+      dlog('Commands', `DeleteOverlayCommand: Redo - deleted overlay ${this.overlayId}`);
     }
   }
 
@@ -195,13 +196,13 @@ export class DeleteMultipleOverlaysCommand implements ICommand {
 
         // Fire-and-forget async operation
         this.overlayStore.remove(overlayId).catch((error: unknown) => {
-          console.error(`❌ DeleteMultipleOverlaysCommand.execute failed for ${overlayId}:`, error);
+          derr('Commands', `DeleteMultipleOverlaysCommand.execute failed for ${overlayId}:`, error);
         });
       }
     }
 
     this.wasExecuted = this.overlaySnapshots.length > 0;
-    console.log(`🗑️ DeleteMultipleOverlaysCommand: Executed for ${this.overlaySnapshots.length} overlays`);
+    dlog('Commands', `DeleteMultipleOverlaysCommand: Executed for ${this.overlaySnapshots.length} overlays`);
   }
 
   /**
@@ -212,11 +213,11 @@ export class DeleteMultipleOverlaysCommand implements ICommand {
       for (const overlay of this.overlaySnapshots) {
         // Fire-and-forget async operation
         this.overlayStore.restore(overlay).catch((error: unknown) => {
-          console.error(`❌ DeleteMultipleOverlaysCommand.undo failed for ${overlay.id}:`, error);
+          derr('Commands', `DeleteMultipleOverlaysCommand.undo failed for ${overlay.id}:`, error);
         });
       }
 
-      console.log(`↩️ DeleteMultipleOverlaysCommand: Undo - restored ${this.overlaySnapshots.length} overlays`);
+      dlog('Commands', `DeleteMultipleOverlaysCommand: Undo - restored ${this.overlaySnapshots.length} overlays`);
     }
   }
 
@@ -227,11 +228,11 @@ export class DeleteMultipleOverlaysCommand implements ICommand {
     for (const overlay of this.overlaySnapshots) {
       // Fire-and-forget async operation
       this.overlayStore.remove(overlay.id).catch((error: unknown) => {
-        console.error(`❌ DeleteMultipleOverlaysCommand.redo failed for ${overlay.id}:`, error);
+        derr('Commands', `DeleteMultipleOverlaysCommand.redo failed for ${overlay.id}:`, error);
       });
     }
 
-    console.log(`↪️ DeleteMultipleOverlaysCommand: Redo - deleted ${this.overlaySnapshots.length} overlays`);
+    dlog('Commands', `DeleteMultipleOverlaysCommand: Redo - deleted ${this.overlaySnapshots.length} overlays`);
   }
 
   /**

@@ -4,6 +4,8 @@ import { db } from '../../../lib/firebase';
 import { collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
+// 🏢 ENTERPRISE: Debug system for production-silent logging
+import { dlog, dwarn, derr } from '../debug';
 
 interface OverlayStoreState {
   overlays: Record<string, Overlay>;
@@ -175,7 +177,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
    */
   const restore = useCallback(async (overlay: Overlay): Promise<void> => {
     if (!overlay.levelId) {
-      console.error('❌ restore: Overlay has no levelId');
+      derr('OverlayStore', '❌ restore: Overlay has no levelId');
       return;
     }
 
@@ -204,7 +206,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const docRef = doc(db, `${COLLECTION_PREFIX}/${overlay.levelId}/items`, overlay.id);
     await setDoc(docRef, overlayDoc);
 
-    console.log(`✅ restore: Overlay ${overlay.id} restored successfully`);
+    dlog('OverlayStore', `✅ restore: Overlay ${overlay.id} restored successfully`);
   }, [user]);
 
   const duplicate = useCallback(async (id: string): Promise<string | null> => {
@@ -240,7 +242,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   // Returns null - use useUniversalSelection().getPrimaryId() to get selected overlay ID
   // then use overlayStore.overlays[id] to get the overlay object
   const getSelectedOverlay = useCallback((): Overlay | null => {
-    console.warn('⚠️ DEPRECATED: getSelectedOverlay() - Use useUniversalSelection() instead');
+    dwarn('OverlayStore', '⚠️ DEPRECATED: getSelectedOverlay() - Use useUniversalSelection() instead');
     return null;
   }, []);
 
@@ -258,13 +260,13 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   const addVertex = useCallback(async (id: string, insertIndex: number, vertex: [number, number]) => {
     const overlay = state.overlays[id];
     if (!overlay) {
-      console.error('❌ addVertex: Overlay not found:', id);
+      derr('OverlayStore', '❌ addVertex: Overlay not found:', id);
       return;
     }
 
     const currentPolygon = overlay.polygon;
     if (!Array.isArray(currentPolygon)) {
-      console.error('❌ addVertex: Invalid polygon format');
+      derr('OverlayStore', '❌ addVertex: Invalid polygon format');
       return;
     }
 
@@ -274,25 +276,25 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
 
     // Use existing update function
     await update(id, { polygon: newPolygon });
-    console.log('✅ addVertex: Vertex added at index', insertIndex);
+    dlog('OverlayStore', '✅ addVertex: Vertex added at index', insertIndex);
   }, [state.overlays, update]);
 
   // 🏢 ENTERPRISE (2026-01-25): Update vertex position (for drag operations)
   const updateVertex = useCallback(async (id: string, vertexIndex: number, newPosition: [number, number]) => {
     const overlay = state.overlays[id];
     if (!overlay) {
-      console.error('❌ updateVertex: Overlay not found:', id);
+      derr('OverlayStore', '❌ updateVertex: Overlay not found:', id);
       return;
     }
 
     const currentPolygon = overlay.polygon;
     if (!Array.isArray(currentPolygon)) {
-      console.error('❌ updateVertex: Invalid polygon format');
+      derr('OverlayStore', '❌ updateVertex: Invalid polygon format');
       return;
     }
 
     if (vertexIndex < 0 || vertexIndex >= currentPolygon.length) {
-      console.error('❌ updateVertex: Invalid vertex index:', vertexIndex);
+      derr('OverlayStore', '❌ updateVertex: Invalid vertex index:', vertexIndex);
       return;
     }
 
@@ -312,24 +314,24 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
 
     const overlay = state.overlays[id];
     if (!overlay) {
-      console.error('❌ removeVertex: Overlay not found:', id);
+      derr('OverlayStore', '❌ removeVertex: Overlay not found:', id);
       return false;
     }
 
     const currentPolygon = overlay.polygon;
     if (!Array.isArray(currentPolygon)) {
-      console.error('❌ removeVertex: Invalid polygon format');
+      derr('OverlayStore', '❌ removeVertex: Invalid polygon format');
       return false;
     }
 
     // 🏢 ADR-145: Minimum vertices for valid polygon - centralized constant
     if (currentPolygon.length <= MIN_POLY_POINTS) {
-      console.warn('⚠️ removeVertex: Cannot remove - minimum vertices reached');
+      dwarn('OverlayStore', '⚠️ removeVertex: Cannot remove - minimum vertices reached');
       return false;
     }
 
     if (vertexIndex < 0 || vertexIndex >= currentPolygon.length) {
-      console.error('❌ removeVertex: Invalid vertex index:', vertexIndex);
+      derr('OverlayStore', '❌ removeVertex: Invalid vertex index:', vertexIndex);
       return false;
     }
 
@@ -339,7 +341,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
 
     // Use existing update function
     await update(id, { polygon: newPolygon });
-    console.log('✅ removeVertex: Vertex removed at index', vertexIndex);
+    dlog('OverlayStore', '✅ removeVertex: Vertex removed at index', vertexIndex);
     return true;
   }, [state.overlays, update]);
 

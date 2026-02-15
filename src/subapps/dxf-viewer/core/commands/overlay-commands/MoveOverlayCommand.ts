@@ -21,6 +21,7 @@ import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
+import { dlog, dwarn, derr } from '../../../debug';
 
 /**
  * Point2D interface for delta calculation
@@ -90,7 +91,7 @@ export class MoveOverlayCommand implements ICommand {
   execute(): void {
     const overlay = this.overlayStore.overlays[this.overlayId];
     if (!overlay) {
-      console.error(`❌ MoveOverlayCommand.execute: Overlay ${this.overlayId} not found`);
+      derr('Commands', `❌ MoveOverlayCommand.execute: Overlay ${this.overlayId} not found`);
       return;
     }
 
@@ -109,11 +110,11 @@ export class MoveOverlayCommand implements ICommand {
     this.overlayStore.update(this.overlayId, {
       polygon: newPolygon
     }).catch((error: unknown) => {
-      console.error('❌ MoveOverlayCommand.execute failed:', error);
+      derr('Commands', '❌ MoveOverlayCommand.execute failed:', error);
     });
 
     this.wasExecuted = true;
-    console.log(`↔️ MoveOverlayCommand: Moved overlay ${this.overlayId} by Δ(${this.delta.x}, ${this.delta.y})`);
+    dlog('Commands', `↔️ MoveOverlayCommand: Moved overlay ${this.overlayId} by Δ(${this.delta.x}, ${this.delta.y})`);
   }
 
   /**
@@ -121,17 +122,17 @@ export class MoveOverlayCommand implements ICommand {
    */
   undo(): void {
     if (!this.originalPolygon || !this.wasExecuted) {
-      console.warn('⚠️ MoveOverlayCommand.undo: No original polygon stored or command not executed');
+      dwarn('Commands', '⚠️ MoveOverlayCommand.undo: No original polygon stored or command not executed');
       return;
     }
 
     this.overlayStore.update(this.overlayId, {
       polygon: this.originalPolygon
     }).catch((error: unknown) => {
-      console.error('❌ MoveOverlayCommand.undo failed:', error);
+      derr('Commands', '❌ MoveOverlayCommand.undo failed:', error);
     });
 
-    console.log(`↩️ MoveOverlayCommand: Undid move for overlay ${this.overlayId}`);
+    dlog('Commands', `↩️ MoveOverlayCommand: Undid move for overlay ${this.overlayId}`);
   }
 
   /**
@@ -212,7 +213,7 @@ export class MoveOverlayCommand implements ICommand {
     merged.originalPolygon = this.originalPolygon;
     merged.wasExecuted = this.wasExecuted;
 
-    console.log(`🔀 MoveOverlayCommand: Merged moves for overlay ${this.overlayId} - Combined delta: (${combinedDelta.x}, ${combinedDelta.y})`);
+    dlog('Commands', `🔀 MoveOverlayCommand: Merged moves for overlay ${this.overlayId} - Combined delta: (${combinedDelta.x}, ${combinedDelta.y})`);
 
     return merged;
   }
@@ -301,7 +302,7 @@ export class MoveMultipleOverlaysCommand implements ICommand {
 
   execute(): void {
     this.commands.forEach(cmd => cmd.execute());
-    console.log(`↔️ MoveMultipleOverlaysCommand: Moved ${this.overlayIds.length} overlays by Δ(${this.delta.x}, ${this.delta.y})`);
+    dlog('Commands', `↔️ MoveMultipleOverlaysCommand: Moved ${this.overlayIds.length} overlays by Δ(${this.delta.x}, ${this.delta.y})`);
   }
 
   undo(): void {

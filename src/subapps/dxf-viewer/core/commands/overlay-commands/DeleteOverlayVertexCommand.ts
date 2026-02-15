@@ -13,6 +13,7 @@
 import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { dlog, derr } from '../../../debug';
 
 /**
  * Overlay store interface for vertex operations
@@ -56,7 +57,7 @@ export class DeleteOverlayVertexCommand implements ICommand {
     // Get overlay to access vertex position
     const overlay = this.overlayStore.overlays[this.overlayId];
     if (!overlay || !overlay.polygon) {
-      console.error(`❌ DeleteOverlayVertexCommand: Overlay ${this.overlayId} not found`);
+      derr('Commands', `DeleteOverlayVertexCommand: Overlay ${this.overlayId} not found`);
       return;
     }
 
@@ -67,13 +68,13 @@ export class DeleteOverlayVertexCommand implements ICommand {
       // Fire-and-forget async operation
       // Firestore real-time listener will update UI
       this.overlayStore.removeVertex(this.overlayId, this.vertexIndex).catch((error: unknown) => {
-        console.error('❌ DeleteOverlayVertexCommand.execute failed:', error);
+        derr('Commands', 'DeleteOverlayVertexCommand.execute failed:', error);
       });
 
       this.wasExecuted = true;
-      console.log(`🗑️ DeleteOverlayVertexCommand: Executed for overlay ${this.overlayId}, vertex ${this.vertexIndex}`);
+      dlog('Commands', `DeleteOverlayVertexCommand: Executed for overlay ${this.overlayId}, vertex ${this.vertexIndex}`);
     } else {
-      console.error(`❌ DeleteOverlayVertexCommand: Invalid vertex index ${this.vertexIndex}`);
+      derr('Commands', `DeleteOverlayVertexCommand: Invalid vertex index ${this.vertexIndex}`);
     }
   }
 
@@ -85,10 +86,10 @@ export class DeleteOverlayVertexCommand implements ICommand {
     if (this.removedVertex && this.wasExecuted) {
       // Fire-and-forget async operation
       this.overlayStore.addVertex(this.overlayId, this.vertexIndex, this.removedVertex).catch((error: unknown) => {
-        console.error('❌ DeleteOverlayVertexCommand.undo failed:', error);
+        derr('Commands', 'DeleteOverlayVertexCommand.undo failed:', error);
       });
 
-      console.log(`↩️ DeleteOverlayVertexCommand: Undo - restored vertex ${this.vertexIndex} at overlay ${this.overlayId}`);
+      dlog('Commands', `DeleteOverlayVertexCommand: Undo - restored vertex ${this.vertexIndex} at overlay ${this.overlayId}`);
     }
   }
 
@@ -99,10 +100,10 @@ export class DeleteOverlayVertexCommand implements ICommand {
     if (this.removedVertex) {
       // Fire-and-forget async operation
       this.overlayStore.removeVertex(this.overlayId, this.vertexIndex).catch((error: unknown) => {
-        console.error('❌ DeleteOverlayVertexCommand.redo failed:', error);
+        derr('Commands', 'DeleteOverlayVertexCommand.redo failed:', error);
       });
 
-      console.log(`↪️ DeleteOverlayVertexCommand: Redo - deleted vertex ${this.vertexIndex} at overlay ${this.overlayId}`);
+      dlog('Commands', `DeleteOverlayVertexCommand: Redo - deleted vertex ${this.vertexIndex} at overlay ${this.overlayId}`);
     }
   }
 
@@ -222,13 +223,13 @@ export class DeleteMultipleOverlayVerticesCommand implements ICommand {
 
         // Fire-and-forget async operation
         this.overlayStore.removeVertex(overlayId, vertexIndex).catch((error: unknown) => {
-          console.error(`❌ DeleteMultipleOverlayVerticesCommand.execute failed for ${overlayId}:${vertexIndex}:`, error);
+          derr('Commands', `DeleteMultipleOverlayVerticesCommand.execute failed for ${overlayId}:${vertexIndex}:`, error);
         });
       }
     }
 
     this.wasExecuted = this.removedVertices.length > 0;
-    console.log(`🗑️ DeleteMultipleOverlayVerticesCommand: Executed for ${this.removedVertices.length} vertices`);
+    dlog('Commands', `DeleteMultipleOverlayVerticesCommand: Executed for ${this.removedVertices.length} vertices`);
   }
 
   /**
@@ -246,11 +247,11 @@ export class DeleteMultipleOverlayVerticesCommand implements ICommand {
       for (const { overlayId, vertexIndex, position } of sortedForRestore) {
         // Fire-and-forget async operation
         this.overlayStore.addVertex(overlayId, vertexIndex, position).catch((error: unknown) => {
-          console.error(`❌ DeleteMultipleOverlayVerticesCommand.undo failed for ${overlayId}:${vertexIndex}:`, error);
+          derr('Commands', `DeleteMultipleOverlayVerticesCommand.undo failed for ${overlayId}:${vertexIndex}:`, error);
         });
       }
 
-      console.log(`↩️ DeleteMultipleOverlayVerticesCommand: Undo - restored ${this.removedVertices.length} vertices`);
+      dlog('Commands', `DeleteMultipleOverlayVerticesCommand: Undo - restored ${this.removedVertices.length} vertices`);
     }
   }
 
@@ -267,11 +268,11 @@ export class DeleteMultipleOverlayVerticesCommand implements ICommand {
     for (const { overlayId, vertexIndex } of sortedForDelete) {
       // Fire-and-forget async operation
       this.overlayStore.removeVertex(overlayId, vertexIndex).catch((error: unknown) => {
-        console.error(`❌ DeleteMultipleOverlayVerticesCommand.redo failed for ${overlayId}:${vertexIndex}:`, error);
+        derr('Commands', `DeleteMultipleOverlayVerticesCommand.redo failed for ${overlayId}:${vertexIndex}:`, error);
       });
     }
 
-    console.log(`↪️ DeleteMultipleOverlayVerticesCommand: Redo - deleted ${this.removedVertices.length} vertices`);
+    dlog('Commands', `DeleteMultipleOverlayVerticesCommand: Redo - deleted ${this.removedVertices.length} vertices`);
   }
 
   /**
