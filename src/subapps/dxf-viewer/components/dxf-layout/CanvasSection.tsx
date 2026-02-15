@@ -261,6 +261,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
   // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
   const draftPolygonRef = useRef<Array<[number, number]>>([]);
+  // 🏢 ENTERPRISE (2026-02-15): Ref for finishDrawingWithPolygon — avoids block-scope issues
+  // (function declared after action handlers, ref updated when function is created)
+  const finishDrawingWithPolygonRef = useRef<(polygon: Array<[number, number]>) => Promise<boolean>>(
+    async () => false
+  );
   // 🏢 ADR-047: Drawing context menu state (AutoCAD-style right-click menu)
   const [drawingContextMenu, setDrawingContextMenu] = useState<{
     isOpen: boolean;
@@ -782,31 +787,54 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, []);
 
   const handleDrawingFinish = useCallback(() => {
+    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
+    if (overlayMode === 'draw' && draftPolygonRef.current.length >= 3) {
+      finishDrawingWithPolygonRef.current(draftPolygonRef.current).then(success => {
+        if (success) setDraftPolygon([]);
+      });
+      return;
+    }
     if (drawingHandlersRef.current?.onDrawingDoubleClick) {
       drawingHandlersRef.current.onDrawingDoubleClick();
     }
-  }, []);
+  }, [overlayMode]);
 
   const handleDrawingClose = useCallback(() => {
-    // For polygon tools, close means finish with closing (same as finish)
+    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
+    if (overlayMode === 'draw' && draftPolygonRef.current.length >= 3) {
+      finishDrawingWithPolygonRef.current(draftPolygonRef.current).then(success => {
+        if (success) setDraftPolygon([]);
+      });
+      return;
+    }
     if (drawingHandlersRef.current?.onDrawingDoubleClick) {
       drawingHandlersRef.current.onDrawingDoubleClick();
     }
-  }, []);
+  }, [overlayMode]);
 
   // 🏢 ADR-053: Cancel handler using ref pattern (avoids stale closure)
   const handleDrawingCancel = useCallback(() => {
+    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
+    if (overlayMode === 'draw') {
+      setDraftPolygon([]);
+      return;
+    }
     if (drawingHandlersRef.current?.onDrawingCancel) {
       drawingHandlersRef.current.onDrawingCancel();
     }
-  }, []);
+  }, [overlayMode]);
 
   // 🏢 ADR-053: Undo last point handler using ref pattern (avoids stale closure)
   const handleDrawingUndoLastPoint = useCallback(() => {
+    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
+    if (overlayMode === 'draw') {
+      setDraftPolygon(prev => prev.slice(0, -1));
+      return;
+    }
     if (drawingHandlersRef.current?.onUndoLastPoint) {
       drawingHandlersRef.current.onUndoLastPoint();
     }
-  }, []);
+  }, [overlayMode]);
 
   // 🏢 ENTERPRISE (2026-01-31): Flip arc direction handler using ref pattern
   const handleFlipArc = useCallback(() => {
@@ -1279,10 +1307,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
 
+      // 🏢 ENTERPRISE (2026-02-15): Auto-close — click κοντά στο 1ο σημείο με 3+ σημεία → save
+      // Ίδια συμπεριφορά με DXF polygon tool (isNearFirstPoint υπολογίζεται στο useOverlayLayers)
+      if (isNearFirstPoint && draftPolygon.length >= 3) {
+        setIsSavingPolygon(true);
+        finishDrawingWithPolygon(draftPolygon).then(success => {
+          setIsSavingPolygon(false);
+          if (success) setDraftPolygon([]);
+        });
+        return;
+      }
+
       // 🏢 ADR-046: worldPoint is already in WORLD coordinates - use directly!
       const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
-
-      // 🎯 SIMPLIFIED (2026-01-24): Just add points - user saves with toolbar button
       setDraftPolygon(prev => [...prev, worldPointArray]);
       return;
     }
@@ -1376,6 +1413,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
     // Note: setDraftPolygon([]) is done in the calling setDraftPolygon callback
   };
+  // 🏢 ENTERPRISE (2026-02-15): Keep ref in sync for action handlers declared earlier
+  finishDrawingWithPolygonRef.current = finishDrawingWithPolygon;
 
   // Legacy function for Enter key support (uses current state, which is fine for keyboard)
   const finishDrawing = async () => {
@@ -1631,10 +1670,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       e.stopPropagation();
 
       // Only show OUR context menu when in drawing mode with points
-      const isDrawing = isDrawingTool(activeTool) || isMeasurementTool(activeTool);
-      const hasPoints = (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
+      // Path 1: Unified drawing tools (DXF polygon, measure-area, etc.)
+      const isUnifiedDrawing = isDrawingTool(activeTool) || isMeasurementTool(activeTool);
+      const hasUnifiedPoints = (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
+      // Path 2: Overlay polygon drawing (draftPolygon system)
+      const isOverlayDrawing = overlayMode === 'draw';
+      const hasOverlayPoints = draftPolygonRef.current.length > 0;
 
-      if (isDrawing && hasPoints) {
+      if ((isUnifiedDrawing && hasUnifiedPoints) || (isOverlayDrawing && hasOverlayPoints)) {
         setDrawingContextMenu({
           isOpen: true,
           position: { x: e.clientX, y: e.clientY },
@@ -1648,7 +1691,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool]);
+  }, [activeTool, overlayMode]);
 
   // ❌ REMOVED: Duplicate zoom handlers - now using centralized zoomSystem.handleKeyboardZoom()
   // All keyboard zoom is handled through the unified system in the keyboard event handler above
@@ -2099,8 +2142,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             isOpen={drawingContextMenu.isOpen}
             onOpenChange={handleDrawingContextMenuClose}
             position={drawingContextMenu.position}
-            activeTool={activeTool}
-            pointCount={drawingHandlers?.drawingState?.tempPoints?.length ?? 0}
+            activeTool={overlayMode === 'draw' ? 'polygon' : activeTool}
+            pointCount={
+              overlayMode === 'draw'
+                ? draftPolygon.length
+                : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)
+            }
             onFinish={handleDrawingFinish}
             onClose={handleDrawingClose}
             onUndoLastPoint={handleDrawingUndoLastPoint}

@@ -1,20 +1,17 @@
 {
   "category": "FEATURE",
-  "shortDescription": "Unified hover highlighting — DXF entities, overlays & measurements",
-  "problem": "Overlay polygons, angle measurements, and area measurements (closed polylines) did not highlight on mouse hover. Only DXF line entities had hover support.",
-  "cause": "1) HitTester switch/case missing 'angle-measurement' type | 2) hitTestPolyline only tested edge proximity, not polygon interior for closed polylines | 3) LayerRenderer had no hover glow rendering | 4) No hover detection pipeline existed for overlay polygons",
+  "shortDescription": "AutoCAD-style grip interaction for DXF entities — drag preview, state machine & wiring",
+  "problem": "Grips appeared on selected DXF entities (blue squares) but had zero interactivity — no hover color change, no click activation, no drag-to-move capability.",
+  "cause": "The rendering pipeline for grip temperature (cold/warm/hot) existed but was never connected to user interaction. No hook managed the grip state machine (idle→hovering→warm→following→commit/cancel) and no CanvasSection wiring passed interaction state to the renderer.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts",
-    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/layer-types.ts",
-    "src/subapps/dxf-viewer/hooks/layers/useOverlayLayers.ts",
-    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts",
-    "src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts",
-    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx",
+    "src/subapps/dxf-viewer/hooks/useDxfGripInteraction.ts",
+    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-types.ts",
+    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts",
     "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx"
   ],
-  "solution": "Phase 1: Added hitTestAngleMeasurement() for angle measurement arms + fixed hitTestPolyline to test closing edge + interior with isPointInPolygon for closed polylines | Phase 2: Added isHovered to ColorLayer type, mapped hoveredOverlayId in useOverlayLayers, rendered yellow glow in LayerRenderer | Phase 3: Extended useCentralizedMouseHandlers with unified hover pipeline (DXF > overlay priority), wired onHoverOverlay through DxfCanvas to CanvasSection state",
+  "solution": "Phase 1: Created useDxfGripInteraction hook (622 lines) — full state machine with computeDxfEntityGrips(), 1s warm timer, click-to-activate, click-to-commit, Escape/right-click cancel, MoveVertexCommand for stretch, useMoveEntities for move | Phase 2: Extended DxfRenderOptions with gripInteractionState + dragPreview types | Phase 3: DxfRenderer.applyDragPreview() clones entity geometry with delta for live preview (move entire entity or stretch single vertex) | Phase 4: Wired hook into CanvasSection — grip click priority over drawing tools, Escape handler, mouse move hover detection, renderOptions pass-through",
   "testing": "TypeScript compilation: 0 errors (npx tsc --noEmit)",
-  "notes": "Unified hover pipeline: DXF entities have higher priority than overlays. When DXF entity is hovered, overlay hover is cleared. Overlay detection uses isPointInPolygon from centralized GeometryUtils. Reverse zIndex iteration ensures top layer hit first.",
+  "notes": "Grip types: vertex grips stretch (MoveVertexCommand via Command Pattern for undo), edge/midpoint grips move entire entity (useMoveEntities). Live preview via entity cloning in DxfRenderer — original entity never mutated until commit. GripInteractionState field naming: hook uses hoveredGrip/activeGrip, pipeline uses hovered/active — mapping done in DxfRenderer.render().",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -23,8 +20,12 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "32b21b58",
-      "message": "feat(dxf-viewer): unified hover highlighting for DXF entities, overlays & measurements"
+      "hash": "7b1ac7f7",
+      "message": "feat(dxf-viewer): add grip editing infrastructure — drag preview, grip interaction state & hook"
+    },
+    {
+      "hash": "9aa55f98",
+      "message": "feat(dxf-viewer): wire grip interaction hook into CanvasSection for AutoCAD-style editing"
     }
   ]
 }
