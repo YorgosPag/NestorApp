@@ -6,7 +6,7 @@
 import { FirestoreProjectsRepository } from './projects/repositories/FirestoreProjectsRepository';
 import { FirestoreProjectsRepository as NewFirestoreRepo } from './projects/repositories/projects-repository';
 import { ProjectsService } from './projects/services/ProjectsService';
-import type { ProjectStatus } from '@/types/project';
+import type { ProjectUpdatePayload } from '@/types/project';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectsServerAction');
@@ -56,7 +56,7 @@ export async function debugProjectData(projectId: string) {
  */
 export async function updateProject(
     projectId: string,
-    updates: { name?: string; title?: string; status?: ProjectStatus }
+    updates: ProjectUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
     try {
         logger.info(`updateProject called`, { projectId });

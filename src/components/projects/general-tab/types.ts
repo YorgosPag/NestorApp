@@ -1,4 +1,11 @@
-import type { Project, ProjectStatus } from "@/types/project";
+import type {
+  Project,
+  ProjectStatus,
+  ProjectType,
+  ProjectPriority,
+  ProjectRiskLevel,
+  ProjectComplexity,
+} from "@/types/project";
 import type { ProjectStats } from "@/types/project";
 
 export interface GeneralProjectTabProps {
@@ -6,6 +13,7 @@ export interface GeneralProjectTabProps {
 }
 
 export interface ProjectFormData {
+  // Βασικά πεδία
   name: string;
   licenseTitle: string;
   description: string;
@@ -19,6 +27,26 @@ export interface ProjectFormData {
   floorPlanPath: string;
   percentagesPath: string;
   companyName: string;
+  // Λεπτομέρειες (inline editing — moved from modal)
+  type: ProjectType | '';
+  priority: ProjectPriority | '';
+  riskLevel: ProjectRiskLevel | '';
+  complexity: ProjectComplexity | '';
+  budget: number | '';
+  totalValue: number | '';
+  totalArea: number | '';
+  duration: number | '';
+  startDate: string;
+  completionDate: string;
+  client: string;
+  location: string;
+  // Χαρακτηριστικά (booleans — moved from modal)
+  hasPermits: boolean;
+  hasFinancing: boolean;
+  isEcological: boolean;
+  hasSubcontractors: boolean;
+  isActive: boolean;
+  hasIssues: boolean;
 }
 
 export interface ProjectCustomersTableProps {

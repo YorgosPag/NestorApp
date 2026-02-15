@@ -22,6 +22,8 @@ import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
 import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 import { ProjectAttachmentsTab } from '../ProjectAttachmentsTab';
 import { ProjectStructureTab } from '../tabs/ProjectStructureTab';
+import { ProjectDetailsSubTab } from './parts/ProjectDetailsSubTab';
+import { ProjectFeaturesSubTab } from './parts/ProjectFeaturesSubTab';
 import MapTabContent from '../../building-management/tabs/MapTabContent';
 
 import { useProjectStats } from './hooks/useProjectStats';
@@ -51,9 +53,10 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   const colors = useSemanticColors();
   const [isEditing, setIsEditing] = useState(false);
   const [projectData, setProjectData] = useState<ProjectFormData>({
+    // Βασικά πεδία
     name: project.name,
     licenseTitle: project.title,
-    description: t('generalTab.defaultDescription'),
+    description: project.description || t('generalTab.defaultDescription'),
     buildingBlock: '10',
     protocolNumber: '',
     licenseNumber: '5142/24-10-2001',
@@ -64,6 +67,26 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     floorPlanPath: '\\\\Server\\shared\\6. erga\\TEST\\SSSSSS.pdf',
     percentagesPath: '\\\\Server\\shared\\6. erga\\TEST\\SSSSSSSS.xls',
     companyName: project.companyName,
+    // Λεπτομέρειες (from project entity)
+    type: project.type || '',
+    priority: project.priority || '',
+    riskLevel: project.riskLevel || '',
+    complexity: project.complexity || '',
+    budget: project.budget || '',
+    totalValue: project.totalValue || '',
+    totalArea: project.totalArea || '',
+    duration: project.duration || '',
+    startDate: project.startDate || '',
+    completionDate: project.completionDate || '',
+    client: project.client || '',
+    location: project.location || '',
+    // Χαρακτηριστικά (booleans)
+    hasPermits: project.hasPermits || false,
+    hasFinancing: project.hasFinancing || false,
+    isEcological: project.isEcological || false,
+    hasSubcontractors: project.hasSubcontractors || false,
+    isActive: project.isActive ?? true,
+    hasIssues: project.hasIssues || false,
   });
 
   const { stats, loading: loadingStats } = useProjectStats(project.id);
@@ -75,12 +98,31 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   };
 
   useEffect(() => {
-    setProjectData(prev => ({ 
-      ...prev, 
-      name: project.name, 
-      licenseTitle: project.title, 
-      status: project.status, 
-      companyName: project.companyName 
+    setProjectData(prev => ({
+      ...prev,
+      name: project.name,
+      licenseTitle: project.title,
+      status: project.status,
+      companyName: project.companyName,
+      description: project.description || prev.description,
+      type: project.type || '',
+      priority: project.priority || '',
+      riskLevel: project.riskLevel || '',
+      complexity: project.complexity || '',
+      budget: project.budget || '',
+      totalValue: project.totalValue || '',
+      totalArea: project.totalArea || '',
+      duration: project.duration || '',
+      startDate: project.startDate || '',
+      completionDate: project.completionDate || '',
+      client: project.client || '',
+      location: project.location || '',
+      hasPermits: project.hasPermits || false,
+      hasFinancing: project.hasFinancing || false,
+      isEcological: project.isEcological || false,
+      hasSubcontractors: project.hasSubcontractors || false,
+      isActive: project.isActive ?? true,
+      hasIssues: project.hasIssues || false,
     }));
   }, [project]);
 
@@ -101,15 +143,35 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       setSaveError(null);
       logger.info('Saving project via Server Action...', { data: projectData });
 
-      // 🏢 ENTERPRISE: Call server action with update payload
-      const result = await updateProject(project.id, {
+      // 🏢 ENTERPRISE: Build update payload with ALL modified fields
+      const updatePayload: Parameters<typeof updateProject>[1] = {
         name: projectData.name,
         title: projectData.licenseTitle,
         status: projectData.status,
-      });
+        description: projectData.description,
+        client: projectData.client || undefined,
+        location: projectData.location || undefined,
+        type: projectData.type || undefined,
+        priority: projectData.priority || undefined,
+        riskLevel: projectData.riskLevel || undefined,
+        complexity: projectData.complexity || undefined,
+        budget: typeof projectData.budget === 'number' ? projectData.budget : undefined,
+        totalValue: typeof projectData.totalValue === 'number' ? projectData.totalValue : undefined,
+        totalArea: typeof projectData.totalArea === 'number' ? projectData.totalArea : undefined,
+        duration: typeof projectData.duration === 'number' ? projectData.duration : undefined,
+        startDate: projectData.startDate || undefined,
+        completionDate: projectData.completionDate || undefined,
+        hasPermits: projectData.hasPermits,
+        hasFinancing: projectData.hasFinancing,
+        isEcological: projectData.isEcological,
+        hasSubcontractors: projectData.hasSubcontractors,
+        isActive: projectData.isActive,
+        hasIssues: projectData.hasIssues,
+      };
+
+      const result = await updateProject(project.id, updatePayload);
 
       if (!result.success) {
-        // 🏢 ENTERPRISE: Handle server-side validation errors
         throw new Error(result.error || 'Failed to save project');
       }
 
@@ -117,7 +179,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       setIsEditing(false);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
-      // Single source of truth for project updates across all pages
       RealtimeService.dispatchProjectUpdated({
         projectId: project.id,
         updates: {
@@ -221,6 +282,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       <Tabs defaultValue="basic-info" className="w-full">
         <TabsList className={cn("flex flex-wrap w-full h-auto min-h-fit", spacing.gap.sm)}>
           <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>{t('generalTab.tabs.basicInfo')}</TabsTrigger>
+          <TabsTrigger value="details" className={themeConfig.tabTrigger}>{t('generalTab.tabs.details')}</TabsTrigger>
+          <TabsTrigger value="features" className={themeConfig.tabTrigger}>{t('generalTab.tabs.features')}</TabsTrigger>
           <TabsTrigger value="structure" className={themeConfig.tabTrigger}>{t('generalTab.tabs.structure')}</TabsTrigger>
           <TabsTrigger value="location" className={themeConfig.tabTrigger}>{t('generalTab.tabs.location')}</TabsTrigger>
           <TabsTrigger value="permits" className={themeConfig.tabTrigger}>{t('generalTab.tabs.permits')}</TabsTrigger>
@@ -237,7 +300,23 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           <ProjectBuildingsCard projectId={project.id} />
           <ProjectCustomersTable projectId={project.id} />
         </TabsContent>
-        
+
+        <TabsContent value="details" className={spacing.padding.top.md}>
+          <ProjectDetailsSubTab
+            data={projectData}
+            setData={setProjectData}
+            isEditing={isEditing}
+          />
+        </TabsContent>
+
+        <TabsContent value="features" className={spacing.padding.top.md}>
+          <ProjectFeaturesSubTab
+            data={projectData}
+            setData={setProjectData}
+            isEditing={isEditing}
+          />
+        </TabsContent>
+
         <TabsContent value="structure" className={spacing.padding.top.md}>
           <ProjectStructureTab projectId={project.id} />
         </TabsContent>
