@@ -4,6 +4,8 @@
 import { PropertyStatus, ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS, DEFAULT_PROPERTY_STATUS } from '../../../constants/property-statuses-enterprise';
 // 🏢 ADR-044: Centralized line widths (import at top of file to avoid hoisting issues)
 import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
+// 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
+import { EventBus } from '../systems/events';
 
 export type Scope = 'project' | 'building' | 'floor' | 'unit' | 'parking' | 'storage';
 export type OverlayKind = 'unit' | 'parking' | 'storage' | 'footprint';
@@ -181,10 +183,8 @@ export const createOverlayHandlers = (overlayStore: {
       levelSwitcher.setCurrentLevel(overlayLevelId);
 
       // 🔥 MISSING STEP: Καλώ τα ίδια functions που καλεί το level card click!
-      // Dispatch του ίδιου event που στέλνει το level card click
-      window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
-        detail: { levelId: overlayLevelId, source: 'overlay-click' }
-      }));
+      // 🏢 ENTERPRISE: Unified EventBus dispatch (type-safe, reaches EventBus.on listeners)
+      EventBus.emit('level-panel:layering-activate', { levelId: overlayLevelId, source: 'overlay-click' });
     }
   },
   handleOverlayEdit: (id: string) => {

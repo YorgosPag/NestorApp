@@ -9,6 +9,8 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import type { ViewTransform } from '../rendering/types/Types';
+// 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
+import { EventBus } from '../systems/events';
 
 // ✅ ENTERPRISE: Window interface extension for legacy support
 declare global {
@@ -69,12 +71,8 @@ export function TransformProvider({
       window.dxfTransform = newTransform;
     }
 
-    // ✅ EVENT DISPATCH: Για components που ακούν events
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('dxf-zoom-changed', {
-        detail: { transform: newTransform }
-      }));
-    }
+    // ✅ EVENT DISPATCH: Unified EventBus — reaches both EventBus.on AND window CustomEvent listeners
+    EventBus.emit('dxf-zoom-changed', { transform: newTransform });
   }, []);
 
   // ✅ EXPOSE setTransform: Κάλεσε το callback για να δώσεις access στον parent
@@ -92,10 +90,9 @@ export function TransformProvider({
       // Same side effects as setTransform
       if (typeof window !== 'undefined') {
         window.dxfTransform = newTransform;
-        window.dispatchEvent(new CustomEvent('dxf-zoom-changed', {
-          detail: { transform: newTransform }
-        }));
       }
+      // 🏢 ENTERPRISE: Unified EventBus — reaches both EventBus.on AND window CustomEvent listeners
+      EventBus.emit('dxf-zoom-changed', { transform: newTransform });
 
       return newTransform;
     });

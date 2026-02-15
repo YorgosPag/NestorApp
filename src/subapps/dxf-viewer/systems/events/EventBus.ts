@@ -54,6 +54,11 @@ export interface DrawingEventMap {
   };
   'level-panel:layering-activate': {
     levelId: string;
+    source?: string; // 'overlay-click' | 'card' | undefined
+  };
+  'canvas-fit-to-view': {
+    source?: string; // 'middle-double-click' | 'keyboard' | 'auto' | undefined
+    viewport?: { width: number; height: number };
   };
   'overlay:polygon-update': {
     regionId: string;

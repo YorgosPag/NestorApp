@@ -16,6 +16,8 @@ import { useCanvasContext } from '../contexts/CanvasContext';
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../systems/selection';
+// 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
+import { EventBus } from '../systems/events';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -107,10 +109,11 @@ export const useKeyboardShortcuts = ({
       if (matchesShortcut(e, 'fitToView')) {
         if (inputFocused || !zoomManager) return;
         e.preventDefault();
-        const event = new CustomEvent('canvas-fit-to-view', {
-          detail: { viewport: { width: window.innerWidth, height: window.innerHeight } }
+        // 🏢 ENTERPRISE: Unified EventBus — reaches both EventBus.on AND window CustomEvent listeners
+        EventBus.emit('canvas-fit-to-view', {
+          source: 'keyboard',
+          viewport: { width: window.innerWidth, height: window.innerHeight }
         });
-        document.dispatchEvent(event);
         return;
       }
 

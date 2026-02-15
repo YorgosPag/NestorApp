@@ -30,6 +30,8 @@ import { clamp } from '../../rendering/entities/shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE (2026-02-15): Point-in-polygon for overlay hover detection
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+// 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
+import { EventBus } from '../../systems/events';
 
 // 🏢 ENTERPRISE: Type-safe snap result interface
 export interface SnapResultItem {
@@ -219,12 +221,8 @@ export function useCentralizedMouseHandlers({
 
       if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD) {
         // 🎯 DOUBLE CLICK DETECTED! Trigger Fit to View
-        // Dispatch fit-to-view event
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('canvas-fit-to-view', {
-            detail: { source: 'middle-double-click' }
-          }));
-        }
+        // 🏢 ENTERPRISE: Unified EventBus — reaches both EventBus.on AND window CustomEvent listeners
+        EventBus.emit('canvas-fit-to-view', { source: 'middle-double-click' });
 
         // Reset click count
         middleClickRef.current.clickCount = 0;

@@ -6,6 +6,8 @@
 const DEBUG_LEVEL_PANEL = false;
 
 import React, { useState, useMemo, useCallback } from 'react';
+// 🏢 ENTERPRISE: Unified EventBus for type-safe event coordination
+import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
 import { Plus } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
@@ -251,24 +253,13 @@ export function LevelPanel({
   }, [updateGripSettings]);
 
   // ✅ EVENT LISTENER: Ακούω για το layering activate event από overlay clicks
+  // 🏢 ENTERPRISE: Unified EventBus.on — receives events from both EventBus.emit AND window CustomEvent
   React.useEffect(() => {
-    const handleLayeringActivateEvent = (event: CustomEvent) => {
-      console.debug('🎯 RECEIVED LAYERING ACTIVATE EVENT:', event.detail);
-
-      // Καλώ την ίδια function που καλείται στο level card click
+    const cleanup = EventBus.on('level-panel:layering-activate', () => {
       handleLayeringActivation();
-
-      console.debug('✅ LAYERING ACTIVATION COMPLETED FROM EVENT');
-    };
-
-    // Προσθήκη event listener
-    window.addEventListener('level-panel:layering-activate', handleLayeringActivateEvent as EventListener);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('level-panel:layering-activate', handleLayeringActivateEvent as EventListener);
-    };
-  }, [handleLayeringActivation]); // Dependency στη function για να αναδημιουργηθεί αν αλλάξει
+    });
+    return cleanup;
+  }, [handleLayeringActivation]);
 
   return (
     <div className={`${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.BASE} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.PADDING} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}`}>
@@ -328,9 +319,7 @@ export function LevelPanel({
                 onSelect={() => {
                   setCurrentLevel(level.id);
                   if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
-                  window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
-                    detail: { levelId: level.id, origin: 'card' }
-                  }));
+                  EventBus.emit('level-panel:layering-activate', { levelId: level.id, source: 'card' });
                 }}
                 onEdit={(e) => {
                   e.stopPropagation();

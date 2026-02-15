@@ -6,6 +6,8 @@
  */
 
 import React from 'react';
+// 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
+import { EventBus } from '../../systems/events';
 import { LazyPanelWrapper } from '../components/shared';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -95,7 +97,7 @@ export function usePanelContentRenderer({
               onLayersMerge={layerOperations.handleLayersMerge}
               onColorGroupsMerge={layerOperations.handleColorGroupsMerge}
               onToolChange={(tool: ToolType) => {
-                window.dispatchEvent(new CustomEvent('level-panel:tool-change', { detail: tool }));
+                EventBus.emit('level-panel:tool-change', tool);
               }}
             />
           </LazyPanelWrapper>

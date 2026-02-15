@@ -21,6 +21,8 @@ import { useCanvasContext } from '../../contexts/CanvasContext';
 import { ZOOM_FACTORS } from '../../config/transform-config';
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
 import { worldToScreenSimple, screenToWorldSimple } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
+import { EventBus } from '../../systems/events';
 
 export interface CanvasOperations {
   getCanvas: () => HTMLCanvasElement | null;
@@ -109,11 +111,8 @@ export const useCanvasOperations = (): CanvasOperations => {
       // Overlay canvas transforms handled by context
     }
 
-    // Emit zoom event for HUD synchronization
-    const zoomEvent = new CustomEvent('dxf-zoom-changed', {
-      detail: { scale: transform.scale, transform }
-    });
-    document.dispatchEvent(zoomEvent);
+    // 🏢 ENTERPRISE: Unified EventBus — reaches both EventBus.on AND window CustomEvent listeners
+    EventBus.emit('dxf-zoom-changed', { transform });
   }, [context]);
 
   // ✅ ENTERPRISE: Helper to get canvas center point

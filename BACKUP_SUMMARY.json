@@ -1,17 +1,15 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "AutoCAD-style grip interaction for DXF entities — drag preview, state machine & wiring",
-  "problem": "Grips appeared on selected DXF entities (blue squares) but had zero interactivity — no hover color change, no click activation, no drag-to-move capability.",
-  "cause": "The rendering pipeline for grip temperature (cold/warm/hot) existed but was never connected to user interaction. No hook managed the grip state machine (idle→hovering→warm→following→commit/cancel) and no CanvasSection wiring passed interaction state to the renderer.",
+  "category": "FIX",
+  "shortDescription": "Click position now matches crosshair center in overlay draw mode",
+  "problem": "When drawing colored layers (overlay draw mode), the click position did not align with the crosshair center. Vertices appeared at a slightly different position than where the user aimed.",
+  "cause": "Three different DOM elements were used as coordinate sources: (1) Crosshair used container div position (overwritten by bubbling in useCanvasMouse), (2) Click used DxfCanvas position (e.currentTarget in useCentralizedMouseHandlers), (3) Render used LayerCanvas dimensions (canvasBoundsService.refreshBounds). Subpixel differences between these elements caused misalignment in the screenToWorld/worldToScreen formulas.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/hooks/useDxfGripInteraction.ts",
-    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-types.ts",
-    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts",
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx"
+    "src/subapps/dxf-viewer/hooks/canvas/useCanvasMouse.ts",
+    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts"
   ],
-  "solution": "Phase 1: Created useDxfGripInteraction hook (622 lines) — full state machine with computeDxfEntityGrips(), 1s warm timer, click-to-activate, click-to-commit, Escape/right-click cancel, MoveVertexCommand for stretch, useMoveEntities for move | Phase 2: Extended DxfRenderOptions with gripInteractionState + dragPreview types | Phase 3: DxfRenderer.applyDragPreview() clones entity geometry with delta for live preview (move entire entity or stretch single vertex) | Phase 4: Wired hook into CanvasSection — grip click priority over drawing tools, Escape handler, mouse move hover detection, renderOptions pass-through",
-  "testing": "TypeScript compilation: 0 errors (npx tsc --noEmit)",
-  "notes": "Grip types: vertex grips stretch (MoveVertexCommand via Command Pattern for undo), edge/midpoint grips move entire entity (useMoveEntities). Live preview via entity cloning in DxfRenderer — original entity never mutated until commit. GripInteractionState field naming: hook uses hoveredGrip/activeGrip, pipeline uses hovered/active — mapping done in DxfRenderer.render().",
+  "solution": "Phase 1: Removed duplicate setImmediatePosition(screenPos) from container mousemove handler (useCanvasMouse.ts:320) — DxfCanvas handler already sets it, container handler was overwriting with container-relative coords due to event bubbling. Phase 2: Changed renderUnified/renderLegacy in LayerRenderer.ts to use the viewport parameter (container-based SSoT) instead of actualViewport (LayerCanvas element) for coordinate transforms, so worldToScreen uses the same viewport as screenToWorld (click handler).",
+  "testing": "TypeScript compilation check passed (0 new errors). Verification steps: overlay draw vertices should align with crosshair center, DXF polygon tool vertices match crosshair, zoom/pan consistency maintained, snap indicators correct.",
+  "notes": "actualViewport still used for clearRect (needs actual canvas pixel dimensions). The setImmediatePosition(null) call in handleContainerMouseLeave is preserved for cleanup.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -20,12 +18,8 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "7b1ac7f7",
-      "message": "feat(dxf-viewer): add grip editing infrastructure — drag preview, grip interaction state & hook"
-    },
-    {
-      "hash": "9aa55f98",
-      "message": "feat(dxf-viewer): wire grip interaction hook into CanvasSection for AutoCAD-style editing"
+      "hash": "5b0bf282",
+      "message": "fix(dxf-viewer): align crosshair, click, and render to same coordinate source"
     }
   ]
 }

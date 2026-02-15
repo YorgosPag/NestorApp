@@ -75,7 +75,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 PDF BACKGROUND: Enterprise PDF background system
 import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background';
 // 🎯 EVENT BUS: For polygon drawing communication with toolbar
-import { useEventBus } from '../../systems/events';
+import { EventBus, useEventBus } from '../../systems/events';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
 // 🏢 ENTERPRISE (2026-01-31): Circle TTT and Line tools now managed by useSpecialTools hook
@@ -1453,8 +1453,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [eventBus]);
 
   // Handle fit-to-view event from useCanvasOperations fallback
+  // 🏢 ENTERPRISE: Unified EventBus.on — receives events from all dispatchers
   React.useEffect(() => {
-    const handleFitToView = (e: CustomEvent) => {
+    const handleFitToView = () => {
       // 🚀 USE COMBINED BOUNDS - DXF + overlays
       // 🏢 FIX (2026-01-04): forceRecalculate=true includes dynamically drawn entities
       const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
@@ -1491,8 +1492,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
     };
 
-    document.addEventListener('canvas-fit-to-view', handleFitToView as EventListener);
-    return () => document.removeEventListener('canvas-fit-to-view', handleFitToView as EventListener);
+    const cleanup = EventBus.on('canvas-fit-to-view', handleFitToView);
+    return cleanup;
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
   // 🏢 ENTERPRISE (2026-01-26): Smart Delete Handler - ADR-032
