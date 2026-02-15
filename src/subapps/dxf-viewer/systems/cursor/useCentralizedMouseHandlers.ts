@@ -88,6 +88,10 @@ interface CentralizedMouseHandlersProps {
   onHoverEntity?: (entityId: string | null) => void;
   // 🏢 ENTERPRISE (2026-02-15): Overlay polygon hover highlighting (unified pipeline)
   onHoverOverlay?: (overlayId: string | null) => void;
+  // 🏢 ENTERPRISE (2026-02-15): Grip drag-release callbacks
+  // Return true = consumed (skip default behavior like marquee start or click processing)
+  onGripMouseDown?: (worldPos: Point2D) => boolean;
+  onGripMouseUp?: (worldPos: Point2D) => boolean;
 }
 
 /**
@@ -114,7 +118,9 @@ export function useCentralizedMouseHandlers({
   onDrawingHover, // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
   onEntitiesSelected, // 🏢 ENTERPRISE (2026-02-13): DXF entity marquee selection callback
   onHoverEntity, // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
-  onHoverOverlay // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting
+  onHoverOverlay, // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting
+  onGripMouseDown, // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseDown
+  onGripMouseUp // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseUp
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -262,6 +268,12 @@ export function useCentralizedMouseHandlers({
     const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
     cursor.updateWorldPosition(worldPos);
 
+    // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseDown on a hovering/warm grip
+    // If consumed, skip entity select + marquee start (grip drag takes priority)
+    if (e.button === 0 && onGripMouseDown && onGripMouseDown(worldPos)) {
+      return; // Grip drag started — skip all further processing
+    }
+
     // Hit test for entity selection using provided callback
     if (hitTestCallback && onEntitySelect) {
       const hitEntityId = hitTestCallback(scene, screenPos, transform, snap.viewport);
@@ -276,7 +288,7 @@ export function useCentralizedMouseHandlers({
     if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging) {
       cursor.startSelection(screenPos);
     }
-  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging]);
+  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);
 
   // 🚀 MOUSE MOVE HANDLER - HIGH PERFORMANCE CAD-style tracking
   // 🏢 ENTERPRISE (2026-01-27): Optimized to reduce React re-renders
@@ -530,6 +542,21 @@ export function useCentralizedMouseHandlers({
       }
     }
 
+    // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseUp commits grip drag
+    // Must be checked BEFORE all click/selection logic
+    if (e.button === 0 && onGripMouseUp) {
+      const upSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+      if (upSnap) {
+        const upScreenPos = getScreenPosFromEvent(e, upSnap);
+        const upWorldPos = screenToWorldWithSnapshot(upScreenPos, transform, upSnap);
+        if (onGripMouseUp(upWorldPos)) {
+          // Grip drag committed — skip all further processing
+          cursor.endSelection();
+          return;
+        }
+      }
+    }
+
     // 🎯 DRAWING TOOLS: Call onCanvasClick if provided (for drawing tools like Line, Circle, etc.)
     // 🏢 ENTERPRISE FIX (2026-01-06): Apply snap to click position for accurate drawing
     // 🏢 ENTERPRISE FIX (2026-01-25): Only LEFT click (button === 0) triggers drawing
@@ -644,10 +671,12 @@ export function useCentralizedMouseHandlers({
           if (isSmallSelection) {
             // 🏢 SSoT (2026-02-15): Unified point-click pipeline
             // Priority: overlay polygon → DXF entity (via HitTester) → fallback canvasClick
-            const canvas = canvasRef?.current ?? null;
-            const hitTestSnap = getPointerSnapshotFromElement(canvas);
+            // 🏢 FIX (2026-02-15): Use fresh event coordinates — cursor.position is ~50ms stale (React throttled)
+            // Same pattern as direct-click path (line 559): snapshot from the element that produced the event
+            const hitTestSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
             if (!hitTestSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
-            const worldPoint = screenToWorldWithSnapshot(cursor.position, transform, hitTestSnap);
+            const freshScreenPos = getScreenPosFromEvent(e, hitTestSnap);
+            const worldPoint = screenToWorldWithSnapshot(freshScreenPos, transform, hitTestSnap);
 
             // Step 1: Check overlay polygons (point-in-polygon)
             let hitLayerId: string | null = null;
@@ -685,11 +714,11 @@ export function useCentralizedMouseHandlers({
               if (hasMultiCallback) {
                 onMultiLayerSelected([hitLayerId]);
               } else if (hasSingleCallback) {
-                onLayerSelected(hitLayerId, cursor.position);
+                onLayerSelected(hitLayerId, freshScreenPos);
               }
             } else if (hitTestCallback && onEntitySelect) {
               // Step 2: SSoT entity hit-test via HitTester (same pipeline as hover)
-              const hitResult = hitTestCallback(scene, cursor.position, transform, hitTestSnap.viewport);
+              const hitResult = hitTestCallback(scene, freshScreenPos, transform, hitTestSnap.viewport);
               if (hitResult) {
                 onEntitySelect(hitResult);
               }
@@ -709,12 +738,12 @@ export function useCentralizedMouseHandlers({
           } else {
             // 🏢 ENTERPRISE (2026-01-25): When marquee selects nothing, trigger canvas click for deselection
             // 🏢 ADR-046: Convert to WORLD coordinates before calling onCanvasClick
-            if (onCanvasClick && cursor.position) {
-              // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot for consistent transforms
-              const canvas = canvasRef?.current ?? null;
-              const clickSnap = getPointerSnapshotFromElement(canvas);
-              if (!clickSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
-              const worldPt = screenToWorldWithSnapshot(cursor.position, transform, clickSnap);
+            // 🏢 FIX (2026-02-15): Use fresh event coordinates — cursor.position is ~50ms stale
+            if (onCanvasClick) {
+              const emptySnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+              if (!emptySnap) return;
+              const emptyScreenPos = getScreenPosFromEvent(e, emptySnap);
+              const worldPt = screenToWorldWithSnapshot(emptyScreenPos, transform, emptySnap);
               onCanvasClick(worldPt);
             }
           }
@@ -737,7 +766,7 @@ export function useCentralizedMouseHandlers({
     } else {
       // Selection debug disabled for performance
     }
-  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, snapEnabled, findSnapPoint]);
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, snapEnabled, findSnapPoint, onGripMouseUp]);
 
   // 🚀 MOUSE LEAVE HANDLER - CAD-style area detection with pan cleanup
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {

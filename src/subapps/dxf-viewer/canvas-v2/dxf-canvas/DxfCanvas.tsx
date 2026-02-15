@@ -75,6 +75,9 @@ interface DxfCanvasProps {
   onHoverEntity?: (entityId: string | null) => void;
   // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting callback
   onHoverOverlay?: (overlayId: string | null) => void;
+  // 🏢 ENTERPRISE (2026-02-15): Grip drag-release callbacks
+  onGripMouseDown?: (worldPos: Point2D) => boolean;
+  onGripMouseUp?: (worldPos: Point2D) => boolean;
 }
 
 export interface DxfCanvasRef {
@@ -111,6 +114,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   isGripDragging = false,
   onHoverEntity,
   onHoverOverlay,
+  onGripMouseDown,
+  onGripMouseUp,
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -221,6 +226,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     isGripDragging,
     onHoverEntity,
     onHoverOverlay,
+    onGripMouseDown,
+    onGripMouseUp,
     hitTestCallback: (scene, screenPos, transform, viewport) => {
       try {
         // ✅ ENTERPRISE MIGRATION: Get service from registry

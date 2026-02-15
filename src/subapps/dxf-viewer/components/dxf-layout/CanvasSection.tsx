@@ -1797,7 +1797,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                     }
                   : null
               }
-              onMouseMove={(screenPoint) => {
+              onMouseMove={(screenPoint, worldPointFromHandler) => {
                 // 🚀 PERFORMANCE (2026-01-27): ENTERPRISE OPTIMIZATION
                 // Reduced unnecessary work in mousemove handler to achieve <16ms per frame
 
@@ -1828,12 +1828,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
                 // Now do the throttled work
                 updateMouseCss(screenPoint);
-                // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = containerRef (SSoT)
-                // All viewport calculations use container for consistency
-                const container = containerRef.current;
-                const snap = getPointerSnapshotFromElement(container);
-                if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid viewport
-                const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, snap.viewport);
+                // 🏢 FIX (2026-02-15): Use pre-calculated worldPoint from useCentralizedMouseHandlers
+                // BEFORE: Recalculated via containerRef (different element rect → Y-offset mismatch)
+                // AFTER: Use worldPoint computed from the SAME element that produced screenPoint (SSoT)
+                const worldPoint = worldPointFromHandler;
                 updateMouseWorld(worldPoint);
                 throttle.lastWorldPoint = worldPoint;
 
@@ -2023,7 +2021,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   entitySelectedOnMouseDownRef.current = false;
                 }
               }}
-              isGripDragging={draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null}
+              isGripDragging={draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null || dxfGripInteraction.isDraggingGrip}
+              // 🏢 ENTERPRISE (2026-02-15): Grip drag-release model — wire mouseDown/mouseUp
+              onGripMouseDown={(worldPos) => dxfGripInteraction.handleGripMouseDown(worldPos)}
+              onGripMouseUp={(worldPos) => dxfGripInteraction.handleGripMouseUp(worldPos)}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
               onContextMenu={handleDrawingContextMenu} // 🏢 ADR-053: Right-click context menu

@@ -3,20 +3,22 @@
  *
  * AutoCAD-style grip editing for DXF entities.
  *
+ * 🏢 (2026-02-15): Drag-release model (replaces click-commit)
+ *
  * State machine:
- *   idle ──[cursor near grip]──→ hovering (start 1s timer)
+ *   idle ──[cursor near grip]──→ hovering (cold blue, start 1s timer)
  *     ↑                              │
  *     │ [cursor leaves]              ↓ [timer expires]
  *     └──────────────────────── warm (visual: orange)
  *                                    │
- *                             [click on grip]
+ *                             [mouseDown on grip]
  *                                    ↓
- *                              following (hot: red, entity/vertex follows cursor)
+ *                              dragging (hot: red, entity/vertex follows cursor)
  *                                    │
  *                   ┌────────────────┼────────────────┐
  *                   ↓                ↓                 ↓
- *             [click again]     [Escape]          [right-click]
- *             commit pos.      cancel+revert     cancel+revert
+ *              [mouseUp]       [Escape]          [right-click]
+ *              commit pos.    cancel+revert     cancel+revert
  *                   │                │                 │
  *                   └────────────────┴─────────────────┘
  *                                    ↓
@@ -24,7 +26,8 @@
  *
  * Grip types:
  * - vertex: stretch — only that vertex moves → MoveVertexCommand
- * - center/edge/midpoint: move — entire entity moves → MoveEntityCommand
+ * - center: move — entire entity moves → MoveEntityCommand
+ * - edge (with edgeVertexIndices): edge-stretch — both edge vertices move together
  *
  * @see useGripMovement.ts — existing hook (reuses GripInfo, GRIP_CONFIG types)
  * @see rendering/grips/ — existing temperature/color system
@@ -47,7 +50,7 @@ import type { AnySceneEntity } from '../types/scene';
 // ============================================================================
 
 /** Interaction phase of the grip state machine */
-type GripPhase = 'idle' | 'hovering' | 'warm' | 'following';
+type GripPhase = 'idle' | 'hovering' | 'warm' | 'dragging';
 
 /** Unique grip identifier for rendering pipeline */
 export interface GripIdentifier {
@@ -72,8 +75,16 @@ export interface DxfGripInteractionState {
 /** Return type of useDxfGripInteraction */
 export interface UseDxfGripInteractionReturn {
   gripInteractionState: DxfGripInteractionState;
+  /** True while user is dragging a grip (mouseDown → mouseUp) */
+  isDraggingGrip: boolean;
+  /** @deprecated Use isDraggingGrip — kept for backward compatibility */
   isFollowingGrip: boolean;
   handleGripMouseMove: (worldPos: Point2D, screenPos: Point2D) => boolean;
+  /** Start drag on mouseDown over a hovering/warm grip. Returns true if consumed. */
+  handleGripMouseDown: (worldPos: Point2D) => boolean;
+  /** Commit drag on mouseUp. Returns true if consumed. */
+  handleGripMouseUp: (worldPos: Point2D) => boolean;
+  /** @deprecated No-op in drag-release model — kept for backward compatibility */
   handleGripClick: (worldPos: Point2D) => boolean;
   handleGripEscape: () => boolean;
   handleGripRightClick: () => boolean;
@@ -120,13 +131,14 @@ function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         position: entity.end,
         movesEntity: false,
       });
-      // Midpoint (moves entire entity)
+      // Midpoint — edge-stretch: moves both endpoints together
       grips.push({
         entityId: entity.id,
         gripIndex: 2,
         type: 'edge',
         position: calculateMidpoint(entity.start, entity.end),
-        movesEntity: true,
+        movesEntity: false,
+        edgeVertexIndices: [0, 1],
       });
       break;
     }
@@ -170,7 +182,7 @@ function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           movesEntity: false,
         });
       });
-      // Midpoints of each edge (moves entire entity)
+      // Midpoints of each edge — edge-stretch: moves the 2 vertices of this edge
       const vLen = entity.vertices.length;
       const edgeCount = entity.closed ? vLen : vLen - 1;
       for (let i = 0; i < edgeCount; i++) {
@@ -180,7 +192,8 @@ function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           gripIndex: vLen + i,
           type: 'edge',
           position: calculateMidpoint(entity.vertices[i], entity.vertices[next]),
-          movesEntity: true,
+          movesEntity: false,
+          edgeVertexIndices: [i, next],
         });
       }
       break;
@@ -295,7 +308,7 @@ export function useDxfGripInteraction({
   const [activeGrip, setActiveGrip] = useState<GripInfo | null>(null);
   const [currentWorldPos, setCurrentWorldPos] = useState<Point2D | null>(null);
 
-  // Anchor = world position at the moment the grip was activated
+  // Anchor = world position at the moment the grip drag started
   const anchorRef = useRef<Point2D | null>(null);
   const warmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -426,13 +439,78 @@ export function useDxfGripInteraction({
     };
   }, [currentLevelId, getLevelScene, setLevelScene]);
 
+  // ----- Helper: reset to idle -----
+  const resetToIdle = useCallback(() => {
+    setPhase('idle');
+    setActiveGrip(null);
+    setHoveredGrip(null);
+    setCurrentWorldPos(null);
+    anchorRef.current = null;
+  }, []);
+
+  // ----- Helper: commit grip delta (shared by mouseUp) -----
+  const commitGripDelta = useCallback((grip: GripInfo, delta: Point2D) => {
+    if (delta.x === 0 && delta.y === 0) return;
+
+    if (grip.edgeVertexIndices) {
+      // 🏢 Edge-stretch: Move BOTH vertices of this edge by the same delta
+      const sceneManager = createSceneManagerAdapter();
+      if (sceneManager) {
+        const [v1idx, v2idx] = grip.edgeVertexIndices;
+        const vertices = sceneManager.getVertices(grip.entityId);
+        if (vertices && v1idx < vertices.length && v2idx < vertices.length) {
+          const cmd1 = new MoveVertexCommand(
+            grip.entityId,
+            v1idx,
+            vertices[v1idx],
+            { x: vertices[v1idx].x + delta.x, y: vertices[v1idx].y + delta.y },
+            sceneManager
+          );
+          const cmd2 = new MoveVertexCommand(
+            grip.entityId,
+            v2idx,
+            vertices[v2idx],
+            { x: vertices[v2idx].x + delta.x, y: vertices[v2idx].y + delta.y },
+            sceneManager
+          );
+          execute(cmd1);
+          execute(cmd2);
+        }
+      }
+    } else if (grip.movesEntity) {
+      // Move entire entity
+      moveEntities([grip.entityId], delta, { isDragging: false });
+    } else {
+      // Move single vertex
+      const sceneManager = createSceneManagerAdapter();
+      if (sceneManager) {
+        const vertices = sceneManager.getVertices(grip.entityId);
+        if (vertices && grip.gripIndex < vertices.length) {
+          const oldPosition = vertices[grip.gripIndex];
+          const newPosition: Point2D = {
+            x: oldPosition.x + delta.x,
+            y: oldPosition.y + delta.y,
+          };
+          const command = new MoveVertexCommand(
+            grip.entityId,
+            grip.gripIndex,
+            oldPosition,
+            newPosition,
+            sceneManager
+          );
+          execute(command);
+        }
+      }
+    }
+  }, [createSceneManagerAdapter, execute, moveEntities]);
+
   // ----- Mouse Move Handler -----
   const handleGripMouseMove = useCallback(
     (worldPos: Point2D, _screenPos: Point2D): boolean => {
       if (!enabled || allGrips.length === 0) return false;
 
-      // During following: update current position for drag preview
-      if (phase === 'following' && activeGrip) {
+      // During dragging: update current position for drag preview
+      if (phase === 'dragging' && activeGrip) {
         setCurrentWorldPos(worldPos);
         return true; // consumed
       }
@@ -462,7 +540,7 @@ export function useDxfGripInteraction({
       }
 
       // Cursor left grip area
-      if (hoveredGrip && phase !== 'following') {
+      if (hoveredGrip && phase !== 'dragging') {
         setHoveredGrip(null);
         setPhase('idle');
         if (warmTimerRef.current) {
@@ -476,102 +554,80 @@ export function useDxfGripInteraction({
     [enabled, allGrips, phase, activeGrip, hoveredGrip, findGripNear]
   );
 
-  // ----- Click Handler -----
-  const handleGripClick = useCallback(
+  // ----- MouseDown Handler (NEW — drag-release model) -----
+  const handleGripMouseDown = useCallback(
     (worldPos: Point2D): boolean => {
       if (!enabled || allGrips.length === 0) return false;
 
-      // If we're in following mode → commit
-      if (phase === 'following' && activeGrip && anchorRef.current) {
-        const delta: Point2D = {
-          x: worldPos.x - anchorRef.current.x,
-          y: worldPos.y - anchorRef.current.y,
-        };
+      // Only start drag if cursor is on a grip (hovering or warm phase)
+      if (phase !== 'hovering' && phase !== 'warm') return false;
 
-        // Only commit if moved
-        if (delta.x !== 0 || delta.y !== 0) {
-          if (activeGrip.movesEntity) {
-            // Move entire entity
-            moveEntities([activeGrip.entityId], delta, { isDragging: false });
-          } else {
-            // Move single vertex
-            const sceneManager = createSceneManagerAdapter();
-            if (sceneManager) {
-              const vertices = sceneManager.getVertices(activeGrip.entityId);
-              if (vertices && activeGrip.gripIndex < vertices.length) {
-                const oldPosition = vertices[activeGrip.gripIndex];
-                const newPosition: Point2D = {
-                  x: oldPosition.x + delta.x,
-                  y: oldPosition.y + delta.y,
-                };
-                const command = new MoveVertexCommand(
-                  activeGrip.entityId,
-                  activeGrip.gripIndex,
-                  oldPosition,
-                  newPosition,
-                  sceneManager
-                );
-                execute(command);
-              }
-            }
-          }
-        }
-
-        // Reset state
-        setPhase('idle');
-        setActiveGrip(null);
-        setHoveredGrip(null);
-        setCurrentWorldPos(null);
-        anchorRef.current = null;
-        return true; // consumed
-      }
-
-      // If we're in idle/hovering/warm → check if clicking on a grip → activate
       const nearGrip = findGripNear(worldPos);
-      if (nearGrip) {
-        // Activate the grip — enter following mode
-        setActiveGrip(nearGrip);
-        setPhase('following');
-        anchorRef.current = worldPos;
-        setCurrentWorldPos(worldPos);
+      if (!nearGrip) return false;
 
-        // Clear warm timer
-        if (warmTimerRef.current) {
-          clearTimeout(warmTimerRef.current);
-          warmTimerRef.current = null;
-        }
+      // Start drag
+      setActiveGrip(nearGrip);
+      setPhase('dragging');
+      anchorRef.current = worldPos;
+      setCurrentWorldPos(worldPos);
 
-        return true; // consumed
+      // Clear warm timer
+      if (warmTimerRef.current) {
+        clearTimeout(warmTimerRef.current);
+        warmTimerRef.current = null;
       }
 
+      return true; // consumed — prevents marquee start
+    },
+    [enabled, allGrips, phase, findGripNear]
+  );
+
+  // ----- MouseUp Handler (NEW — drag-release commit) -----
+  const handleGripMouseUp = useCallback(
+    (worldPos: Point2D): boolean => {
+      if (phase !== 'dragging' || !activeGrip || !anchorRef.current) return false;
+
+      const delta: Point2D = {
+        x: worldPos.x - anchorRef.current.x,
+        y: worldPos.y - anchorRef.current.y,
+      };
+
+      commitGripDelta(activeGrip, delta);
+      resetToIdle();
+      return true; // consumed
+    },
+    [phase, activeGrip, commitGripDelta, resetToIdle]
+  );
+
+  // ----- Click Handler (no-op in drag-release model — kept for backward compat) -----
+  const handleGripClick = useCallback(
+    (_worldPos: Point2D): boolean => {
+      // 🏢 (2026-02-15): Drag-release model — click is no longer used for grip activation/commit.
+      // handleGripMouseDown starts drag, handleGripMouseUp commits.
       return false;
     },
-    [enabled, allGrips, phase, activeGrip, findGripNear, moveEntities, createSceneManagerAdapter, execute]
+    []
   );
 
   // ----- Escape Handler -----
   const handleGripEscape = useCallback((): boolean => {
-    if (phase === 'following') {
+    if (phase === 'dragging') {
       // Cancel — revert to idle (no changes committed)
-      setPhase('idle');
-      setActiveGrip(null);
-      setHoveredGrip(null);
-      setCurrentWorldPos(null);
-      anchorRef.current = null;
+      resetToIdle();
       return true;
     }
     return false;
-  }, [phase]);
+  }, [phase, resetToIdle]);
 
   // ----- Right-click Handler -----
   const handleGripRightClick = useCallback((): boolean => {
-    // Same as Escape — cancel following mode
+    // Same as Escape — cancel dragging
     return handleGripEscape();
   }, [handleGripEscape]);
 
   // ----- Computed: drag preview -----
   const dragPreview = useMemo<DxfGripDragPreview | null>(() => {
-    if (phase !== 'following' || !activeGrip || !anchorRef.current || !currentWorldPos) {
+    if (phase !== 'dragging' || !activeGrip || !anchorRef.current || !currentWorldPos) {
       return null;
     }
 
@@ -597,7 +653,7 @@ export function useDxfGripInteraction({
       };
     }
 
-    if (activeGrip && phase === 'following') {
+    if (activeGrip && phase === 'dragging') {
       state.activeGrip = {
         entityId: activeGrip.entityId,
         gripIndex: activeGrip.gripIndex,
@@ -610,13 +666,16 @@ export function useDxfGripInteraction({
   return useMemo(
     () => ({
       gripInteractionState,
-      isFollowingGrip: phase === 'following',
+      isDraggingGrip: phase === 'dragging',
+      isFollowingGrip: phase === 'dragging', // backward compat alias
       handleGripMouseMove,
+      handleGripMouseDown,
+      handleGripMouseUp,
       handleGripClick,
       handleGripEscape,
       handleGripRightClick,
       dragPreview,
     }),
-    [gripInteractionState, phase, handleGripMouseMove, handleGripClick, handleGripEscape, handleGripRightClick, dragPreview]
+    [gripInteractionState, phase, handleGripMouseMove, handleGripMouseDown, handleGripMouseUp, handleGripClick, handleGripEscape, handleGripRightClick, dragPreview]
   );
 }

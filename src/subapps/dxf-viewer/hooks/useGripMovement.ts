@@ -96,6 +96,8 @@ export interface GripInfo {
   position: Point2D;
   /** Whether this grip moves the entire entity */
   movesEntity: boolean;
+  /** 🏢 (2026-02-15): For edge grips — which 2 vertex indices to move together (edge-stretch) */
+  edgeVertexIndices?: [number, number];
 }
 
 /**

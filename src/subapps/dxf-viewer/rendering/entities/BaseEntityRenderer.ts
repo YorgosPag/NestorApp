@@ -232,8 +232,13 @@ export abstract class BaseEntityRenderer {
 
 
   // 🏢 ADR-075: Use centralized grip size multipliers
+  // 🏢 FIX (2026-02-15): Unified grip color/size policy — SSoT across DXF entities & colored layers
+  // Visual distinction: edge grips at 60% size (not different color) — consistent temperature colors
   protected drawGrip(position: Point2D, state: 'cold' | 'warm' | 'hot', gripType?: string): void {
-    const base = this.gripSettings?.gripSize || 10;
+    const isEdge = gripType === 'edge';
+    const rawBase = this.gripSettings?.gripSize || 10;
+    // 🏢 SSoT: Edge grips at 60% of vertex size (matches LayerRenderer pattern)
+    const base = isEdge ? rawBase * 0.6 : rawBase;
     const multiplier = GRIP_SIZE_MULTIPLIERS[state.toUpperCase() as keyof typeof GRIP_SIZE_MULTIPLIERS];
     const size = Math.round(base * multiplier);
 
@@ -243,17 +248,12 @@ export abstract class BaseEntityRenderer {
       hot: CAD_UI_COLORS.grips.hot,   // ✅ AutoCAD standard: Red (ACI 1) - selected grips
       contour: CAD_UI_COLORS.grips.outline_color // ✅ AutoCAD standard: Black contour
     };
-    
-    // Διαφοροποίηση χρώματος ανάλογα με το gripType
-    let baseColor = colors.cold; // Default για vertex grips
-    if (gripType === 'edge') {
-      // Χρησιμοποιούμε πράσινο χρώμα για edge/midpoint grips
-      baseColor = UI_COLORS.GRIP_DEFAULT; // Πράσινο για μεσαία grips
-    }
-    
+
+    // 🏢 SSoT: Unified color policy — same temperature colors for ALL grip types
+    // Visual distinction comes from SIZE (60% for edges), not color
     const fill = state === 'hot'  ? colors.hot
                : state === 'warm' ? colors.warm
-                                  : baseColor;
+                                  : colors.cold;
 
     renderSquareGrip(this.ctx, position, size, fill, UI_COLORS.GRIP_OUTLINE);
   }
