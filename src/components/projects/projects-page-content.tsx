@@ -86,22 +86,12 @@ export function ProjectsPageContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 🏢 ENTERPRISE: AddProjectDialog state (ADR-087)
+  // 🏢 ENTERPRISE: AddProjectDialog state (CREATE-ONLY — edit happens inline in GeneralProjectTab)
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<typeof selectedProject>(null);
 
-  // 🏢 ENTERPRISE: Handler για refresh μετά τη δημιουργία/ενημέρωση έργου
+  // 🏢 ENTERPRISE: Handler για refresh μετά τη δημιουργία έργου
   const handleProjectAdded = React.useCallback(() => {
-    // Trigger page reload to refresh projects list
-    // Note: Για production, καλύτερα να χρησιμοποιηθεί refetch από useFirestoreProjects
     window.location.reload();
-  }, []);
-
-  // 🏢 ENTERPRISE: Handler για επεξεργασία έργου (ADR-087)
-  const handleEditProject = React.useCallback((project: typeof selectedProject) => {
-    logger.info('Opening edit dialog for project', { projectName: project?.name });
-    setEditingProject(project);
-    setIsAddProjectDialogOpen(true);
   }, []);
 
   // Transform stats to UnifiedDashboard format
@@ -220,15 +210,11 @@ export function ProjectsPageContent() {
             projectCount={projectsStats.totalProjects} // 🏢 Enterprise count display
         />
 
-        {/* 🏢 ENTERPRISE: AddProjectDialog (ADR-087) */}
+        {/* 🏢 ENTERPRISE: AddProjectDialog — CREATE-ONLY (edit happens inline) */}
         <AddProjectDialog
           open={isAddProjectDialogOpen}
-          onOpenChange={(open) => {
-            setIsAddProjectDialogOpen(open);
-            if (!open) setEditingProject(null); // Clear edit state when closing
-          }}
+          onOpenChange={setIsAddProjectDialogOpen}
           onProjectAdded={handleProjectAdded}
-          editProject={editingProject}
         />
 
         {showDashboard && (
@@ -267,8 +253,6 @@ export function ProjectsPageContent() {
             companies={companies}
             // 🏢 ENTERPRISE: Pass viewMode for grid/list switching (PR: Projects Grid View)
             viewMode={viewMode}
-            // 🏢 ENTERPRISE: Pass edit handler (ADR-087)
-            onEditProject={handleEditProject}
             // 🏢 ENTERPRISE: Deep-link initial tab (building → project addresses)
             initialTab={tabFromUrl || undefined}
           />
