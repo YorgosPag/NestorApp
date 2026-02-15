@@ -24,7 +24,7 @@ export function StorageFormHeader({
   return (
     <div
       className={cn(
-        "p-6 border-b",
+        "p-6 border-b flex-shrink-0",
         formType === 'storage'
           ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20"
           : "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20"

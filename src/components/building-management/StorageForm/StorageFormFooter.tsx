@@ -19,7 +19,7 @@ export function StorageFormFooter({ onCancel, unit }: StorageFormFooterProps) {
   const iconSizes = useIconSizes();
 
   return (
-    <div className="p-6 border-t bg-muted/30 sticky bottom-0">
+    <div className="p-6 border-t bg-muted/30 flex-shrink-0">
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           {t('storage.form.footer.requiredFields')}
