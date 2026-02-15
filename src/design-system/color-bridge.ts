@@ -131,20 +131,20 @@ export const COLOR_BRIDGE = {
     BLACK: 'text-black',                  // Black text for light buttons (DebugToolbar)
     DARKER: 'text-gray-800',              // Darker text for ui/effects
 
-    // Status text colors
-    success: 'text-green-600',            // Success text
-    error: 'text-red-600',                // Error text
-    warning: 'text-yellow-600',           // Warning text
-    info: 'text-blue-600',                // Info text
-    price: 'text-green-600',              // Price text (reuse success)
+    // Status text colors (WCAG AA: -700 for 4.5:1 contrast on light backgrounds)
+    success: 'text-green-700',            // Success text
+    error: 'text-red-700',                // Error text
+    warning: 'text-yellow-700',           // Warning text
+    info: 'text-blue-700',               // Info text
+    price: 'text-green-700',              // Price text (reuse success)
 
     // Strong text variants
     successStrong: 'text-green-800',      // Strong success text
     errorStrong: 'text-red-800',          // Strong error text
 
     // ✅ ENTERPRISE MISSING VARIANTS - ADDED FOR COMPONENT COMPATIBILITY
-    danger: 'text-red-600',               // Danger text (alias for error)
-    accent: 'text-blue-600',              // Accent text (alias for info)
+    danger: 'text-red-700',               // Danger text (alias for error)
+    accent: 'text-blue-700',              // Accent text (alias for info)
     tertiary: 'text-slate-500',           // Tertiary text για DynamicInput components
 
     // ✅ ENTERPRISE FIX: Missing text colors for TestResultsModal and other components

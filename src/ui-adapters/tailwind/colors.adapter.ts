@@ -26,11 +26,11 @@ export function mapCssVarToTailwind(varName: string, prefix: 'text' | 'bg' | 'bo
  * Direct mapping from semantic meanings to Tailwind text classes
  */
 export const tailwindTextColors = {
-  success: hardcodedColorValues.text.success,     // 'text-green-600'
-  error: hardcodedColorValues.text.error,         // 'text-red-600'
-  warning: hardcodedColorValues.text.warning,     // 'text-yellow-600'
-  info: hardcodedColorValues.text.info,           // 'text-blue-600'
-  price: hardcodedColorValues.text.success,       // 'text-green-600' (reuse success)
+  success: hardcodedColorValues.text.success,     // 'text-green-700' (WCAG AA)
+  error: hardcodedColorValues.text.error,         // 'text-red-700' (WCAG AA)
+  warning: hardcodedColorValues.text.warning,     // 'text-yellow-700' (WCAG AA)
+  info: hardcodedColorValues.text.info,           // 'text-blue-700' (WCAG AA)
+  price: hardcodedColorValues.text.success,       // 'text-green-700' (reuse success)
   primary: hardcodedColorValues.text.primary,     // 'text-slate-900'
   secondary: hardcodedColorValues.text.secondary, // 'text-slate-600'
   muted: hardcodedColorValues.text.muted,         // 'text-slate-400'

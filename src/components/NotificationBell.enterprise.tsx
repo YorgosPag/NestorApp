@@ -6,19 +6,23 @@ import { Button } from '@/components/ui/button';
 import { useNotificationDrawer } from './NotificationDrawer.enterprise';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function NotificationBell() {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
   const open = useNotificationDrawer(s => s.open);
   const isOpen = useNotificationDrawer(s => s.isOpen);
   const unread = useNotificationCenter(s => s.unread);
+
+  const label = t('notifications.title', { defaultValue: 'Notifications' });
 
   return (
     <Button
       variant="outline"
       size="icon"
       onClick={open}
-      aria-label="Notifications"
+      aria-label={label}
       aria-expanded={isOpen}
       aria-controls="notification-drawer"
       className="relative"
@@ -29,7 +33,7 @@ export function NotificationBell() {
           {unread > 99 ? '99+' : unread}
         </span>
       )}
-      <span className="sr-only">Ειδοποιήσεις</span>
+      <span className="sr-only">{label}</span>
     </Button>
   );
 }

@@ -69,10 +69,10 @@ export const colorTokens = {
 export const hardcodedColorValues = {
   /** Text colors - Hardcoded Tailwind equivalents */
   text: {
-    success: 'text-green-600',
-    error: 'text-red-600',
-    warning: 'text-yellow-600',
-    info: 'text-blue-600',
+    success: 'text-green-700',
+    error: 'text-red-700',
+    warning: 'text-yellow-700',
+    info: 'text-blue-700',
     primary: 'text-slate-900',
     secondary: 'text-slate-600',
     muted: 'text-slate-400',

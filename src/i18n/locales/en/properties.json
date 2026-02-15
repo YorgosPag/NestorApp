@@ -337,7 +337,9 @@
       "propertyPrice": "Property Price",
       "propertyFeatures": "Property Features",
       "propertyTags": "Property Tags",
-      "propertyActions": "Property Actions"
+      "propertyActions": "Property Actions",
+      "favorite": "Add to favorites",
+      "moreDetails": "More details"
     }
   },
   "operationalStatus": {

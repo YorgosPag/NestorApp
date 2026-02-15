@@ -30,13 +30,16 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
           alt={property.name}
           className={`w-full h-full object-cover ${GROUP_HOVER_PATTERNS.SCALE_ON_GROUP} ${TRANSITION_PRESETS.SLOW_ALL}`}
         />
-        <aside className="absolute top-3 left-3" role="status" aria-label={t('card.aria.propertyStatus')}>
+        <div className="absolute top-3 left-3" aria-label={t('card.aria.propertyStatus')}>
           <PropertyBadge
             status="available"
             customLabel={t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' })}
           />
-        </aside>
-        <button className={`absolute top-3 right-3 p-2 ${colors.bg.primary}/90 backdrop-blur ${radius.full} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
+        </div>
+        <button
+          className={`absolute top-3 right-3 p-2 ${colors.bg.primary}/90 backdrop-blur ${radius.full} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+          aria-label={t('card.aria.favorite')}
+        >
           <Heart className={`${iconSizes.sm} ${colors.text.muted}`} />
         </button>
       </header>
@@ -44,7 +47,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
       <main className="p-5">
         <header className="flex justify-between items-start mb-2">
           <section aria-label={t('card.aria.propertyInfo')}>
-            <h3 className={`text-lg font-bold ${colors.text.primary}`} itemProp="name">{property.name}</h3>
+            <h2 className={`text-lg font-bold ${colors.text.primary}`} itemProp="name">{property.name}</h2>
             <p className={`text-sm ${colors.text.muted} flex items-center gap-1 mt-1`}>
               {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
@@ -93,7 +96,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
           </section>
         )}
 
-        <footer className="flex gap-2" role="contentinfo" aria-label={t('card.aria.propertyActions')}>
+        <footer className="flex gap-2" aria-label={t('card.aria.propertyActions')}>
           <button
             onClick={() => onViewFloorPlan(property.id)}
             className={`flex-1 px-4 py-2 bg-primary text-primary-foreground ${radius.lg} flex items-center justify-center gap-2 text-sm font-medium ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
@@ -101,7 +104,10 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
             <Eye className={iconSizes.sm} />
             {t('card.viewFloorPlan')}
           </button>
-          <button className={`px-4 py-2 border ${colors.border.muted} ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
+          <button
+            className={`px-4 py-2 border ${colors.border.muted} ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+            aria-label={t('card.aria.moreDetails')}
+          >
             <ArrowRight className={`${iconSizes.sm} ${colors.text.muted}`} />
           </button>
         </footer>

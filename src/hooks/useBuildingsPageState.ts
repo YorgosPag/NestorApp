@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useTransition, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
@@ -16,6 +16,14 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
+
+  // INP optimization: defer heavy detail panel re-render so browser can paint click feedback first
+  const [, startTransition] = useTransition();
+  const selectBuilding = useCallback((building: Building | null) => {
+    startTransition(() => {
+      setSelectedBuilding(building);
+    });
+  }, [startTransition]);
 
   // Use centralized filter state
   const [filters, setFilters] = useState<BuildingFilterState>(defaultBuildingFilters);
@@ -163,7 +171,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
 
   return {
     selectedBuilding,
-    setSelectedBuilding,
+    setSelectedBuilding: selectBuilding,
     viewMode,
     setViewMode,
     showDashboard,
