@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import type { Project } from '@/types/project';
 import type { NavigationCompany } from '@/components/navigation/core/types';
-import { Edit, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
 import { MobileDetailsSlideIn } from '@/core/layouts';
@@ -29,14 +29,12 @@ interface ProjectViewSwitchProps {
   companies: NavigationCompany[];
   // 🏢 ENTERPRISE: Added viewMode prop for grid/list switching (PR: Projects Grid View)
   viewMode?: ProjectsViewMode;
-  /** 🏢 ENTERPRISE: Callback for editing selected project (ADR-087) */
-  onEditProject?: (project: Project) => void;
   /** 🏢 ENTERPRISE: Deep-link initial tab — forwarded to ProjectDetails → UniversalTabsRenderer */
   initialTab?: string;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', onEditProject, initialTab }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
