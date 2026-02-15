@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Briefcase, Eye, Edit } from 'lucide-react';
+import { Briefcase, Eye } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import type { Project } from '@/types/project';
@@ -11,20 +11,15 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectDetailsHeader');
 
-// Removed hardcoded getStatusColor function - using centralized ProjectBadge instead
-
-
 interface ProjectDetailsHeaderProps {
     project: Project;
-    /** 🏢 ENTERPRISE: Callback for edit button (ADR-087) */
-    onEdit?: () => void;
 }
 
-export function ProjectDetailsHeader({ project, onEdit }: ProjectDetailsHeaderProps) {
+export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('projects');
 
-    // 🏢 ENTERPRISE: Build actions array dynamically (ADR-087)
+    // 🏢 ENTERPRISE: Actions — edit moved to inline (GeneralProjectTab)
     const actions = [
         {
             label: t('detailsHeader.showProject'),
@@ -33,16 +28,6 @@ export function ProjectDetailsHeader({ project, onEdit }: ProjectDetailsHeaderPr
             className: `bg-gradient-to-r from-blue-500 to-purple-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
         }
     ];
-
-    // 🏢 ENTERPRISE: Add edit action if callback provided (ADR-087)
-    if (onEdit) {
-        actions.unshift({
-            label: t('projectHeader.edit'),
-            onClick: onEdit,
-            icon: Edit,
-            className: `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
-        });
-    }
 
     return (
         <>

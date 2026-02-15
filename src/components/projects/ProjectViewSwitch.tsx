@@ -91,28 +91,18 @@ export function ProjectViewSwitch({
           onClose={() => onSelectProject(null)}
           title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
           actionButtons={
-            <>
-              <button
-                onClick={() => selectedProject && onEditProject?.(selectedProject)}
-                className={cn(spacing.padding.sm, "rounded-md border border-border", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
-                aria-label={t('viewSwitch.editLabel')}
-              >
-                <Edit className={iconSizes.sm} />
-              </button>
-              <button
-                onClick={() => {/* TODO: Delete project handler */}}
-                className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
-                aria-label={t('viewSwitch.deleteLabel')}
-              >
-                <Trash2 className={iconSizes.sm} />
-              </button>
-            </>
+            <button
+              onClick={() => {/* TODO: Delete project handler */}}
+              className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
+              aria-label={t('viewSwitch.deleteLabel')}
+            >
+              <Trash2 className={iconSizes.sm} />
+            </button>
           }
         >
           {selectedProject && (
             <ProjectDetails
               project={getProjectWithCompanyName(selectedProject)}
-              onEdit={() => onEditProject?.(selectedProject)}
               initialTab={initialTab}
             />
           )}
@@ -135,7 +125,6 @@ export function ProjectViewSwitch({
         {selectedProject && (
           <ProjectDetails
             project={getProjectWithCompanyName(selectedProject)}
-            onEdit={() => onEditProject?.(selectedProject)}
             initialTab={initialTab}
           />
         )}
@@ -157,28 +146,18 @@ export function ProjectViewSwitch({
         onClose={() => onSelectProject(null)}
         title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
         actionButtons={
-          <>
-            <button
-              onClick={() => selectedProject && onEditProject?.(selectedProject)}
-              className={cn(spacing.padding.sm, "rounded-md border border-border", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
-              aria-label={t('viewSwitch.editLabel')}
-            >
-              <Edit className={iconSizes.sm} />
-            </button>
-            <button
-              onClick={() => {/* TODO: Delete project handler */}}
-              className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
-              aria-label={t('viewSwitch.deleteLabel')}
-            >
-              <Trash2 className={iconSizes.sm} />
-            </button>
-          </>
+          <button
+            onClick={() => {/* TODO: Delete project handler */}}
+            className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
+            aria-label={t('viewSwitch.deleteLabel')}
+          >
+            <Trash2 className={iconSizes.sm} />
+          </button>
         }
       >
         {selectedProject && (
           <ProjectDetails
             project={getProjectWithCompanyName(selectedProject)}
-            onEdit={() => onEditProject?.(selectedProject)}
             initialTab={initialTab}
           />
         )}

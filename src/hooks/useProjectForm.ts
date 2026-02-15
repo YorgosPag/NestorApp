@@ -21,10 +21,9 @@
 
 import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { createProject, updateProjectClient } from '@/services/projects-client.service';
+import { createProject } from '@/services/projects-client.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
-  Project,
   ProjectStatus,
   ProjectType,
   ProjectPriority,
@@ -108,23 +107,18 @@ const INITIAL_FORM_DATA: ProjectFormData = {
 interface UseProjectFormProps {
   onProjectAdded?: () => void;
   onOpenChange: (open: boolean) => void;
-  /** 🏢 ENTERPRISE: Project to edit (null for new project) - ADR-087 */
-  editProject?: Project | null;
 }
 
 // =============================================================================
-// HOOK IMPLEMENTATION
+// HOOK IMPLEMENTATION (CREATE-ONLY — edit moved to inline GeneralProjectTab)
 // =============================================================================
 
-export function useProjectForm({ onProjectAdded, onOpenChange, editProject }: UseProjectFormProps) {
+export function useProjectForm({ onProjectAdded, onOpenChange }: UseProjectFormProps) {
   const { t } = useTranslation('projects');
 
   const [formData, setFormData] = useState<ProjectFormData>(INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof ProjectFormData, string>>>({});
-
-  // 🏢 ENTERPRISE: Edit mode detection (ADR-087)
-  const isEditMode = !!editProject;
 
   // ==========================================================================
   // VALIDATION
@@ -155,57 +149,34 @@ export function useProjectForm({ onProjectAdded, onOpenChange, editProject }: Us
 
     setLoading(true);
     try {
-      // 🏢 ENTERPRISE: Use update for edit mode, create for new (ADR-087)
-      if (isEditMode && editProject?.id) {
-        const result = await updateProjectClient(editProject.id, {
-          name: formData.name,
-          title: formData.title || formData.name,
-          status: formData.status,
-          address: formData.address,
-          city: formData.city,
-          description: formData.description,
-          // 🏢 ENTERPRISE: Include addresses if any (ADR-167)
-          ...(formData.addresses.length > 0 && { addresses: formData.addresses }),
-        });
+      // 🏢 ENTERPRISE: CREATE-ONLY — edit moved to inline GeneralProjectTab
+      const result = await createProject({
+        name: formData.name,
+        title: formData.title || formData.name,
+        status: formData.status,
+        companyId: formData.companyId,
+        company: formData.company,
+        address: formData.address,
+        city: formData.city,
+        description: formData.description,
+        // 🏢 ENTERPRISE: Include addresses if any (ADR-167)
+        ...(formData.addresses.length > 0 && { addresses: formData.addresses }),
+      });
 
-        if (result.success) {
-          toast.success(t('messages.updated'));
-          setFormData(INITIAL_FORM_DATA);
-          onProjectAdded?.();
-          onOpenChange(false);
-        } else {
-          toast.error(result.error || t('dialog.messages.error'));
-        }
+      if (result.success) {
+        toast.success(t('dialog.messages.success'));
+        setFormData(INITIAL_FORM_DATA);
+        onProjectAdded?.();
+        onOpenChange(false);
       } else {
-        // Create new project
-        const result = await createProject({
-          name: formData.name,
-          title: formData.title || formData.name,
-          status: formData.status,
-          companyId: formData.companyId,
-          company: formData.company,
-          address: formData.address,
-          city: formData.city,
-          description: formData.description,
-          // 🏢 ENTERPRISE: Include addresses if any (ADR-167)
-          ...(formData.addresses.length > 0 && { addresses: formData.addresses }),
-        });
-
-        if (result.success) {
-          toast.success(t('dialog.messages.success'));
-          setFormData(INITIAL_FORM_DATA);
-          onProjectAdded?.();
-          onOpenChange(false);
-        } else {
-          toast.error(result.error || t('dialog.messages.error'));
-        }
+        toast.error(result.error || t('dialog.messages.error'));
       }
     } catch {
       toast.error(t('dialog.messages.error'));
     } finally {
       setLoading(false);
     }
-  }, [formData, validate, t, onProjectAdded, onOpenChange, isEditMode, editProject]);
+  }, [formData, validate, t, onProjectAdded, onOpenChange]);
 
   // ==========================================================================
   // CHANGE HANDLERS
