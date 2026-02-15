@@ -49,6 +49,12 @@ interface PointEntityProperties {
   position: Point2D;
 }
 
+interface AngleMeasurementEntityProperties {
+  vertex: Point2D;
+  point1: Point2D;
+  point2: Point2D;
+}
+
 // 🏢 ENTERPRISE: Type guard helpers
 type EntityWithLine = EntityModel & LineEntityProperties;
 type EntityWithCircle = EntityModel & CircleEntityProperties;
@@ -57,6 +63,7 @@ type EntityWithEllipse = EntityModel & EllipseEntityProperties;
 type EntityWithText = EntityModel & TextEntityProperties;
 type EntityWithSpline = EntityModel & SplineEntityProperties;
 type EntityWithPoint = EntityModel & PointEntityProperties;
+type EntityWithAngleMeasurement = EntityModel & AngleMeasurementEntityProperties;
 
 export interface BoundingBox {
   minX: number;
@@ -101,6 +108,8 @@ export class BoundsCalculator {
         return this.calculateSplineBounds(entity, tolerance);
       case 'point':
         return this.calculatePointBounds(entity, tolerance);
+      case 'angle-measurement':
+        return this.calculateAngleMeasurementBounds(entity, tolerance);
       default:
         console.warn(`BoundsCalculator: Unknown entity type: ${entity.type}`);
         return null;
@@ -267,6 +276,22 @@ export class BoundsCalculator {
       position.x + pointSize,
       position.y + pointSize
     );
+  }
+
+  /**
+   * 🔺 ANGLE MEASUREMENT BOUNDS
+   * Bounding box from vertex + 2 arm endpoints (point1, point2)
+   */
+  private static calculateAngleMeasurementBounds(entity: EntityModel, tolerance: number): BoundingBox {
+    const angleMeasurement = entity as EntityWithAngleMeasurement;
+    const { vertex, point1, point2 } = angleMeasurement;
+
+    const minX = Math.min(vertex.x, point1.x, point2.x) - tolerance;
+    const minY = Math.min(vertex.y, point1.y, point2.y) - tolerance;
+    const maxX = Math.max(vertex.x, point1.x, point2.x) + tolerance;
+    const maxY = Math.max(vertex.y, point1.y, point2.y) + tolerance;
+
+    return this.createBoundingBox(minX, minY, maxX, maxY);
   }
 
   /**
