@@ -2007,7 +2007,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 // 🏢 SSoT (2026-02-15): Single pipeline for entity selection
                 // HitTester → useCentralizedMouseHandlers.mouseDown → onEntitySelect
                 if (entityId) {
-                  setSelectedEntityIds([entityId]);
+                  // 🏢 ENTERPRISE (2026-02-15): Skip state update if entity is ALREADY selected.
+                  // Creating a new array triggers useDxfGripInteraction's useEffect that resets
+                  // all grip state (phase, activeGrip, hoveredGrip) — killing any in-progress
+                  // grip interaction. Only update when the selection actually changes.
+                  setSelectedEntityIds(prev => {
+                    if (prev.length === 1 && prev[0] === entityId) return prev; // Same entity — keep reference
+                    return [entityId];
+                  });
                   universalSelection.clearByType('dxf-entity');
                   universalSelection.select(entityId, 'dxf-entity');
                   entitySelectedOnMouseDownRef.current = true;
