@@ -87,7 +87,7 @@
 |-----------|-------------|------------|
 | **Μονάδες** | Διαμερίσματα, Καταστήματα, Στούντιο, Μεζονέτες, Γκαρσονιέρες | `units` |
 | **Αποθήκες** | Αποθήκες υπογείου, Αποθήκες ορόφων | `storage_units` |
-| **Θέσεις Στάθμευσης** | Parking spots | `parking_spaces` |
+| **Θέσεις Στάθμευσης** | Parking spots | `parking_spots` |
 
 ### 3.2 Απόλυτος Κανόνας
 
@@ -110,7 +110,7 @@ storage_units/
   - storage A1
   - storage B2
 
-parking_spaces/
+parking_spots/
   - P1
   - P2
 ```
@@ -325,6 +325,7 @@ match /units/{unitId} {
 | Ημερομηνία | Αλλαγή |
 |------------|--------|
 | 2026-01-31 | Αρχική δημιουργία από REAL_ESTATE_HIERARCHY_DOCUMENTATION.md |
+| 2026-02-16 | Fix: `parking_spaces` → `parking_spots` (ADR-182 audit) |
 
 ---
 

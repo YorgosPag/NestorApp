@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 154 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-14
+**📊 Stats**: 155 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-16
 
 ---
 
@@ -197,6 +197,7 @@
 | **ADR-179** | IFC-Compliant Floor Plan Import Hierarchy | ✅ IMPLEMENTED | 2026-02-14 | DXF Viewer / Import | [📄](./adrs/ADR-179-ifc-compliant-floorplan-hierarchy.md) |
 | **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ IMPLEMENTED | 2026-02-14 | Navigation / UX | [📄](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
 | **ADR-181** | IFC-Compliant Floor Management System | ✅ IMPLEMENTED | 2026-02-14 | Building Management / IFC | [📄](./adrs/ADR-181-ifc-floor-management-system.md) |
+| **ADR-182** | Parking & Storage Hierarchy Audit — 5 Findings | ✅ AUDIT_COMPLETE | 2026-02-16 | Data Architecture / Real Estate | [📄](./adrs/ADR-182-parking-storage-hierarchy-audit.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
