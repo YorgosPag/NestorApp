@@ -1,15 +1,22 @@
 {
   "category": "FIX",
-  "shortDescription": "Click position now matches crosshair center in overlay draw mode",
-  "problem": "When drawing colored layers (overlay draw mode), the click position did not align with the crosshair center. Vertices appeared at a slightly different position than where the user aimed.",
-  "cause": "Three different DOM elements were used as coordinate sources: (1) Crosshair used container div position (overwritten by bubbling in useCanvasMouse), (2) Click used DxfCanvas position (e.currentTarget in useCentralizedMouseHandlers), (3) Render used LayerCanvas dimensions (canvasBoundsService.refreshBounds). Subpixel differences between these elements caused misalignment in the screenToWorld/worldToScreen formulas.",
+  "shortDescription": "Unified event system — all events now flow through EventBus",
+  "problem": "Events dispatched via window.dispatchEvent or document.dispatchEvent never reached EventBus.on() subscribers, causing broken connections: level-panel:layering-activate (overlay click did not trigger layering in DxfViewerContent), level-panel:tool-change (tool changes from LevelPanel not received), dxf-zoom-changed (TransformContext zoom events invisible to EventBus listeners), canvas-fit-to-view (keyboard Shift+1 and middle-double-click dispatched to wrong target — window vs document mismatch).",
+  "cause": "Two asymmetric event channels were in use: (1) EventBus.emit() sends to both internal handlers AND window CustomEvent, but EventBus.on() only listens to internal handlers. (2) window.dispatchEvent/document.dispatchEvent only sends to DOM listeners, never reaching EventBus.on() subscribers. This split meant 6 out of 7 event connections were broken.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/hooks/canvas/useCanvasMouse.ts",
-    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts"
+    "src/subapps/dxf-viewer/systems/events/EventBus.ts",
+    "src/subapps/dxf-viewer/overlays/types.ts",
+    "src/subapps/dxf-viewer/ui/components/LevelPanel.tsx",
+    "src/subapps/dxf-viewer/ui/hooks/usePanelContentRenderer.tsx",
+    "src/subapps/dxf-viewer/contexts/TransformContext.tsx",
+    "src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts",
+    "src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts",
+    "src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts",
+    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx"
   ],
-  "solution": "Phase 1: Removed duplicate setImmediatePosition(screenPos) from container mousemove handler (useCanvasMouse.ts:320) — DxfCanvas handler already sets it, container handler was overwriting with container-relative coords due to event bubbling. Phase 2: Changed renderUnified/renderLegacy in LayerRenderer.ts to use the viewport parameter (container-based SSoT) instead of actualViewport (LayerCanvas element) for coordinate transforms, so worldToScreen uses the same viewport as screenToWorld (click handler).",
-  "testing": "TypeScript compilation check passed (0 new errors). Verification steps: overlay draw vertices should align with crosshair center, DXF polygon tool vertices match crosshair, zoom/pan consistency maintained, snap indicators correct.",
-  "notes": "actualViewport still used for clearRect (needs actual canvas pixel dimensions). The setImmediatePosition(null) call in handleContainerMouseLeave is preserved for cleanup.",
+  "solution": "Phase 1: Extended DrawingEventMap with source field for level-panel:layering-activate and new canvas-fit-to-view event type. Phase 2: Replaced all window.dispatchEvent(new CustomEvent(...)) and document.dispatchEvent(new CustomEvent(...)) calls with EventBus.emit(). Phase 3: Replaced window.addEventListener/document.addEventListener listeners with EventBus.on() for type-safe subscriptions. 9 files changed, ~10 replacements (1:1 migration). EventBus.emit() backward-compatible window dispatch preserved automatically.",
+  "testing": "TypeScript compilation check passed (0 new errors, all pre-existing). Verification: level card click triggers layering, overlay click auto-switches level and activates layering, tool changes propagate from LevelPanel, zoom events fire correctly, Shift+1 fit-to-view works, middle-double-click fit-to-view works.",
+  "notes": "Orphaned events (level-panel:grip-edit-enabled, autocad-cursor-change) left untouched — no listeners means harmless.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
@@ -18,8 +25,8 @@
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "5b0bf282",
-      "message": "fix(dxf-viewer): align crosshair, click, and render to same coordinate source"
+      "hash": "5651a103",
+      "message": "fix(dxf-viewer): unify event system — migrate window/document dispatchers to EventBus"
     }
   ]
 }

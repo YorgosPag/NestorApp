@@ -530,6 +530,17 @@
       }
     },
     "form": {
+      "basicInfo": "Basic Information",
+      "code": "Code",
+      "status": "Status",
+      "description": "Description",
+      "auto": "Auto",
+      "placeholders": {
+        "codeStorage": "e.g. A_B01",
+        "codeParking": "e.g. P_01",
+        "descriptionStorage": "Description for the storage...",
+        "descriptionParking": "Description for the parking space..."
+      },
       "title": {
         "newStorage": "New Storage",
         "editStorage": "Edit Storage",

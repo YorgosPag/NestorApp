@@ -36,7 +36,7 @@ export function StorageFormBasicInfo({
   generateAutoCode,
   formType
 }: StorageFormBasicInfoProps) {
-  const { t } = useTranslation('properties');
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
 
@@ -75,13 +75,13 @@ export function StorageFormBasicInfo({
             <Label>{t('storage.form.status')} *</Label>
             <Select value={formData.status} onValueChange={(val) => updateField('status', val)}>
               <SelectTrigger>
-                <SelectValue placeholder={t('storage.status.available')} />
+                <SelectValue placeholder={t('pages.storage.statusLabels.available')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="available">{t('storage.status.available')}</SelectItem>
-                <SelectItem value="sold">{t('storage.status.sold')}</SelectItem>
-                <SelectItem value="reserved">{t('storage.status.reserved')}</SelectItem>
-                <SelectItem value="maintenance">{t('storage.status.maintenance')}</SelectItem>
+                <SelectItem value="available">{t('pages.storage.statusLabels.available')}</SelectItem>
+                <SelectItem value="sold">{t('pages.storage.statusLabels.sold')}</SelectItem>
+                <SelectItem value="reserved">{t('pages.storage.statusLabels.reserved')}</SelectItem>
+                <SelectItem value="maintenance">{t('pages.storage.statusLabels.maintenance')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -530,6 +530,17 @@
       }
     },
     "form": {
+      "basicInfo": "Βασικές Πληροφορίες",
+      "code": "Κωδικός",
+      "status": "Κατάσταση",
+      "description": "Περιγραφή",
+      "auto": "Αυτόματο",
+      "placeholders": {
+        "codeStorage": "π.χ. A_B01",
+        "codeParking": "π.χ. P_01",
+        "descriptionStorage": "Περιγραφή για την αποθήκη...",
+        "descriptionParking": "Περιγραφή για τη θέση στάθμευσης..."
+      },
       "title": {
         "newStorage": "Νέα Αποθήκη",
         "editStorage": "Επεξεργασία Αποθήκης",

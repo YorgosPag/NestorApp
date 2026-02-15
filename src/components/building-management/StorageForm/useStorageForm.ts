@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useStorageFormState } from './useStorageFormState';
@@ -6,6 +5,7 @@ import { useFeatureLogic } from './useFeatureLogic';
 import { useStorageFormHandlers } from './useStorageFormHandlers';
 import { storageFormConfig } from './storageFormConfig';
 import type { StorageUnit, StorageType } from '@/types/storage';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface UseStorageFormProps {
   unit: StorageUnit | null;
@@ -20,6 +20,8 @@ interface UseStorageFormProps {
 }
 
 export function useStorageForm({ unit, building, onSave, formType }: UseStorageFormProps) {
+  const { t } = useTranslation('building');
+
   const {
     formData,
     setFormData,
@@ -48,9 +50,10 @@ export function useStorageForm({ unit, building, onSave, formType }: UseStorageF
       setErrors,
       onSave,
       updateField,
+      t,
   });
 
-  const { availableFloors, commonFeaturesForType } = storageFormConfig(formType);
+  const { availableFloors, commonFeaturesForType } = storageFormConfig(formType, t);
 
   return {
     formData,
