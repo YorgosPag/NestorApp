@@ -417,13 +417,30 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     setupCanvas();
   }, [setupCanvas]); // 🏢 ADR-118: Only depend on setupCanvas (ResizeObserver handled by hook)
 
-  // 🔍 DEBUG: Check computed styles after mount
+  // 🏢 FIX (2026-02-15): Sync backing store when viewport changes
+  // PROBLEM: CSS size changes but canvas.width/height (backing store) stays the same.
+  // clearRect uses fresh CSS dimensions → only clears partial backing store → ghost artifacts.
+  // SOLUTION: Re-run setupCanvas when viewport dimensions change (same fix as DxfCanvas).
+  const prevViewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
   useEffect(() => {
-    if (canvasRef.current) {
-      const cs = getComputedStyle(canvasRef.current);
-      // Layer canvas computed styles - debug disabled for performance
+    if (!viewport.width || !viewport.height) return;
+
+    const prevViewport = prevViewportRef.current;
+    if (prevViewport.width === viewport.width && prevViewport.height === viewport.height) {
+      return;
     }
-  }, [viewport.width, viewport.height]); // Check when viewport changes
+
+    prevViewportRef.current = { width: viewport.width, height: viewport.height };
+
+    // Skip initial setup (already handled by mount effect above)
+    if (prevViewport.width === 0 && prevViewport.height === 0) {
+      return;
+    }
+
+    setupCanvas();
+    isDirtyRef.current = true;
+  }, [viewport.width, viewport.height, setupCanvas]);
 
   // Render layers
   const renderLayers = useCallback(() => {
