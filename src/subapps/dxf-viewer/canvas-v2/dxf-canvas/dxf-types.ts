@@ -90,6 +90,8 @@ export interface DxfRenderOptions {
     gripIndex: number;
     delta: Point2D;
     movesEntity: boolean;
+    /** For edge grips: which 2 vertex indices to move together (edge-stretch preview) */
+    edgeVertexIndices?: [number, number];
   };
 }
 

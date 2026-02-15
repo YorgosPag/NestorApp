@@ -200,6 +200,23 @@ export class DxfRenderer {
       }
     }
 
+    // 🏢 FIX (2026-02-15): Edge-stretch preview — move both vertices of the edge
+    const edgeIndices = (preview as { edgeVertexIndices?: [number, number] }).edgeVertexIndices;
+    if (edgeIndices && entity.type === 'polyline') {
+      const [v1, v2] = edgeIndices;
+      const vertices = [...entity.vertices];
+      if (v1 < vertices.length) vertices[v1] = offsetPoint(vertices[v1]);
+      if (v2 < vertices.length) vertices[v2] = offsetPoint(vertices[v2]);
+      return { ...entity, vertices };
+    }
+    if (edgeIndices && entity.type === 'line') {
+      const [v1, v2] = edgeIndices;
+      let result = { ...entity };
+      if (v1 === 0 || v2 === 0) result = { ...result, start: offsetPoint(entity.start) };
+      if (v1 === 1 || v2 === 1) result = { ...result, end: offsetPoint(entity.end) };
+      return result;
+    }
+
     // Stretch: move only the specific vertex
     switch (entity.type) {
       case 'line': {

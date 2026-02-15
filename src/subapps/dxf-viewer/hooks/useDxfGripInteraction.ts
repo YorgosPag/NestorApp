@@ -64,6 +64,8 @@ export interface DxfGripDragPreview {
   gripIndex: number;
   delta: Point2D;
   movesEntity: boolean;
+  /** For edge grips: which 2 vertex indices to move together (edge-stretch preview) */
+  edgeVertexIndices?: [number, number];
 }
 
 /** Grip interaction state for rendering pipeline */
@@ -453,30 +455,31 @@ export function useDxfGripInteraction({
     if (delta.x === 0 && delta.y === 0) return;
 
     if (grip.edgeVertexIndices) {
-      // 🏢 Edge-stretch: Move BOTH vertices of this edge by the same delta
-      const sceneManager = createSceneManagerAdapter();
-      if (sceneManager) {
-        const [v1idx, v2idx] = grip.edgeVertexIndices;
-        const vertices = sceneManager.getVertices(grip.entityId);
-        if (vertices && v1idx < vertices.length && v2idx < vertices.length) {
-          const cmd1 = new MoveVertexCommand(
-            grip.entityId,
-            v1idx,
-            vertices[v1idx],
-            { x: vertices[v1idx].x + delta.x, y: vertices[v1idx].y + delta.y },
-            sceneManager
-          );
-          const cmd2 = new MoveVertexCommand(
-            grip.entityId,
-            v2idx,
-            vertices[v2idx],
-            { x: vertices[v2idx].x + delta.x, y: vertices[v2idx].y + delta.y },
-            sceneManager
-          );
-          execute(cmd1);
-          execute(cmd2);
-        }
-      }
+      // 🏢 Edge-stretch: Move BOTH vertices of this edge ATOMICALLY
+      // FIX (2026-02-15): Direct scene update instead of 2 sequential MoveVertexCommands.
+      // Problem: cmd2 reads scene BEFORE cmd1's setLevelScene takes effect (React batching)
+      // → cmd2 overwrites cmd1's changes. Solution: single atomic setLevelScene call.
+      if (!currentLevelId) return;
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+
+      const [v1idx, v2idx] = grip.edgeVertexIndices;
+      const entity = scene.entities.find(e => e.id === grip.entityId);
+      if (!entity || !('vertices' in entity) || !Array.isArray(entity.vertices)) return;
+
+      const vertices = entity.vertices as Point2D[];
+      if (v1idx >= vertices.length || v2idx >= vertices.length) return;
+
+      const newVertices = [...vertices];
+      newVertices[v1idx] = { x: vertices[v1idx].x + delta.x, y: vertices[v1idx].y + delta.y };
+      newVertices[v2idx] = { x: vertices[v2idx].x + delta.x, y: vertices[v2idx].y + delta.y };
+
+      setLevelScene(currentLevelId, {
+        ...scene,
+        entities: scene.entities.map(e =>
+          e.id === grip.entityId ? { ...e, vertices: newVertices } : e
+        ),
+      });
     } else if (grip.movesEntity) {
       // Move entire entity
       moveEntities([grip.entityId], delta, { isDragging: false });
@@ -502,7 +505,7 @@ export function useDxfGripInteraction({
         }
       }
     }
-  }, [createSceneManagerAdapter, execute, moveEntities]);
+  }, [createSceneManagerAdapter, execute, moveEntities, currentLevelId, getLevelScene, setLevelScene]);
 
   // ----- Mouse Move Handler -----
   const handleGripMouseMove = useCallback(
@@ -554,13 +557,17 @@ export function useDxfGripInteraction({
     [enabled, allGrips, phase, activeGrip, hoveredGrip, findGripNear]
   );
 
-  // ----- MouseDown Handler (NEW — drag-release model) -----
+  // ----- MouseDown Handler (drag-release model) -----
+  // 🏢 FIX (2026-02-15): Accept mouseDown on any visible grip regardless of phase.
+  // Previous code required phase='hovering'|'warm', but React state batching could
+  // prevent phase from updating between mousemove and mousedown (same event loop).
+  // Proximity check alone is sufficient — hover/warm is visual feedback, not a prerequisite.
   const handleGripMouseDown = useCallback(
     (worldPos: Point2D): boolean => {
       if (!enabled || allGrips.length === 0) return false;
 
-      // Only start drag if cursor is on a grip (hovering or warm phase)
-      if (phase !== 'hovering' && phase !== 'warm') return false;
+      // Already dragging — ignore (shouldn't happen, but defensive)
+      if (phase === 'dragging') return false;
 
       const nearGrip = findGripNear(worldPos);
       if (!nearGrip) return false;
@@ -639,6 +646,7 @@ export function useDxfGripInteraction({
         y: currentWorldPos.y - anchorRef.current.y,
       },
       movesEntity: activeGrip.movesEntity,
+      edgeVertexIndices: activeGrip.edgeVertexIndices,
     };
   }, [phase, activeGrip, currentWorldPos]);
 
