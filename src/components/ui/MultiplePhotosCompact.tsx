@@ -245,11 +245,15 @@ export function MultiplePhotosCompact({
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}
                 onFileChange={(file) => {
-                  // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
-                  const currentFile = normalizedPhotos[index]?.file;
-                  if (currentFile === file) {
-                    logger.info('SKIPPING - File unchanged for slot', { index });
+                  // 🚨 STOP INFINITE LOOPS: Only guard against setting the SAME non-null file.
+                  // When file===null this is a DELETE request — always allow it through,
+                  // even when currentFile is already null (uploaded photos have file:null + uploadUrl).
+                  const currentSlot = normalizedPhotos[index];
+                  if (file !== null && currentSlot?.file === file) {
                     return;
+                  }
+                  if (file === null && !currentSlot?.file && !currentSlot?.uploadUrl && !currentSlot?.preview) {
+                    return; // Nothing to clear
                   }
 
                   logger.info('File changed for slot', { index, fileName: file?.name });

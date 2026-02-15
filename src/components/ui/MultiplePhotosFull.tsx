@@ -267,10 +267,15 @@ export function MultiplePhotosFull({
                 photoPreview={photoPreviewWithCacheBuster}
                 customFileName={photo.fileName} // 🔥 ΔΙΟΡΘΩΣΗ: Περνάμε το custom filename
                 onFileChange={(file) => {
-                  // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
-                  const currentFile = normalizedPhotos[index]?.file;
-                  if (currentFile === file) {
+                  // 🚨 STOP INFINITE LOOPS: Only guard against setting the SAME non-null file.
+                  // When file===null this is a DELETE request — always allow it through,
+                  // even when currentFile is already null (uploaded photos have file:null + uploadUrl).
+                  const currentSlot = normalizedPhotos[index];
+                  if (file !== null && currentSlot?.file === file) {
                     return;
+                  }
+                  if (file === null && !currentSlot?.file && !currentSlot?.uploadUrl && !currentSlot?.preview) {
+                    return; // Nothing to clear
                   }
 
                   const newPhotos = [...normalizedPhotos];
