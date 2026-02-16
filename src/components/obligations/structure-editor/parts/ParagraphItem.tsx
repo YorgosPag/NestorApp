@@ -68,7 +68,7 @@ export function ParagraphItem({
             />
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={handlers.stopEditing}><Save className={`${iconSizes.xs} mr-1`} />{tCommon('buttons.save')}</Button>
-              <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className={iconSizes.xs} /></Button>
+              <Button size="sm" variant="outline" onClick={handlers.stopEditing} aria-label={t('aria.cancelEditing')}><X className={iconSizes.xs} /></Button>
             </div>
           </div>
         ) : (
@@ -79,8 +79,8 @@ export function ParagraphItem({
       </div>
       {!readOnly && !isEditing && (
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-          <Button variant="ghost" size="sm" onClick={() => handlers.startEditing('paragraph', paragraph.id)} className="h-7 px-2"><Edit3 className={iconSizes.xs} /></Button>
-          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.xs} /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handlers.startEditing('paragraph', paragraph.id)} className="h-7 px-2" aria-label={t('aria.editParagraph')}><Edit3 className={iconSizes.xs} /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className="h-7 px-2 text-destructive hover:text-destructive/80" aria-label={t('aria.deleteParagraph')}><Trash2 className={iconSizes.xs} /></Button>
         </div>
       )}
     </div>

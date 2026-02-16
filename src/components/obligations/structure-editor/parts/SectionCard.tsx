@@ -68,7 +68,7 @@ export function SectionCard({
         <div className="flex items-center gap-2">
           {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100`} />}
           {(hasArticles || section.content) && (
-            <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(section.id)} className={`${iconSizes.md} p-0`}>
+            <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(section.id)} className={`${iconSizes.md} p-0`} aria-label={isExpanded ? t('aria.collapseArticles') : t('aria.expandArticles')}>
               {isExpanded ? <ChevronDown className={iconSizes.sm} /> : <ChevronRight className={iconSizes.sm} />}
             </Button>
           )}
@@ -113,24 +113,24 @@ export function SectionCard({
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
               {isEditing ? (
                 <>
-                  <Button size="sm" onClick={handlers.stopEditing}><Save className={iconSizes.sm} /></Button>
-                  <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className={iconSizes.sm} /></Button>
+                  <Button size="sm" onClick={handlers.stopEditing} aria-label={t('aria.saveSection')}><Save className={iconSizes.sm} /></Button>
+                  <Button size="sm" variant="outline" onClick={handlers.stopEditing} aria-label={t('aria.cancelEditing')}><X className={iconSizes.sm} /></Button>
                 </>
               ) : (
                 <>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2"><Plus className={iconSizes.sm} /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" aria-label={t('section.addArticle')}><Plus className={iconSizes.sm} /></Button>
                     </TooltipTrigger>
                     <TooltipContent>{t('section.addArticle')}</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2"><Copy className={iconSizes.sm} /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" aria-label={t('section.duplicateSection')}><Copy className={iconSizes.sm} /></Button>
                     </TooltipTrigger>
                     <TooltipContent>{t('section.duplicateSection')}</TooltipContent>
                   </Tooltip>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.sm} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-destructive hover:text-destructive/80" aria-label={t('aria.deleteSection')}><Trash2 className={iconSizes.sm} /></Button>
                 </>
               )}
             </div>

@@ -106,7 +106,18 @@
     "preview": "Προεπισκόπηση",
     "hideToc": "Απόκρυψη πίνακα περιεχομένων",
     "showToc": "Εμφάνιση πίνακα περιεχομένων",
-    "printDocument": "Εκτύπωση εγγράφου"
+    "printDocument": "Εκτύπωση εγγράφου",
+    "expandArticles": "Επέκταση άρθρων",
+    "collapseArticles": "Σύμπτυξη άρθρων",
+    "expandParagraphs": "Επέκταση παραγράφων",
+    "collapseParagraphs": "Σύμπτυξη παραγράφων",
+    "saveSection": "Αποθήκευση ενότητας",
+    "saveArticle": "Αποθήκευση άρθρου",
+    "cancelEditing": "Ακύρωση επεξεργασίας",
+    "deleteSection": "Διαγραφή ενότητας",
+    "deleteArticle": "Διαγραφή άρθρου",
+    "deleteParagraph": "Διαγραφή παραγράφου",
+    "editParagraph": "Επεξεργασία παραγράφου"
   },
   "export": {
     "progress": {

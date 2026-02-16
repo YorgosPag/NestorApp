@@ -61,7 +61,7 @@ export function ArticleItem({
       <div className="flex items-center gap-2 p-3">
         {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100`} />}
         {hasParagraphs && (
-          <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(article.id)} className={`${iconSizes.md} p-0`}>
+          <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(article.id)} className={`${iconSizes.md} p-0`} aria-label={isExpanded ? t('aria.collapseParagraphs') : t('aria.expandParagraphs')}>
             {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
           </Button>
         )}
@@ -95,18 +95,18 @@ export function ArticleItem({
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
             {isEditing ? (
               <>
-                <Button size="sm" onClick={handlers.stopEditing}><Save className={iconSizes.xs} /></Button>
-                <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className={iconSizes.xs} /></Button>
+                <Button size="sm" onClick={handlers.stopEditing} aria-label={t('aria.saveArticle')}><Save className={iconSizes.xs} /></Button>
+                <Button size="sm" variant="outline" onClick={handlers.stopEditing} aria-label={t('aria.cancelEditing')}><X className={iconSizes.xs} /></Button>
               </>
             ) : (
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2"><Plus className={iconSizes.xs} /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2" aria-label={t('article.addParagraph')}><Plus className={iconSizes.xs} /></Button>
                   </TooltipTrigger>
                   <TooltipContent>{t('article.addParagraph')}</TooltipContent>
                 </Tooltip>
-                <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.xs} /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className="h-7 px-2 text-destructive hover:text-destructive/80" aria-label={t('aria.deleteArticle')}><Trash2 className={iconSizes.xs} /></Button>
               </>
             )}
           </div>

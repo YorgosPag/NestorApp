@@ -106,7 +106,18 @@
     "preview": "Preview",
     "hideToc": "Hide table of contents",
     "showToc": "Show table of contents",
-    "printDocument": "Print document"
+    "printDocument": "Print document",
+    "expandArticles": "Expand articles",
+    "collapseArticles": "Collapse articles",
+    "expandParagraphs": "Expand paragraphs",
+    "collapseParagraphs": "Collapse paragraphs",
+    "saveSection": "Save section",
+    "saveArticle": "Save article",
+    "cancelEditing": "Cancel editing",
+    "deleteSection": "Delete section",
+    "deleteArticle": "Delete article",
+    "deleteParagraph": "Delete paragraph",
+    "editParagraph": "Edit paragraph"
   },
   "export": {
     "progress": {
