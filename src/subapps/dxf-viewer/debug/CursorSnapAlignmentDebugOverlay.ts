@@ -157,7 +157,7 @@ class CursorSnapAlignmentDebugger {
         // ✅ CORRECTION: snapResults.point is ALREADY in screen coordinates!
         // SnapRenderer uses it directly without any transformation (see SnapRenderer.ts:141)
         // NO transformation needed - use as-is
-        this.state.snapPos = primarySnap.point;
+        this.state.snapPos = primarySnap.point ?? null;
       } else {
         this.state.snapPos = null;
       }

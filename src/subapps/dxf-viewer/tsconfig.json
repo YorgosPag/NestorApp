@@ -8,7 +8,8 @@
     "**/*.ts",
     "**/*.tsx",
     "types/dxf-modules.d.ts",
-    "types/jest-globals.d.ts"
+    "types/jest-globals.d.ts",
+    "types/dxf-window.d.ts"
   ],
   "exclude": [
     "node_modules",
