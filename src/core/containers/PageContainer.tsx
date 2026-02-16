@@ -54,7 +54,7 @@ export function PageContainer({
   const heightClass = fullScreen ? 'h-screen' : 'h-full';
 
   return (
-    <main
+    <section
       className={cn(
         heightClass,
         'flex flex-col',
@@ -62,10 +62,9 @@ export function PageContainer({
         colors.bg.primary,
         className
       )}
-      role="main"
       aria-label={ariaLabel}
     >
       {children}
-    </main>
+    </section>
   );
 }
