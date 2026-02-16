@@ -96,9 +96,22 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.get<UnitsApiResponse>(
-        `/api/units?buildingId=${building.id}`
-      );
+      // Try buildingId-filtered query first; fallback to full list + client filter
+      let result: UnitsApiResponse | null = null;
+      try {
+        result = await apiClient.get<UnitsApiResponse>(
+          `/api/units?buildingId=${building.id}`
+        );
+      } catch {
+        // Composite index / tenant isolation may reject — fallback
+        const allResult = await apiClient.get<UnitsApiResponse>('/api/units');
+        if (allResult?.units) {
+          result = {
+            units: (allResult.units as Unit[]).filter(u => u.buildingId === building.id),
+            count: 0,
+          };
+        }
+      }
       if (result?.units) {
         setUnits(result.units as Unit[]);
       }

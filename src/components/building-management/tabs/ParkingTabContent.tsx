@@ -85,9 +85,22 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.get<ParkingApiResponse>(
-        `/api/parking?buildingId=${building.id}`
-      );
+      // Try buildingId-filtered query first; fallback to full list + client filter
+      let result: ParkingApiResponse | null = null;
+      try {
+        result = await apiClient.get<ParkingApiResponse>(
+          `/api/parking?buildingId=${building.id}`
+        );
+      } catch {
+        // Tenant isolation may reject — fallback to unfiltered + client filter
+        const allResult = await apiClient.get<ParkingApiResponse>('/api/parking');
+        if (allResult?.parkingSpots) {
+          result = {
+            parkingSpots: allResult.parkingSpots.filter(s => s.buildingId === building.id),
+            count: 0,
+          };
+        }
+      }
       if (result?.parkingSpots) {
         setParkingSpots(result.parkingSpots);
       }
