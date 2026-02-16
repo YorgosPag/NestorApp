@@ -128,7 +128,7 @@ export interface UseGripSystemReturn {
   /** Set dragging vertices */
   setDraggingVertices: React.Dispatch<React.SetStateAction<DraggingVertexState[] | null>>;
   /** Single dragging vertex (backwards compatibility) */
-  draggingVertex: { overlayId: string; vertexIndex: number; startPoint: Point2D } | null;
+  draggingVertex: DraggingVertexState | null;
   /** Edge midpoint being dragged (vertex insertion) */
   draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
   /** Set dragging edge midpoint */
@@ -243,11 +243,9 @@ export function useGripSystem(): UseGripSystemReturn {
   /**
    * Single dragging vertex (backwards compatibility)
    */
-  const draggingVertex = draggingVertices && draggingVertices.length > 0 ? {
-    overlayId: draggingVertices[0].overlayId,
-    vertexIndex: draggingVertices[0].vertexIndex,
-    startPoint: draggingVertices[0].startPoint
-  } : null;
+  const draggingVertex: DraggingVertexState | null = draggingVertices && draggingVertices.length > 0
+    ? draggingVertices[0]
+    : null;
 
   /**
    * Edge midpoint being dragged (for vertex insertion)
