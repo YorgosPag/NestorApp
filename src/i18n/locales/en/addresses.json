@@ -74,6 +74,9 @@
     "noLocation": "Location not found",
     "openInMaps": "Open in Maps",
     "error": "Could not locate addresses on map. Please verify the addresses are valid.",
-    "partialStatus": "{count} of {total} addresses"
+    "partialStatus": "{count} of {total} addresses",
+    "dragHint": "Drag the pin to auto-fill the address",
+    "reverseGeocoding": "Looking up address...",
+    "reverseGeocodingFailed": "No address found at this location"
   }
 }

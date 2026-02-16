@@ -85,6 +85,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedAddress, setEditedAddress] = useState<Partial<ProjectAddress> | null>(null);
 
+  // 🗺️ Reverse geocoding drag update — shared between add + edit mode
+  const [dragUpdatedAddress, setDragUpdatedAddress] = useState<Partial<ProjectAddress> | null>(null);
+  const [editDragAddress, setEditDragAddress] = useState<Partial<ProjectAddress> | null>(null);
+
   // ==========================================================================
   // HANDLERS
   // ==========================================================================
@@ -230,6 +234,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const handleCancelAdd = () => {
     setIsAddFormOpen(false);
     setTempAddress(null);
+    setDragUpdatedAddress(null);
   };
 
   /**
@@ -295,6 +300,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const handleCancelEdit = () => {
     setEditingIndex(null);
     setEditedAddress(null);
+    setEditDragAddress(null);
   };
 
   // ==========================================================================
@@ -350,7 +356,19 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           </div>
 
-          <AddressFormSection onChange={setTempAddress} />
+          {/* 🗺️ Draggable map for new address */}
+          <AddressMap
+            addresses={[]}
+            draggableMarkers
+            onAddressDragUpdate={setDragUpdatedAddress}
+            heightPreset="viewerCompact"
+            className="rounded-lg border shadow-sm"
+          />
+
+          <AddressFormSection
+            onChange={setTempAddress}
+            externalValues={dragUpdatedAddress}
+          />
 
           <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
             <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>
@@ -392,7 +410,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             >
               {/* 🏢 ENTERPRISE: Inline Edit Mode or Display Mode */}
               {editingIndex === index ? (
-                // EDIT MODE: Inline form
+                // EDIT MODE: Inline form + draggable map
                 <div className={spacing.spaceBetween.md}>
                   <div className={cn("flex items-center justify-between", spacing.margin.bottom.md)}>
                     <h4 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
@@ -404,9 +422,19 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                     </Button>
                   </div>
 
+                  {/* 🗺️ Draggable map for edit mode */}
+                  <AddressMap
+                    addresses={[address]}
+                    draggableMarkers
+                    onAddressDragUpdate={setEditDragAddress}
+                    heightPreset="viewerCompact"
+                    className="rounded-lg border shadow-sm"
+                  />
+
                   <AddressFormSection
                     onChange={setEditedAddress}
                     initialValues={address}
+                    externalValues={editDragAddress}
                   />
 
                   <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>

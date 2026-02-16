@@ -50,6 +50,23 @@ export interface GeocodingServiceResult {
   displayName: string;
 }
 
+/**
+ * Reverse geocoding result — structured address data from coordinates.
+ * Returned by the /api/geocoding/reverse endpoint.
+ */
+export interface ReverseGeocodingResult {
+  street: string;
+  number: string;
+  city: string;
+  neighborhood: string;
+  postalCode: string;
+  region: string;
+  country: string;
+  displayName: string;
+  lat: number;
+  lng: number;
+}
+
 // =============================================================================
 // CACHE
 // =============================================================================
@@ -168,6 +185,46 @@ export async function geocodeAddressBatch(
   }
 
   return results;
+}
+
+/**
+ * Reverse geocode coordinates to a structured address.
+ * Calls the server-side /api/geocoding/reverse endpoint.
+ * No caching — drag positions are unique.
+ *
+ * @param lat - Latitude
+ * @param lng - Longitude
+ * @returns Structured address or null if not found
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number
+): Promise<ReverseGeocodingResult | null> {
+  try {
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lon: lng.toString(),
+    });
+
+    const response = await fetch(
+      `${GEOGRAPHIC_CONFIG.GEOCODING.API_ENDPOINT}/reverse?${params.toString()}`
+    );
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      logger.warn('Reverse geocoding API error', { data: { status: response.status } });
+      return null;
+    }
+
+    const data: ReverseGeocodingResult = await response.json();
+    return data;
+  } catch (error) {
+    logger.error('Reverse geocoding API call failed', { error: String(error) });
+    return null;
+  }
 }
 
 /**

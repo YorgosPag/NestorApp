@@ -13,19 +13,21 @@
  * - Click-to-focus interaction
  * - Loading/Error states
  * - Caching for performance
+ * - Draggable markers με reverse geocoding for address auto-fill
  *
  * Architecture:
  * AddressMap (Domain-specific) → InteractiveMap (Generic GeoCanvas)
  *
  * @file AddressMap.tsx
  * @created 2026-02-02
+ * @updated 2026-02-16 - Added draggable markers + reverse geocoding (ADR-168)
  */
 
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Source, Layer } from 'react-map-gl/maplibre';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Source, Layer, Marker } from 'react-map-gl/maplibre';
+import { Loader2, AlertTriangle, MapPin } from 'lucide-react';
 import { LngLatBounds } from 'maplibre-gl';
 import type * as GeoJSON from 'geojson';
 
@@ -35,16 +37,19 @@ import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-syst
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 
-import type { ProjectAddress } from '@/types/project/addresses';
+import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
 import {
   formatAddressForGeocoding,
   getGeocodableAddresses
 } from '@/types/project/address-helpers';
 import {
   geocodeAddress,
-  type GeocodingServiceResult
+  reverseGeocode,
+  type GeocodingServiceResult,
+  type ReverseGeocodingResult
 } from '@/lib/geocoding/geocoding-service';
 import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { colors } from '@/styles/design-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -90,6 +95,12 @@ export interface AddressMapProps {
   /** Geocoding complete callback */
   onGeocodingComplete?: (results: Map<string, GeocodingServiceResult>) => void;
 
+  /** Enable draggable markers (for add/edit mode) */
+  draggableMarkers?: boolean;
+
+  /** Callback when user drags a marker — provides reverse-geocoded address data */
+  onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>) => void;
+
   /** Additional CSS classes */
   className?: string;
 }
@@ -101,6 +112,56 @@ type AddressFeatureProperties = {
   isPrimary?: boolean;
   label: string;
 };
+
+// =============================================================================
+// DRAGGABLE MARKER PIN — Inline SVG component (same design as symbol layer pin)
+// =============================================================================
+
+interface DraggableMarkerPinProps {
+  isPrimary?: boolean;
+}
+
+function DraggableMarkerPin({ isPrimary }: DraggableMarkerPinProps) {
+  const size = isPrimary ? 40 : 32;
+  const viewBoxHeight = Math.round(size * 1.25);
+  return (
+    <svg
+      width={size}
+      height={viewBoxHeight}
+      viewBox={`0 0 40 50`}
+      xmlns="http://www.w3.org/2000/svg"
+      className="cursor-grab active:cursor-grabbing drop-shadow-md"
+    >
+      <ellipse cx="20" cy="47" rx="8" ry="3" fill={PIN_COLORS.shadow} />
+      <path
+        d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
+        fill={PIN_COLORS.body}
+        stroke={PIN_COLORS.stroke}
+        strokeWidth="2"
+      />
+      <circle cx="20" cy="16" r="6" fill={PIN_COLORS.innerCircle} />
+    </svg>
+  );
+}
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/** Map ReverseGeocodingResult to partial address data for form population */
+function reverseResultToAddress(result: ReverseGeocodingResult): Partial<PartialProjectAddress> {
+  return {
+    street: result.number
+      ? `${result.street} ${result.number}`
+      : result.street,
+    city: result.city,
+    neighborhood: result.neighborhood || undefined,
+    postalCode: result.postalCode,
+    region: result.region || undefined,
+    country: result.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+    coordinates: { lat: result.lat, lng: result.lng },
+  };
+}
 
 // =============================================================================
 // COMPONENT
@@ -118,6 +179,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   enableClickToFocus = true,
   onMarkerClick,
   onGeocodingComplete,
+  draggableMarkers = false,
+  onAddressDragUpdate,
   className = ''
 }) => {
   // ===========================================================================
@@ -131,6 +194,10 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+
+  // Draggable marker state — position of the single draggable pin
+  const [dragMarkerPosition, setDragMarkerPosition] = useState<{ lng: number; lat: number } | null>(null);
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
 
   const mapRef = useRef<MapInstance | null>(null);
 
@@ -179,12 +246,10 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
         setGeocodedAddresses(geocodedMap);
 
-        // 🐛 DEBUG: Log geocoding results
         logger.info('AddressMap: Geocoding complete', { data: {
           totalAddresses: addresses.length,
           geocodableAddresses: geocodable.length,
           successCount,
-          geocodedMap: Array.from(geocodedMap.entries()),
         } });
 
         // Determine status
@@ -200,6 +265,12 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         if (onGeocodingComplete) {
           onGeocodingComplete(geocodedMap);
         }
+
+        // For draggable mode + existing address: set marker at first geocoded position
+        if (draggableMarkers && successCount > 0 && !dragMarkerPosition) {
+          const firstResult = geocodedMap.values().next().value as GeocodingServiceResult;
+          setDragMarkerPosition({ lng: firstResult.lng, lat: firstResult.lat });
+        }
       } catch (error) {
         logger.error('Geocoding failed:', { error: error });
         setGeocodingStatus('error');
@@ -207,6 +278,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     };
 
     geocodeAllAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addresses, onGeocodingComplete]);
 
   // ===========================================================================
@@ -218,14 +290,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
    * Runs when geocoding completes και map is ready
    */
   useEffect(() => {
-    logger.info('fitBounds effect triggered', { data: {
-      hasMapRef: !!mapRef.current,
-      mapReady,
-      geocodedCount: geocodedAddresses.size,
-    } });
-
     if (!mapRef.current || !mapReady || geocodedAddresses.size === 0) {
-      logger.warn('fitBounds skipped - conditions not met');
       return;
     }
 
@@ -233,20 +298,16 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       const bounds = new LngLatBounds();
 
       geocodedAddresses.forEach(result => {
-        logger.info('Adding to bounds:', { data: { lat: result.lat, lng: result.lng } });
         bounds.extend([result.lng, result.lat]);
       });
 
       // Only fit bounds if we have valid bounds
       if (!bounds.isEmpty()) {
-        logger.info('Calling fitBounds', { data: { bounds } });
         mapRef.current.fitBounds(bounds, {
           padding: ADDRESS_MAP_CONFIG.FIT_BOUNDS_PADDING,
           maxZoom: ADDRESS_MAP_CONFIG.DEFAULT_MAX_ZOOM,
           duration: ADDRESS_MAP_CONFIG.ANIMATION.FIT_BOUNDS
         });
-      } else {
-        logger.warn('Bounds is empty!');
       }
     } catch (error) {
       logger.error('fitBounds failed:', { error: error });
@@ -254,20 +315,21 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [geocodedAddresses, mapReady]);
 
   // ===========================================================================
-  // GEOJSON DATA
+  // GEOJSON DATA (for read-only Source+Layer mode)
   // ===========================================================================
 
   /**
    * Create GeoJSON FeatureCollection from geocoded addresses
-   * 🏢 ENTERPRISE: Uses i18n for address type labels
+   * Used ONLY when draggableMarkers=false (performance optimization)
    */
   const markersGeoJSON = useMemo(() => {
+    if (draggableMarkers) return null;
+
     const features = addresses
       .map((address): GeoJSON.Feature<GeoJSON.Point, AddressFeatureProperties> | null => {
         const geocoded = geocodedAddresses.get(address.id);
         if (!geocoded) return null;
 
-        // Translate address type (billing -> Τιμολόγηση, site -> Εργοτάξιο, etc.)
         const translatedLabel = address.label || t(`types.${address.type}`);
 
         return {
@@ -291,7 +353,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       type: 'FeatureCollection' as const,
       features
     };
-  }, [addresses, geocodedAddresses, t]);
+  }, [addresses, geocodedAddresses, t, draggableMarkers]);
 
   // ===========================================================================
   // EVENT HANDLERS
@@ -302,11 +364,10 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
    * Enterprise pattern: Load custom marker icon into map sprite
    */
   const handleMapReady = useCallback((map: MapInstance) => {
-    logger.info('Map ready!', { data: { map } });
     mapRef.current = map;
     setMapReady(true);
 
-    // 🏢 ENTERPRISE: Load custom pin marker icon — colors from design-tokens
+    // Load custom pin marker icon — needed for non-draggable Source+Layer mode
     const pinSVG = `
       <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
         <ellipse cx="20" cy="47" rx="8" ry="3" fill="${PIN_COLORS.shadow}"/>
@@ -324,18 +385,16 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         map.addImage('address-pin', pinImage);
       }
       setMapLoaded(true);
-      logger.info('Map fully loaded - custom pin icon added');
     };
     pinImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(pinSVG)}`;
   }, []);
 
   /**
-   * Handle marker click
+   * Handle marker click (read-only mode)
    */
   const handleMarkerClick = useCallback((address: ProjectAddress, index: number) => {
     setSelectedMarkerId(address.id);
 
-    // Notify parent
     if (onMarkerClick) {
       onMarkerClick(address, index);
     }
@@ -346,6 +405,28 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     }, ADDRESS_MAP_CONFIG.ANIMATION.MARKER_HIGHLIGHT * 6);
   }, [onMarkerClick]);
 
+  /**
+   * Handle drag end — reverse geocode the new position
+   */
+  const handleDragEnd = useCallback(async (event: { lngLat: { lng: number; lat: number } }) => {
+    const { lng, lat } = event.lngLat;
+    setDragMarkerPosition({ lng, lat });
+    setIsReverseGeocoding(true);
+
+    try {
+      const result = await reverseGeocode(lat, lng);
+      if (result && onAddressDragUpdate) {
+        onAddressDragUpdate(reverseResultToAddress(result));
+      } else if (!result) {
+        logger.warn('Reverse geocoding returned no result', { data: { lat, lng } });
+      }
+    } catch (error) {
+      logger.error('Reverse geocoding failed', { error: String(error) });
+    } finally {
+      setIsReverseGeocoding(false);
+    }
+  }, [onAddressDragUpdate]);
+
   // ===========================================================================
   // RENDERING
   // ===========================================================================
@@ -353,8 +434,11 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const heightClass = ADDRESS_MAP_CONFIG.HEIGHT_PRESETS[heightPreset]
     ?? ADDRESS_MAP_CONFIG.HEIGHT_PRESETS.viewerStandard;
 
-  // Loading state
-  if (geocodingStatus === 'loading') {
+  // For draggable mode: Always render map (no geocoding needed for new addresses)
+  const isDraggableNewAddress = draggableMarkers && addresses.length === 0;
+
+  // Loading state (skip for draggable new address mode)
+  if (geocodingStatus === 'loading' && !isDraggableNewAddress) {
     return (
       <div
         className={`flex items-center justify-center bg-muted rounded-lg ${heightClass} ${className}`}
@@ -369,8 +453,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     );
   }
 
-  // Error state
-  if (geocodingStatus === 'error') {
+  // Error state (skip for draggable new address mode)
+  if (geocodingStatus === 'error' && !isDraggableNewAddress) {
     return (
       <Alert variant="destructive" className={className}>
         <AlertTriangle className="h-4 w-4" />
@@ -381,21 +465,23 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     );
   }
 
-  // Success/Partial: Render map (ONLY after geocoding completes)
-  const shouldRenderMap = geocodingStatus === 'success' || geocodingStatus === 'partial';
+  // Determine if map should render
+  const shouldRenderMap =
+    isDraggableNewAddress ||
+    geocodingStatus === 'success' ||
+    geocodingStatus === 'partial';
 
-  logger.info('AddressMap render', { data: {
-    geocodingStatus,
-    shouldRenderMap,
-    geocodedCount: geocodedAddresses.size,
-  } });
+  // Default position for new address draggable pin (center of Greece)
+  const defaultDragPosition = dragMarkerPosition ?? {
+    lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
+    lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
+  };
 
   return (
     <div className={`relative overflow-hidden ${heightClass} ${className}`}>
       <PolygonSystemProvider>
-        {/* 🗺️ Keep map absolutely bounded to prevent attribution panel from affecting layout height */}
+        {/* Keep map absolutely bounded to prevent attribution panel from affecting layout height */}
         <div className="absolute inset-0">
-          {/* 🗺️ Interactive Map (GeoCanvas) - Render ONLY after geocoding */}
           {shouldRenderMap && (
             <InteractiveMap
               transformState={{
@@ -410,14 +496,26 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               showMapControls={false}
               className="w-full h-full rounded-lg overflow-hidden"
             >
-              {/* 📍 Address Markers - Enterprise Symbol Layer με custom pin icon */}
-              {mapLoaded && markersGeoJSON.features.length > 0 && (
+              {/* Draggable Marker Mode — <Marker> components */}
+              {draggableMarkers && mapReady && (
+                <Marker
+                  longitude={defaultDragPosition.lng}
+                  latitude={defaultDragPosition.lat}
+                  anchor="bottom"
+                  draggable
+                  onDragEnd={handleDragEnd}
+                >
+                  <DraggableMarkerPin isPrimary />
+                </Marker>
+              )}
+
+              {/* Read-only Mode — Source+Layer for performance */}
+              {!draggableMarkers && mapLoaded && markersGeoJSON && markersGeoJSON.features.length > 0 && (
                 <Source
                   id="address-markers"
                   type="geojson"
                   data={markersGeoJSON}
                 >
-                  {/* Symbol layer με professional pin icon */}
                   <Layer
                     id="address-markers-symbols"
                     type="symbol"
@@ -444,8 +542,30 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
           )}
         </div>
 
-        {/* 🏷️ Geocoding Status Badge */}
-        {showGeocodingStatus && geocodingStatus === 'partial' && (
+        {/* Drag hint badge */}
+        {draggableMarkers && (
+          <div className="absolute top-3 left-3 right-3 pointer-events-none">
+            <Badge
+              variant="secondary"
+              className="shadow-md pointer-events-auto flex items-center gap-1.5 w-fit"
+            >
+              {isReverseGeocoding ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  {t('map.reverseGeocoding')}
+                </>
+              ) : (
+                <>
+                  <MapPin className="w-3 h-3" />
+                  {t('map.dragHint')}
+                </>
+              )}
+            </Badge>
+          </div>
+        )}
+
+        {/* Geocoding Status Badge (read-only mode) */}
+        {showGeocodingStatus && !draggableMarkers && geocodingStatus === 'partial' && (
           <div className="absolute top-4 right-4">
             <Badge variant="secondary" className="shadow-md">
               <AlertTriangle className="w-3 h-3 mr-1" />
@@ -464,4 +584,3 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 AddressMap.displayName = 'AddressMap';
 
 export default AddressMap;
-

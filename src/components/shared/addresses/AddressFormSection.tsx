@@ -47,6 +47,8 @@ interface AddressFormSectionProps {
   onChange?: (data: PartialProjectAddress) => void;
   /** Show validation errors? */
   showErrors?: boolean;
+  /** External values to sync into form (e.g. from reverse geocoding drag) */
+  externalValues?: Partial<ProjectAddress> | null;
 }
 
 // =============================================================================
@@ -86,7 +88,8 @@ const BLOCK_SIDE_KEYS: readonly BlockSideDirection[] = [
 export function AddressFormSection({
   initialValues,
   onChange,
-  showErrors = false
+  showErrors = false,
+  externalValues
 }: AddressFormSectionProps) {
   const { t } = useTranslation('addresses');
 
@@ -125,6 +128,50 @@ export function AddressFormSection({
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
   }, []);
+
+  // =========================================================================
+  // EXTERNAL VALUES SYNC (e.g. reverse geocoding drag update)
+  // =========================================================================
+  useEffect(() => {
+    if (!externalValues) return;
+
+    setFormData(prev => {
+      const merged: AddressFormData = {
+        ...prev,
+        street: externalValues.street ?? prev.street,
+        number: externalValues.number ?? prev.number,
+        city: externalValues.city ?? prev.city,
+        neighborhood: externalValues.neighborhood ?? prev.neighborhood,
+        postalCode: externalValues.postalCode ?? prev.postalCode,
+        region: externalValues.region ?? prev.region,
+        country: externalValues.country ?? prev.country,
+      };
+
+      // Notify parent immediately (no debounce — this is a discrete update)
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (onChangeRef.current) {
+        const blockSideValue = merged.blockSide === SELECT_CLEAR_VALUE || !merged.blockSide
+          ? undefined
+          : (merged.blockSide as BlockSideDirection);
+
+        onChangeRef.current({
+          street: merged.street,
+          number: merged.number,
+          city: merged.city,
+          neighborhood: merged.neighborhood || undefined,
+          postalCode: merged.postalCode,
+          region: merged.region || undefined,
+          country: merged.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+          type: merged.type,
+          isPrimary: merged.isPrimary,
+          blockSide: blockSideValue,
+          label: merged.label,
+        });
+      }
+
+      return merged;
+    });
+  }, [externalValues]);
 
   const notifyParent = useCallback((data: AddressFormData) => {
     if (!onChangeRef.current) return;
