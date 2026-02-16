@@ -57,6 +57,8 @@ interface AddressFormData {
   number: string;
   city: string;
   postalCode: string;
+  region: string;
+  country: string;
   type: ProjectAddressType;
   isPrimary: boolean;
   blockSide: BlockSideDirection | typeof SELECT_CLEAR_VALUE;
@@ -92,6 +94,8 @@ export function AddressFormSection({
     number: initialValues?.number || '',
     city: initialValues?.city || '',
     postalCode: initialValues?.postalCode || '',
+    region: initialValues?.region || '',
+    country: initialValues?.country || 'Ελλάδα',
     type: initialValues?.type || 'site',
     isPrimary: initialValues?.isPrimary || false,
     blockSide: initialValues?.blockSide || SELECT_CLEAR_VALUE,
@@ -115,11 +119,12 @@ export function AddressFormSection({
         number: newData.number,
         city: newData.city,
         postalCode: newData.postalCode,
+        region: newData.region || undefined,
+        country: newData.country || 'Ελλάδα',
         type: newData.type,
         isPrimary: newData.isPrimary,
         blockSide: blockSideValue,
         label: newData.label,
-        country: 'Greece' // Default
       });
     }
   };
@@ -196,6 +201,33 @@ export function AddressFormSection({
           {errors.postalCode && (
             <p className="text-xs text-red-500 mt-1">{t('form.validation.postalCodeRequired')}</p>
           )}
+        </div>
+      </div>
+
+      {/* Region + Country */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="region" className="text-sm font-medium">
+            {t('form.region')}
+          </Label>
+          <Input
+            id="region"
+            value={formData.region}
+            onChange={(e) => handleChange('region', e.target.value)}
+            placeholder={t('form.regionPlaceholder')}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="country" className="text-sm font-medium">
+            {t('form.country')}
+          </Label>
+          <Input
+            id="country"
+            value={formData.country}
+            onChange={(e) => handleChange('country', e.target.value)}
+            placeholder={t('form.countryPlaceholder')}
+          />
         </div>
       </div>
 

@@ -41,9 +41,9 @@ import {
   getGeocodableAddresses
 } from '@/types/project/address-helpers';
 import {
-  AddressResolver,
-  type GeocodingResult
-} from '@/services/real-estate-monitor/AddressResolver';
+  geocodeAddress,
+  type GeocodingServiceResult
+} from '@/lib/geocoding/geocoding-service';
 import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
 import { colors } from '@/styles/design-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -88,7 +88,7 @@ export interface AddressMapProps {
   onMarkerClick?: (address: ProjectAddress, index: number) => void;
 
   /** Geocoding complete callback */
-  onGeocodingComplete?: (results: Map<string, GeocodingResult>) => void;
+  onGeocodingComplete?: (results: Map<string, GeocodingServiceResult>) => void;
 
   /** Additional CSS classes */
   className?: string;
@@ -126,19 +126,13 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
   const { t } = useTranslation('addresses');
 
-  const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingResult>>(new Map());
+  const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingServiceResult>>(new Map());
   const [geocodingStatus, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'partial' | 'error'>('idle');
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
 
   const mapRef = useRef<MapInstance | null>(null);
-  const addressResolver = useRef(new AddressResolver({
-    useCache: true,
-    fallbackToArea: true,
-    providers: ['nominatim'],
-    timeout: 5000
-  }));
 
   // ===========================================================================
   // GEOCODING EFFECT
@@ -166,16 +160,14 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
           return;
         }
 
-        // Resolve addresses sequentially with delay to respect Nominatim rate limit
-        const geocodedMap = new Map<string, GeocodingResult>();
+        // Resolve addresses via server-side geocoding service
+        const geocodedMap = new Map<string, GeocodingServiceResult>();
         let successCount = 0;
 
         for (let i = 0; i < geocodable.length; i++) {
-          if (i > 0) await new Promise(r => setTimeout(r, 1100));
           try {
-            const result = await addressResolver.current.resolveAddress(
-              formatAddressForGeocoding(geocodable[i])
-            );
+            const query = formatAddressForGeocoding(geocodable[i]);
+            const result = await geocodeAddress(query);
             if (result) {
               geocodedMap.set(geocodable[i].id, result);
               successCount++;

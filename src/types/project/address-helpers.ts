@@ -22,6 +22,7 @@ import type {
   BlockSideDirection,
   ProjectAddressType
 } from './addresses';
+import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -487,22 +488,22 @@ export function hasCoordinates(address: ProjectAddress): boolean {
 }
 
 /**
- * Format address for geocoding API
- * Enterprise pattern: API-specific formatting
+ * Format address for geocoding API — structured query object.
+ * Uses Nominatim structured search fields for accurate results.
  *
  * @param address - Address to format
- * @returns Geocoding-ready string
+ * @returns Structured geocoding query for /api/geocoding
  */
-export function formatAddressForGeocoding(address: ProjectAddress): string {
-  const parts = [
-    address.street,
-    address.number,
-    address.city,
-    address.postalCode,
-    address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY
-  ].filter(Boolean);
+export function formatAddressForGeocoding(address: ProjectAddress): StructuredGeocodingQuery {
+  const streetParts = [address.street, address.number].filter(Boolean);
 
-  return parts.join(', ');
+  return {
+    street: streetParts.length > 0 ? streetParts.join(' ') : undefined,
+    city: address.city || undefined,
+    postalCode: address.postalCode || undefined,
+    region: address.region || undefined,
+    country: address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+  };
 }
 
 /**
