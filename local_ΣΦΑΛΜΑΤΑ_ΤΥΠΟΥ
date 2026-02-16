@@ -1,4 +1,4 @@
-nteraction Timing
+Interaction Timing
 
 
 All
@@ -9,21 +9,63 @@ All
 
 500ms
 
-span.font-medium
-input delay
-3.745ms
-
-main.container.mx-auto.py-10
-input delay
-2.161,4ms
-
-body.font-sans.overflow-x-hidden.__variable_0365a6
-input delay
-27,3ms
+canvas.dxf-canvas.absolute.inset-0.w-full.h-full.z-10
+mousedown
+11,3ms
 render
-14,9ms
-
-body.font-sans.overflow-x-hidden.__variable_0365a6
+35ms
 input delay
-39,5ms
-r
+
+1,7ms
+
+pointerdown
+
+0,5ms
+
+mousedown
+
+11,3ms
+
+render
+
+35,0ms
+
+total
+
+48,5ms
+
+
+canvas.dxf-canvas.absolute.inset-0.w-full.h-full.z-10
+mouseup
+163,4ms
+render
+139
+
+canvas.dxf-canvas.absolute.inset-0.w-full.h-full.z-10
+mouseup
+163,4ms
+render
+139,2ms
+input delay
+
+0,5ms
+
+pointerup
+
+0,2ms
+
+mouseup
+
+163,4ms
+
+click
+
+0,7ms
+
+render
+
+139,2ms
+
+total
+
+304,0ms
