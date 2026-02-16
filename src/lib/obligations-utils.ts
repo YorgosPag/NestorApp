@@ -111,14 +111,26 @@ export const getObligationStats = (obligations: ObligationDocument[]) => {
   };
 };
 
-// Basic markdown conversion for legacy compatibility
+// Markdown → HTML conversion with proper non-greedy matching
 export const convertMarkdownToHtml = (markdown: string): string => {
   return markdown
+    // Headings (must run before inline formatting)
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-    .replace(/\*(.*)\*/gim, '<em>$1</em>');
+    // Blockquotes (before inline formatting)
+    .replace(/^>\s*(.*)$/gim, '<blockquote>$1</blockquote>')
+    // Bullet lists
+    .replace(/^[-*]\s+(.*)$/gim, '<li>$1</li>')
+    // Numbered lists
+    .replace(/^\d+\.\s+(.*)$/gim, '<li>$1</li>')
+    // Bold — non-greedy
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+    // Italic — non-greedy (must run after bold)
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    // Underline passthrough — already HTML, keep as-is
+    // Newlines → <br /> (last, after all line-based replacements)
+    .replace(/\n/g, '<br />');
 };
 
 // ============================================================================

@@ -4,7 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Save, X, Trash2 } from 'lucide-react';
@@ -76,12 +76,12 @@ export function ArticleItem({
                 placeholder={t('article.titlePlaceholder')}
                 className="text-sm font-medium"
               />
-              <Textarea
+              <RichTextEditor
                 value={article.content}
-                onChange={(e) => handlers.updateArticle(sectionId, article.id, { content: e.target.value })}
+                onChange={(content) => handlers.updateArticle(sectionId, article.id, { content })}
                 placeholder={t('article.contentPlaceholder')}
-                rows={2}
-                className="text-sm"
+                minHeight={80}
+                showStats={false}
               />
             </div>
           ) : (

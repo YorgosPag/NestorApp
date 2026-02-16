@@ -4,7 +4,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GripVertical, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/design-system';
@@ -59,12 +59,12 @@ export function ParagraphItem({
       <div className="flex-1 space-y-2">
         {isEditing ? (
           <div className="space-y-3">
-            <Textarea
+            <RichTextEditor
               value={paragraph.content}
-              onChange={(e) => handlers.updateParagraph(sectionId, articleId, paragraph.id, { content: e.target.value })}
+              onChange={(content) => handlers.updateParagraph(sectionId, articleId, paragraph.id, { content })}
               placeholder={t('paragraph.contentPlaceholder')}
-              rows={3}
-              className="text-sm"
+              minHeight={80}
+              showStats={false}
             />
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={handlers.stopEditing}><Save className={`${iconSizes.xs} mr-1`} />{tCommon('buttons.save')}</Button>

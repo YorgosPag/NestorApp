@@ -7,6 +7,7 @@ import { cn } from "@/lib/design-system";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { convertMarkdownToHtml } from '@/lib/obligations-utils';
 
 interface DocumentContentProps {
   doc: Partial<ObligationDocument>;
@@ -44,18 +45,18 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
             </div>
             <h2 className="text-xl font-bold text-primary uppercase tracking-wide">{section.title}</h2>
           </div>
-          {section.content && <div className="prose prose-sm max-w-none text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: section.content.replace(/\n/g, "<br />") }} />}
+          {section.content && <div className="prose prose-sm max-w-none text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(section.content) }} />}
           {section.articles?.map((article) => (
             <div key={article.id} id={`preview-${article.id}`} className={cn("space-y-3 border-l-4 border-accent pl-4", activeItemId === article.id && "border-l-primary bg-accent/20 -ml-2 pl-6 py-3 rounded-r")}>
               <div className="flex items-center gap-3">
                 <Badge variant="outline" className="font-mono text-sm">{article.number}</Badge>
                 <h3 className="text-lg font-semibold text-foreground">{article.title}</h3>
               </div>
-              {article.content && <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, "<br />") }} />}
+              {article.content && <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(article.content) }} />}
               {article.paragraphs?.map((paragraph) => (
                 <div key={paragraph.id} id={`preview-${paragraph.id}`} className={cn("flex gap-3 text-sm text-foreground", activeItemId === paragraph.id && "bg-accent/30 -ml-3 pl-3 py-2 rounded")}>
                   <span className={`font-mono text-muted-foreground ${iconSizes.lg}`}>{paragraph.number}.</span>
-                  <div className="flex-1" dangerouslySetInnerHTML={{ __html: paragraph.content.replace(/\n/g, "<br />") }} />
+                  <div className="flex-1" dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(paragraph.content) }} />
                 </div>
               ))}
             </div>
