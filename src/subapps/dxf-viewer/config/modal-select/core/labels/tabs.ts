@@ -22,6 +22,7 @@ export interface BuildingTabLabelsConfig {
   readonly timeline: string;
   readonly analytics: string;
   readonly storage: string;
+  readonly parking: string;
   readonly contracts: string;
   readonly protocols: string;
   readonly photos: string;
@@ -151,6 +152,7 @@ export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
   timeline: "tabs.labels.timeline",
   analytics: "tabs.labels.analytics",
   storage: "tabs.labels.storage",
+  parking: "tabs.labels.parking",
   contracts: "tabs.labels.contracts",
   protocols: "tabs.labels.protocols",
   photos: "tabs.labels.photos",

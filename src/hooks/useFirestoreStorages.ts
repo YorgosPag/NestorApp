@@ -1,14 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-// 🔐 ENTERPRISE: Auth-ready gating pattern
+/**
+ * ENTERPRISE STORAGE HOOK
+ *
+ * React hook for Firestore storage units data.
+ * Supports optional buildingId filtering (ADR-184 — Building Spaces Tabs).
+ *
+ * USAGE:
+ * ```tsx
+ * // Get storages for specific building
+ * const { storages, loading, error } = useFirestoreStorages({ buildingId: 'bldg_xxx' });
+ *
+ * // Get all storages
+ * const { storages, loading, error } = useFirestoreStorages();
+ * ```
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-// 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFirestoreStorages');
+
+// =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
+
+interface UseFirestoreStoragesOptions {
+  /** Filter by building ID (ADR-184) */
+  buildingId?: string;
+  /** Auto-fetch on mount (default: true) */
+  autoFetch?: boolean;
+}
 
 interface UseFirestoreStoragesReturn {
   storages: Storage[];
@@ -17,48 +42,53 @@ interface UseFirestoreStoragesReturn {
   refetch: () => Promise<void>;
 }
 
-/**
- * 🏢 ENTERPRISE: Response data type (apiClient returns unwrapped data)
- */
 interface StoragesApiResponse {
   storages: Storage[];
   count?: number;
 }
 
-export function useFirestoreStorages(): UseFirestoreStoragesReturn {
-  // 🔐 ENTERPRISE: Wait for auth state before making API calls
+// =============================================================================
+// HOOK IMPLEMENTATION
+// =============================================================================
+
+export function useFirestoreStorages(
+  options: UseFirestoreStoragesOptions = {}
+): UseFirestoreStoragesReturn {
+  const { buildingId, autoFetch = true } = options;
+
   const { user, loading: authLoading } = useAuth();
 
   const [storages, setStorages] = useState<Storage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStorages = async () => {
+  const fetchStorages = useCallback(async () => {
+    if (authLoading) {
+      logger.info('Waiting for auth state');
+      return;
+    }
+
+    if (!user) {
+      setLoading(false);
+      setError('User not authenticated');
+      return;
+    }
+
     try {
-      // 🔐 AUTH-READY GATING - Wait for authentication
-      if (authLoading) {
-        // Auth state is still loading - wait for it
-        logger.info('Waiting for auth state');
-        return; // Will retry via useEffect when authLoading changes
-      }
-
-      if (!user) {
-        // User not authenticated - cannot proceed
-        setLoading(false);
-        setError('User not authenticated');
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
-      logger.info('Fetching storages');
+      // Build API URL with optional buildingId filter
+      const url = buildingId
+        ? `/api/storages?buildingId=${encodeURIComponent(buildingId)}`
+        : '/api/storages';
 
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      const data = await apiClient.get<StoragesApiResponse>('/api/storages');
+      logger.info('Fetching storages', { buildingId });
+
+      const data = await apiClient.get<StoragesApiResponse>(url);
 
       setStorages(data?.storages || []);
-      logger.info(`Loaded ${data?.storages?.length || 0} storages`);
+      logger.info(`Loaded ${data?.storages?.length || 0} storages`, { buildingId });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -67,14 +97,13 @@ export function useFirestoreStorages(): UseFirestoreStoragesReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildingId, user, authLoading]);
 
-  // 🏢 ENTERPRISE: Fetch storages when auth is ready
   useEffect(() => {
-    if (!authLoading && user) {
+    if (autoFetch && !authLoading && user) {
       fetchStorages();
     }
-  }, [authLoading, user]);
+  }, [fetchStorages, autoFetch, authLoading, user]);
 
   return {
     storages,
@@ -83,3 +112,16 @@ export function useFirestoreStorages(): UseFirestoreStoragesReturn {
     refetch: fetchStorages
   };
 }
+
+// =============================================================================
+// CONVENIENCE EXPORTS
+// =============================================================================
+
+/**
+ * Get storages for a specific building (ADR-184)
+ */
+export function useBuildingStorages(buildingId: string): UseFirestoreStoragesReturn {
+  return useFirestoreStorages({ buildingId });
+}
+
+export default useFirestoreStorages;

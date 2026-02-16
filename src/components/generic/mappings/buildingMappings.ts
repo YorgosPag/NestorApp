@@ -56,6 +56,13 @@ import { MeasurementsTabContent } from '@/components/building-management/tabs/Me
 import { FloorsTabContent } from '@/components/building-management/tabs/FloorsTabContent';
 
 // ============================================================================
+// BUILDING SPACES TABS (ADR-184)
+// ============================================================================
+
+import { ParkingTabContent } from '@/components/building-management/tabs/ParkingTabContent';
+import { UnitsTabContent } from '@/components/building-management/tabs/UnitsTabContent';
+
+// ============================================================================
 // BUILDING COMPONENT MAPPING
 // 🏢 ENTERPRISE: Explicit type for UniversalTabsRenderer compatibility
 // ============================================================================
@@ -73,6 +80,8 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
 
   'MeasurementsTabContent': MeasurementsTabContent as ComponentType<TabComponentProps>,
   'FloorsTabContent': FloorsTabContent as ComponentType<TabComponentProps>,
+  'ParkingTabContent': ParkingTabContent as ComponentType<TabComponentProps>,
+  'UnitsTabContent': UnitsTabContent as ComponentType<TabComponentProps>,
 
   // 🏢 ENTERPRISE: Unified Factory aliases - all using EntityFilesManager (ADR-031)
   'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,

@@ -196,9 +196,10 @@ export const GET = withStandardRateLimit(
 async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promise<NextResponse<StoragesResponse>> {
   logger.info('Loading storages', { email: ctx.email, companyId: ctx.companyId });
   try {
-    // 🏗️ ENTERPRISE: Extract projectId parameter for filtering
+    // 🏗️ ENTERPRISE: Extract query parameters for filtering
     const { searchParams } = new URL(request.url);
     const requestedProjectId = searchParams.get('projectId');
+    const requestedBuildingId = searchParams.get('buildingId');
 
     // =========================================================================
     // STEP 0: Get authorized projects (TENANT ISOLATION)
@@ -272,9 +273,15 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     });
 
     // Filter by authorized projects (if not already filtered by single projectId)
-    const storages = requestedProjectId
+    let storages = requestedProjectId
       ? allStorages // Already filtered by Firestore query
       : allStorages.filter(storage => storage.projectId && authorizedProjectIds.has(storage.projectId));
+
+    // 🏢 ENTERPRISE: Filter by buildingId (ADR-184 — Building Spaces Tabs)
+    if (requestedBuildingId) {
+      storages = storages.filter(s => s.buildingId === requestedBuildingId);
+      logger.info('Filtered by buildingId', { buildingId: requestedBuildingId, count: storages.length });
+    }
 
     logger.info('Found storages for authorized projects', { count: storages.length });
     if (!requestedProjectId) {

@@ -421,11 +421,29 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'StorageTab'
           },
           {
+            id: 'parking',
+            value: 'parking',
+            icon: 'car',
+            description: 'Διαχείριση θέσεων στάθμευσης κτιρίου',
+            order: 7,
+            enabled: true,
+            component: 'ParkingTabContent'
+          },
+          {
+            id: 'units',
+            value: 'units',
+            icon: 'home',
+            description: 'Μονάδες (διαμερίσματα, καταστήματα, γραφεία) του κτιρίου',
+            order: 8,
+            enabled: true,
+            component: 'UnitsTabContent'
+          },
+          {
             id: 'contracts',
             value: 'contracts',
             icon: 'file-signature',
             description: 'tabs.contracts.description',
-            order: 7,
+            order: 9,
             enabled: true,
             component: 'PlaceholderTab',
             componentProps: {
@@ -438,7 +456,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'protocols',
             icon: 'clipboard-check',
             description: 'tabs.protocols.description',
-            order: 8,
+            order: 10,
             enabled: true,
             component: 'PlaceholderTab',
             componentProps: {
@@ -451,7 +469,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'photos',
             icon: 'camera',
             description: 'Φωτογραφίες κτιρίου και εργασιών',
-            order: 9,
+            order: 11,
             enabled: true,
             component: 'PhotosTabContent'
           },
@@ -460,7 +478,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'customers',
             icon: 'users',
             description: 'Πελάτες που έχουν αγοράσει μονάδες σε αυτό το κτίριο',
-            order: 10,
+            order: 12,
             enabled: true,
             component: 'BuildingCustomersTab'
           },
@@ -469,7 +487,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'videos',
             icon: 'play-circle',
             description: 'Videos κτιρίου και εργασιών',
-            order: 11,
+            order: 13,
             enabled: true,
             component: 'VideosTabContent'
           },
@@ -478,7 +496,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'measurements',
             icon: 'ruler',
             description: 'Επιμετρήσεις εργασιών και κοστολόγηση',
-            order: 12,
+            order: 14,
             enabled: true,
             component: 'MeasurementsTabContent'
           }

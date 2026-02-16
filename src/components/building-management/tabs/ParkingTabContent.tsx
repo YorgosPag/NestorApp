@@ -1,10 +1,10 @@
 /**
- * StorageTab — Building Storages Management Tab
+ * ParkingTabContent — Building Parking Spots Management Tab
  *
- * Lists, creates and manages storage units for a building.
- * Reads from the same Firestore collection as /spaces/storage (bidirectional sync).
+ * Lists, creates and manages parking spots for a building.
+ * Reads from the same Firestore collection as /spaces/parking (bidirectional sync).
  *
- * @module components/building-management/StorageTab
+ * @module components/building-management/tabs/ParkingTabContent
  * @see ADR-184 (Building Spaces Tabs)
  */
 
@@ -15,27 +15,27 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Warehouse, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
+import { Car, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
 import type { Building } from '@/types/building/contracts';
-import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface StoragesApiResponse {
-  storages: Storage[];
+interface ParkingApiResponse {
+  parkingSpots: ParkingSpot[];
   count?: number;
 }
 
-interface StorageMutationResponse {
+interface ParkingMutationResponse {
   success: boolean;
-  storage?: Storage;
+  parkingSpot?: ParkingSpot;
   message?: string;
   error?: string;
 }
 
-interface StorageTabProps {
+interface ParkingTabContentProps {
   building: Building;
 }
 
@@ -43,33 +43,33 @@ interface StorageTabProps {
 // CONSTANTS
 // ============================================================================
 
-const STORAGE_TYPES: StorageType[] = ['small', 'large', 'basement', 'ground', 'special'];
+const PARKING_TYPES: ParkingSpotType[] = ['standard', 'handicapped', 'motorcycle', 'electric', 'visitor'];
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function StorageTab({ building }: StorageTabProps) {
-  const { t } = useTranslation('storage');
+export function ParkingTabContent({ building }: ParkingTabContentProps) {
+  const { t } = useTranslation('parking');
   const { t: tBuilding } = useTranslation('building');
 
   // Data state
-  const [storages, setStorages] = useState<Storage[]>([]);
+  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Inline create state
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createName, setCreateName] = useState('');
-  const [createType, setCreateType] = useState<StorageType>('small');
+  const [createNumber, setCreateNumber] = useState('');
+  const [createType, setCreateType] = useState<ParkingSpotType>('standard');
   const [createFloor, setCreateFloor] = useState('');
   const [createArea, setCreateArea] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editType, setEditType] = useState<StorageType>('small');
+  const [editNumber, setEditNumber] = useState('');
+  const [editType, setEditType] = useState<ParkingSpotType>('standard');
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
   const [saving, setSaving] = useState(false);
@@ -78,73 +78,72 @@ export function StorageTab({ building }: StorageTabProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // ============================================================================
-  // FETCH STORAGES
+  // FETCH PARKING SPOTS
   // ============================================================================
 
-  const fetchStorages = useCallback(async () => {
+  const fetchParkingSpots = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.get<StoragesApiResponse>(
-        `/api/storages?buildingId=${building.id}`
+      const result = await apiClient.get<ParkingApiResponse>(
+        `/api/parking?buildingId=${building.id}`
       );
-      if (result?.storages) {
-        setStorages(result.storages);
+      if (result?.parkingSpots) {
+        setParkingSpots(result.parkingSpots);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load storages');
+      setError(err instanceof Error ? err.message : 'Failed to load parking spots');
     } finally {
       setLoading(false);
     }
   }, [building.id]);
 
   useEffect(() => {
-    fetchStorages();
-  }, [fetchStorages]);
+    fetchParkingSpots();
+  }, [fetchParkingSpots]);
 
   // ============================================================================
-  // CREATE STORAGE
+  // CREATE PARKING SPOT
   // ============================================================================
 
   const handleCreate = async () => {
-    if (!createName.trim()) return;
+    if (!createNumber.trim()) return;
     setCreating(true);
     try {
-      const result = await apiClient.post<StorageMutationResponse>('/api/storages', {
-        name: createName.trim(),
+      const result = await apiClient.post<ParkingMutationResponse>('/api/parking', {
+        number: createNumber.trim(),
         type: createType,
         floor: createFloor.trim(),
-        area: createArea ? parseFloat(createArea) : 0,
+        area: createArea ? parseFloat(createArea) : undefined,
         buildingId: building.id,
-        building: building.name,
         projectId: building.projectId,
-        status: 'available' as StorageStatus,
+        status: 'available' as ParkingSpotStatus,
       });
       if (result?.success) {
         setShowCreateForm(false);
-        setCreateName('');
-        setCreateType('small');
+        setCreateNumber('');
+        setCreateType('standard');
         setCreateFloor('');
         setCreateArea('');
-        await fetchStorages();
+        await fetchParkingSpots();
       }
     } catch (err) {
-      console.error('[StorageTab] Create error:', err);
+      console.error('[ParkingTab] Create error:', err);
     } finally {
       setCreating(false);
     }
   };
 
   // ============================================================================
-  // EDIT STORAGE
+  // EDIT PARKING SPOT
   // ============================================================================
 
-  const startEdit = (storage: Storage) => {
-    setEditingId(storage.id);
-    setEditName(storage.name);
-    setEditType(storage.type);
-    setEditFloor(storage.floor);
-    setEditArea(storage.area ? String(storage.area) : '');
+  const startEdit = (spot: ParkingSpot) => {
+    setEditingId(spot.id);
+    setEditNumber(spot.number);
+    setEditType(spot.type || 'standard');
+    setEditFloor(spot.floor || '');
+    setEditArea(spot.area ? String(spot.area) : '');
   };
 
   const cancelEdit = () => {
@@ -152,46 +151,46 @@ export function StorageTab({ building }: StorageTabProps) {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingId || !editName.trim()) return;
+    if (!editingId || !editNumber.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<StorageMutationResponse>(`/api/storages/${editingId}`, {
-        name: editName.trim(),
+      const result = await apiClient.patch<ParkingMutationResponse>(`/api/parking/${editingId}`, {
+        number: editNumber.trim(),
         type: editType,
         floor: editFloor.trim(),
-        area: editArea ? parseFloat(editArea) : 0,
+        area: editArea ? parseFloat(editArea) : undefined,
       });
       if (result?.success) {
         setEditingId(null);
-        await fetchStorages();
+        await fetchParkingSpots();
       }
     } catch (err) {
-      console.error('[StorageTab] Edit error:', err);
+      console.error('[ParkingTab] Edit error:', err);
     } finally {
       setSaving(false);
     }
   };
 
   // ============================================================================
-  // DELETE STORAGE
+  // DELETE PARKING SPOT
   // ============================================================================
 
-  const handleDelete = async (storage: Storage) => {
+  const handleDelete = async (spot: ParkingSpot) => {
     const confirmed = window.confirm(
-      `${t('storages.header.title')}: ${storage.name} — Delete?`
+      `${tBuilding('tabs.labels.parking')}: ${spot.number} — Delete?`
     );
     if (!confirmed) return;
 
-    setDeletingId(storage.id);
+    setDeletingId(spot.id);
     try {
-      const result = await apiClient.delete<StorageMutationResponse>(
-        `/api/storages/${storage.id}`
+      const result = await apiClient.delete<ParkingMutationResponse>(
+        `/api/parking/${spot.id}`
       );
       if (result?.success) {
-        await fetchStorages();
+        await fetchParkingSpots();
       }
     } catch (err) {
-      console.error('[StorageTab] Delete error:', err);
+      console.error('[ParkingTab] Delete error:', err);
     } finally {
       setDeletingId(null);
     }
@@ -201,18 +200,18 @@ export function StorageTab({ building }: StorageTabProps) {
   // HELPERS
   // ============================================================================
 
-  const getStatusBadge = (status: StorageStatus) => {
-    const colorMap: Record<StorageStatus, string> = {
+  const getStatusBadge = (status: ParkingSpotStatus | undefined) => {
+    const s = status || 'available';
+    const colorMap: Record<string, string> = {
       available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
       occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
       reserved: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-      maintenance: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
       sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-      unavailable: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+      maintenance: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     };
     return (
-      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorMap[status] || colorMap.unavailable}`}>
-        {t(`status.${status}`)}
+      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorMap[s] || colorMap.available}`}>
+        {t(`status.${s}`)}
       </span>
     );
   };
@@ -233,7 +232,7 @@ export function StorageTab({ building }: StorageTabProps) {
     return (
       <section className="flex flex-col items-center gap-3 py-12">
         <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" size="sm" onClick={fetchStorages}>
+        <Button variant="outline" size="sm" onClick={fetchParkingSpots}>
           Retry
         </Button>
       </section>
@@ -245,9 +244,9 @@ export function StorageTab({ building }: StorageTabProps) {
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Warehouse className="h-5 w-5 text-primary" />
-          {t('storages.header.title')}
-          <span className="text-sm font-normal text-muted-foreground">({storages.length})</span>
+          <Car className="h-5 w-5 text-primary" />
+          {tBuilding('tabs.labels.parking')}
+          <span className="text-sm font-normal text-muted-foreground">({parkingSpots.length})</span>
         </h2>
         <Button
           variant="default"
@@ -256,24 +255,24 @@ export function StorageTab({ building }: StorageTabProps) {
           disabled={showCreateForm}
         >
           <Plus className="mr-1 h-4 w-4" />
-          {t('storages.header.newStorage')}
+          {tBuilding('tabs.labels.parking')}
         </Button>
       </header>
 
       {/* Inline Create Form */}
       {showCreateForm && (
         <form
-          className="grid grid-cols-[1fr_100px_80px_80px_auto] items-end gap-2 rounded-lg border border-border bg-muted/30 p-3"
+          className="grid grid-cols-[1fr_120px_80px_80px_auto] items-end gap-2 rounded-lg border border-border bg-muted/30 p-3"
           onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
         >
           <fieldset className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted-foreground">
-              {tBuilding('tabs.floors.name')}
+              {t('general.fields.spotCode')}
             </label>
             <Input
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              placeholder={t('storages.header.newStorage')}
+              value={createNumber}
+              onChange={(e) => setCreateNumber(e.target.value)}
+              placeholder="P-001"
               className="h-9"
               disabled={creating}
               autoFocus
@@ -281,27 +280,27 @@ export function StorageTab({ building }: StorageTabProps) {
           </fieldset>
           <fieldset className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted-foreground">
-              {t('types.small')}
+              {t('general.fields.type')}
             </label>
             <select
               value={createType}
-              onChange={(e) => setCreateType(e.target.value as StorageType)}
+              onChange={(e) => setCreateType(e.target.value as ParkingSpotType)}
               className="h-9 rounded-md border border-input bg-background px-2 text-sm"
               disabled={creating}
             >
-              {STORAGE_TYPES.map(st => (
-                <option key={st} value={st}>{t(`types.${st}`)}</option>
+              {PARKING_TYPES.map(pt => (
+                <option key={pt} value={pt}>{t(`types.${pt}`)}</option>
               ))}
             </select>
           </fieldset>
           <fieldset className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted-foreground">
-              {tBuilding('tabs.floors.name')}
+              {t('general.fields.floor')}
             </label>
             <Input
               value={createFloor}
               onChange={(e) => setCreateFloor(e.target.value)}
-              placeholder="0"
+              placeholder="-1"
               className="h-9"
               disabled={creating}
             />
@@ -315,7 +314,7 @@ export function StorageTab({ building }: StorageTabProps) {
               step="0.01"
               value={createArea}
               onChange={(e) => setCreateArea(e.target.value)}
-              placeholder="0"
+              placeholder="12"
               className="h-9"
               disabled={creating}
             />
@@ -324,7 +323,7 @@ export function StorageTab({ building }: StorageTabProps) {
             <Button
               type="submit"
               size="sm"
-              disabled={!createName.trim() || creating}
+              disabled={!createNumber.trim() || creating}
               className="h-9"
             >
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -344,32 +343,32 @@ export function StorageTab({ building }: StorageTabProps) {
       )}
 
       {/* Table */}
-      {storages.length === 0 ? (
+      {parkingSpots.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          {t('storages.list.noResults')}
+          {tBuilding('tabs.labels.parking')} — 0
         </p>
       ) : (
         <>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium uppercase text-muted-foreground">
-                <th className="px-3 py-2">{tBuilding('tabs.floors.name')}</th>
-                <th className="w-24 px-3 py-2">{t('types.small')}</th>
-                <th className="w-20 px-3 py-2">{tBuilding('tabs.floors.name')}</th>
+                <th className="px-3 py-2">{t('general.fields.spotCode')}</th>
+                <th className="w-28 px-3 py-2">{t('general.fields.type')}</th>
+                <th className="w-20 px-3 py-2">{t('general.fields.floor')}</th>
                 <th className="w-20 px-3 py-2">m²</th>
-                <th className="w-28 px-3 py-2">{t('status.available')}</th>
+                <th className="w-28 px-3 py-2">{t('general.fields.status')}</th>
                 <th className="w-24 px-3 py-2 text-right">{tBuilding('tabs.floors.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {storages.map((storage) => (
-                <tr key={storage.id} className="border-b border-border/50 hover:bg-muted/20">
-                  {editingId === storage.id ? (
+              {parkingSpots.map((spot) => (
+                <tr key={spot.id} className="border-b border-border/50 hover:bg-muted/20">
+                  {editingId === spot.id ? (
                     <>
                       <td className="px-3 py-1.5">
                         <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
+                          value={editNumber}
+                          onChange={(e) => setEditNumber(e.target.value)}
                           className="h-8"
                           disabled={saving}
                         />
@@ -377,12 +376,12 @@ export function StorageTab({ building }: StorageTabProps) {
                       <td className="px-3 py-1.5">
                         <select
                           value={editType}
-                          onChange={(e) => setEditType(e.target.value as StorageType)}
+                          onChange={(e) => setEditType(e.target.value as ParkingSpotType)}
                           className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm"
                           disabled={saving}
                         >
-                          {STORAGE_TYPES.map(st => (
-                            <option key={st} value={st}>{t(`types.${st}`)}</option>
+                          {PARKING_TYPES.map(pt => (
+                            <option key={pt} value={pt}>{t(`types.${pt}`)}</option>
                           ))}
                         </select>
                       </td>
@@ -404,7 +403,7 @@ export function StorageTab({ building }: StorageTabProps) {
                           disabled={saving}
                         />
                       </td>
-                      <td className="px-3 py-1.5">{getStatusBadge(storage.status)}</td>
+                      <td className="px-3 py-1.5">{getStatusBadge(spot.status)}</td>
                       <td className="px-3 py-1.5">
                         <nav className="flex justify-end gap-1">
                           <Button
@@ -412,7 +411,7 @@ export function StorageTab({ building }: StorageTabProps) {
                             size="icon"
                             className="h-7 w-7"
                             onClick={handleSaveEdit}
-                            disabled={saving || !editName.trim()}
+                            disabled={saving || !editNumber.trim()}
                           >
                             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
                           </Button>
@@ -430,18 +429,18 @@ export function StorageTab({ building }: StorageTabProps) {
                     </>
                   ) : (
                     <>
-                      <td className="px-3 py-2 font-medium">{storage.name}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{t(`types.${storage.type}`)}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{storage.floor || '—'}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{storage.area > 0 ? `${storage.area}` : '—'}</td>
-                      <td className="px-3 py-2">{getStatusBadge(storage.status)}</td>
+                      <td className="px-3 py-2 font-mono font-medium">{spot.number}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{t(`types.${spot.type || 'standard'}`)}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{spot.floor || '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{spot.area ? `${spot.area}` : '—'}</td>
+                      <td className="px-3 py-2">{getStatusBadge(spot.status)}</td>
                       <td className="px-3 py-2">
                         <nav className="flex justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => startEdit(storage)}
+                            onClick={() => startEdit(spot)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -449,10 +448,10 @@ export function StorageTab({ building }: StorageTabProps) {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(storage)}
-                            disabled={deletingId === storage.id}
+                            onClick={() => handleDelete(spot)}
+                            disabled={deletingId === spot.id}
                           >
-                            {deletingId === storage.id ? (
+                            {deletingId === spot.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Trash2 className="h-3.5 w-3.5" />
@@ -468,7 +467,7 @@ export function StorageTab({ building }: StorageTabProps) {
           </table>
 
           <footer className="text-xs text-muted-foreground">
-            {storages.length} {t('storages.header.title')}
+            {parkingSpots.length} {tBuilding('tabs.labels.parking')}
           </footer>
         </>
       )}
@@ -476,4 +475,4 @@ export function StorageTab({ building }: StorageTabProps) {
   );
 }
 
-export default StorageTab;
+export default ParkingTabContent;
