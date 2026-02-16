@@ -490,11 +490,11 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const heightClass = ADDRESS_MAP_CONFIG.HEIGHT_PRESETS[heightPreset]
     ?? ADDRESS_MAP_CONFIG.HEIGHT_PRESETS.viewerStandard;
 
-  // For draggable mode: Always render map (no geocoding needed for new addresses)
-  const isDraggableNewAddress = draggableMarkers && addresses.length === 0;
+  // For draggable mode: Always render map immediately (skip loading/error early returns)
+  const isDraggableMode = draggableMarkers;
 
-  // Loading state (skip for draggable new address mode)
-  if (geocodingStatus === 'loading' && !isDraggableNewAddress) {
+  // Loading state (skip for draggable mode — map must always be visible)
+  if (geocodingStatus === 'loading' && !isDraggableMode) {
     return (
       <div
         className={`flex items-center justify-center bg-muted rounded-lg ${heightClass} ${className}`}
@@ -509,8 +509,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     );
   }
 
-  // Error state (skip for draggable new address mode)
-  if (geocodingStatus === 'error' && !isDraggableNewAddress) {
+  // Error state (skip for draggable mode — show map with default pin position)
+  if (geocodingStatus === 'error' && !isDraggableMode) {
     return (
       <Alert variant="destructive" className={className}>
         <AlertTriangle className="h-4 w-4" />
@@ -523,7 +523,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
   // Determine if map should render
   const shouldRenderMap =
-    isDraggableNewAddress ||
+    isDraggableMode ||
     geocodingStatus === 'success' ||
     geocodingStatus === 'partial';
 
