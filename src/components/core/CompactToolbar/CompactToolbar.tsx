@@ -163,6 +163,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onNewItem}
+                  aria-label={tooltip || t('buttons.add')}
                 >
                   <IconComponent className={`${iconSizes.sm} ${getIconColor('newItem')}`} />
                 </Button>
@@ -184,6 +185,7 @@ export function CompactToolbar({
                   className={`${iconSizes.xl} p-0`}
                   onClick={() => hasSelectedContact && onEditItem?.('0')}
                   disabled={!hasSelectedContact}
+                  aria-label={tooltip || t('buttons.edit')}
                 >
                   <Edit className={`${iconSizes.sm} ${!hasSelectedContact ? colors.text.muted : getIconColor('editItem')}`} />
                 </Button>
@@ -210,6 +212,7 @@ export function CompactToolbar({
                   className={`${iconSizes.xl} p-0`}
                   onClick={() => onDeleteItems?.(selectedItems)}
                   disabled={isDisabled}
+                  aria-label={tooltip || t('buttons.delete')}
                 >
                   <IconComponent className={`${iconSizes.sm} ${iconColor}`} />
                 </Button>
@@ -229,6 +232,7 @@ export function CompactToolbar({
                     variant="ghost"
                     size="sm"
                     className={`${iconSizes.xl} p-0 relative`}
+                    aria-label={getTooltip(config.tooltips.filters) || t('filters.title')}
                   >
                     <Filter className={`${iconSizes.sm} ${getIconColor('filters')}`} />
                     {activeFilters.length > 0 && (
@@ -290,6 +294,7 @@ export function CompactToolbar({
                   className={`${iconSizes.xl} p-0`}
                   onClick={() => logger.info('Add to favorites')}
                   disabled={selectedItems.length === 0}
+                  aria-label={tooltip || 'Favorites'}
                 >
                   <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('favorites')}`} />
                 </Button>
@@ -311,6 +316,7 @@ export function CompactToolbar({
                   className={`${iconSizes.xl} p-0`}
                   onClick={() => logger.info('Archive selected')}
                   disabled={selectedItems.length === 0}
+                  aria-label={tooltip || 'Archive'}
                 >
                   <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('archive')}`} />
                 </Button>
@@ -331,6 +337,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onExport}
+                  aria-label={tooltip || t('buttons.export')}
                 >
                   <Download className={`${iconSizes.sm} ${getIconColor('export')}`} />
                 </Button>
@@ -351,6 +358,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onImport}
+                  aria-label={tooltip || t('buttons.import')}
                 >
                   <Upload className={`${iconSizes.sm} ${getIconColor('import')}`} />
                 </Button>
@@ -371,6 +379,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onRefresh}
+                  aria-label={tooltip || t('buttons.refresh')}
                 >
                   <RefreshCw className={`${iconSizes.sm} ${getIconColor('refresh')}`} />
                 </Button>
@@ -390,6 +399,7 @@ export function CompactToolbar({
                     variant="ghost"
                     size="sm"
                     className={`${iconSizes.xl} p-0`}
+                    aria-label={getTooltip(config.tooltips.sorting) || 'Sort'}
                   >
                     <ArrowUpDown className={`${iconSizes.sm} ${getIconColor('sorting')}`} />
                   </Button>
@@ -429,6 +439,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onPreview}
+                  aria-label={tooltip || 'Preview'}
                 >
                   <Eye className={`${iconSizes.sm} ${getIconColor('preview')}`} />
                 </Button>
@@ -450,6 +461,7 @@ export function CompactToolbar({
                   className={`${iconSizes.xl} p-0`}
                   onClick={onCopy}
                   disabled={selectedItems.length === 0}
+                  aria-label={tooltip || 'Copy'}
                 >
                   <Copy className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('copy')}`} />
                 </Button>
@@ -470,6 +482,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onShare}
+                  aria-label={tooltip || 'Share'}
                 >
                   <Share2 className={`${iconSizes.sm} ${getIconColor('share')}`} />
                 </Button>
@@ -490,6 +503,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onReports}
+                  aria-label={tooltip || 'Reports'}
                 >
                   <FileText className={`${iconSizes.sm} ${getIconColor('reports')}`} />
                 </Button>
@@ -510,6 +524,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onSettings}
+                  aria-label={tooltip || 'Settings'}
                 >
                   <Settings className={`${iconSizes.sm} ${getIconColor('settings')}`} />
                 </Button>
@@ -530,6 +545,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onFavoritesManagement}
+                  aria-label={tooltip || 'Manage favorites'}
                 >
                   <Heart className={`${iconSizes.sm} ${getIconColor('favoritesManagement')}`} />
                 </Button>
@@ -550,6 +566,7 @@ export function CompactToolbar({
                   size="sm"
                   className={`${iconSizes.xl} p-0`}
                   onClick={onHelp}
+                  aria-label={tooltip || 'Help'}
                 >
                   <HelpCircle className={`${iconSizes.sm} ${getIconColor('help')}`} />
                 </Button>

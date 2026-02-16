@@ -67,6 +67,8 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
               variant={showDashboard ? "default" : "outline"}
               size="icon"
               onClick={onDashboardToggle}
+              aria-label={showDashboard ? t('headerActions.hideDashboard') : t('headerActions.showDashboard')}
+              aria-pressed={showDashboard}
             >
               {showDashboard ? <EyeOff className={iconSizes.sm} /> : <Eye className={iconSizes.sm} />}
             </Button>
@@ -109,7 +111,7 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
       {addButton && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="icon" onClick={addButton.onClick} variant="outline">
+            <Button size="icon" onClick={addButton.onClick} variant="outline" aria-label={addButton.label}>
               {addButton.icon ? (
                 <addButton.icon className={iconSizes.sm} />
               ) : (

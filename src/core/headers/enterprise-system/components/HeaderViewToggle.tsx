@@ -64,6 +64,8 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
                 variant={viewMode === mode ? "default" : "ghost"}
                 size="sm"
                 onClick={() => onViewModeChange(mode)}
+                aria-label={getViewLabel(mode)}
+                aria-pressed={viewMode === mode}
                 className={cn(
                   "h-8 border-0",
                   spacing.padding.x.sm,
