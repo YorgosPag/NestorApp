@@ -265,6 +265,11 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
     updateMouseCss(screenPos);
     updateMouseWorld(worldPos);
 
+    // 🏢 FIX (2026-02-16): Run overlay grip hover detection from DxfCanvas handler.
+    // LayerCanvas (z-0) NEVER receives mouse events because DxfCanvas (z-10) intercepts them.
+    // Without this call, hoveredVertexInfo/hoveredEdgeInfo are never set → no warm state, no drag.
+    handleLayerCanvasMouseMove(screenPos, worldPos);
+
     if (isInDrawingMode(activeTool, overlayMode) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
       drawingHandlersRef.current.onDrawingHover(worldPos);
     }

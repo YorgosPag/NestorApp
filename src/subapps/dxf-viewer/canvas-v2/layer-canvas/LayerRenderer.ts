@@ -32,7 +32,7 @@ import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rend
 // This eliminates dual-canvas alignment issues - single source of truth pattern
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 // 🏢 ADR-106: Centralized Edge Grip Size Multipliers
-import { GRIP_SIZE_MULTIPLIERS, EDGE_GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
+import { GRIP_SIZE_MULTIPLIERS, EDGE_GRIP_SIZE_MULTIPLIERS, EDGE_GRIP_COLOR, DEFAULT_GRIP_COLORS } from '../../rendering/grips/constants';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../rendering/primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized Angular Constants
@@ -642,13 +642,12 @@ export class LayerRenderer {
       const GRIP_SIZE_WARM = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.WARM);
       const GRIP_SIZE_HOT = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.HOT);
 
-      // 🏢 FIX (2026-02-15): Unified grip colors — same fallbacks as DXF renderer (BaseEntityRenderer)
-      // BEFORE: GRIP_DEFAULT (green), GRIP_HOVER (orange), SUCCESS_BRIGHT (green)
-      // AFTER: SNAP_CENTER (blue), SNAP_INTERSECTION (magenta), SNAP_ENDPOINT (red)
-      const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.SNAP_CENTER;
-      const GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.SNAP_INTERSECTION;
-      const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SNAP_ENDPOINT;
-      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK;
+      // 🏢 FIX (2026-02-16): Use centralized DEFAULT_GRIP_COLORS (same as DXF GripColorManager)
+      // Vertex grips: blue cold (#5F9ED1), orange warm, red hot — matching AutoCAD ACI standard
+      const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? DEFAULT_GRIP_COLORS.COLD;
+      const GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? DEFAULT_GRIP_COLORS.WARM;
+      const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? DEFAULT_GRIP_COLORS.HOT;
+      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? DEFAULT_GRIP_COLORS.CONTOUR;
 
       // 🏢 ENTERPRISE (2026-01-26): Get selected grip indices for multi-grip support
       const selectedVertexGripIndices = layer.selectedGripIndices ??
@@ -721,12 +720,11 @@ export class LayerRenderer {
       const EDGE_GRIP_SIZE_COLD = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.COLD);
       const EDGE_GRIP_SIZE_WARM = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.WARM);
 
-      // 🏢 FIX (2026-02-15): Unified edge grip colors — same temperature colors as vertex grips
-      // BEFORE: GRIP_EDGE (gray cold), GRIP_HOVER (orange warm)
-      // AFTER: Same colors as vertex grips — visual distinction via SIZE (60%), not color
-      const EDGE_GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.SNAP_CENTER;
-      const EDGE_GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.SNAP_INTERSECTION;
-      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK;
+      // 🏢 FIX (2026-02-16): Edge grips use GREEN cold (matching DXF GripColorManager)
+      // Edge cold = EDGE_GRIP_COLOR (green #00ff80), warm = orange — same as DXF entity edge grips
+      const EDGE_GRIP_COLOR_COLD = EDGE_GRIP_COLOR;
+      const EDGE_GRIP_COLOR_WARM = DEFAULT_GRIP_COLORS.WARM;
+      const GRIP_COLOR_CONTOUR = DEFAULT_GRIP_COLORS.CONTOUR;
 
       // Iterate through edges (including closing edge for closed polygons)
       const edgeCount = screenVertices.length;
