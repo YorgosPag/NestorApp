@@ -41,7 +41,6 @@ import { useZoom } from '../../systems/zoom';
 import {
   CoordinateTransforms,
   COORDINATE_LAYOUT,
-  getPointerSnapshotFromElement
 } from '../../rendering/core/CoordinateTransforms';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
@@ -65,7 +64,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 PDF BACKGROUND: Enterprise PDF background system
 import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background';
 // 🎯 EVENT BUS: For polygon drawing communication with toolbar
-import { EventBus, useEventBus } from '../../systems/events';
+import { useEventBus } from '../../systems/events';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
 // 🏢 ENTERPRISE (2026-01-31): Circle TTT and Line tools now managed by useSpecialTools hook
@@ -81,7 +80,7 @@ import {
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler, useLayerCanvasMouseMove } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler, useLayerCanvasMouseMove, useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -226,14 +225,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🏢 ENTERPRISE (2026-01-25): Multi-selection - getSelectedOverlay() replaced by isSelected() and getSelectedOverlays()
   // const selectedOverlay = overlayStore.getSelectedOverlay(); // DEPRECATED - use overlayStore.isSelected(id) instead
 
-  const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
-  // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
-  const draftPolygonRef = useRef<Array<[number, number]>>([]);
-  // 🏢 ENTERPRISE (2026-02-15): Ref for finishDrawingWithPolygon — avoids block-scope issues
-  // (function declared after action handlers, ref updated when function is created)
-  const finishDrawingWithPolygonRef = useRef<(polygon: Array<[number, number]>) => Promise<boolean>>(
-    async () => false
-  );
+  // 🏢 ENTERPRISE (2026-02-16): draftPolygon, draftPolygonRef, finishDrawingWithPolygonRef → usePolygonCompletion hook
   // 🏢 ADR-047: Drawing context menu — moved to useCanvasContextMenu hook (see line ~590)
   // 🏢 ENTERPRISE (2026-01-31): Grip system state management moved to useGripSystem hook
   // Previous ~65 lines of grip state definitions now handled by centralized hook
@@ -249,8 +241,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     gripHoverThrottleRef, justFinishedDragRef,
     markDragFinished,
   } = useGripSystem();
-  // 🔧 FIX (2026-01-24): Flag to track if we're in the process of saving
-  const [isSavingPolygon, setIsSavingPolygon] = useState(false);
+  // 🏢 ENTERPRISE (2026-02-16): isSavingPolygon state → usePolygonCompletion hook
   // 🏢 ENTERPRISE (2026-02-13): Selected drawn entity IDs for DxfCanvas highlight rendering
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
@@ -263,6 +254,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
   const eventBus = useEventBus();
 
+  // 🏢 ENTERPRISE (2026-02-16): Polygon draft state + completion logic extracted to usePolygonCompletion hook
+  // Owns: draftPolygon, draftPolygonRef, finishDrawingWithPolygonRef, isSavingPolygon, finishDrawing
+  const {
+    draftPolygon, setDraftPolygon, draftPolygonRef,
+    isSavingPolygon, setIsSavingPolygon,
+    finishDrawingWithPolygonRef, finishDrawing,
+  } = usePolygonCompletion({
+    levelManager, overlayStore, eventBus,
+    currentStatus, currentKind, activeTool, overlayMode,
+  });
+
   // 🏢 ENTERPRISE (2026-01-31): Special tools management moved to useSpecialTools hook
   // Previous ~100 lines of tool initialization and activation logic now handled by centralized hook
   const {
@@ -274,18 +276,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     levelManager,
   });
 
-  // Keep ref in sync with state
-  React.useEffect(() => {
-    draftPolygonRef.current = draftPolygon;
-  }, [draftPolygon]);
-
-  // 🎯 POLYGON EVENTS (2026-01-24): Notify toolbar about draft polygon changes
-  React.useEffect(() => {
-    eventBus.emit('overlay:draft-polygon-update', {
-      pointCount: draftPolygon.length,
-      canSave: draftPolygon.length >= 3
-    });
-  }, [draftPolygon.length, eventBus]);
+  // 🏢 ENTERPRISE (2026-02-16): Ref sync + EventBus polygon update → usePolygonCompletion hook
 
   // 🏢 ENTERPRISE: Provide zoom system to context
   // NOTE: canvasContext already retrieved at line 93 for centralized zoom operations
@@ -452,15 +443,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // Debug toggle only applies when in 'select' mode (not actively drawing/editing)
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
 
-  // 🏢 ENTERPRISE (2026-01-25): Clear draft polygon when switching to select tool
-  // Αποτρέπει το bug όπου η διαδικασία σχεδίασης συνεχίζεται μετά την αλλαγή tool
-  // 🔧 FIX (2026-02-13): Exclude overlayMode='draw' — in draw mode activeTool stays 'select'
-  // but the draft polygon must NOT be cleared while the user is actively drawing
-  React.useEffect(() => {
-    if (activeTool === 'select' && overlayMode !== 'draw' && draftPolygon.length > 0) {
-      setDraftPolygon([]);
-    }
-  }, [activeTool, draftPolygon.length, overlayMode]);
+  // 🏢 ENTERPRISE (2026-02-16): Clear draft polygon on tool change → usePolygonCompletion hook
 
   // 🏢 ENTERPRISE (2026-02-01): Clear preview canvas when switching to non-drawing tool
   // FIX: Green grip ball (start point indicator) stayed visible after switching to Select tool
@@ -629,6 +612,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onParentMouseMove: props.onMouseMove,
   });
 
+  // 🏢 ENTERPRISE (2026-02-16): Fit-to-view + fit-to-overlay extracted to useFitToView hook
+  const { fitToOverlay } = useFitToView({
+    dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays,
+  });
+
   // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
   React.useEffect(() => {
     if (dxfScene && dxfScene.entities.length > 0) {
@@ -683,38 +671,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       overlays: overlayStore.overlays
     }, undefined);  // ✅ CanvasSection δεν έχει levelSwitcher, άρα περνάω undefined
 
-  // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: FIT TO OVERLAY - Χρήση κεντρικής υπηρεσίας αντί για διάσπαρτη logic
-  const fitToOverlay = (overlayId: string) => {
-    const overlay = currentOverlays.find(o => o.id === overlayId);
-    if (!overlay || !overlay.polygon || overlay.polygon.length < 3) {
-      return;
-    }
-
-    // Calculate bounding box of overlay polygon
-    const xs = overlay.polygon.map(([x]) => x);
-    const ys = overlay.polygon.map(([, y]) => y);
-    const bounds = {
-      min: { x: Math.min(...xs), y: Math.min(...ys) },
-      max: { x: Math.max(...xs), y: Math.max(...ys) }
-    };
-
-    // ✅ ENTERPRISE MIGRATION: Get service from registry
-    const fitToView = serviceRegistry.get('fit-to-view');
-    // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = containerRef (SSoT)
-    // All viewport calculations use container for consistency
-    const container = containerRef.current;
-    const snap = getPointerSnapshotFromElement(container);
-    if (!snap) {
-      dwarn('CanvasSection', 'fitViewToBounds: Cannot fit - viewport not ready');
-      return; // 🏢 Fail-fast: Cannot fit without valid viewport
-    }
-    const result = fitToView.calculateFitToViewFromBounds(bounds, snap.viewport, { padding: 0.1 });
-
-    if (result.success && result.transform) {
-      // Apply transform to zoom system
-      zoomSystem.setTransform(result.transform);
-    }
-  };
+  // 🏢 ENTERPRISE (2026-02-16): fitToOverlay → useFitToView hook
 
 
   // 🏢 ENTERPRISE (2026-01-25): Edge midpoint click handler for vertex insertion
@@ -808,119 +765,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentOverlays, handleOverlayClick,
   });
 
-  // 🔧 FIX (2026-01-24): New function that accepts polygon as parameter to avoid stale closure
-  const finishDrawingWithPolygon = async (polygon: Array<[number, number]>) => {
-    // 🔧 FIX: Better error handling - notify user if level is not selected
-    if (polygon.length < 3) {
-      dwarn('CanvasSection', '⚠️ Cannot save polygon - need at least 3 points');
-      return false;
-    }
+  // 🏢 ENTERPRISE (2026-02-16): finishDrawingWithPolygon + finishDrawing → usePolygonCompletion hook
 
-    if (!levelManager.currentLevelId) {
-      derr('CanvasSection', '❌ Cannot save polygon - no level selected!');
-      // TODO: Show notification to user
-      alert('Παρακαλώ επιλέξτε ένα επίπεδο (Level) πρώτα για να αποθηκευτεί το polygon.');
-      return false;
-    }
+  // 🏢 ENTERPRISE (2026-02-16): Save/cancel polygon EventBus listeners → usePolygonCompletion hook
 
-    try {
-      await overlayStore.add({
-        levelId: levelManager.currentLevelId,
-        kind: currentKind,
-        polygon: polygon, // 🔧 FIX: Use passed polygon, not stale draftPolygon
-        status: currentStatus,
-        label: `Overlay ${Date.now()}`, // Temporary label
-      });
-
-      return true;
-    } catch (error) {
-      derr('CanvasSection', 'Failed to create overlay:', error);
-      return false;
-    }
-    // Note: setDraftPolygon([]) is done in the calling setDraftPolygon callback
-  };
-  // 🏢 ENTERPRISE (2026-02-15): Keep ref in sync for action handlers declared earlier
-  finishDrawingWithPolygonRef.current = finishDrawingWithPolygon;
-
-  // Legacy function for Enter key support (uses current state, which is fine for keyboard)
-  const finishDrawing = async () => {
-    if (draftPolygon.length >= 3 && levelManager.currentLevelId) {
-      await finishDrawingWithPolygon(draftPolygon);
-    }
-    setDraftPolygon([]);
-  };
-
-  // 🎯 POLYGON EVENTS (2026-01-24): Listen for save/cancel commands from toolbar
-  React.useEffect(() => {
-    // Handle save polygon command from toolbar "Αποθήκευση" button
-    const cleanupSave = eventBus.on('overlay:save-polygon', () => {
-      const polygon = draftPolygonRef.current;
-
-      if (polygon.length >= 3) {
-        setIsSavingPolygon(true);
-        finishDrawingWithPolygon(polygon).then(success => {
-          setIsSavingPolygon(false);
-          if (success) {
-            setDraftPolygon([]);
-          }
-        });
-      }
-    });
-
-    // Handle cancel polygon command from toolbar or Escape key
-    const cleanupCancel = eventBus.on('overlay:cancel-polygon', () => {
-      setDraftPolygon([]);
-    });
-
-    return () => {
-      cleanupSave();
-      cleanupCancel();
-    };
-  }, [eventBus]);
-
-  // Handle fit-to-view event from useCanvasOperations fallback
-  // 🏢 ENTERPRISE: Unified EventBus.on — receives events from all dispatchers
-  React.useEffect(() => {
-    const handleFitToView = () => {
-      // 🚀 USE COMBINED BOUNDS - DXF + overlays
-      // 🏢 FIX (2026-01-04): forceRecalculate=true includes dynamically drawn entities
-      const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
-
-      if (combinedBounds) {
-        // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = containerRef (SSoT)
-        // All viewport calculations use container for consistency
-        const container = containerRef.current;
-        const snap = getPointerSnapshotFromElement(container);
-        if (!snap) {
-          dwarn('CanvasSection', 'handleFitToView: Cannot fit - viewport not ready');
-          return; // 🏢 Fail-fast: Cannot fit without valid viewport
-        }
-
-        try {
-          // 🎯 ENTERPRISE: preserve original origin (allow negative coordinates)
-          const zoomResult = zoomSystem.zoomToFit(combinedBounds, snap.viewport, false);
-
-          // 🔥 ΚΡΙΣΙΜΟ: Εφαρμογή του νέου transform με null checks + NaN guards
-          if (zoomResult && zoomResult.transform) {
-            const { scale, offsetX, offsetY } = zoomResult.transform;
-
-            // 🛡️ GUARD: Check for NaN values before applying transform
-            if (isNaN(scale) || isNaN(offsetX) || isNaN(offsetY)) {
-              derr('CanvasSection', '🚨 Shift+1 failed: Invalid transform (NaN values)');
-              return;
-            }
-
-            setTransform(zoomResult.transform);
-          }
-        } catch (error) {
-          derr('CanvasSection', '🚨 Shift+1 failed:', error);
-        }
-      }
-    };
-
-    const cleanup = EventBus.on('canvas-fit-to-view', handleFitToView);
-    return cleanup;
-  }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
+  // 🏢 ENTERPRISE (2026-02-16): Fit-to-view EventBus listener → useFitToView hook
 
   // 🏢 ENTERPRISE (2026-02-16): Smart delete extracted to useSmartDelete hook
   // Handles Delete/Backspace with priority: grips → overlays → DXF entities
@@ -936,67 +785,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     eventBus,
   });
 
-  // Handle keyboard shortcuts for drawing, delete, and local operations
-  React.useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // Prevent shortcuts when typing in inputs
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
-        return;
-      }
-
-      // 🏢 ENTERPRISE (2026-01-26): Smart Delete - ADR-032
-      // Delete/Backspace: Context-aware deletion (grips first, then overlays)
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        e.stopPropagation(); // 🏢 Prevent other handlers from receiving this event
-        await handleSmartDelete();
-        return;
-      }
-
-      // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Zoom shortcuts μετακόμισαν στο hooks/useKeyboardShortcuts.ts
-      // Εδώ κρατάμε ΜΟΝΟ local shortcuts για drawing mode (Escape, Enter)
-
-      switch (e.key) {
-        case 'Escape':
-          // 🏢 ENTERPRISE (2026-02-15): Escape cancels grip following mode first
-          if (dxfGripInteraction.handleGripEscape()) {
-            break; // Consumed by grip interaction
-          }
-          setDraftPolygon([]);
-          // 🏢 ENTERPRISE: Escape also clears grip selection
-          if (selectedGrips.length > 0) {
-            setSelectedGrips([]);
-          }
-          break;
-        case 'Enter':
-          // 🏢 ENTERPRISE (2026-01-31): Handle Enter for continuous drawing tools - ADR-083
-          // Check if we're in a continuous drawing mode (polyline, polygon, measure-area, circle-best-fit, etc.)
-          const continuousTools = ['polyline', 'polygon', 'measure-area', 'measure-angle', 'measure-distance-continuous', 'circle-best-fit'];
-          if (continuousTools.includes(activeTool)) {
-            e.preventDefault();
-            handleDrawingFinish();
-          } else if (draftPolygon.length >= 3) {
-            // Legacy: Overlay polygon mode
-            finishDrawing();
-          }
-          break;
-        // 🏢 ENTERPRISE (2026-01-31): "X" key for flip arc direction during arc drawing
-        case 'x':
-        case 'X':
-          // Only flip if we're in arc drawing mode
-          if (activeTool === 'arc-3p' || activeTool === 'arc-cse' || activeTool === 'arc-sce') {
-            e.preventDefault();
-            handleFlipArc();
-          }
-          break;
-      }
-    };
-
-    // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish]);
+  // 🏢 ENTERPRISE (2026-02-16): Keyboard shortcuts extracted to useCanvasKeyboardShortcuts hook
+  // Delete/Backspace, Escape, Enter, X (flip arc) — all handled by the hook
+  useCanvasKeyboardShortcuts({
+    handleSmartDelete, dxfGripInteraction,
+    setDraftPolygon, draftPolygon,
+    selectedGrips, setSelectedGrips,
+    activeTool, handleDrawingFinish, handleFlipArc, finishDrawing,
+  });
 
   // 🏢 ADR-053: Native contextmenu listener — moved to useCanvasContextMenu hook
 

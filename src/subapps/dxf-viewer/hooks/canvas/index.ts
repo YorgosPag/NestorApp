@@ -87,3 +87,23 @@ export type {
   UseLayerCanvasMouseMoveParams,
   UseLayerCanvasMouseMoveReturn,
 } from './useLayerCanvasMouseMove';
+
+// === useFitToView === (CanvasSection decomposition #8 — fit-to-view zoom functionality)
+export { useFitToView } from './useFitToView';
+export type {
+  UseFitToViewParams,
+  UseFitToViewReturn,
+} from './useFitToView';
+
+// === usePolygonCompletion === (CanvasSection decomposition #9 — polygon draft state + completion)
+export { usePolygonCompletion } from './usePolygonCompletion';
+export type {
+  UsePolygonCompletionParams,
+  UsePolygonCompletionReturn,
+} from './usePolygonCompletion';
+
+// === useCanvasKeyboardShortcuts === (CanvasSection decomposition #10 — keyboard shortcuts)
+export { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts';
+export type {
+  UseCanvasKeyboardShortcutsParams,
+} from './useCanvasKeyboardShortcuts';
