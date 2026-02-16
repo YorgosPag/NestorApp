@@ -33,13 +33,6 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
    * Enhanced setLevelScene with auto-save
    */
   const setLevelSceneWithAutoSave = useCallback((levelId: string, scene: SceneModel) => {
-    // 🔍 DEBUG (2026-01-31): Log auto-save setLevelScene call
-    console.debug('💾 [useAutoSaveSceneManager] setLevelSceneWithAutoSave called', {
-      levelId,
-      entityCount: scene?.entities?.length || 0
-    });
-
-    // Call the original setLevelScene
     sceneManager.setLevelScene(levelId, scene);
     
     // Trigger auto-save if enabled and we have a filename and not loading from Firestore

@@ -407,15 +407,7 @@ function useLevelsSystemState({
   }, []);
 
   // Scene management (delegated to sceneManager)
-  // 🔧 FIX (2026-01-31): Use sceneManager functions directly as dependencies
-  // PROBLEM: sceneManager object reference doesn't change, causing stale closures
-  // SOLUTION: Use the actual function references which DO change when state changes
   const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
-    // 🔍 DEBUG (2026-01-31): Log LevelsSystem setLevelScene call
-    console.log('🏢 [LevelsSystem] setLevelScene called', {
-      levelId,
-      entityCount: scene?.entities?.length || 0
-    });
     sceneManager.setLevelScene(levelId, scene);
   }, [sceneManager.setLevelScene]);
 

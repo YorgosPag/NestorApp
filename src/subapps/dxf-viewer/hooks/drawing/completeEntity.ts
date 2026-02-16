@@ -34,11 +34,7 @@
  */
 
 import type { Entity } from '../../types/entities';
-// 🏢 ADR-102: Centralized Entity Type Guards
-import { isArcEntity } from '../../types/entities';
-// 🏢 ADR-130: Centralized Default Layer Name
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-// 🏢 ADR-XXX: Centralized Color Config
 import { UI_COLORS } from '../../config/color-config';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -116,19 +112,7 @@ export function completeEntity(
   entity: Entity | null,
   options: CompleteEntityOptions
 ): CompleteEntityResult {
-  // 🔍 DEBUG (2026-01-31): Log completeEntity call for circle debugging
-  console.debug('📦 [completeEntity] Called', {
-    entityType: entity?.type,
-    entityId: entity?.id,
-    levelId: options.levelId,
-    tool: options.tool,
-    // 🔍 DEBUG: Check if arc has counterclockwise BEFORE any processing
-    counterclockwiseOnEntry: entity?.type === 'arc' ? (entity as { counterclockwise?: boolean }).counterclockwise : 'N/A'
-  });
-
-  // 🛡️ GUARD: Validate entity
   if (!entity) {
-    console.debug('❌ [completeEntity] Entity is null');
     return { success: false, entityId: '', error: 'Entity is null' };
   }
 
@@ -150,38 +134,17 @@ export function completeEntity(
   // ═══════════════════════════════════════════════════════════════════════════
   applyCompletionStyles(entity as unknown as Record<string, unknown>);
 
-  // 🔍 DEBUG: Check if arc has counterclockwise AFTER applyCompletionStyles
-  // 🏢 ADR-102: Use centralized type guard
-  if (isArcEntity(entity)) {
-    console.debug('📦 [completeEntity] Arc entity AFTER applyCompletionStyles:', {
-      entityId: entity.id,
-      counterclockwise: (entity as { counterclockwise?: boolean }).counterclockwise,
-      fullEntity: JSON.stringify(entity, null, 2)
-    });
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // STEP 2: Add entity to scene
-  // 🔧 FIX (2026-01-31): Store finalScene for event emission (avoids stale closure)
-  // ═══════════════════════════════════════════════════════════════════════════
   const scene = getScene(levelId);
   let finalScene: SceneModel;
 
   if (scene) {
-    // Add to existing scene
     finalScene = {
       ...scene,
       entities: [...scene.entities, entity as AnySceneEntity]
     };
     setScene(levelId, finalScene);
-    // 🔍 DEBUG (2026-01-31): Log scene update
-    console.debug('✅ [completeEntity] Added to existing scene', {
-      levelId,
-      previousCount: scene.entities.length,
-      newCount: finalScene.entities.length
-    });
   } else {
-    // Create new scene with default layer (measurement tools need this)
     finalScene = {
       entities: [entity as AnySceneEntity],
       layers: { [DXF_DEFAULT_LAYER]: { name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false } },
@@ -189,38 +152,15 @@ export function completeEntity(
       units: 'mm',
     };
     setScene(levelId, finalScene);
-    // 🔍 DEBUG (2026-01-31): Log new scene creation
-    console.debug('✅ [completeEntity] Created new scene', {
-      levelId,
-      entityCount: 1
-    });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // STEP 3: Track for undo (optional)
-  // ═══════════════════════════════════════════════════════════════════════════
   if (trackForUndo && entity.id) {
     trackForUndo(entity.id);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // STEP 4: Emit completion event
-  // 🔧 FIX (2026-01-31): Pass finalScene directly to avoid stale closure issue
-  // The finalScene was just created above, so it contains the new entity
-  // ═══════════════════════════════════════════════════════════════════════════
   if (!skipEvent) {
-    // 🔍 DEBUG: Check arc counterclockwise in finalScene BEFORE emit
-    const arcEntitiesInFinalScene = finalScene.entities.filter(e => e.type === 'arc');
-    console.debug('📤 [completeEntity] Emitting drawing:complete with finalScene', {
-      entityCount: finalScene.entities.length,
-      entityId: entity.id,
-      arcCount: arcEntitiesInFinalScene.length,
-      arcsWithCounterclockwise: arcEntitiesInFinalScene.map(e => ({
-        id: e.id,
-        counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
-      }))
-    });
-
     EventBus.emit('drawing:complete', {
       tool,
       entityId: entity.id,
@@ -230,9 +170,7 @@ export function completeEntity(
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // STEP 5: Handle tool persistence (ADR-055)
-  // ═══════════════════════════════════════════════════════════════════════════
+  // STEP 5: Handle tool persistence
   if (!skipToolPersistence) {
     toolStateStore.handleToolCompletion(tool);
   }

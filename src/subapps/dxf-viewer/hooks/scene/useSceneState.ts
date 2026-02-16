@@ -70,19 +70,9 @@ export function useSceneState() {
     }
   }, [currentLevelId, currentScene, setLevelScene]);
 
-  // Scene change handler
-  // 🔍 DEBUG (2026-01-31): Log scene change for debugging
   const handleSceneChange = useCallback((scene: SceneModel) => {
-    dlog('SceneState', '🎬 [useSceneState] handleSceneChange called', {
-      currentLevelId,
-      entityCount: scene?.entities?.length || 0,
-      hasSetLevelScene: !!setLevelScene
-    });
     if (currentLevelId) {
       setLevelScene(currentLevelId, scene);
-      dlog('SceneState', '✅ [useSceneState] setLevelScene completed');
-    } else {
-      dlog('SceneState', '⚠️ [useSceneState] No currentLevelId - skipping setLevelScene');
     }
   }, [currentLevelId, setLevelScene]);
 
