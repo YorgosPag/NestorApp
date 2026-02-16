@@ -13,9 +13,8 @@
  * @created 2026-01-24
  */
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { auth } from '@/lib/firebase'; // Import Firebase auth directly
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,13 +54,14 @@ export default function AdminSetupPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
   // ==========================================================================
-  // CHECK CURRENT CONFIG
+  // CHECK CURRENT CONFIG — Deferred to avoid blocking main thread
   // ==========================================================================
 
   const checkCurrentConfig = useCallback(async () => {
+    // Lazy import Firebase auth to avoid blocking module load
+    const { auth } = await import('@/lib/firebase');
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) return;
 
@@ -69,9 +69,6 @@ export default function AdminSetupPage() {
     setError(null);
 
     try {
-      // 🏢 ENTERPRISE INP: Yield to main thread before heavy async work
-      await new Promise(resolve => setTimeout(resolve, 0));
-
       const token = await firebaseUser.getIdToken();
       const response = await fetch('/api/admin/setup-admin-config', {
         method: 'GET',
@@ -97,58 +94,56 @@ export default function AdminSetupPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && user && auth.currentUser) {
-      checkCurrentConfig();
+    if (isAuthenticated && user) {
+      // Defer config check — yield main thread for user interactions first
+      const timerId = setTimeout(checkCurrentConfig, 50);
+      return () => clearTimeout(timerId);
     }
   }, [isAuthenticated, user, checkCurrentConfig]);
 
   // ==========================================================================
-  // SETUP ADMIN
+  // SETUP ADMIN — Proper async handler (no IIFE)
   // ==========================================================================
 
-  const setupAdmin = () => {
+  const setupAdmin = async () => {
+    const { auth } = await import('@/lib/firebase');
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
       setError('Δεν είσαι συνδεδεμένος');
       return;
     }
 
-    // 🏢 ENTERPRISE INP: Use startTransition to keep UI responsive during async work
-    startTransition(() => {
-      setSaving(true);
-      setError(null);
-      setSuccess(false);
-    });
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
 
-    (async () => {
-      try {
-        const token = await firebaseUser.getIdToken();
-        const response = await fetch('/api/admin/setup-admin-config', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            enableErrorReporting: true
-          })
-        });
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/admin/setup-admin-config', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          enableErrorReporting: true
+        })
+      });
 
-        const data: SetupResponse = await response.json();
+      const data: SetupResponse = await response.json();
 
-        if (data.success && data.config) {
-          setCurrentConfig(data.config);
-          setSuccess(true);
-        } else {
-          setError(data.error || data.message || 'Αποτυχία αποθήκευσης');
-        }
-      } catch (err) {
-        logger.error('Failed to setup admin', { error: err });
-        setError('Αποτυχία σύνδεσης με τον server');
-      } finally {
-        setSaving(false);
+      if (data.success && data.config) {
+        setCurrentConfig(data.config);
+        setSuccess(true);
+      } else {
+        setError(data.error || data.message || 'Αποτυχία αποθήκευσης');
       }
-    })();
+    } catch (err) {
+      logger.error('Failed to setup admin', { error: err });
+      setError('Αποτυχία σύνδεσης με τον server');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ==========================================================================
