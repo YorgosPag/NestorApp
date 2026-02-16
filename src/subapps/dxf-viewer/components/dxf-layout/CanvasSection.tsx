@@ -5,7 +5,7 @@ import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 // ✅ CURSOR SETTINGS: Import από κεντρικό system αντί για duplicate
 import { useCanvasContext } from '../../contexts/CanvasContext';
-import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
+// useDrawingHandlers → moved to useCanvasEffects hook
 import { UI_COLORS, PREVIEW_DEFAULTS } from '../../config/color-config';
 // ADR-130, ADR-142: getLayerNameOrDefault, TEXT_SIZE_LIMITS — moved to useDxfSceneConversion hook
 // CanvasProvider removed - not needed for Canvas V2
@@ -16,8 +16,7 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 // 🏢 ADR-127: Centralized Ruler Dimensions
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 import { useCursorSettings, useCursorActions } from '../../systems/cursor';
-// 🏢 ENTERPRISE (2026-01-25): Immediate position store για zero-latency crosshair
-import { globalRulerStore } from '../../settings-provider';
+// globalRulerStore → moved to useCanvasEffects hook
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
 import { createOverlayHandlers } from '../../overlays/types';
@@ -33,7 +32,7 @@ import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
 import { useGripStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Centralized tool detection (Single Source of Truth)
-import { isDrawingTool, isMeasurementTool, isInDrawingMode } from '../../systems/tools/ToolStateManager';
+import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-102: Centralized Entity Type Guards
 // isLineEntity, isPolylineEntity, Entity — moved to useCanvasClickHandler hook
@@ -42,8 +41,7 @@ import {
   CoordinateTransforms,
   COORDINATE_LAYOUT,
 } from '../../rendering/core/CoordinateTransforms';
-// ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
-import { serviceRegistry } from '../../services';
+// serviceRegistry → moved to useCanvasEffects hook (DXF auto-fit)
 // 🏢 ENTERPRISE (2026-01-30): canvasBoundsService — moved to useViewportManager hook
 import { dlog, dwarn, derr } from '../../debug';
 // ✅ ADR-006 FIX: Import CrosshairOverlay για crosshair rendering
@@ -80,7 +78,7 @@ import {
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler, useLayerCanvasMouseMove, useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler, useLayerCanvasMouseMove, useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts, useCanvasEffects } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -313,15 +311,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     state: { grid: gridContextSettings, rulers: rulerContextSettings }
   } = useRulersGridContext();
 
-  // 🔧 FIX: React state hook για GlobalRulerStore reactivity
-  const [globalRulerSettings, setGlobalRulerSettings] = React.useState(globalRulerStore.settings);
-
-  React.useEffect(() => {
-    const unsubscribe = globalRulerStore.subscribe((newSettings) => {
-      setGlobalRulerSettings(newSettings);
-    });
-    return unsubscribe;
-  }, []);
+  // 🏢 ENTERPRISE (2026-02-16): globalRulerSettings → useCanvasEffects hook
 
   // Get cursor settings from CursorSystem
   const { settings: cursorSettings } = useCursorSettings();
@@ -445,37 +435,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // 🏢 ENTERPRISE (2026-02-16): Clear draft polygon on tool change → usePolygonCompletion hook
 
-  // 🏢 ENTERPRISE (2026-02-01): Clear preview canvas when switching to non-drawing tool
-  // FIX: Green grip ball (start point indicator) stayed visible after switching to Select tool
-  // The preview canvas is independent and must be explicitly cleared when leaving drawing mode
-  React.useEffect(() => {
-    if (!isInDrawingMode(activeTool, overlayMode)) {
-      previewCanvasRef.current?.clear();
-    }
-  }, [activeTool, overlayMode]);
+  // 🏢 ENTERPRISE (2026-02-16): Preview canvas cleanup → useCanvasEffects hook
 
-  // 🏢 ENTERPRISE (2026-01-26): Clear selected grips when overlay or tool changes
-  // ADR-031: Multi-Grip Selection System - clear grips that are no longer valid
-  React.useEffect(() => {
-    if (selectedGrips.length > 0) {
-      // Filter out grips whose overlays are no longer selected
-      const validGrips = selectedGrips.filter(grip =>
-        universalSelection.isSelected(grip.overlayId)
-      );
-
-      // Clear all grips if tool is not select/layering
-      if (activeTool !== 'select' && activeTool !== 'layering') {
-        setSelectedGrips([]);
-        setDragPreviewPosition(null);
-      } else if (validGrips.length !== selectedGrips.length) {
-        // Some grips became invalid - update selection
-        setSelectedGrips(validGrips);
-        if (validGrips.length === 0) {
-          setDragPreviewPosition(null);
-        }
-      }
-    }
-  }, [universalSelection, activeTool, selectedGrips]);
+  // 🏢 ENTERPRISE (2026-02-16): Grip validation → useCanvasEffects hook
 
   // 🏢 ENTERPRISE (2026-01-31): Grid/Selection settings construction moved to useCanvasSettings hook
   // Previous ~60 lines of settings construction now handled by the hook above (line 608-622)
@@ -502,83 +464,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentStatus,
     hoveredOverlayId,
     overlayMode,
-  });
-
-  // === 🎨 DRAWING SYSTEM ===
-  // useDrawingHandlers για DXF entity drawing (Line, Circle, Rectangle, etc.)
-  const drawingHandlers = useDrawingHandlers(
-    activeTool,
-    (entity) => {
-      // Callback όταν δημιουργηθεί entity
-      if (props.handleSceneChange && props.currentScene) {
-        // 🎯 TYPE-SAFE: Entity is already properly typed from useDrawingHandlers
-        const updatedScene = {
-          ...props.currentScene,
-          entities: [...(props.currentScene.entities || []), entity]
-        };
-        props.handleSceneChange(updatedScene);
-      }
-    },
-    (tool) => {
-      // Tool change callback
-      if (props.onToolChange) {
-        props.onToolChange(tool);
-      }
-    },
-    props.currentScene ?? undefined, // ✅ Convert null to undefined for type compatibility
-    previewCanvasRef // 🏢 ADR-040: Pass PreviewCanvas ref for direct preview rendering
-  );
-
-  // === 🎯 DRAWING HANDLERS REF ===
-  // Χρήση ref pattern για να αποφύγουμε infinite loops (Bug #1 fix)
-  const drawingHandlersRef = React.useRef(drawingHandlers);
-  React.useEffect(() => {
-    drawingHandlersRef.current = drawingHandlers;
-  }, [drawingHandlers]);
-
-  // === 🚀 AUTO-START DRAWING ===
-  // Όταν επιλέγεται drawing tool ή measurement tool, ξεκινά αυτόματα το drawing mode
-  // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
-  React.useEffect(() => {
-    const isDrawing = isDrawingTool(activeTool);
-    const isMeasurement = isMeasurementTool(activeTool);
-
-    if ((isDrawing || isMeasurement) && drawingHandlersRef.current?.startDrawing) {
-      // 🎯 TYPE-SAFE: activeTool is already narrowed to DrawingTool by if statement
-      drawingHandlersRef.current.startDrawing(activeTool as import('../../hooks/drawing/useUnifiedDrawing').DrawingTool);
-    }
-  }, [activeTool]);
-
-  // 🏢 ADR-047/053: Context menu — extracted to useCanvasContextMenu hook
-  // hasUnifiedDrawingPointsRef bridges drawingHandlersRef into the hook without coupling
-  const hasUnifiedDrawingPointsRef = React.useRef(() =>
-    (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0
-  );
-  hasUnifiedDrawingPointsRef.current = () =>
-    (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
-
-  const { drawingContextMenu, handleDrawingContextMenu, handleDrawingContextMenuClose } = useCanvasContextMenu({
-    containerRef,
-    activeTool,
-    overlayMode,
-    hasUnifiedDrawingPointsRef,
-    draftPolygonRef,
-  });
-
-  // 🏢 ENTERPRISE (2026-02-16): Drawing UI handlers extracted to useDrawingUIHandlers hook
-  // Finish, close, cancel, undo last point, flip arc — all dual-path (overlay + unified drawing)
-  const {
-    handleDrawingFinish,
-    handleDrawingClose,
-    handleDrawingCancel,
-    handleDrawingUndoLastPoint,
-    handleFlipArc,
-  } = useDrawingUIHandlers({
-    overlayMode,
-    draftPolygonRef,
-    finishDrawingWithPolygonRef,
-    drawingHandlersRef,
-    setDraftPolygon,
   });
 
   // 🏢 ENTERPRISE (2026-02-16): Scene→DxfScene conversion extracted to useDxfSceneConversion hook
@@ -617,41 +502,47 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays,
   });
 
-  // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
-  React.useEffect(() => {
-    if (dxfScene && dxfScene.entities.length > 0) {
-      // DxfScene loaded with entities - debug disabled for performance
+  // 🏢 ENTERPRISE (2026-02-16): Canvas effects + drawing system — extraction #11
+  // globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef
+  const { globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef } = useCanvasEffects({
+    activeTool,
+    overlayMode,
+    currentScene: props.currentScene ?? null,
+    handleSceneChange: props.handleSceneChange,
+    onToolChange: props.onToolChange,
+    previewCanvasRef,
+    selectedGrips,
+    setSelectedGrips,
+    setDragPreviewPosition,
+    universalSelection,
+    dxfScene,
+    dxfCanvasRef,
+    overlayCanvasRef,
+    zoomSystem,
+  });
 
-      // ✅ AUTO-FIT TO VIEW - Using new zoom system with DYNAMIC VIEWPORT
-      if (dxfScene.bounds) {
-        // Auto-fitting DXF to view - debug disabled for performance
+  const { drawingContextMenu, handleDrawingContextMenu, handleDrawingContextMenuClose } = useCanvasContextMenu({
+    containerRef,
+    activeTool,
+    overlayMode,
+    hasUnifiedDrawingPointsRef,
+    draftPolygonRef,
+  });
 
-        // Get actual canvas dimensions instead of hardcoded values
-        const canvas = dxfCanvasRef?.current || overlayCanvasRef.current;
-        if (canvas && canvas instanceof HTMLCanvasElement) {
-          // ✅ ENTERPRISE MIGRATION: Get service from registry
-          const canvasBounds = serviceRegistry.get('canvas-bounds');
-          const rect = canvasBounds.getBounds(canvas);
-          const viewport = { width: rect.width, height: rect.height };
-
-          // Use professional zoom system for fit-to-view with actual viewport
-          // 🎯 ENTERPRISE: preserve original origin (allow negative coordinates)
-          zoomSystem.zoomToFit(dxfScene.bounds, viewport, false);
-        } else {
-          // Fallback to container dimensions if canvas not ready
-          const container = document.querySelector('.relative.w-full.h-full.overflow-hidden');
-          if (container) {
-            // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CanvasBoundsService (works with any element)
-            const rect = container.getBoundingClientRect();
-            // 🎯 ENTERPRISE: preserve original origin (allow negative coordinates)
-            zoomSystem.zoomToFit(dxfScene.bounds, { width: rect.width, height: rect.height }, false);
-          }
-        }
-      }
-    } else if (dxfScene) {
-      // console.log('🔍 DxfScene loaded but NO entities:', { dxfScene });
-    }
-  }, [props.currentScene]); // Use props instead of derived state to prevent infinite loop
+  // 🏢 ENTERPRISE (2026-02-16): Drawing UI handlers extracted to useDrawingUIHandlers hook
+  const {
+    handleDrawingFinish,
+    handleDrawingClose,
+    handleDrawingCancel,
+    handleDrawingUndoLastPoint,
+    handleFlipArc,
+  } = useDrawingUIHandlers({
+    overlayMode,
+    draftPolygonRef,
+    finishDrawingWithPolygonRef,
+    drawingHandlersRef,
+    setDraftPolygon,
+  });
 
   // Use shared overlay handlers to eliminate duplicate code
   // 🏢 ENTERPRISE (2026-01-25): Bridge to universal selection system - ADR-030

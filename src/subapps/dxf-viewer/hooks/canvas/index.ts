@@ -107,3 +107,10 @@ export { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts';
 export type {
   UseCanvasKeyboardShortcutsParams,
 } from './useCanvasKeyboardShortcuts';
+
+// === useCanvasEffects === (CanvasSection decomposition #11 — effects + drawing system init)
+export { useCanvasEffects } from './useCanvasEffects';
+export type {
+  UseCanvasEffectsParams,
+  UseCanvasEffectsReturn,
+} from './useCanvasEffects';
