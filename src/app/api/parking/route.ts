@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ParkingRoute');
@@ -104,129 +105,87 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
   logger.info('Loading parking spots', { email: ctx.email, companyId: ctx.companyId });
 
   try {
-    // 🏗️ ENTERPRISE: Extract buildingId parameter for filtering
     const { searchParams } = new URL(request.url);
     const requestedBuildingId = searchParams.get('buildingId');
 
     // =========================================================================
-    // STEP 0: Get authorized buildings (TENANT ISOLATION)
+    // TENANT ISOLATION — Enterprise Pattern (O(1) direct verification)
     // =========================================================================
-    logger.info('Getting authorized buildings for company');
+    // Uses requireBuildingInTenant() — single Firestore read + companyId check
+    // Replaces fragile 3-hop chain (projects→buildings→check) that:
+    //   - Failed when buildings had no projectId
+    //   - Silently dropped buildings when >10 projects (Firestore 'in' limit)
+    // =========================================================================
 
-    // Get all projects belonging to user's company
-    const projectsSnapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.PROJECTS)
-      .where('companyId', '==', ctx.companyId)
-      .get();
-
-    const projectIds = projectsSnapshot.docs.map(doc => doc.id);
-    logger.info('Found projects for company', { projectCount: projectIds.length, companyId: ctx.companyId });
-
-    if (projectIds.length === 0) {
-      logger.info('No projects found for company - returning empty result');
-      return NextResponse.json({
-        success: true,
-        data: {
-          parkingSpots: [],
-          count: 0,
-          cached: false
+    if (requestedBuildingId) {
+      // Direct building verification — O(1), no project chain needed
+      try {
+        await requireBuildingInTenant({
+          ctx,
+          buildingId: requestedBuildingId,
+          path: '/api/parking',
+        });
+      } catch (err) {
+        if (err instanceof TenantIsolationError) {
+          return NextResponse.json({
+            success: false,
+            error: err.code === 'NOT_FOUND' ? 'Building not found' : 'Access denied',
+            details: err.message,
+          }, { status: err.status });
         }
-      });
-    }
-
-    // Get all buildings from these projects
-    const buildingsSnapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.BUILDINGS)
-      .where('projectId', 'in', projectIds.slice(0, 10)) // Firestore 'in' limit is 10
-      .get();
-
-    const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
-    logger.info('Found authorized buildings', { buildingCount: authorizedBuildingIds.size });
-
-    // If buildingId parameter provided, verify it's authorized
-    if (requestedBuildingId) {
-      if (!authorizedBuildingIds.has(requestedBuildingId)) {
-        logger.warn('TENANT ISOLATION: Unauthorized building access attempt', { userId: ctx.uid, buildingId: requestedBuildingId });
-        return NextResponse.json({
-          success: false,
-          error: 'Building not found or access denied',
-          details: 'The requested building does not belong to your organization'
-        }, { status: 403 });
+        throw err;
       }
-      logger.info('Building authorized - proceeding with query', { buildingId: requestedBuildingId });
-    }
 
-    // =========================================================================
-    // STEP 1: Check cache (skip for now - tenant-specific caching needed)
-    // =========================================================================
-    logger.info('Fetching from Firestore with Admin SDK (tenant-filtered)');
+      logger.info('Building authorized via direct verification', { buildingId: requestedBuildingId });
 
-    // =========================================================================
-    // STEP 2: Query Firestore using Admin SDK (TENANT FILTERED)
-    // =========================================================================
-    let snapshot;
-
-    if (requestedBuildingId) {
-      // Single building query (already validated as authorized)
-      snapshot = await getAdminFirestore()
+      // Query parking spots for this building
+      const snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.PARKING_SPACES)
         .where('buildingId', '==', requestedBuildingId)
         .get();
-      logger.info('Querying parking spots for building', { buildingId: requestedBuildingId });
-    } else {
-      // Multiple buildings query - get all and filter in-memory
-      // (Firestore 'in' operator limited to 10 items)
-      snapshot = await getAdminFirestore()
-        .collection(COLLECTIONS.PARKING_SPACES)
-        .get();
-      logger.info('Querying all parking spots', { authorizedBuildingCount: authorizedBuildingIds.size });
+
+      const parkingSpots = mapParkingDocs(snapshot.docs);
+      logger.info('Found parking spots for building', { buildingId: requestedBuildingId, count: parkingSpots.length });
+
+      return NextResponse.json({
+        success: true,
+        data: { parkingSpots, count: parkingSpots.length, cached: false, buildingId: requestedBuildingId }
+      });
     }
 
     // =========================================================================
-    // STEP 3: Map and filter parking spots (TENANT ISOLATION)
+    // NO buildingId — Return all parking for company's buildings
     // =========================================================================
-    const allParkingSpots: FirestoreParkingSpot[] = snapshot.docs.map(doc => {
-      const data = doc.data() as Record<string, unknown>;
-      return {
-        id: doc.id,
-        number: (data.number as string) || (data.code as string) || `P-${doc.id.slice(0, 4)}`,
-        buildingId: (data.buildingId as string) || '',
-        type: data.type as FirestoreParkingSpot['type'],
-        status: data.status as FirestoreParkingSpot['status'],
-        floor: data.floor as string | undefined,
-        location: data.location as string | undefined,
-        area: data.area as number | undefined,
-        notes: data.notes as string | undefined,
-        // Convert Firestore timestamps to dates
-        createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || data.createdAt as Date | undefined,
-        updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || data.updatedAt as Date | undefined
-      };
-    });
 
-    // Filter by authorized buildings (if not already filtered by single buildingId)
-    const parkingSpots = requestedBuildingId
-      ? allParkingSpots // Already filtered by Firestore query
-      : allParkingSpots.filter(spot => authorizedBuildingIds.has(spot.buildingId));
+    // Get all buildings belonging to this company
+    const buildingsSnapshot = await getAdminFirestore()
+      .collection(COLLECTIONS.BUILDINGS)
+      .where('companyId', '==', ctx.companyId)
+      .get();
 
-    logger.info('Found parking spots for authorized buildings', { count: parkingSpots.length });
-    if (!requestedBuildingId) {
-      const filteredOut = allParkingSpots.length - parkingSpots.length;
-      if (filteredOut > 0) {
-        logger.info('TENANT ISOLATION: Filtered out parking spots from unauthorized buildings', { filteredOut });
-      }
+    const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
+    logger.info('Found authorized buildings', { buildingCount: authorizedBuildingIds.size, companyId: ctx.companyId });
+
+    if (authorizedBuildingIds.size === 0) {
+      return NextResponse.json({
+        success: true,
+        data: { parkingSpots: [], count: 0, cached: false }
+      });
     }
 
-    // =========================================================================
-    // STEP 4: Return tenant-filtered results (CANONICAL FORMAT)
-    // =========================================================================
+    // Fetch all parking spots and filter by authorized buildings
+    const snapshot = await getAdminFirestore()
+      .collection(COLLECTIONS.PARKING_SPACES)
+      .get();
+
+    const allSpots = mapParkingDocs(snapshot.docs);
+    const parkingSpots = allSpots.filter(spot => authorizedBuildingIds.has(spot.buildingId));
+
+    logger.info('Found parking spots for company', { total: allSpots.length, authorized: parkingSpots.length });
+
     return NextResponse.json({
       success: true,
-      data: {
-        parkingSpots,
-        count: parkingSpots.length,
-        cached: false,
-        buildingId: requestedBuildingId || undefined
-      }
+      data: { parkingSpots, count: parkingSpots.length, cached: false }
     });
 
   } catch (error) {
@@ -238,4 +197,27 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+}
+
+// ============================================================================
+// DATA MAPPER — Firestore docs to typed parking spots
+// ============================================================================
+
+function mapParkingDocs(docs: FirebaseFirestore.QueryDocumentSnapshot[]): FirestoreParkingSpot[] {
+  return docs.map(doc => {
+    const data = doc.data() as Record<string, unknown>;
+    return {
+      id: doc.id,
+      number: (data.number as string) || (data.code as string) || `P-${doc.id.slice(0, 4)}`,
+      buildingId: (data.buildingId as string) || '',
+      type: data.type as FirestoreParkingSpot['type'],
+      status: data.status as FirestoreParkingSpot['status'],
+      floor: data.floor as string | undefined,
+      location: data.location as string | undefined,
+      area: data.area as number | undefined,
+      notes: data.notes as string | undefined,
+      createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || data.createdAt as Date | undefined,
+      updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || data.updatedAt as Date | undefined
+    };
+  });
 }
