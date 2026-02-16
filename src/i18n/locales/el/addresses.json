@@ -77,6 +77,11 @@
     "partialStatus": "{count} από {total} διευθύνσεις",
     "dragHint": "Σύρετε την πινέζα για αυτόματη συμπλήρωση διεύθυνσης",
     "reverseGeocoding": "Αναζήτηση διεύθυνσης...",
-    "reverseGeocodingFailed": "Δεν βρέθηκε διεύθυνση σε αυτή τη θέση"
+    "reverseGeocodingFailed": "Δεν βρέθηκε διεύθυνση σε αυτή τη θέση",
+    "locateMe": "Βρες τη θέση μου",
+    "locatingUser": "Εντοπισμός θέσης...",
+    "locationDenied": "Η πρόσβαση στην τοποθεσία απορρίφθηκε",
+    "locationError": "Δεν ήταν δυνατός ο εντοπισμός",
+    "myLocation": "Η θέση μου"
   }
 }

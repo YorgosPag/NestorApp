@@ -77,6 +77,11 @@
     "partialStatus": "{count} of {total} addresses",
     "dragHint": "Drag the pin to auto-fill the address",
     "reverseGeocoding": "Looking up address...",
-    "reverseGeocodingFailed": "No address found at this location"
+    "reverseGeocodingFailed": "No address found at this location",
+    "locateMe": "Find my location",
+    "locatingUser": "Locating...",
+    "locationDenied": "Location access denied",
+    "locationError": "Could not determine location",
+    "myLocation": "My location"
   }
 }

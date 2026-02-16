@@ -27,7 +27,8 @@
 
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Source, Layer, Marker } from 'react-map-gl/maplibre';
-import { Loader2, AlertTriangle, MapPin } from 'lucide-react';
+import { Loader2, AlertTriangle, MapPin, Locate } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { LngLatBounds } from 'maplibre-gl';
 import type * as GeoJSON from 'geojson';
 
@@ -48,6 +49,7 @@ import {
   type GeocodingServiceResult,
   type ReverseGeocodingResult
 } from '@/lib/geocoding/geocoding-service';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { ADDRESS_MAP_CONFIG, type AddressMapHeightPreset } from '@/config/address-map-config';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { colors } from '@/styles/design-tokens';
@@ -94,6 +96,9 @@ export interface AddressMapProps {
 
   /** Geocoding complete callback */
   onGeocodingComplete?: (results: Map<string, GeocodingServiceResult>) => void;
+
+  /** Show "Locate me" button for user GPS position (default: true) */
+  showLocateMe?: boolean;
 
   /** Enable draggable markers (for add/edit mode) */
   draggableMarkers?: boolean;
@@ -145,6 +150,23 @@ function DraggableMarkerPin({ isPrimary }: DraggableMarkerPinProps) {
 }
 
 // =============================================================================
+// USER LOCATION PIN — Green pulsating dot ("My Location" pattern)
+// =============================================================================
+
+function UserLocationPin() {
+  return (
+    <div className="relative flex items-center justify-center w-8 h-8">
+      {/* Pulsating accuracy ring */}
+      <span className="absolute inset-0 rounded-full bg-green-500/25 animate-ping" />
+      {/* Static semi-transparent ring */}
+      <span className="absolute inset-1 rounded-full bg-green-500/15" />
+      {/* Solid center dot */}
+      <span className="relative w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow-md" />
+    </div>
+  );
+}
+
+// =============================================================================
 // HELPERS
 // =============================================================================
 
@@ -179,6 +201,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   enableClickToFocus = true,
   onMarkerClick,
   onGeocodingComplete,
+  showLocateMe = true,
   draggableMarkers = false,
   onAddressDragUpdate,
   className = ''
@@ -188,6 +211,13 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // ===========================================================================
 
   const { t } = useTranslation('addresses');
+
+  // User location (GPS) — "Βρες τη θέση μου"
+  const {
+    position: userPosition,
+    status: geoStatus,
+    requestPosition,
+  } = useGeolocation({ enableHighAccuracy: false, maximumAge: 60_000, timeout: 15_000 });
 
   const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingServiceResult>>(new Map());
   const [geocodingStatus, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'partial' | 'error'>('idle');
@@ -200,6 +230,18 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
 
   const mapRef = useRef<MapInstance | null>(null);
+
+  // ===========================================================================
+  // USER LOCATION ERROR TOAST
+  // ===========================================================================
+
+  useEffect(() => {
+    if (geoStatus === 'denied') {
+      toast.error(t('map.locationDenied'));
+    } else if (geoStatus === 'error') {
+      toast.error(t('map.locationError'));
+    }
+  }, [geoStatus, t]);
 
   // ===========================================================================
   // GEOCODING EFFECT
@@ -538,9 +580,48 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                   />
                 </Source>
               )}
+
+              {/* User Location Marker — green pulsating dot */}
+              {showLocateMe && mapReady && userPosition && (
+                <Marker
+                  longitude={userPosition.longitude}
+                  latitude={userPosition.latitude}
+                  anchor="center"
+                >
+                  <UserLocationPin />
+                </Marker>
+              )}
             </InteractiveMap>
           )}
         </div>
+
+        {/* Locate Me Button — bottom-right corner */}
+        {showLocateMe && (
+          <button
+            type="button"
+            onClick={requestPosition}
+            disabled={geoStatus === 'requesting'}
+            className={`
+              absolute bottom-3 right-3 z-10
+              flex items-center justify-center
+              w-9 h-9 rounded-lg shadow-md
+              border border-border
+              transition-colors duration-150
+              disabled:opacity-60 disabled:cursor-not-allowed
+              ${geoStatus === 'granted'
+                ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                : 'bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground'}
+            `}
+            title={t('map.locateMe')}
+            aria-label={t('map.locateMe')}
+          >
+            {geoStatus === 'requesting' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Locate className="w-4 h-4" />
+            )}
+          </button>
+        )}
 
         {/* Drag hint badge */}
         {draggableMarkers && (
