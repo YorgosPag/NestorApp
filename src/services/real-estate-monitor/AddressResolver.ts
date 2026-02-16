@@ -13,8 +13,10 @@
 
 'use client';
 
-import { GEOGRAPHIC_CONFIG, GeographicUtils } from '@/config/geographic-config';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
+import { transliterateGreeklish, containsGreek } from '@/services/ai-pipeline/shared/greek-nlp';
 
 const logger = createModuleLogger('AddressResolver');
 
@@ -121,12 +123,15 @@ export class AddressResolver {
   }
 
   /**
-   * Batch resolve multiple addresses
+   * Batch resolve multiple addresses — sequential with 1.1s delay
+   * to respect Nominatim's 1 req/s rate limit.
    */
   async resolveMultiple(addresses: (GreekAddress | string)[]): Promise<(GeocodingResult | null)[]> {
-    const results = await Promise.all(
-      addresses.map(addr => this.resolveAddress(addr))
-    );
+    const results: (GeocodingResult | null)[] = [];
+    for (let i = 0; i < addresses.length; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, 1100));
+      results.push(await this.resolveAddress(addresses[i]));
+    }
     return results;
   }
 
@@ -147,10 +152,15 @@ export class AddressResolver {
    */
   private parseGreekAddress(addressString: string): GreekAddress {
     // Clean και normalize
-    const cleaned = addressString
+    let cleaned = addressString
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/,\s*/g, ', ');
+
+    // Greeklish→Greek αν δεν περιέχει ελληνικούς χαρακτήρες
+    if (!containsGreek(cleaned)) {
+      cleaned = transliterateGreeklish(cleaned);
+    }
 
     // Common patterns για Greek addresses
     const patterns = {
@@ -188,8 +198,10 @@ export class AddressResolver {
       }
     }
 
-    // Detect common area names
-    result.area = this.extractArea(cleaned);
+    // Detect common area names — only if regex didn't already parse one
+    if (!result.area) {
+      result.area = this.extractArea(cleaned);
+    }
     result.municipality = this.detectMunicipality(result.area);
     result.region = this.detectRegion(result.municipality || result.area);
 
@@ -265,11 +277,34 @@ export class AddressResolver {
   }
 
   /**
-   * Detect region from municipality or area
+   * Detect region from municipality or area via lookup table
    */
-  private detectRegion(location?: string): string {
-    // Simplified - most προς πώληση are in Attica
-    return 'Αττική';
+  private static readonly REGION_MAP: Readonly<Record<string, string>> = {
+    'Μαρούσι': 'Αττική', 'Αμαρουσίου': 'Αττική',
+    'Κηφισιά': 'Αττική', 'Κηφισιάς': 'Αττική',
+    'Χαλάνδρι': 'Αττική', 'Χαλανδρίου': 'Αττική',
+    'Γλυφάδα': 'Αττική', 'Γλυφάδας': 'Αττική',
+    'Κολωνάκι': 'Αττική', 'Παγκράτι': 'Αττική',
+    'Πειραιάς': 'Αττική', 'Πειραιώς': 'Αττική',
+    'Ψυχικό': 'Αττική', 'Φιλοθέη': 'Αττική',
+    'Εκάλη': 'Αττική', 'Βούλα': 'Αττική',
+    'Βουλιαγμένη': 'Αττική', 'Βάρη': 'Αττική',
+    'Νέα Σμύρνη': 'Αττική', 'Καλλιθέα': 'Αττική',
+    'Αγία Παρασκευή': 'Αττική', 'Νέο Ηράκλειο': 'Αττική',
+    'Μεταμόρφωση': 'Αττική', 'Λυκόβρυση': 'Αττική',
+    'Πεύκη': 'Αττική', 'Αθήνα': 'Αττική',
+    'Θεσσαλονίκη': 'Κεντρική Μακεδονία',
+    'Πάτρα': 'Δυτική Ελλάδα',
+    'Ηράκλειο': 'Κρήτη', 'Χανιά': 'Κρήτη',
+    'Λάρισα': 'Θεσσαλία', 'Βόλος': 'Θεσσαλία',
+    'Ιωάννινα': 'Ήπειρος',
+    'Καβάλα': 'Ανατολική Μακεδονία και Θράκη',
+    'Ρόδος': 'Νότιο Αιγαίο', 'Κέρκυρα': 'Ιόνια Νησιά',
+  };
+
+  private detectRegion(location?: string): string | undefined {
+    if (!location) return undefined;
+    return AddressResolver.REGION_MAP[location];
   }
 
   // ============================================================================
@@ -364,56 +399,81 @@ export class AddressResolver {
   }
 
   /**
-   * Resolve area center coordinates
+   * Deterministic area center coordinates (real geographic centers).
+   * Eliminates Math.random() drift from the old generateNearbyCoordinates().
+   */
+  private static readonly AREA_CENTERS: Readonly<Record<string, readonly [number, number]>> = {
+    // Attica — North
+    'Μαρούσι': [38.0498, 23.8079],
+    'Κηφισιά': [38.0744, 23.8115],
+    'Χαλάνδρι': [38.0213, 23.8000],
+    'Νέο Ηράκλειο': [38.0387, 23.7594],
+    'Μεταμόρφωση': [38.0559, 23.7641],
+    'Λυκόβρυση': [38.0647, 23.7809],
+    'Πεύκη': [38.0583, 23.7985],
+    'Αγία Παρασκευή': [38.0155, 23.8260],
+    'Ψυχικό': [38.0065, 23.7780],
+    'Φιλοθέη': [38.0170, 23.7840],
+    'Εκάλη': [38.0990, 23.8320],
+    // Attica — Central
+    'Αθήνα': [37.9838, 23.7275],
+    'Κολωνάκι': [37.9793, 23.7434],
+    'Παγκράτι': [37.9679, 23.7465],
+    // Attica — South
+    'Γλυφάδα': [37.8609, 23.7532],
+    'Βούλα': [37.8447, 23.7684],
+    'Βουλιαγμένη': [37.8100, 23.7785],
+    'Βάρη': [37.8220, 23.7810],
+    'Καλλιθέα': [37.9562, 23.6988],
+    'Νέα Σμύρνη': [37.9459, 23.7141],
+    // Attica — West
+    'Πειραιάς': [37.9475, 23.6346],
+    // Major Greek cities
+    'Θεσσαλονίκη': [40.6401, 22.9444],
+    'Πάτρα': [38.2466, 21.7346],
+    'Ηράκλειο': [35.3387, 25.1442],
+    'Χανιά': [35.5138, 24.0180],
+    'Λάρισα': [39.6390, 22.4191],
+    'Βόλος': [39.3621, 22.9420],
+    'Ιωάννινα': [39.6650, 20.8537],
+  };
+
+  /**
+   * Resolve area center coordinates — deterministic lookup, no randomness.
    */
   private async resolveAreaCenter(area: string): Promise<GeocodingResult | null> {
-    // 🏢 ENTERPRISE: Configurable coordinates based on geographic config
-    const areaCoordinates: Record<string, [number, number]> = {
-      // Primary/Alternative city centers from config
-      [GEOGRAPHIC_CONFIG.DEFAULT_CITY]: [GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE],
-      [GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY]: [GEOGRAPHIC_CONFIG.ALTERNATIVE_LATITUDE, GEOGRAPHIC_CONFIG.ALTERNATIVE_LONGITUDE],
+    // Check config-based defaults first
+    if (area === GEOGRAPHIC_CONFIG.DEFAULT_CITY) {
+      return this.buildAreaResult(area, GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE);
+    }
+    if (area === GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY) {
+      return this.buildAreaResult(area, GEOGRAPHIC_CONFIG.ALTERNATIVE_LATITUDE, GEOGRAPHIC_CONFIG.ALTERNATIVE_LONGITUDE);
+    }
 
-      // Generate nearby coordinates for demo areas (if different from config)
-      'Μαρούσι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 15), // ~15km north
-      'Κηφισιά': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 12), // ~12km NE
-      'Χαλάνδρι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 8), // ~8km N
-      'Γλυφάδα': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, -10), // ~10km S
-      'Κολωνάκι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 1), // ~1km central
-      'Παγκράτι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 2), // ~2km SE
-      'Πειραιάς': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, -8), // ~8km SW
-    };
-
-    const coords = areaCoordinates[area];
+    // Deterministic area centers
+    const coords = AddressResolver.AREA_CENTERS[area];
     if (coords) {
-      return {
-        lat: coords[0],
-        lng: coords[1],
-        accuracy: 'center',
-        confidence: 0.5,
-        provider: 'cache',
-        address: {
-          area,
-          country: 'Greece'
-        }
-      };
+      return this.buildAreaResult(area, coords[0], coords[1]);
     }
 
     // Fallback to Nominatim για unknown areas
     return this.geocodeWithNominatim({ area, country: 'Greece' });
   }
 
+  private buildAreaResult(area: string, lat: number, lng: number): GeocodingResult {
+    return {
+      lat,
+      lng,
+      accuracy: 'center',
+      confidence: 0.5,
+      provider: 'cache',
+      address: { area, country: 'Greece' }
+    };
+  }
+
   // ============================================================================
   // UTILITIES
   // ============================================================================
-
-  /**
-   * 🏢 ENTERPRISE: Generate nearby coordinates for demo areas
-   */
-  private generateNearbyCoordinates(baseLat: number, baseLng: number, offsetKm: number): [number, number] {
-    // Use the centralized utility from geographic config
-    const generated = GeographicUtils.generateNearbyCoordinates(offsetKm);
-    return [generated.lat, generated.lng];
-  }
 
   /**
    * Build query string από GreekAddress
@@ -463,20 +523,20 @@ export class AddressResolver {
   }
 
   /**
-   * Calculate confidence score
+   * Calculate confidence score — accent-insensitive comparison
    * @param result - Geocoding API result
    */
   private calculateConfidence(result: { display_name?: string }, address: GreekAddress): number {
     let confidence = 0.5;
+    const displayNorm = normalizeGreekText(result.display_name ?? '');
 
-    // Check if street και number match
-    if (address.street && result.display_name?.includes(address.street)) {
+    if (address.street && displayNorm.includes(normalizeGreekText(address.street))) {
       confidence += 0.2;
     }
-    if (address.number && result.display_name?.includes(address.number)) {
+    if (address.number && displayNorm.includes(address.number)) {
       confidence += 0.2;
     }
-    if (address.area && result.display_name?.includes(address.area)) {
+    if (address.area && displayNorm.includes(normalizeGreekText(address.area))) {
       confidence += 0.1;
     }
 
@@ -505,11 +565,18 @@ export class AddressResolver {
   }
 
   /**
-   * Generate cache key
+   * Generate cache key — includes all address fields + accent-normalized
+   * to prevent collisions between different cities with same street name.
    */
   private getCacheKey(address: GreekAddress): string {
-    return `${address.street}_${address.number}_${address.area}_${address.postalCode}`.toLowerCase();
+    const parts = [
+      address.street, address.number, address.area,
+      address.postalCode, address.municipality, address.region, address.country
+    ].map(p => p ? normalizeGreekText(p) : '');
+    return parts.join('_');
   }
+
+  private static readonly CACHE_STORAGE_KEY = 'geo_alert_address_cache_v2';
 
   /**
    * Save cache to localStorage
@@ -517,22 +584,24 @@ export class AddressResolver {
   private saveCacheToLocalStorage(): void {
     try {
       const cacheData = Array.from(this.cache.entries());
-      localStorage.setItem('geo_alert_address_cache', JSON.stringify(cacheData));
+      localStorage.setItem(AddressResolver.CACHE_STORAGE_KEY, JSON.stringify(cacheData));
     } catch (error) {
       // Warning logging removed //('Failed to save cache:', error);
     }
   }
 
   /**
-   * Load cache από localStorage
+   * Load cache από localStorage — auto-cleanup old v1 key
    */
   private loadCacheFromLocalStorage(): void {
     try {
-      const stored = localStorage.getItem('geo_alert_address_cache');
+      // Remove stale v1 cache (different key structure)
+      localStorage.removeItem('geo_alert_address_cache');
+
+      const stored = localStorage.getItem(AddressResolver.CACHE_STORAGE_KEY);
       if (stored) {
         const cacheData: [string, GeocodingResult][] = JSON.parse(stored);
         this.cache = new Map(cacheData);
-        // Debug logging removed //(`📍 Loaded ${this.cache.size} cached addresses`);
       }
     } catch (error) {
       // Warning logging removed //('Failed to load cache:', error);
@@ -544,7 +613,7 @@ export class AddressResolver {
    */
   clearCache(): void {
     this.cache.clear();
-    localStorage.removeItem('geo_alert_address_cache');
+    localStorage.removeItem(AddressResolver.CACHE_STORAGE_KEY);
   }
 
   /**

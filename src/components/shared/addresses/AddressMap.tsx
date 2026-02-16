@@ -166,23 +166,24 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
           return;
         }
 
-        // Resolve all addresses
-        const results = await Promise.allSettled(
-          geocodable.map(addr =>
-            addressResolver.current.resolveAddress(formatAddressForGeocoding(addr))
-          )
-        );
-
-        // Build result map
+        // Resolve addresses sequentially with delay to respect Nominatim rate limit
         const geocodedMap = new Map<string, GeocodingResult>();
         let successCount = 0;
 
-        results.forEach((result, idx) => {
-          if (result.status === 'fulfilled' && result.value) {
-            geocodedMap.set(geocodable[idx].id, result.value);
-            successCount++;
+        for (let i = 0; i < geocodable.length; i++) {
+          if (i > 0) await new Promise(r => setTimeout(r, 1100));
+          try {
+            const result = await addressResolver.current.resolveAddress(
+              formatAddressForGeocoding(geocodable[i])
+            );
+            if (result) {
+              geocodedMap.set(geocodable[i].id, result);
+              successCount++;
+            }
+          } catch {
+            logger.warn('Geocoding failed for address', { data: { id: geocodable[i].id } });
           }
-        });
+        }
 
         setGeocodedAddresses(geocodedMap);
 

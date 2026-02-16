@@ -184,7 +184,7 @@ const GREEKLISH_CHARS: ReadonlyMap<string, string> = new Map([
 /**
  * Check if text contains any Greek characters.
  */
-function containsGreek(text: string): boolean {
+export function containsGreek(text: string): boolean {
   return /[\u0370-\u03FF\u1F00-\u1FFF]/.test(text);
 }
 
