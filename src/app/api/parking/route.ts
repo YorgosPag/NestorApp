@@ -15,12 +15,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
+import { FieldValue } from 'firebase-admin/firestore';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ParkingRoute');
@@ -100,6 +102,108 @@ const getHandler = async (request: NextRequest) => {
 };
 
 export const GET = withStandardRateLimit(getHandler);
+
+// ============================================================================
+// POST — Create Parking Spot via Admin SDK
+// ============================================================================
+
+interface ParkingCreatePayload {
+  number: string;
+  buildingId: string;
+  type?: FirestoreParkingSpot['type'];
+  status?: FirestoreParkingSpot['status'];
+  floor?: string;
+  location?: string;
+  area?: number;
+  price?: number;
+  notes?: string;
+  projectId?: string;
+}
+
+interface ParkingCreateResponse {
+  parkingSpotId: string;
+}
+
+export const POST = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<ParkingCreateResponse>>(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      const adminDb = getAdminFirestore();
+      if (!adminDb) {
+        throw new ApiError(503, 'Database unavailable');
+      }
+
+      try {
+        const body: ParkingCreatePayload = await request.json();
+
+        // Validation
+        if (!body.number?.trim()) {
+          throw new ApiError(400, 'Parking spot number is required');
+        }
+        if (!body.buildingId?.trim()) {
+          throw new ApiError(400, 'Building ID is required');
+        }
+
+        // Tenant isolation — verify building belongs to user's company
+        try {
+          await requireBuildingInTenant({
+            ctx,
+            buildingId: body.buildingId,
+            path: '/api/parking (POST)',
+          });
+        } catch (err) {
+          if (err instanceof TenantIsolationError) {
+            throw new ApiError(err.status, err.message);
+          }
+          throw err;
+        }
+
+        // Sanitize data — force companyId from auth context
+        const cleanData: Record<string, unknown> = {
+          number: body.number.trim(),
+          buildingId: body.buildingId,
+          type: body.type || 'standard',
+          status: body.status || 'available',
+          companyId: ctx.companyId,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          createdBy: ctx.uid,
+        };
+
+        // Optional fields — only include if provided (Firestore rejects undefined)
+        if (body.floor?.trim()) cleanData.floor = body.floor.trim();
+        if (body.location?.trim()) cleanData.location = body.location.trim();
+        if (typeof body.area === 'number' && body.area > 0) cleanData.area = body.area;
+        if (typeof body.price === 'number' && body.price >= 0) cleanData.price = body.price;
+        if (body.notes?.trim()) cleanData.notes = body.notes.trim();
+        if (body.projectId?.trim()) cleanData.projectId = body.projectId.trim();
+
+        logger.info('Creating parking spot', { number: body.number, buildingId: body.buildingId, companyId: ctx.companyId });
+
+        const docRef = await adminDb.collection(COLLECTIONS.PARKING_SPACES).add(cleanData);
+
+        logger.info('Parking spot created', { parkingSpotId: docRef.id });
+
+        await logAuditEvent(ctx, 'data_created', 'parking_spot', 'api', {
+          newValue: {
+            type: 'status',
+            value: { parkingSpotId: docRef.id, number: body.number, buildingId: body.buildingId },
+          },
+          metadata: { reason: 'Parking spot created via API' },
+        });
+
+        return apiSuccess<ParkingCreateResponse>(
+          { parkingSpotId: docRef.id },
+          'Parking spot created successfully'
+        );
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        logger.error('Error creating parking spot', { error: error instanceof Error ? error.message : String(error) });
+        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create parking spot');
+      }
+    },
+    { permissions: 'units:units:create' }
+  )
+);
 
 async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ParkingAPIResponse>> {
   logger.info('Loading parking spots', { email: ctx.email, companyId: ctx.companyId });

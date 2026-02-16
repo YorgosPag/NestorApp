@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
+import { FieldValue } from 'firebase-admin/firestore';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -314,3 +317,105 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     }, { status: 500 });
   }
 }
+
+// ============================================================================
+// POST — Create Storage Unit via Admin SDK
+// ============================================================================
+
+interface StorageCreatePayload {
+  name: string;
+  buildingId: string;
+  type?: StorageType;
+  status?: StorageStatus;
+  floor?: string;
+  area?: number;
+  price?: number;
+  description?: string;
+  notes?: string;
+  projectId?: string;
+  building?: string;
+}
+
+interface StorageCreateResponse {
+  storageId: string;
+}
+
+export const POST = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<StorageCreateResponse>>(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      const adminDb = getAdminFirestore();
+      if (!adminDb) throw new ApiError(503, 'Database unavailable');
+
+      try {
+        const body: StorageCreatePayload = await request.json();
+
+        // Validation
+        if (!body.name?.trim()) {
+          throw new ApiError(400, 'Storage name is required');
+        }
+        if (!body.buildingId?.trim()) {
+          throw new ApiError(400, 'Building ID is required');
+        }
+
+        // Tenant isolation — verify building belongs to user's company
+        try {
+          await requireBuildingInTenant({
+            ctx,
+            buildingId: body.buildingId,
+            path: '/api/storages (POST)',
+          });
+        } catch (err) {
+          if (err instanceof TenantIsolationError) {
+            throw new ApiError(err.status, err.message);
+          }
+          throw err;
+        }
+
+        // Sanitize data
+        const cleanData: Record<string, unknown> = {
+          name: body.name.trim(),
+          buildingId: body.buildingId,
+          type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
+          status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',
+          companyId: ctx.companyId,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          createdBy: ctx.uid,
+        };
+
+        // Optional fields
+        if (body.floor?.trim()) cleanData.floor = body.floor.trim();
+        if (typeof body.area === 'number' && body.area > 0) cleanData.area = body.area;
+        if (typeof body.price === 'number' && body.price >= 0) cleanData.price = body.price;
+        if (body.description?.trim()) cleanData.description = body.description.trim();
+        if (body.notes?.trim()) cleanData.notes = body.notes.trim();
+        if (body.projectId?.trim()) cleanData.projectId = body.projectId.trim();
+        if (body.building?.trim()) cleanData.building = body.building.trim();
+
+        logger.info('Creating storage unit', { name: body.name, buildingId: body.buildingId, companyId: ctx.companyId });
+
+        const docRef = await adminDb.collection(COLLECTIONS.STORAGE).add(cleanData);
+
+        logger.info('Storage unit created', { storageId: docRef.id });
+
+        await logAuditEvent(ctx, 'data_created', 'storage', 'api', {
+          newValue: {
+            type: 'status',
+            value: { storageId: docRef.id, name: body.name, buildingId: body.buildingId },
+          },
+          metadata: { reason: 'Storage unit created via API' },
+        });
+
+        return apiSuccess<StorageCreateResponse>(
+          { storageId: docRef.id },
+          'Storage unit created successfully'
+        );
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        logger.error('Error creating storage', { error: error instanceof Error ? error.message : String(error) });
+        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create storage unit');
+      }
+    },
+    { permissions: 'units:units:create' }
+  )
+);

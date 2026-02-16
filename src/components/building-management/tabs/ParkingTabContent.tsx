@@ -15,6 +15,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Car, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
@@ -28,11 +29,14 @@ interface ParkingApiResponse {
   count?: number;
 }
 
-interface ParkingMutationResponse {
-  success: boolean;
-  parkingSpot?: ParkingSpot;
-  message?: string;
-  error?: string;
+/** POST /api/parking returns { parkingSpotId } via apiSuccess (unwrapped by apiClient) */
+interface ParkingCreateResult {
+  parkingSpotId: string;
+}
+
+/** PATCH/DELETE /api/parking/[id] returns { id } via apiSuccess */
+interface ParkingMutationResult {
+  id: string;
 }
 
 interface ParkingTabContentProps {
@@ -44,6 +48,23 @@ interface ParkingTabContentProps {
 // ============================================================================
 
 const PARKING_TYPES: ParkingSpotType[] = ['standard', 'handicapped', 'motorcycle', 'electric', 'visitor'];
+const PARKING_STATUSES: ParkingSpotStatus[] = ['available', 'occupied', 'reserved', 'sold', 'maintenance'];
+
+const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
+  standard: 'Κανονική',
+  handicapped: 'ΑμεΑ',
+  motorcycle: 'Μοτοσυκλέτα',
+  electric: 'Ηλεκτρικό',
+  visitor: 'Επισκέπτης',
+};
+
+const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
+  available: 'Διαθέσιμη',
+  occupied: 'Κατειλημμένη',
+  reserved: 'Δεσμευμένη',
+  sold: 'Πωλημένη',
+  maintenance: 'Συντήρηση',
+};
 
 // ============================================================================
 // COMPONENT
@@ -58,27 +79,33 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Inline create state
+  // Create form state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createNumber, setCreateNumber] = useState('');
   const [createType, setCreateType] = useState<ParkingSpotType>('standard');
+  const [createStatus, setCreateStatus] = useState<ParkingSpotStatus>('available');
   const [createFloor, setCreateFloor] = useState('');
+  const [createLocation, setCreateLocation] = useState('');
   const [createArea, setCreateArea] = useState('');
+  const [createPrice, setCreatePrice] = useState('');
+  const [createNotes, setCreateNotes] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Inline edit state
+  // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNumber, setEditNumber] = useState('');
   const [editType, setEditType] = useState<ParkingSpotType>('standard');
+  const [editStatus, setEditStatus] = useState<ParkingSpotStatus>('available');
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
+  const [editPrice, setEditPrice] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Delete state
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // ============================================================================
-  // FETCH PARKING SPOTS
+  // FETCH
   // ============================================================================
 
   const fetchParkingSpots = useCallback(async () => {
@@ -103,28 +130,39 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   }, [fetchParkingSpots]);
 
   // ============================================================================
-  // CREATE PARKING SPOT
+  // CREATE
   // ============================================================================
+
+  const resetCreateForm = () => {
+    setShowCreateForm(false);
+    setCreateNumber('');
+    setCreateType('standard');
+    setCreateStatus('available');
+    setCreateFloor('');
+    setCreateLocation('');
+    setCreateArea('');
+    setCreatePrice('');
+    setCreateNotes('');
+  };
 
   const handleCreate = async () => {
     if (!createNumber.trim()) return;
     setCreating(true);
     try {
-      const result = await apiClient.post<ParkingMutationResponse>('/api/parking', {
+      const result = await apiClient.post<ParkingCreateResult>('/api/parking', {
         number: createNumber.trim(),
         type: createType,
-        floor: createFloor.trim(),
+        status: createStatus,
+        floor: createFloor.trim() || undefined,
+        location: createLocation.trim() || undefined,
         area: createArea ? parseFloat(createArea) : undefined,
+        price: createPrice ? parseFloat(createPrice) : undefined,
+        notes: createNotes.trim() || undefined,
         buildingId: building.id,
         projectId: building.projectId,
-        status: 'available' as ParkingSpotStatus,
       });
-      if (result?.success) {
-        setShowCreateForm(false);
-        setCreateNumber('');
-        setCreateType('standard');
-        setCreateFloor('');
-        setCreateArea('');
+      if (result?.parkingSpotId) {
+        resetCreateForm();
         await fetchParkingSpots();
       }
     } catch (err) {
@@ -135,15 +173,17 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   };
 
   // ============================================================================
-  // EDIT PARKING SPOT
+  // EDIT
   // ============================================================================
 
   const startEdit = (spot: ParkingSpot) => {
     setEditingId(spot.id);
     setEditNumber(spot.number);
     setEditType(spot.type || 'standard');
+    setEditStatus(spot.status || 'available');
     setEditFloor(spot.floor || '');
     setEditArea(spot.area ? String(spot.area) : '');
+    setEditPrice(spot.price ? String(spot.price) : '');
   };
 
   const cancelEdit = () => {
@@ -154,13 +194,15 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     if (!editingId || !editNumber.trim()) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<ParkingMutationResponse>(`/api/parking/${editingId}`, {
+      const result = await apiClient.patch<ParkingMutationResult>(`/api/parking/${editingId}`, {
         number: editNumber.trim(),
         type: editType,
-        floor: editFloor.trim(),
+        status: editStatus,
+        floor: editFloor.trim() || undefined,
         area: editArea ? parseFloat(editArea) : undefined,
+        price: editPrice ? parseFloat(editPrice) : undefined,
       });
-      if (result?.success) {
+      if (result?.id) {
         setEditingId(null);
         await fetchParkingSpots();
       }
@@ -172,7 +214,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   };
 
   // ============================================================================
-  // DELETE PARKING SPOT
+  // DELETE
   // ============================================================================
 
   const handleDelete = async (spot: ParkingSpot) => {
@@ -183,10 +225,10 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
     setDeletingId(spot.id);
     try {
-      const result = await apiClient.delete<ParkingMutationResponse>(
+      const result = await apiClient.delete<ParkingMutationResult>(
         `/api/parking/${spot.id}`
       );
-      if (result?.success) {
+      if (result?.id) {
         await fetchParkingSpots();
       }
     } catch (err) {
@@ -211,7 +253,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     };
     return (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorMap[s] || colorMap.available}`}>
-        {t(`status.${s}`)}
+        {PARKING_STATUS_LABELS[s] || s}
       </span>
     );
   };
@@ -259,84 +301,148 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         </Button>
       </header>
 
-      {/* Inline Create Form */}
+      {/* Create Form — Expanded with all parking fields */}
       {showCreateForm && (
         <form
-          className="grid grid-cols-[1fr_120px_80px_80px_auto] items-end gap-2 rounded-lg border border-border bg-muted/30 p-3"
+          className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4"
           onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
         >
-          <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t('general.fields.spotCode')}
+          {/* Row 1: Number, Type, Status */}
+          <fieldset className="grid grid-cols-3 gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Κωδικός *
+              </span>
+              <Input
+                value={createNumber}
+                onChange={(e) => setCreateNumber(e.target.value)}
+                placeholder="P-001"
+                className="h-9"
+                disabled={creating}
+                autoFocus
+              />
             </label>
-            <Input
-              value={createNumber}
-              onChange={(e) => setCreateNumber(e.target.value)}
-              placeholder="P-001"
-              className="h-9"
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Τύπος
+              </span>
+              <select
+                value={createType}
+                onChange={(e) => setCreateType(e.target.value as ParkingSpotType)}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                disabled={creating}
+              >
+                {PARKING_TYPES.map(pt => (
+                  <option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Κατάσταση
+              </span>
+              <select
+                value={createStatus}
+                onChange={(e) => setCreateStatus(e.target.value as ParkingSpotStatus)}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                disabled={creating}
+              >
+                {PARKING_STATUSES.map(ps => (
+                  <option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
+
+          {/* Row 2: Floor, Location, Area, Price */}
+          <fieldset className="grid grid-cols-4 gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Όροφος
+              </span>
+              <Input
+                value={createFloor}
+                onChange={(e) => setCreateFloor(e.target.value)}
+                placeholder="-1"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Τοποθεσία
+              </span>
+              <Input
+                value={createLocation}
+                onChange={(e) => setCreateLocation(e.target.value)}
+                placeholder="Πυλωτή, Υπόγειο Α"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                m²
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                value={createArea}
+                onChange={(e) => setCreateArea(e.target.value)}
+                placeholder="12"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Τιμή (€)
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                value={createPrice}
+                onChange={(e) => setCreatePrice(e.target.value)}
+                placeholder="15000"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+          </fieldset>
+
+          {/* Row 3: Notes */}
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              Σημειώσεις
+            </span>
+            <Textarea
+              value={createNotes}
+              onChange={(e) => setCreateNotes(e.target.value)}
+              placeholder="Σημειώσεις θέσης στάθμευσης..."
+              className="h-16 resize-none"
               disabled={creating}
-              autoFocus
             />
-          </fieldset>
-          <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t('general.fields.type')}
-            </label>
-            <select
-              value={createType}
-              onChange={(e) => setCreateType(e.target.value as ParkingSpotType)}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              disabled={creating}
-            >
-              {PARKING_TYPES.map(pt => (
-                <option key={pt} value={pt}>{t(`types.${pt}`)}</option>
-              ))}
-            </select>
-          </fieldset>
-          <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t('general.fields.floor')}
-            </label>
-            <Input
-              value={createFloor}
-              onChange={(e) => setCreateFloor(e.target.value)}
-              placeholder="-1"
-              className="h-9"
-              disabled={creating}
-            />
-          </fieldset>
-          <fieldset className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              m²
-            </label>
-            <Input
-              type="number"
-              step="0.01"
-              value={createArea}
-              onChange={(e) => setCreateArea(e.target.value)}
-              placeholder="12"
-              className="h-9"
-              disabled={creating}
-            />
-          </fieldset>
-          <nav className="flex gap-1">
-            <Button
-              type="submit"
-              size="sm"
-              disabled={!createNumber.trim() || creating}
-              className="h-9"
-            >
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            </Button>
+          </label>
+
+          {/* Actions */}
+          <nav className="flex justify-end gap-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setShowCreateForm(false)}
+              onClick={resetCreateForm}
               disabled={creating}
-              className="h-9"
             >
-              <X className="h-4 w-4" />
+              <X className="mr-1 h-4 w-4" />
+              Ακύρωση
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!createNumber.trim() || creating}
+            >
+              {creating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+              Αποθήκευση
             </Button>
           </nav>
         </form>
@@ -352,11 +458,12 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium uppercase text-muted-foreground">
-                <th className="px-3 py-2">{t('general.fields.spotCode')}</th>
-                <th className="w-28 px-3 py-2">{t('general.fields.type')}</th>
-                <th className="w-20 px-3 py-2">{t('general.fields.floor')}</th>
+                <th className="px-3 py-2">Κωδικός</th>
+                <th className="w-28 px-3 py-2">Τύπος</th>
+                <th className="w-20 px-3 py-2">Όροφος</th>
                 <th className="w-20 px-3 py-2">m²</th>
-                <th className="w-28 px-3 py-2">{t('general.fields.status')}</th>
+                <th className="w-24 px-3 py-2">Τιμή</th>
+                <th className="w-28 px-3 py-2">Κατάσταση</th>
                 <th className="w-24 px-3 py-2 text-right">{tBuilding('tabs.floors.actions')}</th>
               </tr>
             </thead>
@@ -366,12 +473,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                   {editingId === spot.id ? (
                     <>
                       <td className="px-3 py-1.5">
-                        <Input
-                          value={editNumber}
-                          onChange={(e) => setEditNumber(e.target.value)}
-                          className="h-8"
-                          disabled={saving}
-                        />
+                        <Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} className="h-8" disabled={saving} />
                       </td>
                       <td className="px-3 py-1.5">
                         <select
@@ -381,47 +483,37 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                           disabled={saving}
                         >
                           {PARKING_TYPES.map(pt => (
-                            <option key={pt} value={pt}>{t(`types.${pt}`)}</option>
+                            <option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>
                           ))}
                         </select>
                       </td>
                       <td className="px-3 py-1.5">
-                        <Input
-                          value={editFloor}
-                          onChange={(e) => setEditFloor(e.target.value)}
-                          className="h-8 w-16"
-                          disabled={saving}
-                        />
+                        <Input value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className="h-8 w-16" disabled={saving} />
                       </td>
                       <td className="px-3 py-1.5">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editArea}
-                          onChange={(e) => setEditArea(e.target.value)}
-                          className="h-8 w-16"
-                          disabled={saving}
-                        />
+                        <Input type="number" step="0.01" value={editArea} onChange={(e) => setEditArea(e.target.value)} className="h-8 w-16" disabled={saving} />
                       </td>
-                      <td className="px-3 py-1.5">{getStatusBadge(spot.status)}</td>
+                      <td className="px-3 py-1.5">
+                        <Input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-20" disabled={saving} />
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <select
+                          value={editStatus}
+                          onChange={(e) => setEditStatus(e.target.value as ParkingSpotStatus)}
+                          className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm"
+                          disabled={saving}
+                        >
+                          {PARKING_STATUSES.map(ps => (
+                            <option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>
+                          ))}
+                        </select>
+                      </td>
                       <td className="px-3 py-1.5">
                         <nav className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={handleSaveEdit}
-                            disabled={saving || !editNumber.trim()}
-                          >
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editNumber.trim()}>
                             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={cancelEdit}
-                            disabled={saving}
-                          >
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}>
                             <X className="h-3.5 w-3.5" />
                           </Button>
                         </nav>
@@ -430,18 +522,14 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                   ) : (
                     <>
                       <td className="px-3 py-2 font-mono font-medium">{spot.number}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{t(`types.${spot.type || 'standard'}`)}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{PARKING_TYPE_LABELS[spot.type || 'standard']}</td>
                       <td className="px-3 py-2 text-muted-foreground">{spot.floor || '—'}</td>
                       <td className="px-3 py-2 font-mono text-xs">{spot.area ? `${spot.area}` : '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{spot.price ? `€${spot.price.toLocaleString()}` : '—'}</td>
                       <td className="px-3 py-2">{getStatusBadge(spot.status)}</td>
                       <td className="px-3 py-2">
                         <nav className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => startEdit(spot)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(spot)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button
