@@ -22,26 +22,21 @@ import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
 import { createOverlayHandlers } from '../../overlays/types';
 import { squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-// 🏢 ENTERPRISE (2026-01-31): Import pointToLineDistance for Circle TTT hit testing
-import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
+// pointToLineDistance — moved to useCanvasClickHandler hook
 // 🏢 ADR-079: Centralized Movement Detection Constants
 // 🏢 ADR-099: Centralized Polygon Tolerances
 // 🏢 ADR-147: Centralized Hit Tolerance for Entity Picking
-import { MOVEMENT_DETECTION, POLYGON_TOLERANCES, TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { MOVEMENT_DETECTION, POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
-// 🔧 FIX (2026-02-13): Point-in-polygon hit-test for move tool overlay detection
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+// isPointInPolygon — moved to useCanvasClickHandler hook
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
 import { useGripStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Centralized tool detection (Single Source of Truth)
-import { isDrawingTool, isMeasurementTool, isInteractiveTool, isInDrawingMode } from '../../systems/tools/ToolStateManager';
+import { isDrawingTool, isMeasurementTool, isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-102: Centralized Entity Type Guards
-import {
-  isLineEntity, isPolylineEntity,
-  type Entity
-} from '../../types/entities';
+// isLineEntity, isPolylineEntity, Entity — moved to useCanvasClickHandler hook
 import { useZoom } from '../../systems/zoom';
 import {
   CoordinateTransforms,
@@ -86,7 +81,7 @@ import {
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -778,268 +773,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [activeTool, overlayMode, overlayStore]);
 
-  const handleCanvasClick = (worldPoint: Point2D) => {
-    // 🏢 ADR-046: ENTERPRISE FIX - onCanvasClick now receives WORLD coordinates directly!
-    //
-    // PROBLEM (ROOT CAUSE - 2026-01-27):
-    //   - handleMouseUp (in useCentralizedMouseHandlers) used LayerCanvas for world→screen conversion
-    //   - handleCanvasClick used DxfCanvas for screen→world conversion
-    //   - These are TWO DIFFERENT canvas elements with potentially different dimensions!
-    //   - Double conversion with mismatched viewports caused ~80px X-axis offset on first use
-    //   - Opening DevTools triggered resize which synced both canvas dimensions, masking the bug
-    //
-    // SOLUTION (ENTERPRISE - Autodesk/Bentley pattern):
-    //   - handleMouseUp now passes WORLD coordinates directly (single conversion at source)
-    //   - handleCanvasClick receives WORLD coordinates - no conversion needed!
-    //   - Pattern: Single coordinate transform per operation (CAD industry standard)
-    //
-    // NOTE: The `worldPoint` parameter is already in WORLD coordinate system!
-
-    // 🏢 ADR-045: Block interactions until viewport is ready
-    // This guard is still useful to prevent early initialization issues
-    if (!viewportReady) {
-      dwarn('CanvasSection', '🚫 Click blocked: viewport not ready', viewport);
-      return;
-    }
-
-    // 🏢 ENTERPRISE (2026-02-15): AutoCAD-style grip click handling
-    // Grip clicks have priority over all drawing tools.
-    // In "following" state, click commits the new position; otherwise, click activates the grip.
-    if (dxfGripInteraction.handleGripClick(worldPoint)) {
-      return; // Consumed by grip interaction — don't process further
-    }
-
-    // 🏢 ENTERPRISE (2026-01-31): Circle TTT entity picking mode
-    // When circle-ttt tool is active, perform hit testing to find clicked entity
-    if (activeTool === 'circle-ttt' && circleTTT.isWaitingForSelection) {
-      // Get current scene for hit testing
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
-
-      if (scene?.entities) {
-        // Find entity at click point (check lines and polylines only)
-        // 🏢 ADR-147: Use centralized SNAP_DEFAULT tolerance for entity picking
-        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale; // screen pixels in world units
-
-        for (const entity of scene.entities) {
-          // 🏢 ADR-102: Use centralized type guards
-          const e = entity as unknown as Entity;
-          if (isLineEntity(e) || isPolylineEntity(e)) {
-            // Simple distance check for hit testing
-            let isHit = false;
-
-            if (isLineEntity(e)) {
-              const lineEntity = entity as { start: Point2D; end: Point2D };
-              const dist = pointToLineDistance(worldPoint, lineEntity.start, lineEntity.end);
-              isHit = dist <= hitTolerance;
-            } else if (isPolylineEntity(e)) {
-              const polyEntity = entity as { vertices: Point2D[]; closed?: boolean };
-              if (polyEntity.vertices && polyEntity.vertices.length >= 2) {
-                for (let i = 0; i < polyEntity.vertices.length - 1; i++) {
-                  const dist = pointToLineDistance(
-                    worldPoint,
-                    polyEntity.vertices[i],
-                    polyEntity.vertices[i + 1]
-                  );
-                  if (dist <= hitTolerance) {
-                    isHit = true;
-                    break;
-                  }
-                }
-                // Check closing segment for closed polylines
-                if (!isHit && polyEntity.closed && polyEntity.vertices.length > 2) {
-                  const dist = pointToLineDistance(
-                    worldPoint,
-                    polyEntity.vertices[polyEntity.vertices.length - 1],
-                    polyEntity.vertices[0]
-                  );
-                  isHit = dist <= hitTolerance;
-                }
-              }
-            }
-
-            if (isHit) {
-              // Pass entity to Circle TTT handler
-              const accepted = circleTTT.onEntityClick(entity as import('../../types/scene').AnySceneEntity, worldPoint);
-              if (accepted) {
-                dlog('CanvasSection', '🎯 Circle TTT entity accepted:', entity.id);
-                return; // Entity was accepted, don't process further
-              }
-            }
-          }
-        }
-
-        // No entity hit - show feedback
-        dlog('CanvasSection', '🎯 Circle TTT: No line/polyline found at click point');
-      }
-      return; // Don't process as regular canvas click
-    }
-
-    // 🏢 ENTERPRISE (2026-01-31): Line Perpendicular entity picking mode - ADR-060
-    // Step 0: Select reference line, Step 1: Click through point
-    if (activeTool === 'line-perpendicular' && linePerpendicular.isActive) {
-      if (linePerpendicular.currentStep === 0) {
-        // Step 0: Entity selection mode - find clicked line
-        const scene = levelManager.currentLevelId
-          ? levelManager.getLevelScene(levelManager.currentLevelId)
-          : null;
-
-        if (scene?.entities) {
-          // 🏢 ADR-147: Use centralized SNAP_DEFAULT tolerance for entity picking
-          const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-
-          for (const entity of scene.entities) {
-            // 🏢 ADR-102: Use centralized type guard
-            if (isLineEntity(entity as unknown as Entity)) {
-              const lineEntity = entity as { start: Point2D; end: Point2D };
-              const dist = pointToLineDistance(worldPoint, lineEntity.start, lineEntity.end);
-              if (dist <= hitTolerance) {
-                // Pass entity as AnySceneEntity - the hook will extract start/end internally
-                const accepted = linePerpendicular.onEntityClick(
-                  entity as import('../../types/scene').AnySceneEntity,
-                  worldPoint
-                );
-                if (accepted) {
-                  dlog('CanvasSection', '🎯 LinePerpendicular entity accepted:', entity.id);
-                  return;
-                }
-              }
-            }
-          }
-          dlog('CanvasSection', '🎯 LinePerpendicular: No line found at click point');
-        }
-        return;
-      } else if (linePerpendicular.currentStep === 1) {
-        // Step 1: Point selection mode - pass click point to hook
-        linePerpendicular.onCanvasClick(worldPoint);
-        return;
-      }
-    }
-
-    // 🏢 ENTERPRISE (2026-01-31): Line Parallel entity picking mode - ADR-060
-    // Step 0: Select reference line, Step 1: Click offset point
-    if (activeTool === 'line-parallel' && lineParallel.isActive) {
-      if (lineParallel.currentStep === 0) {
-        // Step 0: Entity selection mode - find clicked line
-        const scene = levelManager.currentLevelId
-          ? levelManager.getLevelScene(levelManager.currentLevelId)
-          : null;
-
-        if (scene?.entities) {
-          // 🏢 ADR-147: Use centralized SNAP_DEFAULT tolerance for entity picking
-          const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-
-          for (const entity of scene.entities) {
-            // 🏢 ADR-102: Use centralized type guard
-            if (isLineEntity(entity as unknown as Entity)) {
-              const lineEntity = entity as { start: Point2D; end: Point2D };
-              const dist = pointToLineDistance(worldPoint, lineEntity.start, lineEntity.end);
-              if (dist <= hitTolerance) {
-                // Pass entity as AnySceneEntity - the hook will extract start/end internally
-                const accepted = lineParallel.onEntityClick(
-                  entity as import('../../types/scene').AnySceneEntity,
-                  worldPoint
-                );
-                if (accepted) {
-                  dlog('CanvasSection', '🎯 LineParallel entity accepted:', entity.id);
-                  return;
-                }
-              }
-            }
-          }
-          dlog('CanvasSection', '🎯 LineParallel: No line found at click point');
-        }
-        return;
-      } else if (lineParallel.currentStep === 1) {
-        // Step 1: Point selection mode - pass click point to hook
-        lineParallel.onCanvasClick(worldPoint);
-        return;
-      }
-    }
-
-    // ✅ OVERLAY MODE: Use overlay system with draftPolygon (takes priority over unified drawing)
-    // ⚠️ NOTE: This MUST come BEFORE the unified drawing check below,
-    // because overlay mode uses its own polygon state (draftPolygon), not the unified engine.
-    // 🔧 FIX (2026-02-13): Removed `activeTool !== 'select'` guard — when overlay draw mode
-    // is activated via OverlayModeButtons, only overlayMode changes; activeTool stays 'select'.
-    if (overlayMode === 'draw') {
-      if (isSavingPolygon) return;
-
-      // 🏢 ENTERPRISE (2026-02-15): Auto-close — click κοντά στο 1ο σημείο με 3+ σημεία → save
-      // Ίδια συμπεριφορά με DXF polygon tool (isNearFirstPoint υπολογίζεται στο useOverlayLayers)
-      if (isNearFirstPoint && draftPolygon.length >= 3) {
-        setIsSavingPolygon(true);
-        finishDrawingWithPolygon(draftPolygon).then(success => {
-          setIsSavingPolygon(false);
-          if (success) setDraftPolygon([]);
-        });
-        return;
-      }
-
-      // 🏢 ADR-046: worldPoint is already in WORLD coordinates - use directly!
-      const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
-      setDraftPolygon(prev => [...prev, worldPointArray]);
-      return;
-    }
-
-    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
-    // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
-    if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
-      // 🏢 ADR-046: worldPoint is already in WORLD coordinates - no conversion needed!
-      drawingHandlersRef.current.onDrawingPoint(worldPoint);
-      return;
-    }
-
-    // 🔧 FIX (2026-02-13): Move tool — hit-test overlays and start body drag
-    // DxfCanvas (z-10) captures mouse events, but overlay hit-testing only exists in LayerCanvas.
-    // Since LayerCanvas (z-0) never receives pointer events, we do the hit-test here.
-    // 🔧 FIX (2026-02-13): Guard against re-initiating drag when already dragging.
-    // Second click should be handled by handleContainerMouseUp (event bubbles to container).
-    if (activeTool === 'move' && !draggingOverlayBody) {
-      for (const overlay of currentOverlays) {
-        if (!overlay.polygon || overlay.polygon.length < 3) continue;
-        const vertices = overlay.polygon.map(([x, y]) => ({ x, y }));
-        if (isPointInPolygon(worldPoint, vertices)) {
-          handleOverlayClick(overlay.id, worldPoint);
-          return;
-        }
-      }
-    }
-
-    // 🔧 FIX (2026-02-13): When move-dragging, second click ends drag via handleContainerMouseUp.
-    // Skip deselection and all further processing to avoid interfering with the drag-end.
-    if (activeTool === 'move' && draggingOverlayBody) {
-      return;
-    }
-
-    // 🏢 SSoT (2026-02-15): Duplicate entity hit-test REMOVED — selection now handled by
-    // DxfCanvas → useCentralizedMouseHandlers → HitTester (single pipeline).
-    // The old code here used rect.x/y/width/height which doesn't match rectangle entities
-    // (they use corner1/corner2). The SSoT HitTester converts rectangles to polylines correctly.
-
-    // 🏢 ENTERPRISE (2026-01-25): Only deselect overlay if clicking on EMPTY canvas space
-    // Do NOT deselect if:
-    // - A grip is selected (user might be about to drag)
-    // - User is hovering over a grip
-    // - Click was on the overlay itself (handled by handleOverlayClick)
-    // - Just finished a drag operation (prevent accidental deselection)
-    {
-      const isClickOnGrip = hoveredVertexInfo !== null || hoveredEdgeInfo !== null;
-      const hasSelectedGrip = selectedGrip !== null;
-      const justFinishedDrag = justFinishedDragRef.current;
-
-      if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag && !entitySelectedOnMouseDownRef.current) {
-        // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
-        universalSelection.clearByType('overlay');
-        universalSelection.clearByType('dxf-entity');
-        setSelectedGrips([]); // Clear grip selection when clicking empty space
-        setSelectedEntityIds([]); // Clear entity selection
-      }
-      // 🏢 SSoT (2026-02-15): Reset ref after handling — ready for next click cycle
-      entitySelectedOnMouseDownRef.current = false;
-    }
-  };
+  // 🏢 ENTERPRISE (2026-02-16): Canvas click handler extracted to useCanvasClickHandler hook
+  // Priority-based routing: grips → special tools → overlay drawing → unified drawing → move → deselect
+  const { handleCanvasClick } = useCanvasClickHandler({
+    viewportReady, viewport, transform,
+    activeTool, overlayMode,
+    circleTTT, linePerpendicular, lineParallel, dxfGripInteraction,
+    levelManager,
+    draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
+    isNearFirstPoint, finishDrawingWithPolygonRef,
+    drawingHandlersRef, entitySelectedOnMouseDownRef,
+    universalSelection,
+    hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
+    selectedGrips, setSelectedGrips, justFinishedDragRef,
+    draggingOverlayBody, setSelectedEntityIds,
+    currentOverlays, handleOverlayClick,
+  });
 
   // 🔧 FIX (2026-01-24): New function that accepts polygon as parameter to avoid stale closure
   const finishDrawingWithPolygon = async (polygon: Array<[number, number]>) => {

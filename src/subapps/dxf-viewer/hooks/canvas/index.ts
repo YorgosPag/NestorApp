@@ -73,3 +73,10 @@ export type {
   UseDrawingUIHandlersParams,
   UseDrawingUIHandlersReturn,
 } from './useDrawingUIHandlers';
+
+// === useCanvasClickHandler === (CanvasSection decomposition — priority-based click routing)
+export { useCanvasClickHandler } from './useCanvasClickHandler';
+export type {
+  UseCanvasClickHandlerParams,
+  UseCanvasClickHandlerReturn,
+} from './useCanvasClickHandler';
