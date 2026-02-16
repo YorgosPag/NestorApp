@@ -86,7 +86,7 @@ import {
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -587,62 +587,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     draftPolygonRef,
   });
 
-  const handleDrawingFinish = useCallback(() => {
-    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
-    if (overlayMode === 'draw' && draftPolygonRef.current.length >= 3) {
-      finishDrawingWithPolygonRef.current(draftPolygonRef.current).then(success => {
-        if (success) setDraftPolygon([]);
-      });
-      return;
-    }
-    if (drawingHandlersRef.current?.onDrawingDoubleClick) {
-      drawingHandlersRef.current.onDrawingDoubleClick();
-    }
-  }, [overlayMode]);
-
-  const handleDrawingClose = useCallback(() => {
-    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
-    if (overlayMode === 'draw' && draftPolygonRef.current.length >= 3) {
-      finishDrawingWithPolygonRef.current(draftPolygonRef.current).then(success => {
-        if (success) setDraftPolygon([]);
-      });
-      return;
-    }
-    if (drawingHandlersRef.current?.onDrawingDoubleClick) {
-      drawingHandlersRef.current.onDrawingDoubleClick();
-    }
-  }, [overlayMode]);
-
-  // 🏢 ADR-053: Cancel handler using ref pattern (avoids stale closure)
-  const handleDrawingCancel = useCallback(() => {
-    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
-    if (overlayMode === 'draw') {
-      setDraftPolygon([]);
-      return;
-    }
-    if (drawingHandlersRef.current?.onDrawingCancel) {
-      drawingHandlersRef.current.onDrawingCancel();
-    }
-  }, [overlayMode]);
-
-  // 🏢 ADR-053: Undo last point handler using ref pattern (avoids stale closure)
-  const handleDrawingUndoLastPoint = useCallback(() => {
-    // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
-    if (overlayMode === 'draw') {
-      setDraftPolygon(prev => prev.slice(0, -1));
-      return;
-    }
-    if (drawingHandlersRef.current?.onUndoLastPoint) {
-      drawingHandlersRef.current.onUndoLastPoint();
-    }
-  }, [overlayMode]);
-
-  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction handler using ref pattern
-  const handleFlipArc = useCallback(() => {
-    if (drawingHandlersRef.current?.onFlipArc) {
-      drawingHandlersRef.current.onFlipArc();
-    }
-  }, []);
+  // 🏢 ENTERPRISE (2026-02-16): Drawing UI handlers extracted to useDrawingUIHandlers hook
+  // Finish, close, cancel, undo last point, flip arc — all dual-path (overlay + unified drawing)
+  const {
+    handleDrawingFinish,
+    handleDrawingClose,
+    handleDrawingCancel,
+    handleDrawingUndoLastPoint,
+    handleFlipArc,
+  } = useDrawingUIHandlers({
+    overlayMode,
+    draftPolygonRef,
+    finishDrawingWithPolygonRef,
+    drawingHandlersRef,
+    setDraftPolygon,
+  });
 
   // 🏢 ENTERPRISE (2026-02-16): Scene→DxfScene conversion extracted to useDxfSceneConversion hook
   // Converts SceneModel entities to DxfEntityUnion for Canvas V2 rendering

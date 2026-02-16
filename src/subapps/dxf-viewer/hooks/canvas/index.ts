@@ -66,3 +66,10 @@ export type {
   UseSmartDeleteParams,
   UseSmartDeleteReturn,
 } from './useSmartDelete';
+
+// === useDrawingUIHandlers === (CanvasSection decomposition — drawing action handlers)
+export { useDrawingUIHandlers } from './useDrawingUIHandlers';
+export type {
+  UseDrawingUIHandlersParams,
+  UseDrawingUIHandlersReturn,
+} from './useDrawingUIHandlers';
