@@ -81,7 +81,7 @@ import {
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler, useLayerCanvasMouseMove } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -611,6 +611,24 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     enabled: activeTool === 'select',
   });
 
+  // 🏢 ENTERPRISE (2026-02-16): LayerCanvas mouse move handler extracted to useLayerCanvasMouseMove hook
+  // Grip hover detection, throttled position updates, drag preview, parent callback delegation
+  const { handleLayerCanvasMouseMove } = useLayerCanvasMouseMove({
+    activeTool,
+    transform,
+    updateMouseCss,
+    updateMouseWorld,
+    hoveredVertexInfo, setHoveredVertexInfo,
+    hoveredEdgeInfo, setHoveredEdgeInfo,
+    draggingVertex, draggingEdgeMidpoint, draggingOverlayBody,
+    setDragPreviewPosition,
+    gripHoverThrottleRef,
+    universalSelection,
+    currentOverlays,
+    gripSettings,
+    onParentMouseMove: props.onMouseMove,
+  });
+
   // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
   React.useEffect(() => {
     if (dxfScene && dxfScene.entities.length > 0) {
@@ -1085,140 +1103,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                     }
                   : null
               }
-              onMouseMove={(screenPoint, worldPointFromHandler) => {
-                // 🚀 PERFORMANCE (2026-01-27): ENTERPRISE OPTIMIZATION
-                // Reduced unnecessary work in mousemove handler to achieve <16ms per frame
-
-                // 🚀 EARLY RETURN: Skip all grip-related work if not in select/layering mode
-                const isGripMode = activeTool === 'select' || activeTool === 'layering';
-
-                // 🚀 THROTTLED: Mouse position updates (was causing re-renders on every move)
-                const now = performance.now();
-                const throttle = gripHoverThrottleRef.current;
-
-                // 🚀 PERFORMANCE (2026-01-27): Increase throttle from 33ms to 100ms (10fps)
-                // Grip hover detection doesn't need 30fps - 10fps is smooth enough for visual feedback.
-                // IMPORTANT: Apply this throttle ONLY in grip modes; drawing tools need full-rate hover updates
-                // for smooth preview rendering (line/rectangle/circle rubber-band feedback).
-                const GRIP_HOVER_THROTTLE_MS = 100;
-                const shouldThrottleGripWork =
-                  isGripMode && (now - throttle.lastCheckTime < GRIP_HOVER_THROTTLE_MS);
-
-                if (shouldThrottleGripWork) {
-                  // 🚀 PERFORMANCE (2026-01-27): During drag, use RAF-throttled preview update
-                  // Instead of setState on every mousemove, we use a ref + RAF for smooth animation
-                  return; // Skip all other work until throttle period passes
-                }
-
-                if (isGripMode) {
-                  throttle.lastCheckTime = now;
-                }
-
-                // Now do the throttled work
-                updateMouseCss(screenPoint);
-                // 🏢 FIX (2026-02-15): Use pre-calculated worldPoint from useCentralizedMouseHandlers
-                // BEFORE: Recalculated via containerRef (different element rect → Y-offset mismatch)
-                // AFTER: Use worldPoint computed from the SAME element that produced screenPoint (SSoT)
-                const worldPoint = worldPointFromHandler;
-                updateMouseWorld(worldPoint);
-                throttle.lastWorldPoint = worldPoint;
-
-                // 🚀 PERFORMANCE: Skip grip detection entirely if not in grip mode
-                if (!isGripMode) {
-                  // Clear any stale hover state (only if needed)
-                  if (hoveredEdgeInfo || hoveredVertexInfo) {
-                    setHoveredEdgeInfo(null);
-                    setHoveredVertexInfo(null);
-                  }
-                } else {
-                  // 🏢 ENTERPRISE (2026-01-25): Grip hover detection for selected overlays
-                  const selectedOverlayIds = universalSelection.getIdsByType('overlay');
-
-                  // 🚀 EARLY RETURN: Skip if no overlays selected
-                  if (selectedOverlayIds.length === 0) {
-                    if (hoveredEdgeInfo || hoveredVertexInfo) {
-                      setHoveredEdgeInfo(null);
-                      setHoveredVertexInfo(null);
-                    }
-                  } else {
-                    const selectedOverlays = selectedOverlayIds
-                      .map(id => currentOverlays.find(o => o.id === id))
-                      .filter((o): o is Overlay => o !== undefined);
-
-                    // 🎯 CENTRALIZED: Tolerance from grip settings
-                    const gripTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
-                    const gripToleranceWorld = gripTolerancePx / transform.scale;
-
-                    // Check grips on ALL selected overlays
-                    let foundVertexInfo: { overlayId: string; vertexIndex: number } | null = null;
-                    let foundEdgeInfo: { overlayId: string; edgeIndex: number } | null = null;
-
-                    outerLoop:
-                    for (const overlay of selectedOverlays) {
-                      if (!overlay?.polygon) continue;
-
-                      // 1. Check vertex grips first (higher priority)
-                      for (let i = 0; i < overlay.polygon.length; i++) {
-                        const vertex = overlay.polygon[i];
-                        // 🏢 ADR-157: Use centralized squaredDistance (ADR-109)
-                        const distSq = squaredDistance(worldPoint, { x: vertex[0], y: vertex[1] });
-                        const toleranceSq = gripToleranceWorld * gripToleranceWorld;
-
-                        if (distSq < toleranceSq) {
-                          foundVertexInfo = { overlayId: overlay.id, vertexIndex: i };
-                          break outerLoop;
-                        }
-                      }
-
-                      // 2. If no vertex hover, check edge midpoints
-                      const edgeInfo = findOverlayEdgeForGrip(worldPoint, overlay.polygon, gripToleranceWorld);
-                      if (edgeInfo) {
-                        foundEdgeInfo = { overlayId: overlay.id, edgeIndex: edgeInfo.edgeIndex };
-                        break;
-                      }
-                    }
-
-                    // 🚀 PERFORMANCE: Only setState if value actually changed
-                    if (foundVertexInfo) {
-                      if (!hoveredVertexInfo ||
-                          hoveredVertexInfo.overlayId !== foundVertexInfo.overlayId ||
-                          hoveredVertexInfo.vertexIndex !== foundVertexInfo.vertexIndex) {
-                        setHoveredVertexInfo(foundVertexInfo);
-                      }
-                      if (hoveredEdgeInfo) setHoveredEdgeInfo(null);
-                    } else if (foundEdgeInfo) {
-                      if (!hoveredEdgeInfo ||
-                          hoveredEdgeInfo.overlayId !== foundEdgeInfo.overlayId ||
-                          hoveredEdgeInfo.edgeIndex !== foundEdgeInfo.edgeIndex) {
-                        setHoveredEdgeInfo(foundEdgeInfo);
-                      }
-                      if (hoveredVertexInfo) setHoveredVertexInfo(null);
-                    } else {
-                      // Clear hover only if something was previously set
-                      if (hoveredEdgeInfo) setHoveredEdgeInfo(null);
-                      if (hoveredVertexInfo) setHoveredVertexInfo(null);
-                    }
-                  }
-                }
-
-                // 🏢 ENTERPRISE: Drag preview update (already throttled by above check)
-                // 🏢 ENTERPRISE (2027-01-27): Add overlay body drag support - Unified Toolbar Integration
-                if (draggingVertex || draggingEdgeMidpoint || draggingOverlayBody) {
-                  setDragPreviewPosition(worldPoint);
-                }
-
-                // ✅ ΔΙΟΡΘΩΣΗ: Καλώ και το props.onMouseMove για cursor-centered zoom
-                if (props.onMouseMove) {
-                  // 🎯 TYPE-SAFE: Create proper mock event (event not available in this context)
-                  const mockEvent = {
-                    clientX: screenPoint.x,
-                    clientY: screenPoint.y,
-                    preventDefault: () => {},
-                    stopPropagation: () => {}
-                  } as React.MouseEvent;
-                  props.onMouseMove(worldPoint, mockEvent);
-                }
-              }}
+              onMouseMove={handleLayerCanvasMouseMove}
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`} // 🎯 Z-INDEX FIX: LayerCanvas BACKGROUND (z-0)
               style={canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled)}
             />

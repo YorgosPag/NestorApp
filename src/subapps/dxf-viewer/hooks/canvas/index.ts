@@ -80,3 +80,10 @@ export type {
   UseCanvasClickHandlerParams,
   UseCanvasClickHandlerReturn,
 } from './useCanvasClickHandler';
+
+// === useLayerCanvasMouseMove === (CanvasSection decomposition — LayerCanvas grip hover + mouse move)
+export { useLayerCanvasMouseMove } from './useLayerCanvasMouseMove';
+export type {
+  UseLayerCanvasMouseMoveParams,
+  UseLayerCanvasMouseMoveReturn,
+} from './useLayerCanvasMouseMove';
