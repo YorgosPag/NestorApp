@@ -114,29 +114,13 @@ export default function NewObligationPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const textareaTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Height calculation function
+  // Height calculation — fits viewport, content scrolls internally
   const calculateHeight = useCallback(() => {
-    if (previewContentRef.current) {
-      const scrollHeight = previewContentRef.current.scrollHeight;
-      const viewportHeight = window.innerHeight;
-      const headerHeight = OBLIGATION_PREVIEW_LAYOUT.headerHeightPx;
-      const minHeight = OBLIGATION_PREVIEW_LAYOUT.minHeightPx;
-
-      // ΓΙΩΡΓΟΣ: Κόκκινο container να είναι 2300px
-      const neededHeight = OBLIGATION_PREVIEW_LAYOUT.fixedPreviewHeightPx;
-
-      // Debug logging για το ύψος του κίτρινου container
-      logger.info('Container height calculated', {
-        scrollHeight: `${scrollHeight}px`,
-        viewportHeight: `${viewportHeight}px`,
-        headerHeight: `${headerHeight}px`,
-        minHeight: `${minHeight}px`,
-        calculatedNeededHeight: `${neededHeight}px`,
-        finalDynamicHeight: `${neededHeight}px`
-      });
-
-      setDynamicHeight(`${neededHeight}px`);
-    }
+    const viewportHeight = window.innerHeight;
+    const headerOffset = 160; // app header + page header + padding
+    const minHeight = OBLIGATION_PREVIEW_LAYOUT.minHeightPx;
+    const neededHeight = Math.max(minHeight, viewportHeight - headerOffset);
+    setDynamicHeight(`${neededHeight}px`);
   }, []);
 
   // Store current function in ref
@@ -681,7 +665,7 @@ export default function NewObligationPage() {
 
           {/* Right Panel - Live Preview */}
           {viewMode === 'split' && (
-            <aside className="space-y-6 relative" aria-label={t('aria.preview')}>
+            <aside className="sticky top-6" aria-label={t('aria.preview')}>
               <Card
                 className={`flex flex-col relative ${previewHeightClass}`}
               >
