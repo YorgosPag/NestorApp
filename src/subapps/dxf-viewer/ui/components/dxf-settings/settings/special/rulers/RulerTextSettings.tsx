@@ -13,16 +13,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
+import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
-// 🏢 ENTERPRISE: Dynamic background class (ZERO inline styles)
-import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 
@@ -50,8 +48,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   // HOOKS
   // ============================================================================
 
-  const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('dxf-viewer');
@@ -60,8 +57,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
     updateRulerSettings
   } = useRulersGridContext();
 
-  // 🏢 ENTERPRISE: Dynamic background class (ZERO inline styles)
-  const textColorBgClass = useDynamicBackgroundClass(rulerSettings?.horizontal?.textColor ?? UI_COLORS.WHITE);
+  const rulerTextColor = rulerSettings?.horizontal?.textColor ?? UI_COLORS.WHITE;
 
   // ============================================================================
   // LOCAL STATE
@@ -114,24 +110,17 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.text.colorTitle')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.text.colorDescription')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <div
-            className={`${iconSizes.lg} ${radius.md} ${getStatusBorder('default')} ${textColorBgClass}`}
-          />
-          <input
-            type="color"
-            value={rulerSettings.horizontal.textColor}
-            onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${iconSizes.xl} ${radius.md} border-0 ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.HEIGHT.LG}`}
-          />
-          <input
-            type="text"
-            value={rulerSettings.horizontal.textColor}
-            onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} ${PANEL_LAYOUT.WIDTH.INPUT_SM}`}
-            placeholder={UI_COLORS.WHITE}
-          />
-        </div>
+        <ColorDialogTrigger
+          value={rulerTextColor}
+          onChange={handleRulerTextColorChange}
+          label={rulerTextColor}
+          title={t('rulerSettings.text.colorTitle')}
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent
+          eyedropper
+        />
       </div>
 
       {/* Font Size */}

@@ -5,16 +5,14 @@
 // PURPOSE: Ruler units settings UI (units type, visibility, font size, color)
 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
+import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 // 🏢 ADR-076: Centralized Color Conversion
 import { rgbToHex } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
-// 🏢 ENTERPRISE: Dynamic background/border classes (ZERO inline styles)
-import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
@@ -56,7 +54,6 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
   // HOOKS
   // ============================================================================
 
-  const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
@@ -67,12 +64,6 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
     updateRulerSettings
   } = useRulersGridContext();
 
-  // 🏢 ENTERPRISE: Compute preview color for units (ZERO inline styles)
-  const unitsPreviewColor = rulerSettings?.horizontal?.unitsColor ||
-    rulerSettings?.horizontal?.textColor ||
-    UI_COLORS.WHITE;
-  const unitsBgClass = useDynamicBackgroundClass(unitsPreviewColor);
-  const unitsBorderClass = useDynamicBorderClass(unitsPreviewColor);
 
   // ============================================================================
   // LOCAL STATE
@@ -133,10 +124,6 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
     return color;
   };
 
-  // Helper function to get preview background for divs (preserves rgba)
-  const getPreviewBackground = (color: string): string => {
-    return color;
-  };
 
   // ============================================================================
   // RENDER
@@ -216,32 +203,25 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.units.colorTitle')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.units.colorDescription')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <div
-            className={`${iconSizes.lg} rounded ${unitsBgClass} ${unitsBorderClass}`}
-          />
-          <input
-            type="color"
-            value={getPreviewColor(
-              rulerSettings.horizontal.unitsColor ||
-              rulerSettings.horizontal.textColor ||
-              UI_COLORS.WHITE
-            )}
-            onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`${iconSizes.xl} ${PANEL_LAYOUT.HEIGHT.LG} rounded border-0 ${PANEL_LAYOUT.CURSOR.POINTER}`}
-          />
-          <input
-            type="text"
-            value={
-              rulerSettings.horizontal.unitsColor ||
-              rulerSettings.horizontal.textColor ||
-              UI_COLORS.WHITE
-            }
-            onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`${PANEL_LAYOUT.WIDTH.INPUT_SM} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${getStatusBorder('muted')}`}
-            placeholder={UI_COLORS.WHITE}
-          />
-        </div>
+        <ColorDialogTrigger
+          value={getPreviewColor(
+            rulerSettings.horizontal.unitsColor ||
+            rulerSettings.horizontal.textColor ||
+            UI_COLORS.WHITE
+          )}
+          onChange={handleUnitsColorChange}
+          label={
+            rulerSettings.horizontal.unitsColor ||
+            rulerSettings.horizontal.textColor ||
+            UI_COLORS.WHITE
+          }
+          title={t('rulerSettings.units.colorTitle')}
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent
+          eyedropper
+        />
       </div>
     </div>
   );

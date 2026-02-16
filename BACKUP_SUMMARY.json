@@ -1,32 +1,30 @@
 {
-  "category": "FIX",
-  "shortDescription": "Unified event system — all events now flow through EventBus",
-  "problem": "Events dispatched via window.dispatchEvent or document.dispatchEvent never reached EventBus.on() subscribers, causing broken connections: level-panel:layering-activate (overlay click did not trigger layering in DxfViewerContent), level-panel:tool-change (tool changes from LevelPanel not received), dxf-zoom-changed (TransformContext zoom events invisible to EventBus listeners), canvas-fit-to-view (keyboard Shift+1 and middle-double-click dispatched to wrong target — window vs document mismatch).",
-  "cause": "Two asymmetric event channels were in use: (1) EventBus.emit() sends to both internal handlers AND window CustomEvent, but EventBus.on() only listens to internal handlers. (2) window.dispatchEvent/document.dispatchEvent only sends to DOM listeners, never reaching EventBus.on() subscribers. This split meant 6 out of 7 event connections were broken.",
+  "category": "FEATURE",
+  "shortDescription": "Integrate full Γενική Συγγραφή Υποχρεώσεων (28 articles) as default template",
+  "problem": "Obligations template had only 6 generic mock sections without articles. User needed the real construction obligations document (ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ, Θέρμη 2026) integrated as default template.",
+  "cause": "Template data was placeholder mock content. The real document has 28 articles across 8 categories covering all construction obligations.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/systems/events/EventBus.ts",
-    "src/subapps/dxf-viewer/overlays/types.ts",
-    "src/subapps/dxf-viewer/ui/components/LevelPanel.tsx",
-    "src/subapps/dxf-viewer/ui/hooks/usePanelContentRenderer.tsx",
-    "src/subapps/dxf-viewer/contexts/TransformContext.tsx",
-    "src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts",
-    "src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts",
-    "src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts",
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx"
+    "src/types/obligations/default-template.ts (NEW — 28 articles in 8 sections)",
+    "src/types/mock-obligations.ts (import from default-template)",
+    "src/types/obligation-services.ts (import from default-template)",
+    "src/types/obligations/index.ts (barrel export)",
+    "src/app/obligations/new/page.tsx (preserve articles, show count)",
+    "src/i18n/locales/el/obligations.json (template.articles key)",
+    "src/i18n/locales/en/obligations.json (template.articles key)"
   ],
-  "solution": "Phase 1: Extended DrawingEventMap with source field for level-panel:layering-activate and new canvas-fit-to-view event type. Phase 2: Replaced all window.dispatchEvent(new CustomEvent(...)) and document.dispatchEvent(new CustomEvent(...)) calls with EventBus.emit(). Phase 3: Replaced window.addEventListener/document.addEventListener listeners with EventBus.on() for type-safe subscriptions. 9 files changed, ~10 replacements (1:1 migration). EventBus.emit() backward-compatible window dispatch preserved automatically.",
-  "testing": "TypeScript compilation check passed (0 new errors, all pre-existing). Verification: level card click triggers layering, overlay click auto-switches level and activates layering, tool changes propagate from LevelPanel, zoom events fire correctly, Shift+1 fit-to-view works, middle-double-click fit-to-view works.",
-  "notes": "Orphaned events (level-panel:grip-edit-enabled, autocad-cursor-change) left untouched — no listeners means harmless.",
+  "solution": "Created default-template.ts with complete Γενική Συγγραφή Υποχρεώσεων organized as: 1) ΓΕΝΙΚΑ (arts 1-7), 2) ΦΕΡΩΝ ΟΡΓΑΝΙΣΜΟΣ & ΚΑΤΑΣΚΕΥΗ (arts 8-10), 3) ΘΕΡΜΟΠΡΟΣΟΨΕΙΣ, ΕΠΙΧΡΙΣΜΑΤΑ & ΚΟΥΦΩΜΑΤΑ (arts 11-13), 4) ΔΑΠΕΔΑ, ΧΡΩΜΑΤΙΣΜΟΙ & ΓΥΨΟΣΑΝΙΔΕΣ (arts 14-16), 5) ΜΟΝΩΣΕΙΣ & ΣΤΕΓΗ (arts 17-18), 6) ΕΙΔΗ ΥΓΙΕΙΝΗΣ & ΕΞΟΠΛΙΣΜΟΣ (arts 19-21), 7) ΗΜ ΕΓΚΑΤΑΣΤΑΣΕΙΣ (arts 22-26), 8) ΕΞΩΤΕΡΙΚΕΣ ΕΡΓΑΣΙΕΣ (arts 27-28). Fixed new/page.tsx useEffect that was stripping articles from template.",
+  "testing": "TypeScript compilation check: 0 errors. Pre-commit hooks passed.",
+  "notes": "Template preserves exact document text and layout. Each article maps to ObligationArticle interface with proper sectionId references. SectionCategory values used: general, construction, materials, finishes, installations, environment.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-02-15"
+    "sessionDate": "2026-02-16"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "5651a103",
-      "message": "fix(dxf-viewer): unify event system — migrate window/document dispatchers to EventBus"
+      "hash": "69a11852",
+      "message": "feat(obligations): integrate full Γενική Συγγραφή Υποχρεώσεων as default template"
     }
   ]
 }

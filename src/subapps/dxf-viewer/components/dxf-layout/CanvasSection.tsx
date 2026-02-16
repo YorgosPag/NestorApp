@@ -53,9 +53,7 @@ import {
 } from '../../rendering/core/CoordinateTransforms';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
-// 🏢 ENTERPRISE (2026-01-30): canvasBoundsService kept ONLY for ResizeObserver cache clearing
-// NOT used for coordinate transforms - using getPointerSnapshotFromElement instead
-import { canvasBoundsService } from '../../services/CanvasBoundsService';
+// 🏢 ENTERPRISE (2026-01-30): canvasBoundsService — moved to useViewportManager hook
 import { dlog, dwarn, derr } from '../../debug';
 // ✅ ADR-006 FIX: Import CrosshairOverlay για crosshair rendering
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
@@ -98,15 +96,14 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
 import { useSpecialTools } from '../../hooks/tools';
 // 🏢 ENTERPRISE (2026-01-31): Centralized grip system state management - ADR-XXX
 import { useGripSystem } from '../../hooks/grips';
-// 🏢 ADR-119: UnifiedFrameScheduler for centralized RAF management
-import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
+// 🏢 ADR-119: UnifiedFrameScheduler — moved to useViewportManager hook
 // 🏢 ENTERPRISE (2026-02-15): AutoCAD-style grip interaction for DXF entities
 import { useDxfGripInteraction } from '../../hooks/useDxfGripInteraction';
 // ADR-176: Touch gestures + responsive layout
@@ -163,38 +160,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     derr('CanvasSection', 'setTransform called but CanvasContext not available');
   });
 
-  // ✅ CENTRALIZED VIEWPORT: Single source of truth για viewport dimensions
-  const [viewport, setViewport] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  // 🏢 ENTERPRISE (2026-02-16): Viewport management extracted to useViewportManager hook
+  // Owns: viewport state, viewportRef, transformRef, ResizeObserver, RAF initial measure
+  // See: hooks/canvas/useViewportManager.ts
+  const containerRef = useRef<HTMLDivElement>(null);
+  // 🏢 PDF BACKGROUND: Get PDF background state and setViewport action
+  // NOTE: Moved up from original position so setPdfViewport is available for onViewportChange
+  const {
+    enabled: pdfEnabled,
+    opacity: pdfOpacity,
+    transform: pdfTransform,
+    renderedImageUrl: pdfImageUrl,
+    setViewport: setPdfViewport,
+  } = usePdfBackgroundStore();
 
-  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport Ref - ZERO React lag
-  // PROBLEM: useState viewport updates ASYNC (React batches) → stale on resize
-  // SOLUTION: viewportRef updates SYNCHRONOUSLY in ResizeObserver
-  // CANONICAL ELEMENT: containerRef (wrapper that contains all canvases)
-  const viewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
-
-  // 🏢 ENTERPRISE FIX (2026-02-01): Transform ref for fresh access in ResizeObserver callback
-  // PROBLEM: When viewport height changes (toolbar open/close), offsetY must be adjusted
-  //          to keep world origin at same screen position
-  // SOLUTION: Keep transform ref in sync, adjust offsetY by deltaHeight in ResizeObserver
-  const transformRef = useRef(transform);
-
-  // 🏢 ENTERPRISE FIX (2026-02-01): Wrapper setTransform that updates ref SYNCHRONOUSLY
-  // PROBLEM: Pan/zoom call setTransform (async React state), but canvas uses transformRef (sync)
-  //          This causes origin markers to be out of sync during pan operations
-  // SOLUTION: Update transformRef.current IMMEDIATELY, then call context setTransform
-  const setTransform = useCallback((newTransform: typeof transform) => {
-    // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
-    transformRef.current = newTransform;
-    // React state update for context (async)
-    contextSetTransform(newTransform);
-  }, [contextSetTransform]);
-
-  // 🏢 ENTERPRISE FIX (2026-01-27): Viewport readiness check για coordinate transforms
-  // Αποτρέπει λανθασμένες μετατροπές coordinates ΠΡΙΝ το viewport αρχικοποιηθεί σωστά
-  // PROBLEM: Την πρώτη φορά μετά από server restart, το viewport είναι {0,0}
-  //          και η screenToWorld επιστρέφει λάθος τιμές (π.χ. Y-offset ~80px)
-  // SOLUTION: Το viewportReady flag αποκλείει τα clicks μέχρι το viewport να είναι valid
-  const viewportReady = viewport.width > 0 && viewport.height > 0;
+  const { viewport, viewportRef, viewportReady, setTransform, transformRef } = useViewportManager({
+    containerRef,
+    transform,
+    setTransform: contextSetTransform,
+    onViewportChange: setPdfViewport,
+  });
 
   // 🏢 ENTERPRISE (2026-01-30): Get canvas element for viewport snapshot
   // Returns the canvas HTMLElement for use with getViewportSnapshotFromElement()
@@ -215,7 +200,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // 🏢 ENTERPRISE: Inject viewport για accurate zoom-to-cursor
     viewport
   });
-  const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
   // 🏢 ENTERPRISE (2026-01-31): Mouse position state moved to useCanvasMouse hook
   // mouseCss, mouseWorld, lastMouseCssRef, lastMouseWorldRef, updateMouseCss, updateMouseWorld
   // are now provided by the hook (see line ~520)
@@ -247,8 +231,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // This is CRITICAL for updateVertex/addVertex to work with the latest polygon data
   overlayStoreRef.current = overlayStore;
   universalSelectionRef.current = universalSelection;
-  // 🏢 FIX (2026-02-01): Keep transform ref in sync for ResizeObserver callback
-  transformRef.current = transform;
+  // 🏢 FIX (2026-02-01): transformRef sync now handled by useViewportManager hook
   const levelManager = useLevels();
 
   // 🏢 ENTERPRISE (2026-01-25): Moved BEFORE callbacks that use them to avoid hoisting issues
@@ -330,175 +313,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // NOTE: canvasContext already retrieved at line 93 for centralized zoom operations
   // 🎯 SNAP INDICATOR: Get current snap result for visual feedback
   const { currentSnapResult } = useSnapContext();
-  // 🏢 PDF BACKGROUND: Get PDF background state and setViewport action
-  const {
-    enabled: pdfEnabled,
-    opacity: pdfOpacity,
-    transform: pdfTransform,
-    renderedImageUrl: pdfImageUrl,
-    setViewport: setPdfViewport,
-  } = usePdfBackgroundStore();
-  // ✅ CENTRALIZED VIEWPORT: Update viewport από CONTAINER dimensions
-  // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = container (SSoT)
-  // PROBLEM: Canvas vs container mixing caused drift on DevTools toggle
-  // SOLUTION: Use CONTAINER as single source of truth for ALL viewport calculations
-  React.useEffect(() => {
-    let resizeObserver: ResizeObserver | null = null;
-
-    const updateViewport = () => {
-      // 🎯 CANONICAL ELEMENT: containerRef (wrapper that contains all canvases)
-      const container = containerRef.current;
-
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        // Only update if dimensions are valid (not 0x0)
-        if (rect.width > 0 && rect.height > 0) {
-          const newViewport = { width: rect.width, height: rect.height };
-          // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
-          viewportRef.current = newViewport;
-          // React state update for dependencies
-          setViewport(newViewport);
-          // 🏢 PDF BACKGROUND: Sync viewport to PDF store for fit-to-view
-          setPdfViewport(newViewport);
-        }
-      }
-    };
-
-    // 🏢 ENTERPRISE: ResizeObserver on CONTAINER (canonical element)
-    const setupObserver = () => {
-      const container = containerRef.current;
-
-      if (container) {
-        resizeObserver = new ResizeObserver((entries) => {
-          for (const entry of entries) {
-            const { width, height } = entry.contentRect;
-            if (width > 0 && height > 0) {
-              // 🏢 FIX (2026-02-01): Adjust transform.offsetY when viewport height changes
-              // PROBLEM: When toolbar opens/closes, viewport height changes but offsetY stays same
-              //          This causes world origin to shift on screen (origin markers misalign)
-              // SOLUTION: Adjust offsetY by deltaHeight to keep world origin at same screen position
-              // FORMULA: newOffsetY = oldOffsetY + (newHeight - oldHeight)
-              const oldHeight = viewportRef.current.height;
-              const deltaHeight = height - oldHeight;
-
-              // Only adjust if we have a valid previous height (not initial load)
-              if (oldHeight > 0 && Math.abs(deltaHeight) > 0.5) {
-                const currentTransform = transformRef.current;
-                const newOffsetY = currentTransform.offsetY + deltaHeight;
-                const newTransform = {
-                  ...currentTransform,
-                  offsetY: newOffsetY
-                };
-
-                // 🔍 DEBUG: Detailed logging to understand the issue
-                const timestamp = performance.now().toFixed(0);
-                dlog('Canvas', `[${timestamp}ms][ResizeObserver] ADJUSTING:
-  oldHeight=${oldHeight.toFixed(1)}, newHeight=${height.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}
-  oldOffsetY=${currentTransform.offsetY.toFixed(1)}, newOffsetY=${newOffsetY.toFixed(1)}
-  transformRef.current.offsetY BEFORE=${transformRef.current.offsetY.toFixed(1)}`);
-
-                // 🏢 FIX (2026-02-01): Update transformRef SYNCHRONOUSLY before viewport update
-                // PROBLEM: setTransform is async (React batches), but viewportRef is sync
-                //          Canvas re-renders with new viewport but OLD transform → misaligned markers
-                // SOLUTION: Update transformRef FIRST (sync), then setTransform (async for React)
-                transformRef.current = newTransform;
-
-                // React state update for dependencies (async)
-                setTransform(newTransform);
-
-                dlog('Canvas', `[${timestamp}ms][ResizeObserver] AFTER: transformRef.current.offsetY=${transformRef.current.offsetY.toFixed(1)}`);
-              } else {
-                dlog('Canvas', `[ResizeObserver] SKIP adjust: oldHeight=${oldHeight.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}`);
-              }
-
-              const newViewport = { width, height };
-              // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
-              viewportRef.current = newViewport;
-              // React state update for dependencies
-              setViewport(newViewport);
-              // 🏢 PDF BACKGROUND: Sync viewport to PDF store for fit-to-view
-              setPdfViewport(newViewport);
-              // 🏢 FIX (2026-01-30): Clear canvasBoundsService cache on resize
-              canvasBoundsService.clearCache();
-            }
-          }
-        });
-        resizeObserver.observe(container);
-
-        // Initial update
-        updateViewport();
-      }
-    };
-
-    // 🏢 ENTERPRISE: Retry mechanism for container mount timing
-    let retryCount = 0;
-    const maxRetries = 10;
-
-    const trySetupObserver = () => {
-      const container = containerRef.current;
-
-      if (container) {
-        setupObserver();
-      } else if (retryCount < maxRetries) {
-        retryCount++;
-        setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY);
-      } else {
-        dwarn('CanvasSection', '⚠️ Viewport container not available after', maxRetries, 'retries');
-      }
-    };
-
-    // Initial setup with delay to ensure container is mounted
-    const timer = setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY);
-
-    // Fallback: Also listen for window resize
-    window.addEventListener('resize', updateViewport);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', updateViewport);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-    };
-  }, []); // 🏢 FIX: Empty deps - setup once, ResizeObserver handles updates
-
-  // 🏢 ENTERPRISE FIX (2026-02-01): Force viewport update after browser layout stabilization
-  // PROBLEM: getBoundingClientRect() επιστρέφει stale values την πρώτη φορά μετά από server restart
-  //          γιατί ο browser δεν έχει ακόμα ολοκληρώσει το layout calculation
-  // SOLUTION: Χρησιμοποιούμε requestAnimationFrame + setTimeout για να περιμένουμε
-  //           1. RAF: Περιμένει το επόμενο paint frame
-  //           2. setTimeout: Δίνει χρόνο στον browser να κάνει reflow
-  // RESULT: Το viewport έχει σωστές dimensions ΠΡΙΝ ο χρήστης κάνει click
-  // 🏢 ADR-119: Migrated to UnifiedFrameScheduler.scheduleOnceDelayed for centralized RAF management
-  // 🏢 FIX (2026-02-01): SSoT - Use containerRef (same as ResizeObserver) instead of dxfCanvas
-  //                      Also update viewportRef.current for consistency with main mechanism
-  React.useEffect(() => {
-    const forceViewportUpdate = () => {
-      // 🏢 SSoT: Use containerRef (canonical element) - SAME as ResizeObserver mechanism
-      // BEFORE: Used dxfCanvas which caused inconsistency with container-based ResizeObserver
-      const container = containerRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          const newViewport = { width: rect.width, height: rect.height };
-          // 🏢 SSoT: Update BOTH ref AND state (same as ResizeObserver)
-          viewportRef.current = newViewport;
-          setViewport(newViewport);
-          setPdfViewport(newViewport);
-        }
-      }
-    };
-
-    // 🏢 ADR-119: Use UnifiedFrameScheduler for centralized RAF coordination
-    // Pattern: RAF → setTimeout → RAF ensures layout is stable before measurement
-    const cancelScheduled = UnifiedFrameScheduler.scheduleOnceDelayed(
-      'canvas-section-viewport-layout',
-      forceViewportUpdate,
-      PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION
-    );
-
-    return cancelScheduled;
-  }, []); // Empty deps - run once on mount
+  // 🏢 PDF BACKGROUND: usePdfBackgroundStore moved up (before useViewportManager) for onViewportChange
+  // pdfEnabled, pdfOpacity, pdfTransform, pdfImageUrl, setPdfViewport are now available from line ~168
+  // 🏢 ENTERPRISE (2026-02-16): ResizeObserver + RAF viewport measurement → useViewportManager hook
 
   // ✅ AUTO FIT TO VIEW: Trigger existing fit-to-view event after canvas mount
   // ⚠️ DISABLED: Αφαιρέθηκε γιατί προκαλούσε issues με origin marker visibility
@@ -569,7 +386,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
    * which child canvas is active or whether DxfCanvas/LayerCanvas are mounted.
    */
   const { updatePosition, setActive } = useCursorActions();
-  const containerRef = useRef<HTMLDivElement>(null);
+  // containerRef — moved to useViewportManager section (line ~166)
 
   // ADR-176: Touch gesture hooks for mobile pinch-zoom and pan
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();

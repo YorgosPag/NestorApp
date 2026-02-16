@@ -38,3 +38,10 @@ export type {
 // === useCanvasSizeObserver === (ADR-146)
 export { useCanvasSizeObserver } from './useCanvasSizeObserver';
 export type { UseCanvasSizeObserverOptions } from './useCanvasSizeObserver';
+
+// === useViewportManager === (CanvasSection decomposition — viewport lifecycle)
+export { useViewportManager } from './useViewportManager';
+export type {
+  UseViewportManagerParams,
+  UseViewportManagerReturn,
+} from './useViewportManager';
