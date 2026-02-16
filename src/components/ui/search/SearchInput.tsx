@@ -50,6 +50,8 @@ export function SearchInput({
   // 🚀 Enterprise debouncing implementation
   const [localValue, setLocalValue] = useState(value);
 
+  const resolvedPlaceholder = placeholder.includes('.') ? t(placeholder) : placeholder;
+
   // 📝 Debounced onChange handler
   useEffect(() => {
     if (!onChange) return; // 🛡️ Guard check - prevent crash when onChange is undefined
@@ -90,6 +92,7 @@ export function SearchInput({
     setLocalValue(newValue);
   }, [maxLength]);
 
+
   // 🎨 Icon classes - consistent με existing implementations
   const iconClasses = cn(
     SEARCH_UI.ICON.POSITION,
@@ -123,7 +126,7 @@ export function SearchInput({
       {/* 📝 Search Input */}
       <Input
         type="text"
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         value={localValue}
         onChange={handleInputChange}
         onFocus={onFocus}
@@ -150,3 +153,4 @@ export function SearchInput({
     </div>
   );
 }
+

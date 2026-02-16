@@ -496,7 +496,7 @@ export function ReadOnlyLayerViewer({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{DXF_LAYER_CATEGORY_LABELS.all}</SelectItem>
+                  <SelectItem value="all">{t(DXF_LAYER_CATEGORY_LABELS.all)}</SelectItem>
                   {categories.map(category => (
                     <SelectItem key={category} value={category}>
                       <div className="flex items-center gap-2">
@@ -606,3 +606,4 @@ export function ReadOnlyLayerViewer({
     </Card>
   );
 }
+

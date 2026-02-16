@@ -12,7 +12,6 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import type { ParkingFilters } from '@/types/parking';
 import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/types/parking';
-import { PARKING_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -51,12 +50,12 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
             </Label>
             <Select value={filters.type} onValueChange={(value) => onFiltersChange({ type: value })}>
               <SelectTrigger id="type-filter" className="h-9">
-                <SelectValue placeholder={PARKING_FILTER_LABELS.ALL_TYPES} />
+                <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{PARKING_FILTER_LABELS.ALL_TYPES}</SelectItem>
+                <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
                 {Object.entries(PARKING_TYPE_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                  <SelectItem key={key} value={key}>{t(label)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -66,12 +65,12 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
             <Label htmlFor="status-filter" className="text-xs font-medium">{t('parking.statusLabel')}</Label>
             <Select value={filters.status} onValueChange={(value) => onFiltersChange({ status: value })}>
               <SelectTrigger id="status-filter" className="h-9">
-                <SelectValue placeholder={PARKING_FILTER_LABELS.ALL_STATUSES} />
+                <SelectValue placeholder={t('allStatuses', { ns: 'filters' })} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{PARKING_FILTER_LABELS.ALL_STATUSES}</SelectItem>
+                <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
                 {Object.entries(PARKING_STATUS_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                  <SelectItem key={key} value={key}>{t(label)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -81,10 +80,10 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
             <Label htmlFor="level-filter" className="text-xs font-medium">{t('parking.levelLabel')}</Label>
             <Select value={filters.level} onValueChange={(value) => onFiltersChange({ level: value })}>
               <SelectTrigger id="level-filter" className="h-9">
-                <SelectValue placeholder={PARKING_FILTER_LABELS.ALL_LEVELS} />
+                <SelectValue placeholder={t('allLevels', { ns: 'filters' })} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{PARKING_FILTER_LABELS.ALL_LEVELS}</SelectItem>
+                <SelectItem value="all">{t('allLevels', { ns: 'filters' })}</SelectItem>
                 <SelectItem value="basement">{t('parking.levels.basement')}</SelectItem>
                 <SelectItem value="ground">{t('parking.levels.ground')}</SelectItem>
                 <SelectItem value="first">{t('parking.levels.first')}</SelectItem>

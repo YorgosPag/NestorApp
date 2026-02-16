@@ -214,7 +214,7 @@ export function SearchFiltersTabContent({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
-            {t('toolbar.filters.status.label')}: {statusTabs.find(tab => tab.value === getCurrentStatusFilter?.())?.label || COMMON_FILTER_LABELS.ALL_STATUSES}
+            {t('toolbar.filters.status.label')}: {statusTabs.find(tab => tab.value === getCurrentStatusFilter?.())?.label || t(COMMON_FILTER_LABELS.ALL_STATUSES, { ns: 'filters' })}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -236,7 +236,7 @@ export function SearchFiltersTabContent({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
-            {t('toolbar.filters.type.label')}: {typeTabs.find(tab => tab.value === getCurrentTypeFilter?.())?.label || COMMON_FILTER_LABELS.ALL_TYPES}
+            {t('toolbar.filters.type.label')}: {typeTabs.find(tab => tab.value === getCurrentTypeFilter?.())?.label || t(COMMON_FILTER_LABELS.ALL_TYPES, { ns: 'filters' })}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

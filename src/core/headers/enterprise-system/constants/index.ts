@@ -177,11 +177,11 @@ export const HEADER_SIZES = {
 
 // 🏢 ENTERPRISE: i18n-enabled search placeholders with dynamic getters
 const SEARCH_PLACEHOLDERS = {
-  get default() { return i18n.t('search.placeholder.default', { ns: 'common' }); },
-  get contacts() { return i18n.t('search.placeholder.contacts', { ns: 'common' }); },
-  get projects() { return i18n.t('search.placeholder.projects', { ns: 'common' }); },
-  get buildings() { return i18n.t('search.placeholder', { ns: 'common' }); },
-  get files() { return i18n.t('search.placeholder.files', { ns: 'common' }); }
+  get default() { return i18n.t('placeholders.search', { ns: 'common' }); },
+  get contacts() { return i18n.t('placeholders.searchContacts', { ns: 'common' }); },
+  get projects() { return i18n.t('placeholders.searchProjects', { ns: 'common' }); },
+  get buildings() { return i18n.t('placeholders.searchBuildings', { ns: 'common' }); },
+  get files() { return i18n.t('placeholders.search', { ns: 'common' }); }
 };
 
 export const SEARCH_CONFIG = {
@@ -238,3 +238,4 @@ export const ENTERPRISE_HEADER_CONFIG = {
     events: ['search', 'filter', 'view_change', 'action_click']
   }
 } as const;
+

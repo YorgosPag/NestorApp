@@ -17,7 +17,7 @@ import type { SearchConfig } from './types';
 export const SEARCH_CONFIG: SearchConfig = {
   debounceDelay: 300,
   maxLength: 500,
-  placeholderDefault: 'search.placeholders.default',
+  placeholderDefault: 'placeholders.search',
   iconSize: 4,
   iconPosition: 'left-3',
   paddingLeft: 'pl-11', // Consistent με existing implementations
@@ -33,21 +33,21 @@ export const LEGACY_PATTERNS = {
   PROPERTY_SEARCH: {
     iconClasses: 'absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground',
     inputClasses: 'pl-9',
-    placeholder: 'search.placeholders.property',
+    placeholder: 'placeholders.searchProperty',
   },
 
   // Pattern από navigation/dialogs/SelectCompanyContactModal.tsx
   COMPANY_SEARCH: {
     iconClasses: 'absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground',
     inputClasses: 'pl-11',
-    placeholder: 'search.placeholders.company',
+    placeholder: 'placeholders.searchCompany',
   },
 
   // Pattern από header/search-bar.tsx
   HEADER_SEARCH: {
     iconClasses: 'absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground',
     inputClasses: 'pl-10',
-    placeholder: 'search.placeholders.contacts',
+    placeholder: 'placeholders.searchContacts',
   },
 } as const;
 
