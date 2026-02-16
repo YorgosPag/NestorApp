@@ -4,10 +4,10 @@
  * =============================================================================
  *
  * Server-side geocoding proxy that:
- * - Uses Nominatim STRUCTURED search (not free-form `q=`)
+ * - Primary: OSM-style free-form search "street number postalcode" (most reliable)
+ * - Fallback: Nominatim structured search with multi-variant strategy
  * - Sends proper User-Agent header (required by Nominatim TOS)
- * - Multi-variant query strategy: original → accent-stripped → greeklish→greek
- * - Falls back to free-form search if structured fails
+ * - Multi-variant: original → dehyphenated → accent-stripped → greeklish → full free-form
  * - Rate limited: withHeavyRateLimit (10 req/min)
  *
  * @module app/api/geocoding/route
@@ -245,25 +245,50 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
 // =============================================================================
 
 /**
+ * Build OSM-style free-form query: "street number postalcode"
+ * This is how openstreetmap.org itself searches — space-separated,
+ * no city, no commas. The postal code is enough to disambiguate.
+ */
+function toOsmStyleQuery(params: GeocodingRequestBody): string {
+  return [params.street, params.postalCode].filter(Boolean).join(' ');
+}
+
+/**
  * Multi-variant geocoding strategy:
- * 1. Structured search (original)
- * 2. Structured search (accent-stripped)
- * 3. Structured search (greeklish→greek)
- * 4. Free-form fallback (original query string)
+ *
+ * 1. OSM-style free-form: "street number postalcode" (most reliable — same as openstreetmap.org)
+ * 2. Structured search (original fields)
+ * 3. Structured search (dehyphenated city/neighborhood)
+ * 4. Structured search (accent-stripped)
+ * 5. Structured search (greeklish→greek)
+ * 6. Full free-form fallback: "street, neighborhood/city, postalcode, region"
  */
 async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiResponse | null> {
-  // --- Variant 1: Original structured search ---
+  // --- Variant 1: OSM-style free-form (most reliable) ---
+  // "Αχιλλέως 17 56224" → same approach as openstreetmap.org website.
+  // The postal code disambiguates the neighborhood automatically.
+  const osmQuery = toOsmStyleQuery(params);
+  if (osmQuery.trim()) {
+    const osmUrl = buildFreeformUrl(osmQuery);
+    logger.info('Geocoding attempt 1: OSM-style free-form', { data: { query: osmQuery } });
+    const result = await fetchNominatim(osmUrl);
+
+    if (result) {
+      return formatResult(result, params);
+    }
+  }
+
+  // --- Variant 2: Structured search ---
+  await sleep(GEOCODING.NOMINATIM_DELAY_MS);
   const structuredUrl = buildStructuredUrl(params);
-  logger.info('Geocoding attempt 1: structured (original)', { data: { url: structuredUrl } });
+  logger.info('Geocoding attempt 2: structured (original)', { data: { url: structuredUrl } });
   let result = await fetchNominatim(structuredUrl);
 
   if (result) {
     return formatResult(result, params);
   }
 
-  // --- Variant 1b: Hyphen-normalized city/neighborhood ---
-  // Greek compound names use hyphens (e.g. "Ελευθέριο-Κορδελιό") but
-  // Nominatim may store them with spaces.
+  // --- Variant 3: Structured (dehyphenated city/neighborhood) ---
   const hasHyphen =
     (params.city && params.city.includes('-')) ||
     (params.neighborhood && params.neighborhood.includes('-'));
@@ -274,7 +299,7 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
       neighborhood: params.neighborhood?.replace(/-/g, ' '),
     };
     const dehyphenUrl = buildStructuredUrl(dehyphenated);
-    logger.info('Geocoding attempt 1b: structured (dehyphenated)');
+    logger.info('Geocoding attempt 3: structured (dehyphenated)');
     await sleep(GEOCODING.NOMINATIM_DELAY_MS);
     result = await fetchNominatim(dehyphenUrl);
 
@@ -283,10 +308,10 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
     }
   }
 
-  // --- Variant 2: Accent-stripped structured search ---
+  // --- Variant 4: Accent-stripped structured ---
   const stripped = createAccentStrippedVariant(params);
   const strippedUrl = buildStructuredUrl(stripped);
-  logger.info('Geocoding attempt 2: structured (accent-stripped)');
+  logger.info('Geocoding attempt 4: structured (accent-stripped)');
   await sleep(GEOCODING.NOMINATIM_DELAY_MS);
   result = await fetchNominatim(strippedUrl);
 
@@ -294,11 +319,11 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
     return formatResult(result, params);
   }
 
-  // --- Variant 3: Greeklish→Greek ---
+  // --- Variant 5: Greeklish→Greek ---
   const greeklishVariant = createGreeklishVariant(params);
   if (greeklishVariant) {
     const greeklishUrl = buildStructuredUrl(greeklishVariant);
-    logger.info('Geocoding attempt 3: structured (greeklish→greek)');
+    logger.info('Geocoding attempt 5: structured (greeklish→greek)');
     await sleep(GEOCODING.NOMINATIM_DELAY_MS);
     result = await fetchNominatim(greeklishUrl);
 
@@ -307,11 +332,11 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
     }
   }
 
-  // --- Variant 4: Free-form fallback ---
+  // --- Variant 6: Full free-form fallback ---
   const freeformQuery = toFreeformQuery(params);
-  if (freeformQuery.trim()) {
+  if (freeformQuery.trim() && freeformQuery !== osmQuery) {
     const freeformUrl = buildFreeformUrl(freeformQuery);
-    logger.info('Geocoding attempt 4: free-form fallback', { data: { query: freeformQuery } });
+    logger.info('Geocoding attempt 6: free-form fallback', { data: { query: freeformQuery } });
     await sleep(GEOCODING.NOMINATIM_DELAY_MS);
     result = await fetchNominatim(freeformUrl);
 
