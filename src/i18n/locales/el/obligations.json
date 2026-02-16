@@ -51,7 +51,8 @@
   "template": {
     "title": "Πρότυπο",
     "useDefault": "Χρήση προεπιλεγμένου προτύπου",
-    "sections": "ενότητες"
+    "sections": "ενότητες",
+    "articles": "άρθρα"
   },
   "structure": {
     "title": "Δομή & Περιεχόμενο",

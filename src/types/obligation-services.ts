@@ -77,51 +77,11 @@ export async function getObligations(limitCount: number = 100): Promise<Obligati
   }
 }
 
-// 🏗️ DEFAULT TEMPLATE - για νέες συγγραφές όταν δεν υπάρχουν templates στη βάση
-export const DEFAULT_TEMPLATE_SECTIONS: ObligationSection[] = [
-  {
-    id: 'building-terms',
-    number: '1',
-    title: 'ΟΡΟΙ ΔΟΜΗΣΗΣ',
-    content: `Όλες οι εργασίες θα εκτελεσθούν σύμφωνα με:
+// DEFAULT TEMPLATE — Πλήρης Γενική Συγγραφή Υποχρεώσεων (28 Άρθρα)
+import { GENERAL_CONSTRUCTION_TEMPLATE } from './obligations/default-template';
+export const DEFAULT_TEMPLATE_SECTIONS: ObligationSection[] = GENERAL_CONSTRUCTION_TEMPLATE;
 
-• τα εγκεκριμένα σχέδια των μελετών
-• την συγγραφή υποχρεώσεων
-• την τεχνική περιγραφή
-• τις ισχύουσες πολεοδομικές διατάξεις
-• τον αντισεισμικό κανονισμό`,
-    isRequired: true,
-    category: 'general',
-    order: 1
-  },
-  {
-    id: 'delivery-time',
-    number: '2',
-    title: 'ΧΡΟΝΟΣ ΠΑΡΑΔΟΣΗΣ',
-    content: `Ως χρόνος παράδοσης του κτιρίου ορίζεται ο αναφερόμενος στο συμβόλαιο.
-
-Η παράδοση κάθε κατοικίας θα γίνεται με αντίστοιχο πρωτόκολλο παράδοσης και παραλαβής.`,
-    isRequired: true,
-    category: 'general',
-    order: 2
-  },
-  {
-    id: 'execution-materials',
-    number: '3',
-    title: 'ΕΚΤΕΛΕΣΗ - ΥΛΙΚΑ',
-    content: `Οι εργασίες θα εκτελεσθούν με μέριμνα και δαπάνες της εργολάβου εταιρείας, με υλικά αρίστης ποιότητας.
-
-Η εργολάβος εταιρεία έχει το δικαίωμα να καθορίζει τα υλικά που θα χρησιμοποιηθούν.`,
-    isRequired: true,
-    category: 'materials',
-    order: 3
-  }
-];
-
-// 🚨 DEPRECATED: Αυτά τα exports διατηρούνται για backward compatibility
-// αλλά θα πρέπει να αντικατασταθούν με async Firebase calls
+/** @deprecated Χρησιμοποίησε async Firebase calls */
 export const MOCK_SECTIONS: ObligationSection[] = [];
 export const MOCK_OBLIGATIONS: ObligationDocument[] = [];
 export const COMPLETE_SECTIONS: ObligationSection[] = [];
-
-// 📝 TODO: Αφαίρεση των deprecated exports όταν όλα τα αρχεία μετακινηθούν στο async API

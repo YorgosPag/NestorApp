@@ -51,7 +51,8 @@
   "template": {
     "title": "Template",
     "useDefault": "Use default template",
-    "sections": "sections"
+    "sections": "sections",
+    "articles": "articles"
   },
   "structure": {
     "title": "Structure & Content",

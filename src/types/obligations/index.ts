@@ -1,4 +1,5 @@
 export * from './contracts';
+export * from './default-template';
 export * from './factories';
 export * from './numbering';
 export * from './toc';

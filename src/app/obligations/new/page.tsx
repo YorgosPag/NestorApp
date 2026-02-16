@@ -27,6 +27,7 @@ import {
   generateTableOfContents
 } from "@/types/obligations";
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
+import { TEMPLATE_ARTICLE_COUNT } from '@/types/obligations/default-template';
 import { obligationsService } from "@/services/obligations.service";
 import StructureEditor from "@/components/obligations/structure-editor";
 import LivePreview from "@/components/obligations/live-preview";
@@ -350,7 +351,6 @@ export default function NewObligationPage() {
         ...prev,
         sections: DEFAULT_TEMPLATE_SECTIONS.map(section => ({
           ...section,
-          articles: [],
           isExpanded: false
         }))
       }));
@@ -656,7 +656,7 @@ export default function NewObligationPage() {
                     className={iconSizes.sm}
                   />
                   <Label htmlFor="useTemplate" className="text-sm">
-                    {t('template.useDefault')} ({DEFAULT_TEMPLATE_SECTIONS.length} {t('template.sections')})
+                    {t('template.useDefault')} ({DEFAULT_TEMPLATE_SECTIONS.length} {t('template.sections')}, {TEMPLATE_ARTICLE_COUNT} {t('template.articles')})
                   </Label>
                 </div>
               </CardContent>
