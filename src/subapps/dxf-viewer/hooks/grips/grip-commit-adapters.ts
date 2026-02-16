@@ -16,7 +16,7 @@ import type { ISceneManager, SceneEntity, ICommand } from '../../core/commands/i
 import type { VertexMovement } from '../../core/commands';
 import { MoveVertexCommand } from '../../core/commands';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import type { AnySceneEntity } from '../../types/scene';
+import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UnifiedGripInfo } from './unified-grip-types';
 
@@ -29,8 +29,8 @@ export interface DxfCommitDeps {
   moveEntities: (ids: string[], delta: Point2D, opts: { isDragging: boolean }) => void;
   execute: (command: ICommand) => void;
   currentLevelId: string | null;
-  getLevelScene: (levelId: string) => { entities: AnySceneEntity[] } | null;
-  setLevelScene: (levelId: string, scene: { entities: AnySceneEntity[] }) => void;
+  getLevelScene: (levelId: string) => SceneModel | null;
+  setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
 /** Dependencies needed for overlay grip commits */

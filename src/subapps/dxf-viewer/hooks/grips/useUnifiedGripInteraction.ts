@@ -265,7 +265,13 @@ export function useUnifiedGripInteraction(
 
   const isGripMode = activeTool === 'select' || activeTool === 'layering';
 
-  // ----- Reset when selection changes -----
+  // ----- Reset when selection CONTENT changes -----
+  // Use stable string keys instead of array references, because selectedOverlays
+  // is recomputed every render (overlayStore.getByLevel creates new array via filter).
+  // Without stable keys, this useEffect fires every render, resetting hoveredGrip immediately.
+  const entitySelectionKey = selectedEntityIds.join(',');
+  const overlaySelectionKey = selectedOverlays.map(o => o.id).join(',');
+
   useEffect(() => {
     setPhase('idle');
     setHoveredGrip(null);
@@ -276,7 +282,7 @@ export function useUnifiedGripInteraction(
       clearTimeout(warmTimerRef.current);
       warmTimerRef.current = null;
     }
-  }, [selectedEntityIds, selectedOverlays]);
+  }, [entitySelectionKey, overlaySelectionKey]);
 
   // ----- Cleanup timer on unmount -----
   useEffect(() => {
