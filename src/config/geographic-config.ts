@@ -8,12 +8,20 @@ interface GeographicConfig {
   readonly DEFAULT_CITY: string;
   readonly DEFAULT_REGION: string;
   readonly DEFAULT_COUNTRY: string;
+  readonly DEFAULT_COUNTRY_CODE: string;
+  readonly DEFAULT_COUNTRY_EN: string;
   readonly DEFAULT_LATITUDE: number;
   readonly DEFAULT_LONGITUDE: number;
   readonly ALTERNATIVE_CITY: string;
   readonly ALTERNATIVE_LATITUDE: number;
   readonly ALTERNATIVE_LONGITUDE: number;
   readonly MAP_ZOOM_LEVEL: number;
+  readonly COUNTRY_BOUNDING_BOX: {
+    readonly minLat: number;
+    readonly maxLat: number;
+    readonly minLng: number;
+    readonly maxLng: number;
+  };
 }
 
 /**
@@ -25,6 +33,8 @@ function getGeographicConfig(): GeographicConfig {
     DEFAULT_CITY: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα',
     DEFAULT_REGION: process.env.NEXT_PUBLIC_DEFAULT_REGION || 'Αττική',
     DEFAULT_COUNTRY: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || 'Ελλάδα',
+    DEFAULT_COUNTRY_CODE: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY_CODE || 'gr',
+    DEFAULT_COUNTRY_EN: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY_EN || 'Greece',
 
     // Primary coordinates (defaults to Athens, Greece)
     DEFAULT_LATITUDE: parseFloat(process.env.NEXT_PUBLIC_DEFAULT_LATITUDE || '37.9838'),
@@ -36,7 +46,15 @@ function getGeographicConfig(): GeographicConfig {
     ALTERNATIVE_LONGITUDE: parseFloat(process.env.NEXT_PUBLIC_ALTERNATIVE_LONGITUDE || '22.9444'),
 
     // Map configuration
-    MAP_ZOOM_LEVEL: parseFloat(process.env.NEXT_PUBLIC_MAP_ZOOM_LEVEL || '13')
+    MAP_ZOOM_LEVEL: parseFloat(process.env.NEXT_PUBLIC_MAP_ZOOM_LEVEL || '13'),
+
+    // Country bounding box (for coordinate validation)
+    COUNTRY_BOUNDING_BOX: {
+      minLat: parseFloat(process.env.NEXT_PUBLIC_COUNTRY_BBOX_MIN_LAT || '34.5'),
+      maxLat: parseFloat(process.env.NEXT_PUBLIC_COUNTRY_BBOX_MAX_LAT || '42.0'),
+      minLng: parseFloat(process.env.NEXT_PUBLIC_COUNTRY_BBOX_MIN_LNG || '19.0'),
+      maxLng: parseFloat(process.env.NEXT_PUBLIC_COUNTRY_BBOX_MAX_LNG || '29.5'),
+    },
   } as const;
 }
 

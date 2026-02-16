@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   ProjectAddress,
@@ -95,7 +96,7 @@ export function AddressFormSection({
     city: initialValues?.city || '',
     postalCode: initialValues?.postalCode || '',
     region: initialValues?.region || '',
-    country: initialValues?.country || 'Ελλάδα',
+    country: initialValues?.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
     type: initialValues?.type || 'site',
     isPrimary: initialValues?.isPrimary || false,
     blockSide: initialValues?.blockSide || SELECT_CLEAR_VALUE,
@@ -120,7 +121,7 @@ export function AddressFormSection({
         city: newData.city,
         postalCode: newData.postalCode,
         region: newData.region || undefined,
-        country: newData.country || 'Ελλάδα',
+        country: newData.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
         type: newData.type,
         isPrimary: newData.isPrimary,
         blockSide: blockSideValue,

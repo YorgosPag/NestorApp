@@ -18,6 +18,7 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import {
   geocodeAddress,
   geocodeAddressBatch,
@@ -118,10 +119,11 @@ export class AddressResolver {
   }
 
   /**
-   * Check if coordinates are within Greece
+   * Check if coordinates are within configured country bounding box
    */
-  isInGreece(lat: number, lng: number): boolean {
-    return lat >= 34.5 && lat <= 42.0 && lng >= 19.0 && lng <= 29.5;
+  isInCountry(lat: number, lng: number): boolean {
+    const bbox = GEOGRAPHIC_CONFIG.COUNTRY_BOUNDING_BOX;
+    return lat >= bbox.minLat && lat <= bbox.maxLat && lng >= bbox.minLng && lng <= bbox.maxLng;
   }
 
   /**
@@ -167,7 +169,7 @@ export class AddressResolver {
     };
 
     const result: GreekAddress = {
-      country: 'Greece',
+      country: GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_EN,
       fullAddress: cleaned,
     };
 
@@ -208,7 +210,7 @@ export class AddressResolver {
       city: address.area || address.municipality || undefined,
       postalCode: address.postalCode || undefined,
       region: address.region || undefined,
-      country: address.country || 'Greece',
+      country: address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_EN,
     };
   }
 

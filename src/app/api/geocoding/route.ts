@@ -16,6 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { transliterateGreeklish, containsGreek } from '@/services/ai-pipeline/shared/greek-nlp';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -56,12 +57,13 @@ interface GeocodingApiResponse {
 }
 
 // =============================================================================
-// CONSTANTS
+// CONFIGURATION (from environment variables)
 // =============================================================================
 
-const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
-const USER_AGENT = 'NestorPagonisApp/1.0 (geocoding; https://nestor-app.vercel.app)';
-const NOMINATIM_TIMEOUT_MS = 8000;
+const NOMINATIM_BASE_URL = process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
+const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
+const NOMINATIM_TIMEOUT_MS = parseInt(process.env.GEOCODING_TIMEOUT_MS || '8000', 10);
+const DEFAULT_COUNTRY_CODE = GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_CODE;
 
 // =============================================================================
 // NOMINATIM QUERY HELPERS
@@ -76,7 +78,7 @@ function buildStructuredUrl(params: GeocodingRequestBody): string {
   const searchParams = new URLSearchParams({
     format: 'json',
     limit: '1',
-    countrycodes: 'gr',
+    countrycodes: DEFAULT_COUNTRY_CODE,
     'accept-language': 'el,en',
   });
 
@@ -107,7 +109,7 @@ function buildFreeformUrl(query: string): string {
     q: query,
     format: 'json',
     limit: '1',
-    countrycodes: 'gr',
+    countrycodes: DEFAULT_COUNTRY_CODE,
     'accept-language': 'el,en',
   });
 
