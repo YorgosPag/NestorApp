@@ -553,7 +553,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               className="w-full h-full rounded-lg overflow-hidden"
             >
               {/* Draggable Marker Mode — <Marker> components */}
-              {draggableMarkers && mapReady && (
+              {draggableMarkers && (
                 <Marker
                   longitude={defaultDragPosition.lng}
                   latitude={defaultDragPosition.lat}
@@ -596,7 +596,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               )}
 
               {/* User Location Marker — green pulsating dot */}
-              {showLocateMe && mapReady && userPosition && (
+              {showLocateMe && userPosition && (
                 <Marker
                   longitude={userPosition.longitude}
                   latitude={userPosition.latitude}
