@@ -1,14 +1,27 @@
 "use client";
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import {
-  Bold, Italic, Underline, List, ListOrdered, Quote, Eye, Edit3, RotateCcw, RotateCw
+  Bold, Italic, Underline, List, ListOrdered, Quote, Eye, Edit3, RotateCcw, RotateCw, Palette, X
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getAriaLabels } from '../utils/a11y';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/design-system';
+
+/** Predefined document text colors using CSS classes from globals.css */
+const DOCUMENT_COLORS = [
+  { className: 'doc-text-red', swatch: 'bg-red-800 dark:bg-red-400', label: 'Κόκκινο' },
+  { className: 'doc-text-blue', swatch: 'bg-blue-800 dark:bg-blue-400', label: 'Μπλε' },
+  { className: 'doc-text-green', swatch: 'bg-green-800 dark:bg-green-400', label: 'Πράσινο' },
+  { className: 'doc-text-purple', swatch: 'bg-purple-800 dark:bg-purple-400', label: 'Μωβ' },
+  { className: 'doc-text-orange', swatch: 'bg-orange-700 dark:bg-orange-400', label: 'Πορτοκαλί' },
+  { className: 'doc-text-gray', swatch: 'bg-gray-600 dark:bg-gray-400', label: 'Γκρι' },
+  { className: 'doc-text-reset', swatch: 'bg-foreground', label: 'Αφαίρεση χρώματος' },
+] as const;
 
 interface ToolbarProps {
   disabled: boolean;
@@ -24,7 +37,7 @@ interface ToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  // Visual state for active formatting
+  onColor?: (cssClass: string) => void;
   activeBold?: boolean;
   activeItalic?: boolean;
   activeUnderline?: boolean;
@@ -44,14 +57,15 @@ export function Toolbar({
   onRedo,
   canUndo,
   canRedo,
+  onColor,
   activeBold = false,
   activeItalic = false,
   activeUnderline = false
 }: ToolbarProps) {
   const iconSizes = useIconSizes();
   const ariaLabels = getAriaLabels();
-  // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('common');
+  const [colorOpen, setColorOpen] = useState(false);
 
   return (
     <div className="flex items-center gap-1 p-2 border rounded-md bg-muted/30 flex-wrap">
@@ -108,6 +122,54 @@ export function Toolbar({
           </TooltipTrigger>
           <TooltipContent>{t('richText.underline')}</TooltipContent>
         </Tooltip>
+
+        {/* Font color picker */}
+        {onColor && (
+          <Popover open={colorOpen} onOpenChange={setColorOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={`${iconSizes.xl} p-0`}
+                    aria-label="Χρώμα γραμματοσειράς"
+                    disabled={isPreview || disabled}
+                  >
+                    <Palette className={iconSizes.sm} />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Χρώμα γραμματοσειράς</TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-auto p-3" align="start">
+              <nav aria-label="Χρώματα γραμματοσειράς" className="grid grid-cols-4 gap-2">
+                {DOCUMENT_COLORS.map((color) => (
+                  <Tooltip key={color.className}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => { onColor(color.className); setColorOpen(false); }}
+                        className={cn(
+                          "w-7 h-7 rounded-md border border-border hover:scale-110 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          color.swatch,
+                          color.className === 'doc-text-reset' && 'flex items-center justify-center'
+                        )}
+                        aria-label={color.label}
+                      >
+                        {color.className === 'doc-text-reset' && (
+                          <X className="h-3 w-3 text-background" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{color.label}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </nav>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       <div className="h-6 w-px bg-muted-foreground/30 mx-1" />
@@ -180,4 +242,3 @@ export function Toolbar({
     </div>
   );
 }
-

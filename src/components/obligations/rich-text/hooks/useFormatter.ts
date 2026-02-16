@@ -108,10 +108,33 @@ export function useFormatter(props: UseFormatterProps) {
   const insertNumberedList = useCallback(() => insertList('1.'), [insertList]);
   const insertQuote = useCallback(() => applyFormatting('\n> ', '', 'richText.placeholders.quote'), [applyFormatting]);
 
+  const formatColor = useCallback((cssClass: string) => {
+    if (cssClass === 'doc-text-reset') {
+      // Remove color wrapping — just keep selected text
+      if (!textareaRef.current) return;
+      const textarea = textareaRef.current;
+      const currentValue = textarea.value;
+      const { start, end, selectedText } = getSelection(textarea);
+      // Strip surrounding <span class="doc-text-..."> and </span> if present
+      const before = currentValue.substring(0, start);
+      const after = currentValue.substring(end);
+      const strippedBefore = before.replace(/<span class="doc-text-[a-z]+">\s*$/, '');
+      const strippedAfter = after.replace(/^\s*<\/span>/, '');
+      const newValue = strippedBefore + selectedText + strippedAfter;
+      textarea.value = newValue;
+      const event = new Event('input', { bubbles: true });
+      textarea.dispatchEvent(event);
+      restoreCaret(textarea, strippedBefore.length + selectedText.length);
+    } else {
+      applyFormatting(`<span class="${cssClass}">`, '</span>', 'κείμενο');
+    }
+  }, [applyFormatting, textareaRef]);
+
   return {
     formatBold,
     formatItalic,
     formatUnderline,
+    formatColor,
     insertBulletList,
     insertNumberedList,
     insertQuote

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 
 interface EditorAreaProps {
@@ -21,18 +21,24 @@ export function EditorArea({
   textareaRef,
   placeholder,
   minHeight,
-  maxHeight,
   disabled
 }: EditorAreaProps) {
   const [localValue, setLocalValue] = useState(value);
   const lastCursorPositionRef = useRef<number | null>(null);
   const isUpdatingFromParentRef = useRef(false);
 
+  // Auto-resize textarea to fit content without scrolling
+  const autoResize = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(minHeight, textarea.scrollHeight)}px`;
+  }, [textareaRef, minHeight]);
+
   // Sync with parent value only when it changes externally (not from our onChange)
   useEffect(() => {
     if (value !== localValue && !isUpdatingFromParentRef.current) {
       setLocalValue(value);
-      // Restore cursor position if we have it
       setTimeout(() => {
         if (textareaRef.current && lastCursorPositionRef.current !== null) {
           textareaRef.current.setSelectionRange(
@@ -45,21 +51,19 @@ export function EditorArea({
     isUpdatingFromParentRef.current = false;
   }, [value, localValue]);
 
+  // Auto-resize whenever localValue changes
+  useEffect(() => {
+    requestAnimationFrame(autoResize);
+  }, [localValue, autoResize]);
+
   // Handle user typing - update local state immediately, debounce parent update
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const cursorPosition = e.target.selectionStart;
 
-    // Store cursor position
     lastCursorPositionRef.current = cursorPosition;
-
-    // Update local state immediately (no re-render from parent)
     setLocalValue(newValue);
-
-    // Mark that we're updating parent to avoid sync conflicts
     isUpdatingFromParentRef.current = true;
-
-    // Notify parent of change
     onChange(newValue);
   };
 
@@ -70,16 +74,9 @@ export function EditorArea({
       const newValue = textarea.value;
       const cursorPosition = textarea.selectionStart;
 
-      // Store cursor position
       lastCursorPositionRef.current = cursorPosition;
-
-      // Update local state immediately
       setLocalValue(newValue);
-
-      // Mark that we're updating parent to avoid sync conflicts
       isUpdatingFromParentRef.current = true;
-
-      // Notify parent of change
       onChange(newValue);
     }
   };
@@ -93,7 +90,6 @@ export function EditorArea({
     }
   }, [onChange]);
 
-  // Store cursor position on click and keyup
   const handleCursorPositionUpdate = () => {
     if (textareaRef.current) {
       lastCursorPositionRef.current = textareaRef.current.selectionStart;
@@ -109,14 +105,10 @@ export function EditorArea({
       onClick={handleCursorPositionUpdate}
       onKeyUp={handleCursorPositionUpdate}
       placeholder={placeholder}
-      className="font-mono text-sm resize-none"
-      style={{
-        minHeight: `${minHeight}px`,
-        maxHeight: `${maxHeight}px`
-      }}
+      className="font-mono text-sm resize-none overflow-hidden"
+      style={{ minHeight: `${minHeight}px` }}
       disabled={disabled}
       aria-label="Rich text editor"
     />
   );
 }
-

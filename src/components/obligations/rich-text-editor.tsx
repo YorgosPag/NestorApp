@@ -52,17 +52,18 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     debounceMs: 250
   });
 
-  const { 
-    formatBold, 
-    formatItalic, 
-    formatUnderline, 
-    insertBulletList, 
-    insertNumberedList, 
-    insertQuote 
-  } = useFormatter({ 
-    textareaRef, 
-    value: currentValue, 
-    onChange: setValue 
+  const {
+    formatBold,
+    formatItalic,
+    formatUnderline,
+    formatColor,
+    insertBulletList,
+    insertNumberedList,
+    insertQuote
+  } = useFormatter({
+    textareaRef,
+    value: currentValue,
+    onChange: setValue
   });
 
   const handleKeyDown = useShortcuts({
@@ -96,6 +97,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+        onColor={formatColor}
         activeBold={formattingState.bold}
         activeItalic={formattingState.italic}
         activeUnderline={formattingState.underline}

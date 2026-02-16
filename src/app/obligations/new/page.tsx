@@ -532,121 +532,121 @@ export default function NewObligationPage() {
           </div>
         </header>
 
-        {/* Main Content */}
+        {/* Basic Info & Template — full-width above split grid */}
+        <section className="space-y-6 w-full" aria-label={t('aria.editForm')}>
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t('basicInfo.title')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <fieldset className="space-y-2">
+                  <Label className="text-sm">{t('basicInfo.company')} {t('basicInfo.required')}</Label>
+                  <Select
+                    value={formData.companyId || ""}
+                    onValueChange={handleCompanySelection}
+                    disabled={loadingCompanies}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={loadingCompanies ? t('basicInfo.loadingCompanies') : t('basicInfo.selectCompany')}
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-80">
+                      {companyOptions.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </fieldset>
+
+                <fieldset className="space-y-2">
+                  <Label className="text-sm">{t('basicInfo.project')}</Label>
+                  <Select
+                    value={formData.projectId ? String(formData.projectId) : ""}
+                    onValueChange={(value) => handleProjectSelection(value)}
+                    disabled={!formData.companyId || loadingProjects}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={
+                          !formData.companyId
+                            ? t('basicInfo.selectCompanyFirst')
+                            : loadingProjects
+                            ? t('basicInfo.loadingProjects')
+                            : t('basicInfo.selectProject')
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-80">
+                      {projectOptions.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </fieldset>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <fieldset>
+                  <Label htmlFor="title" className="text-sm">{t('basicInfo.titleLabel')} {t('basicInfo.required')}</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => handleInputChange("title", e.target.value)}
+                    placeholder={t('basicInfo.titlePlaceholder')}
+                    className="mt-1"
+                  />
+                </fieldset>
+
+                <fieldset>
+                  <Label htmlFor="projectName" className="text-sm">{t('basicInfo.projectName')} {t('basicInfo.required')}</Label>
+                  <Input
+                    id="projectName"
+                    value={formData.projectName}
+                    onChange={(e) => handleInputChange("projectName", e.target.value)}
+                    placeholder={t('basicInfo.projectNamePlaceholder')}
+                    className="mt-1"
+                  />
+                </fieldset>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Template Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t('template.title')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="useTemplate"
+                  checked={useTemplate}
+                  onChange={(e) => setUseTemplate(e.target.checked)}
+                  className={iconSizes.sm}
+                />
+                <Label htmlFor="useTemplate" className="text-sm">
+                  {t('template.useDefault')} ({DEFAULT_TEMPLATE_SECTIONS.length} {t('template.sections')}, {TEMPLATE_ARTICLE_COUNT} {t('template.articles')})
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Main Content — split grid: Structure Editor + Live Preview */}
         <section
           className={`obligations-page flex-1 grid gap-6 ${viewMode === 'split' ? OBLIGATION_PREVIEW_LAYOUT.splitLayoutGridClass : OBLIGATION_PREVIEW_LAYOUT.singleLayoutGridClass} w-full min-h-0`}
           aria-label={t('aria.editObligation')}
         >
-          {/* Left Panel - Editor */}
-          <section className="space-y-6" aria-label={t('aria.editForm')}>
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t('basicInfo.title')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* 🏢 ENTERPRISE: Company & Project Selection ΠΡΩΤΑ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <fieldset className="space-y-2">
-                    <Label className="text-sm">{t('basicInfo.company')} {t('basicInfo.required')}</Label>
-                    <Select
-                      value={formData.companyId || ""}
-                      onValueChange={handleCompanySelection}
-                      disabled={loadingCompanies}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue
-                          placeholder={loadingCompanies ? t('basicInfo.loadingCompanies') : t('basicInfo.selectCompany')}
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-80">
-                        {companyOptions.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </fieldset>
-
-                  <fieldset className="space-y-2">
-                    <Label className="text-sm">{t('basicInfo.project')}</Label>
-                    <Select
-                      value={formData.projectId ? String(formData.projectId) : ""}
-                      onValueChange={(value) => handleProjectSelection(value)}
-                      disabled={!formData.companyId || loadingProjects}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue
-                          placeholder={
-                            !formData.companyId
-                              ? t('basicInfo.selectCompanyFirst')
-                              : loadingProjects
-                              ? t('basicInfo.loadingProjects')
-                              : t('basicInfo.selectProject')
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-80">
-                        {projectOptions.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </fieldset>
-                </div>
-
-                {/* Τίτλος και Όνομα Έργου ΚΑΤΩ από τα dropdowns */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <fieldset>
-                    <Label htmlFor="title" className="text-sm">{t('basicInfo.titleLabel')} {t('basicInfo.required')}</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => handleInputChange("title", e.target.value)}
-                      placeholder={t('basicInfo.titlePlaceholder')}
-                      className="mt-1"
-                    />
-                  </fieldset>
-
-                  <fieldset>
-                    <Label htmlFor="projectName" className="text-sm">{t('basicInfo.projectName')} {t('basicInfo.required')}</Label>
-                    <Input
-                      id="projectName"
-                      value={formData.projectName}
-                      onChange={(e) => handleInputChange("projectName", e.target.value)}
-                      placeholder={t('basicInfo.projectNamePlaceholder')}
-                      className="mt-1"
-                    />
-                  </fieldset>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Template Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t('template.title')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="useTemplate"
-                    checked={useTemplate}
-                    onChange={(e) => setUseTemplate(e.target.checked)}
-                    className={iconSizes.sm}
-                  />
-                  <Label htmlFor="useTemplate" className="text-sm">
-                    {t('template.useDefault')} ({DEFAULT_TEMPLATE_SECTIONS.length} {t('template.sections')}, {TEMPLATE_ARTICLE_COUNT} {t('template.articles')})
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Structure Editor */}
+          {/* Left Panel - Structure Editor */}
+          <section aria-label={t('aria.editForm')}>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{t('structure.title')}</CardTitle>

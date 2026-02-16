@@ -450,6 +450,22 @@
     animation-duration: 300ms;
   }
 
+  /* Document text colors for Rich Text Editor (obligations) */
+  .doc-text-red { color: #991B1B; }
+  .doc-text-blue { color: #1E40AF; }
+  .doc-text-green { color: #166534; }
+  .doc-text-purple { color: #6B21A8; }
+  .doc-text-orange { color: #C2410C; }
+  .doc-text-gray { color: #4B5563; }
+  .doc-text-reset { color: inherit; }
+
+  :is(.dark) .doc-text-red { color: #FCA5A5; }
+  :is(.dark) .doc-text-blue { color: #93C5FD; }
+  :is(.dark) .doc-text-green { color: #86EFAC; }
+  :is(.dark) .doc-text-purple { color: #D8B4FE; }
+  :is(.dark) .doc-text-orange { color: #FDBA74; }
+  :is(.dark) .doc-text-gray { color: #9CA3AF; }
+
   /* Force all containers to respect viewport boundaries */
   * {
     box-sizing: border-box;
