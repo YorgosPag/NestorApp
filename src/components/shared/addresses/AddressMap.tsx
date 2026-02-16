@@ -29,7 +29,7 @@ import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from '
 import { Source, Layer, Marker } from 'react-map-gl/maplibre';
 import { Loader2, AlertTriangle, MapPin, Locate } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { LngLatBounds } from 'maplibre-gl';
+import { LngLatBounds, Marker as MapLibreMarker } from 'maplibre-gl';
 import type * as GeoJSON from 'geojson';
 
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
@@ -150,23 +150,6 @@ function DraggableMarkerPin({ isPrimary }: DraggableMarkerPinProps) {
 }
 
 // =============================================================================
-// USER LOCATION PIN — Green pulsating dot ("My Location" pattern)
-// =============================================================================
-
-function UserLocationPin() {
-  return (
-    <div className="relative flex items-center justify-center w-8 h-8">
-      {/* Pulsating accuracy ring */}
-      <span className="absolute inset-0 rounded-full bg-green-500/25 animate-ping" />
-      {/* Static semi-transparent ring */}
-      <span className="absolute inset-1 rounded-full bg-green-500/15" />
-      {/* Solid center dot */}
-      <span className="relative w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow-md" />
-    </div>
-  );
-}
-
-// =============================================================================
 // HELPERS
 // =============================================================================
 
@@ -217,7 +200,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     position: userPosition,
     status: geoStatus,
     requestPosition,
-  } = useGeolocation({ enableHighAccuracy: false, maximumAge: 60_000, timeout: 15_000 });
+  } = useGeolocation({ enableHighAccuracy: true, maximumAge: 30_000, timeout: 15_000 });
 
   const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingServiceResult>>(new Map());
   const [geocodingStatus, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'partial' | 'error'>('idle');
@@ -244,17 +227,62 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [geoStatus, t]);
 
   // ===========================================================================
-  // FLY TO USER POSITION (when obtained via "Locate Me")
+  // FLY TO USER POSITION + NATIVE MARKER (when obtained via "Locate Me")
+  // Uses native MapLibre marker instead of react-map-gl <Marker> for reliability
   // ===========================================================================
+
+  const userMarkerRef = useRef<MapLibreMarker | null>(null);
 
   useEffect(() => {
     if (!mapRef.current || !mapReady || !userPosition) return;
 
-    mapRef.current.flyTo({
+    const map = mapRef.current;
+
+    // Fly to user position
+    map.flyTo({
       center: [userPosition.longitude, userPosition.latitude],
       zoom: 15,
       duration: 1000,
     });
+
+    // Remove previous user marker if exists
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+
+    // Create native MapLibre marker with custom green pulsating element
+    const el = document.createElement('div');
+    el.className = 'user-location-marker';
+    el.innerHTML = `
+      <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+        <span style="position:absolute;inset:0;border-radius:50%;background:rgba(34,197,94,0.25);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite"></span>
+        <span style="position:absolute;inset:4px;border-radius:50%;background:rgba(34,197,94,0.15)"></span>
+        <span style="width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);position:relative"></span>
+      </div>
+    `;
+
+    // Inject ping animation if not already present
+    if (!document.getElementById('user-loc-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'user-loc-keyframes';
+      style.textContent = '@keyframes ping{75%,100%{transform:scale(2);opacity:0}}';
+      document.head.appendChild(style);
+    }
+
+    const marker = new MapLibreMarker({ element: el, anchor: 'center' })
+      .setLngLat([userPosition.longitude, userPosition.latitude])
+      .addTo(map);
+
+    userMarkerRef.current = marker;
+
+    // Cleanup on unmount
+    return () => {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+    };
   }, [userPosition, mapReady]);
 
   // ===========================================================================
@@ -595,16 +623,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                 </Source>
               )}
 
-              {/* User Location Marker — green pulsating dot */}
-              {showLocateMe && userPosition && (
-                <Marker
-                  longitude={userPosition.longitude}
-                  latitude={userPosition.latitude}
-                  anchor="center"
-                >
-                  <UserLocationPin />
-                </Marker>
-              )}
+              {/* User location marker rendered via native MapLibre (useEffect above) */}
             </InteractiveMap>
           )}
         </div>
