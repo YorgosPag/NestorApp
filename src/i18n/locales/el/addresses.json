@@ -52,6 +52,8 @@
     "streetPlaceholder": "π.χ. Σαμοθράκης",
     "numberPlaceholder": "π.χ. 16",
     "cityPlaceholder": "π.χ. Θεσσαλονίκη",
+    "neighborhood": "Περιοχή / Συνοικία",
+    "neighborhoodPlaceholder": "π.χ. Εύοσμος, Καλαμαριά, Μαρούσι",
     "postalCodePlaceholder": "π.χ. 54621",
     "labelPlaceholder": "π.χ. Κύρια Είσοδος",
     "requiredFields": "* Υποχρεωτικά πεδία",

@@ -32,6 +32,8 @@ const logger = createModuleLogger('geocoding-service');
 export interface StructuredGeocodingQuery {
   street?: string;
   city?: string;
+  /** Neighborhood / area — more specific than city (e.g. "Εύοσμος" within "Θεσσαλονίκη") */
+  neighborhood?: string;
   postalCode?: string;
   region?: string;
   country?: string;

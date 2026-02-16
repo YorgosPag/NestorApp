@@ -52,6 +52,8 @@
     "streetPlaceholder": "e.g. Samothrakis",
     "numberPlaceholder": "e.g. 16",
     "cityPlaceholder": "e.g. Thessaloniki",
+    "neighborhood": "Neighborhood / Area",
+    "neighborhoodPlaceholder": "e.g. Evosmos, Kalamaria, Marousi",
     "postalCodePlaceholder": "e.g. 54621",
     "labelPlaceholder": "e.g. Main Entrance",
     "requiredFields": "* Required fields",

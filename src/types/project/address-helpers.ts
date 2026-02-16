@@ -500,6 +500,7 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
   return {
     street: streetParts.length > 0 ? streetParts.join(' ') : undefined,
     city: address.city || undefined,
+    neighborhood: address.neighborhood || undefined,
     postalCode: address.postalCode || undefined,
     region: address.region || undefined,
     country: address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,

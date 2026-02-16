@@ -57,6 +57,7 @@ interface AddressFormData {
   street: string;
   number: string;
   city: string;
+  neighborhood: string;
   postalCode: string;
   region: string;
   country: string;
@@ -94,6 +95,7 @@ export function AddressFormSection({
     street: initialValues?.street || '',
     number: initialValues?.number || '',
     city: initialValues?.city || '',
+    neighborhood: initialValues?.neighborhood || '',
     postalCode: initialValues?.postalCode || '',
     region: initialValues?.region || '',
     country: initialValues?.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
@@ -135,6 +137,7 @@ export function AddressFormSection({
       street: data.street,
       number: data.number,
       city: data.city,
+      neighborhood: data.neighborhood || undefined,
       postalCode: data.postalCode,
       region: data.region || undefined,
       country: data.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
@@ -211,8 +214,8 @@ export function AddressFormSection({
         </div>
       </div>
 
-      {/* City + Postal Code */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* City + Neighborhood + Postal Code */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="city" className="text-sm font-medium">
             {t('form.city')} *
@@ -227,6 +230,18 @@ export function AddressFormSection({
           {errors.city && (
             <p className="text-xs text-red-500 mt-1">{t('form.validation.cityRequired')}</p>
           )}
+        </div>
+
+        <div>
+          <Label htmlFor="neighborhood" className="text-sm font-medium">
+            {t('form.neighborhood')}
+          </Label>
+          <Input
+            id="neighborhood"
+            value={formData.neighborhood}
+            onChange={(e) => handleTextChange('neighborhood', e.target.value)}
+            placeholder={t('form.neighborhoodPlaceholder')}
+          />
         </div>
 
         <div>

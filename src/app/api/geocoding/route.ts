@@ -33,6 +33,7 @@ export const maxDuration = 30;
 interface GeocodingRequestBody {
   street?: string;
   city?: string;
+  neighborhood?: string;
   postalCode?: string;
   region?: string;
   country?: string;
@@ -86,7 +87,13 @@ function buildStructuredUrl(params: GeocodingRequestBody): string {
   if (params.street) {
     searchParams.set('street', params.street);
   }
-  if (params.city) {
+  // If neighborhood is set, use it as the Nominatim `city` parameter.
+  // Greek neighborhoods (Εύοσμος, Καλαμαριά, Μαρούσι) are indexed as
+  // separate cities/towns in OSM, so this gives precise results.
+  // The broader city (Θεσσαλονίκη, Αθήνα) is too wide for disambiguation.
+  if (params.neighborhood) {
+    searchParams.set('city', params.neighborhood);
+  } else if (params.city) {
     searchParams.set('city', params.city);
   }
   if (params.region) {
@@ -165,7 +172,9 @@ function calculateConfidence(
   if (params.street && display.includes(normalizeGreekText(params.street))) {
     score += GEOCODING.CONFIDENCE.STREET_MATCH;
   }
-  if (params.city && display.includes(normalizeGreekText(params.city))) {
+  if (params.neighborhood && display.includes(normalizeGreekText(params.neighborhood))) {
+    score += GEOCODING.CONFIDENCE.CITY_MATCH;
+  } else if (params.city && display.includes(normalizeGreekText(params.city))) {
     score += GEOCODING.CONFIDENCE.CITY_MATCH;
   }
   if (params.postalCode && display.includes(params.postalCode)) {
@@ -181,7 +190,9 @@ function calculateConfidence(
  * and "Ελλάδα" can confuse Nominatim's free-form parser.
  */
 function toFreeformQuery(params: GeocodingRequestBody): string {
-  return [params.street, params.city, params.postalCode, params.region]
+  // Prefer neighborhood over city for free-form (more specific locality)
+  const locality = params.neighborhood || params.city;
+  return [params.street, locality, params.postalCode, params.region]
     .filter(Boolean)
     .join(', ');
 }
@@ -193,6 +204,7 @@ function createAccentStrippedVariant(params: GeocodingRequestBody): GeocodingReq
   return {
     street: params.street ? normalizeGreekText(params.street) : undefined,
     city: params.city ? normalizeGreekText(params.city) : undefined,
+    neighborhood: params.neighborhood ? normalizeGreekText(params.neighborhood) : undefined,
     postalCode: params.postalCode,
     region: params.region ? normalizeGreekText(params.region) : undefined,
     country: params.country,
@@ -205,7 +217,8 @@ function createAccentStrippedVariant(params: GeocodingRequestBody): GeocodingReq
 function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestBody | null {
   const hasNonGreek =
     (params.street && !containsGreek(params.street)) ||
-    (params.city && !containsGreek(params.city));
+    (params.city && !containsGreek(params.city)) ||
+    (params.neighborhood && !containsGreek(params.neighborhood));
 
   if (!hasNonGreek) return null;
 
@@ -216,6 +229,9 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
     city: params.city && !containsGreek(params.city)
       ? transliterateGreeklish(params.city)
       : params.city,
+    neighborhood: params.neighborhood && !containsGreek(params.neighborhood)
+      ? transliterateGreeklish(params.neighborhood)
+      : params.neighborhood,
     postalCode: params.postalCode,
     region: params.region && !containsGreek(params.region)
       ? transliterateGreeklish(params.region)
@@ -245,13 +261,20 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
     return formatResult(result, params);
   }
 
-  // --- Variant 1b: Hyphen-normalized city (e.g. "Ελευθέριο-Κορδελιό" → "Ελευθέριο Κορδελιό") ---
-  // Greek compound city names use hyphens but Nominatim may store them with spaces.
-  const hasHyphenCity = params.city && params.city.includes('-');
-  if (hasHyphenCity) {
-    const dehyphenated: GeocodingRequestBody = { ...params, city: params.city!.replace(/-/g, ' ') };
+  // --- Variant 1b: Hyphen-normalized city/neighborhood ---
+  // Greek compound names use hyphens (e.g. "Ελευθέριο-Κορδελιό") but
+  // Nominatim may store them with spaces.
+  const hasHyphen =
+    (params.city && params.city.includes('-')) ||
+    (params.neighborhood && params.neighborhood.includes('-'));
+  if (hasHyphen) {
+    const dehyphenated: GeocodingRequestBody = {
+      ...params,
+      city: params.city?.replace(/-/g, ' '),
+      neighborhood: params.neighborhood?.replace(/-/g, ' '),
+    };
     const dehyphenUrl = buildStructuredUrl(dehyphenated);
-    logger.info('Geocoding attempt 1b: structured (dehyphenated city)');
+    logger.info('Geocoding attempt 1b: structured (dehyphenated)');
     await sleep(GEOCODING.NOMINATIM_DELAY_MS);
     result = await fetchNominatim(dehyphenUrl);
 
@@ -332,7 +355,7 @@ function validateRequestBody(body: unknown): body is GeocodingRequestBody {
   if (!hasSearchField) return false;
 
   // All fields must be string or undefined
-  for (const key of ['street', 'city', 'postalCode', 'region', 'country']) {
+  for (const key of ['street', 'city', 'neighborhood', 'postalCode', 'region', 'country']) {
     if (b[key] !== undefined && typeof b[key] !== 'string') return false;
   }
 
