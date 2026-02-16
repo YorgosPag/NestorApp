@@ -294,6 +294,15 @@ function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
   return grips;
 }
 
+/** Recalculate angle (degrees) between two arms meeting at a vertex */
+function computeAngleDegrees(vertex: Point2D, p1: Point2D, p2: Point2D): number {
+  const a1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+  const a2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
+  let deg = Math.abs(a2 - a1) * (180 / Math.PI);
+  if (deg > 180) deg = 360 - deg;
+  return deg;
+}
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -404,21 +413,61 @@ export function useDxfGripInteraction({
       },
       updateVertex: (id: string, vertexIndex: number, position: Point2D) => {
         const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          setLevelScene(currentLevelId, {
-            ...scene,
-            entities: scene.entities.map((e) => {
-              if (e.id === id && 'vertices' in e && Array.isArray(e.vertices)) {
-                const vertices = [...e.vertices];
-                if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-                  vertices[vertexIndex] = position;
-                }
-                return { ...e, vertices };
+        if (!scene) return;
+
+        setLevelScene(currentLevelId, {
+          ...scene,
+          entities: scene.entities.map((e) => {
+            if (e.id !== id) return e;
+
+            // Polyline/polygon: has vertices array
+            if ('vertices' in e && Array.isArray(e.vertices)) {
+              const vertices = [...e.vertices] as Point2D[];
+              if (vertexIndex >= 0 && vertexIndex < vertices.length) {
+                vertices[vertexIndex] = position;
               }
+              return { ...e, vertices };
+            }
+
+            // Line: gripIndex 0→start, 1→end
+            if ('start' in e && 'end' in e && !('vertices' in e)) {
+              if (vertexIndex === 0) return { ...e, start: position };
+              if (vertexIndex === 1) return { ...e, end: position };
               return e;
-            }),
-          });
-        }
+            }
+
+            // Circle: gripIndex 1-4 = quadrant → update radius (center stays fixed)
+            if ('center' in e && 'radius' in e && !('startAngle' in e)) {
+              const center = e.center as Point2D;
+              return { ...e, radius: calculateDistance(center, position) };
+            }
+
+            // Arc: gripIndex 1→startAngle, 2→endAngle (+ update radius)
+            if ('center' in e && 'radius' in e && 'startAngle' in e && 'endAngle' in e) {
+              const center = e.center as Point2D;
+              const newRadius = calculateDistance(center, position);
+              let angleDeg = Math.atan2(position.y - center.y, position.x - center.x) * (180 / Math.PI);
+              if (angleDeg < 0) angleDeg += 360;
+              if (vertexIndex === 1) return { ...e, startAngle: angleDeg, radius: newRadius };
+              if (vertexIndex === 2) return { ...e, endAngle: angleDeg, radius: newRadius };
+              return e;
+            }
+
+            // Angle-measurement: gripIndex 0→vertex, 1→point1, 2→point2
+            if ('vertex' in e && 'point1' in e && 'point2' in e) {
+              const vertex = vertexIndex === 0 ? position : e.vertex as Point2D;
+              const point1 = vertexIndex === 1 ? position : e.point1 as Point2D;
+              const point2 = vertexIndex === 2 ? position : e.point2 as Point2D;
+              return {
+                ...e,
+                vertex, point1, point2,
+                angle: computeAngleDegrees(vertex, point1, point2),
+              };
+            }
+
+            return e;
+          }),
+        });
       },
       insertVertex: (_id: string, _insertIndex: number, _position: Point2D) => {
         // Not needed for grip editing
@@ -429,12 +478,49 @@ export function useDxfGripInteraction({
       getVertices: (id: string): Point2D[] | undefined => {
         const scene = getLevelScene(currentLevelId);
         const entity = scene?.entities?.find((e) => e.id === id);
-        if (entity && 'vertices' in entity) {
+        if (!entity) return undefined;
+
+        // Polyline/polygon: actual vertices array
+        if ('vertices' in entity && Array.isArray(entity.vertices)) {
           return entity.vertices as Point2D[];
         }
-        // For lines: synthesize vertices from start/end
-        if (entity && 'start' in entity && 'end' in entity) {
+        // Line: [start, end] — gripIndex 0=start, 1=end
+        if ('start' in entity && 'end' in entity) {
           return [entity.start as Point2D, entity.end as Point2D];
+        }
+        // Circle: [center, E, N, W, S] — gripIndex 0-4
+        if ('center' in entity && 'radius' in entity && !('startAngle' in entity)) {
+          const c = entity.center as Point2D;
+          const r = entity.radius as number;
+          return [
+            c,
+            { x: c.x + r, y: c.y },
+            { x: c.x, y: c.y + r },
+            { x: c.x - r, y: c.y },
+            { x: c.x, y: c.y - r },
+          ];
+        }
+        // Arc: [center, startPt, endPt, midArcPt] — gripIndex 0-3
+        if ('center' in entity && 'radius' in entity && 'startAngle' in entity && 'endAngle' in entity) {
+          const c = entity.center as Point2D;
+          const r = entity.radius as number;
+          const sa = ((entity.startAngle as number) * Math.PI) / 180;
+          const ea = ((entity.endAngle as number) * Math.PI) / 180;
+          const ma = (sa + ea) / 2;
+          return [
+            c,
+            { x: c.x + r * Math.cos(sa), y: c.y + r * Math.sin(sa) },
+            { x: c.x + r * Math.cos(ea), y: c.y + r * Math.sin(ea) },
+            { x: c.x + r * Math.cos(ma), y: c.y + r * Math.sin(ma) },
+          ];
+        }
+        // Angle-measurement: [vertex, point1, point2] — gripIndex 0-2
+        if ('vertex' in entity && 'point1' in entity && 'point2' in entity) {
+          return [
+            entity.vertex as Point2D,
+            entity.point1 as Point2D,
+            entity.point2 as Point2D,
+          ];
         }
         return undefined;
       },
@@ -455,31 +541,47 @@ export function useDxfGripInteraction({
     if (delta.x === 0 && delta.y === 0) return;
 
     if (grip.edgeVertexIndices) {
-      // 🏢 Edge-stretch: Move BOTH vertices of this edge ATOMICALLY
-      // FIX (2026-02-15): Direct scene update instead of 2 sequential MoveVertexCommands.
-      // Problem: cmd2 reads scene BEFORE cmd1's setLevelScene takes effect (React batching)
-      // → cmd2 overwrites cmd1's changes. Solution: single atomic setLevelScene call.
+      // Edge-stretch: Move BOTH vertices of this edge ATOMICALLY.
+      // Single setLevelScene call avoids React batching race condition.
       if (!currentLevelId) return;
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
 
-      const [v1idx, v2idx] = grip.edgeVertexIndices;
       const entity = scene.entities.find(e => e.id === grip.entityId);
-      if (!entity || !('vertices' in entity) || !Array.isArray(entity.vertices)) return;
+      if (!entity) return;
 
-      const vertices = entity.vertices as Point2D[];
-      if (v1idx >= vertices.length || v2idx >= vertices.length) return;
+      // Polyline/polygon: move both edge vertices
+      if ('vertices' in entity && Array.isArray(entity.vertices)) {
+        const [v1idx, v2idx] = grip.edgeVertexIndices;
+        const vertices = entity.vertices as Point2D[];
+        if (v1idx >= vertices.length || v2idx >= vertices.length) return;
 
-      const newVertices = [...vertices];
-      newVertices[v1idx] = { x: vertices[v1idx].x + delta.x, y: vertices[v1idx].y + delta.y };
-      newVertices[v2idx] = { x: vertices[v2idx].x + delta.x, y: vertices[v2idx].y + delta.y };
+        const newVertices = [...vertices];
+        newVertices[v1idx] = { x: vertices[v1idx].x + delta.x, y: vertices[v1idx].y + delta.y };
+        newVertices[v2idx] = { x: vertices[v2idx].x + delta.x, y: vertices[v2idx].y + delta.y };
 
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map(e =>
-          e.id === grip.entityId ? { ...e, vertices: newVertices } : e
-        ),
-      });
+        setLevelScene(currentLevelId, {
+          ...scene,
+          entities: scene.entities.map(e =>
+            e.id === grip.entityId ? { ...e, vertices: newVertices } : e
+          ),
+        });
+      }
+      // Line: move both start and end (midpoint edge grip)
+      else if ('start' in entity && 'end' in entity) {
+        const start = entity.start as Point2D;
+        const end = entity.end as Point2D;
+        setLevelScene(currentLevelId, {
+          ...scene,
+          entities: scene.entities.map(e =>
+            e.id === grip.entityId ? {
+              ...e,
+              start: { x: start.x + delta.x, y: start.y + delta.y },
+              end: { x: end.x + delta.x, y: end.y + delta.y },
+            } : e
+          ),
+        });
+      }
     } else if (grip.movesEntity) {
       // Move entire entity
       moveEntities([grip.entityId], delta, { isDragging: false });
