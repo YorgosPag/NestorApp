@@ -95,9 +95,9 @@ function buildStructuredUrl(params: GeocodingRequestBody): string {
   if (params.postalCode) {
     searchParams.set('postalcode', params.postalCode);
   }
-  if (params.country) {
-    searchParams.set('country', params.country);
-  }
+  // NOTE: Do NOT pass `country` to structured search — Nominatim's structured
+  // `country` param requires "Greece" (English/ISO), but we receive "Ελλάδα".
+  // The `countrycodes=gr` filter already restricts results to Greece.
 
   return `${NOMINATIM_BASE_URL}/search?${searchParams.toString()}`;
 }
@@ -177,9 +177,11 @@ function calculateConfidence(
 
 /**
  * Build a free-form query string from structured params.
+ * Omits `country` — `countrycodes=gr` already restricts to Greece,
+ * and "Ελλάδα" can confuse Nominatim's free-form parser.
  */
 function toFreeformQuery(params: GeocodingRequestBody): string {
-  return [params.street, params.city, params.postalCode, params.region, params.country]
+  return [params.street, params.city, params.postalCode, params.region]
     .filter(Boolean)
     .join(', ');
 }
@@ -243,11 +245,25 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
     return formatResult(result, params);
   }
 
+  // --- Variant 1b: Hyphen-normalized city (e.g. "Ελευθέριο-Κορδελιό" → "Ελευθέριο Κορδελιό") ---
+  // Greek compound city names use hyphens but Nominatim may store them with spaces.
+  const hasHyphenCity = params.city && params.city.includes('-');
+  if (hasHyphenCity) {
+    const dehyphenated: GeocodingRequestBody = { ...params, city: params.city!.replace(/-/g, ' ') };
+    const dehyphenUrl = buildStructuredUrl(dehyphenated);
+    logger.info('Geocoding attempt 1b: structured (dehyphenated city)');
+    await sleep(GEOCODING.NOMINATIM_DELAY_MS);
+    result = await fetchNominatim(dehyphenUrl);
+
+    if (result) {
+      return formatResult(result, params);
+    }
+  }
+
   // --- Variant 2: Accent-stripped structured search ---
   const stripped = createAccentStrippedVariant(params);
   const strippedUrl = buildStructuredUrl(stripped);
   logger.info('Geocoding attempt 2: structured (accent-stripped)');
-  // Respect Nominatim 1 req/s
   await sleep(GEOCODING.NOMINATIM_DELAY_MS);
   result = await fetchNominatim(strippedUrl);
 
