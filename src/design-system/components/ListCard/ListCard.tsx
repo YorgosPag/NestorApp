@@ -18,6 +18,8 @@
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
+// 🏢 ENTERPRISE: i18n for accessibility labels
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 CENTRALIZED HOOKS
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -99,11 +101,12 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
   tabIndex = 0,
-  role = 'button',
+  role,
 }, ref) {
   // ==========================================================================
   // 🏢 CENTRALIZED HOOKS
   // ==========================================================================
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, getStatusBorder } = useBorderTokens();
@@ -208,12 +211,13 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       {/* 🏢 HOVER ACTIONS */}
       {/* ================================================================== */}
       {(onToggleFavorite || actions.length > 0) && (
-        <nav
+        <div
+          role="toolbar"
           className={cn(
             `absolute ${positioning.top.sm} ${positioning.right.sm} flex ${spacing.gap.sm}`,
-            'opacity-0 group-hover:opacity-100 transition-opacity'
+            'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity'
           )}
-          aria-label="Card actions"
+          aria-label={t('a11y.cardActions')}
         >
           {/* Favorite button */}
           {onToggleFavorite && (
@@ -226,7 +230,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
                   ? 'text-yellow-500'
                   : cn(colors.text.muted, 'hover:text-yellow-500')
               )}
-              aria-label={isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+              aria-label={isFavorite ? t('a11y.removeFavorite') : t('a11y.addFavorite')}
               aria-pressed={isFavorite}
             >
               <Star className={cn(iconSizes.sm, isFavorite && 'fill-current')} />
@@ -252,7 +256,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
               <action.icon className={iconSizes.sm} />
             </button>
           ))}
-        </nav>
+        </div>
       )}
 
       {/* ================================================================== */}

@@ -17,6 +17,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
+// 🏢 ENTERPRISE: i18n for accessibility labels
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 CENTRALIZED HOOKS
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -101,6 +103,7 @@ export function GridCard({
   // ==========================================================================
   // 🏢 CENTRALIZED HOOKS
   // ==========================================================================
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, getStatusBorder } = useBorderTokens();
@@ -164,7 +167,6 @@ export function GridCard({
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      role="button"
       tabIndex={tabIndex}
       aria-label={ariaLabel || title}
       aria-describedby={ariaDescribedBy}
@@ -174,12 +176,13 @@ export function GridCard({
       {/* 🏢 HOVER ACTIONS (Top Right) */}
       {/* ================================================================== */}
       {(onToggleFavorite || actions.length > 0) && (
-        <nav
+        <div
+          role="toolbar"
           className={cn(
             `absolute ${positioning.top.sm} ${positioning.right.sm} flex ${spacing.gap.sm}`,
-            'opacity-0 group-hover:opacity-100 transition-opacity z-10'
+            'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10'
           )}
-          aria-label="Card actions"
+          aria-label={t('a11y.cardActions')}
         >
           {/* Favorite button */}
           {onToggleFavorite && (
@@ -193,7 +196,7 @@ export function GridCard({
                   ? 'text-yellow-500'
                   : cn(colors.text.muted, 'hover:text-yellow-500')
               )}
-              aria-label={isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+              aria-label={isFavorite ? t('a11y.removeFavorite') : t('a11y.addFavorite')}
               aria-pressed={isFavorite}
             >
               <Star className={cn(iconSizes.sm, isFavorite && 'fill-current')} />
@@ -220,7 +223,7 @@ export function GridCard({
               <action.icon className={iconSizes.sm} />
             </button>
           ))}
-        </nav>
+        </div>
       )}
 
       {/* ================================================================== */}

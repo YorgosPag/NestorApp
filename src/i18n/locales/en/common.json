@@ -1781,5 +1781,10 @@
     "7": "July",
     "1": "January",
     "12": "December"
+  },
+  "a11y": {
+    "addFavorite": "Add to favorites",
+    "removeFavorite": "Remove from favorites",
+    "cardActions": "Card actions"
   }
 }

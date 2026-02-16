@@ -157,7 +157,8 @@ export function TypeQuickFilters({
   };
 
   return (
-    <nav
+    <div
+      role="toolbar"
       className={cn(
         'flex flex-wrap items-center gap-1 px-4 py-2',
         colors.bg.secondary,
@@ -165,7 +166,6 @@ export function TypeQuickFilters({
         className
       )}
       aria-label={displayAriaLabel}
-      role="group"
     >
       {/* 📋 Filter Label (desktop only) */}
       {!compact && displayLabel && (
@@ -223,7 +223,7 @@ export function TypeQuickFilters({
           </Tooltip>
         );
       })}
-    </nav>
+    </div>
   );
 }
 
