@@ -244,6 +244,20 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [geoStatus, t]);
 
   // ===========================================================================
+  // FLY TO USER POSITION (when obtained via "Locate Me")
+  // ===========================================================================
+
+  useEffect(() => {
+    if (!mapRef.current || !mapReady || !userPosition) return;
+
+    mapRef.current.flyTo({
+      center: [userPosition.longitude, userPosition.latitude],
+      zoom: 15,
+      duration: 1000,
+    });
+  }, [userPosition, mapReady]);
+
+  // ===========================================================================
   // GEOCODING EFFECT
   // ===========================================================================
 

@@ -102,6 +102,10 @@ export function BuildingAddressesCard({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedAddress, setEditedAddress] = useState<Partial<ProjectAddress> | null>(null);
 
+  // 🗺️ Reverse geocoding drag update — shared between add + edit mode
+  const [dragUpdatedAddress, setDragUpdatedAddress] = useState<Partial<ProjectAddress> | null>(null);
+  const [editDragAddress, setEditDragAddress] = useState<Partial<ProjectAddress> | null>(null);
+
   // ============================================================
   // Determine mode
   // ============================================================
@@ -521,9 +525,21 @@ export function BuildingAddressesCard({
                     <X className={iconSizes.sm} />
                   </Button>
                 </div>
-                <AddressFormSection onChange={setTempAddress} />
+                {/* 🗺️ Draggable map for new address */}
+                <AddressMap
+                  addresses={[]}
+                  draggableMarkers
+                  onAddressDragUpdate={setDragUpdatedAddress}
+                  heightPreset="viewerCompact"
+                  className="rounded-lg border shadow-sm"
+                />
+
+                <AddressFormSection
+                  onChange={setTempAddress}
+                  externalValues={dragUpdatedAddress}
+                />
                 <div className="flex gap-3 justify-end pt-4 border-t">
-                  <Button variant="outline" onClick={() => { setIsAddFormOpen(false); setTempAddress(null); }} disabled={isSaving}>
+                  <Button variant="outline" onClick={() => { setIsAddFormOpen(false); setTempAddress(null); setDragUpdatedAddress(null); }} disabled={isSaving}>
                     {t('tabs.general.header.cancel')}
                   </Button>
                   <Button onClick={handleSaveNewAddress} disabled={isSaving}>
@@ -568,9 +584,22 @@ export function BuildingAddressesCard({
                             <X className={iconSizes.sm} />
                           </Button>
                         </div>
-                        <AddressFormSection onChange={setEditedAddress} initialValues={address} />
+                        {/* 🗺️ Draggable map for edit mode */}
+                        <AddressMap
+                          addresses={[address]}
+                          draggableMarkers
+                          onAddressDragUpdate={setEditDragAddress}
+                          heightPreset="viewerCompact"
+                          className="rounded-lg border shadow-sm"
+                        />
+
+                        <AddressFormSection
+                          onChange={setEditedAddress}
+                          initialValues={address}
+                          externalValues={editDragAddress}
+                        />
                         <div className="flex gap-3 justify-end pt-4 border-t">
-                          <Button variant="outline" onClick={() => { setEditingIndex(null); setEditedAddress(null); }} disabled={isSaving}>
+                          <Button variant="outline" onClick={() => { setEditingIndex(null); setEditedAddress(null); setEditDragAddress(null); }} disabled={isSaving}>
                             {t('tabs.general.header.cancel')}
                           </Button>
                           <Button onClick={handleSaveEdit} disabled={isSaving}>
