@@ -170,14 +170,7 @@ export default function LayoutMapper() {
   }, [isVisible]);
 
   if (!isVisible) {
-    return (
-      <div
-        className={`${LAYOUT_MAPPER_STYLES.HINT_BADGE.CONTAINER} ${colors.text.disabled}`}
-        style={{ zIndex: portalComponents.overlay.debug.info.zIndex() }}
-      >
-        Press Ctrl+Shift+L για Layout Debug
-      </div>
-    );
+    return null;
   }
 
   return (
