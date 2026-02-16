@@ -45,3 +45,10 @@ export type {
   UseViewportManagerParams,
   UseViewportManagerReturn,
 } from './useViewportManager';
+
+// === useDxfSceneConversion === (CanvasSection decomposition — scene→DxfScene conversion)
+export { useDxfSceneConversion } from './useDxfSceneConversion';
+export type {
+  UseDxfSceneConversionParams,
+  UseDxfSceneConversionReturn,
+} from './useDxfSceneConversion';

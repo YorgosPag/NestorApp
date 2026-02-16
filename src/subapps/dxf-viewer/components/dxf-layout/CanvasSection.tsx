@@ -1,16 +1,13 @@
 'use client';
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 // === CANVAS V2 IMPORTS ===
-import { DxfCanvas, LayerCanvas, type DxfScene, type DxfEntityUnion } from '../../canvas-v2';
+import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 // ✅ CURSOR SETTINGS: Import από κεντρικό system αντί για duplicate
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 import { UI_COLORS, PREVIEW_DEFAULTS } from '../../config/color-config';
-// ADR-130: Centralized Default Layer Name
-import { getLayerNameOrDefault } from '../../config/layer-config';
-// 🏢 ADR-142: Centralized Default Font Size
-import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
+// ADR-130, ADR-142: getLayerNameOrDefault, TEXT_SIZE_LIMITS — moved to useDxfSceneConversion hook
 // CanvasProvider removed - not needed for Canvas V2
 // OverlayCanvas import removed - it was dead code
 import { useOverlayStore } from '../../overlays/overlay-store';
@@ -96,7 +93,7 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -660,110 +657,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, []);
 
-  // === CONVERT SCENE TO CANVAS V2 FORMAT ===
-  // 🔍 DEBUG (2026-01-31): Log props.currentScene for circle debugging
-  dlog('CanvasSection', '📋 props.currentScene', {
-    hasScene: !!props.currentScene,
-    entityCount: props.currentScene?.entities?.length || 0,
-    entityTypes: props.currentScene?.entities?.map(e => e.type) || []
-  });
-
-  // 🏢 ENTERPRISE (2026-01-26): Always create dxfScene for preview entities, even without loaded DXF
-  // This allows measurement/drawing tools to work even when no DXF file is loaded
-  const dxfScene: DxfScene = {
-    entities: [
-      ...(props.currentScene?.entities?.map((entity): DxfEntityUnion | null => {
-        // Get layer color information
-        const layerInfo = entity.layer ? props.currentScene?.layers?.[entity.layer] : null;
-
-        // Convert SceneEntity to DxfEntityUnion
-        // 🏢 ENTERPRISE (2026-01-27): Type guard for measurement properties
-        // Measurement entities (from useUnifiedDrawing) have these flags for distance label rendering
-        const entityWithMeasurement = entity as typeof entity & {
-          measurement?: boolean;
-          showEdgeDistances?: boolean;
-        };
-
-        const base = {
-          id: entity.id,
-          // ADR-130: Centralized default layer
-          layer: getLayerNameOrDefault(entity.layer),
-          color: String(entity.color || layerInfo?.color || UI_COLORS.WHITE), // ✅ ENTERPRISE FIX: Ensure string type
-          lineWidth: entity.lineweight || 1,
-          visible: entity.visible ?? true, // ✅ ENTERPRISE FIX: Default to true if undefined
-          // 🏢 ENTERPRISE (2026-01-27): Pass measurement flags for distance label rendering
-          // These flags come from useUnifiedDrawing when creating measurement entities
-          ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
-          ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances })
-        };
-
-        switch (entity.type) {
-          case 'line': {
-            // Type guard: Entity με type 'line' έχει start & end
-            const lineEntity = entity as typeof entity & { start: Point2D; end: Point2D };
-            return { ...base, type: 'line' as const, start: lineEntity.start, end: lineEntity.end } as DxfEntityUnion;
-          }
-          case 'circle': {
-            // Type guard: Entity με type 'circle' έχει center & radius
-            const circleEntity = entity as typeof entity & { center: Point2D; radius: number };
-            return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius } as DxfEntityUnion;
-          }
-          case 'polyline': {
-            // Type guard: Entity με type 'polyline' έχει vertices & closed
-            const polylineEntity = entity as typeof entity & { vertices: Point2D[]; closed: boolean };
-            return { ...base, type: 'polyline' as const, vertices: polylineEntity.vertices, closed: polylineEntity.closed } as DxfEntityUnion;
-          }
-          case 'arc': {
-            // Type guard: Entity με type 'arc' έχει center, radius, startAngle, endAngle, counterclockwise
-            // 🔧 FIX (2026-01-31): Προσθήκη counterclockwise για σωστή κατεύθυνση τόξου
-            const arcEntity = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean };
-            return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle, counterclockwise: arcEntity.counterclockwise } as DxfEntityUnion;
-          }
-          case 'text': {
-            // ╔════════════════════════════════════════════════════════════════════╗
-            // ║ ⚠️ VERIFIED WORKING (2026-01-03) - ΜΗΝ ΑΛΛΑΞΕΤΕ!                   ║
-            // ║ height || fontSize || DEFAULT_FONT_SIZE είναι η ΣΩΣΤΗ σειρά       ║
-            // ║ ΜΗΝ αλλάξετε σε fontSize || height - ΧΑΛΑΕΙ τα κείμενα!           ║
-            // ║ 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback        ║
-            // ╚════════════════════════════════════════════════════════════════════╝
-            const textEntity = entity as typeof entity & { position: Point2D; text: string; fontSize?: number; height?: number; rotation?: number };
-            const textHeight = textEntity.height || textEntity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
-            return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textHeight, rotation: textEntity.rotation } as DxfEntityUnion;
-          }
-          case 'angle-measurement': {
-            // 🏢 ENTERPRISE (2026-01-27): Angle measurement entity support
-            // Type guard: Entity με type 'angle-measurement' έχει vertex, point1, point2, angle
-            const angleMeasurementEntity = entity as typeof entity & { vertex: Point2D; point1: Point2D; point2: Point2D; angle: number };
-            return { ...base, type: 'angle-measurement' as const, vertex: angleMeasurementEntity.vertex, point1: angleMeasurementEntity.point1, point2: angleMeasurementEntity.point2, angle: angleMeasurementEntity.angle } as DxfEntityUnion;
-          }
-          case 'rectangle': {
-            // 🏢 ENTERPRISE (2026-01-30): Rectangle support - convert to closed polyline
-            // Pattern: DXF Standard - rectangles are stored as closed polylines (4 vertices)
-            // Type guard: Entity με type 'rectangle' έχει corner1 & corner2
-            const rectEntity = entity as typeof entity & { corner1: Point2D; corner2: Point2D };
-            const { corner1, corner2 } = rectEntity;
-            // Convert corners to 4 vertices (clockwise from corner1)
-            const vertices: Point2D[] = [
-              corner1,                           // Bottom-left
-              { x: corner2.x, y: corner1.y },    // Bottom-right
-              corner2,                           // Top-right
-              { x: corner1.x, y: corner2.y },    // Top-left
-            ];
-            return { ...base, type: 'polyline' as const, vertices, closed: true } as DxfEntityUnion;
-          }
-          default:
-            dwarn('CanvasSection', '🔍 Unsupported entity type for DxfCanvas:', entity.type);
-            return null;
-        }
-      }).filter(Boolean) as DxfEntityUnion[] || []),
-      // 🏢 ADR-040: Preview entity rendering moved to dedicated PreviewCanvas layer
-      // This eliminates duplicate rendering and improves performance (250ms → <16ms)
-      // Previous code (kept for reference):
-      // ...(drawingHandlers.drawingState.previewEntity ? [...] : [])
-    ],
-    layers: Object.keys(props.currentScene?.layers || {}), // ✅ FIX: Convert layers object to array (optional chaining for null safety)
-    bounds: props.currentScene?.bounds ?? null // ✅ FIX: Convert undefined to null for type compatibility
-  };
+  // 🏢 ENTERPRISE (2026-02-16): Scene→DxfScene conversion extracted to useDxfSceneConversion hook
+  // Converts SceneModel entities to DxfEntityUnion for Canvas V2 rendering
+  const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
 
   // 🏢 ENTERPRISE (2026-02-15): AutoCAD-style grip interaction for DXF entities
   // Manages state machine: idle → hovering → warm → following → commit/cancel
