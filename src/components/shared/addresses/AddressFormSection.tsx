@@ -15,7 +15,7 @@
  * - Simple validation (required fields only)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -103,32 +103,73 @@ export function AddressFormSection({
     label: initialValues?.label || ''
   });
 
-  // Update parent when form changes
-  const handleChange = (field: keyof AddressFormData, value: string | boolean) => {
-    const newData = { ...formData, [field]: value };
-    setFormData(newData);
+  // =========================================================================
+  // DEBOUNCED PARENT NOTIFICATION (INP optimization)
+  // =========================================================================
+  // Text inputs: update local state immediately, debounce parent onChange.
+  // Select/Checkbox: notify parent immediately (discrete interactions).
 
-    // Notify parent
-    if (onChange) {
-      // Handle SELECT_CLEAR_VALUE for blockSide - convert to undefined
-      const blockSideValue = newData.blockSide === SELECT_CLEAR_VALUE || !newData.blockSide
-        ? undefined
-        : (newData.blockSide as BlockSideDirection);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeRef = useRef(onChange);
 
-      onChange({
-        street: newData.street,
-        number: newData.number,
-        city: newData.city,
-        postalCode: newData.postalCode,
-        region: newData.region || undefined,
-        country: newData.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
-        type: newData.type,
-        isPrimary: newData.isPrimary,
-        blockSide: blockSideValue,
-        label: newData.label,
-      });
-    }
-  };
+  // Keep ref in sync without re-creating callbacks
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, []);
+
+  const notifyParent = useCallback((data: AddressFormData) => {
+    if (!onChangeRef.current) return;
+
+    const blockSideValue = data.blockSide === SELECT_CLEAR_VALUE || !data.blockSide
+      ? undefined
+      : (data.blockSide as BlockSideDirection);
+
+    onChangeRef.current({
+      street: data.street,
+      number: data.number,
+      city: data.city,
+      postalCode: data.postalCode,
+      region: data.region || undefined,
+      country: data.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+      type: data.type,
+      isPrimary: data.isPrimary,
+      blockSide: blockSideValue,
+      label: data.label,
+    });
+  }, []);
+
+  /** Text field change — debounced parent notification (300ms) */
+  const handleTextChange = useCallback((field: keyof AddressFormData, value: string) => {
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+
+      // Debounce parent notification
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => notifyParent(newData), 300);
+
+      return newData;
+    });
+  }, [notifyParent]);
+
+  /** Discrete change (Select, Checkbox) — immediate parent notification */
+  const handleDiscreteChange = useCallback((field: keyof AddressFormData, value: string | boolean) => {
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+
+      // Cancel any pending debounce, notify immediately
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      notifyParent(newData);
+
+      return newData;
+    });
+  }, [notifyParent]);
 
   // Validation
   const errors = {
@@ -148,7 +189,7 @@ export function AddressFormSection({
           <Input
             id="street"
             value={formData.street}
-            onChange={(e) => handleChange('street', e.target.value)}
+            onChange={(e) => handleTextChange('street', e.target.value)}
             placeholder={t('form.streetPlaceholder')}
             className={errors.street ? 'border-red-500' : ''}
           />
@@ -164,7 +205,7 @@ export function AddressFormSection({
           <Input
             id="number"
             value={formData.number}
-            onChange={(e) => handleChange('number', e.target.value)}
+            onChange={(e) => handleTextChange('number', e.target.value)}
             placeholder={t('form.numberPlaceholder')}
           />
         </div>
@@ -179,7 +220,7 @@ export function AddressFormSection({
           <Input
             id="city"
             value={formData.city}
-            onChange={(e) => handleChange('city', e.target.value)}
+            onChange={(e) => handleTextChange('city', e.target.value)}
             placeholder={t('form.cityPlaceholder')}
             className={errors.city ? 'border-red-500' : ''}
           />
@@ -195,7 +236,7 @@ export function AddressFormSection({
           <Input
             id="postalCode"
             value={formData.postalCode}
-            onChange={(e) => handleChange('postalCode', e.target.value)}
+            onChange={(e) => handleTextChange('postalCode', e.target.value)}
             placeholder={t('form.postalCodePlaceholder')}
             className={errors.postalCode ? 'border-red-500' : ''}
           />
@@ -214,7 +255,7 @@ export function AddressFormSection({
           <Input
             id="region"
             value={formData.region}
-            onChange={(e) => handleChange('region', e.target.value)}
+            onChange={(e) => handleTextChange('region', e.target.value)}
             placeholder={t('form.regionPlaceholder')}
           />
         </div>
@@ -226,7 +267,7 @@ export function AddressFormSection({
           <Input
             id="country"
             value={formData.country}
-            onChange={(e) => handleChange('country', e.target.value)}
+            onChange={(e) => handleTextChange('country', e.target.value)}
             placeholder={t('form.countryPlaceholder')}
           />
         </div>
@@ -240,7 +281,7 @@ export function AddressFormSection({
           </Label>
           <Select
             value={formData.type}
-            onValueChange={(value) => handleChange('type', value as ProjectAddressType)}
+            onValueChange={(value) => handleDiscreteChange('type', value as ProjectAddressType)}
           >
             <SelectTrigger id="type">
               <SelectValue />
@@ -261,7 +302,7 @@ export function AddressFormSection({
           </Label>
           <Select
             value={formData.blockSide}
-            onValueChange={(value) => handleChange('blockSide', value)}
+            onValueChange={(value) => handleDiscreteChange('blockSide', value)}
           >
             <SelectTrigger id="blockSide">
               <SelectValue placeholder={t('form.blockSidePlaceholder')} />
@@ -286,7 +327,7 @@ export function AddressFormSection({
         <Input
           id="label"
           value={formData.label}
-          onChange={(e) => handleChange('label', e.target.value)}
+          onChange={(e) => handleTextChange('label', e.target.value)}
           placeholder={t('form.labelPlaceholder')}
         />
       </div>
@@ -296,7 +337,7 @@ export function AddressFormSection({
         <Checkbox
           id="isPrimary"
           checked={formData.isPrimary}
-          onCheckedChange={(checked) => handleChange('isPrimary', !!checked)}
+          onCheckedChange={(checked) => handleDiscreteChange('isPrimary', !!checked)}
         />
         <Label
           htmlFor="isPrimary"
