@@ -4,6 +4,28 @@
  * ZERO HARDCODED COORDINATES - All data από environment variables
  */
 
+interface GeocodingConfig {
+  /** Delay between Nominatim requests (TOS: max 1 req/s) */
+  readonly NOMINATIM_DELAY_MS: number;
+  /** Delay between batch geocoding requests */
+  readonly BATCH_DELAY_MS: number;
+  /** Address resolver timeout */
+  readonly RESOLVER_TIMEOUT_MS: number;
+  /** Max results from Nominatim per query */
+  readonly NOMINATIM_RESULT_LIMIT: string;
+  /** Accept-Language header for Nominatim */
+  readonly ACCEPT_LANGUAGE: string;
+  /** Client-side API endpoint for geocoding */
+  readonly API_ENDPOINT: string;
+  /** Confidence scoring weights */
+  readonly CONFIDENCE: {
+    readonly BASE: number;
+    readonly STREET_MATCH: number;
+    readonly CITY_MATCH: number;
+    readonly POSTAL_MATCH: number;
+  };
+}
+
 interface GeographicConfig {
   readonly DEFAULT_CITY: string;
   readonly DEFAULT_REGION: string;
@@ -22,6 +44,7 @@ interface GeographicConfig {
     readonly minLng: number;
     readonly maxLng: number;
   };
+  readonly GEOCODING: GeocodingConfig;
 }
 
 /**
@@ -54,6 +77,22 @@ function getGeographicConfig(): GeographicConfig {
       maxLat: parseFloat(process.env.NEXT_PUBLIC_COUNTRY_BBOX_MAX_LAT || '42.0'),
       minLng: parseFloat(process.env.NEXT_PUBLIC_COUNTRY_BBOX_MIN_LNG || '19.0'),
       maxLng: parseFloat(process.env.NEXT_PUBLIC_COUNTRY_BBOX_MAX_LNG || '29.5'),
+    },
+
+    // Geocoding service configuration
+    GEOCODING: {
+      NOMINATIM_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_NOMINATIM_DELAY_MS || '1100', 10),
+      BATCH_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_BATCH_DELAY_MS || '1200', 10),
+      RESOLVER_TIMEOUT_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_TIMEOUT_MS || '5000', 10),
+      NOMINATIM_RESULT_LIMIT: process.env.NEXT_PUBLIC_NOMINATIM_RESULT_LIMIT || '1',
+      ACCEPT_LANGUAGE: process.env.NEXT_PUBLIC_GEOCODING_ACCEPT_LANGUAGE || 'el,en',
+      API_ENDPOINT: process.env.NEXT_PUBLIC_GEOCODING_API_ENDPOINT || '/api/geocoding',
+      CONFIDENCE: {
+        BASE: parseFloat(process.env.NEXT_PUBLIC_GEOCODING_CONFIDENCE_BASE || '0.4'),
+        STREET_MATCH: parseFloat(process.env.NEXT_PUBLIC_GEOCODING_CONFIDENCE_STREET || '0.25'),
+        CITY_MATCH: parseFloat(process.env.NEXT_PUBLIC_GEOCODING_CONFIDENCE_CITY || '0.2'),
+        POSTAL_MATCH: parseFloat(process.env.NEXT_PUBLIC_GEOCODING_CONFIDENCE_POSTAL || '0.15'),
+      },
     },
   } as const;
 }

@@ -241,7 +241,7 @@ export const addressResolver = new AddressResolver({
   useCache: true,
   fallbackToArea: true,
   providers: ['nominatim'],
-  timeout: 5000,
+  timeout: GEOGRAPHIC_CONFIG.GEOCODING.RESOLVER_TIMEOUT_MS,
 });
 
 // =============================================================================

@@ -149,7 +149,7 @@ export function AddressFormSection({
             id="street"
             value={formData.street}
             onChange={(e) => handleChange('street', e.target.value)}
-            placeholder="π.χ. Σαμοθράκης"
+            placeholder={t('form.streetPlaceholder')}
             className={errors.street ? 'border-red-500' : ''}
           />
           {errors.street && (
@@ -165,7 +165,7 @@ export function AddressFormSection({
             id="number"
             value={formData.number}
             onChange={(e) => handleChange('number', e.target.value)}
-            placeholder="π.χ. 16"
+            placeholder={t('form.numberPlaceholder')}
           />
         </div>
       </div>
@@ -180,7 +180,7 @@ export function AddressFormSection({
             id="city"
             value={formData.city}
             onChange={(e) => handleChange('city', e.target.value)}
-            placeholder="π.χ. Θεσσαλονίκη"
+            placeholder={t('form.cityPlaceholder')}
             className={errors.city ? 'border-red-500' : ''}
           />
           {errors.city && (
@@ -196,7 +196,7 @@ export function AddressFormSection({
             id="postalCode"
             value={formData.postalCode}
             onChange={(e) => handleChange('postalCode', e.target.value)}
-            placeholder="π.χ. 54621"
+            placeholder={t('form.postalCodePlaceholder')}
             className={errors.postalCode ? 'border-red-500' : ''}
           />
           {errors.postalCode && (
@@ -287,7 +287,7 @@ export function AddressFormSection({
           id="label"
           value={formData.label}
           onChange={(e) => handleChange('label', e.target.value)}
-          placeholder="π.χ. Κύρια Είσοδος"
+          placeholder={t('form.labelPlaceholder')}
         />
       </div>
 

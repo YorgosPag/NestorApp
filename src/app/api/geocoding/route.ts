@@ -64,6 +64,7 @@ const NOMINATIM_BASE_URL = process.env.NOMINATIM_BASE_URL || 'https://nominatim.
 const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
 const NOMINATIM_TIMEOUT_MS = parseInt(process.env.GEOCODING_TIMEOUT_MS || '8000', 10);
 const DEFAULT_COUNTRY_CODE = GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_CODE;
+const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
 // =============================================================================
 // NOMINATIM QUERY HELPERS
@@ -77,9 +78,9 @@ const DEFAULT_COUNTRY_CODE = GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_CODE;
 function buildStructuredUrl(params: GeocodingRequestBody): string {
   const searchParams = new URLSearchParams({
     format: 'json',
-    limit: '1',
+    limit: GEOCODING.NOMINATIM_RESULT_LIMIT,
     countrycodes: DEFAULT_COUNTRY_CODE,
-    'accept-language': 'el,en',
+    'accept-language': GEOCODING.ACCEPT_LANGUAGE,
   });
 
   if (params.street) {
@@ -108,9 +109,9 @@ function buildFreeformUrl(query: string): string {
   const searchParams = new URLSearchParams({
     q: query,
     format: 'json',
-    limit: '1',
+    limit: GEOCODING.NOMINATIM_RESULT_LIMIT,
     countrycodes: DEFAULT_COUNTRY_CODE,
-    'accept-language': 'el,en',
+    'accept-language': GEOCODING.ACCEPT_LANGUAGE,
   });
 
   return `${NOMINATIM_BASE_URL}/search?${searchParams.toString()}`;
@@ -158,17 +159,17 @@ function calculateConfidence(
   result: NominatimResult,
   params: GeocodingRequestBody
 ): number {
-  let score = 0.4; // base score for any result
+  let score = GEOCODING.CONFIDENCE.BASE;
   const display = normalizeGreekText(result.display_name);
 
   if (params.street && display.includes(normalizeGreekText(params.street))) {
-    score += 0.25;
+    score += GEOCODING.CONFIDENCE.STREET_MATCH;
   }
   if (params.city && display.includes(normalizeGreekText(params.city))) {
-    score += 0.2;
+    score += GEOCODING.CONFIDENCE.CITY_MATCH;
   }
   if (params.postalCode && display.includes(params.postalCode)) {
-    score += 0.15;
+    score += GEOCODING.CONFIDENCE.POSTAL_MATCH;
   }
 
   return Math.min(score, 1);
@@ -247,7 +248,7 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
   const strippedUrl = buildStructuredUrl(stripped);
   logger.info('Geocoding attempt 2: structured (accent-stripped)');
   // Respect Nominatim 1 req/s
-  await sleep(1100);
+  await sleep(GEOCODING.NOMINATIM_DELAY_MS);
   result = await fetchNominatim(strippedUrl);
 
   if (result) {
@@ -259,7 +260,7 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
   if (greeklishVariant) {
     const greeklishUrl = buildStructuredUrl(greeklishVariant);
     logger.info('Geocoding attempt 3: structured (greeklish→greek)');
-    await sleep(1100);
+    await sleep(GEOCODING.NOMINATIM_DELAY_MS);
     result = await fetchNominatim(greeklishUrl);
 
     if (result) {
@@ -272,7 +273,7 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
   if (freeformQuery.trim()) {
     const freeformUrl = buildFreeformUrl(freeformQuery);
     logger.info('Geocoding attempt 4: free-form fallback', { data: { query: freeformQuery } });
-    await sleep(1100);
+    await sleep(GEOCODING.NOMINATIM_DELAY_MS);
     result = await fetchNominatim(freeformUrl);
 
     if (result) {

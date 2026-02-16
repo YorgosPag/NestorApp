@@ -15,6 +15,7 @@
  * @module lib/geocoding/geocoding-service
  */
 
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -80,7 +81,7 @@ async function callGeocodingApi(
   query: StructuredGeocodingQuery
 ): Promise<GeocodingServiceResult | null> {
   try {
-    const response = await fetch('/api/geocoding', {
+    const response = await fetch(GEOGRAPHIC_CONFIG.GEOCODING.API_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(query),
@@ -157,7 +158,7 @@ export async function geocodeAddressBatch(
       const prevCacheKey = getCacheKey(queries[i - 1]);
       const wasCacheHit = geocodingCache.has(prevCacheKey);
       if (!wasCacheHit) {
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        await new Promise(resolve => setTimeout(resolve, GEOGRAPHIC_CONFIG.GEOCODING.BATCH_DELAY_MS));
       }
     }
 
