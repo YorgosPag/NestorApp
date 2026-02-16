@@ -52,3 +52,10 @@ export type {
   UseDxfSceneConversionParams,
   UseDxfSceneConversionReturn,
 } from './useDxfSceneConversion';
+
+// === useCanvasContextMenu === (CanvasSection decomposition — right-click context menu)
+export { useCanvasContextMenu } from './useCanvasContextMenu';
+export type {
+  UseCanvasContextMenuParams,
+  UseCanvasContextMenuReturn,
+} from './useCanvasContextMenu';

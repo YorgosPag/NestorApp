@@ -93,7 +93,7 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -246,14 +246,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const finishDrawingWithPolygonRef = useRef<(polygon: Array<[number, number]>) => Promise<boolean>>(
     async () => false
   );
-  // 🏢 ADR-047: Drawing context menu state (AutoCAD-style right-click menu)
-  const [drawingContextMenu, setDrawingContextMenu] = useState<{
-    isOpen: boolean;
-    position: { x: number; y: number };
-  }>({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-  });
+  // 🏢 ADR-047: Drawing context menu — moved to useCanvasContextMenu hook (see line ~590)
   // 🏢 ENTERPRISE (2026-01-31): Grip system state management moved to useGripSystem hook
   // Previous ~65 lines of grip state definitions now handled by centralized hook
   // Includes: hover states, selection states, drag states, throttle refs
@@ -585,20 +578,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [activeTool]);
 
-  // === 🏢 ADR-053: DRAWING CONTEXT MENU HANDLER ===
-  // AutoCAD-style right-click context menu during drawing operations
-  // NOTE: This React handler is kept as FALLBACK - main handler is native DOM listener below
-  const handleDrawingContextMenu = useCallback((e: React.MouseEvent) => {
-    // 🏢 CRITICAL: ALWAYS prevent browser context menu on canvas
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
+  // 🏢 ADR-047/053: Context menu — extracted to useCanvasContextMenu hook
+  // hasUnifiedDrawingPointsRef bridges drawingHandlersRef into the hook without coupling
+  const hasUnifiedDrawingPointsRef = React.useRef(() =>
+    (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0
+  );
+  hasUnifiedDrawingPointsRef.current = () =>
+    (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
 
-  const handleDrawingContextMenuClose = useCallback((open: boolean) => {
-    if (!open) {
-      setDrawingContextMenu(prev => ({ ...prev, isOpen: false }));
-    }
-  }, []);
+  const { drawingContextMenu, handleDrawingContextMenu, handleDrawingContextMenuClose } = useCanvasContextMenu({
+    containerRef,
+    activeTool,
+    overlayMode,
+    hasUnifiedDrawingPointsRef,
+    draftPolygonRef,
+  });
 
   const handleDrawingFinish = useCallback(() => {
     // 🏢 ENTERPRISE (2026-02-15): Dual-path — overlay polygon OR unified drawing
@@ -1371,41 +1365,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish]);
 
-  // 🏢 ADR-053 ENTERPRISE FIX (2026-01-30): Document-level contextmenu handler
-  // Native DOM event listener is MORE RELIABLE than React's synthetic events on canvas
-  // This is the pattern used by AutoCAD, Autodesk Viewer, BricsCAD for CAD context menus
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleNativeContextMenu = (e: MouseEvent) => {
-      // ALWAYS prevent browser context menu on canvas area
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Only show OUR context menu when in drawing mode with points
-      // Path 1: Unified drawing tools (DXF polygon, measure-area, etc.)
-      const isUnifiedDrawing = isDrawingTool(activeTool) || isMeasurementTool(activeTool);
-      const hasUnifiedPoints = (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
-      // Path 2: Overlay polygon drawing (draftPolygon system)
-      const isOverlayDrawing = overlayMode === 'draw';
-      const hasOverlayPoints = draftPolygonRef.current.length > 0;
-
-      if ((isUnifiedDrawing && hasUnifiedPoints) || (isOverlayDrawing && hasOverlayPoints)) {
-        setDrawingContextMenu({
-          isOpen: true,
-          position: { x: e.clientX, y: e.clientY },
-        });
-      }
-    };
-
-    // Use capture: true to intercept BEFORE any other handler
-    container.addEventListener('contextmenu', handleNativeContextMenu, { capture: true });
-
-    return () => {
-      container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
-    };
-  }, [activeTool, overlayMode]);
+  // 🏢 ADR-053: Native contextmenu listener — moved to useCanvasContextMenu hook
 
   // ❌ REMOVED: Duplicate zoom handlers - now using centralized zoomSystem.handleKeyboardZoom()
   // All keyboard zoom is handled through the unified system in the keyboard event handler above
