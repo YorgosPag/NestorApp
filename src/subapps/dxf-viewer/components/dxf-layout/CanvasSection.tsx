@@ -19,15 +19,13 @@ import { useCursorSettings, useCursorActions } from '../../systems/cursor';
 // globalRulerStore → moved to useCanvasEffects hook
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
-import { createOverlayHandlers } from '../../overlays/types';
-import { squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// createOverlayHandlers, squaredDistance → moved to useOverlayInteraction hook
 // pointToLineDistance — moved to useCanvasClickHandler hook
 // 🏢 ADR-079: Centralized Movement Detection Constants
 // 🏢 ADR-099: Centralized Polygon Tolerances
 // 🏢 ADR-147: Centralized Hit Tolerance for Entity Picking
-import { MOVEMENT_DETECTION, POLYGON_TOLERANCES } from '../../config/tolerance-config';
-// 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
-import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
+import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
+// findOverlayEdgeForGrip → moved to useOverlayInteraction hook
 // isPointInPolygon — moved to useCanvasClickHandler hook
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
 import { useGripStyles } from '../../settings-provider';
@@ -74,11 +72,10 @@ import {
   useCommandHistoryKeyboard,
 } from '../../core/commands';
 // Delete*Command + LevelSceneManagerAdapter — moved to useSmartDelete hook
-// 🏢 ADR-101: Centralized deep clone utility
-import { deepClone } from '../../utils/clone-utils';
+// deepClone → moved to useOverlayInteraction hook
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler, useLayerCanvasMouseMove, useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts, useCanvasEffects } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler, useLayerCanvasMouseMove, useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts, useCanvasEffects, useOverlayInteraction } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -544,100 +541,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDraftPolygon,
   });
 
-  // Use shared overlay handlers to eliminate duplicate code
-  // 🏢 ENTERPRISE (2026-01-25): Bridge to universal selection system - ADR-030
-  const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete, handleOverlayUpdate } =
-    createOverlayHandlers({
-      setSelectedOverlay: (id: string | null) => {
-        // 🏢 ENTERPRISE (2026-01-25): Route through universal selection system - ADR-030
-        if (id) {
-          universalSelection.select(id, 'overlay');
-        } else {
-          universalSelection.clearByType('overlay');
-        }
-      },
-      remove: overlayStore.remove,
-      update: overlayStore.update,
-      getSelectedOverlay: overlayStore.getSelectedOverlay,
-      overlays: overlayStore.overlays
-    }, undefined);  // ✅ CanvasSection δεν έχει levelSwitcher, άρα περνάω undefined
-
-  // 🏢 ENTERPRISE (2026-02-16): fitToOverlay → useFitToView hook
-
-
-  // 🏢 ENTERPRISE (2026-01-25): Edge midpoint click handler for vertex insertion
-  const handleEdgeMidpointClick = async (overlayId: string, edgeIndex: number, insertPoint: Point2D) => {
-    const overlay = currentOverlays.find(o => o.id === overlayId);
-    if (!overlay) return;
-
-    // Convert Point2D to [number, number] for overlay store
-    const vertex: [number, number] = [insertPoint.x, insertPoint.y];
-    const insertIndex = edgeIndex + 1; // Insert after the edge start vertex
-
-    try {
-      await overlayStore.addVertex(overlayId, insertIndex, vertex);
-    } catch (error) {
-      derr('CanvasSection', 'Failed to add vertex:', error);
-    }
-  };
-
-  // Drawing logic
-  const handleOverlayClick = (overlayId: string, point: Point2D) => {
-    // console.log('🔍 handleOverlayClick called:', { overlayId, point, overlayMode, activeTool });
-
-    // 🏢 ENTERPRISE (2026-01-25): Check for edge midpoint click first (vertex insertion)
-    if ((activeTool === 'select' || activeTool === 'layering') && hoveredEdgeInfo?.overlayId === overlayId) {
-      const overlay = currentOverlays.find(o => o.id === overlayId);
-      if (overlay?.polygon) {
-        // 🏢 ADR-099: Using centralized POLYGON_TOLERANCES.EDGE_DETECTION
-        const edgeTolerance = POLYGON_TOLERANCES.EDGE_DETECTION / transform.scale;
-        const edgeInfo = findOverlayEdgeForGrip(point, overlay.polygon, edgeTolerance);
-
-        if (edgeInfo && edgeInfo.edgeIndex === hoveredEdgeInfo.edgeIndex) {
-          // Click was on the hovered edge midpoint - add vertex
-          handleEdgeMidpointClick(overlayId, edgeInfo.edgeIndex, edgeInfo.insertPoint);
-          return; // Don't proceed with selection
-        }
-      }
-    }
-
-    // 🚀 PROFESSIONAL CAD: Αυτόματη επιλογή layers όταν select/layering/move tool είναι ενεργό
-    // 🏢 ENTERPRISE (2026-01-25): Προσθήκη 'select' tool για επιλογή layers με grips
-    // 🏢 ENTERPRISE (2027-01-27): Προσθήκη 'move' tool για overlay drag - Unified Toolbar Integration
-    if (activeTool === 'select' || activeTool === 'layering' || activeTool === 'move' || overlayMode === 'select') {
-      // console.log('🔍 Selecting overlay:', overlayId);
-      handleOverlaySelect(overlayId);
-
-      // 🏢 ENTERPRISE (2027-01-27): Start overlay body drag if move tool is active - Unified Toolbar Integration
-      if (activeTool === 'move') {
-        const overlay = currentOverlays.find(o => o.id === overlayId);
-        if (overlay?.polygon) {
-          // Start dragging the entire overlay body
-          setDraggingOverlayBody({
-            overlayId,
-            startPoint: point,
-            startPolygon: deepClone(overlay.polygon) // Deep copy for undo
-          });
-          setDragPreviewPosition(point);
-        }
-      }
-
-      // 🔧 AUTO FIT TO VIEW - Zoom to selected overlay (only for layering tool)
-      if (activeTool === 'layering') {
-        setTimeout(() => {
-          fitToOverlay(overlayId);
-        }, 100); // Small delay to ensure selection state updates
-      }
-    }
-  };
-
-  // 🏢 ENTERPRISE (2026-01-25): Multi-selection handler for marquee selection
-  const handleMultiOverlayClick = useCallback((layerIds: string[]) => {
-    if (activeTool === 'select' || activeTool === 'layering' || overlayMode === 'select') {
-      // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
-      universalSelection.selectMultiple(layerIds.map(id => ({ id, type: 'overlay' as const })));
-    }
-  }, [activeTool, overlayMode, overlayStore]);
+  // 🏢 ENTERPRISE (2026-02-16): Overlay interaction handlers — extraction #12
+  const { handleOverlayClick, handleMultiOverlayClick } = useOverlayInteraction({
+    activeTool,
+    overlayMode,
+    currentOverlays,
+    universalSelection,
+    overlayStore,
+    hoveredEdgeInfo,
+    transformScale: transform.scale,
+    fitToOverlay,
+    setDraggingOverlayBody,
+    setDragPreviewPosition,
+  });
 
   // 🏢 ENTERPRISE (2026-02-16): Canvas click handler extracted to useCanvasClickHandler hook
   // Priority-based routing: grips → special tools → overlay drawing → unified drawing → move → deselect

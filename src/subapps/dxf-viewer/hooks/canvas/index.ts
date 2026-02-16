@@ -114,3 +114,10 @@ export type {
   UseCanvasEffectsParams,
   UseCanvasEffectsReturn,
 } from './useCanvasEffects';
+
+// === useOverlayInteraction === (CanvasSection decomposition #12 — overlay click handlers)
+export { useOverlayInteraction } from './useOverlayInteraction';
+export type {
+  UseOverlayInteractionParams,
+  UseOverlayInteractionReturn,
+} from './useOverlayInteraction';
