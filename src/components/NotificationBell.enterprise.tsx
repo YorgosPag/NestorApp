@@ -27,13 +27,12 @@ export function NotificationBell() {
       aria-controls="notification-drawer"
       className="relative"
     >
-      <Bell className={iconSizes.sm} />
+      <Bell className={iconSizes.sm} aria-hidden="true" />
       {unread > 0 && (
-        <span className="absolute top-0 -right-0.5 bg-red-600 text-white text-xs px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium">
+        <span className="absolute top-0 -right-0.5 bg-red-600 text-white text-xs px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium" aria-hidden="true">
           {unread > 99 ? '99+' : unread}
         </span>
       )}
-      <span className="sr-only">{label}</span>
     </Button>
   );
 }
