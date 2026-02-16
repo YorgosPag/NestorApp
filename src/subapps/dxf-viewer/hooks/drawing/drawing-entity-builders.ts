@@ -23,7 +23,7 @@ import type {
   ExtendedCircleEntity,
   ExtendedPolylineEntity,
   ExtendedArcEntity,
-} from './useUnifiedDrawing';
+} from './drawing-types';
 import {
   calculateDistance,
   arcFrom3Points,

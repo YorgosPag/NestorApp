@@ -18,7 +18,7 @@ import type {
   ExtendedLineEntity,
   ExtendedArcEntity,
   PreviewPoint,
-} from './useUnifiedDrawing';
+} from './drawing-types';
 import {
   arcFrom3Points,
   arcFromCenterStartEnd,
@@ -405,4 +405,165 @@ export function applyPreviewStyling(
       (entity as ExtendedCircleEntity).measurement = true;
     }
   }
+}
+
+
+// ─── Partial Preview (after point click, before entity is complete) ─────────
+
+/** Tools that need 3 points and share the same dot → line partial preview pattern */
+const THREE_POINT_DOT_LINE_TOOLS: ReadonlySet<DrawingTool> = new Set([
+  'arc-3p', 'arc-cse', 'arc-sce',
+  'circle-3p', 'circle-chord-sagitta', 'circle-2p-radius',
+]);
+
+/**
+ * Creates a partial preview entity to display after a point click for multi-point tools.
+ *
+ * This consolidates the repeated dot/line/polyline patterns that were previously
+ * copy-pasted across 6 tool groups (~290 lines) in useUnifiedDrawing.addPoint().
+ *
+ * @param tool - The active drawing tool
+ * @param points - Points collected so far (including the just-added point)
+ * @returns A partial preview entity, or null if no partial preview is needed
+ */
+export function createPartialPreview(
+  tool: DrawingTool,
+  points: Point2D[]
+): ExtendedSceneEntity | null {
+  if (points.length === 0) return null;
+
+  // ── Pattern A: 3-point tools (dot at 1pt, line at 2pt) ────────────────
+  if (THREE_POINT_DOT_LINE_TOOLS.has(tool)) {
+    if (points.length === 1) {
+      return {
+        id: 'preview_partial',
+        type: 'point',
+        position: points[0],
+        size: 4,
+        visible: true,
+        layer: '0',
+        preview: true,
+        showPreviewGrips: true,
+      } as PreviewPoint;
+    }
+    if (points.length === 2) {
+      return {
+        id: 'preview_partial',
+        type: 'line',
+        start: points[0],
+        end: points[1],
+        visible: true,
+        layer: '0',
+        color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+        lineweight: 1,
+        opacity: 1.0,
+        lineType: 'solid' as const,
+        preview: true,
+        showEdgeDistances: true,
+        showPreviewGrips: true,
+      } as ExtendedLineEntity;
+    }
+    return null;
+  }
+
+  // ── Pattern B: measure-angle (measurement dot at 1pt, measurement polyline at 2pt) ─
+  if (tool === 'measure-angle') {
+    if (points.length === 1) {
+      return {
+        id: 'preview_partial',
+        type: 'circle',
+        center: points[0],
+        radius: 3,
+        visible: true,
+        layer: '0',
+        measurement: true,
+        preview: true,
+        showPreviewGrips: true,
+      } as ExtendedCircleEntity;
+    }
+    if (points.length === 2) {
+      return {
+        id: 'preview_partial',
+        type: 'polyline',
+        vertices: points,
+        closed: false,
+        visible: true,
+        layer: '0',
+        color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+        lineweight: 1,
+        opacity: 1.0,
+        lineType: 'solid' as const,
+        preview: true,
+        showEdgeDistances: true,
+        showPreviewGrips: true,
+        measurement: true,
+      } as ExtendedPolylineEntity;
+    }
+    return null;
+  }
+
+  // ── Pattern C: circle-best-fit (dot → line → best-fit circle or polyline) ─
+  if (tool === 'circle-best-fit') {
+    if (points.length === 1) {
+      return {
+        id: 'preview_partial',
+        type: 'point',
+        position: points[0],
+        size: 4,
+        visible: true,
+        layer: '0',
+        preview: true,
+        showPreviewGrips: true,
+      } as PreviewPoint;
+    }
+    if (points.length === 2) {
+      return {
+        id: 'preview_partial',
+        type: 'line',
+        start: points[0],
+        end: points[1],
+        visible: true,
+        layer: '0',
+        color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+        lineweight: 1,
+        opacity: 1.0,
+        lineType: 'solid' as const,
+        preview: true,
+        showEdgeDistances: true,
+        showPreviewGrips: true,
+      } as ExtendedLineEntity;
+    }
+    // 3+ points: try best-fit circle, fallback to polyline
+    const circleResult = circleBestFit(points);
+    if (circleResult) {
+      return {
+        id: 'preview_partial',
+        type: 'circle',
+        center: circleResult.center,
+        radius: circleResult.radius,
+        visible: true,
+        layer: '0',
+        preview: true,
+        showPreviewGrips: true,
+      } as ExtendedCircleEntity;
+    }
+    return {
+      id: 'preview_partial',
+      type: 'polyline',
+      vertices: [...points],
+      closed: false,
+      visible: true,
+      layer: '0',
+      color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+      lineweight: 1,
+      opacity: 1.0,
+      lineType: 'solid' as const,
+      preview: true,
+      showEdgeDistances: true,
+      showPreviewGrips: true,
+    } as ExtendedPolylineEntity;
+  }
+
+  // No partial preview needed for this tool/point combination
+  return null;
 }
