@@ -173,7 +173,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       { x: center.x, y: center.y - radius }      // South
     ];
     
-    return createGripsFromPoints(entity.id, quadrants);
+    grips.push(...createGripsFromPoints(entity.id, quadrants));
+    return grips;
   }
 
   // ✅ ENTERPRISE: Required abstract method implementation

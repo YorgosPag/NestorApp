@@ -453,6 +453,18 @@ export function useDxfGripInteraction({
               return e;
             }
 
+            // Rectangle: gripIndex 0-3 → corners derived from corner1/corner2
+            if ('corner1' in e && 'corner2' in e) {
+              const c1 = e.corner1 as Point2D;
+              const c2 = e.corner2 as Point2D;
+              // 0=TL(corner1), 1=TR, 2=BR(corner2), 3=BL
+              if (vertexIndex === 0) return { ...e, corner1: position };
+              if (vertexIndex === 1) return { ...e, corner1: { x: c1.x, y: position.y }, corner2: { x: position.x, y: c2.y } };
+              if (vertexIndex === 2) return { ...e, corner2: position };
+              if (vertexIndex === 3) return { ...e, corner1: { x: position.x, y: c1.y }, corner2: { x: c2.x, y: position.y } };
+              return e;
+            }
+
             // Angle-measurement: gripIndex 0→vertex, 1→point1, 2→point2
             if ('vertex' in e && 'point1' in e && 'point2' in e) {
               const vertex = vertexIndex === 0 ? position : e.vertex as Point2D;
@@ -512,6 +524,17 @@ export function useDxfGripInteraction({
             { x: c.x + r * Math.cos(sa), y: c.y + r * Math.sin(sa) },
             { x: c.x + r * Math.cos(ea), y: c.y + r * Math.sin(ea) },
             { x: c.x + r * Math.cos(ma), y: c.y + r * Math.sin(ma) },
+          ];
+        }
+        // Rectangle: 4 corners from corner1/corner2 — gripIndex 0-3
+        if ('corner1' in entity && 'corner2' in entity) {
+          const c1 = entity.corner1 as Point2D;
+          const c2 = entity.corner2 as Point2D;
+          return [
+            c1,                            // 0: TL
+            { x: c2.x, y: c1.y },         // 1: TR
+            c2,                            // 2: BR
+            { x: c1.x, y: c2.y },         // 3: BL
           ];
         }
         // Angle-measurement: [vertex, point1, point2] — gripIndex 0-2
@@ -579,6 +602,38 @@ export function useDxfGripInteraction({
               start: { x: start.x + delta.x, y: start.y + delta.y },
               end: { x: end.x + delta.x, y: end.y + delta.y },
             } : e
+          ),
+        });
+      }
+      // Rectangle: edge midpoints move one side (update corner1/corner2)
+      else if ('corner1' in entity && 'corner2' in entity) {
+        const c1 = entity.corner1 as Point2D;
+        const c2 = entity.corner2 as Point2D;
+        const [v1, v2] = grip.edgeVertexIndices;
+        let newC1 = { ...c1 };
+        let newC2 = { ...c2 };
+
+        // Top edge [0,1]: shift corner1.y
+        if ((v1 === 0 && v2 === 1) || (v1 === 1 && v2 === 0)) {
+          newC1 = { ...c1, y: c1.y + delta.y };
+        }
+        // Right edge [1,2]: shift corner2.x
+        else if ((v1 === 1 && v2 === 2) || (v1 === 2 && v2 === 1)) {
+          newC2 = { ...c2, x: c2.x + delta.x };
+        }
+        // Bottom edge [2,3]: shift corner2.y
+        else if ((v1 === 2 && v2 === 3) || (v1 === 3 && v2 === 2)) {
+          newC2 = { ...c2, y: c2.y + delta.y };
+        }
+        // Left edge [3,0]: shift corner1.x
+        else if ((v1 === 3 && v2 === 0) || (v1 === 0 && v2 === 3)) {
+          newC1 = { ...c1, x: c1.x + delta.x };
+        }
+
+        setLevelScene(currentLevelId, {
+          ...scene,
+          entities: scene.entities.map(e =>
+            e.id === grip.entityId ? { ...e, corner1: newC1, corner2: newC2 } : e
           ),
         });
       }

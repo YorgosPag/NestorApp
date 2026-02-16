@@ -19,6 +19,7 @@ import { EntityRendererComposite } from '../../rendering/core/EntityRendererComp
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 
 
@@ -232,6 +233,26 @@ export class DxfRenderer {
         }
         return entity;
       }
+      case 'circle': {
+        // Quadrant grip drag → change radius (center stays fixed)
+        const newQuadrantPos = offsetPoint(this.getCircleQuadrant(entity, gripIndex));
+        return { ...entity, radius: calculateDistance(entity.center, newQuadrantPos) };
+      }
+      case 'arc': {
+        // Start/end grip drag → change angle + radius
+        if (gripIndex === 1 || gripIndex === 2) {
+          const arcPoint = gripIndex === 1
+            ? this.getArcPoint(entity, entity.startAngle)
+            : this.getArcPoint(entity, entity.endAngle);
+          const newPos = offsetPoint(arcPoint);
+          const newRadius = calculateDistance(entity.center, newPos);
+          let angleDeg = Math.atan2(newPos.y - entity.center.y, newPos.x - entity.center.x) * (180 / Math.PI);
+          if (angleDeg < 0) angleDeg += 360;
+          if (gripIndex === 1) return { ...entity, startAngle: angleDeg, radius: newRadius };
+          return { ...entity, endAngle: angleDeg, radius: newRadius };
+        }
+        return entity;
+      }
       case 'angle-measurement': {
         if (gripIndex === 0) return { ...entity, vertex: offsetPoint(entity.vertex) };
         if (gripIndex === 1) return { ...entity, point1: offsetPoint(entity.point1) };
@@ -241,6 +262,27 @@ export class DxfRenderer {
       default:
         return entity;
     }
+  }
+
+  /** Get quadrant point position for a circle grip (gripIndex 1-4) */
+  private getCircleQuadrant(entity: { center: Point2D; radius: number }, gripIndex: number): Point2D {
+    const { center, radius } = entity;
+    switch (gripIndex) {
+      case 1: return { x: center.x + radius, y: center.y };
+      case 2: return { x: center.x, y: center.y + radius };
+      case 3: return { x: center.x - radius, y: center.y };
+      case 4: return { x: center.x, y: center.y - radius };
+      default: return center;
+    }
+  }
+
+  /** Get point on arc at given angle (degrees) */
+  private getArcPoint(entity: { center: Point2D; radius: number }, angleDeg: number): Point2D {
+    const rad = (angleDeg * Math.PI) / 180;
+    return {
+      x: entity.center.x + entity.radius * Math.cos(rad),
+      y: entity.center.y + entity.radius * Math.sin(rad),
+    };
   }
 
   private toEntityModel(entity: DxfEntityUnion, isSelected: boolean): Entity {

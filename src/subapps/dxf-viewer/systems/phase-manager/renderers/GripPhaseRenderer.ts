@@ -171,7 +171,7 @@ export class GripPhaseRenderer {
       const screenPos = this.worldToScreen(grip.position);
 
       // Determine grip temperature based on interaction state
-      const temperature = this.getGripTemperature(entity.id, i, state);
+      const temperature = this.getGripTemperature(entity.id, grip.gripIndex ?? i, state);
 
       this.drawGrip(screenPos, temperature, state, grip.type);
     }
