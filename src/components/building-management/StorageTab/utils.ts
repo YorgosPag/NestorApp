@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Car, Package } from 'lucide-react';
+import { Package, Warehouse } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -38,7 +38,7 @@ export const getStatusLabel = (status: StorageStatus, t?: TranslateFunction) => 
 };
 
 export const getTypeIcon = (type: StorageType) => {
-    return type === 'storage' ? Package : Car;
+    return type === 'basement' || type === 'ground' ? Warehouse : Package;
 };
 
 // 🏢 ENTERPRISE: i18n-enabled type label function
@@ -75,7 +75,6 @@ export const calculateStats = (units: StorageUnit[]) => {
         reserved: units.filter(u => u.status === 'reserved').length,
         totalValue: units.reduce((sum, u) => sum + u.price, 0),
         totalArea: units.reduce((sum, u) => sum + u.area, 0),
-        storageCount: units.filter(u => u.type === 'storage').length,
-        parkingCount: units.filter(u => u.type === 'parking').length
+        storageCount: units.length,
       };
 }

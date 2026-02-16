@@ -3,7 +3,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Archive, Plus, MapPin, Package } from 'lucide-react';
-import type { StorageType } from '@/types/storage';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -13,7 +12,7 @@ interface StorageTabHeaderProps {
     buildingName: string;
     viewMode: 'list' | 'map';
     onSetViewMode: (mode: 'list' | 'map') => void;
-    onAddNew: (type: StorageType) => void;
+    onAddNew: () => void;
 }
 
 export function StorageTabHeader({
@@ -52,13 +51,9 @@ export function StorageTabHeader({
                 >
                     <MapPin className={`${iconSizes.sm} mr-2`} /> {t('storageTabHeader.mapView')}
                 </Button>
-                <Button onClick={() => onAddNew('storage')} className={`bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}>
+                <Button onClick={onAddNew} className={`bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}>
                     <Plus className={`${iconSizes.sm} mr-2`} />
                     {t('storageTabHeader.newStorage')}
-                </Button>
-                <Button onClick={() => onAddNew('parking')} className={`bg-orange-600 ${HOVER_BACKGROUND_EFFECTS.ORANGE_BUTTON}`}>
-                    <Plus className={`${iconSizes.sm} mr-2`} />
-                    {t('storageTabHeader.newParking')}
                 </Button>
             </nav>
         </header>

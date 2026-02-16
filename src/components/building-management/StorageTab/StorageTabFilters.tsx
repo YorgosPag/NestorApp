@@ -58,8 +58,11 @@ export function StorageTabFilters({
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
-                            <SelectItem value="storage">{t('pages.storage.typeLabels.storage')}</SelectItem>
-                            <SelectItem value="parking">{t('pages.storage.typeLabels.parking')}</SelectItem>
+                            <SelectItem value="small">{t('pages.storage.typeLabels.small')}</SelectItem>
+                            <SelectItem value="large">{t('pages.storage.typeLabels.large')}</SelectItem>
+                            <SelectItem value="basement">{t('pages.storage.typeLabels.basement')}</SelectItem>
+                            <SelectItem value="ground">{t('pages.storage.typeLabels.ground')}</SelectItem>
+                            <SelectItem value="special">{t('pages.storage.typeLabels.special')}</SelectItem>
                         </SelectContent>
                     </Select>
 

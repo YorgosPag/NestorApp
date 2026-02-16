@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Package, Car, CheckCircle, Euro } from 'lucide-react';
+import { Package, CheckCircle, Euro, Ruler } from 'lucide-react';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -9,16 +9,16 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageTabStatsProps {
     storageCount: number;
-    parkingCount: number;
     available: number;
     totalValue: number;
+    totalArea: number;
 }
 
 export function StorageTabStats({
     storageCount,
-    parkingCount,
     available,
     totalValue,
+    totalArea,
 }: StorageTabStatsProps) {
     const { t } = useTranslation('building');
 
@@ -28,12 +28,6 @@ export function StorageTabStats({
             value: storageCount,
             icon: Package,
             color: 'blue',
-        },
-        {
-            title: t('storageStats.parkingSpaces'),
-            value: parkingCount,
-            icon: Car,
-            color: 'orange',
         },
         {
             title: t('storageStats.available'),
@@ -46,6 +40,12 @@ export function StorageTabStats({
             value: `€${(totalValue / 1000).toFixed(0)}K`,
             icon: Euro,
             color: 'gray',
+        },
+        {
+            title: t('storageStats.totalArea'),
+            value: `${totalArea.toFixed(1)} m²`,
+            icon: Ruler,
+            color: 'blue',
         },
     ];
 

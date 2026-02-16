@@ -94,7 +94,7 @@ export const PATCH = withStandardRateLimit(
         throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update storage unit');
       }
     },
-    { permissions: 'units:units:edit' }
+    { permissions: 'units:units:update' }
   )
 );
 
@@ -138,7 +138,7 @@ export const DELETE = withStandardRateLimit(
         throw new ApiError(500, error instanceof Error ? error.message : 'Failed to delete storage unit');
       }
     },
-    { permissions: 'units:units:delete' }
+    { permissions: 'units:units:update' }
   )
 );
 

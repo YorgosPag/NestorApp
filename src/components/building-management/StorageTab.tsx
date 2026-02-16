@@ -1,14 +1,26 @@
+/**
+ * StorageTab — Building Storage Management Tab (Storage-only, no parking)
+ *
+ * Lists, creates, edits and deletes storage units for a building.
+ * Uses API routes (/api/storages) for proper tenant isolation.
+ *
+ * ARCHITECTURE FIX (2026-02-17):
+ * - Removed parking (now in separate ParkingTabContent — ADR-184)
+ * - Replaced Client SDK with API-based approach for tenant isolation
+ * - CRUD operations now persist to Firestore via API endpoints
+ *
+ * @module components/building-management/StorageTab
+ * @see ADR-184 (Building Spaces Tabs)
+ */
 
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React, { useState, useMemo, useCallback } from 'react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
-import { COLLECTIONS } from '@/config/firestore-collections';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useEffect } from 'react';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -18,7 +30,6 @@ import { StorageTabHeader } from './StorageTab/StorageTabHeader';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageMapPlaceholder } from './StorageTab/StorageMapPlaceholder';
-// 🏢 ENTERPRISE: Centralized spinner component
 import { Spinner } from '@/components/ui/spinner';
 import {
   getStatusColor,
@@ -29,6 +40,10 @@ import {
   calculateStats,
 } from './StorageTab/utils';
 
+// ============================================================================
+// TYPES
+// ============================================================================
+
 interface StorageTabProps {
   building: {
     id: string;
@@ -38,14 +53,21 @@ interface StorageTabProps {
   };
 }
 
+interface StoragesApiResponse {
+  storages: StorageUnit[];
+  count: number;
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 export function StorageTab({ building }: StorageTabProps) {
-  // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
 
   const [units, setUnits] = useState<StorageUnit[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🏢 ENTERPRISE: i18n-enabled wrapper functions for utilities
   const translatedGetStatusLabel = useCallback(
     (status: StorageStatus) => getStatusLabel(status, t),
     [t]
@@ -56,81 +78,142 @@ export function StorageTab({ building }: StorageTabProps) {
     [t]
   );
 
-  // 🔥 ΦΟΡΤΩΣΗ ΠΡΑΓΜΑΤΙΚΩΝ STORAGE UNITS ΑΠΟ FIREBASE
-  useEffect(() => {
-    const fetchStorageUnits = async () => {
-      try {
-        setLoading(true);
+  // ============================================================================
+  // FETCH — API-based with tenant isolation
+  // ============================================================================
 
-        // Φόρτωση storage units για το συγκεκριμένο κτίριο
-        const storageQuery = query(
-          collection(db, COLLECTIONS.STORAGE),
-          where('building', '==', building.name)
-        );
+  const fetchStorageUnits = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        const snapshot = await getDocs(storageQuery);
-        const storageUnits = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as StorageUnit[];
+      const result = await apiClient.get<StoragesApiResponse>(
+        `/api/storages?buildingId=${building.id}`
+      );
+
+      if (result?.storages) {
+        // Map API Storage type to StorageUnit (compatibility layer)
+        const storageUnits: StorageUnit[] = result.storages.map(s => ({
+          id: s.id,
+          code: s.code || `S-${s.id.substring(0, 6)}`,
+          type: (s.type || 'small') as StorageType,
+          status: (s.status || 'available') as StorageStatus,
+          floor: s.floor || '',
+          area: typeof s.area === 'number' ? s.area : 0,
+          price: typeof s.price === 'number' ? s.price : 0,
+          description: s.description || '',
+          building: s.building || building.name,
+          project: s.project || '',
+          company: s.company || '',
+          linkedProperty: s.linkedProperty ?? null,
+          features: s.features || [],
+          coordinates: s.coordinates || { x: 0, y: 0 },
+        }));
 
         setUnits(storageUnits);
-        logger.info('Loaded storage units', { count: storageUnits.length, buildingName: building.name });
-
-      } catch (error) {
-        logger.error('Error fetching storage units from Firebase', { error });
-        setUnits([]); // Κενό array αντί για mock data
-      } finally {
-        setLoading(false);
+        logger.info('Loaded storage units via API', { count: storageUnits.length, buildingId: building.id });
       }
-    };
+    } catch (error) {
+      logger.error('Error fetching storage units', { error });
+      setUnits([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [building.id, building.name]);
 
+  useEffect(() => {
     fetchStorageUnits();
-  }, [building.name]);
+  }, [fetchStorageUnits]);
+
+  // ============================================================================
+  // STATE
+  // ============================================================================
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<StorageType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<StorageStatus | 'all'>('all');
-  // 🏢 ENTERPRISE: filterFloor ready for future floor filter UI implementation
-  const filterFloor = 'all'; // Static value until floor filter UI is added
+  const filterFloor = 'all';
   const [editingUnit, setEditingUnit] = useState<StorageUnit | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [formType, setFormType] = useState<StorageType>('storage');
+  const formType: StorageType = 'storage';
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
-  const filteredUnits = useMemo(() => 
-    filterUnits(units, searchTerm, filterType, filterStatus, filterFloor), 
+  const filteredUnits = useMemo(() =>
+    filterUnits(units, searchTerm, filterType, filterStatus, filterFloor),
     [units, searchTerm, filterType, filterStatus, filterFloor]
   );
-  
+
   const stats = useMemo(() => calculateStats(filteredUnits), [filteredUnits]);
 
-  const handleAddNew = (type: StorageType) => {
+  // ============================================================================
+  // CRUD HANDLERS — API-based (persist to Firestore)
+  // ============================================================================
+
+  const handleAddNew = () => {
     setEditingUnit(null);
-    setFormType(type);
     setShowForm(true);
   };
 
   const handleEdit = (unit: StorageUnit) => {
     setEditingUnit(unit);
-    setFormType(unit.type);
     setShowForm(true);
   };
 
-  const handleSave = (unit: StorageUnit) => {
-    if (editingUnit) {
-      setUnits(units => units.map(u => u.id === unit.id ? unit : u));
-    } else {
-      setUnits(units => [...units, { ...unit, id: `new_${Date.now()}` }]);
+  const handleSave = async (unit: StorageUnit) => {
+    try {
+      if (editingUnit) {
+        // UPDATE — PATCH /api/storages/[id]
+        await apiClient.patch(`/api/storages/${editingUnit.id}`, {
+          name: unit.code,
+          type: unit.type,
+          status: unit.status,
+          floor: unit.floor || null,
+          area: unit.area || null,
+          price: unit.price || null,
+          description: unit.description || null,
+        });
+        logger.info('Storage unit updated via API', { id: editingUnit.id });
+      } else {
+        // CREATE — POST /api/storages
+        await apiClient.post('/api/storages', {
+          name: unit.code,
+          buildingId: building.id,
+          type: unit.type || 'small',
+          status: unit.status || 'available',
+          floor: unit.floor || undefined,
+          area: unit.area || undefined,
+          price: unit.price || undefined,
+          description: unit.description || undefined,
+          building: building.name,
+        });
+        logger.info('Storage unit created via API', { buildingId: building.id });
+      }
+
+      // Re-fetch to get fresh data from server
+      await fetchStorageUnits();
+    } catch (error) {
+      logger.error('Error saving storage unit', { error });
     }
+
     setShowForm(false);
     setEditingUnit(null);
   };
 
-  const handleDelete = (unitId: string) => {
-    setUnits(units => units.filter(u => u.id !== unitId));
+  const handleDelete = async (unitId: string) => {
+    try {
+      await apiClient.delete(`/api/storages/${unitId}`);
+      logger.info('Storage unit deleted via API', { id: unitId });
+
+      // Re-fetch to get fresh data
+      await fetchStorageUnits();
+    } catch (error) {
+      logger.error('Error deleting storage unit', { error });
+    }
   };
 
-  // 🏢 ENTERPRISE: Loading state with centralized spinner
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
   if (loading) {
     return (
       <section className="flex items-center justify-center py-12" role="status" aria-live="polite">
@@ -153,9 +236,9 @@ export function StorageTab({ building }: StorageTabProps) {
 
       <StorageTabStats
         storageCount={stats.storageCount}
-        parkingCount={stats.parkingCount}
         available={stats.available}
         totalValue={stats.totalValue}
+        totalArea={stats.totalArea}
       />
 
       <StorageTabFilters

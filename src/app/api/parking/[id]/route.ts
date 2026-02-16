@@ -96,7 +96,7 @@ export const PATCH = withStandardRateLimit(
         throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update parking spot');
       }
     },
-    { permissions: 'units:units:edit' }
+    { permissions: 'units:units:update' }
   )
 );
 
@@ -140,7 +140,7 @@ export const DELETE = withStandardRateLimit(
         throw new ApiError(500, error instanceof Error ? error.message : 'Failed to delete parking spot');
       }
     },
-    { permissions: 'units:units:delete' }
+    { permissions: 'units:units:update' }
   )
 );
 
