@@ -59,3 +59,10 @@ export type {
   UseCanvasContextMenuParams,
   UseCanvasContextMenuReturn,
 } from './useCanvasContextMenu';
+
+// === useSmartDelete === (CanvasSection decomposition — context-aware deletion)
+export { useSmartDelete } from './useSmartDelete';
+export type {
+  UseSmartDeleteParams,
+  UseSmartDeleteReturn,
+} from './useSmartDelete';

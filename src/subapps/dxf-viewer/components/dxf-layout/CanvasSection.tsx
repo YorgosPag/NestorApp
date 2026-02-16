@@ -80,20 +80,13 @@ import { useUniversalSelection } from '../../systems/selection';
 import {
   useCommandHistory,
   useCommandHistoryKeyboard,
-  DeleteOverlayCommand,
-  DeleteMultipleOverlaysCommand,
-  DeleteOverlayVertexCommand,
-  DeleteMultipleOverlayVerticesCommand,
-  DeleteEntityCommand,
-  DeleteMultipleEntitiesCommand
 } from '../../core/commands';
-// 🏢 ENTERPRISE (2026-02-15): Adapter for DXF entity deletion via Command Pattern
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+// Delete*Command + LevelSceneManagerAdapter — moved to useSmartDelete hook
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
 // 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
-import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu } from '../../hooks/canvas';
+import { useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useSmartDelete } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -1203,105 +1196,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return cleanup;
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
-  // 🏢 ENTERPRISE (2026-01-26): Smart Delete Handler - ADR-032
-  // Handles Delete/Backspace with intelligent context awareness:
-  // - If grips selected → delete vertices (from highest index to lowest)
-  // - Else if overlay selected → delete entire overlay
-  // Pattern: AutoCAD/Figma - context-aware deletion
-  const handleSmartDelete = React.useCallback(async () => {
-    const overlayStoreInstance = overlayStoreRef.current;
-
-    // PRIORITY 1: Delete selected grips (vertices) with UNDO SUPPORT
-    if (selectedGrips.length > 0) {
-      // 🏢 ENTERPRISE: Sort by index DESCENDING to avoid index shifting
-      // When deleting vertex[5], then vertex[3], indices stay correct
-      const vertexGrips = selectedGrips
-        .filter(g => g.type === 'vertex')
-        .sort((a, b) => {
-          // Group by overlayId first, then sort by index descending within each overlay
-          if (a.overlayId !== b.overlayId) return a.overlayId.localeCompare(b.overlayId);
-          return b.index - a.index; // Descending order
-        });
-
-      if (vertexGrips.length > 0) {
-        // 🏢 ENTERPRISE (2026-01-26): Use Command System for undo support - ADR-032
-        // Execute command via Command History for Ctrl+Z undo capability
-        if (vertexGrips.length === 1) {
-          // Single vertex delete
-          executeCommand(new DeleteOverlayVertexCommand(
-            vertexGrips[0].overlayId,
-            vertexGrips[0].index,
-            overlayStoreInstance
-          ));
-        } else {
-          // Batch vertex delete
-          executeCommand(new DeleteMultipleOverlayVerticesCommand(
-            vertexGrips.map(g => ({ overlayId: g.overlayId, vertexIndex: g.index })),
-            overlayStoreInstance
-          ));
-        }
-
-        // Clear grip selection after deletion
-        setSelectedGrips([]);
-        return true;
-      }
-    }
-
-    // PRIORITY 2: Delete selected overlays (entire entities) with UNDO SUPPORT
-    // 🏢 ENTERPRISE: Use getIdsByType('overlay') from Universal Selection System - ADR-030
-    // 🏢 ENTERPRISE (2026-01-26): Delete works REGARDLESS of current tool
-    // Pattern: AutoCAD/Figma/Revit - Delete ALWAYS removes selected entities
-    // The current tool determines what you CREATE, not what you can DELETE
-    const selectedOverlayIds = universalSelectionRef.current.getIdsByType('overlay');
-    if (selectedOverlayIds.length > 0) {
-      // 🏢 ENTERPRISE (2026-01-26): Use Command System for undo support - ADR-032
-      // Execute command via Command History for Ctrl+Z undo capability
-      if (selectedOverlayIds.length === 1) {
-        // Single overlay delete
-        executeCommand(new DeleteOverlayCommand(selectedOverlayIds[0], overlayStoreInstance));
-      } else {
-        // Batch overlay delete
-        executeCommand(new DeleteMultipleOverlaysCommand(selectedOverlayIds, overlayStoreInstance));
-      }
-
-      // Clear selection after deletion
-      // 🏢 ENTERPRISE: Use clearAll() from Universal Selection System - ADR-030
-      universalSelectionRef.current.clearAll();
-      return true;
-    }
-
-    // PRIORITY 3: Delete selected DXF entities with UNDO SUPPORT
-    // 🏢 ENTERPRISE (2026-02-15): Reuse existing DeleteEntityCommand + LevelSceneManagerAdapter
-    const selectedDxfEntityIds = universalSelectionRef.current.getIdsByType('dxf-entity');
-    if (selectedDxfEntityIds.length > 0 && levelManager.currentLevelId) {
-      const adapter = new LevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId
-      );
-      if (selectedDxfEntityIds.length === 1) {
-        executeCommand(new DeleteEntityCommand(selectedDxfEntityIds[0], adapter));
-      } else {
-        executeCommand(new DeleteMultipleEntitiesCommand(selectedDxfEntityIds, adapter));
-      }
-      universalSelectionRef.current.clearByType('dxf-entity');
-      setSelectedEntityIds([]);
-      return true;
-    }
-
-    return false;
-  }, [selectedGrips, executeCommand, levelManager]); // 🏢 ENTERPRISE: No tool dependency - delete works in all modes
-
-  // 🏢 ENTERPRISE (2026-01-26): Listen for delete command from floating toolbar - ADR-032
-  React.useEffect(() => {
-    const cleanupDelete = eventBus.on('toolbar:delete', () => {
-      handleSmartDelete();
-    });
-
-    return () => {
-      cleanupDelete();
-    };
-  }, [eventBus, handleSmartDelete]);
+  // 🏢 ENTERPRISE (2026-02-16): Smart delete extracted to useSmartDelete hook
+  // Handles Delete/Backspace with priority: grips → overlays → DXF entities
+  // Also listens for toolbar:delete events from EventBus
+  const { handleSmartDelete } = useSmartDelete({
+    selectedGrips,
+    setSelectedGrips,
+    executeCommand,
+    overlayStoreRef,
+    universalSelectionRef,
+    levelManager,
+    setSelectedEntityIds,
+    eventBus,
+  });
 
   // Handle keyboard shortcuts for drawing, delete, and local operations
   React.useEffect(() => {
