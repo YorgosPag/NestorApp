@@ -1,10 +1,14 @@
 'use client';
 
 /**
+ * @deprecated ADR-183: Replaced by useUnifiedGripInteraction.
+ * This hook is kept for backward compatibility with type exports.
+ * Use `useUnifiedGripInteraction` from `hooks/grips/useUnifiedGripInteraction` instead.
+ *
  * 🏢 ENTERPRISE: useGripSystem Hook
  *
  * @description Manages grip hover, selection, and drag states for overlay polygons
- * @see ADR-XXX: CanvasSection Decomposition
+ * @see ADR-183: Unified Grip System
  * @see ADR-031: Multi-Grip Selection System
  *
  * Responsibilities:

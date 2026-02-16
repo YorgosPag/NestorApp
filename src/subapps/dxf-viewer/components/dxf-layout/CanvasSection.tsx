@@ -21,19 +21,21 @@ import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/command
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
-  useLayerCanvasMouseMove, useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
+  useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction,
 } from '../../hooks/canvas';
 import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
-import { useGripSystem } from '../../hooks/grips';
-import { useDxfGripInteraction } from '../../hooks/useDxfGripInteraction';
+import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
 /**
  * Canvas orchestrator — wires 25+ hooks together and delegates rendering to CanvasLayerStack.
  * No business logic, no JSX beyond the single CanvasLayerStack call.
+ *
+ * ADR-183: Unified Grip System — useGripSystem + useDxfGripInteraction + useLayerCanvasMouseMove
+ * replaced by single useUnifiedGripInteraction hook.
  */
 export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
   const {
@@ -124,19 +126,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     ? overlayStore.getByLevel(levelManager.currentLevelId)
     : [];
 
-  // === Grip system (hover, selection, drag states) ===
-  const {
-    hoveredVertexInfo, setHoveredVertexInfo,
-    hoveredEdgeInfo, setHoveredEdgeInfo,
-    selectedGrips, setSelectedGrips, selectedGrip,
-    draggingVertices, setDraggingVertices, draggingVertex,
-    draggingEdgeMidpoint, setDraggingEdgeMidpoint,
-    draggingOverlayBody, setDraggingOverlayBody,
-    dragPreviewPosition, setDragPreviewPosition,
-    gripHoverThrottleRef, justFinishedDragRef,
-    markDragFinished,
-  } = useGripSystem();
-
   // === Entity interaction state ===
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
@@ -144,19 +133,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const entitySelectedOnMouseDownRef = useRef(false);
   const [hoveredOverlayId, setHoveredOverlayId] = useState<string | null>(null);
   const eventBus = useEventBus();
-
-  // === Polygon drawing ===
-  const {
-    draftPolygon, setDraftPolygon, draftPolygonRef,
-    isSavingPolygon, setIsSavingPolygon,
-    finishDrawingWithPolygonRef, finishDrawing,
-  } = usePolygonCompletion({
-    levelManager, overlayStore, eventBus,
-    currentStatus, currentKind, activeTool, overlayMode,
-  });
-
-  const { circleTTT, linePerpendicular, lineParallel } = useSpecialTools({ activeTool, levelManager });
-  const { currentSnapResult } = useSnapContext();
 
   // === Settings ===
   const { state: { grid: gridContextSettings, rulers: rulerContextSettings } } = useRulersGridContext();
@@ -172,6 +148,37 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
   const gripSettings = useGripStyles();
 
+  // === DXF scene (must be before unified grip system) ===
+  const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
+
+  // === ADR-183: Unified Grip System ===
+  const unified = useUnifiedGripInteraction({
+    selectedEntityIds,
+    dxfScene,
+    transform,
+    currentOverlays,
+    universalSelection,
+    overlayStore,
+    overlayStoreRef,
+    activeTool,
+    gripSettings,
+    executeCommand,
+    movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
+  });
+
+  // === Polygon drawing ===
+  const {
+    draftPolygon, setDraftPolygon, draftPolygonRef,
+    isSavingPolygon, setIsSavingPolygon,
+    finishDrawingWithPolygonRef, finishDrawing,
+  } = usePolygonCompletion({
+    levelManager, overlayStore, eventBus,
+    currentStatus, currentKind, activeTool, overlayMode,
+  });
+
+  const { circleTTT, linePerpendicular, lineParallel } = useSpecialTools({ activeTool, levelManager });
+  const { currentSnapResult } = useSnapContext();
+
   // === Cursor + touch gestures (ADR-176) ===
   const { updatePosition, setActive } = useCursorActions();
 
@@ -184,31 +191,69 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setTransform: contextSetTransform,
   });
 
-  // === Mouse event handling ===
+  // === Mouse event handling (STRIPPED — grip logic now in unified hook) ===
   const {
     mouseCss, mouseWorld,
     updateMouseCss, updateMouseWorld,
-    handleContainerMouseMove, handleContainerMouseDown,
-    handleContainerMouseUp, handleContainerMouseEnter, handleContainerMouseLeave,
+    handleContainerMouseMove,
+    handleContainerMouseEnter, handleContainerMouseLeave,
   } = useCanvasMouse({
     transform, viewport, activeTool,
     updatePosition, setActive, containerRef,
-    hoveredVertexInfo, hoveredEdgeInfo,
-    selectedGrips, setSelectedGrips,
-    draggingVertices, setDraggingVertices,
-    draggingEdgeMidpoint, setDraggingEdgeMidpoint,
-    draggingOverlayBody, setDraggingOverlayBody,
-    dragPreviewPosition, setDragPreviewPosition,
-    gripHoverThrottleRef, justFinishedDragRef, markDragFinished,
+    // ADR-183: Pass unified grip state so container drag preview still works
+    hoveredVertexInfo: unified.overlayProjection.hoveredVertexInfo,
+    hoveredEdgeInfo: unified.overlayProjection.hoveredEdgeInfo,
+    selectedGrips: unified.selectedGrips,
+    setSelectedGrips: unified.setSelectedGrips,
+    draggingVertices: unified.draggingVertices,
+    setDraggingVertices: () => {}, // no-op — unified handles this
+    draggingEdgeMidpoint: unified.draggingEdgeMidpoint,
+    setDraggingEdgeMidpoint: () => {}, // no-op
+    draggingOverlayBody: unified.draggingOverlayBody,
+    setDraggingOverlayBody: () => {}, // no-op
+    dragPreviewPosition: unified.overlayProjection.dragPreviewPosition,
+    setDragPreviewPosition: unified.setDragPreviewPosition,
+    gripHoverThrottleRef: unified.gripHoverThrottleRef,
+    justFinishedDragRef: unified.justFinishedDragRef,
+    markDragFinished: unified.markDragFinished,
     universalSelectionRef, overlayStoreRef,
     executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
 
+  // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
+  const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button === 0) {
+      const consumed = unified.handleMouseDown(
+        mouseWorld ?? { x: 0, y: 0 },
+        e.shiftKey,
+      );
+      if (consumed) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
+    // Fall through to useCanvasMouse for non-grip behavior (not needed — grip handling is complete)
+  }, [unified, mouseWorld]);
+
+  const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    const worldPos = mouseWorld ?? { x: 0, y: 0 };
+    const consumed = await unified.handleMouseUp(worldPos);
+    if (consumed) return;
+    // No fallback needed — unified handles all grip commits
+  }, [unified, mouseWorld]);
+
   // === Layer visibility: always show when drawing/editing ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
 
   // === Overlay → ColorLayer conversion ===
+  const {
+    hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, selectedGrip,
+    draggingVertex, draggingVertices, draggingEdgeMidpoint,
+    dragPreviewPosition, draggingOverlayBody,
+  } = unified.overlayProjection;
+
   const { colorLayers, colorLayersWithDraft, isNearFirstPoint } = useOverlayLayers({
     overlays: currentOverlays,
     isSelected: universalSelection.isSelected,
@@ -220,25 +265,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentStatus, hoveredOverlayId, overlayMode,
   });
 
-  // === DXF scene + grip interaction ===
-  const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
-  const dxfGripInteraction = useDxfGripInteraction({
-    selectedEntityIds, dxfScene, transform,
-    enabled: activeTool === 'select',
-  });
-
-  // === Delegated hook orchestration ===
-  const { handleLayerCanvasMouseMove } = useLayerCanvasMouseMove({
-    activeTool, transform,
-    updateMouseCss, updateMouseWorld,
-    hoveredVertexInfo, setHoveredVertexInfo,
-    hoveredEdgeInfo, setHoveredEdgeInfo,
-    draggingVertex, draggingEdgeMidpoint, draggingOverlayBody,
-    setDragPreviewPosition, gripHoverThrottleRef,
-    universalSelection, currentOverlays, gripSettings,
-    onParentMouseMove: props.onMouseMove,
-  });
-
   const { fitToOverlay } = useFitToView({
     dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays,
   });
@@ -248,7 +274,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentScene: props.currentScene ?? null,
     handleSceneChange: props.handleSceneChange,
     onToolChange: props.onToolChange,
-    previewCanvasRef, selectedGrips, setSelectedGrips, setDragPreviewPosition,
+    previewCanvasRef,
+    selectedGrips: unified.selectedGrips,
+    setSelectedGrips: unified.setSelectedGrips,
+    setDragPreviewPosition: unified.setDragPreviewPosition,
     universalSelection, dxfScene, dxfCanvasRef, overlayCanvasRef, zoomSystem,
   });
 
@@ -263,34 +292,44 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { handleOverlayClick, handleMultiOverlayClick } = useOverlayInteraction({
     activeTool, overlayMode, currentOverlays, universalSelection, overlayStore,
     hoveredEdgeInfo, transformScale: transform.scale,
-    fitToOverlay, setDraggingOverlayBody, setDragPreviewPosition,
+    fitToOverlay,
+    setDraggingOverlayBody: unified.setDraggingOverlayBody,
+    setDragPreviewPosition: unified.setDragPreviewPosition,
   });
 
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform,
     activeTool, overlayMode,
-    circleTTT, linePerpendicular, lineParallel, dxfGripInteraction,
+    circleTTT, linePerpendicular, lineParallel,
+    dxfGripInteraction: unified.dxfProjection,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     isNearFirstPoint, finishDrawingWithPolygonRef,
     drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
-    selectedGrips, setSelectedGrips, justFinishedDragRef,
-    draggingOverlayBody, setSelectedEntityIds,
+    selectedGrips: unified.selectedGrips,
+    setSelectedGrips: unified.setSelectedGrips,
+    justFinishedDragRef: unified.justFinishedDragRef,
+    draggingOverlayBody: unified.draggingOverlayBody,
+    setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
   });
 
   const { handleSmartDelete } = useSmartDelete({
-    selectedGrips, setSelectedGrips, executeCommand,
+    selectedGrips: unified.selectedGrips,
+    setSelectedGrips: unified.setSelectedGrips,
+    executeCommand,
     overlayStoreRef, universalSelectionRef, levelManager,
     setSelectedEntityIds, eventBus,
   });
 
   useCanvasKeyboardShortcuts({
-    handleSmartDelete, dxfGripInteraction,
+    handleSmartDelete,
+    dxfGripInteraction: unified.dxfProjection,
     setDraftPolygon, draftPolygon,
-    selectedGrips, setSelectedGrips,
+    selectedGrips: unified.selectedGrips,
+    setSelectedGrips: unified.setSelectedGrips,
     activeTool, handleDrawingFinish, handleFlipArc, finishDrawing,
   });
 
@@ -324,18 +363,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         grip: gripSettings,
         globalRuler: globalRulerSettings,
       }}
-      gripState={{
-        draggingVertex, draggingEdgeMidpoint,
-        hoveredVertexInfo, hoveredEdgeInfo,
-        draggingOverlayBody, dragPreviewPosition,
-      }}
+      gripState={unified.gripStateForStack}
       entityState={{
         selectedEntityIds, setSelectedEntityIds,
         hoveredEntityId, setHoveredEntityId,
         hoveredOverlayId, setHoveredOverlayId,
       }}
       zoomSystem={zoomSystem}
-      dxfGripInteraction={dxfGripInteraction}
+      dxfGripInteraction={unified.dxfProjection}
       universalSelection={universalSelection}
       currentSnapResult={currentSnapResult}
       setTransform={setTransform}
@@ -352,7 +387,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       handleOverlayClick={handleOverlayClick}
       handleMultiOverlayClick={handleMultiOverlayClick}
       handleCanvasClick={handleCanvasClick}
-      handleLayerCanvasMouseMove={handleLayerCanvasMouseMove}
+      handleUnifiedMouseMove={unified.handleMouseMove}
       handleDrawingContextMenu={handleDrawingContextMenu}
       handleDrawingContextMenuClose={handleDrawingContextMenuClose}
       drawingState={{

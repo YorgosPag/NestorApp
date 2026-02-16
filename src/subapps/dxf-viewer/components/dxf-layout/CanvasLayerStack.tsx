@@ -162,7 +162,8 @@ export interface CanvasLayerStackProps {
   handleOverlayClick: (overlayId: string, point: Point2D) => void;
   handleMultiOverlayClick: (layerIds: string[]) => void;
   handleCanvasClick: (worldPoint: Point2D) => void;
-  handleLayerCanvasMouseMove: (screenPoint: Point2D, worldPoint: Point2D) => void;
+  /** ADR-183: Unified grip mouse move handler (replaces handleLayerCanvasMouseMove bridge hack) */
+  handleUnifiedMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
   handleDrawingContextMenu: (e: React.MouseEvent) => void;
   handleDrawingContextMenuClose: (open: boolean) => void;
 
@@ -203,7 +204,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   zoomSystem, dxfGripInteraction, universalSelection, currentSnapResult, setTransform,
   mouseCss, updateMouseCss, updateMouseWorld,
   containerHandlers,
-  handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleLayerCanvasMouseMove,
+  handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
   handleDrawingContextMenu, handleDrawingContextMenuClose,
   drawingState, pdf, onMouseMove,
 }) => {
@@ -248,8 +249,9 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   };
 
   const handleDxfMouseMove = (screenPos: Point2D, worldPos: Point2D) => {
+    // ADR-183: ONE call handles ALL grips (DXF + overlay) — replaces bridge hack
     if (worldPos) {
-      dxfGripInteraction.handleGripMouseMove(worldPos, screenPos);
+      handleUnifiedMouseMove(worldPos, screenPos);
     }
 
     if (onMouseMove && worldPos) {
@@ -264,11 +266,6 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
 
     updateMouseCss(screenPos);
     updateMouseWorld(worldPos);
-
-    // 🏢 FIX (2026-02-16): Run overlay grip hover detection from DxfCanvas handler.
-    // LayerCanvas (z-0) NEVER receives mouse events because DxfCanvas (z-10) intercepts them.
-    // Without this call, hoveredVertexInfo/hoveredEdgeInfo are never set → no warm state, no drag.
-    handleLayerCanvasMouseMove(screenPos, worldPos);
 
     if (isInDrawingMode(activeTool, overlayMode) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
       drawingHandlersRef.current.onDrawingHover(worldPos);
@@ -393,7 +390,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               onCanvasClick={handleCanvasClick}
               onDrawingHover={drawingHandlersRef.current?.onDrawingHover}
               draggingOverlay={draggingOverlayDelta}
-              onMouseMove={handleLayerCanvasMouseMove}
+              onMouseMove={(screenPos, worldPos) => handleUnifiedMouseMove(worldPos, screenPos)}
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`}
               style={canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled)}
             />

@@ -1,4 +1,8 @@
 /**
+ * @deprecated ADR-183: Replaced by useUnifiedGripInteraction.
+ * Use `useUnifiedGripInteraction` from `hooks/grips/useUnifiedGripInteraction` instead.
+ * Types and computeDxfEntityGrips() are still exported for reuse.
+ *
  * DXF GRIP INTERACTION HOOK
  *
  * AutoCAD-style grip editing for DXF entities.
@@ -112,7 +116,7 @@ const WARM_DELAY_MS = 1000;
 // PURE: Compute grips from DXF entity geometry
 // ============================================================================
 
-function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
+export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
   const grips: GripInfo[] = [];
 
   switch (entity.type) {
