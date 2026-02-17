@@ -9,6 +9,8 @@
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ViewTransform } from '../../systems/rulers-grid/config';
+// 🏢 ENTERPRISE (2026-02-17): World→Screen conversion for correct indicator positioning
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ENTERPRISE: Centralized design tokens for overlay colors
 import { canvasUI } from '@/styles/design-tokens/canvas';
 import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
@@ -219,10 +221,20 @@ export default function SnapIndicatorOverlay({
   transform,
   className = ''
 }: SnapIndicatorOverlayProps) {
-  if (!snapResult || !snapResult.point) return null;
+  if (!snapResult || !snapResult.point || !transform) return null;
 
   const { point, type } = snapResult;
   const snapColor = canvasUI.overlay.colors.snap.border;
+
+  // 🏢 ENTERPRISE (2026-02-17): Convert world coordinates → screen coordinates
+  // The snap result contains world-space coordinates from ProSnapEngineV2.
+  // We must convert to screen-space for correct CSS positioning.
+  // Uses the same CoordinateTransforms pipeline as entity rendering (Y-inversion + margins).
+  const screenPos = CoordinateTransforms.worldToScreen(
+    point,
+    transform as { scale: number; offsetX: number; offsetY: number },
+    viewport
+  );
 
   return (
     // 🏢 ENTERPRISE: pointer-events-none για να μην εμποδίζει mouse events στο canvas κάτω
@@ -234,8 +246,8 @@ export default function SnapIndicatorOverlay({
       <div
         className={`absolute ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
         style={{
-          left: point.x - SNAP_INDICATOR_HALF,
-          top: point.y - SNAP_INDICATOR_HALF,
+          left: screenPos.x - SNAP_INDICATOR_HALF,
+          top: screenPos.y - SNAP_INDICATOR_HALF,
           filter: `drop-shadow(0 0 2px ${snapColor})` // Glow effect for visibility
         }}
       >
