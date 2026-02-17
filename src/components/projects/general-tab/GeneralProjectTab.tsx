@@ -179,7 +179,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       setIsEditing(false);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
-      RealtimeService.dispatchProjectUpdated({
+      RealtimeService.dispatch('PROJECT_UPDATED', {
         projectId: project.id,
         updates: {
           name: projectData.name,

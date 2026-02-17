@@ -32,7 +32,7 @@ export async function addTask(
   const result = await tasksRepository.add(taskData);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-  RealtimeService.dispatchTaskCreated({
+  RealtimeService.dispatch('TASK_CREATED',{
     taskId: result.id,
     task: {
       title: taskData.title,
@@ -97,7 +97,7 @@ export async function updateTask(id: string, updates: Partial<CrmTask>): Promise
   await tasksRepository.update(id, updates);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-  RealtimeService.dispatchTaskUpdated({
+  RealtimeService.dispatch('TASK_UPDATED',{
     taskId: id,
     updates: {
       title: updates.title,
@@ -118,7 +118,7 @@ export async function deleteTask(id: string): Promise<void> {
   await tasksRepository.delete(id);
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-  RealtimeService.dispatchTaskDeleted({
+  RealtimeService.dispatch('TASK_DELETED',{
     taskId: id,
     timestamp: Date.now()
   });
@@ -141,7 +141,7 @@ export async function completeTask(id: string, notes = ''): Promise<void> {
   });
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-  RealtimeService.dispatchTaskUpdated({
+  RealtimeService.dispatch('TASK_UPDATED',{
     taskId: id,
     updates: {
       status: 'completed',

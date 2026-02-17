@@ -632,7 +632,7 @@ export class EnterpriseCompanySettingsService {
       this.invalidateCache(tenantId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchWorkspaceUpdated({
+      RealtimeService.dispatch('WORKSPACE_UPDATED', {
         workspaceId: docId,
         updates: {
           settings: {

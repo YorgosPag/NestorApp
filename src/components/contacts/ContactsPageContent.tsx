@@ -321,7 +321,7 @@ export function ContactsPageContent() {
     };
 
     // Subscribe to contact updates (same-page + cross-page)
-    const unsubscribe = RealtimeService.subscribeToContactUpdates(handleContactUpdate, {
+    const unsubscribe = RealtimeService.subscribe('CONTACT_UPDATED', handleContactUpdate, {
       checkPendingOnMount: false
     });
 

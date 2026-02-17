@@ -71,7 +71,7 @@ export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: str
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to add the unit to their local state
-    RealtimeService.dispatchUnitCreated({
+    RealtimeService.dispatch('UNIT_CREATED',{
       unitId: docRef.id,
       unit: {
         name: unitData.name,
@@ -112,7 +112,7 @@ export async function createUnit(
     logger.info(`Unit created with ID: ${unitId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchUnitCreated({
+    RealtimeService.dispatch('UNIT_CREATED',{
       unitId,
       unit: {
         name: unitData.name as string,
@@ -204,7 +204,7 @@ export async function updateUnit(unitId: string, updates: Partial<Property>): Pr
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to update their local state
-    RealtimeService.dispatchUnitUpdated({
+    RealtimeService.dispatch('UNIT_UPDATED',{
       unitId,
       updates: {
         name: updates.name,
@@ -256,7 +256,7 @@ export async function deleteUnit(unitId: string): Promise<{ success: boolean }> 
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to remove the unit from their local state
-    RealtimeService.dispatchUnitDeleted({
+    RealtimeService.dispatch('UNIT_DELETED',{
       unitId,
       timestamp: Date.now()
     });

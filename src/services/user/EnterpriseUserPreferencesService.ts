@@ -350,7 +350,7 @@ class EnterpriseUserPreferencesService {
       this.clearCacheForUser(userId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchUserSettingsUpdated({
+      RealtimeService.dispatch('USER_SETTINGS_UPDATED', {
         userId,
         updates: {
           settingKey: 'preferences',
@@ -392,7 +392,7 @@ class EnterpriseUserPreferencesService {
       this.clearCacheForUser(userId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchUserSettingsUpdated({
+      RealtimeService.dispatch('USER_SETTINGS_UPDATED', {
         userId,
         updates: {
           settingKey: 'preferences',

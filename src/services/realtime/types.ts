@@ -975,69 +975,74 @@ export interface EntityUnlinkedPayload {
   timestamp: number;
 }
 
+// ============================================================================
+// EVENT MAP — type-safe mapping from event key → payload type
+// ============================================================================
+
 /**
- * 🏢 ENTERPRISE: localStorage keys for cross-page sync
- * Using storage events to sync updates across browser tabs
+ * Data-driven event map: maps every REALTIME_EVENTS key to its payload type.
+ * Used by RealtimeService.dispatch() and RealtimeService.subscribe() for
+ * full type inference — no need for individual dispatch/subscribe methods.
  */
-export const REALTIME_STORAGE_KEYS = {
-  // Update events
-  PROJECT_UPDATED: 'realtime:project-updated',
-  BUILDING_UPDATED: 'realtime:building-updated',
-  UNIT_UPDATED: 'realtime:unit-updated',
-  CONTACT_UPDATED: 'realtime:contact-updated',
-  TASK_UPDATED: 'realtime:task-updated',
-  OPPORTUNITY_UPDATED: 'realtime:opportunity-updated',
-  COMMUNICATION_UPDATED: 'realtime:communication-updated',
-  FILE_UPDATED: 'realtime:file-updated',
-  NOTIFICATION_UPDATED: 'realtime:notification-updated',
-  OBLIGATION_UPDATED: 'realtime:obligation-updated',
-  WORKSPACE_UPDATED: 'realtime:workspace-updated',
-  RELATIONSHIP_UPDATED: 'realtime:relationship-updated',
-  SESSION_UPDATED: 'realtime:session-updated',
-  USER_SETTINGS_UPDATED: 'realtime:user-settings-updated',
-  FLOORPLAN_UPDATED: 'realtime:floorplan-updated',
-  // Create events
-  BUILDING_CREATED: 'realtime:building-created',
-  PROJECT_CREATED: 'realtime:project-created',
-  CONTACT_CREATED: 'realtime:contact-created',
-  UNIT_CREATED: 'realtime:unit-created',
-  TASK_CREATED: 'realtime:task-created',
-  OPPORTUNITY_CREATED: 'realtime:opportunity-created',
-  COMMUNICATION_CREATED: 'realtime:communication-created',
-  FILE_CREATED: 'realtime:file-created',
-  NOTIFICATION_CREATED: 'realtime:notification-created',
-  OBLIGATION_CREATED: 'realtime:obligation-created',
-  WORKSPACE_CREATED: 'realtime:workspace-created',
-  RELATIONSHIP_CREATED: 'realtime:relationship-created',
-  SESSION_CREATED: 'realtime:session-created',
-  FLOORPLAN_CREATED: 'realtime:floorplan-created',
-  // Delete events
-  BUILDING_DELETED: 'realtime:building-deleted',
-  PROJECT_DELETED: 'realtime:project-deleted',
-  CONTACT_DELETED: 'realtime:contact-deleted',
-  UNIT_DELETED: 'realtime:unit-deleted',
-  TASK_DELETED: 'realtime:task-deleted',
-  OPPORTUNITY_DELETED: 'realtime:opportunity-deleted',
-  COMMUNICATION_DELETED: 'realtime:communication-deleted',
-  FILE_DELETED: 'realtime:file-deleted',
-  FILE_TRASHED: 'realtime:file-trashed',
-  FILE_RESTORED: 'realtime:file-restored',
-  NOTIFICATION_DELETED: 'realtime:notification-deleted',
-  OBLIGATION_DELETED: 'realtime:obligation-deleted',
-  WORKSPACE_DELETED: 'realtime:workspace-deleted',
-  RELATIONSHIP_DELETED: 'realtime:relationship-deleted',
-  SESSION_DELETED: 'realtime:session-deleted',
-  FLOORPLAN_DELETED: 'realtime:floorplan-deleted',
-  // Parking events
-  PARKING_CREATED: 'realtime:parking-created',
-  PARKING_UPDATED: 'realtime:parking-updated',
-  PARKING_DELETED: 'realtime:parking-deleted',
-  // Association link events
-  CONTACT_LINK_CREATED: 'realtime:contact-link-created',
-  CONTACT_LINK_DELETED: 'realtime:contact-link-deleted',
-  FILE_LINK_CREATED: 'realtime:file-link-created',
-  FILE_LINK_DELETED: 'realtime:file-link-deleted',
-  // Entity linking events
-  ENTITY_LINKED: 'realtime:entity-linked',
-  ENTITY_UNLINKED: 'realtime:entity-unlinked',
-} as const;
+export interface RealtimeEventMap {
+  // Update events (16)
+  PROJECT_UPDATED: ProjectUpdatedPayload;
+  BUILDING_UPDATED: BuildingUpdatedPayload;
+  UNIT_UPDATED: UnitUpdatedPayload;
+  CONTACT_UPDATED: ContactUpdatedPayload;
+  TASK_UPDATED: TaskUpdatedPayload;
+  OPPORTUNITY_UPDATED: OpportunityUpdatedPayload;
+  COMMUNICATION_UPDATED: CommunicationUpdatedPayload;
+  FILE_UPDATED: FileUpdatedPayload;
+  NOTIFICATION_UPDATED: NotificationUpdatedPayload;
+  OBLIGATION_UPDATED: ObligationUpdatedPayload;
+  WORKSPACE_UPDATED: WorkspaceUpdatedPayload;
+  RELATIONSHIP_UPDATED: RelationshipUpdatedPayload;
+  SESSION_UPDATED: SessionUpdatedPayload;
+  USER_SETTINGS_UPDATED: UserSettingsUpdatedPayload;
+  FLOORPLAN_UPDATED: FloorplanUpdatedPayload;
+  PARKING_UPDATED: ParkingUpdatedPayload;
+  // Create events (15)
+  PROJECT_CREATED: ProjectCreatedPayload;
+  BUILDING_CREATED: BuildingCreatedPayload;
+  UNIT_CREATED: UnitCreatedPayload;
+  CONTACT_CREATED: ContactCreatedPayload;
+  TASK_CREATED: TaskCreatedPayload;
+  OPPORTUNITY_CREATED: OpportunityCreatedPayload;
+  COMMUNICATION_CREATED: CommunicationCreatedPayload;
+  FILE_CREATED: FileCreatedPayload;
+  NOTIFICATION_CREATED: NotificationCreatedPayload;
+  OBLIGATION_CREATED: ObligationCreatedPayload;
+  WORKSPACE_CREATED: WorkspaceCreatedPayload;
+  RELATIONSHIP_CREATED: RelationshipCreatedPayload;
+  SESSION_CREATED: SessionCreatedPayload;
+  FLOORPLAN_CREATED: FloorplanCreatedPayload;
+  PARKING_CREATED: ParkingCreatedPayload;
+  // Delete events (15)
+  PROJECT_DELETED: ProjectDeletedPayload;
+  BUILDING_DELETED: BuildingDeletedPayload;
+  UNIT_DELETED: UnitDeletedPayload;
+  CONTACT_DELETED: ContactDeletedPayload;
+  TASK_DELETED: TaskDeletedPayload;
+  OPPORTUNITY_DELETED: OpportunityDeletedPayload;
+  COMMUNICATION_DELETED: CommunicationDeletedPayload;
+  FILE_DELETED: FileDeletedPayload;
+  NOTIFICATION_DELETED: NotificationDeletedPayload;
+  OBLIGATION_DELETED: ObligationDeletedPayload;
+  WORKSPACE_DELETED: WorkspaceDeletedPayload;
+  RELATIONSHIP_DELETED: RelationshipDeletedPayload;
+  SESSION_DELETED: SessionDeletedPayload;
+  FLOORPLAN_DELETED: FloorplanDeletedPayload;
+  PARKING_DELETED: ParkingDeletedPayload;
+  // File extras (2)
+  FILE_TRASHED: FileTrashedPayload;
+  FILE_RESTORED: FileRestoredPayload;
+  // Association links (4)
+  CONTACT_LINK_CREATED: ContactLinkCreatedPayload;
+  CONTACT_LINK_DELETED: ContactLinkDeletedPayload;
+  FILE_LINK_CREATED: FileLinkCreatedPayload;
+  FILE_LINK_DELETED: FileLinkDeletedPayload;
+  // Entity linking (2)
+  ENTITY_LINKED: EntityLinkedPayload;
+  ENTITY_UNLINKED: EntityUnlinkedPayload;
+}

@@ -180,7 +180,7 @@ export class EntityLinkingService {
 
     // 📋 STEP 5: Dispatch success event via centralized RealtimeService
     // 🏢 ENTERPRISE: Using centralized RealtimeService for cross-page/cross-tab sync
-    RealtimeService.dispatchEntityLinked({
+    RealtimeService.dispatch('ENTITY_LINKED',{
       entityId,
       entityType,
       parentId,
@@ -320,7 +320,7 @@ export class EntityLinkingService {
 
     // Dispatch event via centralized RealtimeService
     // 🏢 ENTERPRISE: Using centralized RealtimeService for cross-page/cross-tab sync
-    RealtimeService.dispatchEntityUnlinked({
+    RealtimeService.dispatch('ENTITY_UNLINKED',{
       entityId,
       entityType,
       previousParentId,

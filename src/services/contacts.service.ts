@@ -246,7 +246,7 @@ export class ContactsService {
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       // Dispatch event for all components to update their local state
-      RealtimeService.dispatchContactCreated({
+      RealtimeService.dispatch('CONTACT_CREATED',{
         contactId: docRef.id,
         contact: {
           type: sanitizedData.type,
@@ -514,7 +514,7 @@ export class ContactsService {
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       // Dispatch event for all components to update their local state
-      RealtimeService.dispatchContactUpdated({
+      RealtimeService.dispatch('CONTACT_UPDATED',{
         contactId: id,
         updates: {
           firstName: updates.firstName,
@@ -622,7 +622,7 @@ export class ContactsService {
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       // Dispatch event for all components to remove the contact from their local state
-      RealtimeService.dispatchContactDeleted({
+      RealtimeService.dispatch('CONTACT_DELETED',{
         contactId: id,
         timestamp: Date.now()
       });

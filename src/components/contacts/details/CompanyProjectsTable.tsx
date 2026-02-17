@@ -76,7 +76,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
         };
 
         // Subscribe to project updates (same-page + cross-page)
-        const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate, {
+        const unsubscribe = RealtimeService.subscribe('PROJECT_UPDATED', handleProjectUpdate, {
             checkPendingOnMount: false
         });
 

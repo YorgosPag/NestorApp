@@ -1,22 +1,22 @@
 /**
- * 🏢 ENTERPRISE: Centralized Real-time System
+ * Centralized Real-time System
  *
  * Single entry point for all real-time functionality.
  *
  * @example
  * ```tsx
- * // Import service
- * import { RealtimeService, useRealtimeBuildings } from '@/services/realtime';
+ * import { RealtimeService } from '@/services/realtime';
  *
- * // Use in component
- * const { getBuildingCount } = useRealtimeBuildings();
- *
- * // Dispatch events
- * RealtimeService.dispatchBuildingProjectLinked({
- *   buildingId: 'abc',
- *   previousProjectId: null,
- *   newProjectId: 'xyz',
+ * // Dispatch events (type-safe)
+ * RealtimeService.dispatch('PROJECT_UPDATED', {
+ *   projectId: 'abc',
+ *   updates: { name: 'New name' },
  *   timestamp: Date.now()
+ * });
+ *
+ * // Subscribe to events (type-safe)
+ * const unsub = RealtimeService.subscribe('PROJECT_UPDATED', (payload) => {
+ *   console.log(payload.projectId, payload.updates);
  * });
  * ```
  */
@@ -35,7 +35,9 @@ export {
   type RealtimeBuilding,
   type RealtimeProject,
   type RealtimeUnit,
+  type RealtimeEventMap,
   type BuildingProjectLinkPayload,
+  type UnitBuildingLinkPayload,
   // Update payloads
   type ProjectUpdatedPayload,
   type BuildingUpdatedPayload,
@@ -98,7 +100,6 @@ export {
   type EntityUnlinkedPayload,
   type RealtimeEventType,
   REALTIME_EVENTS,
-  REALTIME_STORAGE_KEYS,
 } from './types';
 
 // Hooks

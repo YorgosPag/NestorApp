@@ -71,7 +71,7 @@ export async function createCommunicationClient(
     logger.info('Communication created', { communicationId: docRef.id });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchCommunicationCreated({
+    RealtimeService.dispatch('COMMUNICATION_CREATED', {
       communicationId: docRef.id,
       communication: {
         type: data.type,
@@ -117,7 +117,7 @@ export async function updateCommunicationClient(
     logger.info('Communication updated successfully', { communicationId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchCommunicationUpdated({
+    RealtimeService.dispatch('COMMUNICATION_UPDATED', {
       communicationId,
       updates: {
         type: updates.type,
@@ -156,7 +156,7 @@ export async function deleteCommunicationClient(
     logger.info('Communication deleted successfully', { communicationId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchCommunicationDeleted({
+    RealtimeService.dispatch('COMMUNICATION_DELETED', {
       communicationId,
       timestamp: Date.now()
     });

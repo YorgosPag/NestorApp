@@ -134,7 +134,7 @@ export class AssociationService {
       logger.info(`✅ [AssociationService] Created contact link: ${linkId}`);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchContactLinkCreated({
+      RealtimeService.dispatch('CONTACT_LINK_CREATED', {
         linkId,
         link: {
           sourceContactId,
@@ -309,7 +309,7 @@ export class AssociationService {
       logger.info(`✅ [AssociationService] Created file link: ${linkId}`);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFileLinkCreated({
+      RealtimeService.dispatch('FILE_LINK_CREATED', {
         linkId,
         link: {
           sourceFileId,

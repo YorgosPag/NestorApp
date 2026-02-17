@@ -244,7 +244,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
     // Subscribe to project updates (same-page + cross-page)
     // Note: checkPendingOnMount=false to avoid interference with initial data load
-    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate, {
+    const unsubscribe = RealtimeService.subscribe('PROJECT_UPDATED', handleProjectUpdate, {
       checkPendingOnMount: false
     });
 

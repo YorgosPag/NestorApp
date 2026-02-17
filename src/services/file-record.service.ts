@@ -202,7 +202,7 @@ export class FileRecordService {
       });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFileCreated({
+      RealtimeService.dispatch('FILE_CREATED',{
         fileId,
         file: {
           displayName,
@@ -280,7 +280,7 @@ export class FileRecordService {
     });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchFileUpdated({
+    RealtimeService.dispatch('FILE_UPDATED',{
       fileId: input.fileId,
       updates: {
         status: coreUpdate.status,
@@ -571,7 +571,7 @@ export class FileRecordService {
     });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchFileTrashed({
+    RealtimeService.dispatch('FILE_TRASHED',{
       fileId,
       trashedBy,
       purgeAt: purgeDate.toISOString(),
@@ -629,7 +629,7 @@ export class FileRecordService {
     logger.info('FileRecord restored from trash', { fileId, restoredBy });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchFileRestored({
+    RealtimeService.dispatch('FILE_RESTORED',{
       fileId,
       restoredBy,
       timestamp: Date.now(),

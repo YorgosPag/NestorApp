@@ -71,7 +71,7 @@ export async function createOpportunityClient(
     logger.info('Opportunity created', { opportunityId: docRef.id });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchOpportunityCreated({
+    RealtimeService.dispatch('OPPORTUNITY_CREATED', {
       opportunityId: docRef.id,
       opportunity: {
         name: data.name,
@@ -117,7 +117,7 @@ export async function updateOpportunityClient(
     logger.info('Opportunity updated successfully', { opportunityId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchOpportunityUpdated({
+    RealtimeService.dispatch('OPPORTUNITY_UPDATED', {
       opportunityId,
       updates: {
         name: updates.name,
@@ -158,7 +158,7 @@ export async function deleteOpportunityClient(
     logger.info('Opportunity deleted successfully', { opportunityId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchOpportunityDeleted({
+    RealtimeService.dispatch('OPPORTUNITY_DELETED', {
       opportunityId,
       timestamp: Date.now()
     });

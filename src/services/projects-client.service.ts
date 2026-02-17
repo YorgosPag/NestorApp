@@ -92,7 +92,7 @@ export async function createProject(
     logger.info('Project created', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchProjectCreated({
+    RealtimeService.dispatch('PROJECT_CREATED', {
       projectId,
       project: {
         name: data.name,
@@ -136,7 +136,7 @@ export async function updateProjectClient(
     logger.info('Project updated successfully', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchProjectUpdated({
+    RealtimeService.dispatch('PROJECT_UPDATED', {
       projectId,
       updates: {
         name: updates.name,
@@ -178,7 +178,7 @@ export async function deleteProject(
     logger.info('Project deleted successfully', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchProjectDeleted({
+    RealtimeService.dispatch('PROJECT_DELETED', {
       projectId,
       timestamp: Date.now()
     });

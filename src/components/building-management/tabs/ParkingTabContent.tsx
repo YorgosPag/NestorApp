@@ -163,7 +163,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         projectId: building.projectId,
       });
       if (result?.parkingSpotId) {
-        RealtimeService.dispatchParkingCreated({
+        RealtimeService.dispatch('PARKING_CREATED', {
           parkingSpotId: result.parkingSpotId,
           parkingSpot: {
             number: createNumber.trim(),
@@ -214,7 +214,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         price: editPrice ? parseFloat(editPrice) : undefined,
       });
       if (result?.id) {
-        RealtimeService.dispatchParkingUpdated({
+        RealtimeService.dispatch('PARKING_UPDATED', {
           parkingSpotId: editingId,
           updates: {
             number: editNumber.trim(),
@@ -252,7 +252,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         `/api/parking/${spot.id}`
       );
       if (result?.id) {
-        RealtimeService.dispatchParkingDeleted({
+        RealtimeService.dispatch('PARKING_DELETED', {
           parkingSpotId: spot.id,
           timestamp: Date.now(),
         });

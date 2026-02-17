@@ -185,17 +185,17 @@ export function useFirestoreParkingSpots(
 
   // Real-time sync: auto-refetch when parking events are dispatched
   useEffect(() => {
-    const unsubCreate = RealtimeService.subscribeToParkingCreated(() => {
+    const unsubCreate = RealtimeService.subscribe('PARKING_CREATED', () => {
       logger.debug('Parking created event received, refetching');
       fetchParkingSpots();
     });
 
-    const unsubUpdate = RealtimeService.subscribeToParkingUpdated(() => {
+    const unsubUpdate = RealtimeService.subscribe('PARKING_UPDATED', () => {
       logger.debug('Parking updated event received, refetching');
       fetchParkingSpots();
     });
 
-    const unsubDelete = RealtimeService.subscribeToParkingDeleted(() => {
+    const unsubDelete = RealtimeService.subscribe('PARKING_DELETED', () => {
       logger.debug('Parking deleted event received, refetching');
       fetchParkingSpots();
     });

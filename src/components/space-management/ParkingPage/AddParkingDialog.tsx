@@ -132,7 +132,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
       });
 
       if (result?.parkingSpotId) {
-        RealtimeService.dispatchParkingCreated({
+        RealtimeService.dispatch('PARKING_CREATED', {
           parkingSpotId: result.parkingSpotId,
           parkingSpot: {
             number: number.trim(),

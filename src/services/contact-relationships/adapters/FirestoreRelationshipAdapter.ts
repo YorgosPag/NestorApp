@@ -86,7 +86,7 @@ export class FirestoreRelationshipAdapter {
       await setDoc(docRef, firestoreData);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchRelationshipCreated({
+      RealtimeService.dispatch('RELATIONSHIP_CREATED', {
         relationshipId: relationship.id,
         relationship: {
           sourceId: relationship.sourceContactId,
@@ -140,7 +140,7 @@ export class FirestoreRelationshipAdapter {
       logger.info('✅ FIRESTORE: Relationship updated successfully:', relationshipId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchRelationshipUpdated({
+      RealtimeService.dispatch('RELATIONSHIP_UPDATED', {
         relationshipId,
         updates: {
           type: updates.relationshipType,
@@ -164,7 +164,7 @@ export class FirestoreRelationshipAdapter {
       logger.info('✅ FIRESTORE: Relationship deleted successfully:', relationshipId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchRelationshipDeleted({
+      RealtimeService.dispatch('RELATIONSHIP_DELETED', {
         relationshipId,
         timestamp: Date.now(),
       });

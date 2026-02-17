@@ -47,7 +47,7 @@ export class NavigationCompaniesService {
       this.clearCache();
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchWorkspaceUpdated({
+      RealtimeService.dispatch('WORKSPACE_UPDATED', {
         workspaceId: 'navigation',
         updates: {
           settings: {
@@ -83,7 +83,7 @@ export class NavigationCompaniesService {
       this.clearCache();
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchWorkspaceUpdated({
+      RealtimeService.dispatch('WORKSPACE_UPDATED', {
         workspaceId: 'navigation',
         updates: {
           settings: {

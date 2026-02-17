@@ -85,7 +85,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
     };
 
     // Subscribe to unit updates (same-page + cross-page)
-    const unsubscribe = RealtimeService.subscribeToUnitUpdates(handleUnitUpdate, {
+    const unsubscribe = RealtimeService.subscribe('UNIT_UPDATED', handleUnitUpdate, {
       checkPendingOnMount: false
     });
 
@@ -107,7 +107,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
       refetchUnits();
     };
 
-    const unsubscribe = RealtimeService.subscribeToUnitCreated(handleUnitCreated, {
+    const unsubscribe = RealtimeService.subscribe('UNIT_CREATED', handleUnitCreated, {
       checkPendingOnMount: false
     });
 
@@ -122,7 +122,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
       setUnits(prev => prev.filter(unit => unit.id !== payload.unitId));
     };
 
-    const unsubscribe = RealtimeService.subscribeToUnitDeleted(handleUnitDeleted, {
+    const unsubscribe = RealtimeService.subscribe('UNIT_DELETED', handleUnitDeleted, {
       checkPendingOnMount: false
     });
 

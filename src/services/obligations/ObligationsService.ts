@@ -40,7 +40,7 @@ class ObligationsService implements IObligationsService {
     const result = await this.repository.create(data);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchObligationCreated({
+    RealtimeService.dispatch('OBLIGATION_CREATED', {
       obligationId: result.id,
       obligation: {
         title: result.title,
@@ -57,7 +57,7 @@ class ObligationsService implements IObligationsService {
 
     if (result) {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchObligationUpdated({
+      RealtimeService.dispatch('OBLIGATION_UPDATED', {
         obligationId: id,
         updates: {
           title: data.title,
@@ -75,7 +75,7 @@ class ObligationsService implements IObligationsService {
 
     if (result) {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchObligationDeleted({
+      RealtimeService.dispatch('OBLIGATION_DELETED', {
         obligationId: id,
         timestamp: Date.now(),
       });
@@ -120,7 +120,7 @@ class ObligationsService implements IObligationsService {
     const result = await this.repository.issueWithTransmittal(request);
 
     if (result) {
-      RealtimeService.dispatchObligationUpdated({
+      RealtimeService.dispatch('OBLIGATION_UPDATED', {
         obligationId: request.obligationId,
         updates: {
           status: 'issued',

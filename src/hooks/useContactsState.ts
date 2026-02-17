@@ -138,7 +138,7 @@ export function useContactsState() {
     };
 
     // Subscribe to contact updates (same-page + cross-page)
-    const unsubscribe = RealtimeService.subscribeToContactUpdates(handleContactUpdate, {
+    const unsubscribe = RealtimeService.subscribe('CONTACT_UPDATED', handleContactUpdate, {
       checkPendingOnMount: false
     });
 
@@ -153,7 +153,7 @@ export function useContactsState() {
       forceDataRefresh();
     };
 
-    const unsubscribe = RealtimeService.subscribeToContactCreated(handleContactCreated, {
+    const unsubscribe = RealtimeService.subscribe('CONTACT_CREATED', handleContactCreated, {
       checkPendingOnMount: false
     });
 
@@ -174,7 +174,7 @@ export function useContactsState() {
       );
     };
 
-    const unsubscribe = RealtimeService.subscribeToContactDeleted(handleContactDeleted, {
+    const unsubscribe = RealtimeService.subscribe('CONTACT_DELETED', handleContactDeleted, {
       checkPendingOnMount: false
     });
 

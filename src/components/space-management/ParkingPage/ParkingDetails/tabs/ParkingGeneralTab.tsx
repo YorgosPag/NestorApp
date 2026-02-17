@@ -144,7 +144,7 @@ export function ParkingGeneralTab({
       await apiClient.patch<ParkingPatchResult>(`/api/parking/${parking.id}`, payload);
 
       // Dispatch realtime event for cross-page sync
-      RealtimeService.dispatchParkingUpdated({
+      RealtimeService.dispatch('PARKING_UPDATED', {
         parkingSpotId: parking.id,
         updates: {
           number: form.number.trim(),

@@ -200,7 +200,7 @@ export class FloorplanService {
       });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFloorplanCreated({
+      RealtimeService.dispatch('FLOORPLAN_CREATED', {
         floorplanId: docId,
         floorplan: {
           entityType: ENTITY_TYPES.PROJECT,
@@ -341,7 +341,7 @@ export class FloorplanService {
       });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFloorplanDeleted({
+      RealtimeService.dispatch('FLOORPLAN_DELETED', {
         floorplanId: docId,
         timestamp: Date.now(),
       });

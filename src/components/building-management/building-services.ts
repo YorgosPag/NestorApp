@@ -67,7 +67,7 @@ export async function updateBuilding(
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to update their local state
-    RealtimeService.dispatchBuildingUpdated({
+    RealtimeService.dispatch('BUILDING_UPDATED', {
       buildingId,
       updates: {
         name: updates.name,
@@ -139,7 +139,7 @@ export async function createBuilding(
     logger.info('Building created', { buildingId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchBuildingCreated({
+    RealtimeService.dispatch('BUILDING_CREATED', {
       buildingId,
       building: {
         name: data.name,
@@ -177,7 +177,7 @@ export async function deleteBuilding(
     logger.info('Building deleted successfully', { buildingId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchBuildingDeleted({
+    RealtimeService.dispatch('BUILDING_DELETED', {
       buildingId,
       timestamp: Date.now()
     });

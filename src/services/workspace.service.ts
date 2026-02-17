@@ -105,7 +105,7 @@ export class WorkspaceService {
     logger.info(`✅ [WorkspaceService] Created workspace: ${workspaceId} (${type})`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchWorkspaceCreated({
+    RealtimeService.dispatch('WORKSPACE_CREATED', {
       workspaceId,
       workspace: {
         name: displayName,
@@ -271,7 +271,7 @@ export class WorkspaceService {
     logger.info(`✅ [WorkspaceService] Updated workspace: ${workspaceId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchWorkspaceUpdated({
+    RealtimeService.dispatch('WORKSPACE_UPDATED', {
       workspaceId,
       updates: {
         name: displayName,

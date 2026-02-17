@@ -45,7 +45,7 @@ export class UnitFloorplanService {
       // Debug logging removed //(`✅ Successfully saved unit floorplan for unit:`, unitId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFloorplanCreated({
+      RealtimeService.dispatch('FLOORPLAN_CREATED', {
         floorplanId: docId,
         floorplan: {
           entityType: ENTITY_TYPES.UNIT,
@@ -117,7 +117,7 @@ export class UnitFloorplanService {
       // Debug logging removed //(`✅ Successfully deleted unit floorplan for unit:`, unitId);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFloorplanDeleted({
+      RealtimeService.dispatch('FLOORPLAN_DELETED', {
         floorplanId: docId,
         timestamp: Date.now(),
       });

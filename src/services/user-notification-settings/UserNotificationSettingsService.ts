@@ -133,7 +133,7 @@ class UserNotificationSettingsService {
       logger.info('Settings saved for user', { userId: settings.userId });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchUserSettingsUpdated({
+      RealtimeService.dispatch('USER_SETTINGS_UPDATED', {
         userId: settings.userId,
         updates: {
           settingKey: 'notifications',
@@ -174,7 +174,7 @@ class UserNotificationSettingsService {
       logger.info('Settings updated for user', { userId });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchUserSettingsUpdated({
+      RealtimeService.dispatch('USER_SETTINGS_UPDATED', {
         userId,
         updates: {
           settingKey: 'notifications',

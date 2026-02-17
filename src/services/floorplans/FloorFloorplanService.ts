@@ -186,7 +186,7 @@ export class FloorFloorplanService {
       });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFloorplanCreated({
+      RealtimeService.dispatch('FLOORPLAN_CREATED', {
         floorplanId: createResult.fileId,
         floorplan: {
           name: fileName,
@@ -374,7 +374,7 @@ export class FloorFloorplanService {
       floorplanLogger.info(`Deleted floor floorplan(s)`, { floorId, count: fileRecords.length });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFloorplanDeleted({
+      RealtimeService.dispatch('FLOORPLAN_DELETED', {
         floorplanId: floorId,
         timestamp: Date.now(),
       });

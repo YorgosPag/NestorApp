@@ -160,7 +160,7 @@ export class BuildingFloorplanService {
         floorplanLogger.info(`PDF save complete for ${type}`, { buildingId });
 
         // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-        RealtimeService.dispatchFloorplanCreated({
+        RealtimeService.dispatch('FLOORPLAN_CREATED', {
           floorplanId: docId,
           floorplan: {
             entityType: ENTITY_TYPES.BUILDING,
@@ -187,7 +187,7 @@ export class BuildingFloorplanService {
         floorplanLogger.info(`Enterprise save complete for ${type}`, { buildingId });
 
         // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-        RealtimeService.dispatchFloorplanCreated({
+        RealtimeService.dispatch('FLOORPLAN_CREATED', {
           floorplanId: fileId,
           floorplan: {
             entityType: ENTITY_TYPES.BUILDING,
@@ -383,7 +383,7 @@ export class BuildingFloorplanService {
       floorplanLogger.info(`Deleted ${type} floorplan`, { buildingId });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchFloorplanDeleted({
+      RealtimeService.dispatch('FLOORPLAN_DELETED', {
         floorplanId: docId,
         timestamp: Date.now(),
       });

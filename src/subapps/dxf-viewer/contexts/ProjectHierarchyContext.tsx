@@ -465,7 +465,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     };
 
     // Subscribe to project updates (same-page + cross-page)
-    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate);
+    const unsubscribe = RealtimeService.subscribe('PROJECT_UPDATED', handleProjectUpdate);
 
     return unsubscribe;
   }, []);

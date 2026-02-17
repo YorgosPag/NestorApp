@@ -404,7 +404,7 @@ export class EnterpriseSessionService {
     logger.info(`🔐 Session created: ${sessionId} for user ${userId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    RealtimeService.dispatchSessionCreated({
+    RealtimeService.dispatch('SESSION_CREATED',{
       sessionId,
       session: {
         userId,
@@ -462,7 +462,7 @@ export class EnterpriseSessionService {
       logger.info(`🔐 Session revoked: ${sessionId}`);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatchSessionDeleted({
+      RealtimeService.dispatch('SESSION_DELETED',{
         sessionId,
         timestamp: Date.now(),
       });
