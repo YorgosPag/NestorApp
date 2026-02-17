@@ -1697,6 +1697,20 @@
     "deleteStorage": "Delete Storage",
     "deleteStorageDesc": "Are you sure you want to delete the storage"
   },
+  "spaceLink": {
+    "link": "Link",
+    "linkExisting": "Link Existing",
+    "searchPlaceholder": "Search...",
+    "noUnlinked": "No unlinked items found.",
+    "noResults": "No results found.",
+    "available": "available",
+    "linkParking": "Link Parking Spot",
+    "linkParkingDesc": "Select an unlinked parking spot to link to this building.",
+    "linkUnit": "Link Unit",
+    "linkUnitDesc": "Select an unlinked unit to link to this building.",
+    "linkStorage": "Link Storage",
+    "linkStorageDesc": "Select an unlinked storage to link to this building."
+  },
   "storageListHeader": {
     "results": "{count} results",
     "selected": "{count} selected",

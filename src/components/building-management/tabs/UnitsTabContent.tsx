@@ -23,15 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon } from 'lucide-react';
+import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
 import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog } from '../shared';
-import type { SpaceColumn, SpaceCardField } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
+import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 
 // ============================================================================
 // CONFIRM ACTION TYPE
@@ -113,6 +113,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<UnitConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
 
   const iconSizes = useIconSizes();
 
@@ -212,6 +213,27 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   };
 
   // ============================================================================
+  // LINK — Fetch unlinked units + link to this building
+  // ============================================================================
+
+  const fetchUnlinkedUnits = useCallback(async (): Promise<LinkableItem[]> => {
+    const result = await apiClient.get<UnitsApiResponse>('/api/units');
+    if (!result?.units) return [];
+    return result.units
+      .filter((u) => !u.buildingId)
+      .map((u) => ({
+        id: u.id,
+        label: u.name,
+        sublabel: `${UNIT_TYPE_LABELS[u.type] || u.type} · ${u.floor || '—'}`,
+      }));
+  }, []);
+
+  const handleLinkUnit = useCallback(async (itemId: string) => {
+    await apiClient.patch(`/api/units/${itemId}`, { buildingId: building.id });
+    await fetchUnits();
+  }, [building.id, fetchUnits]);
+
+  // ============================================================================
   // HELPERS
   // ============================================================================
 
@@ -285,14 +307,24 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
           {t('tabs.labels.units')}
           <span className="text-sm font-normal text-muted-foreground">({units.length})</span>
         </h2>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => setShowAddDialog(true)}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          {t('tabs.labels.units')}
-        </Button>
+        <nav className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLinkDialog(true)}
+          >
+            <Link2 className="mr-1 h-4 w-4" />
+            {t('spaceLink.linkExisting')}
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowAddDialog(true)}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            {t('tabs.labels.units')}
+          </Button>
+        </nav>
       </header>
 
       {/* Stats Cards */}
@@ -406,6 +438,16 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
           </footer>
         </>
       )}
+
+      {/* Link Existing Dialog */}
+      <BuildingSpaceLinkDialog
+        open={showLinkDialog}
+        onOpenChange={setShowLinkDialog}
+        title={t('spaceLink.linkUnit')}
+        description={t('spaceLink.linkUnitDesc')}
+        fetchUnlinked={fetchUnlinkedUnits}
+        onLink={handleLinkUnit}
+      />
 
       {/* Enterprise AddUnitDialog — Same modal as /units page */}
       <AddUnitDialog

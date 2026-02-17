@@ -42,6 +42,8 @@ export interface StorageUnit {
   status: StorageStatus;
   description: string;
   building: string;
+  /** 🏢 ENTERPRISE: Building document ID (foreign key) - added via migration 006 */
+  buildingId?: string;
   project: string;
   company: string;
   linkedProperty: string | null; // Code of linked property/apartment

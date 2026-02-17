@@ -22,7 +22,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Warehouse, Plus, Layers, Table as TableIcon } from 'lucide-react';
+import { Warehouse, Plus, Layers, Table as TableIcon, Link2 } from 'lucide-react';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -36,8 +36,8 @@ import {
   filterUnits,
   calculateStats,
 } from './StorageTab/utils';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog } from './shared';
-import type { SpaceColumn, SpaceCardField } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from './shared';
+import type { SpaceColumn, SpaceCardField, LinkableItem } from './shared';
 
 // ============================================================================
 // TYPES
@@ -138,6 +138,7 @@ export function StorageTab({ building }: StorageTabProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<StorageUnit | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
 
   const filteredUnits = useMemo(() =>
     filterUnits(units, searchTerm, filterType, filterStatus, filterFloor),
@@ -224,6 +225,28 @@ export function StorageTab({ building }: StorageTabProps) {
   };
 
   // ============================================================================
+  // LINK — Fetch unlinked storages + link to this building
+  // ============================================================================
+
+  const fetchUnlinkedStorages = useCallback(async (): Promise<LinkableItem[]> => {
+    // Fetch all storages (no buildingId filter) then client-filter for unlinked
+    const result = await apiClient.get<StoragesApiResponse>('/api/storages');
+    if (!result?.storages) return [];
+    return result.storages
+      .filter((s) => !s.buildingId)
+      .map((s) => ({
+        id: s.id,
+        label: s.code,
+        sublabel: `${translatedGetTypeLabel(s.type)} · ${s.floor || '—'}`,
+      }));
+  }, [translatedGetTypeLabel]);
+
+  const handleLinkStorage = useCallback(async (itemId: string) => {
+    await apiClient.patch(`/api/storages/${itemId}`, { buildingId: building.id });
+    await fetchStorageUnits();
+  }, [building.id, fetchStorageUnits]);
+
+  // ============================================================================
   // CENTRALIZED: Column & Card Field Definitions
   // ============================================================================
 
@@ -271,10 +294,16 @@ export function StorageTab({ building }: StorageTabProps) {
           {t('tabs.labels.storages')}
           <span className="text-sm font-normal text-muted-foreground">({units.length})</span>
         </h2>
-        <Button variant="default" size="sm" onClick={handleAddNew}>
-          <Plus className="mr-1 h-4 w-4" />
-          {t('tabs.labels.storages')}
-        </Button>
+        <nav className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)}>
+            <Link2 className="mr-1 h-4 w-4" />
+            {t('spaceLink.linkExisting')}
+          </Button>
+          <Button variant="default" size="sm" onClick={handleAddNew}>
+            <Plus className="mr-1 h-4 w-4" />
+            {t('tabs.labels.storages')}
+          </Button>
+        </nav>
       </header>
 
       {/* Stats Cards */}
@@ -372,6 +401,16 @@ export function StorageTab({ building }: StorageTabProps) {
           formType={formType}
         />
       )}
+
+      {/* Link Existing Dialog */}
+      <BuildingSpaceLinkDialog
+        open={showLinkDialog}
+        onOpenChange={setShowLinkDialog}
+        title={t('spaceLink.linkStorage')}
+        description={t('spaceLink.linkStorageDesc')}
+        fetchUnlinked={fetchUnlinkedStorages}
+        onLink={handleLinkStorage}
+      />
 
       {/* Centralized Confirm Dialog (delete) */}
       <BuildingSpaceConfirmDialog

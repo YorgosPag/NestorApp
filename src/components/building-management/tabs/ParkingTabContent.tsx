@@ -25,15 +25,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TableCell } from '@/components/ui/table';
-import { Car, Plus, Check, X, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon } from 'lucide-react';
+import { Car, Plus, Check, X, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog } from '../shared';
-import type { SpaceColumn, SpaceCardField } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
+import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 
 // ============================================================================
 // CONFIRM ACTION TYPE
@@ -129,6 +129,9 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ParkingConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // Link dialog state
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
@@ -329,6 +332,34 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   };
 
   // ============================================================================
+  // LINK — Fetch unlinked parking spots + link to this building
+  // ============================================================================
+
+  const fetchUnlinkedParking = useCallback(async (): Promise<LinkableItem[]> => {
+    const result = await apiClient.get<ParkingApiResponse>('/api/parking');
+    if (!result?.parkingSpots) return [];
+    return result.parkingSpots
+      .filter((s) => !s.buildingId)
+      .map((s) => ({
+        id: s.id,
+        label: s.number,
+        sublabel: `${PARKING_TYPE_LABELS[s.type || 'standard']} · ${s.floor || '—'}`,
+      }));
+  }, []);
+
+  const handleLinkParking = useCallback(async (itemId: string) => {
+    await apiClient.patch<ParkingMutationResult>(`/api/parking/${itemId}`, {
+      buildingId: building.id,
+    });
+    RealtimeService.dispatch('PARKING_UPDATED', {
+      parkingSpotId: itemId,
+      updates: { buildingId: building.id },
+      timestamp: Date.now(),
+    });
+    await fetchParkingSpots();
+  }, [building.id, fetchParkingSpots]);
+
+  // ============================================================================
   // COMPUTED: Stats & Filtered Data
   // ============================================================================
 
@@ -430,15 +461,25 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           {tBuilding('tabs.labels.parking')}
           <span className="text-sm font-normal text-muted-foreground">({parkingSpots.length})</span>
         </h2>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => setShowCreateForm(true)}
-          disabled={showCreateForm}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          {tBuilding('tabs.labels.parking')}
-        </Button>
+        <nav className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLinkDialog(true)}
+          >
+            <Link2 className="mr-1 h-4 w-4" />
+            {tBuilding('spaceLink.linkExisting')}
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowCreateForm(true)}
+            disabled={showCreateForm}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            {tBuilding('tabs.labels.parking')}
+          </Button>
+        </nav>
       </header>
 
       {/* Stats Cards */}
@@ -736,6 +777,16 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           </footer>
         </>
       )}
+      {/* Link Existing Dialog */}
+      <BuildingSpaceLinkDialog
+        open={showLinkDialog}
+        onOpenChange={setShowLinkDialog}
+        title={tBuilding('spaceLink.linkParking')}
+        description={tBuilding('spaceLink.linkParkingDesc')}
+        fetchUnlinked={fetchUnlinkedParking}
+        onLink={handleLinkParking}
+      />
+
       {/* Centralized Confirm Dialog (delete / unlink) */}
       <BuildingSpaceConfirmDialog
         open={!!confirmAction}
