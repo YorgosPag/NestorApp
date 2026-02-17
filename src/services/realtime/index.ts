@@ -84,6 +84,10 @@ export {
   type RelationshipDeletedPayload,
   type SessionDeletedPayload,
   type FloorplanDeletedPayload,
+  // Parking payloads
+  type ParkingCreatedPayload,
+  type ParkingUpdatedPayload,
+  type ParkingDeletedPayload,
   // Association link payloads
   type ContactLinkCreatedPayload,
   type ContactLinkDeletedPayload,

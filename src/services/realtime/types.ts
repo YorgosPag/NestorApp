@@ -205,6 +205,10 @@ export const REALTIME_EVENTS = {
   RELATIONSHIP_DELETED: 'realtime:relationship-deleted',
   SESSION_DELETED: 'realtime:session-deleted',
   FLOORPLAN_DELETED: 'realtime:floorplan-deleted',
+  // Parking events
+  PARKING_CREATED: 'realtime:parking-created',
+  PARKING_UPDATED: 'realtime:parking-updated',
+  PARKING_DELETED: 'realtime:parking-deleted',
   // Link events
   BUILDING_PROJECT_LINKED: 'realtime:building-project-linked',
   UNIT_BUILDING_LINKED: 'realtime:unit-building-linked',
@@ -851,6 +855,48 @@ export interface FloorplanDeletedPayload {
 }
 
 // ============================================================================
+// PARKING EVENT PAYLOADS
+// ============================================================================
+
+/**
+ * Event payload for parking spot creation
+ */
+export interface ParkingCreatedPayload {
+  parkingSpotId: string;
+  parkingSpot: {
+    number?: string;
+    buildingId?: string;
+    type?: string;
+    status?: string;
+  };
+  timestamp: number;
+}
+
+/**
+ * Event payload for parking spot update
+ */
+export interface ParkingUpdatedPayload {
+  parkingSpotId: string;
+  updates: {
+    number?: string;
+    type?: string;
+    status?: string;
+    floor?: string;
+    area?: number;
+    price?: number;
+  };
+  timestamp: number;
+}
+
+/**
+ * Event payload for parking spot deletion
+ */
+export interface ParkingDeletedPayload {
+  parkingSpotId: string;
+  timestamp: number;
+}
+
+// ============================================================================
 // ASSOCIATION LINK EVENT PAYLOADS (contact_links, file_links)
 // ============================================================================
 
@@ -982,6 +1028,10 @@ export const REALTIME_STORAGE_KEYS = {
   RELATIONSHIP_DELETED: 'realtime:relationship-deleted',
   SESSION_DELETED: 'realtime:session-deleted',
   FLOORPLAN_DELETED: 'realtime:floorplan-deleted',
+  // Parking events
+  PARKING_CREATED: 'realtime:parking-created',
+  PARKING_UPDATED: 'realtime:parking-updated',
+  PARKING_DELETED: 'realtime:parking-deleted',
   // Association link events
   CONTACT_LINK_CREATED: 'realtime:contact-link-created',
   CONTACT_LINK_DELETED: 'realtime:contact-link-deleted',

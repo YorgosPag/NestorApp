@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Car, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
 
 // ============================================================================
 // TYPES
@@ -162,6 +163,16 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         projectId: building.projectId,
       });
       if (result?.parkingSpotId) {
+        RealtimeService.dispatchParkingCreated({
+          parkingSpotId: result.parkingSpotId,
+          parkingSpot: {
+            number: createNumber.trim(),
+            buildingId: building.id,
+            type: createType,
+            status: createStatus,
+          },
+          timestamp: Date.now(),
+        });
         resetCreateForm();
         await fetchParkingSpots();
       }
@@ -203,6 +214,18 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         price: editPrice ? parseFloat(editPrice) : undefined,
       });
       if (result?.id) {
+        RealtimeService.dispatchParkingUpdated({
+          parkingSpotId: editingId,
+          updates: {
+            number: editNumber.trim(),
+            type: editType,
+            status: editStatus,
+            floor: editFloor.trim() || undefined,
+            area: editArea ? parseFloat(editArea) : undefined,
+            price: editPrice ? parseFloat(editPrice) : undefined,
+          },
+          timestamp: Date.now(),
+        });
         setEditingId(null);
         await fetchParkingSpots();
       }
@@ -229,6 +252,10 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         `/api/parking/${spot.id}`
       );
       if (result?.id) {
+        RealtimeService.dispatchParkingDeleted({
+          parkingSpotId: spot.id,
+          timestamp: Date.now(),
+        });
         await fetchParkingSpots();
       }
     } catch (err) {

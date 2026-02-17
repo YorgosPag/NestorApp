@@ -28,6 +28,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
 
 // =============================================================================
 // 🅿️ TYPE DEFINITIONS
@@ -181,6 +182,30 @@ export function useFirestoreParkingSpots(
       fetchParkingSpots();
     }
   }, [fetchParkingSpots, autoFetch, authLoading, user]);
+
+  // Real-time sync: auto-refetch when parking events are dispatched
+  useEffect(() => {
+    const unsubCreate = RealtimeService.subscribeToParkingCreated(() => {
+      logger.debug('Parking created event received, refetching');
+      fetchParkingSpots();
+    });
+
+    const unsubUpdate = RealtimeService.subscribeToParkingUpdated(() => {
+      logger.debug('Parking updated event received, refetching');
+      fetchParkingSpots();
+    });
+
+    const unsubDelete = RealtimeService.subscribeToParkingDeleted(() => {
+      logger.debug('Parking deleted event received, refetching');
+      fetchParkingSpots();
+    });
+
+    return () => {
+      unsubCreate();
+      unsubUpdate();
+      unsubDelete();
+    };
+  }, [fetchParkingSpots]);
 
   return {
     parkingSpots,

@@ -47,6 +47,7 @@ import {
 } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { AddParkingDialog } from '@/components/space-management/ParkingPage/AddParkingDialog';
 
 function ParkingPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -107,6 +108,7 @@ function ParkingPageContent() {
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
+  const [showAddDialog, setShowAddDialog] = React.useState(false);
 
   // Dashboard stats from real data
   const dashboardStats: DashboardStat[] = [
@@ -188,6 +190,7 @@ function ParkingPageContent() {
             setShowDashboard={setShowDashboard}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            onNewParking={() => setShowAddDialog(true)}
             showFilters={showMobileFilters}
             setShowFilters={setShowMobileFilters}
           />
@@ -277,6 +280,12 @@ function ParkingPageContent() {
             onFiltersChange={setFilters}
           />
         </MobileDetailsSlideIn>
+
+        {/* Add Parking Dialog */}
+        <AddParkingDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+        />
       </PageContainer>
   );
 }

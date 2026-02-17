@@ -721,6 +721,25 @@
         "importData": "Import Data",
         "help": "Help",
         "selectedCount": "{count} selected"
+      },
+      "addSpot": "New Parking Spot",
+      "addSpotDescription": "Fill in the details for the new parking spot.",
+      "form": {
+        "building": "Building",
+        "selectBuilding": "Select building",
+        "loadingBuildings": "Loading buildings...",
+        "number": "Code",
+        "type": "Type",
+        "status": "Status",
+        "floor": "Floor",
+        "area": "Area (m²)",
+        "price": "Price (€)",
+        "location": "Location",
+        "locationPlaceholder": "Pilotis, Basement A",
+        "notes": "Notes",
+        "notesPlaceholder": "Parking spot notes...",
+        "cancel": "Cancel",
+        "create": "Create"
       }
     }
   },

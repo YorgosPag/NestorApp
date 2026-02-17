@@ -95,6 +95,10 @@ import {
   // Entity linking payloads
   type EntityLinkedPayload,
   type EntityUnlinkedPayload,
+  // Parking payloads
+  type ParkingCreatedPayload,
+  type ParkingUpdatedPayload,
+  type ParkingDeletedPayload,
 } from './types';
 
 const logger = createModuleLogger('RealtimeService');
@@ -2697,6 +2701,244 @@ class RealtimeServiceCore {
         logger.warn('localStorage notification failed', { error });
       }
     }
+  }
+
+  // ==========================================================================
+  // PARKING CREATE/UPDATE/DELETE REAL-TIME SYNC
+  // ==========================================================================
+
+  /**
+   * Dispatch parking created event
+   */
+  dispatchParkingCreated(payload: ParkingCreatedPayload): void {
+    logger.debug('Dispatching PARKING_CREATED', { parkingSpotId: payload.parkingSpotId });
+
+    this.dispatchEvent(REALTIME_EVENTS.PARKING_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.PARKING_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        logger.warn('localStorage notification failed', { error });
+      }
+    }
+  }
+
+  /**
+   * Subscribe to parking created events
+   */
+  subscribeToParkingCreated(
+    onCreated: (payload: ParkingCreatedPayload) => void,
+    options?: { checkPendingOnMount?: boolean }
+  ): () => void {
+    const { checkPendingOnMount = true } = options || {};
+
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<ParkingCreatedPayload>;
+      if (customEvent.detail) {
+        logger.debug('Same-page parking created', { parkingSpotId: customEvent.detail.parkingSpotId });
+        onCreated(customEvent.detail);
+      }
+    };
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== REALTIME_STORAGE_KEYS.PARKING_CREATED || !event.newValue) return;
+
+      try {
+        const payload = JSON.parse(event.newValue) as ParkingCreatedPayload;
+        logger.debug('Cross-page parking created', { parkingSpotId: payload.parkingSpotId });
+        onCreated(payload);
+      } catch (error) {
+        logger.error('Failed to parse parking created event', { error });
+      }
+    };
+
+    if (checkPendingOnMount && typeof window !== 'undefined') {
+      try {
+        const pendingUpdate = localStorage.getItem(REALTIME_STORAGE_KEYS.PARKING_CREATED);
+        if (pendingUpdate) {
+          const payload = JSON.parse(pendingUpdate) as ParkingCreatedPayload;
+          if (Date.now() - payload.timestamp < 5000) {
+            logger.debug('Applying pending parking created', { parkingSpotId: payload.parkingSpotId });
+            onCreated(payload);
+          }
+          localStorage.removeItem(REALTIME_STORAGE_KEYS.PARKING_CREATED);
+        }
+      } catch (error) {
+        logger.error('Failed to process pending parking created', { error });
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(REALTIME_EVENTS.PARKING_CREATED, handleCustomEvent);
+      window.addEventListener('storage', handleStorageEvent);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(REALTIME_EVENTS.PARKING_CREATED, handleCustomEvent);
+        window.removeEventListener('storage', handleStorageEvent);
+      }
+    };
+  }
+
+  /**
+   * Dispatch parking updated event
+   */
+  dispatchParkingUpdated(payload: ParkingUpdatedPayload): void {
+    logger.debug('Dispatching PARKING_UPDATED', { parkingSpotId: payload.parkingSpotId });
+
+    this.dispatchEvent(REALTIME_EVENTS.PARKING_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.PARKING_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        logger.warn('localStorage notification failed', { error });
+      }
+    }
+  }
+
+  /**
+   * Subscribe to parking updated events
+   */
+  subscribeToParkingUpdated(
+    onUpdated: (payload: ParkingUpdatedPayload) => void,
+    options?: { checkPendingOnMount?: boolean }
+  ): () => void {
+    const { checkPendingOnMount = true } = options || {};
+
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<ParkingUpdatedPayload>;
+      if (customEvent.detail) {
+        logger.debug('Same-page parking updated', { parkingSpotId: customEvent.detail.parkingSpotId });
+        onUpdated(customEvent.detail);
+      }
+    };
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== REALTIME_STORAGE_KEYS.PARKING_UPDATED || !event.newValue) return;
+
+      try {
+        const payload = JSON.parse(event.newValue) as ParkingUpdatedPayload;
+        logger.debug('Cross-page parking updated', { parkingSpotId: payload.parkingSpotId });
+        onUpdated(payload);
+      } catch (error) {
+        logger.error('Failed to parse parking updated event', { error });
+      }
+    };
+
+    if (checkPendingOnMount && typeof window !== 'undefined') {
+      try {
+        const pendingUpdate = localStorage.getItem(REALTIME_STORAGE_KEYS.PARKING_UPDATED);
+        if (pendingUpdate) {
+          const payload = JSON.parse(pendingUpdate) as ParkingUpdatedPayload;
+          if (Date.now() - payload.timestamp < 5000) {
+            logger.debug('Applying pending parking updated', { parkingSpotId: payload.parkingSpotId });
+            onUpdated(payload);
+          }
+          localStorage.removeItem(REALTIME_STORAGE_KEYS.PARKING_UPDATED);
+        }
+      } catch (error) {
+        logger.error('Failed to process pending parking updated', { error });
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(REALTIME_EVENTS.PARKING_UPDATED, handleCustomEvent);
+      window.addEventListener('storage', handleStorageEvent);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(REALTIME_EVENTS.PARKING_UPDATED, handleCustomEvent);
+        window.removeEventListener('storage', handleStorageEvent);
+      }
+    };
+  }
+
+  /**
+   * Dispatch parking deleted event
+   */
+  dispatchParkingDeleted(payload: ParkingDeletedPayload): void {
+    logger.debug('Dispatching PARKING_DELETED', { parkingSpotId: payload.parkingSpotId });
+
+    this.dispatchEvent(REALTIME_EVENTS.PARKING_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.PARKING_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        logger.warn('localStorage notification failed', { error });
+      }
+    }
+  }
+
+  /**
+   * Subscribe to parking deleted events
+   */
+  subscribeToParkingDeleted(
+    onDeleted: (payload: ParkingDeletedPayload) => void,
+    options?: { checkPendingOnMount?: boolean }
+  ): () => void {
+    const { checkPendingOnMount = true } = options || {};
+
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<ParkingDeletedPayload>;
+      if (customEvent.detail) {
+        logger.debug('Same-page parking deleted', { parkingSpotId: customEvent.detail.parkingSpotId });
+        onDeleted(customEvent.detail);
+      }
+    };
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== REALTIME_STORAGE_KEYS.PARKING_DELETED || !event.newValue) return;
+
+      try {
+        const payload = JSON.parse(event.newValue) as ParkingDeletedPayload;
+        logger.debug('Cross-page parking deleted', { parkingSpotId: payload.parkingSpotId });
+        onDeleted(payload);
+      } catch (error) {
+        logger.error('Failed to parse parking deleted event', { error });
+      }
+    };
+
+    if (checkPendingOnMount && typeof window !== 'undefined') {
+      try {
+        const pendingUpdate = localStorage.getItem(REALTIME_STORAGE_KEYS.PARKING_DELETED);
+        if (pendingUpdate) {
+          const payload = JSON.parse(pendingUpdate) as ParkingDeletedPayload;
+          if (Date.now() - payload.timestamp < 5000) {
+            logger.debug('Applying pending parking deleted', { parkingSpotId: payload.parkingSpotId });
+            onDeleted(payload);
+          }
+          localStorage.removeItem(REALTIME_STORAGE_KEYS.PARKING_DELETED);
+        }
+      } catch (error) {
+        logger.error('Failed to process pending parking deleted', { error });
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(REALTIME_EVENTS.PARKING_DELETED, handleCustomEvent);
+      window.addEventListener('storage', handleStorageEvent);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(REALTIME_EVENTS.PARKING_DELETED, handleCustomEvent);
+        window.removeEventListener('storage', handleStorageEvent);
+      }
+    };
   }
 
   // ==========================================================================

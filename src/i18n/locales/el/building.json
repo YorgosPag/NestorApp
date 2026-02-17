@@ -721,6 +721,25 @@
         "importData": "Εισαγωγή Δεδομένων",
         "help": "Βοήθεια",
         "selectedCount": "{count} επιλεγμένες"
+      },
+      "addSpot": "Νέα Θέση Στάθμευσης",
+      "addSpotDescription": "Συμπληρώστε τα στοιχεία για τη νέα θέση στάθμευσης.",
+      "form": {
+        "building": "Κτίριο",
+        "selectBuilding": "Επιλέξτε κτίριο",
+        "loadingBuildings": "Φόρτωση κτιρίων...",
+        "number": "Κωδικός",
+        "type": "Τύπος",
+        "status": "Κατάσταση",
+        "floor": "Όροφος",
+        "area": "Επιφάνεια (m²)",
+        "price": "Τιμή (€)",
+        "location": "Τοποθεσία",
+        "locationPlaceholder": "Πυλωτή, Υπόγειο Α",
+        "notes": "Σημειώσεις",
+        "notesPlaceholder": "Σημειώσεις θέσης στάθμευσης...",
+        "cancel": "Ακύρωση",
+        "create": "Δημιουργία"
       }
     }
   },
