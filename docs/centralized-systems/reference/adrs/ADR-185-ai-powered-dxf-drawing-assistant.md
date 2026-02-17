@@ -1,6 +1,6 @@
 # ADR-185: AI-Powered DXF Drawing Assistant
 
-> **Status**: DRAFT — Requirements Gathering
+> **Status**: 🟡 PHASE 1 IMPLEMENTED — Basic Drawing Commands
 > **Date**: 2026-02-17
 > **Category**: AI Architecture / DXF Viewer / CAD Automation
 > **Related ADRs**: ADR-171 (Autonomous AI Agent), ADR-080 (AI Pipeline), ADR-031 (Command Pattern), ADR-032 (Drawing State Machine), ADR-057 (Entity Completion Pipeline)
@@ -937,6 +937,78 @@ src/
 
 ---
 
+## 9b. Phase 1 Implementation Details (2026-02-17)
+
+### Status: ✅ IMPLEMENTED — 9 new files, 4 modified, 0 TS errors
+
+### Architecture Implemented
+
+```
+User types → useDxfAiChat hook → POST /api/dxf-ai/command
+                                       ↓
+                             OpenAI gpt-4o-mini + 5 DXF tools
+                                       ↓
+                             Structured tool_calls response
+                                       ↓
+             executeDxfAiToolCalls() → completeEntities() → Canvas
+```
+
+**Key decisions vs plan:**
+- **Single-call** (NOT agentic loop) — Phase 1 doesn't need multi-step reasoning
+- **Client-side executor** — tool calls validated + executed on client via `completeEntities()` (ADR-057)
+- **Feature flag gated** — `NEXT_PUBLIC_DXF_AI_ASSISTANT=true` required to enable
+
+### Files Implemented
+
+| File | Type | Description |
+|------|------|-------------|
+| `src/subapps/dxf-viewer/ai-assistant/types.ts` | NEW | Full type system (messages, tools, API payloads, execution results) |
+| `src/subapps/dxf-viewer/config/ai-assistant-config.ts` | NEW | Centralized constants (DXF_AI_UNITS, DXF_AI_LIMITS, DXF_AI_API, DXF_AI_DEFAULTS) |
+| `src/subapps/dxf-viewer/config/feature-flags.ts` | MOD | Added `USE_AI_DRAWING_ASSISTANT` feature flag |
+| `src/subapps/dxf-viewer/ai-assistant/dxf-tool-definitions.ts` | NEW | 5 OpenAI tools with strict JSON Schema |
+| `src/subapps/dxf-viewer/ai-assistant/dxf-system-prompt.ts` | NEW | Context-aware system prompt builder |
+| `src/app/api/dxf-ai/command/route.ts` | NEW | API route (withAuth + withStandardRateLimit + maxDuration=60) |
+| `src/subapps/dxf-viewer/ai-assistant/dxf-ai-tool-executor.ts` | NEW | Client-side tool executor → validates + creates entities |
+| `src/subapps/dxf-viewer/ai-assistant/hooks/useDxfAiChat.ts` | NEW | React hook: state, API, execution pipeline |
+| `src/subapps/dxf-viewer/ai-assistant/components/DxfAiChatPanel.tsx` | NEW | Chat panel UI (semantic HTML, Tailwind only) |
+| `src/subapps/dxf-viewer/ai-assistant/index.ts` | NEW | Barrel exports |
+| `src/i18n/locales/{el,en}/dxf-viewer.json` | MOD | Added `aiAssistant.*` translations |
+| `src/subapps/dxf-viewer/app/DxfViewerContent.tsx` | MOD | Integrated lazy-loaded chat panel behind feature flag |
+
+### Tools Implemented (Phase 1)
+
+| Tool | Arguments | Validation |
+|------|-----------|------------|
+| `draw_line` | start_x, start_y, end_x, end_y, layer?, color? | Rejects zero-length lines |
+| `draw_rectangle` | x, y, width, height, layer?, color? | Rejects non-positive dimensions |
+| `draw_circle` | center_x, center_y, radius, layer?, color? | Rejects non-positive radius |
+| `query_entities` | type?, layer? | Read-only, returns entity summary |
+| `undo_action` | count? | Placeholder — Phase 1b integration |
+
+### Reused Centralized Systems
+
+| System | From | Used For |
+|--------|------|----------|
+| `completeEntities()` | ADR-057 | Batch entity insertion with event emission |
+| `generateEntityId()` | enterprise-id.service | Crypto-secure entity IDs |
+| `DXF_DEFAULT_LAYER` | layer-config.ts | Default layer '0' |
+| `UI_COLORS.WHITE` | color-config.ts | Default entity color |
+| `withAuth` | @/lib/auth | API authentication |
+| `withStandardRateLimit` | @/lib/middleware | Rate limiting |
+| `AI_ANALYSIS_DEFAULTS` | ai-analysis-config.ts | OpenAI model + base URL |
+| `AgenticToolDefinition` | agentic-tool-definitions.ts | Tool definition type reuse |
+| `useSemanticColors` | design-system/color-bridge | Theme-aware styling |
+| `useTranslation` | i18n/hooks | Internationalization |
+
+### Activation
+
+1. Set `NEXT_PUBLIC_DXF_AI_ASSISTANT=true` in `.env.local`
+2. Ensure `OPENAI_API_KEY` is set (server-side)
+3. Open DXF Viewer → trigger action `toggle-ai-assistant`
+4. Type: "σχεδίασε γραμμή από 0,0 μέχρι 10,5" → line appears on canvas
+
+---
+
 ## 10. Changelog
 
 | Date | Change | By |
@@ -949,3 +1021,4 @@ src/
 | 2026-02-17 | Έρευνα #2: AI Provider abstraction, Vercel AI SDK, vendor lock-in avoidance | Claude + Γιώργος |
 | 2026-02-17 | Προσθήκη sections 6.5-6.8: Geometry Engine, Provider Abstraction, Performance, References | Claude |
 | 2026-02-17 | Έλεγχος γραμμή-γραμμή: 11 νέες ερωτήσεις (Q-12 → Q-21), 2 αντιφάσεις (C-01, C-02), fix τίτλου Section 3.1 | Claude |
+| 2026-02-17 | **Phase 1 IMPLEMENTED**: 9 νέα αρχεία, 4 τροποποιημένα, 0 TS errors. Tools: draw_line, draw_rectangle, draw_circle, query_entities, undo_action. Single-call OpenAI + client-side executor + chat panel UI. Feature flag gated. | Claude |
