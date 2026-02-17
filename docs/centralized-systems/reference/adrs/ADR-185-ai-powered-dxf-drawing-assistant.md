@@ -939,7 +939,7 @@ src/
 
 ## 9b. Phase 1 Implementation Details (2026-02-17)
 
-### Status: ✅ IMPLEMENTED — 9 new files, 8 modified, 0 TS errors
+### Status: ✅ IMPLEMENTED — 9 new files, 9 modified, 0 TS errors
 
 ### Architecture Implemented
 
@@ -950,20 +950,22 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
                                        ↓
                              Structured tool_calls response
                                        ↓
-             executeDxfAiToolCalls() → completeEntities() → Canvas
+             executeDxfAiToolCalls() → completeEntity() → Canvas
 ```
 
 **Key decisions vs plan:**
 - **Single-call** (NOT agentic loop) — Phase 1 doesn't need multi-step reasoning
-- **Client-side executor** — tool calls validated + executed on client via `completeEntities()` (ADR-057)
+- **Client-side executor** — tool calls validated + executed on client via `completeEntity()` (ADR-057)
 - **Feature flag gated** — `NEXT_PUBLIC_DXF_AI_ASSISTANT=true` required to enable
+- **No unit conversion** — coordinates pass through as-is (canvas units = user units)
+- **Dual-scene sync** — uses `completeEntity()` (not batch) so `drawing:complete` event includes `updatedScene`
 
 ### Files Implemented
 
 | File | Type | Description |
 |------|------|-------------|
 | `src/subapps/dxf-viewer/ai-assistant/types.ts` | NEW | Full type system (messages, tools, API payloads, execution results) |
-| `src/subapps/dxf-viewer/config/ai-assistant-config.ts` | NEW | Centralized constants (DXF_AI_UNITS, DXF_AI_LIMITS, DXF_AI_API, DXF_AI_DEFAULTS) |
+| `src/subapps/dxf-viewer/config/ai-assistant-config.ts` | NEW | Centralized constants (DXF_AI_LIMITS, DXF_AI_API, DXF_AI_DEFAULTS) |
 | `src/subapps/dxf-viewer/config/feature-flags.ts` | MOD | Added `USE_AI_DRAWING_ASSISTANT` feature flag |
 | `src/subapps/dxf-viewer/ai-assistant/dxf-tool-definitions.ts` | NEW | 5 OpenAI tools with strict JSON Schema |
 | `src/subapps/dxf-viewer/ai-assistant/dxf-system-prompt.ts` | NEW | Context-aware system prompt builder |
@@ -977,6 +979,7 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | `src/constants/property-statuses-enterprise.ts` | MOD | Added `AI_ASSISTANT` to `DXF_UTILITY_TOOL_LABELS` |
 | `src/subapps/dxf-viewer/config/toolbar-colors.ts` | MOD | Added `aiAssistant` color (VIOLET) to `DXF_ACTION_COLORS` |
 | `src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.tsx` | MOD | Added Sparkles toolbar toggle button |
+| `src/subapps/dxf-viewer/hooks/canvas/useDxfSceneConversion.ts` | MOD | Added `x/y/width/height` rectangle format support (dual format) |
 
 ### Tools Implemented (Phase 1)
 
@@ -992,7 +995,7 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 
 | System | From | Used For |
 |--------|------|----------|
-| `completeEntities()` | ADR-057 | Batch entity insertion with event emission |
+| `completeEntity()` | ADR-057 | Individual entity insertion with `updatedScene` event propagation |
 | `generateEntityId()` | enterprise-id.service | Crypto-secure entity IDs |
 | `DXF_DEFAULT_LAYER` | layer-config.ts | Default layer '0' |
 | `UI_COLORS.WHITE` | color-config.ts | Default entity color |
@@ -1039,3 +1042,8 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | 2026-02-17 | Έλεγχος γραμμή-γραμμή: 11 νέες ερωτήσεις (Q-12 → Q-21), 2 αντιφάσεις (C-01, C-02), fix τίτλου Section 3.1 | Claude |
 | 2026-02-17 | **Phase 1 IMPLEMENTED**: 9 νέα αρχεία, 4 τροποποιημένα, 0 TS errors. Tools: draw_line, draw_rectangle, draw_circle, query_entities, undo_action. Single-call OpenAI + client-side executor + chat panel UI. Feature flag gated. | Claude |
 | 2026-02-17 | **Sparkles Toolbar Button**: Προσθήκη ✨ toggle button στο DXF toolbar (Violet color, Sparkles icon). 4 επιπλέον αρχεία τροποποιημένα. `NEXT_PUBLIC_DXF_AI_ASSISTANT=true` set on Vercel production. | Claude |
+| 2026-02-18 | **Bug fix #1: Invisible entities** — AI-created entities δεν εμφανίζονταν γιατί δεν είχαν `visible: true`. `DxfRenderer.ts:117` skips entities where `!entity.visible` is truthy (includes undefined). Fix: Προσθήκη `visible: true` σε όλους τους entity builders στο `dxf-ai-tool-executor.ts`. | Claude |
+| 2026-02-18 | **Bug fix #2: Dual-scene sync** — Entities δημιουργούνταν στο level manager αλλά δεν propagated στο `currentScene` (rendering). ROOT CAUSE: `completeEntities` (batch) εκπέμπει `drawing:complete` χωρίς `updatedScene` payload → sync handler αδυνατεί να ενημερώσει τον canvas. Fix: Αλλαγή σε individual `completeEntity()` calls που περιλαμβάνουν `updatedScene` στο event. | Claude |
+| 2026-02-18 | **Bug fix #3: Unit conversion (×1000)** — Το system prompt οδηγούσε την AI να μετατρέπει μέτρα→mm (×1000), αλλά ο canvas δουλεύει σε drawing units που ταιριάζουν με αυτά που βλέπει ο χρήστης. Fix: Αφαίρεση ×1000 κανόνα από prompt, tool definitions, config. Αριθμοί περνούν αυτούσιοι. | Claude |
+| 2026-02-18 | **Bug fix #4: Rectangle crash** — `TypeError: Cannot read properties of undefined (reading 'x')` στο `useDxfSceneConversion`. Η conversion περίμενε `corner1/corner2` αλλά `RectangleEntity` χρησιμοποιεί `x/y/width/height`. Fix: Dual format support στο rectangle case. | Claude |
+| 2026-02-18 | **Bug fix #5: Persistent unit conversion** — Η AI συνέχιζε να μετατρέπει "3 μέτρα" → 3000 λόγω general knowledge, παρά τις οδηγίες. Fix: Ενίσχυση system prompt με ΑΠΑΓΟΡΕΥΕΤΑΙ directive + explicit counter-examples ("3 μέτρα → βάλε 3, ΟΧΙ 3000"). | Claude |
