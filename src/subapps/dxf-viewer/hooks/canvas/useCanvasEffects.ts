@@ -84,6 +84,8 @@ export interface UseCanvasEffectsParams {
   overlayCanvasRef: RefObject<HTMLCanvasElement | null>;
   /** Zoom system for auto-fit */
   zoomSystem: ZoomSystemForAutoFit;
+  /** Current level ID — used to reset auto-fit when switching levels */
+  currentLevelId: string | null;
 }
 
 /** Return type of useDrawingHandlers */
@@ -119,6 +121,7 @@ export function useCanvasEffects({
   dxfCanvasRef,
   overlayCanvasRef,
   zoomSystem,
+  currentLevelId,
 }: UseCanvasEffectsParams): UseCanvasEffectsReturn {
 
   // === Global Ruler Settings (reactive state via external store) ===
@@ -203,9 +206,17 @@ export function useCanvasEffects({
   hasUnifiedDrawingPointsRef.current = () =>
     (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
 
-  // === DXF auto-fit on scene load ===
+  // === DXF auto-fit on scene/level load (NOT on entity creation) ===
+  // Track which level has already been auto-fitted to prevent re-fitting
+  // when the user draws new entities (which also mutates currentScene).
+  const lastFittedLevelRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (dxfScene && dxfScene.entities.length > 0 && dxfScene.bounds) {
+    // Only auto-fit when switching to a new level (or initial load)
+    if (currentLevelId && currentLevelId !== lastFittedLevelRef.current &&
+        dxfScene && dxfScene.entities.length > 0 && dxfScene.bounds) {
+      lastFittedLevelRef.current = currentLevelId;
+
       const canvas = dxfCanvasRef?.current?.getCanvas?.() ?? overlayCanvasRef.current;
       if (canvas && canvas instanceof HTMLCanvasElement) {
         const canvasBounds = serviceRegistry.get('canvas-bounds');
@@ -220,7 +231,12 @@ export function useCanvasEffects({
         }
       }
     }
-  }, [currentScene]); // Use props instead of derived state to prevent infinite loop
+
+    // Reset when level is cleared (no scene)
+    if (!currentLevelId) {
+      lastFittedLevelRef.current = null;
+    }
+  }, [currentScene, currentLevelId]);
 
   return {
     globalRulerSettings,

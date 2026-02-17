@@ -279,6 +279,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setSelectedGrips: unified.setSelectedGrips,
     setDragPreviewPosition: unified.setDragPreviewPosition,
     universalSelection, dxfScene, dxfCanvasRef, overlayCanvasRef, zoomSystem,
+    currentLevelId: levelManager.currentLevelId,
   });
 
   const { drawingContextMenu, handleDrawingContextMenu, handleDrawingContextMenuClose } = useCanvasContextMenu({
