@@ -133,7 +133,7 @@ export function myFunction(value: string | number): Result {
 
 1. **ΑΝΑΖΗΤΗΣΗ ΠΡΩΤΑ**: Grep/Glob searches για existing κώδικα. Αν υπάρχει, επέκτεινέ το.
 2. **ΕΛΕΓΞΕ CENTRALIZED SYSTEMS**: `docs/centralized-systems/README.md` — μην δημιουργείς duplicate.
-3. **COMPILATION CHECK**: Τρέξε `npx tsc --noEmit` μετά από αλλαγές κώδικα.
+3. **COMPILATION CHECK**: Ακολούθησε τον κανόνα `⚡ TYPESCRIPT CHECK WORKFLOW` παρακάτω.
 4. **ΕΝΕΡΓΟΠΟΙΗΣΗ > ΔΗΜΙΟΥΡΓΙΑ**: Πρώτα ψάξε αν υπάρχει κάτι απενεργοποιημένο.
 5. **ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ**: Χρησιμοποίησε centralized κώδικα. Αν βρεις duplicates, κεντρικοποίησέ τα.
 6. **ΤΕΚΜΗΡΙΩΣΗ**: Ενημέρωσε `docs/centralized-systems/` όταν κεντρικοποιείς κώδικα.
@@ -155,6 +155,30 @@ export function myFunction(value: string | number): Result {
 - [x] Semantic HTML (όχι `div` soup)
 
 **Αν αποτύχει κάτι → διόρθωσέ το μόνος σου, μην ρωτάς.**
+
+---
+## ⚡ TYPESCRIPT CHECK WORKFLOW
+
+### ΚΑΝΟΝΑΣ: ΜΗΝ περιμένεις το tsc — δούλεψε παράλληλα!
+
+Το `npx tsc --noEmit` σε αυτό το project παίρνει **60-90 δευτερόλεπτα**. Για να μην καθυστερεί η ροή:
+
+#### 🟢 Μικρές αλλαγές (1-3 αρχεία, χωρίς αλλαγή types/interfaces):
+- **SKIP** εντελώς το tsc
+- Commit + push αμέσως
+- Το Vercel build θα πιάσει τυχόν errors
+
+#### 🟡 Μεσαίες αλλαγές (4-10 αρχεία ή αλλαγή σε types):
+- Τρέξε `npx tsc --noEmit` στο **background** (`run_in_background: true`)
+- Commit + push **χωρίς να περιμένεις** το αποτέλεσμα
+- Αν βρεθεί error → fix στο επόμενο commit
+
+#### 🔴 Μεγάλα refactorings (10+ αρχεία, αλλαγή exports/interfaces):
+- Τρέξε `npx tsc --noEmit` στο **background**
+- Commit + push **χωρίς να περιμένεις**
+- Αν βρεθεί error → fix + νέο commit + push αμέσως
+
+#### ⚠️ ΠΟΤΕ δεν κάνεις blocking wait στο tsc. Ο χρήστης δεν πρέπει να περιμένει.
 
 ---
 ## 🔄 GIT WORKFLOW & BACKUP PROTOCOL
