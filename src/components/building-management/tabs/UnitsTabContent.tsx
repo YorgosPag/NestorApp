@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3 } from 'lucide-react';
+import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Eye, Pencil, Unlink2, Trash2, Layers, Table as TableIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -92,10 +92,15 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   // AddUnitDialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  // Filter state
+  // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<UnitType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+
+  // Action state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
   const iconSizes = useIconSizes();
 
@@ -156,6 +161,44 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     { title: t('unitStats.totalValue'), value: `€${(stats.totalValue / 1000).toFixed(0)}K`, icon: Euro, color: 'gray' },
     { title: t('unitStats.totalArea'), value: `${stats.totalArea.toFixed(1)} m²`, icon: Ruler, color: 'blue' },
   ], [stats, t]);
+
+  // ============================================================================
+  // CRUD HANDLERS
+  // ============================================================================
+
+  const handleDelete = async (unit: Unit) => {
+    const confirmed = window.confirm(
+      `Διαγραφή μονάδας "${unit.name}";`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(unit.id);
+    try {
+      await apiClient.delete(`/api/units/${unit.id}`);
+      await fetchUnits();
+    } catch (err) {
+      console.error('[UnitsTab] Delete error:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleUnlink = async (unit: Unit) => {
+    const confirmed = window.confirm(
+      `Αποσύνδεση μονάδας "${unit.name}" από το κτίριο;\nΗ μονάδα θα παραμείνει στο σύστημα αλλά δεν θα ανήκει σε κτίριο.`
+    );
+    if (!confirmed) return;
+
+    setUnlinkingId(unit.id);
+    try {
+      await apiClient.patch(`/api/units/${unit.id}`, { buildingId: null });
+      await fetchUnits();
+    } catch (err) {
+      console.error('[UnitsTab] Unlink error:', err);
+    } finally {
+      setUnlinkingId(null);
+    }
+  };
 
   // ============================================================================
   // HELPERS
@@ -271,12 +314,71 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* View Toggle */}
+      <nav className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">
+          {filteredUnits.length} αποτελέσματα
+        </span>
+        <fieldset className="flex items-center gap-2">
+          <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
+            <Layers className="mr-1 h-4 w-4" /> Κάρτες
+          </Button>
+          <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
+            <TableIcon className="mr-1 h-4 w-4" /> Πίνακας
+          </Button>
+        </fieldset>
+      </nav>
+
+      {/* Content */}
       {filteredUnits.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {t('tabs.labels.units')} — 0
         </p>
+      ) : viewMode === 'cards' ? (
+        /* ─── Cards View ─── */
+        <>
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredUnits.map((unit) => (
+              <Card key={unit.id} className="overflow-hidden">
+                <CardContent className="p-4 space-y-3">
+                  <header className="flex items-center justify-between">
+                    <h3 className="font-medium text-sm">{unit.name}</h3>
+                    {getStatusBadge(unit.status)}
+                  </header>
+                  <dl className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <dt>Τύπος</dt>
+                    <dd className="text-foreground">{getTypeLabel(unit.type)}</dd>
+                    <dt>Όροφος</dt>
+                    <dd className="text-foreground">{unit.floor || '—'}</dd>
+                    <dt>m²</dt>
+                    <dd className="text-foreground">{unit.area || '—'}</dd>
+                    <dt>Τιμή</dt>
+                    <dd className="text-foreground">{unit.price ? `€${unit.price.toLocaleString()}` : '—'}</dd>
+                  </dl>
+                  <nav className="flex justify-end gap-1 border-t border-border pt-2">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowAddDialog(true)} title="Επεξεργασία">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(unit)} disabled={unlinkingId === unit.id} title="Αποσύνδεση">
+                      {unlinkingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(unit)} disabled={deletingId === unit.id} title="Διαγραφή">
+                      {deletingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </Button>
+                  </nav>
+                </CardContent>
+              </Card>
+            ))}
+          </section>
+          <footer className="text-xs text-muted-foreground">
+            {filteredUnits.length} {t('tabs.labels.units')}
+          </footer>
+        </>
       ) : (
+        /* ─── Table View ─── */
         <>
           <table className="w-full text-sm">
             <thead>
@@ -286,6 +388,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                 <th className="w-20 px-3 py-2">{t('tabs.floors.number')}</th>
                 <th className="w-20 px-3 py-2">m²</th>
                 <th className="w-28 px-3 py-2">{t('tabs.labels.details')}</th>
+                <th className="w-32 px-3 py-2 text-right">{t('tabs.floors.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -296,6 +399,22 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                   <td className="px-3 py-2 font-mono text-sm text-muted-foreground">{unit.floor}</td>
                   <td className="px-3 py-2 font-mono text-xs">{unit.area ? `${unit.area}` : '—'}</td>
                   <td className="px-3 py-2">{getStatusBadge(unit.status)}</td>
+                  <td className="px-3 py-2">
+                    <nav className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowAddDialog(true)} title="Επεξεργασία">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(unit)} disabled={unlinkingId === unit.id} title="Αποσύνδεση">
+                        {unlinkingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(unit)} disabled={deletingId === unit.id} title="Διαγραφή">
+                        {deletingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    </nav>
+                  </td>
                 </tr>
               ))}
             </tbody>

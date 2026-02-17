@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Car, Plus, Pencil, Trash2, Check, X, Loader2, Unlink2, Search, CheckCircle, Euro, Ruler, BarChart3 } from 'lucide-react';
+import { Car, Plus, Pencil, Trash2, Check, X, Loader2, Unlink2, Search, CheckCircle, Euro, Ruler, BarChart3, Eye, Layers, Table as TableIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -117,10 +117,11 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
-  // Filter state
+  // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<ParkingSpotType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<ParkingSpotStatus | 'all'>('all');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const iconSizes = useIconSizes();
 
@@ -604,12 +605,71 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         </form>
       )}
 
-      {/* Table */}
+      {/* View Toggle */}
+      <nav className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">
+          {filteredSpots.length} αποτελέσματα
+        </span>
+        <fieldset className="flex items-center gap-2">
+          <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
+            <Layers className="mr-1 h-4 w-4" /> Κάρτες
+          </Button>
+          <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
+            <TableIcon className="mr-1 h-4 w-4" /> Πίνακας
+          </Button>
+        </fieldset>
+      </nav>
+
+      {/* Content */}
       {filteredSpots.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {tBuilding('tabs.labels.parking')} — 0
         </p>
+      ) : viewMode === 'cards' ? (
+        /* ─── Cards View ─── */
+        <>
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredSpots.map((spot) => (
+              <Card key={spot.id} className="overflow-hidden">
+                <CardContent className="p-4 space-y-3">
+                  <header className="flex items-center justify-between">
+                    <h3 className="font-mono font-semibold text-sm">{spot.number}</h3>
+                    {getStatusBadge(spot.status)}
+                  </header>
+                  <dl className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <dt>Τύπος</dt>
+                    <dd className="text-foreground">{PARKING_TYPE_LABELS[spot.type || 'standard']}</dd>
+                    <dt>Όροφος</dt>
+                    <dd className="text-foreground">{spot.floor || '—'}</dd>
+                    <dt>m²</dt>
+                    <dd className="text-foreground">{spot.area || '—'}</dd>
+                    <dt>Τιμή</dt>
+                    <dd className="text-foreground">{spot.price ? `€${spot.price.toLocaleString()}` : '—'}</dd>
+                  </dl>
+                  <nav className="flex justify-end gap-1 border-t border-border pt-2">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(spot)} title="Επεξεργασία">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(spot)} disabled={unlinkingId === spot.id} title="Αποσύνδεση">
+                      {unlinkingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(spot)} disabled={deletingId === spot.id} title="Διαγραφή">
+                      {deletingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </Button>
+                  </nav>
+                </CardContent>
+              </Card>
+            ))}
+          </section>
+          <footer className="text-xs text-muted-foreground">
+            {filteredSpots.length} {tBuilding('tabs.labels.parking')}
+          </footer>
+        </>
       ) : (
+        /* ─── Table View ─── */
         <>
           <table className="w-full text-sm">
             <thead>
@@ -620,7 +680,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                 <th className="w-20 px-3 py-2">m²</th>
                 <th className="w-24 px-3 py-2">Τιμή</th>
                 <th className="w-28 px-3 py-2">Κατάσταση</th>
-                <th className="w-24 px-3 py-2 text-right">{tBuilding('tabs.floors.actions')}</th>
+                <th className="w-32 px-3 py-2 text-right">{tBuilding('tabs.floors.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -632,15 +692,8 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                         <Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} className="h-8" disabled={saving} />
                       </td>
                       <td className="px-3 py-1.5">
-                        <select
-                          value={editType}
-                          onChange={(e) => setEditType(e.target.value as ParkingSpotType)}
-                          className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm"
-                          disabled={saving}
-                        >
-                          {PARKING_TYPES.map(pt => (
-                            <option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>
-                          ))}
+                        <select value={editType} onChange={(e) => setEditType(e.target.value as ParkingSpotType)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
+                          {PARKING_TYPES.map(pt => (<option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>))}
                         </select>
                       </td>
                       <td className="px-3 py-1.5">
@@ -653,15 +706,8 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                         <Input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-20" disabled={saving} />
                       </td>
                       <td className="px-3 py-1.5">
-                        <select
-                          value={editStatus}
-                          onChange={(e) => setEditStatus(e.target.value as ParkingSpotStatus)}
-                          className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm"
-                          disabled={saving}
-                        >
-                          {PARKING_STATUSES.map(ps => (
-                            <option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>
-                          ))}
+                        <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as ParkingSpotStatus)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
+                          {PARKING_STATUSES.map(ps => (<option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>))}
                         </select>
                       </td>
                       <td className="px-3 py-1.5">
@@ -685,36 +731,17 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                       <td className="px-3 py-2">{getStatusBadge(spot.status)}</td>
                       <td className="px-3 py-2">
                         <nav className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(spot)} title="Επεξεργασία">
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-amber-600 hover:text-amber-700"
-                            onClick={() => handleUnlink(spot)}
-                            disabled={unlinkingId === spot.id}
-                            title="Αποσύνδεση από κτίριο"
-                          >
-                            {unlinkingId === spot.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Unlink2 className="h-3.5 w-3.5" />
-                            )}
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(spot)} disabled={unlinkingId === spot.id} title="Αποσύνδεση">
+                            {unlinkingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(spot)}
-                            disabled={deletingId === spot.id}
-                            title="Διαγραφή"
-                          >
-                            {deletingId === spot.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(spot)} disabled={deletingId === spot.id} title="Διαγραφή">
+                            {deletingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                           </Button>
                         </nav>
                       </td>
@@ -724,11 +751,10 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
               ))}
             </tbody>
           </table>
-
           <footer className="text-xs text-muted-foreground">
             {filteredSpots.length} {tBuilding('tabs.labels.parking')}
             {filteredSpots.length !== parkingSpots.length && (
-              <span className="ml-1">({parkingSpots.length} {t('allStatuses', { ns: 'filters' }).toLowerCase()})</span>
+              <span className="ml-1">({parkingSpots.length} σύνολο)</span>
             )}
           </footer>
         </>
