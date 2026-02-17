@@ -141,8 +141,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
-    // PRIORITY 1: DXF entity grip interaction
-    if (dxfGripInteraction.handleGripClick(worldPoint)) {
+    // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)
+    if (!isInteractiveTool(activeTool) && dxfGripInteraction.handleGripClick(worldPoint)) {
       return;
     }
 

@@ -270,12 +270,14 @@ export function useCentralizedMouseHandlers({
 
     // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseDown on a hovering/warm grip
     // If consumed, skip entity select + marquee start (grip drag takes priority)
-    if (e.button === 0 && onGripMouseDown && onGripMouseDown(worldPos)) {
+    // 🏢 AutoCAD standard: Skip grip drag during drawing mode — grips are for select mode only
+    if (e.button === 0 && !isToolInteractive && onGripMouseDown && onGripMouseDown(worldPos)) {
       return; // Grip drag started — skip all further processing
     }
 
     // Hit test for entity selection using provided callback
-    if (hitTestCallback && onEntitySelect) {
+    // 🏢 AutoCAD standard: SKIP entity selection during drawing mode — only select in 'select' tool
+    if (hitTestCallback && onEntitySelect && !isToolInteractive && activeTool === 'select') {
       const hitEntityId = hitTestCallback(scene, screenPos, transform, snap.viewport);
       onEntitySelect(hitEntityId);
     }
@@ -718,16 +720,16 @@ export function useCentralizedMouseHandlers({
               }
             } else if (hitTestCallback && onEntitySelect) {
               // Step 2: SSoT entity hit-test via HitTester (same pipeline as hover)
-              const hitResult = hitTestCallback(scene, freshScreenPos, transform, hitTestSnap.viewport);
-              if (hitResult) {
-                onEntitySelect(hitResult);
+              // 🏢 AutoCAD standard: SKIP entity selection during drawing mode
+              const isDrawing = isInDrawingMode(activeTool, overlayMode);
+              if (!isDrawing) {
+                const hitResult = hitTestCallback(scene, freshScreenPos, transform, hitTestSnap.viewport);
+                if (hitResult) {
+                  onEntitySelect(hitResult);
+                }
               }
               // 🏢 ENTERPRISE (2026-02-15): ALWAYS route to onCanvasClick so grip handlers
-              // in CanvasSection get a chance to fire. Without this, clicking on a grip that
-              // overlaps the entity body routes only to onEntitySelect and handleGripClick
-              // never runs — making grip activation impossible.
-              // When entity IS hit: entitySelectedOnMouseDownRef guards against accidental deselection.
-              // When entity is NOT hit: falls through to deselection path (existing behavior).
+              // and drawing handlers get a chance to fire.
               if (onCanvasClick) {
                 onCanvasClick(worldPoint);
               }
@@ -753,20 +755,23 @@ export function useCentralizedMouseHandlers({
       cursor.endSelection();
     } else if (cursor.position && hitTestCallback) {
       // Single point hit-test for entity/layer selection (only when no marquee)
-      // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot for consistent transforms
-      const canvasForHit = canvasRef?.current ?? null;
-      const hitSnap = getPointerSnapshotFromElement(canvasForHit);
-      if (!hitSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
-      const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
-      // Hit-test debug disabled for performance
+      // 🏢 AutoCAD standard: SKIP entity selection during drawing mode
+      const isDrawing = isInDrawingMode(activeTool, overlayMode);
+      if (!isDrawing) {
+        // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot for consistent transforms
+        const canvasForHit = canvasRef?.current ?? null;
+        const hitSnap = getPointerSnapshotFromElement(canvasForHit);
+        if (!hitSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+        const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
 
-      if (onEntitySelect) {
-        onEntitySelect(hitResult);
+        if (onEntitySelect) {
+          onEntitySelect(hitResult);
+        }
       }
     } else {
       // Selection debug disabled for performance
     }
-  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, snapEnabled, findSnapPoint, onGripMouseUp]);
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, overlayMode, snapEnabled, findSnapPoint, onGripMouseUp]);
 
   // 🚀 MOUSE LEAVE HANDLER - CAD-style area detection with pan cleanup
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
