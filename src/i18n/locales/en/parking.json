@@ -76,7 +76,12 @@
   "header": {
     "viewParking": "View Parking",
     "edit": "Edit",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
     "print": "Print",
-    "ownerLabel": "Owner:"
+    "ownerLabel": "Owner:",
+    "saveSuccess": "Parking spot updated",
+    "saveError": "Failed to save"
   }
 }

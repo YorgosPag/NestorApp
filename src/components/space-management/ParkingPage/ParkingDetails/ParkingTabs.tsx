@@ -7,20 +7,26 @@
  * ✅ ZERO HARDCODED VALUES: Όλα από centralized systems
  * ✅ ZERO INLINE STYLES: Following Fortune 500 protocol
  * ✅ CENTRALIZED CONFIGURATION: από parking-tabs-config.ts
+ * ✅ INLINE EDITING: Passes editing state via globalProps
  *
  * @migrated 2025-01-09
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import React from 'react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { getSortedParkingTabs } from '@/config/parking-tabs-config';
-// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
 import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 import { PARKING_COMPONENT_MAPPING } from '@/components/generic/mappings/parkingMappings';
 
 interface ParkingTabsProps {
   parking: ParkingSpot;
+  /** Whether inline editing is active (controlled by parent header) */
+  isEditing?: boolean;
+  /** Callback when editing state changes (from child tab components) */
+  onEditingChange?: (editing: boolean) => void;
+  /** Ref for save delegation — ParkingGeneralTab registers its save here */
+  saveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
 /**
@@ -31,7 +37,7 @@ interface ParkingTabsProps {
  * ZERO HARDCODED VALUES - όλα από centralized configuration.
  * ZERO INLINE STYLES - τηρεί το Fortune 500 protocol.
  */
-export function ParkingTabs({ parking }: ParkingTabsProps) {
+export function ParkingTabs({ parking, isEditing, onEditingChange, saveRef }: ParkingTabsProps) {
   // Get centralized tabs configuration
   const tabs = getSortedParkingTabs();
 
@@ -42,8 +48,12 @@ export function ParkingTabs({ parking }: ParkingTabsProps) {
       componentMapping={PARKING_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
       defaultTab="general"
       theme="default"
-      // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
       translationNamespace="building"
+      globalProps={{
+        isEditing,
+        onEditingChange,
+        onSaveRef: saveRef,
+      }}
     />
   );
 }
