@@ -1432,7 +1432,8 @@
     "export": "Export",
     "runTests": "Run Tests",
     "togglePerf": "Performance Monitor",
-    "pdfBackground": "PDF Background"
+    "pdfBackground": "PDF Background",
+    "aiAssistant": "AI Drawing"
   },
   "entityJoin": {
     "menuTitle": "Join",

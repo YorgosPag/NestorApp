@@ -1483,7 +1483,9 @@ export const DXF_UTILITY_TOOL_LABELS = {
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
   TOGGLE_PERF: 'tools.togglePerf',
   // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
-  PDF_BACKGROUND: 'tools.pdfBackground'
+  PDF_BACKGROUND: 'tools.pdfBackground',
+  // 🤖 ADR-185: AI Drawing Assistant Toggle
+  AI_ASSISTANT: 'tools.aiAssistant'
 } as const;
 
 // ============================================================================

@@ -60,6 +60,9 @@ export const DXF_ACTION_COLORS = {
 
   // Background controls
   pdfBackground: HOVER_TEXT_EFFECTS.PINK,
+
+  // 🤖 ADR-185: AI Drawing Assistant
+  aiAssistant: HOVER_TEXT_EFFECTS.VIOLET,
 } as const;
 
 /**

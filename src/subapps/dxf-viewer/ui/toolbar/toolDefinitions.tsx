@@ -5,7 +5,8 @@ import {
   Grid, Crop, Download, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
-  FileUp // 🏢 ENTERPRISE: PDF Background icon
+  FileUp, // 🏢 ENTERPRISE: PDF Background icon
+  Sparkles // 🤖 ADR-185: AI Drawing Assistant icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -376,5 +377,14 @@ export const createActionButtons = (props: {
     hotkey: getShortcutDisplayLabel('togglePdfBackground'),
     colorClass: DXF_ACTION_COLORS.pdfBackground,
     onClick: () => props.onAction('toggle-pdf-background')
+  },
+  // 🤖 ADR-185: AI Drawing Assistant Toggle
+  {
+    id: 'toggle-ai-assistant',
+    icon: Sparkles,
+    label: DXF_UTILITY_TOOL_LABELS.AI_ASSISTANT,
+    hotkey: '',
+    colorClass: DXF_ACTION_COLORS.aiAssistant,
+    onClick: () => props.onAction('toggle-ai-assistant')
   }
 ];

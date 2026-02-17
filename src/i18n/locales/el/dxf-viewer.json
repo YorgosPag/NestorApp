@@ -1426,7 +1426,8 @@
     "export": "Εξαγωγή",
     "runTests": "Εκτέλεση Tests",
     "togglePerf": "Παρακολούθηση Απόδοσης",
-    "pdfBackground": "PDF Υπόβαθρο"
+    "pdfBackground": "PDF Υπόβαθρο",
+    "aiAssistant": "AI Σχεδίαση"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",
