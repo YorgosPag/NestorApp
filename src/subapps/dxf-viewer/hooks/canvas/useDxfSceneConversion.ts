@@ -112,6 +112,13 @@ export function useDxfSceneConversion({
           converted.push({ ...base, type: 'angle-measurement' as const, vertex: e.vertex, point1: e.point1, point2: e.point2, angle: e.angle } as DxfEntityUnion);
           break;
         }
+        case 'lwpolyline': {
+          // 🏢 ADR-186: LWPolyline (lightweight polyline) → render as standard polyline
+          // Created by Entity Join operations and DXF imports
+          const e = entity as typeof entity & { vertices: Point2D[]; closed: boolean };
+          converted.push({ ...base, type: 'polyline' as const, vertices: e.vertices, closed: e.closed ?? false } as DxfEntityUnion);
+          break;
+        }
         case 'rectangle': {
           // DXF Standard: rectangles stored as closed polylines (4 vertices)
           const e = entity as typeof entity & { corner1: Point2D; corner2: Point2D };
