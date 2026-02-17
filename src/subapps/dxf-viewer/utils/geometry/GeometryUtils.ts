@@ -10,6 +10,7 @@ import { degToRad, TAU } from '../../rendering/entities/shared/geometry-utils';
 import {
   isLineEntity,
   isPolylineEntity,
+  isLWPolylineEntity,
   isArcEntity,
   type Entity,
 } from '../../types/entities';
@@ -143,18 +144,18 @@ export function entityToSegments(entity: GeometryEntity): Segment[] {
     return [{ start: entity.start, end: entity.end }];
   }
 
-  if (isPolylineEntity(e)) {
+  if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
     const vs = entity.vertices || [];
     const segs: Segment[] = [];
-    
+
     for (let i = 0; i < vs.length - 1; i++) {
       segs.push({ start: vs[i], end: vs[i + 1] });
     }
-    
+
     if (entity.closed && vs.length > 2) {
       segs.push({ start: vs[vs.length - 1], end: vs[0] });
     }
-    
+
     return segs;
   }
 

@@ -6,7 +6,7 @@
  * - JoinEntityCommand + CommandHistory for undo/redo
  * - LevelSceneManagerAdapter for scene mutations
  *
- * @see ADR-161: Entity Join System
+ * @see ADR-186: Entity Join System
  * @see ADR-032: Command History / Undo-Redo
  */
 
@@ -32,6 +32,10 @@ export interface UseEntityJoinParams {
   executeCommand: (command: ICommand) => void;
   /** Callback to update selected entity IDs after join */
   setSelectedEntityIds: (ids: string[]) => void;
+  /** Optional warning callback for user feedback */
+  onWarning?: (message: string) => void;
+  /** Optional success callback for user feedback */
+  onSuccess?: (message: string) => void;
 }
 
 export interface UseEntityJoinReturn {
@@ -59,6 +63,8 @@ export function useEntityJoin({
   levelManager,
   executeCommand,
   setSelectedEntityIds,
+  onWarning,
+  onSuccess,
 }: UseEntityJoinParams): UseEntityJoinReturn {
 
   const mergeService = useMemo(() => new EntityMergeService(), []);
@@ -70,15 +76,49 @@ export function useEntityJoin({
 
   const joinEntities = useCallback((entityIds: string[]): boolean => {
     const scene = getScene();
-    if (!scene || !levelManager.currentLevelId) return false;
+    if (!scene || !levelManager.currentLevelId) {
+      console.warn('[EntityJoin] No scene or level ID available');
+      onWarning?.('No active scene');
+      return false;
+    }
+
+    if (entityIds.length < 2) {
+      console.warn('[EntityJoin] Need 2+ entities, got:', entityIds.length);
+      onWarning?.('Select at least 2 entities to join');
+      return false;
+    }
+
+    // Debug: log entity types
+    const entities = scene.entities.filter(e => entityIds.includes(e.id));
+    console.log('[EntityJoin] Joining entities:', entities.map(e => ({
+      id: e.id.substring(0, 8),
+      type: e.type,
+      hasStart: 'start' in e,
+      hasVertices: 'vertices' in e,
+    })));
 
     // Use EntityMergeService to compute the merge result
     const result = mergeService.joinEntities({ entityIds, scene });
-    if (!result.success || !result.newEntityId) return false;
+
+    if (!result.success || !result.newEntityId) {
+      console.warn('[EntityJoin] Merge failed:', result.message);
+      onWarning?.(result.message || 'Join failed');
+      return false;
+    }
 
     // Find the merged entity in the updated scene
     const mergedEntity = result.updatedScene.entities.find(e => e.id === result.newEntityId);
-    if (!mergedEntity) return false;
+    if (!mergedEntity) {
+      console.error('[EntityJoin] Merged entity not found in updated scene');
+      onWarning?.('Join computation error');
+      return false;
+    }
+
+    console.log('[EntityJoin] Merge succeeded:', {
+      resultType: mergedEntity.type,
+      entityCount: entities.length,
+      newId: result.newEntityId.substring(0, 8),
+    });
 
     // Create adapter for command system
     const adapter = new LevelSceneManagerAdapter(
@@ -99,8 +139,9 @@ export function useEntityJoin({
     setSelectedEntityIds([result.newEntityId]);
     publishHighlight({ ids: [result.newEntityId] });
 
+    onSuccess?.(result.message || `Joined ${entities.length} entities`);
     return true;
-  }, [getScene, levelManager, mergeService, executeCommand, setSelectedEntityIds]);
+  }, [getScene, levelManager, mergeService, executeCommand, setSelectedEntityIds, onWarning, onSuccess]);
 
   const canJoin = useCallback((entityIds: string[]): boolean => {
     const scene = getScene();

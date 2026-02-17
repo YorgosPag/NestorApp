@@ -28,6 +28,7 @@ import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
+import { useNotifications } from '../../../../providers/NotificationProvider';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
@@ -114,6 +115,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const overlayStore = useOverlayStore();
   const universalSelection = useUniversalSelection();
   const { execute: executeCommand } = useCommandHistory();
+  const { warning: notifyWarning, success: notifySuccess } = useNotifications();
   useCommandHistoryKeyboard();
 
   // Stable refs to avoid stale closures in mouse event callbacks
@@ -327,11 +329,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setSelectedEntityIds, eventBus,
   });
 
-  // ADR-161: Entity Join System
+  // ADR-186: Entity Join System
   const entityJoinHook = useEntityJoin({
     levelManager,
     executeCommand,
     setSelectedEntityIds,
+    onWarning: notifyWarning,
+    onSuccess: notifySuccess,
   });
 
   // ADR-161: Memoized join state (avoid recalculating on every render)
