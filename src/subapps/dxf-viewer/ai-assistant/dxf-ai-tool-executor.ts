@@ -37,6 +37,7 @@ function buildLineEntity(args: DrawLineArgs): LineEntity {
   return {
     id: generateEntityId(),
     type: 'line',
+    visible: true,
     start: { x: args.start_x, y: args.start_y },
     end: { x: args.end_x, y: args.end_y },
     layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
@@ -48,6 +49,7 @@ function buildRectangleEntity(args: DrawRectangleArgs): RectangleEntity {
   return {
     id: generateEntityId(),
     type: 'rectangle',
+    visible: true,
     x: args.x,
     y: args.y,
     width: args.width,
@@ -61,6 +63,7 @@ function buildCircleEntity(args: DrawCircleArgs): CircleEntity {
   return {
     id: generateEntityId(),
     type: 'circle',
+    visible: true,
     center: { x: args.center_x, y: args.center_y },
     radius: args.radius,
     layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
