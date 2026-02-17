@@ -939,7 +939,7 @@ src/
 
 ## 9b. Phase 1 Implementation Details (2026-02-17)
 
-### Status: ✅ IMPLEMENTED — 9 new files, 4 modified, 0 TS errors
+### Status: ✅ IMPLEMENTED — 9 new files, 8 modified, 0 TS errors
 
 ### Architecture Implemented
 
@@ -974,6 +974,9 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | `src/subapps/dxf-viewer/ai-assistant/index.ts` | NEW | Barrel exports |
 | `src/i18n/locales/{el,en}/dxf-viewer.json` | MOD | Added `aiAssistant.*` translations |
 | `src/subapps/dxf-viewer/app/DxfViewerContent.tsx` | MOD | Integrated lazy-loaded chat panel behind feature flag |
+| `src/constants/property-statuses-enterprise.ts` | MOD | Added `AI_ASSISTANT` to `DXF_UTILITY_TOOL_LABELS` |
+| `src/subapps/dxf-viewer/config/toolbar-colors.ts` | MOD | Added `aiAssistant` color (VIOLET) to `DXF_ACTION_COLORS` |
+| `src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.tsx` | MOD | Added Sparkles toolbar toggle button |
 
 ### Tools Implemented (Phase 1)
 
@@ -1000,11 +1003,24 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | `useSemanticColors` | design-system/color-bridge | Theme-aware styling |
 | `useTranslation` | i18n/hooks | Internationalization |
 
+### Toolbar Integration (2026-02-17)
+
+Προσθήκη **Sparkles (✨) toggle button** στο DXF Viewer toolbar:
+
+| File | Change |
+|------|--------|
+| `src/constants/property-statuses-enterprise.ts` | Added `AI_ASSISTANT: 'tools.aiAssistant'` to `DXF_UTILITY_TOOL_LABELS` |
+| `src/subapps/dxf-viewer/config/toolbar-colors.ts` | Added `aiAssistant: HOVER_TEXT_EFFECTS.VIOLET` to `DXF_ACTION_COLORS` |
+| `src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.tsx` | Added Sparkles button with `toggle-ai-assistant` action |
+| `src/i18n/locales/{el,en}/dxf-viewer.json` | Added `tools.aiAssistant` translation ("AI Σχεδίαση" / "AI Drawing") |
+
+**Pattern**: Ίδιο pattern με `toggle-pdf-background` — enterprise action button architecture.
+
 ### Activation
 
-1. Set `NEXT_PUBLIC_DXF_AI_ASSISTANT=true` in `.env.local`
-2. Ensure `OPENAI_API_KEY` is set (server-side)
-3. Open DXF Viewer → trigger action `toggle-ai-assistant`
+1. Set `NEXT_PUBLIC_DXF_AI_ASSISTANT=true` on Vercel (✅ Done 2026-02-17)
+2. Ensure `OPENAI_API_KEY` is set (server-side, ✅ already configured)
+3. Open DXF Viewer → click **✨ AI Σχεδίαση** button in toolbar → chat panel opens
 4. Type: "σχεδίασε γραμμή από 0,0 μέχρι 10,5" → line appears on canvas
 
 ---
@@ -1022,3 +1038,4 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | 2026-02-17 | Προσθήκη sections 6.5-6.8: Geometry Engine, Provider Abstraction, Performance, References | Claude |
 | 2026-02-17 | Έλεγχος γραμμή-γραμμή: 11 νέες ερωτήσεις (Q-12 → Q-21), 2 αντιφάσεις (C-01, C-02), fix τίτλου Section 3.1 | Claude |
 | 2026-02-17 | **Phase 1 IMPLEMENTED**: 9 νέα αρχεία, 4 τροποποιημένα, 0 TS errors. Tools: draw_line, draw_rectangle, draw_circle, query_entities, undo_action. Single-call OpenAI + client-side executor + chat panel UI. Feature flag gated. | Claude |
+| 2026-02-17 | **Sparkles Toolbar Button**: Προσθήκη ✨ toggle button στο DXF toolbar (Violet color, Sparkles icon). 4 επιπλέον αρχεία τροποποιημένα. `NEXT_PUBLIC_DXF_AI_ASSISTANT=true` set on Vercel production. | Claude |
