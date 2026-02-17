@@ -981,15 +981,16 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | `src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.tsx` | MOD | Added Sparkles toolbar toggle button |
 | `src/subapps/dxf-viewer/hooks/canvas/useDxfSceneConversion.ts` | MOD | Added `x/y/width/height` rectangle format support (dual format) |
 
-### Tools Implemented (Phase 1)
+### Tools Implemented (Phase 1 + 1b)
 
-| Tool | Arguments | Validation |
-|------|-----------|------------|
-| `draw_line` | start_x, start_y, end_x, end_y, layer?, color? | Rejects zero-length lines |
-| `draw_rectangle` | x, y, width, height, layer?, color? | Rejects non-positive dimensions |
-| `draw_circle` | center_x, center_y, radius, layer?, color? | Rejects non-positive radius |
-| `query_entities` | type?, layer? | Read-only, returns entity summary |
-| `undo_action` | count? | Placeholder — Phase 1b integration |
+| Tool | Arguments | Validation | Phase |
+|------|-----------|------------|-------|
+| `draw_line` | start_x, start_y, end_x, end_y, layer?, color? | Rejects zero-length lines | 1 |
+| `draw_rectangle` | x, y, width, height, layer?, color? | Rejects non-positive dimensions | 1 |
+| `draw_circle` | center_x, center_y, radius, layer?, color? | Rejects non-positive radius | 1 |
+| `draw_polyline` | vertices[{x,y}], closed, layer?, color? | Min 2 vertices (3 for closed) | 1b |
+| `query_entities` | type?, layer? | Read-only, returns entity summary | 1 |
+| `undo_action` | count? | Removes last N entities + EventBus scene sync | 1b |
 
 ### Reused Centralized Systems
 
@@ -1005,6 +1006,7 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | `AgenticToolDefinition` | agentic-tool-definitions.ts | Tool definition type reuse |
 | `useSemanticColors` | design-system/color-bridge | Theme-aware styling |
 | `useTranslation` | i18n/hooks | Internationalization |
+| `EventBus` | systems/events | Dual-scene sync for undo (drawing:complete event) |
 
 ### Toolbar Integration (2026-02-17)
 
@@ -1047,3 +1049,4 @@ User types → useDxfAiChat hook → POST /api/dxf-ai/command
 | 2026-02-18 | **Bug fix #3: Unit conversion (×1000)** — Το system prompt οδηγούσε την AI να μετατρέπει μέτρα→mm (×1000), αλλά ο canvas δουλεύει σε drawing units που ταιριάζουν με αυτά που βλέπει ο χρήστης. Fix: Αφαίρεση ×1000 κανόνα από prompt, tool definitions, config. Αριθμοί περνούν αυτούσιοι. | Claude |
 | 2026-02-18 | **Bug fix #4: Rectangle crash** — `TypeError: Cannot read properties of undefined (reading 'x')` στο `useDxfSceneConversion`. Η conversion περίμενε `corner1/corner2` αλλά `RectangleEntity` χρησιμοποιεί `x/y/width/height`. Fix: Dual format support στο rectangle case. | Claude |
 | 2026-02-18 | **Bug fix #5: Persistent unit conversion** — Η AI συνέχιζε να μετατρέπει "3 μέτρα" → 3000 λόγω general knowledge, παρά τις οδηγίες. Fix: Ενίσχυση system prompt με ΑΠΑΓΟΡΕΥΕΤΑΙ directive + explicit counter-examples ("3 μέτρα → βάλε 3, ΟΧΙ 3000"). | Claude |
+| 2026-02-18 | **Phase 1b: undo_action + draw_polyline** — Υλοποίηση undo (αφαίρεση τελευταίων N entities + EventBus sync). Νέο tool `draw_polyline` (πολυγραμμές, πολύγωνα). 6 tools συνολικά. 4 αρχεία τροποποιημένα (types, definitions, executor, prompt). 0 TS errors. | Claude |
