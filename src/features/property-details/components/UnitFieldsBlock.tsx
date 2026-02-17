@@ -4,11 +4,12 @@
  * =============================================================================
  *
  * Displays and edits extended unit fields (layout, areas, orientations, etc.)
- * Following enterprise patterns established in other Block components.
+ * Each section wrapped in Card for visual separation (consistent with Parking/Building).
  *
  * @module features/property-details/components/UnitFieldsBlock
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
  * @since 2026-01-24
+ * @updated 2026-02-17 — Card containers for visual consistency
  *
  * Features:
  * - i18n support (EL/EN)
@@ -17,16 +18,17 @@
  * - Radix Select for dropdowns (ADR-001)
  * - Inline editing capability
  * - Phase 1-5 Unit Fields complete
+ * - Card containers per section (Google Material pattern)
  */
 
 'use client';
 
 import React, { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -40,13 +42,14 @@ import { cn } from '@/lib/utils';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import {
   Bed, Bath, Compass, Wrench, Zap,
-  Ruler, Thermometer, Snowflake, Home, Shield, Flame
+  Ruler, Thermometer, Snowflake, Home, Shield, Flame, FileText
 } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Centralized tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTypography } from '@/hooks/useTypography';
 
 // 🏢 ENTERPRISE: i18n
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -146,6 +149,7 @@ export function UnitFieldsBlock({
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: Use parent-controlled edit mode (lifting state pattern)
   // Fallback to local state only for backwards compatibility
@@ -266,10 +270,8 @@ export function UnitFieldsBlock({
       const errorMessage = error instanceof Error ? error.message : String(error);
 
       if (errorMessage.includes('permission') || errorMessage.includes('PERMISSION_DENIED')) {
-        // Permission denied - show clear error to user
         toast.error(t('save.permissionDenied', 'Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας'));
       } else {
-        // Generic error
         toast.error(t('save.error', 'Σφάλμα κατά την αποθήκευση'));
       }
       logger.error('UnitFieldsBlock save error:', { error: error });
@@ -281,10 +283,8 @@ export function UnitFieldsBlock({
   // Handle cancel
   const handleCancel = useCallback(() => {
     setFormData({
-      // 🏢 ENTERPRISE: Name & Description
       name: property.name ?? '',
       description: property.description ?? '',
-      // Layout
       bedrooms: property.layout?.bedrooms ?? 0,
       bathrooms: property.layout?.bathrooms ?? 0,
       wc: property.layout?.wc ?? 0,
@@ -304,7 +304,6 @@ export function UnitFieldsBlock({
       interiorFeatures: property.interiorFeatures ?? [],
       securityFeatures: property.securityFeatures ?? []
     });
-    // 🏢 ENTERPRISE: Exit edit mode via parent callback or local state
     if (onExitEditMode) {
       onExitEditMode();
     } else {
@@ -329,499 +328,477 @@ export function UnitFieldsBlock({
     });
   }, []);
 
-  // Check if there's any data to show
-  const hasData = (
-    (property.layout?.bedrooms ?? 0) > 0 ||
-    (property.layout?.bathrooms ?? 0) > 0 ||
-    (property.areas?.gross ?? 0) > 0 ||
-    (property.orientations?.length ?? 0) > 0 ||
-    property.condition ||
-    property.energy?.class ||
-    property.systemsOverride?.heatingType ||
-    property.systemsOverride?.coolingType ||
-    (property.finishes?.flooring?.length ?? 0) > 0 ||
-    (property.interiorFeatures?.length ?? 0) > 0 ||
-    (property.securityFeatures?.length ?? 0) > 0
-  );
-
-  // 🏢 ENTERPRISE: NEVER return null - always show placeholders in view mode
-  // This follows Fortune 500 UX patterns: "view mode ≠ hidden mode"
-
   return (
-    <>
-      <Separator />
-      <section className={spacing.spaceBetween.sm} aria-labelledby="unit-fields-title">
-        {/* Header - 🏢 ENTERPRISE: Edit button removed - controlled by parent (PropertyMeta) */}
-        <header className={`flex items-center justify-between ${spacing.gap.sm}`}>
-          <h4 id="unit-fields-title" className="text-xs font-medium">
-            {t('features.sectionTitle', { defaultValue: 'Χαρακτηριστικά Μονάδας' })}
-          </h4>
-          {/* 🏢 ENTERPRISE: Edit button removed per enterprise UX guidelines
-              Single "Edit details" button in PropertyMeta controls all fields */}
-        </header>
+    <form
+      id={isEditing ? 'unit-fields-form' : undefined}
+      className="space-y-4 p-1"
+      onSubmit={(e) => { e.preventDefault(); if (isEditing) handleSave(); }}
+    >
+      {/* ─── Identity Card (Name + Description) ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <FileText className={cn(iconSizes.md, 'text-blue-500')} />
+            {t('fields.identity.sectionTitle', { defaultValue: 'Ταυτότητα Μονάδας' })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <fieldset className="space-y-1.5">
+            <Label htmlFor="unit-name" className="text-xs font-medium">
+              {t('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })}
+            </Label>
+            <Input
+              id="unit-name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              disabled={!isEditing}
+              className="h-8 text-sm"
+              placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
+            />
+          </fieldset>
+          <fieldset className="space-y-1.5">
+            <Label htmlFor="unit-description" className="text-xs font-medium">
+              {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
+            </Label>
+            <textarea
+              id="unit-description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              disabled={!isEditing}
+              className={cn(
+                'w-full h-20 text-sm px-3 py-2 rounded-md border border-input bg-background resize-none',
+                !isEditing && 'disabled:cursor-default disabled:opacity-70'
+              )}
+              placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
+            />
+          </fieldset>
+        </CardContent>
+      </Card>
 
-        {/* Content — 🏢 ENTERPRISE: Same layout in View & Edit mode (Salesforce/SAP pattern)
-            Fields are disabled when not editing. No layout shift between modes. */}
-        <form
-          id={isEditing ? 'unit-fields-form' : undefined}
-          className={spacing.spaceBetween.sm}
-          onSubmit={(e) => { e.preventDefault(); if (isEditing) handleSave(); }}
-        >
-            {/* ═══════════════════════════════════════════════════════════════
-                🏢 ENTERPRISE: NAME & DESCRIPTION (Unit Identity)
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset className={spacing.spaceBetween.sm}>
-              <legend className="sr-only">{t('fields.identity.sectionTitle', { defaultValue: 'Ταυτότητα Μονάδας' })}</legend>
-
-              {/* Name */}
-              <article>
-                <Label htmlFor="unit-name" className={`text-xs font-medium ${spacing.margin.bottom.xs}`}>
-                  {t('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })}
-                </Label>
-                <Input
-                  id="unit-name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  disabled={!isEditing}
-                  className="h-8 text-sm"
-                  placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
-                />
-              </article>
-
-              {/* Description */}
-              <article>
-                <Label htmlFor="unit-description" className={`text-xs font-medium ${spacing.margin.bottom.xs}`}>
-                  {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
-                </Label>
-                <textarea
-                  id="unit-description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  disabled={!isEditing}
-                  className={cn(
-                    'w-full h-20 text-sm px-3 py-2 rounded-md border border-input bg-background resize-none',
-                    !isEditing && 'disabled:cursor-default disabled:opacity-70'
-                  )}
-                  placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
-                />
-              </article>
+      {/* ─── Layout Card (Bedrooms, Bathrooms, WC) ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Bed className={cn(iconSizes.md, 'text-violet-500')} />
+            {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`grid grid-cols-3 ${spacing.gap.sm}`}>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="bedrooms" className="text-xs flex items-center gap-1">
+                <Bed className={cn(iconSizes.xs, 'text-violet-600')} />
+                {t('card.stats.bedrooms')}
+              </Label>
+              <Input
+                id="bedrooms"
+                type="number"
+                min={0}
+                max={20}
+                value={formData.bedrooms}
+                onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
             </fieldset>
-
-            <Separator />
-
-            {/* ═══════════════════════════════════════════════════════════════
-                PHASE 1: LAYOUT (Bedrooms, Bathrooms, WC)
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset className={`grid grid-cols-3 ${spacing.gap.sm}`}>
-              <legend className="sr-only">{t('fields.layout.bedrooms')}</legend>
-
-              {/* Bedrooms */}
-              <article>
-                <Label htmlFor="bedrooms" className="text-xs flex items-center gap-1">
-                  <Bed className={cn(iconSizes.xs, 'text-violet-600')} />
-                  {t('card.stats.bedrooms')}
-                </Label>
-                <Input
-                  id="bedrooms"
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={formData.bedrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
-                  disabled={!isEditing}
-                  className={cn('h-8 text-xs mt-1', quick.input)}
-                />
-              </article>
-
-              {/* Bathrooms */}
-              <article>
-                <Label htmlFor="bathrooms" className="text-xs flex items-center gap-1">
-                  <Bath className={cn(iconSizes.xs, 'text-cyan-600')} />
-                  {t('card.stats.bathrooms')}
-                </Label>
-                <Input
-                  id="bathrooms"
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={formData.bathrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: parseInt(e.target.value) || 0 }))}
-                  disabled={!isEditing}
-                  className={cn('h-8 text-xs mt-1', quick.input)}
-                />
-              </article>
-
-              {/* WC */}
-              <article>
-                <Label htmlFor="wc" className="text-xs flex items-center gap-1">
-                  <Bath className={cn(iconSizes.xs, 'text-sky-500')} />
-                  {t('fields.layout.wc')}
-                </Label>
-                <Input
-                  id="wc"
-                  type="number"
-                  min={0}
-                  max={5}
-                  value={formData.wc}
-                  onChange={(e) => setFormData(prev => ({ ...prev, wc: parseInt(e.target.value) || 0 }))}
-                  disabled={!isEditing}
-                  className={cn('h-8 text-xs mt-1', quick.input)}
-                />
-              </article>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="bathrooms" className="text-xs flex items-center gap-1">
+                <Bath className={cn(iconSizes.xs, 'text-cyan-600')} />
+                {t('card.stats.bathrooms')}
+              </Label>
+              <Input
+                id="bathrooms"
+                type="number"
+                min={0}
+                max={10}
+                value={formData.bathrooms}
+                onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: parseInt(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
             </fieldset>
-
-            {/* ═══════════════════════════════════════════════════════════════
-                PHASE 2: AREAS (Gross, Net, Balcony, Terrace, Garden)
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset>
-              <legend className="text-xs font-medium flex items-center gap-1 mb-2">
-                <Ruler className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
-                {t('fields.areas.sectionTitle')}
-              </legend>
-              <div className={`grid grid-cols-5 ${spacing.gap.sm}`}>
-                <article>
-                  <Label htmlFor="areaGross" className="text-xs">{t('fields.areas.gross')}</Label>
-                  <Input
-                    id="areaGross"
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    value={formData.areaGross}
-                    onChange={(e) => setFormData(prev => ({ ...prev, areaGross: parseFloat(e.target.value) || 0 }))}
-                    disabled={!isEditing}
-                    className={cn('h-8 text-xs mt-1', quick.input)}
-                  />
-                </article>
-                <article>
-                  <Label htmlFor="areaNet" className="text-xs">{t('fields.areas.net')}</Label>
-                  <Input
-                    id="areaNet"
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    value={formData.areaNet}
-                    onChange={(e) => setFormData(prev => ({ ...prev, areaNet: parseFloat(e.target.value) || 0 }))}
-                    disabled={!isEditing}
-                    className={cn('h-8 text-xs mt-1', quick.input)}
-                  />
-                </article>
-                <article>
-                  <Label htmlFor="areaBalcony" className="text-xs">{t('fields.areas.balcony')}</Label>
-                  <Input
-                    id="areaBalcony"
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    value={formData.areaBalcony}
-                    onChange={(e) => setFormData(prev => ({ ...prev, areaBalcony: parseFloat(e.target.value) || 0 }))}
-                    disabled={!isEditing}
-                    className={cn('h-8 text-xs mt-1', quick.input)}
-                  />
-                </article>
-                <article>
-                  <Label htmlFor="areaTerrace" className="text-xs">{t('fields.areas.terrace')}</Label>
-                  <Input
-                    id="areaTerrace"
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    value={formData.areaTerrace}
-                    onChange={(e) => setFormData(prev => ({ ...prev, areaTerrace: parseFloat(e.target.value) || 0 }))}
-                    disabled={!isEditing}
-                    className={cn('h-8 text-xs mt-1', quick.input)}
-                  />
-                </article>
-                <article>
-                  <Label htmlFor="areaGarden" className="text-xs">{t('fields.areas.garden')}</Label>
-                  <Input
-                    id="areaGarden"
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    value={formData.areaGarden}
-                    onChange={(e) => setFormData(prev => ({ ...prev, areaGarden: parseFloat(e.target.value) || 0 }))}
-                    disabled={!isEditing}
-                    className={cn('h-8 text-xs mt-1', quick.input)}
-                  />
-                </article>
-              </div>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="wc" className="text-xs flex items-center gap-1">
+                <Bath className={cn(iconSizes.xs, 'text-sky-500')} />
+                {t('fields.layout.wc')}
+              </Label>
+              <Input
+                id="wc"
+                type="number"
+                min={0}
+                max={5}
+                value={formData.wc}
+                onChange={(e) => setFormData(prev => ({ ...prev, wc: parseInt(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
             </fieldset>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                PHASE 3: ORIENTATION
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset>
-              <legend className="text-xs font-medium flex items-center gap-1 mb-2">
-                <Compass className={cn(iconSizes.xs, 'text-amber-600')} />
-                {t('orientation.sectionTitle')}
-              </legend>
-              <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-                {ORIENTATION_OPTIONS.map((orientation) => {
-                  const isSelected = formData.orientations.includes(orientation);
-                  return (
-                    <Button
-                      key={orientation}
-                      type="button"
-                      variant={isSelected ? 'default' : 'outline'}
-                      size="sm"
-                      disabled={!isEditing}
-                      className="h-7 px-2 text-xs"
-                      onClick={() => toggleArrayItem('orientations', orientation)}
-                    >
-                      {t(`orientation.short.${orientation}`)}
-                    </Button>
-                  );
-                })}
-              </div>
+      {/* ─── Areas Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Ruler className={cn(iconSizes.md, NAVIGATION_ENTITIES.area.color)} />
+            {t('fields.areas.sectionTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`grid grid-cols-5 ${spacing.gap.sm}`}>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="areaGross" className="text-xs">{t('fields.areas.gross')}</Label>
+              <Input
+                id="areaGross"
+                type="number"
+                min={0}
+                step={0.1}
+                value={formData.areaGross}
+                onChange={(e) => setFormData(prev => ({ ...prev, areaGross: parseFloat(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
             </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="areaNet" className="text-xs">{t('fields.areas.net')}</Label>
+              <Input
+                id="areaNet"
+                type="number"
+                min={0}
+                step={0.1}
+                value={formData.areaNet}
+                onChange={(e) => setFormData(prev => ({ ...prev, areaNet: parseFloat(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="areaBalcony" className="text-xs">{t('fields.areas.balcony')}</Label>
+              <Input
+                id="areaBalcony"
+                type="number"
+                min={0}
+                step={0.1}
+                value={formData.areaBalcony}
+                onChange={(e) => setFormData(prev => ({ ...prev, areaBalcony: parseFloat(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="areaTerrace" className="text-xs">{t('fields.areas.terrace')}</Label>
+              <Input
+                id="areaTerrace"
+                type="number"
+                min={0}
+                step={0.1}
+                value={formData.areaTerrace}
+                onChange={(e) => setFormData(prev => ({ ...prev, areaTerrace: parseFloat(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="areaGarden" className="text-xs">{t('fields.areas.garden')}</Label>
+              <Input
+                id="areaGarden"
+                type="number"
+                min={0}
+                step={0.1}
+                value={formData.areaGarden}
+                onChange={(e) => setFormData(prev => ({ ...prev, areaGarden: parseFloat(e.target.value) || 0 }))}
+                disabled={!isEditing}
+                className={cn('h-8 text-xs', quick.input)}
+              />
+            </fieldset>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                PHASE 4: CONDITION & ENERGY
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset className={`grid grid-cols-2 ${spacing.gap.sm}`}>
-              <article>
-                <Label htmlFor="condition" className="text-xs flex items-center gap-1">
-                  <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
-                  {t('condition.sectionTitle')}
-                </Label>
-                <Select
-                  value={formData.condition}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+      {/* ─── Orientation Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Compass className={cn(iconSizes.md, 'text-amber-500')} />
+            {t('orientation.sectionTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`flex flex-wrap ${spacing.gap.sm}`}>
+            {ORIENTATION_OPTIONS.map((orientation) => {
+              const isSelected = formData.orientations.includes(orientation);
+              return (
+                <Button
+                  key={orientation}
+                  type="button"
+                  variant={isSelected ? 'default' : 'outline'}
+                  size="sm"
                   disabled={!isEditing}
+                  className="h-7 px-2 text-xs"
+                  onClick={() => toggleArrayItem('orientations', orientation)}
                 >
-                  <SelectTrigger id="condition" className="h-8 text-xs mt-1">
-                    <SelectValue placeholder={t('condition.sectionTitle')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONDITION_OPTIONS.map((condition) => (
-                      <SelectItem key={condition} value={condition} className="text-xs">
-                        {t(`condition.${condition}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </article>
+                  {t(`orientation.short.${orientation}`)}
+                </Button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
-              <article>
-                <Label htmlFor="energyClass" className="text-xs flex items-center gap-1">
-                  <Zap className={cn(iconSizes.xs, 'text-green-600')} />
-                  {t('energy.class')}
-                </Label>
-                <Select
-                  value={formData.energyClass}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}
-                  disabled={!isEditing}
-                >
-                  <SelectTrigger id="energyClass" className="h-8 text-xs mt-1">
-                    <SelectValue placeholder={t('energy.class')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ENERGY_CLASS_OPTIONS.map((energyClass) => (
-                      <SelectItem key={energyClass} value={energyClass} className="text-xs">
-                        {energyClass}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </article>
+      {/* ─── Condition & Energy Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Wrench className={cn(iconSizes.md, 'text-orange-500')} />
+            {t('condition.sectionTitle')}
+            <span className="text-muted-foreground">&</span>
+            <Zap className={cn(iconSizes.md, 'text-green-500')} />
+            {t('energy.class')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="condition" className="text-xs flex items-center gap-1">
+                <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
+                {t('condition.sectionTitle')}
+              </Label>
+              <Select
+                value={formData.condition}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="condition" className="h-8 text-xs">
+                  <SelectValue placeholder={t('condition.sectionTitle')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONDITION_OPTIONS.map((condition) => (
+                    <SelectItem key={condition} value={condition} className="text-xs">
+                      {t(`condition.${condition}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
-
-            {/* ═══════════════════════════════════════════════════════════════
-                PHASE 5: SYSTEMS (Heating, Cooling)
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset>
-              <legend className="text-xs font-medium flex items-center gap-1 mb-2">
-                <Thermometer className={cn(iconSizes.xs, 'text-red-600')} />
-                {t('systems.sectionTitle')}
-              </legend>
-              <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
-                <article>
-                  <Label htmlFor="heatingType" className="text-xs flex items-center gap-1">
-                    <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
-                    {t('systems.heating.label')}
-                  </Label>
-                  <Select
-                    value={formData.heatingType}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger id="heatingType" className="h-8 text-xs mt-1">
-                      <SelectValue placeholder={t('systems.heating.label')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {HEATING_OPTIONS.map((heating) => (
-                        <SelectItem key={heating} value={heating} className="text-xs">
-                          {t(`systems.heating.${heating}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </article>
-
-                <article>
-                  <Label htmlFor="coolingType" className="text-xs flex items-center gap-1">
-                    <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
-                    {t('systems.cooling.label')}
-                  </Label>
-                  <Select
-                    value={formData.coolingType}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger id="coolingType" className="h-8 text-xs mt-1">
-                      <SelectValue placeholder={t('systems.cooling.label')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COOLING_OPTIONS.map((cooling) => (
-                        <SelectItem key={cooling} value={cooling} className="text-xs">
-                          {t(`systems.cooling.${cooling}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </article>
-              </div>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="energyClass" className="text-xs flex items-center gap-1">
+                <Zap className={cn(iconSizes.xs, 'text-green-600')} />
+                {t('energy.class')}
+              </Label>
+              <Select
+                value={formData.energyClass}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="energyClass" className="h-8 text-xs">
+                  <SelectValue placeholder={t('energy.class')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENERGY_CLASS_OPTIONS.map((energyClass) => (
+                    <SelectItem key={energyClass} value={energyClass} className="text-xs">
+                      {energyClass}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                PHASE 5: FINISHES (Flooring, Frames, Glazing)
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset>
-              <legend className="text-xs font-medium flex items-center gap-1 mb-2">
-                <Home className={cn(iconSizes.xs, 'text-teal-600')} />
-                {t('finishes.sectionTitle')}
-              </legend>
-
-              {/* Flooring - Multi-select buttons */}
-              <div className="mb-3">
-                <Label className="text-xs mb-1 block">{t('finishes.flooring.label')}</Label>
-                <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-                  {FLOORING_OPTIONS.map((floor) => {
-                    const isSelected = formData.flooring.includes(floor);
-                    return (
-                      <Button
-                        key={floor}
-                        type="button"
-                        variant={isSelected ? 'default' : 'outline'}
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        disabled={!isEditing}
-                        onClick={() => toggleArrayItem('flooring', floor)}
-                      >
-                        {t(`finishes.flooring.${floor}`)}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Frames & Glazing */}
-              <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
-                <article>
-                  <Label htmlFor="windowFrames" className="text-xs">{t('finishes.frames.label')}</Label>
-                  <Select
-                    value={formData.windowFrames}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, windowFrames: value }))}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger id="windowFrames" className="h-8 text-xs mt-1">
-                      <SelectValue placeholder={t('finishes.frames.label')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FRAME_OPTIONS.map((frame) => (
-                        <SelectItem key={frame} value={frame} className="text-xs">
-                          {t(`finishes.frames.${frame}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </article>
-
-                <article>
-                  <Label htmlFor="glazing" className="text-xs">{t('finishes.glazing.label')}</Label>
-                  <Select
-                    value={formData.glazing}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, glazing: value }))}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger id="glazing" className="h-8 text-xs mt-1">
-                      <SelectValue placeholder={t('finishes.glazing.label')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GLAZING_OPTIONS.map((glaze) => (
-                        <SelectItem key={glaze} value={glaze} className="text-xs">
-                          {t(`finishes.glazing.${glaze}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </article>
-              </div>
+      {/* ─── Systems Card (Heating + Cooling) ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Thermometer className={cn(iconSizes.md, 'text-red-500')} />
+            {t('systems.sectionTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="heatingType" className="text-xs flex items-center gap-1">
+                <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
+                {t('systems.heating.label')}
+              </Label>
+              <Select
+                value={formData.heatingType}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="heatingType" className="h-8 text-xs">
+                  <SelectValue placeholder={t('systems.heating.label')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {HEATING_OPTIONS.map((heating) => (
+                    <SelectItem key={heating} value={heating} className="text-xs">
+                      {t(`systems.heating.${heating}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
-
-            {/* ═══════════════════════════════════════════════════════════════
-                PHASE 5: FEATURES (Interior & Security)
-            ═══════════════════════════════════════════════════════════════ */}
-            <fieldset>
-              <legend className="text-xs font-medium flex items-center gap-1 mb-2">
-                <Shield className={cn(iconSizes.xs, 'text-purple-600')} />
-                {t('features.sectionTitle')}
-              </legend>
-
-              {/* Interior Features */}
-              <div className="mb-3">
-                <Label className="text-xs mb-1 block">{t('features.interior.label')}</Label>
-                <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-                  {INTERIOR_FEATURE_OPTIONS.map((feature) => {
-                    const isSelected = formData.interiorFeatures.includes(feature);
-                    return (
-                      <Button
-                        key={feature}
-                        type="button"
-                        variant={isSelected ? 'default' : 'outline'}
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        disabled={!isEditing}
-                        onClick={() => toggleArrayItem('interiorFeatures', feature)}
-                      >
-                        {t(`features.interior.${feature}`)}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Security Features */}
-              <div>
-                <Label className="text-xs mb-1 block">{t('features.security.label')}</Label>
-                <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-                  {SECURITY_FEATURE_OPTIONS.map((feature) => {
-                    const isSelected = formData.securityFeatures.includes(feature);
-                    return (
-                      <Button
-                        key={feature}
-                        type="button"
-                        variant={isSelected ? 'default' : 'outline'}
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        disabled={!isEditing}
-                        onClick={() => toggleArrayItem('securityFeatures', feature)}
-                      >
-                        {t(`features.security.${feature}`)}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="coolingType" className="text-xs flex items-center gap-1">
+                <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
+                {t('systems.cooling.label')}
+              </Label>
+              <Select
+                value={formData.coolingType}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="coolingType" className="h-8 text-xs">
+                  <SelectValue placeholder={t('systems.cooling.label')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {COOLING_OPTIONS.map((cooling) => (
+                    <SelectItem key={cooling} value={cooling} className="text-xs">
+                      {t(`systems.cooling.${cooling}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* 🏢 ENTERPRISE: Save/Cancel actions moved to UnitDetailsHeader (single source)
-                The header's Save button triggers this form via requestSubmit('unit-fields-form')
-                The header's Cancel button calls onExitEditMode which resets form state */}
-          </form>
-      </section>
-    </>
+      {/* ─── Finishes Card (Flooring, Frames, Glazing) ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Home className={cn(iconSizes.md, 'text-teal-500')} />
+            {t('finishes.sectionTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Flooring - Multi-select buttons */}
+          <fieldset>
+            <Label className="text-xs mb-1.5 block">{t('finishes.flooring.label')}</Label>
+            <div className={`flex flex-wrap ${spacing.gap.sm}`}>
+              {FLOORING_OPTIONS.map((floor) => {
+                const isSelected = formData.flooring.includes(floor);
+                return (
+                  <Button
+                    key={floor}
+                    type="button"
+                    variant={isSelected ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    disabled={!isEditing}
+                    onClick={() => toggleArrayItem('flooring', floor)}
+                  >
+                    {t(`finishes.flooring.${floor}`)}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {/* Frames & Glazing */}
+          <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="windowFrames" className="text-xs">{t('finishes.frames.label')}</Label>
+              <Select
+                value={formData.windowFrames}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, windowFrames: value }))}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="windowFrames" className="h-8 text-xs">
+                  <SelectValue placeholder={t('finishes.frames.label')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {FRAME_OPTIONS.map((frame) => (
+                    <SelectItem key={frame} value={frame} className="text-xs">
+                      {t(`finishes.frames.${frame}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label htmlFor="glazing" className="text-xs">{t('finishes.glazing.label')}</Label>
+              <Select
+                value={formData.glazing}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, glazing: value }))}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="glazing" className="h-8 text-xs">
+                  <SelectValue placeholder={t('finishes.glazing.label')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {GLAZING_OPTIONS.map((glaze) => (
+                    <SelectItem key={glaze} value={glaze} className="text-xs">
+                      {t(`finishes.glazing.${glaze}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ─── Features Card (Interior & Security) ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Shield className={cn(iconSizes.md, 'text-purple-500')} />
+            {t('features.sectionTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Interior Features */}
+          <fieldset>
+            <Label className="text-xs mb-1.5 block">{t('features.interior.label')}</Label>
+            <div className={`flex flex-wrap ${spacing.gap.sm}`}>
+              {INTERIOR_FEATURE_OPTIONS.map((feature) => {
+                const isSelected = formData.interiorFeatures.includes(feature);
+                return (
+                  <Button
+                    key={feature}
+                    type="button"
+                    variant={isSelected ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    disabled={!isEditing}
+                    onClick={() => toggleArrayItem('interiorFeatures', feature)}
+                  >
+                    {t(`features.interior.${feature}`)}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {/* Security Features */}
+          <fieldset>
+            <Label className="text-xs mb-1.5 block">{t('features.security.label')}</Label>
+            <div className={`flex flex-wrap ${spacing.gap.sm}`}>
+              {SECURITY_FEATURE_OPTIONS.map((feature) => {
+                const isSelected = formData.securityFeatures.includes(feature);
+                return (
+                  <Button
+                    key={feature}
+                    type="button"
+                    variant={isSelected ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    disabled={!isEditing}
+                    onClick={() => toggleArrayItem('securityFeatures', feature)}
+                  >
+                    {t(`features.security.${feature}`)}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+        </CardContent>
+      </Card>
+    </form>
   );
 }
 
