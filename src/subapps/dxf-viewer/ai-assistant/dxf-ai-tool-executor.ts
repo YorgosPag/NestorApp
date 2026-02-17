@@ -24,8 +24,7 @@ import type {
   QueryEntitiesArgs,
 } from './types';
 import type { Entity, LineEntity, CircleEntity, RectangleEntity, SceneModel } from '../types/entities';
-import type { CompleteEntityOptions } from '../hooks/drawing/completeEntity';
-import { completeEntities } from '../hooks/drawing/completeEntity';
+import { completeEntity } from '../hooks/drawing/completeEntity';
 import { generateEntityId } from '../systems/entity-creation/utils';
 import { DXF_AI_DEFAULTS, DXF_AI_LIMITS } from '../config/ai-assistant-config';
 
@@ -248,18 +247,29 @@ export function executeDxfAiToolCalls(
     }
   }
 
-  // Batch insert all created entities
+  // Insert entities one-by-one so each emits 'drawing:complete' with updatedScene.
+  // CRITICAL: completeEntities (batch) emits event WITHOUT updatedScene, which
+  // breaks the dual-scene sync (level manager → currentScene) in DxfViewerContent.
+  // Using individual completeEntity() ensures the sync handler receives the
+  // updatedScene directly and propagates it to the canvas renderer.
   if (entitiesToCreate.length > 0) {
-    const completeOptions: Omit<CompleteEntityOptions, 'skipEvent' | 'skipToolPersistence'> = {
-      tool: 'select', // AI-created entities don't lock a drawing tool
-      levelId,
-      getScene,
-      setScene,
-    };
+    const createdIds: string[] = [];
+    let failedCount = 0;
 
-    const results = completeEntities(entitiesToCreate, completeOptions);
-    const createdIds = results.filter(r => r.success).map(r => r.entityId);
-    const failedCount = results.filter(r => !r.success).length;
+    for (const entity of entitiesToCreate) {
+      const result = completeEntity(entity, {
+        tool: 'select', // AI-created entities don't lock a drawing tool
+        levelId,
+        getScene,
+        setScene,
+      });
+
+      if (result.success) {
+        createdIds.push(result.entityId);
+      } else {
+        failedCount++;
+      }
+    }
 
     if (failedCount > 0) {
       errors.push(`${failedCount} entity/ies απέτυχαν κατά τη δημιουργία`);
