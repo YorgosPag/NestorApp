@@ -1,5 +1,6 @@
 /**
  * Segment chaining utilities for connecting geometric segments
+ * 🏢 ADR-186: Updated with configurable force-connect tolerances for JOIN operations
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -7,6 +8,8 @@ import { Segment, samePoint, nearPoint, debugSegments } from './GeometryUtils';
 import type { AnySceneEntity } from '../../types/scene';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-186: Centralized JOIN Tolerances
+import { JOIN_TOLERANCES } from '../../config/tolerance-config';
 
 // Connection result for force-connect algorithm
 interface ConnectionCandidate {
@@ -20,12 +23,23 @@ export interface ChainResult {
   chain: Point2D[];
   unusedSegments: number;
   success: boolean;
+  /** Minimum gap distance between closest unconnected endpoints (when chain fails) */
+  minGapDistance?: number;
 }
 
 /**
- * Chain segments together using greedy algorithm
+ * Chain segments together using greedy algorithm.
+ *
+ * @param segs - Segments to chain
+ * @param originalEntities - Original entities (for debug)
+ * @param forceConnectTolerances - Custom tolerance array for force-connect (default: DEFAULT_CHAIN)
+ *   For JOIN operations, pass JOIN_TOLERANCES.FORCE_CONNECT for generous matching.
  */
-export function chainSegments(segs: Segment[], originalEntities: AnySceneEntity[] = []): Point2D[] | null {
+export function chainSegments(
+  segs: Segment[],
+  originalEntities: AnySceneEntity[] = [],
+  forceConnectTolerances: readonly number[] = JOIN_TOLERANCES.DEFAULT_CHAIN,
+): Point2D[] | null {
   if (segs.length === 0) return [];
   
   const used = new Array(segs.length).fill(false);
@@ -168,16 +182,21 @@ export function chainSegments(segs: Segment[], originalEntities: AnySceneEntity[
     }
     
     // Try force-connect with increasing distance tolerance
-    const tolerances = [0.2, 0.5, 1.0, 2.0];
-    for (const tolerance of tolerances) {
+    // 🏢 ADR-186: Use configurable tolerances (generous for JOIN, tight for auto-chain)
+    for (const tolerance of forceConnectTolerances) {
       const forceResult = tryForceConnect(chain, unusedSegs, tolerance);
       if (forceResult) {
-
+        console.log(`[SegmentChaining] Force-connected at tolerance ${tolerance} CAD units`);
         return forceResult;
       }
     }
-    
-    console.warn(`❌ Even force-connect failed. Segments are too disconnected.`);
+
+    // Calculate minimum gap distance for error reporting
+    const minGap = computeMinGapDistance(chain, unusedSegs);
+    const maxTolerance = forceConnectTolerances[forceConnectTolerances.length - 1];
+    console.warn(
+      `[SegmentChaining] Force-connect failed. Min gap: ${minGap.toFixed(2)} CAD units, max tolerance: ${maxTolerance}`
+    );
     return null;
   }
 
@@ -253,4 +272,97 @@ export function tryForceConnect(
   }
 
   return extendedChain;
+}
+
+/**
+ * Compute the minimum distance between chain endpoints and unused segment endpoints.
+ * Used for error reporting when force-connect fails.
+ */
+function computeMinGapDistance(
+  chain: Point2D[],
+  unusedSegs: Array<Segment & { index: number }>,
+): number {
+  if (chain.length === 0 || unusedSegs.length === 0) return Infinity;
+
+  const chainHead = chain[0];
+  const chainTail = chain[chain.length - 1];
+  let minDist = Infinity;
+
+  for (const seg of unusedSegs) {
+    const d1 = calculateDistance(chainTail, seg.start);
+    const d2 = calculateDistance(chainTail, seg.end);
+    const d3 = calculateDistance(chainHead, seg.start);
+    const d4 = calculateDistance(chainHead, seg.end);
+    minDist = Math.min(minDist, d1, d2, d3, d4);
+  }
+
+  return minDist;
+}
+
+/**
+ * Chain segments and return detailed result with gap info.
+ * Used by EntityMergeService for better error messaging.
+ */
+export function chainSegmentsDetailed(
+  segs: Segment[],
+  originalEntities: AnySceneEntity[] = [],
+  forceConnectTolerances: readonly number[] = JOIN_TOLERANCES.FORCE_CONNECT,
+): ChainResult {
+  if (segs.length === 0) {
+    return { chain: [], unusedSegments: 0, success: true };
+  }
+
+  const result = chainSegments(segs, originalEntities, forceConnectTolerances);
+
+  if (result && result.length >= 2) {
+    return { chain: result, unusedSegments: 0, success: true };
+  }
+
+  // Failed — compute gap info for error messaging
+  // Re-run the initial chain to find unused segments
+  const used = new Array(segs.length).fill(false);
+  const tempChain: Point2D[] = [];
+  used[0] = true;
+  tempChain.push(segs[0].start, segs[0].end);
+
+  // Quick greedy pass to find what connected
+  let extended = true;
+  while (extended) {
+    extended = false;
+    const tail = tempChain[tempChain.length - 1];
+    const head = tempChain[0];
+    for (let i = 0; i < segs.length; i++) {
+      if (used[i]) continue;
+      if (samePoint(tail, segs[i].start) || nearPoint(tail, segs[i].start)) {
+        tempChain.push(segs[i].end);
+        used[i] = true;
+        extended = true;
+      } else if (samePoint(tail, segs[i].end) || nearPoint(tail, segs[i].end)) {
+        tempChain.push(segs[i].start);
+        used[i] = true;
+        extended = true;
+      } else if (samePoint(head, segs[i].end) || nearPoint(head, segs[i].end)) {
+        tempChain.unshift(segs[i].start);
+        used[i] = true;
+        extended = true;
+      } else if (samePoint(head, segs[i].start) || nearPoint(head, segs[i].start)) {
+        tempChain.unshift(segs[i].end);
+        used[i] = true;
+        extended = true;
+      }
+    }
+  }
+
+  const unusedSegs = segs
+    .map((seg, i) => ({ ...seg, index: i }))
+    .filter((_, i) => !used[i]);
+
+  const minGap = computeMinGapDistance(tempChain, unusedSegs);
+
+  return {
+    chain: tempChain,
+    unusedSegments: unusedSegs.length,
+    success: false,
+    minGapDistance: minGap,
+  };
 }

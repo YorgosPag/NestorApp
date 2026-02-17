@@ -166,6 +166,33 @@ export const ENTITY_LIMITS = {
   GAP_TOLERANCE: 0.5,
 } as const;
 
+// ===== JOIN / FORCE-CONNECT TOLERANCES =====
+// 🏢 ADR-186: Entity Join System — Force-Connect Tolerances (2026-02-17)
+
+/**
+ * 🎯 JOIN FORCE-CONNECT TOLERANCES
+ * Progressive tolerance array for entity JOIN operations.
+ * Each value is tried in order; first successful connect wins.
+ *
+ * JOIN is a **deliberate user action** (select + right-click + Join),
+ * so we allow much more generous tolerances than automatic chaining.
+ *
+ * Values are in CAD/world units:
+ * - 0.5–2.0: Tight tolerance for precision-drawn entities
+ * - 5.0–20.0: Medium tolerance for freehand-drawn entities on canvas
+ * - 50.0–100.0: Very generous for entities drawn without snapping
+ *
+ * @example
+ * import { JOIN_TOLERANCES } from '../config/tolerance-config';
+ * const chain = chainSegments(segs, entities, JOIN_TOLERANCES.FORCE_CONNECT);
+ */
+export const JOIN_TOLERANCES = {
+  /** Progressive force-connect distances (CAD units) */
+  FORCE_CONNECT: [0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0] as const,
+  /** Default tolerances for automatic chaining (DXF import, etc.) */
+  DEFAULT_CHAIN: [0.2, 0.5, 1.0, 2.0] as const,
+} as const;
+
 // ===== ARC TESSELLATION CONFIGURATION =====
 // 🏢 ADR-166: Centralized Arc Tessellation Constants (2026-02-01)
 

@@ -21,10 +21,12 @@ import type {
   LWPolylineEntity,
 } from '../types/entities';
 import { entityToSegments, samePoint, arePointsCollinear } from '../utils/geometry/GeometryUtils';
-import { chainSegments } from '../utils/geometry/SegmentChaining';
+import { chainSegments, chainSegmentsDetailed } from '../utils/geometry/SegmentChaining';
 import { publishHighlight } from '../events/selection-bus';
 // ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateEntityId } from '../systems/entity-creation/utils';
+// 🏢 ADR-186: Centralized JOIN Tolerances
+import { JOIN_TOLERANCES } from '../config/tolerance-config';
 
 // ============================================================================
 // CONSTANTS
@@ -349,6 +351,7 @@ export class EntityMergeService {
 
   /**
    * Execute the geometric join: segment extraction → chaining → result type → build entity.
+   * 🏢 ADR-186: Uses generous JOIN_TOLERANCES for force-connect
    */
   private executeGeometricJoin(entities: AnySceneEntity[], scene: SceneModel): MergeResult {
     const allSegs = entities.flatMap(entityToSegments);
@@ -356,10 +359,19 @@ export class EntityMergeService {
       return { updatedScene: scene, success: false, message: 'No geometry segments found in selected entities' };
     }
 
-    const chain = chainSegments(allSegs, entities);
-    if (!chain || chain.length < 2) {
-      return { updatedScene: scene, success: false, message: 'Selected entities are not geometrically connected' };
+    // Use generous JOIN tolerances (up to 100 CAD units) for deliberate user actions
+    const detailed = chainSegmentsDetailed(allSegs, entities, JOIN_TOLERANCES.FORCE_CONNECT);
+    if (!detailed.success || detailed.chain.length < 2) {
+      const gapInfo = detailed.minGapDistance !== undefined && detailed.minGapDistance < Infinity
+        ? ` (min gap: ${detailed.minGapDistance.toFixed(1)} units)`
+        : '';
+      return {
+        updatedScene: scene,
+        success: false,
+        message: `Entities are not connected${gapInfo}. Move endpoints closer together.`,
+      };
     }
+    const chain = detailed.chain;
 
     // Determine output entity type
     const resultType = determineResultType(entities, chain);
@@ -424,14 +436,17 @@ export class EntityMergeService {
       return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Contains closed entities' };
     }
 
-    // Attempt chaining to determine result type
+    // Attempt chaining to determine result type (use generous JOIN tolerances)
     const allSegs = entities.flatMap(entityToSegments);
-    const chain = chainSegments(allSegs, entities);
-    if (!chain || chain.length < 2) {
-      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Entities are not connected' };
+    const detailed = chainSegmentsDetailed(allSegs, entities, JOIN_TOLERANCES.FORCE_CONNECT);
+    if (!detailed.success || detailed.chain.length < 2) {
+      const gapInfo = detailed.minGapDistance !== undefined && detailed.minGapDistance < Infinity
+        ? ` (gap: ${detailed.minGapDistance.toFixed(1)} units)`
+        : '';
+      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: `Entities not connected${gapInfo}` };
     }
 
-    const resultType = determineResultType(entities, chain);
+    const resultType = determineResultType(entities, detailed.chain);
     return { canJoin: true, resultType, entityCount: entities.length };
   }
 
