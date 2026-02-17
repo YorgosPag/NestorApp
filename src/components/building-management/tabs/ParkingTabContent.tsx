@@ -10,13 +10,24 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Car, Plus, Pencil, Trash2, Check, X, Loader2, Unlink2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Car, Plus, Pencil, Trash2, Check, X, Loader2, Unlink2, Search, CheckCircle, Euro, Ruler, BarChart3 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -105,6 +116,13 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   // Delete & Unlink state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<ParkingSpotType | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<ParkingSpotStatus | 'all'>('all');
+
+  const iconSizes = useIconSizes();
 
   // ============================================================================
   // FETCH
@@ -298,6 +316,36 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   };
 
   // ============================================================================
+  // COMPUTED: Stats & Filtered Data
+  // ============================================================================
+
+  const stats = useMemo(() => ({
+    total: parkingSpots.length,
+    available: parkingSpots.filter(s => s.status === 'available').length,
+    totalValue: parkingSpots.reduce((sum, s) => sum + (s.price || 0), 0),
+    totalArea: parkingSpots.reduce((sum, s) => sum + (s.area || 0), 0),
+  }), [parkingSpots]);
+
+  const filteredSpots = useMemo(() => {
+    return parkingSpots.filter(spot => {
+      const matchesSearch = !searchTerm ||
+        spot.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (spot.location || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (spot.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = filterType === 'all' || spot.type === filterType;
+      const matchesStatus = filterStatus === 'all' || spot.status === filterStatus;
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [parkingSpots, searchTerm, filterType, filterStatus]);
+
+  const dashboardStats: DashboardStat[] = useMemo(() => [
+    { title: tBuilding('parkingStats.total'), value: stats.total, icon: Car, color: 'blue' },
+    { title: tBuilding('parkingStats.available'), value: stats.available, icon: CheckCircle, color: 'green' },
+    { title: tBuilding('parkingStats.totalValue'), value: `€${(stats.totalValue / 1000).toFixed(0)}K`, icon: Euro, color: 'gray' },
+    { title: tBuilding('parkingStats.totalArea'), value: `${stats.totalArea.toFixed(1)} m²`, icon: Ruler, color: 'blue' },
+  ], [stats, tBuilding]);
+
+  // ============================================================================
   // HELPERS
   // ============================================================================
 
@@ -359,6 +407,55 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           {tBuilding('tabs.labels.parking')}
         </Button>
       </header>
+
+      {/* Stats Cards */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} className="" />
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <label className="relative md:col-span-2">
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
+              <Input
+                placeholder={tBuilding('parkingStats.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </label>
+
+            <Select value={filterType} onValueChange={(val) => setFilterType(val as ParkingSpotType | 'all')}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
+                {PARKING_TYPES.map(pt => (
+                  <SelectItem key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterStatus} onValueChange={(val) => setFilterStatus(val as ParkingSpotStatus | 'all')}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allStatuses', { ns: 'filters' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
+                {PARKING_STATUSES.map(ps => (
+                  <SelectItem key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" className="flex items-center gap-2">
+              <BarChart3 className={iconSizes.sm} />
+              {tBuilding('parkingStats.exportReport')}
+            </Button>
+          </fieldset>
+        </CardContent>
+      </Card>
 
       {/* Create Form — Expanded with all parking fields */}
       {showCreateForm && (
@@ -508,7 +605,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
       )}
 
       {/* Table */}
-      {parkingSpots.length === 0 ? (
+      {filteredSpots.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {tBuilding('tabs.labels.parking')} — 0
         </p>
@@ -527,7 +624,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
               </tr>
             </thead>
             <tbody>
-              {parkingSpots.map((spot) => (
+              {filteredSpots.map((spot) => (
                 <tr key={spot.id} className="border-b border-border/50 hover:bg-muted/20">
                   {editingId === spot.id ? (
                     <>
@@ -629,7 +726,10 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           </table>
 
           <footer className="text-xs text-muted-foreground">
-            {parkingSpots.length} {tBuilding('tabs.labels.parking')}
+            {filteredSpots.length} {tBuilding('tabs.labels.parking')}
+            {filteredSpots.length !== parkingSpots.length && (
+              <span className="ml-1">({parkingSpots.length} {t('allStatuses', { ns: 'filters' }).toLowerCase()})</span>
+            )}
           </footer>
         </>
       )}

@@ -1708,7 +1708,24 @@
     "storages": "Αποθήκες",
     "parkingSpaces": "Θέσεις Στάθμευσης",
     "available": "Διαθέσιμα",
-    "totalValue": "Συνολική Αξία"
+    "totalValue": "Συνολική Αξία",
+    "totalArea": "Συν. Εμβαδόν"
+  },
+  "parkingStats": {
+    "total": "Θέσεις",
+    "available": "Διαθέσιμες",
+    "totalValue": "Συνολική Αξία",
+    "totalArea": "Συν. Εμβαδόν",
+    "searchPlaceholder": "Αναζήτηση κωδικού ή περιγραφής...",
+    "exportReport": "Εξαγωγή Αναφοράς"
+  },
+  "unitStats": {
+    "total": "Μονάδες",
+    "available": "Διαθέσιμες",
+    "totalValue": "Συνολική Αξία",
+    "totalArea": "Συν. Εμβαδόν",
+    "searchPlaceholder": "Αναζήτηση ονόματος ή τύπου...",
+    "exportReport": "Εξαγωγή Αναφοράς"
   },
   "map": {
     "interactiveMap": "Διαδραστικός Χάρτης"

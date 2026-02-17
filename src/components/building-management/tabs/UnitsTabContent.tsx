@@ -14,7 +14,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
-import { Home, Plus, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
 import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
@@ -48,6 +60,23 @@ const UNIT_TYPE_LABELS: Record<string, string> = {
   storage: 'Αποθήκη',
 };
 
+const UNIT_TYPES_FOR_FILTER: UnitType[] = [
+  'studio', 'apartment_1br', 'apartment', 'apartment_2br', 'apartment_3br',
+  'maisonette', 'shop', 'office', 'storage',
+];
+
+const UNIT_STATUS_LABELS: Record<string, string> = {
+  'for-sale': 'Προς Πώληση',
+  'for-rent': 'Προς Ενοικίαση',
+  sold: 'Πωλημένη',
+  reserved: 'Δεσμευμένη',
+  rented: 'Ενοικιασμένη',
+  'under-negotiation': 'Υπό Διαπραγμάτευση',
+  unavailable: 'Μη Διαθέσιμη',
+};
+
+const UNIT_STATUSES_FOR_FILTER = ['for-sale', 'for-rent', 'sold', 'reserved', 'rented', 'under-negotiation', 'unavailable'] as const;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -62,6 +91,13 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   // AddUnitDialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<UnitType | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const iconSizes = useIconSizes();
 
   // Pre-build the buildings array for AddUnitDialog (single building, pre-selected)
   const buildingsForDialog = useMemo(() => [building], [building]);
@@ -90,6 +126,36 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   useEffect(() => {
     fetchUnits();
   }, [fetchUnits]);
+
+  // ============================================================================
+  // COMPUTED: Stats & Filtered Data
+  // ============================================================================
+
+  const stats = useMemo(() => ({
+    total: units.length,
+    available: units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length,
+    totalValue: units.reduce((sum, u) => sum + (u.price || 0), 0),
+    totalArea: units.reduce((sum, u) => sum + (u.area || 0), 0),
+  }), [units]);
+
+  const filteredUnits = useMemo(() => {
+    return units.filter(unit => {
+      const matchesSearch = !searchTerm ||
+        unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (unit.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getTypeLabel(unit.type).toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = filterType === 'all' || unit.type === filterType;
+      const matchesStatus = filterStatus === 'all' || unit.status === filterStatus;
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [units, searchTerm, filterType, filterStatus]);
+
+  const dashboardStats: DashboardStat[] = useMemo(() => [
+    { title: t('unitStats.total'), value: stats.total, icon: Home, color: 'blue' },
+    { title: t('unitStats.available'), value: stats.available, icon: CheckCircle, color: 'green' },
+    { title: t('unitStats.totalValue'), value: `€${(stats.totalValue / 1000).toFixed(0)}K`, icon: Euro, color: 'gray' },
+    { title: t('unitStats.totalArea'), value: `${stats.totalArea.toFixed(1)} m²`, icon: Ruler, color: 'blue' },
+  ], [stats, t]);
 
   // ============================================================================
   // HELPERS
@@ -156,8 +222,57 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         </Button>
       </header>
 
+      {/* Stats Cards */}
+      <UnifiedDashboard stats={dashboardStats} columns={4} className="" />
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <label className="relative md:col-span-2">
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
+              <Input
+                placeholder={t('unitStats.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </label>
+
+            <Select value={filterType} onValueChange={(val) => setFilterType(val as UnitType | 'all')}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
+                {UNIT_TYPES_FOR_FILTER.map(ut => (
+                  <SelectItem key={ut} value={ut}>{UNIT_TYPE_LABELS[ut] || ut}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allStatuses', { ns: 'filters' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
+                {UNIT_STATUSES_FOR_FILTER.map(us => (
+                  <SelectItem key={us} value={us}>{UNIT_STATUS_LABELS[us] || us}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" className="flex items-center gap-2">
+              <BarChart3 className={iconSizes.sm} />
+              {t('unitStats.exportReport')}
+            </Button>
+          </fieldset>
+        </CardContent>
+      </Card>
+
       {/* Table */}
-      {units.length === 0 ? (
+      {filteredUnits.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {t('tabs.labels.units')} — 0
         </p>
@@ -174,7 +289,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               </tr>
             </thead>
             <tbody>
-              {units.map((unit) => (
+              {filteredUnits.map((unit) => (
                 <tr key={unit.id} className="border-b border-border/50 hover:bg-muted/20">
                   <td className="px-3 py-2 font-medium">{unit.name}</td>
                   <td className="px-3 py-2 text-muted-foreground">{getTypeLabel(unit.type)}</td>
@@ -187,7 +302,10 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
           </table>
 
           <footer className="text-xs text-muted-foreground">
-            {units.length} {t('tabs.labels.units')}
+            {filteredUnits.length} {t('tabs.labels.units')}
+            {filteredUnits.length !== units.length && (
+              <span className="ml-1">({units.length} {t('allStatuses', { ns: 'filters' }).toLowerCase()})</span>
+            )}
           </footer>
         </>
       )}

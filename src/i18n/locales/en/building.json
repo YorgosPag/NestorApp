@@ -1708,7 +1708,24 @@
     "storages": "Storages",
     "parkingSpaces": "Parking Spaces",
     "available": "Available",
-    "totalValue": "Total Value"
+    "totalValue": "Total Value",
+    "totalArea": "Total Area"
+  },
+  "parkingStats": {
+    "total": "Spots",
+    "available": "Available",
+    "totalValue": "Total Value",
+    "totalArea": "Total Area",
+    "searchPlaceholder": "Search by code or description...",
+    "exportReport": "Export Report"
+  },
+  "unitStats": {
+    "total": "Units",
+    "available": "Available",
+    "totalValue": "Total Value",
+    "totalArea": "Total Area",
+    "searchPlaceholder": "Search by name or type...",
+    "exportReport": "Export Report"
   },
   "map": {
     "interactiveMap": "Interactive Map"
