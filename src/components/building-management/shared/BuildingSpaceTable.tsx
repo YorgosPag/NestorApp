@@ -1,15 +1,19 @@
 /**
- * BuildingSpaceTable — Centralized table component
+ * BuildingSpaceTable — Centralized sortable table component
  *
  * Used by all building space tabs (Units, Parking, Storage).
  * Renders data using the canonical @/components/ui/table system
  * with centralized border tokens and interactive patterns.
+ *
+ * Columns with a `sortValue` function get a clickable header
+ * that toggles A→Z / Z→A sorting.
  *
  * @module components/building-management/shared/BuildingSpaceTable
  */
 
 'use client';
 
+import { useMemo, useState, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -18,9 +22,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
-import type { SpaceColumn, SpaceActions, SpaceActionState } from './types';
+import type { SpaceColumn, SpaceActions, SpaceActionState, SortDirection } from './types';
+
+// ============================================================================
+// SORT STATE
+// ============================================================================
+
+interface SortState {
+  key: string;
+  direction: SortDirection;
+}
 
 // ============================================================================
 // TYPES
@@ -57,21 +72,86 @@ export function BuildingSpaceTable<T>({
   editingId,
 }: BuildingSpaceTableProps<T>) {
   const { t } = useTranslation('building');
+  const iconSizes = useIconSizes();
 
   const hasActions = actions && (actions.onView || actions.onEdit || actions.onUnlink || actions.onDelete);
+
+  // ============================================================================
+  // SORT STATE & LOGIC
+  // ============================================================================
+
+  const [sort, setSort] = useState<SortState | null>(null);
+
+  const handleSort = useCallback((columnKey: string) => {
+    setSort((prev) => {
+      if (prev?.key === columnKey) {
+        return { key: columnKey, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key: columnKey, direction: 'asc' };
+    });
+  }, []);
+
+  const sortedItems = useMemo(() => {
+    if (!sort) return items;
+
+    const column = columns.find((c) => c.key === sort.key);
+    if (!column?.sortValue) return items;
+
+    const { direction } = sort;
+    const extractor = column.sortValue;
+
+    return [...items].sort((a, b) => {
+      const av = extractor(a);
+      const bv = extractor(b);
+
+      // Numeric comparison
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return direction === 'asc' ? av - bv : bv - av;
+      }
+
+      // String comparison (locale-aware for Greek)
+      const sa = String(av).toLowerCase();
+      const sb = String(bv).toLowerCase();
+      const cmp = sa.localeCompare(sb, 'el');
+      return direction === 'asc' ? cmp : -cmp;
+    });
+  }, [items, sort, columns]);
+
+  // ============================================================================
+  // SORT ICON HELPER
+  // ============================================================================
+
+  const renderSortIcon = (columnKey: string) => {
+    if (sort?.key === columnKey) {
+      return sort.direction === 'asc'
+        ? <ArrowUp className={`${iconSizes.xs} ml-1 inline-block`} />
+        : <ArrowDown className={`${iconSizes.xs} ml-1 inline-block`} />;
+    }
+    return <ArrowUpDown className={`${iconSizes.xs} ml-1 inline-block opacity-40`} />;
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          {columns.map((col) => (
-            <TableHead
-              key={col.key}
-              className={`${col.width || ''} ${col.alignRight ? 'text-right' : ''}`}
-            >
-              {col.label}
-            </TableHead>
-          ))}
+          {columns.map((col) => {
+            const isSortable = !!col.sortValue;
+
+            return (
+              <TableHead
+                key={col.key}
+                className={`${col.width || ''} ${col.alignRight ? 'text-right' : ''} ${isSortable ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
+                onClick={isSortable ? () => handleSort(col.key) : undefined}
+              >
+                {col.label}
+                {isSortable && renderSortIcon(col.key)}
+              </TableHead>
+            );
+          })}
           {hasActions && (
             <TableHead className="w-36 text-right">
               {t('spaceActions.actions')}
@@ -80,7 +160,7 @@ export function BuildingSpaceTable<T>({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {items.map((item) => {
+        {sortedItems.map((item) => {
           const key = getKey(item);
           const isEditing = editingId === key;
 

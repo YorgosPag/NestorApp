@@ -239,11 +239,11 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   // ============================================================================
 
   const unitColumns: SpaceColumn<Unit>[] = useMemo(() => [
-    { key: 'name', label: t('tabs.floors.name'), render: (u) => <span className="font-medium">{u.name}</span> },
-    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', render: (u) => <span className="text-muted-foreground">{getTypeLabel(u.type)}</span> },
-    { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', render: (u) => <span className="font-mono text-sm text-muted-foreground">{u.floor}</span> },
-    { key: 'area', label: 'm²', width: 'w-20', render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
-    { key: 'status', label: t('tabs.labels.details'), width: 'w-28', render: (u) => getStatusBadge(u.status) },
+    { key: 'name', label: t('tabs.floors.name'), sortValue: (u) => u.name, render: (u) => <span className="font-medium">{u.name}</span> },
+    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className="text-muted-foreground">{getTypeLabel(u.type)}</span> },
+    { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className="font-mono text-sm text-muted-foreground">{u.floor}</span> },
+    { key: 'area', label: 'm²', width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
+    { key: 'status', label: t('tabs.labels.details'), width: 'w-28', sortValue: (u) => u.status, render: (u) => getStatusBadge(u.status) },
   ], [t]);
 
   const unitCardFields: SpaceCardField<Unit>[] = useMemo(() => [

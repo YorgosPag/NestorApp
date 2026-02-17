@@ -29,7 +29,20 @@ export interface SpaceColumn<T> {
   render: (item: T) => ReactNode;
   /** Optional: align text right (for actions column) */
   alignRight?: boolean;
+  /**
+   * Extract a sortable value from the item.
+   * When provided, the column header becomes clickable for A→Z / Z→A sorting.
+   * Returns string (lexicographic) or number (numeric) for proper comparison.
+   */
+  sortValue?: (item: T) => string | number;
 }
+
+// ============================================================================
+// SORT DIRECTION
+// ============================================================================
+
+/** Sort direction for column headers */
+export type SortDirection = 'asc' | 'desc';
 
 // ============================================================================
 // CARD FIELD DEFINITION

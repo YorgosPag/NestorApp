@@ -228,12 +228,12 @@ export function StorageTab({ building }: StorageTabProps) {
   // ============================================================================
 
   const storageColumns: SpaceColumn<StorageUnit>[] = useMemo(() => [
-    { key: 'code', label: t('storageTable.columns.code'), render: (u) => <span className="font-medium">{u.code}</span> },
-    { key: 'type', label: t('storageTable.columns.type'), width: 'w-28', render: (u) => <span className="text-muted-foreground">{translatedGetTypeLabel(u.type)}</span> },
-    { key: 'floor', label: t('storageTable.columns.floor'), width: 'w-20', render: (u) => <span className="text-muted-foreground">{u.floor || '—'}</span> },
-    { key: 'area', label: t('storageTable.columns.area'), width: 'w-20', render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
-    { key: 'price', label: t('storageTable.columns.price'), width: 'w-24', render: (u) => <span className="font-mono text-xs">{u.price ? `€${u.price.toLocaleString()}` : '—'}</span> },
-    { key: 'status', label: t('storageTable.columns.status'), width: 'w-28', render: (u) => (
+    { key: 'code', label: t('storageTable.columns.code'), sortValue: (u) => u.code, render: (u) => <span className="font-medium">{u.code}</span> },
+    { key: 'type', label: t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className="text-muted-foreground">{translatedGetTypeLabel(u.type)}</span> },
+    { key: 'floor', label: t('storageTable.columns.floor'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className="text-muted-foreground">{u.floor || '—'}</span> },
+    { key: 'area', label: t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
+    { key: 'price', label: t('storageTable.columns.price'), width: 'w-24', sortValue: (u) => u.price || 0, render: (u) => <span className="font-mono text-xs">{u.price ? `€${u.price.toLocaleString()}` : '—'}</span> },
+    { key: 'status', label: t('storageTable.columns.status'), width: 'w-28', sortValue: (u) => u.status, render: (u) => (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
         {translatedGetStatusLabel(u.status)}
       </span>

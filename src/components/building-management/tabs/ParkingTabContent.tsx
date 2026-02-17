@@ -383,12 +383,12 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   // ============================================================================
 
   const parkingColumns: SpaceColumn<ParkingSpot>[] = useMemo(() => [
-    { key: 'number', label: 'Κωδικός', render: (s) => <span className="font-mono font-medium">{s.number}</span> },
-    { key: 'type', label: 'Τύπος', width: 'w-28', render: (s) => <span className="text-muted-foreground">{PARKING_TYPE_LABELS[s.type || 'standard']}</span> },
-    { key: 'floor', label: 'Όροφος', width: 'w-20', render: (s) => <span className="text-muted-foreground">{s.floor || '—'}</span> },
-    { key: 'area', label: 'm²', width: 'w-20', render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
-    { key: 'price', label: 'Τιμή', width: 'w-24', render: (s) => <span className="font-mono text-xs">{s.price ? `€${s.price.toLocaleString()}` : '—'}</span> },
-    { key: 'status', label: 'Κατάσταση', width: 'w-28', render: (s) => getStatusBadge(s.status) },
+    { key: 'number', label: 'Κωδικός', sortValue: (s) => s.number, render: (s) => <span className="font-mono font-medium">{s.number}</span> },
+    { key: 'type', label: 'Τύπος', width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className="text-muted-foreground">{PARKING_TYPE_LABELS[s.type || 'standard']}</span> },
+    { key: 'floor', label: 'Όροφος', width: 'w-20', sortValue: (s) => s.floor || '', render: (s) => <span className="text-muted-foreground">{s.floor || '—'}</span> },
+    { key: 'area', label: 'm²', width: 'w-20', sortValue: (s) => s.area || 0, render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
+    { key: 'price', label: 'Τιμή', width: 'w-24', sortValue: (s) => s.price || 0, render: (s) => <span className="font-mono text-xs">{s.price ? `€${s.price.toLocaleString()}` : '—'}</span> },
+    { key: 'status', label: 'Κατάσταση', width: 'w-28', sortValue: (s) => s.status || '', render: (s) => getStatusBadge(s.status) },
   ], []);
 
   const parkingCardFields: SpaceCardField<ParkingSpot>[] = useMemo(() => [
