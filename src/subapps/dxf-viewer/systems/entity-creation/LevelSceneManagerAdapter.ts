@@ -51,11 +51,25 @@ type SetLevelSceneFunction = (levelId: string, scene: SceneModel) => void;
  *
  * This adapter allows Commands (CreateEntityCommand, DeleteEntityCommand, etc.)
  * to interact with the Level-based scene storage without tight coupling.
+ *
+ * 🔧 CRITICAL FIX (2026-02-17): Pending scene cache for batch mutations.
+ * React's getLevelScene reads from a closure-captured state. When multiple
+ * mutations happen in the same synchronous execution (e.g., JoinEntityCommand
+ * doing removeEntity + removeEntity + addEntity), each call reads the STALE
+ * initial scene. The pendingScene cache tracks progressive mutations within
+ * a single sync batch and clears after the microtask boundary.
  */
 export class LevelSceneManagerAdapter implements ISceneManager {
-  private readonly getLevelScene: GetLevelSceneFunction;
-  private readonly setLevelScene: SetLevelSceneFunction;
+  private readonly getLevelSceneFn: GetLevelSceneFunction;
+  private readonly setLevelSceneFn: SetLevelSceneFunction;
   private readonly levelId: string;
+
+  /**
+   * 🔧 Pending scene cache for batch mutations within same synchronous execution.
+   * Cleared via queueMicrotask after the sync batch completes.
+   */
+  private pendingScene: SceneModel | null = null;
+  private pendingClearScheduled = false;
 
   /**
    * Create a new adapter for a specific level
@@ -69,9 +83,35 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     setLevelScene: SetLevelSceneFunction,
     levelId: string
   ) {
-    this.getLevelScene = getLevelScene;
-    this.setLevelScene = setLevelScene;
+    this.getLevelSceneFn = getLevelScene;
+    this.setLevelSceneFn = setLevelScene;
     this.levelId = levelId;
+  }
+
+  /**
+   * 🔧 Get the latest scene, preferring the pending cache if available.
+   * This ensures multiple mutations in the same sync execution see each other's changes.
+   */
+  private getLatestScene(): SceneModel | null {
+    return this.pendingScene ?? this.getLevelSceneFn(this.levelId);
+  }
+
+  /**
+   * 🔧 Commit a scene update — stores in pending cache AND pushes to React state.
+   * The pending cache is cleared after the microtask boundary (sync batch done).
+   */
+  private commitScene(scene: SceneModel): void {
+    this.pendingScene = scene;
+    this.setLevelSceneFn(this.levelId, scene);
+
+    // Schedule pending cache clear after current sync batch
+    if (!this.pendingClearScheduled) {
+      this.pendingClearScheduled = true;
+      queueMicrotask(() => {
+        this.pendingScene = null;
+        this.pendingClearScheduled = false;
+      });
+    }
   }
 
   /**
@@ -79,7 +119,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Called by CreateEntityCommand.execute() and redo()
    */
   addEntity(entity: SceneEntity): void {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
 
     // 🏢 ENTERPRISE: Convert SceneEntity (command interface) to AnySceneEntity (scene type)
     // These types are structurally compatible but TypeScript needs explicit conversion
@@ -91,7 +131,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         ...scene,
         entities: [...scene.entities, sceneEntity],
       };
-      this.setLevelScene(this.levelId, updatedScene);
+      this.commitScene(updatedScene);
     } else {
       // Create new scene with this entity
       // 🏢 ENTERPRISE: DXF Standard - Layer "0" is always present for entities without explicit layer
@@ -114,7 +154,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         bounds: defaultBounds,
         units: 'mm',
       };
-      this.setLevelScene(this.levelId, newScene);
+      this.commitScene(newScene);
     }
   }
 
@@ -123,7 +163,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Called by DeleteEntityCommand.execute() and CreateEntityCommand.undo()
    */
   removeEntity(entityId: string): void {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
 
     if (scene) {
       const updatedEntities = scene.entities.filter((e) => e.id !== entityId);
@@ -131,7 +171,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         ...scene,
         entities: updatedEntities,
       };
-      this.setLevelScene(this.levelId, updatedScene);
+      this.commitScene(updatedScene);
     }
   }
 
@@ -140,7 +180,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Used for validation and state inspection
    */
   getEntity(entityId: string): SceneEntity | undefined {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
     const entity = scene?.entities.find((e) => e.id === entityId);
     // 🏢 ENTERPRISE: Type conversion from AnySceneEntity to SceneEntity interface
     return entity ? (entity as unknown as SceneEntity) : undefined;
@@ -151,7 +191,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Called by MoveEntityCommand and other modification commands
    */
   updateEntity(entityId: string, updates: Partial<SceneEntity>): void {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
 
     if (scene) {
       const updatedEntities = scene.entities.map((e) =>
@@ -161,7 +201,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         ...scene,
         entities: updatedEntities as AnySceneEntity[],
       };
-      this.setLevelScene(this.levelId, updatedScene);
+      this.commitScene(updatedScene);
     }
   }
 
@@ -170,7 +210,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Called by MoveVertexCommand
    */
   updateVertex(entityId: string, vertexIndex: number, position: Point2D): void {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
 
     if (scene) {
       const updatedEntities = scene.entities.map((entity) => {
@@ -211,7 +251,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         ...scene,
         entities: updatedEntities,
       };
-      this.setLevelScene(this.levelId, updatedScene);
+      this.commitScene(updatedScene);
     }
   }
 
@@ -220,7 +260,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Called by AddVertexCommand
    */
   insertVertex(entityId: string, insertIndex: number, position: Point2D): void {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
 
     if (scene) {
       const updatedEntities = scene.entities.map((entity) => {
@@ -241,7 +281,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         ...scene,
         entities: updatedEntities,
       };
-      this.setLevelScene(this.levelId, updatedScene);
+      this.commitScene(updatedScene);
     }
   }
 
@@ -250,7 +290,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Called by RemoveVertexCommand
    */
   removeVertex(entityId: string, vertexIndex: number): void {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
 
     if (scene) {
       const updatedEntities = scene.entities.map((entity) => {
@@ -273,7 +313,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         ...scene,
         entities: updatedEntities,
       };
-      this.setLevelScene(this.levelId, updatedScene);
+      this.commitScene(updatedScene);
     }
   }
 
@@ -282,7 +322,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    * Used for state inspection and validation
    */
   getVertices(entityId: string): Point2D[] | undefined {
-    const scene = this.getLevelScene(this.levelId);
+    const scene = this.getLatestScene();
     const entity = scene?.entities.find((e) => e.id === entityId);
 
     if (!entity) return undefined;
