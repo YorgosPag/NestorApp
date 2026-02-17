@@ -28,6 +28,8 @@ import { isInDrawingMode } from '../tools/ToolStateManager';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 ENTERPRISE (2026-02-18): Centralized scale limits for fallback zoom
+import { TRANSFORM_SCALE_LIMITS } from '../../config/transform-config';
 // 🏢 ENTERPRISE (2026-02-15): Point-in-polygon for overlay hover detection
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
@@ -846,7 +848,7 @@ export function useCentralizedMouseHandlers({
       // ⚠️ FALLBACK: Basic wheel zoom for backwards compatibility
       // 🏢 ENTERPRISE (2025-10-04): Use centralized CoordinateTransforms instead of duplicate formula
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      const newScale = clamp(transform.scale * zoomFactor, 0.1, 50);
+      const newScale = clamp(transform.scale * zoomFactor, TRANSFORM_SCALE_LIMITS.MIN_SCALE, TRANSFORM_SCALE_LIMITS.MAX_SCALE);
 
       // ✅ CENTRALIZED: CoordinateTransforms handles margins adjustment automatically
       const canvas = e.currentTarget;

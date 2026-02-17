@@ -108,8 +108,9 @@ const FloatingPanelsSection = React.lazy(() => import('../layout/FloatingPanelsS
 
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
 import { TransformProvider } from '../contexts/TransformContext';
-// 🏢 ENTERPRISE: Canvas Context (Centralized Zoom System)
-import { CanvasProvider } from '../contexts/CanvasContext';
+// 🏢 ENTERPRISE FIX (2026-02-18): CanvasProvider moved to DxfViewerApp.tsx
+// REASON: useDxfViewerState() calls useCanvasContext() which needs CanvasProvider as ancestor
+// CanvasProvider is no longer imported or rendered here
 
 // 🧪 UNIFIED TEST RUNNER - Import modal (test functions moved to DebugToolbar)
 import { type UnifiedTestReport } from '../debug/unified-test-runner';
@@ -981,7 +982,6 @@ Check console for detailed metrics`;
       : PANEL_LAYOUT.POINTER_EVENTS.AUTO;
 
   return (
-    <CanvasProvider>
       <TransformProvider
         initialTransform={canvasTransform}
         onTransformReady={handleTransformReady}
@@ -1125,7 +1125,6 @@ Check console for detailed metrics`;
       )}
       </section>
       </TransformProvider>
-    </CanvasProvider>
   );
 });
 

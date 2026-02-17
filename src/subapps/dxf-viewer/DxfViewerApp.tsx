@@ -24,6 +24,12 @@ import { ProjectHierarchyProvider } from './contexts/ProjectHierarchyContext';
 // TextSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider
 import { DxfViewerContent } from './app/DxfViewerContent';
 import type { DxfViewerAppProps } from './types';
+// 🏢 ENTERPRISE FIX (2026-02-18): CanvasProvider moved here from DxfViewerContent
+// REASON: useDxfViewerState() calls useCanvasContext() which needs CanvasProvider as ancestor.
+// When CanvasProvider was inside DxfViewerContent's JSX, useContext couldn't find it
+// (React looks UP the tree, not inside the same component's rendered children).
+// Result: zoom percentage always showed 100%.
+import { CanvasProvider } from './contexts/CanvasContext';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal refactoring) =====
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
 // import { ConfigurationProvider } from './providers/ConfigurationProvider';
@@ -81,7 +87,9 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                         <ToolbarsSystem>
                           <LevelsSystem enableFirestore={process.env.NODE_ENV === 'production'}>
                             <OverlayStoreProvider>
+                              <CanvasProvider>
                                 <DxfViewerContent {...props} />
+                              </CanvasProvider>
                             </OverlayStoreProvider>
                           </LevelsSystem>
                         </ToolbarsSystem>

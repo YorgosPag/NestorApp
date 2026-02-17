@@ -20,19 +20,19 @@ import { clamp } from '../rendering/entities/shared/geometry-utils';
 /**
  * Scale limits για canvas transformation
  *
- * RATIONALE:
- * - MIN_SCALE: 0.01 (1%) - Wide enough για μεγάλα buildings/sites
- * - MAX_SCALE: 1000 (100,000%) - Επαρκής για millimeter-level CAD precision
+ * RATIONALE (2026-02-18 UPDATE):
+ * - MIN_SCALE: 0.001 (0.1%) - Ultra-wide view for massive site plans
+ * - MAX_SCALE: 10000 (1,000,000%) - Sub-millimeter CAD precision
  *
- * DECISION: Χρησιμοποιούμε τα πιο wide limits από useCanvasTransformState
- * γιατί δίνουν μεγαλύτερη ευελιξία χωρίς performance issues.
+ * AutoCAD/BricsCAD allow essentially unlimited zoom range.
+ * These limits prevent floating-point precision loss at extremes.
  */
 export const TRANSFORM_SCALE_LIMITS = {
-  /** Minimum scale (1% - can see very large sites/buildings) */
-  MIN_SCALE: 0.01,
+  /** Minimum scale (0.1% - ultra-wide view for large sites) */
+  MIN_SCALE: 0.001,
 
-  /** Maximum scale (100,000% - millimeter-level CAD precision) */
-  MAX_SCALE: 1000,
+  /** Maximum scale (1,000,000% - sub-millimeter CAD precision) */
+  MAX_SCALE: 10000,
 
   /** Default/initial scale (100% - 1:1 view) */
   DEFAULT_SCALE: 1,
@@ -61,19 +61,19 @@ export const PDF_SCALE_LIMITS = {
 } as const;
 
 /**
- * Practical zoom limits για UI controls
+ * Practical zoom limits για UI controls (wheel + keyboard + buttons)
  *
- * RATIONALE:
- * - Οι UI controls (toolbar buttons) χρησιμοποιούν πιο conservative limits
- * - Οι users μπορούν να φτάσουν extreme zooms μέσω mouse wheel αν χρειάζεται
- * - Αυτό προστατεύει από accidental extreme zooms
+ * RATIONALE (2026-02-18 UPDATE):
+ * - MIN_SCALE: 0.001 (0.1%) - Enables viewing entire site plans
+ * - MAX_SCALE: 10000 (1,000,000%) - Sub-millimeter precision for detailed CAD work
+ * - Same as TRANSFORM_SCALE_LIMITS for consistent UX across all input methods
  */
 export const UI_ZOOM_LIMITS = {
-  /** Minimum scale για UI controls (10%) */
-  MIN_SCALE: 0.1,
+  /** Minimum scale for all zoom methods (0.1%) */
+  MIN_SCALE: 0.001,
 
-  /** Maximum scale για UI controls (50000%) - Increased for detailed CAD work */
-  MAX_SCALE: 500,
+  /** Maximum scale for all zoom methods (1,000,000%) */
+  MAX_SCALE: 10000,
 } as const;
 
 // ============================================
