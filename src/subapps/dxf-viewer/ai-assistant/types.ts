@@ -85,13 +85,14 @@ export type DxfAiToolName =
   | 'draw_line'
   | 'draw_rectangle'
   | 'draw_circle'
+  | 'draw_polyline'
   | 'query_entities'
   | 'undo_action';
 
 /** A single tool call returned by the AI */
 export interface DxfAiToolCall {
   name: DxfAiToolName;
-  arguments: DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | QueryEntitiesArgs | UndoActionArgs;
+  arguments: DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | DrawPolylineArgs | QueryEntitiesArgs | UndoActionArgs;
 }
 
 /** Arguments for draw_line tool */
@@ -119,6 +120,20 @@ export interface DrawCircleArgs {
   center_x: number;
   center_y: number;
   radius: number;
+  layer: string | null;
+  color: string | null;
+}
+
+/** A 2D vertex used in polyline tool calls */
+export interface DxfAiVertex {
+  x: number;
+  y: number;
+}
+
+/** Arguments for draw_polyline tool */
+export interface DrawPolylineArgs {
+  vertices: DxfAiVertex[];
+  closed: boolean;
   layer: string | null;
   color: string | null;
 }

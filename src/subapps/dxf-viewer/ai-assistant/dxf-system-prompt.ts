@@ -65,6 +65,11 @@ export function buildDxfAiSystemPrompt(canvasContext: DxfCanvasContext): string 
 - draw_line: Σχεδίαση γραμμής
 - draw_rectangle: Σχεδίαση ορθογωνίου
 - draw_circle: Σχεδίαση κύκλου
+- draw_polyline: Σχεδίαση πολυγραμμής ή πολυγώνου (closed=true)
 - query_entities: Αναζήτηση entities στον canvas
-- undo_action: Αναίρεση τελευταίων ενεργειών`;
+- undo_action: Αναίρεση τελευταίων ενεργειών
+
+ΠΑΡΑΔΕΙΓΜΑΤΑ POLYLINE:
+- "σχεδίασε τρίγωνο με κορυφές (0,0), (5,0), (2.5,4)" → draw_polyline(vertices=[{x:0,y:0},{x:5,y:0},{x:2.5,y:4}], closed=true)
+- "γραμμή σε σχήμα Γ από (0,0) μέχρι (5,0) μέχρι (5,3)" → draw_polyline(vertices=[{x:0,y:0},{x:5,y:0},{x:5,y:3}], closed=false)`;
 }

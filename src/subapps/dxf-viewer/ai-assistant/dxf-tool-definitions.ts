@@ -2,10 +2,11 @@
  * @module ai-assistant/dxf-tool-definitions
  * @description OpenAI tool definitions for the DXF AI Drawing Assistant
  *
- * 5 tools in Chat Completions API format (same pattern as agentic-tool-definitions.ts):
+ * 6 tools in Chat Completions API format (same pattern as agentic-tool-definitions.ts):
  * - draw_line: Draw a line segment
  * - draw_rectangle: Draw a rectangle
  * - draw_circle: Draw a circle
+ * - draw_polyline: Draw a polyline or polygon
  * - query_entities: Query existing entities on canvas
  * - undo_action: Undo recent actions
  *
@@ -153,7 +154,52 @@ export const DXF_AI_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 4. query_entities ──
+  // ── 4. draw_polyline ──
+  {
+    type: 'function',
+    function: {
+      name: 'draw_polyline',
+      description:
+        'Draw a polyline (connected line segments) or polygon (closed polyline) on the canvas. ' +
+        'Requires at least 2 vertices. Set closed=true for a polygon. ' +
+        'Pass coordinates exactly as the user specifies them. Do NOT convert units.',
+      parameters: {
+        type: 'object',
+        properties: {
+          vertices: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                x: { type: 'number', description: 'X coordinate of vertex' },
+                y: { type: 'number', description: 'Y coordinate of vertex' },
+              },
+              required: ['x', 'y'],
+              additionalProperties: false,
+            },
+            description: 'Array of vertices defining the polyline path',
+          },
+          closed: {
+            type: 'boolean',
+            description: 'Whether to close the polyline (last vertex connects to first). Use true for polygons.',
+          },
+          layer: {
+            type: ['string', 'null'],
+            description: 'Target layer name (null = default layer "0")',
+          },
+          color: {
+            type: ['string', 'null'],
+            description: 'Polyline color as hex string (null = default white)',
+          },
+        },
+        required: ['vertices', 'closed', 'layer', 'color'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 5. query_entities ──
   {
     type: 'function',
     function: {
@@ -182,13 +228,13 @@ export const DXF_AI_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 5. undo_action ──
+  // ── 6. undo_action ──
   {
     type: 'function',
     function: {
       name: 'undo_action',
       description:
-        'Undo the last drawing action(s). Removes the most recently created entities.',
+        'Undo the last drawing action(s). Removes the most recently added entities from the canvas.',
       parameters: {
         type: 'object',
         properties: {

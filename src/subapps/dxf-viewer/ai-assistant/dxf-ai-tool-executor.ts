@@ -4,8 +4,9 @@
  *
  * Receives parsed DxfAiToolCall objects from the API response and:
  * - Validates arguments (rejects negative radius, zero-length lines, etc.)
- * - Creates proper entity objects (LineEntity, CircleEntity, RectangleEntity)
- * - Uses completeEntities() for batch entity insertion (ADR-057)
+ * - Creates proper entity objects (LineEntity, CircleEntity, RectangleEntity, PolylineEntity)
+ * - Uses completeEntity() for individual entity insertion with dual-scene sync (ADR-057)
+ * - Handles undo by removing last N entities from scene + EventBus propagation
  * - Returns execution results with created entity IDs
  *
  * IMPORTANT: This runs on the CLIENT, not the server.
@@ -21,12 +22,15 @@ import type {
   DrawLineArgs,
   DrawRectangleArgs,
   DrawCircleArgs,
+  DrawPolylineArgs,
   QueryEntitiesArgs,
+  UndoActionArgs,
 } from './types';
-import type { Entity, LineEntity, CircleEntity, RectangleEntity, SceneModel } from '../types/entities';
+import type { Entity, LineEntity, CircleEntity, RectangleEntity, PolylineEntity, SceneModel } from '../types/entities';
 import { completeEntity } from '../hooks/drawing/completeEntity';
 import { generateEntityId } from '../systems/entity-creation/utils';
 import { DXF_AI_DEFAULTS, DXF_AI_LIMITS } from '../config/ai-assistant-config';
+import { EventBus } from '../systems/events';
 
 // ============================================================================
 // ENTITY BUILDERS
@@ -70,6 +74,18 @@ function buildCircleEntity(args: DrawCircleArgs): CircleEntity {
   };
 }
 
+function buildPolylineEntity(args: DrawPolylineArgs): PolylineEntity {
+  return {
+    id: generateEntityId(),
+    type: 'polyline',
+    visible: true,
+    vertices: args.vertices.map(v => ({ x: v.x, y: v.y })),
+    closed: args.closed,
+    layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
+    color: args.color ?? DXF_AI_DEFAULTS.COLOR,
+  };
+}
+
 // ============================================================================
 // VALIDATION
 // ============================================================================
@@ -94,6 +110,16 @@ function validateRectangle(args: DrawRectangleArgs): string | null {
 function validateCircle(args: DrawCircleArgs): string | null {
   if (args.radius <= 0) {
     return `Μη έγκυρη ακτίνα κύκλου: ${args.radius}`;
+  }
+  return null;
+}
+
+function validatePolyline(args: DrawPolylineArgs): string | null {
+  if (!args.vertices || args.vertices.length < 2) {
+    return `Η πολυγραμμή χρειάζεται τουλάχιστον 2 κορυφές (δόθηκαν ${args.vertices?.length ?? 0})`;
+  }
+  if (args.closed && args.vertices.length < 3) {
+    return `Ένα κλειστό πολύγωνο χρειάζεται τουλάχιστον 3 κορυφές (δόθηκαν ${args.vertices.length})`;
   }
   return null;
 }
@@ -232,6 +258,22 @@ export function executeDxfAiToolCalls(
         break;
       }
 
+      case 'draw_polyline': {
+        const args = call.arguments as DrawPolylineArgs;
+        const validationError = validatePolyline(args);
+        if (validationError) {
+          errors.push(validationError);
+          break;
+        }
+        if (entityCount >= DXF_AI_LIMITS.MAX_ENTITIES_PER_COMMAND) {
+          errors.push(`Μέγιστο όριο ${DXF_AI_LIMITS.MAX_ENTITIES_PER_COMMAND} entities ανά εντολή`);
+          break;
+        }
+        entitiesToCreate.push(buildPolylineEntity(args));
+        entityCount++;
+        break;
+      }
+
       case 'query_entities': {
         const args = call.arguments as QueryEntitiesArgs;
         const queryResult = executeQuery(args, getScene, levelId);
@@ -240,8 +282,38 @@ export function executeDxfAiToolCalls(
       }
 
       case 'undo_action': {
-        // Phase 1: undo not yet integrated — report to user
-        messages.push('Η αναίρεση δεν είναι ακόμα διαθέσιμη στο AI assistant (Phase 1b).');
+        const args = call.arguments as UndoActionArgs;
+        const count = Math.min(Math.max(args.count ?? 1, 1), DXF_AI_LIMITS.MAX_ENTITIES_PER_COMMAND);
+
+        const scene = getScene(levelId);
+        if (!scene || scene.entities.length === 0) {
+          messages.push('Δεν υπάρχουν entities για αναίρεση — ο καμβάς είναι κενός.');
+          break;
+        }
+
+        const removeCount = Math.min(count, scene.entities.length);
+        const updatedEntities = scene.entities.slice(0, scene.entities.length - removeCount);
+        const updatedScene: SceneModel = {
+          ...scene,
+          entities: updatedEntities,
+        };
+
+        setScene(levelId, updatedScene);
+
+        // Emit drawing:complete with updatedScene for dual-scene sync
+        // (same pattern as completeEntity — DxfViewerContent listens for this)
+        EventBus.emit('drawing:complete', {
+          tool: 'select',
+          entityId: 'undo',
+          updatedScene,
+          levelId,
+        });
+
+        messages.push(
+          removeCount === 1
+            ? 'Αναίρεσα 1 entity.'
+            : `Αναίρεσα ${removeCount} entities.`
+        );
         break;
       }
     }
