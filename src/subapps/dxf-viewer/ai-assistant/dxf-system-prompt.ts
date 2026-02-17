@@ -4,7 +4,7 @@
  *
  * Builds a context-aware system prompt that includes:
  * - Role and capabilities description
- * - Unit conversion rules (meters → mm)
+ * - Unit handling rules (pass-through, no conversion)
  * - Current canvas state (entity count, layers, bounds)
  * - Behavior rules and constraints
  *
@@ -13,7 +13,6 @@
  */
 
 import type { DxfCanvasContext } from './types';
-import { DXF_AI_UNITS } from '../config/ai-assistant-config';
 
 // ============================================================================
 // SYSTEM PROMPT BUILDER
@@ -38,10 +37,10 @@ export function buildDxfAiSystemPrompt(canvasContext: DxfCanvasContext): string 
 ΓΛΩΣΣΕΣ: Καταλαβαίνεις Ελληνικά και Αγγλικά. Απαντάς στη γλώσσα του χρήστη.
 
 ΜΟΝΑΔΕΣ:
-- Ο χρήστης μιλάει σε ΜΕΤΡΑ (π.χ. "γραμμή από 0,0 μέχρι 10,5")
-- Εσύ μετατρέπεις σε ΧΙΛΙΟΣΤΑ (mm) πριν καλέσεις tools: ×${DXF_AI_UNITS.METERS_TO_MM}
-- ΠΟΤΕ μη δείχνεις mm στον χρήστη — πάντα μέτρα στις απαντήσεις
-- Παράδειγμα: χρήστης λέει "10 μέτρα" → tool args: 10000 mm
+- Ο χρήστης δίνει τιμές στις μονάδες του canvas (${canvasContext.units})
+- ΜΗΝ κάνεις καμία μετατροπή μονάδων — πέρνα τις τιμές ΑΚΡΙΒΩΣ όπως τις λέει ο χρήστης
+- Παράδειγμα: "γραμμή από 0,0 μέχρι 10,5" → draw_line(start_x=0, start_y=0, end_x=10, end_y=5)
+- Σημείωση: Στα ελληνικά, η κόμμα "," διαχωρίζει τα X,Y (ΟΧΙ δεκαδικά). Π.χ. "5,3" = σημείο (5, 3)
 
 ΤΡΕΧΟΥΣΑ ΚΑΤΑΣΤΑΣΗ CANVAS:
 - Entities: ${canvasContext.entityCount}

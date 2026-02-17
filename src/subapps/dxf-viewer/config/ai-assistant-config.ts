@@ -13,16 +13,6 @@ import { DXF_DEFAULT_LAYER } from './layer-config';
 import { UI_COLORS } from './color-config';
 
 // ============================================================================
-// UNIT CONVERSION
-// ============================================================================
-
-/** Unit conversion factors — DXF works in mm internally */
-export const DXF_AI_UNITS = {
-  /** Multiply meters by this to get mm (DXF internal unit) */
-  METERS_TO_MM: 1000,
-} as const;
-
-// ============================================================================
 // SAFETY LIMITS
 // ============================================================================
 

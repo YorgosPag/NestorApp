@@ -12,6 +12,9 @@
  * All tools use strict: true with additionalProperties: false.
  * Optional fields use type: ['string', 'null'] and are listed in required.
  *
+ * IMPORTANT: Coordinates are in canvas units (pass-through, NO conversion).
+ * The user provides values in the same units the canvas displays.
+ *
  * @see ADR-185 (AI Drawing Assistant)
  * @since 2026-02-17
  */
@@ -29,26 +32,26 @@ export const DXF_AI_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     function: {
       name: 'draw_line',
       description:
-        'Draw a line segment on the canvas. Coordinates are in millimeters (mm). ' +
-        'When the user speaks in meters, multiply by 1000 to convert to mm.',
+        'Draw a line segment on the canvas. Pass coordinates exactly as the user specifies them. ' +
+        'Do NOT convert units — values go directly to the canvas.',
       parameters: {
         type: 'object',
         properties: {
           start_x: {
             type: 'number',
-            description: 'Start X coordinate in mm',
+            description: 'Start X coordinate',
           },
           start_y: {
             type: 'number',
-            description: 'Start Y coordinate in mm',
+            description: 'Start Y coordinate',
           },
           end_x: {
             type: 'number',
-            description: 'End X coordinate in mm',
+            description: 'End X coordinate',
           },
           end_y: {
             type: 'number',
-            description: 'End Y coordinate in mm',
+            description: 'End Y coordinate',
           },
           layer: {
             type: ['string', 'null'],
@@ -73,26 +76,26 @@ export const DXF_AI_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       name: 'draw_rectangle',
       description:
         'Draw a rectangle on the canvas. The origin (x, y) is the bottom-left corner. ' +
-        'Coordinates and dimensions are in millimeters (mm). ' +
-        'When the user speaks in meters, multiply by 1000.',
+        'Pass coordinates and dimensions exactly as the user specifies them. ' +
+        'Do NOT convert units.',
       parameters: {
         type: 'object',
         properties: {
           x: {
             type: 'number',
-            description: 'Bottom-left X coordinate in mm',
+            description: 'Bottom-left X coordinate',
           },
           y: {
             type: 'number',
-            description: 'Bottom-left Y coordinate in mm',
+            description: 'Bottom-left Y coordinate',
           },
           width: {
             type: 'number',
-            description: 'Width in mm (positive)',
+            description: 'Width (positive)',
           },
           height: {
             type: 'number',
-            description: 'Height in mm (positive)',
+            description: 'Height (positive)',
           },
           layer: {
             type: ['string', 'null'],
@@ -116,22 +119,23 @@ export const DXF_AI_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     function: {
       name: 'draw_circle',
       description:
-        'Draw a circle on the canvas. Center and radius are in millimeters (mm). ' +
-        'When the user speaks in meters, multiply by 1000.',
+        'Draw a circle on the canvas. ' +
+        'Pass center and radius exactly as the user specifies them. ' +
+        'Do NOT convert units.',
       parameters: {
         type: 'object',
         properties: {
           center_x: {
             type: 'number',
-            description: 'Center X coordinate in mm',
+            description: 'Center X coordinate',
           },
           center_y: {
             type: 'number',
-            description: 'Center Y coordinate in mm',
+            description: 'Center Y coordinate',
           },
           radius: {
             type: 'number',
-            description: 'Radius in mm (must be positive)',
+            description: 'Radius (must be positive)',
           },
           layer: {
             type: ['string', 'null'],
