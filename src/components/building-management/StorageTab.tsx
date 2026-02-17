@@ -21,24 +21,23 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Warehouse, Plus, Layers, Table as TableIcon } from 'lucide-react';
 
 const logger = createModuleLogger('StorageTab');
 
-import { StorageList } from './StorageList';
 import { StorageForm } from './StorageForm/index';
-import { StorageTabHeader } from './StorageTab/StorageTabHeader';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
-import { StorageMapPlaceholder } from './StorageTab/StorageMapPlaceholder';
 import { Spinner } from '@/components/ui/spinner';
 import {
-  getStatusColor,
   getStatusLabel,
-  getTypeIcon,
   getTypeLabel,
   filterUnits,
   calculateStats,
 } from './StorageTab/utils';
+import { BuildingSpaceTable, BuildingSpaceCardGrid } from './shared';
+import type { SpaceColumn, SpaceCardField } from './shared';
 
 // ============================================================================
 // TYPES
@@ -135,7 +134,8 @@ export function StorageTab({ building }: StorageTabProps) {
   const [editingUnit, setEditingUnit] = useState<StorageUnit | null>(null);
   const [showForm, setShowForm] = useState(false);
   const formType: StorageType = 'storage';
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredUnits = useMemo(() =>
     filterUnits(units, searchTerm, filterType, filterStatus, filterFloor),
@@ -199,17 +199,45 @@ export function StorageTab({ building }: StorageTabProps) {
     setEditingUnit(null);
   };
 
-  const handleDelete = async (unitId: string) => {
-    try {
-      await apiClient.delete(`/api/storages/${unitId}`);
-      logger.info('Storage unit deleted via API', { id: unitId });
+  const handleDeleteUnit = async (unit: StorageUnit) => {
+    const confirmed = window.confirm(`Διαγραφή αποθήκης "${unit.code}";`);
+    if (!confirmed) return;
 
-      // Re-fetch to get fresh data
+    setDeletingId(unit.id);
+    try {
+      await apiClient.delete(`/api/storages/${unit.id}`);
+      logger.info('Storage unit deleted via API', { id: unit.id });
       await fetchStorageUnits();
     } catch (error) {
       logger.error('Error deleting storage unit', { error });
+    } finally {
+      setDeletingId(null);
     }
   };
+
+  // ============================================================================
+  // CENTRALIZED: Column & Card Field Definitions
+  // ============================================================================
+
+  const storageColumns: SpaceColumn<StorageUnit>[] = useMemo(() => [
+    { key: 'code', label: t('storageTable.columns.code'), render: (u) => <span className="font-medium">{u.code}</span> },
+    { key: 'type', label: t('storageTable.columns.type'), width: 'w-28', render: (u) => <span className="text-muted-foreground">{translatedGetTypeLabel(u.type)}</span> },
+    { key: 'floor', label: t('storageTable.columns.floor'), width: 'w-20', render: (u) => <span className="text-muted-foreground">{u.floor || '—'}</span> },
+    { key: 'area', label: t('storageTable.columns.area'), width: 'w-20', render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
+    { key: 'price', label: t('storageTable.columns.price'), width: 'w-24', render: (u) => <span className="font-mono text-xs">{u.price ? `€${u.price.toLocaleString()}` : '—'}</span> },
+    { key: 'status', label: t('storageTable.columns.status'), width: 'w-28', render: (u) => (
+      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
+        {translatedGetStatusLabel(u.status)}
+      </span>
+    )},
+  ], [t, translatedGetTypeLabel, translatedGetStatusLabel]);
+
+  const storageCardFields: SpaceCardField<StorageUnit>[] = useMemo(() => [
+    { label: t('storageTable.columns.type'), render: (u) => translatedGetTypeLabel(u.type) },
+    { label: t('storageTable.columns.floor'), render: (u) => u.floor || '—' },
+    { label: 'm²', render: (u) => u.area || '—' },
+    { label: t('storageTable.columns.price'), render: (u) => u.price ? `€${u.price.toLocaleString()}` : '—' },
+  ], [t, translatedGetTypeLabel]);
 
   // ============================================================================
   // RENDER
@@ -218,23 +246,30 @@ export function StorageTab({ building }: StorageTabProps) {
   if (loading) {
     return (
       <section className="flex items-center justify-center py-12" role="status" aria-live="polite">
-        <div className="text-center">
+        <article className="text-center">
           <Spinner size="large" className="mx-auto mb-4" />
           <p className="text-muted-foreground">{t('tabs.storageTab.loading')}</p>
-        </div>
+        </article>
       </section>
     );
   }
 
   return (
-    <article className="space-y-6">
-      <StorageTabHeader
-        buildingName={building.name}
-        viewMode={viewMode}
-        onSetViewMode={setViewMode}
-        onAddNew={handleAddNew}
-      />
+    <section className="flex flex-col gap-4 p-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Warehouse className="h-5 w-5 text-primary" />
+          {t('tabs.labels.storages')}
+          <span className="text-sm font-normal text-muted-foreground">({units.length})</span>
+        </h2>
+        <Button variant="default" size="sm" onClick={handleAddNew}>
+          <Plus className="mr-1 h-4 w-4" />
+          {t('tabs.labels.storages')}
+        </Button>
+      </header>
 
+      {/* Stats Cards */}
       <StorageTabStats
         storageCount={stats.storageCount}
         available={stats.available}
@@ -242,6 +277,7 @@ export function StorageTab({ building }: StorageTabProps) {
         totalArea={stats.totalArea}
       />
 
+      {/* Filters */}
       <StorageTabFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -251,18 +287,69 @@ export function StorageTab({ building }: StorageTabProps) {
         onFilterStatusChange={setFilterStatus}
       />
 
-      {viewMode === 'list' ? (
-        <StorageList
-          units={filteredUnits}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          getStatusColor={getStatusColor}
-          getStatusLabel={translatedGetStatusLabel}
-          getTypeIcon={getTypeIcon}
-          getTypeLabel={translatedGetTypeLabel}
-        />
+      {/* View Toggle */}
+      <nav className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">
+          {filteredUnits.length} αποτελέσματα
+        </span>
+        <fieldset className="flex items-center gap-2">
+          <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
+            <Layers className="mr-1 h-4 w-4" /> Κάρτες
+          </Button>
+          <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
+            <TableIcon className="mr-1 h-4 w-4" /> Πίνακας
+          </Button>
+        </fieldset>
+      </nav>
+
+      {/* Content — Centralized shared components */}
+      {filteredUnits.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          {t('tabs.labels.storages')} — 0
+        </p>
+      ) : viewMode === 'cards' ? (
+        <>
+          <BuildingSpaceCardGrid<StorageUnit>
+            items={filteredUnits}
+            getKey={(u) => u.id}
+            getName={(u) => u.code}
+            renderStatus={(u) => (
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
+                {translatedGetStatusLabel(u.status)}
+              </span>
+            )}
+            fields={storageCardFields}
+            actions={{
+              onView: () => {},
+              onEdit: handleEdit,
+              onDelete: handleDeleteUnit,
+            }}
+            actionState={{ deletingId }}
+          />
+          <footer className="text-xs text-muted-foreground">
+            {filteredUnits.length} {t('tabs.labels.storages')}
+          </footer>
+        </>
       ) : (
-        <StorageMapPlaceholder />
+        <>
+          <BuildingSpaceTable<StorageUnit>
+            items={filteredUnits}
+            columns={storageColumns}
+            getKey={(u) => u.id}
+            actions={{
+              onView: () => {},
+              onEdit: handleEdit,
+              onDelete: handleDeleteUnit,
+            }}
+            actionState={{ deletingId }}
+          />
+          <footer className="text-xs text-muted-foreground">
+            {filteredUnits.length} {t('tabs.labels.storages')}
+            {filteredUnits.length !== units.length && (
+              <span className="ml-1">({units.length} σύνολο)</span>
+            )}
+          </footer>
+        </>
       )}
 
       {showForm && (
@@ -277,6 +364,20 @@ export function StorageTab({ building }: StorageTabProps) {
           formType={formType}
         />
       )}
-    </article>
+    </section>
   );
+}
+
+// ============================================================================
+// HELPER: Status badge class mapping
+// ============================================================================
+
+function getStatusBadgeClass(status: StorageStatus): string {
+  const colorMap: Record<string, string> = {
+    available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    maintenance: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    reserved: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  };
+  return colorMap[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
 }

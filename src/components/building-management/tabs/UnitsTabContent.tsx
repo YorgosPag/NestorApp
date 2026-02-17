@@ -23,13 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Eye, Pencil, Unlink2, Trash2, Layers, Table as TableIcon } from 'lucide-react';
+import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
 import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
+import { BuildingSpaceTable, BuildingSpaceCardGrid } from '../shared';
+import type { SpaceColumn, SpaceCardField } from '../shared';
 
 // ============================================================================
 // TYPES
@@ -224,6 +226,25 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   };
 
   // ============================================================================
+  // CENTRALIZED: Column & Card Field Definitions
+  // ============================================================================
+
+  const unitColumns: SpaceColumn<Unit>[] = useMemo(() => [
+    { key: 'name', label: t('tabs.floors.name'), render: (u) => <span className="font-medium">{u.name}</span> },
+    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', render: (u) => <span className="text-muted-foreground">{getTypeLabel(u.type)}</span> },
+    { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', render: (u) => <span className="font-mono text-sm text-muted-foreground">{u.floor}</span> },
+    { key: 'area', label: 'm²', width: 'w-20', render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
+    { key: 'status', label: t('tabs.labels.details'), width: 'w-28', render: (u) => getStatusBadge(u.status) },
+  ], [t]);
+
+  const unitCardFields: SpaceCardField<Unit>[] = useMemo(() => [
+    { label: 'Τύπος', render: (u) => getTypeLabel(u.type) },
+    { label: 'Όροφος', render: (u) => u.floor || '—' },
+    { label: 'm²', render: (u) => u.area || '—' },
+    { label: 'Τιμή', render: (u) => u.price ? `€${u.price.toLocaleString()}` : '—' },
+  ], []);
+
+  // ============================================================================
   // RENDER
   // ============================================================================
 
@@ -329,97 +350,45 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         </fieldset>
       </nav>
 
-      {/* Content */}
+      {/* Content — Centralized shared components */}
       {filteredUnits.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {t('tabs.labels.units')} — 0
         </p>
       ) : viewMode === 'cards' ? (
-        /* ─── Cards View ─── */
         <>
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredUnits.map((unit) => (
-              <Card key={unit.id} className="overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <header className="flex items-center justify-between">
-                    <h3 className="font-medium text-sm">{unit.name}</h3>
-                    {getStatusBadge(unit.status)}
-                  </header>
-                  <dl className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                    <dt>Τύπος</dt>
-                    <dd className="text-foreground">{getTypeLabel(unit.type)}</dd>
-                    <dt>Όροφος</dt>
-                    <dd className="text-foreground">{unit.floor || '—'}</dd>
-                    <dt>m²</dt>
-                    <dd className="text-foreground">{unit.area || '—'}</dd>
-                    <dt>Τιμή</dt>
-                    <dd className="text-foreground">{unit.price ? `€${unit.price.toLocaleString()}` : '—'}</dd>
-                  </dl>
-                  <nav className="flex justify-end gap-1 border-t border-border pt-2">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowAddDialog(true)} title="Επεξεργασία">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(unit)} disabled={unlinkingId === unit.id} title="Αποσύνδεση">
-                      {unlinkingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(unit)} disabled={deletingId === unit.id} title="Διαγραφή">
-                      {deletingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                    </Button>
-                  </nav>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
+          <BuildingSpaceCardGrid<Unit>
+            items={filteredUnits}
+            getKey={(u) => u.id}
+            getName={(u) => u.name}
+            renderStatus={(u) => getStatusBadge(u.status)}
+            fields={unitCardFields}
+            actions={{
+              onView: () => {},
+              onEdit: () => setShowAddDialog(true),
+              onUnlink: handleUnlink,
+              onDelete: handleDelete,
+            }}
+            actionState={{ unlinkingId, deletingId }}
+          />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.units')}
           </footer>
         </>
       ) : (
-        /* ─── Table View ─── */
         <>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs font-medium uppercase text-muted-foreground">
-                <th className="px-3 py-2">{t('tabs.floors.name')}</th>
-                <th className="w-28 px-3 py-2">{t('tabs.labels.properties')}</th>
-                <th className="w-20 px-3 py-2">{t('tabs.floors.number')}</th>
-                <th className="w-20 px-3 py-2">m²</th>
-                <th className="w-28 px-3 py-2">{t('tabs.labels.details')}</th>
-                <th className="w-32 px-3 py-2 text-right">{t('tabs.floors.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUnits.map((unit) => (
-                <tr key={unit.id} className="border-b border-border/50 hover:bg-muted/20">
-                  <td className="px-3 py-2 font-medium">{unit.name}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{getTypeLabel(unit.type)}</td>
-                  <td className="px-3 py-2 font-mono text-sm text-muted-foreground">{unit.floor}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{unit.area ? `${unit.area}` : '—'}</td>
-                  <td className="px-3 py-2">{getStatusBadge(unit.status)}</td>
-                  <td className="px-3 py-2">
-                    <nav className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowAddDialog(true)} title="Επεξεργασία">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(unit)} disabled={unlinkingId === unit.id} title="Αποσύνδεση">
-                        {unlinkingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(unit)} disabled={deletingId === unit.id} title="Διαγραφή">
-                        {deletingId === unit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                      </Button>
-                    </nav>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
+          <BuildingSpaceTable<Unit>
+            items={filteredUnits}
+            columns={unitColumns}
+            getKey={(u) => u.id}
+            actions={{
+              onView: () => {},
+              onEdit: () => setShowAddDialog(true),
+              onUnlink: handleUnlink,
+              onDelete: handleDelete,
+            }}
+            actionState={{ unlinkingId, deletingId }}
+          />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.units')}
             {filteredUnits.length !== units.length && (

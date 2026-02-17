@@ -24,13 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Car, Plus, Pencil, Trash2, Check, X, Loader2, Unlink2, Search, CheckCircle, Euro, Ruler, BarChart3, Eye, Layers, Table as TableIcon } from 'lucide-react';
+import { TableCell } from '@/components/ui/table';
+import { Car, Plus, Check, X, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { BuildingSpaceTable, BuildingSpaceCardGrid } from '../shared';
+import type { SpaceColumn, SpaceCardField } from '../shared';
 
 // ============================================================================
 // TYPES
@@ -367,6 +370,26 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   };
 
   // ============================================================================
+  // CENTRALIZED: Column & Card Field Definitions
+  // ============================================================================
+
+  const parkingColumns: SpaceColumn<ParkingSpot>[] = useMemo(() => [
+    { key: 'number', label: 'Κωδικός', render: (s) => <span className="font-mono font-medium">{s.number}</span> },
+    { key: 'type', label: 'Τύπος', width: 'w-28', render: (s) => <span className="text-muted-foreground">{PARKING_TYPE_LABELS[s.type || 'standard']}</span> },
+    { key: 'floor', label: 'Όροφος', width: 'w-20', render: (s) => <span className="text-muted-foreground">{s.floor || '—'}</span> },
+    { key: 'area', label: 'm²', width: 'w-20', render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
+    { key: 'price', label: 'Τιμή', width: 'w-24', render: (s) => <span className="font-mono text-xs">{s.price ? `€${s.price.toLocaleString()}` : '—'}</span> },
+    { key: 'status', label: 'Κατάσταση', width: 'w-28', render: (s) => getStatusBadge(s.status) },
+  ], []);
+
+  const parkingCardFields: SpaceCardField<ParkingSpot>[] = useMemo(() => [
+    { label: 'Τύπος', render: (s) => PARKING_TYPE_LABELS[s.type || 'standard'] },
+    { label: 'Όροφος', render: (s) => s.floor || '—' },
+    { label: 'm²', render: (s) => s.area || '—' },
+    { label: 'Τιμή', render: (s) => s.price ? `€${s.price.toLocaleString()}` : '—' },
+  ], []);
+
+  // ============================================================================
   // RENDER
   // ============================================================================
 
@@ -620,137 +643,82 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         </fieldset>
       </nav>
 
-      {/* Content */}
+      {/* Content — Centralized shared components */}
       {filteredSpots.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {tBuilding('tabs.labels.parking')} — 0
         </p>
       ) : viewMode === 'cards' ? (
-        /* ─── Cards View ─── */
         <>
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredSpots.map((spot) => (
-              <Card key={spot.id} className="overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <header className="flex items-center justify-between">
-                    <h3 className="font-mono font-semibold text-sm">{spot.number}</h3>
-                    {getStatusBadge(spot.status)}
-                  </header>
-                  <dl className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                    <dt>Τύπος</dt>
-                    <dd className="text-foreground">{PARKING_TYPE_LABELS[spot.type || 'standard']}</dd>
-                    <dt>Όροφος</dt>
-                    <dd className="text-foreground">{spot.floor || '—'}</dd>
-                    <dt>m²</dt>
-                    <dd className="text-foreground">{spot.area || '—'}</dd>
-                    <dt>Τιμή</dt>
-                    <dd className="text-foreground">{spot.price ? `€${spot.price.toLocaleString()}` : '—'}</dd>
-                  </dl>
-                  <nav className="flex justify-end gap-1 border-t border-border pt-2">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(spot)} title="Επεξεργασία">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(spot)} disabled={unlinkingId === spot.id} title="Αποσύνδεση">
-                      {unlinkingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(spot)} disabled={deletingId === spot.id} title="Διαγραφή">
-                      {deletingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                    </Button>
-                  </nav>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
+          <BuildingSpaceCardGrid<ParkingSpot>
+            items={filteredSpots}
+            getKey={(s) => s.id}
+            getName={(s) => s.number}
+            renderStatus={(s) => getStatusBadge(s.status)}
+            fields={parkingCardFields}
+            actions={{
+              onView: () => {},
+              onEdit: startEdit,
+              onUnlink: handleUnlink,
+              onDelete: handleDelete,
+            }}
+            actionState={{ unlinkingId, deletingId }}
+          />
           <footer className="text-xs text-muted-foreground">
             {filteredSpots.length} {tBuilding('tabs.labels.parking')}
           </footer>
         </>
       ) : (
-        /* ─── Table View ─── */
         <>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs font-medium uppercase text-muted-foreground">
-                <th className="px-3 py-2">Κωδικός</th>
-                <th className="w-28 px-3 py-2">Τύπος</th>
-                <th className="w-20 px-3 py-2">Όροφος</th>
-                <th className="w-20 px-3 py-2">m²</th>
-                <th className="w-24 px-3 py-2">Τιμή</th>
-                <th className="w-28 px-3 py-2">Κατάσταση</th>
-                <th className="w-32 px-3 py-2 text-right">{tBuilding('tabs.floors.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSpots.map((spot) => (
-                <tr key={spot.id} className="border-b border-border/50 hover:bg-muted/20">
-                  {editingId === spot.id ? (
-                    <>
-                      <td className="px-3 py-1.5">
-                        <Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} className="h-8" disabled={saving} />
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <select value={editType} onChange={(e) => setEditType(e.target.value as ParkingSpotType)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
-                          {PARKING_TYPES.map(pt => (<option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <Input value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className="h-8 w-16" disabled={saving} />
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <Input type="number" step="0.01" value={editArea} onChange={(e) => setEditArea(e.target.value)} className="h-8 w-16" disabled={saving} />
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <Input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-20" disabled={saving} />
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as ParkingSpotStatus)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
-                          {PARKING_STATUSES.map(ps => (<option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <nav className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editNumber.trim()}>
-                            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}>
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </nav>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-3 py-2 font-mono font-medium">{spot.number}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{PARKING_TYPE_LABELS[spot.type || 'standard']}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{spot.floor || '—'}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{spot.area ? `${spot.area}` : '—'}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{spot.price ? `€${spot.price.toLocaleString()}` : '—'}</td>
-                      <td className="px-3 py-2">{getStatusBadge(spot.status)}</td>
-                      <td className="px-3 py-2">
-                        <nav className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Προβολή">
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(spot)} title="Επεξεργασία">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => handleUnlink(spot)} disabled={unlinkingId === spot.id} title="Αποσύνδεση">
-                            {unlinkingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink2 className="h-3.5 w-3.5" />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(spot)} disabled={deletingId === spot.id} title="Διαγραφή">
-                            {deletingId === spot.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                          </Button>
-                        </nav>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <BuildingSpaceTable<ParkingSpot>
+            items={filteredSpots}
+            columns={parkingColumns}
+            getKey={(s) => s.id}
+            actions={{
+              onView: () => {},
+              onEdit: startEdit,
+              onUnlink: handleUnlink,
+              onDelete: handleDelete,
+            }}
+            actionState={{ unlinkingId, deletingId }}
+            editingId={editingId}
+            renderEditRow={() => (
+              <>
+                <TableCell>
+                  <Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} className="h-8" disabled={saving} />
+                </TableCell>
+                <TableCell>
+                  <select value={editType} onChange={(e) => setEditType(e.target.value as ParkingSpotType)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
+                    {PARKING_TYPES.map(pt => (<option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>))}
+                  </select>
+                </TableCell>
+                <TableCell>
+                  <Input value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className="h-8 w-16" disabled={saving} />
+                </TableCell>
+                <TableCell>
+                  <Input type="number" step="0.01" value={editArea} onChange={(e) => setEditArea(e.target.value)} className="h-8 w-16" disabled={saving} />
+                </TableCell>
+                <TableCell>
+                  <Input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-20" disabled={saving} />
+                </TableCell>
+                <TableCell>
+                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as ParkingSpotStatus)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
+                    {PARKING_STATUSES.map(ps => (<option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>))}
+                  </select>
+                </TableCell>
+                <TableCell>
+                  <nav className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editNumber.trim()}>
+                      {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </nav>
+                </TableCell>
+              </>
+            )}
+          />
           <footer className="text-xs text-muted-foreground">
             {filteredSpots.length} {tBuilding('tabs.labels.parking')}
             {filteredSpots.length !== parkingSpots.length && (

@@ -1676,6 +1676,13 @@
     "edit": "Επεξεργασία",
     "delete": "Διαγραφή"
   },
+  "spaceActions": {
+    "view": "Προβολή",
+    "edit": "Επεξεργασία",
+    "unlink": "Αποσύνδεση",
+    "delete": "Διαγραφή",
+    "actions": "Ενέργειες"
+  },
   "storageListHeader": {
     "results": "{count} αποτελέσματα",
     "selected": "{count} επιλεγμένα",

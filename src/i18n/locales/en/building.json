@@ -1676,6 +1676,13 @@
     "edit": "Edit",
     "delete": "Delete"
   },
+  "spaceActions": {
+    "view": "View",
+    "edit": "Edit",
+    "unlink": "Unlink",
+    "delete": "Delete",
+    "actions": "Actions"
+  },
   "storageListHeader": {
     "results": "{count} results",
     "selected": "{count} selected",
