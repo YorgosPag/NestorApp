@@ -32,6 +32,8 @@ interface ParkingPatchPayload {
   area?: number;
   price?: number;
   notes?: string;
+  /** Set to null to unlink from building, or string to link */
+  buildingId?: string | null;
 }
 
 interface ParkingMutationResult {
@@ -79,6 +81,7 @@ export const PATCH = withStandardRateLimit(
         if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
         if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
+        if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
 
         await docRef.update(updateData);
 

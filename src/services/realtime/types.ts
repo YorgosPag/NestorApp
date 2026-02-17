@@ -884,6 +884,7 @@ export interface ParkingUpdatedPayload {
     floor?: string;
     area?: number;
     price?: number;
+    buildingId?: string | null;
   };
   timestamp: number;
 }

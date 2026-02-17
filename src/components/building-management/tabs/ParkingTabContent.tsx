@@ -16,7 +16,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Car, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
+import { Car, Plus, Pencil, Trash2, Check, X, Loader2, Unlink2 } from 'lucide-react';
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -102,8 +102,9 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   const [editPrice, setEditPrice] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Delete state
+  // Delete & Unlink state
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
   // ============================================================================
   // FETCH
@@ -262,6 +263,37 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
       console.error('[ParkingTab] Delete error:', err);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // ============================================================================
+  // UNLINK — Disassociate parking spot from building (keeps spot in system)
+  // ============================================================================
+
+  const handleUnlink = async (spot: ParkingSpot) => {
+    const confirmed = window.confirm(
+      `Αποσύνδεση θέσης ${spot.number} από το κτίριο;\nΗ θέση θα παραμείνει στο σύστημα αλλά δεν θα ανήκει σε κτίριο.`
+    );
+    if (!confirmed) return;
+
+    setUnlinkingId(spot.id);
+    try {
+      const result = await apiClient.patch<ParkingMutationResult>(
+        `/api/parking/${spot.id}`,
+        { buildingId: null }
+      );
+      if (result?.id) {
+        RealtimeService.dispatch('PARKING_UPDATED', {
+          parkingSpotId: spot.id,
+          updates: { buildingId: null },
+          timestamp: Date.now(),
+        });
+        await fetchParkingSpots();
+      }
+    } catch (err) {
+      console.error('[ParkingTab] Unlink error:', err);
+    } finally {
+      setUnlinkingId(null);
     }
   };
 
@@ -556,8 +588,22 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                       <td className="px-3 py-2">{getStatusBadge(spot.status)}</td>
                       <td className="px-3 py-2">
                         <nav className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(spot)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(spot)} title="Επεξεργασία">
                             <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-amber-600 hover:text-amber-700"
+                            onClick={() => handleUnlink(spot)}
+                            disabled={unlinkingId === spot.id}
+                            title="Αποσύνδεση από κτίριο"
+                          >
+                            {unlinkingId === spot.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Unlink2 className="h-3.5 w-3.5" />
+                            )}
                           </Button>
                           <Button
                             variant="ghost"
@@ -565,6 +611,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                             className="h-7 w-7 text-destructive hover:text-destructive"
                             onClick={() => handleDelete(spot)}
                             disabled={deletingId === spot.id}
+                            title="Διαγραφή"
                           >
                             {deletingId === spot.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
