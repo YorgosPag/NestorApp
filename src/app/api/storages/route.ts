@@ -249,7 +249,16 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
 
     let snapshot;
 
-    if (requestedProjectId) {
+    if (requestedBuildingId) {
+      // 🏢 ENTERPRISE: Direct buildingId query with companyId tenant isolation
+      // This is the most efficient path — no need for projectId-based filtering
+      snapshot = await getAdminFirestore()
+        .collection(COLLECTIONS.STORAGE)
+        .where('buildingId', '==', requestedBuildingId)
+        .where('companyId', '==', ctx.companyId)
+        .get();
+      logger.info('Querying storages for building (direct)', { buildingId: requestedBuildingId });
+    } else if (requestedProjectId) {
       // Single project query (already validated as authorized)
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
@@ -275,15 +284,15 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       allStorages.push(storage);
     });
 
-    // Filter by authorized projects (if not already filtered by single projectId)
-    let storages = requestedProjectId
-      ? allStorages // Already filtered by Firestore query
-      : allStorages.filter(storage => storage.projectId && authorizedProjectIds.has(storage.projectId));
-
-    // 🏢 ENTERPRISE: Filter by buildingId (ADR-184 — Building Spaces Tabs)
+    // Filter by authorized projects (skip if already filtered by buildingId+companyId)
+    let storages: Storage[];
     if (requestedBuildingId) {
-      storages = storages.filter(s => s.buildingId === requestedBuildingId);
-      logger.info('Filtered by buildingId', { buildingId: requestedBuildingId, count: storages.length });
+      // Already tenant-isolated via Firestore query (buildingId + companyId)
+      storages = allStorages;
+    } else if (requestedProjectId) {
+      storages = allStorages; // Already filtered by Firestore query
+    } else {
+      storages = allStorages.filter(storage => storage.projectId && authorizedProjectIds.has(storage.projectId));
     }
 
     logger.info('Found storages for authorized projects', { count: storages.length });

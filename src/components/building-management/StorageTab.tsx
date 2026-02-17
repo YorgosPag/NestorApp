@@ -177,6 +177,7 @@ export function StorageTab({ building }: StorageTabProps) {
         await apiClient.post('/api/storages', {
           name: unit.code,
           buildingId: building.id,
+          projectId: building.project || undefined,
           type: unit.type || 'small',
           status: unit.status || 'available',
           floor: unit.floor || undefined,
