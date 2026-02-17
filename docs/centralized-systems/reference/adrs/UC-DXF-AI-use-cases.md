@@ -308,12 +308,12 @@
 
 | UC | Ερώτηση | Status |
 |----|---------|--------|
-| **UC-DXF-001** | **Server timeout**: Τι γίνεται αν η κλήση στο OpenAI κάνει timeout (Vercel 10s/60s); Retry; Fallback; Error message; | ΑΝΟΙΧΤΗ |
-| **UC-DXF-002** | **Entity selection via click**: Ο χρήστης μπορεί να κλικάρει ένα entity για να το επιλέξει αντί να το περιγράψει; ("Μετακίνησε **αυτό**" + click); | ΑΝΟΙΧΤΗ |
-| **UC-DXF-003** | **Geometry engine delegation**: Ο υπολογισμός offset/parallel γίνεται server-side μέσω geometry engine (Section 6.5); Πώς ακριβώς αλληλεπιδρά η AI με τον geometry engine; | ΑΝΟΙΧΤΗ |
-| **UC-DXF-006** | **Batched undo details**: Η Section 6.7 αναφέρει CommandGroup. Πώς ακριβώς αναγνωρίζεται ότι 50 entities ανήκουν στην ίδια AI εντολή; Transaction ID; | ΑΝΟΙΧΤΗ |
-| **UC-DXF-008** | **Pending point TTL**: Πόσο διαρκεί ένα "pending point"; Μέχρι να χρησιμοποιηθεί; Μέχρι timeout (π.χ. 30s); Μέχρι νέο click; | ΑΝΟΙΧΤΗ |
-| **UC-009 → 020** | Και τα 12 UCs χρειάζονται αναλυτική συμπλήρωση κύριας ροής, εναλλακτικών, και edge cases — θα γίνει κατά τη συζήτηση | ΑΝΟΙΧΤΗ |
+| **UC-DXF-001** | **Server timeout**: Ήδη απαντήθηκε μέσω Q-12 (error handling: 4 σενάρια) + Q-20 (streaming responses) του ADR-185. Πρόληψη μέσω streaming + maxDuration=60. Αν timeout → retry button. Αν API down → χειροκίνητη σχεδίαση. | ✅ ΑΠΑΝΤΗΘΗΚΕ |
+| **UC-DXF-002** | **Entity selection via click**: Υβριδικό σύστημα. (Α) Click + εντολή: κλικάρεις entity → λες "μετακίνησέ το" → η AI ξέρει ποιο (selectedEntityId στο context). (Β) Μόνο φωνή/text: "μετακίνησε το ορθογώνιο" → η AI ψάχνει μόνη της (αν 1 → εκτελεί, αν πολλά → ρωτάει). Ο χρήστης διαλέγει τρόπο ελεύθερα. | ✅ ΑΠΑΝΤΗΘΗΚΕ |
+| **UC-DXF-003** | **Geometry engine delegation**: AI αποφασίζει ΤΙ (tool call), Geometry Engine υπολογίζει ΠΩΣ (flatten-js), Client σχεδιάζει. Τριμερής αρχιτεκτονική — ήδη αποφασισμένο στο ADR-185 (Section 3.1 + 6.5). Επιπλέον: Real-time constraint monitoring (Q-23 ADR-185) — ο Geometry Engine ελέγχει κανόνες ΝΟΚ τοπικά (δωρεάν, <10ms) σε κάθε drop, χωρίς AI calls. | ✅ ΑΠΑΝΤΗΘΗΚΕ |
+| **UC-DXF-006** | **Batched undo details**: Transaction ID. Κάθε AI εντολή παίρνει μοναδικό `transactionId`. Όλα τα entities που δημιουργεί → ομαδοποιούνται. Undo = αναιρεί ολόκληρο το transaction (π.χ. 4 κολώνες μαζί). Redo = τα επαναφέρει όλα μαζί. Ο existing CommandHistory επεκτείνεται με grouping μέσω transaction ID. | ✅ ΑΠΑΝΤΗΘΗΚΕ |
+| **UC-DXF-008** | **Pending point TTL**: Κανένα timeout — το σημείο μένει μέχρι να χρησιμοποιηθεί ή να αντικατασταθεί από νέο click. Νέο click = αντικαθιστά (ή προσθέτει αν χρειάζονται πολλαπλά σημεία). Μετά την εντολή → καθαρίζονται. Μέγιστο 10 pending points. Εμφανίζεται μικρός marker στον canvas. | ✅ ΑΠΑΝΤΗΘΗΚΕ |
+| **UC-009 → 020** | Αναλυτική συμπλήρωση αργότερα, ανά Phase. Phase 2 → UC-009/012/013/018. Phase 3 → UC-005/011/016/017. Phase 4 → UC-010/014/015/020. Τα placeholders (τίτλος + παράδειγμα + βασικές ερωτήσεις) αρκούν για τώρα. | ✅ ΑΠΑΝΤΗΘΗΚΕ |
 
 ---
 
