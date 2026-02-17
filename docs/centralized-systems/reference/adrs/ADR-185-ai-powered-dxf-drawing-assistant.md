@@ -517,6 +517,115 @@ User message → Pipeline Orchestrator → Agentic Loop → OpenAI (tool calling
 
 ---
 
+### 6.5 Geometry Engine — Server-Side Υπολογισμοί (Έρευνα #1, 2026-02-17)
+
+> **Πηγές**: ICCV 2025 (CAD-Assistant paper), LLMs for CAD Survey (arxiv:2505.08137)
+
+**ΚΡΙΣΙΜΟ ΕΥΡΗΜΑ**: Τα LLMs έχουν 42-80% αποτυχία σε complex spatial/geometric tasks. **ΠΟΤΕ** μην αφήνεις την AI να υπολογίζει γεωμετρία. Η AI αποφασίζει **τι** σχεδιάζεται — ο server κάνει τους γεωμετρικούς υπολογισμούς σε **deterministic code**.
+
+**Προτεινόμενες βιβλιοθήκες** (όλες FREE, permissive licenses):
+
+| Βιβλιοθήκη | Άδεια | Τι κάνει | Χρήση στο σύστημα |
+|------------|-------|----------|-------------------|
+| **@flatten-js/core** | MIT | Πλήρης 2D geometry (intersections, distances, containment) | **ΚΟΡΥΦΑΙΑ ΕΠΙΛΟΓΗ** — κεντρικός geometry engine |
+| **polyclip-ts** | MIT | Polygon boolean operations (union, difference) | Room detection, walls |
+| **clipper2-wasm** | BSL-1.0 | Polygon offset | Πάχος τοίχων (wall offset/thickness) |
+| **rbush** | MIT | Spatial index (R-tree) | Performance — "βρες entities κοντά σε σημείο" |
+| **robust-predicates** | ISC | Ακρίβεια floating-point | Αποφυγή CAD precision bugs |
+| **@turf/turf** | MIT | Geospatial analysis | Τοπογραφικά, ΕΓΣΑ'87 |
+
+> **Σημείωση**: Όλες οι παραπάνω έχουν **permissive licenses** (MIT/ISC/BSL) — δεν υποχρεώνουν open-source. Συμβατές με ADR-034 (License Compliance).
+
+**Planned file structure**:
+```
+src/services/geometry-engine/
+├── geometry-engine.ts              — Facade (main API)
+├── intersection-solver.ts          — Line-line, line-circle, circle-circle
+├── offset-calculator.ts            — Parallel lines, wall offsets
+├── spatial-index.ts                — R-tree spatial indexing (rbush)
+├── coordinate-transformer.ts       — ΕΓΣΑ'87, unit conversions
+└── precision-utils.ts              — Robust predicates
+```
+
+---
+
+### 6.6 AI Provider Abstraction — Αποφυγή Vendor Lock-in (Έρευνα #2, 2026-02-17)
+
+> **Ερώτηση Γιώργου**: "Αν αύριο θέλω να φύγω από OpenAI και να πάω σε Anthropic ή κάποιο άλλο σύστημα, θα υπάρχει πρόβλημα;"
+> **Απαίτηση**: Μία πληρωμή AI provider (ΟΧΙ πολλαπλά APIs), ελευθερία αλλαγής provider χωρίς refactoring.
+
+**Στρατηγική**: **AI Provider Abstraction Layer** — ένα ενιαίο interface, πολλαπλοί providers πίσω.
+
+#### Αξιολογημένες λύσεις:
+
+| Λύση | Άδεια | Πλεονεκτήματα | Μειονεκτήματα | Απόφαση |
+|------|-------|---------------|---------------|---------|
+| **Vercel AI SDK** | Apache 2.0 | Ήδη χρησιμοποιούμε Vercel, unified API, streaming, tool calling support, OpenAI/Anthropic/Google/Mistral/Ollama, Next.js native | — | **ΚΟΡΥΦΑΙΑ ΕΠΙΛΟΓΗ** |
+| LangChain.js | MIT | Μεγάλο ecosystem, πολλοί providers | Βαρύ (bundle size), over-engineering για εμάς | Απορρίπτεται |
+| LiteLLM | MIT | 100+ providers, proxy mode | Python only (δεν ταιριάζει σε Next.js) | Απορρίπτεται |
+| OpenRouter | Proprietary | 200+ models, single API key | **Πληρώνεις τρίτο** (middleware fee), vendor lock-in | Απορρίπτεται |
+| Custom abstraction | — | Πλήρης έλεγχος | Χρόνος ανάπτυξης, maintenance | Fallback αν χρειαστεί |
+
+#### Vercel AI SDK — Γιατί ΚΟΡΥΦΑΙΑ ΕΠΙΛΟΓΗ:
+
+1. **Apache 2.0 license** — δεν υποχρεώνει open-source (ADR-034 compliant)
+2. **Ήδη χρησιμοποιούμε Vercel** — zero friction integration
+3. **Unified API**: Αλλαγή `openai('gpt-4o')` → `anthropic('claude-4.5-sonnet')` = **1 γραμμή κώδικα**
+4. **Tool calling support**: Δουλεύει identically σε OpenAI, Anthropic, Google
+5. **Streaming**: Built-in streaming για progressive rendering
+6. **No middleware fees**: Πληρώνεις μόνο τον AI provider, **ΤΙΠΟΤΑ** στη Vercel για το SDK
+
+#### Pattern αλλαγής provider:
+
+```typescript
+// ΠΡΙΝ (OpenAI)
+import { openai } from '@ai-sdk/openai';
+const model = openai('gpt-4o');
+
+// ΜΕΤΑ (Anthropic) — αλλαγή 1 ΓΡΑΜΜΗΣ
+import { anthropic } from '@ai-sdk/anthropic';
+const model = anthropic('claude-4.5-sonnet');
+
+// Το υπόλοιπο ΟΛΟΚΛΗΡΟ σύστημα ΠΑΡΑΜΕΝΕΙ ΙΔΙΟ
+const result = await generateText({ model, tools, messages });
+```
+
+#### Βελτιστοποίηση κόστους AI:
+
+| Στρατηγική | Περιγραφή | Εξοικονόμηση |
+|-----------|-----------|-------------|
+| **Model routing** | gpt-4o-mini για 80% εντολών, gpt-4o μόνο για vision/complex | ~70% |
+| **Prompt caching** | Cached system prompts (OpenAI, Anthropic υποστηρίζουν) | ~50% στα input tokens |
+| **Context pruning** | Μόνο ορατά entities + summary, ΟΧΙ ολόκληρο canvas state | ~60% |
+| **Batched requests** | Ομαδοποίηση σύνθετων εντολών | Μείωση roundtrips |
+
+> **ΑΠΟΦΑΣΗ**: Ξεκινάμε με OpenAI directly (ήδη λειτουργεί). Εισάγουμε Vercel AI SDK στο Phase 1 ώστε από την αρχή να έχουμε provider-agnostic κώδικα. Η αλλαγή μπορεί να γίνει **οποιαδήποτε στιγμή** χωρίς refactoring.
+
+---
+
+### 6.7 Performance & UX — Πράγματα που μας διέφευγαν (Έρευνα #1, 2026-02-17)
+
+> Ευρήματα από research σε production AI-CAD systems.
+
+| Εύρημα | Περιγραφή | Ενέργεια |
+|--------|-----------|---------|
+| **Coordinates σε mm (integers)** | `{x: 3500, y: 2000}` αντί `{x: 3.5, y: 2.0}`. Τα integers είναι πιο ακριβή στο context ενός LLM (λιγότερα floating-point λάθη). | Εσωτερικά mm integers → display σε m |
+| **Context pruning** | ΜΗΝ στέλνεις ΟΛΟ το canvas state στην AI. Μόνο τα ορατά entities + summary. | Token budget: max 2000 tokens canvas context |
+| **Progressive rendering** | Μια σύνθετη εντολή μπορεί να πάρει 10-30 δευτερόλεπτα. Πρέπει να δείχνουμε progress. | Streaming + entity-by-entity rendering |
+| **Batched undo** | Μία εντολή AI = πολλά entities (π.χ. 50). Το undo πρέπει να τα αναιρεί ΟΛΑ μαζί. | `CommandGroup` pattern: 1 undo = αναίρεση πλήρους AI action |
+
+---
+
+### 6.8 Open Source Reference Projects (Έρευνα #1, 2026-02-17)
+
+| Project | Άδεια | Τι κάνει | Πώς μας βοηθά |
+|---------|-------|----------|---------------|
+| **tldraw "Make Real"** | Apache 2.0 | Canvas → screenshot → GPT-4V → εφαρμογή | Pattern για vision-based interaction |
+| **Zoo/KittyCAD** | MIT | Text-to-CAD, KCL language, MCP Server | UI reference implementation |
+| **FloorspaceJS** | BSD | Floor plan editor (NREL) | Floor plan UI/UX reference |
+
+---
+
 ## 7. File Structure (Planned)
 
 ```
@@ -528,6 +637,13 @@ src/
 │   ├── dxf-ai-tool-executor.ts           — Server-side executor
 │   ├── dxf-ai-system-prompt.ts           — System prompt builder
 │   └── dxf-ai-coordinate-resolver.ts     — Coordinate logic
+├── services/geometry-engine/             — Server-side geometry (Έρευνα #1)
+│   ├── geometry-engine.ts                — Facade (main API)
+│   ├── intersection-solver.ts            — Line-line, line-circle, circle-circle
+│   ├── offset-calculator.ts              — Parallel lines, wall offsets
+│   ├── spatial-index.ts                  — R-tree spatial indexing (rbush)
+│   ├── coordinate-transformer.ts         — ΕΓΣΑ'87, unit conversions
+│   └── precision-utils.ts                — Robust predicates, mm integers
 ├── subapps/dxf-viewer/
 │   ├── components/ai-panel/
 │   │   ├── DxfAiChatPanel.tsx            — Chat UI component
@@ -562,6 +678,26 @@ src/
 11. DraftAid — draftaid.io
 12. CAD-MCP (GitHub) — github.com/daobataotie/CAD-MCP
 
+### Geometry Libraries (Έρευνα #1)
+
+13. @flatten-js/core (MIT) — npmjs.com/package/@flatten-js/core
+14. polyclip-ts (MIT) — npmjs.com/package/polyclip-ts
+15. clipper2-wasm (BSL-1.0) — npmjs.com/package/clipper2-wasm
+16. rbush (MIT) — npmjs.com/package/rbush
+17. robust-predicates (ISC) — npmjs.com/package/robust-predicates
+18. @turf/turf (MIT) — npmjs.com/package/@turf/turf
+
+### AI Provider Abstraction (Έρευνα #2)
+
+19. Vercel AI SDK (Apache 2.0) — sdk.vercel.ai
+20. tldraw "Make Real" (Apache 2.0) — github.com/tldraw/make-real
+21. FloorspaceJS (BSD) — github.com/NREL/floorspace.js
+
+### Research Papers (Έρευνα #1)
+
+22. **ICCV 2025 CAD-Assistant** — LLMs as planners, not renderers (42-80% geometric failure rate)
+23. **Prompt Engineering for CAD** — Coordinates in mm integers, context pruning strategies
+
 ---
 
 ## 9. Changelog
@@ -572,3 +708,6 @@ src/
 | 2026-02-17 | Προσθήκη 11 αποφάσεων (Q-01 → Q-11) από συζήτηση | Claude + Γιώργος |
 | 2026-02-17 | Use Cases μεταφέρθηκαν σε ξεχωριστό αρχείο (UC-DXF-AI-use-cases.md) | Claude |
 | 2026-02-17 | Δημιουργία ADR-186 (Building Code / ΝΟΚ Module) | Claude + Γιώργος |
+| 2026-02-17 | Έρευνα #1: Geometry libraries, αρχιτεκτονική AI-CAD, performance patterns | Claude |
+| 2026-02-17 | Έρευνα #2: AI Provider abstraction, Vercel AI SDK, vendor lock-in avoidance | Claude + Γιώργος |
+| 2026-02-17 | Προσθήκη sections 6.5-6.8: Geometry Engine, Provider Abstraction, Performance, References | Claude |
