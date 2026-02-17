@@ -103,6 +103,7 @@ export {
 export { CreateEntityCommand } from './entity-commands/CreateEntityCommand';
 export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './entity-commands/DeleteEntityCommand';
 export { MoveEntityCommand, MoveMultipleEntitiesCommand } from './entity-commands/MoveEntityCommand';
+export { JoinEntityCommand } from './entity-commands/JoinEntityCommand';
 
 // Vertex Commands
 export { MoveVertexCommand } from './vertex-commands/MoveVertexCommand';

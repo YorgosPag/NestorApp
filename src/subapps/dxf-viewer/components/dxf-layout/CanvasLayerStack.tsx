@@ -18,6 +18,7 @@ import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
 import DrawingContextMenu from '../../ui/components/DrawingContextMenu';
+import EntityContextMenu from '../../ui/components/EntityContextMenu';
 import { PdfBackgroundCanvas } from '../../pdf-background';
 import type { PdfBackgroundTransform } from '../../pdf-background';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
@@ -166,6 +167,7 @@ export interface CanvasLayerStackProps {
   handleUnifiedMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
   handleDrawingContextMenu: (e: React.MouseEvent) => void;
   handleDrawingContextMenuClose: (open: boolean) => void;
+  handleEntityContextMenuClose: (open: boolean) => void;
 
   // === Drawing state (grouped) ===
   drawingState: {
@@ -177,6 +179,15 @@ export interface CanvasLayerStackProps {
     handleDrawingCancel: () => void;
     handleDrawingUndoLastPoint: () => void;
     handleFlipArc: () => void;
+  };
+
+  // === Entity context menu state (ADR-161) ===
+  entityContextMenu: { isOpen: boolean; position: { x: number; y: number } };
+  entityJoin: {
+    canJoin: boolean;
+    joinResultLabel?: string;
+    onJoin: () => void;
+    onDelete: () => void;
   };
 
   // === PDF background (grouped) ===
@@ -205,8 +216,8 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   mouseCss, updateMouseCss, updateMouseWorld,
   containerHandlers,
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
-  handleDrawingContextMenu, handleDrawingContextMenuClose,
-  drawingState, pdf, onMouseMove,
+  handleDrawingContextMenu, handleDrawingContextMenuClose, handleEntityContextMenuClose,
+  drawingState, entityContextMenu, entityJoin, pdf, onMouseMove,
 }) => {
   // --- Destructure grouped props ---
   const { crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings } = settings;
@@ -505,6 +516,19 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
             onUndoLastPoint={handleDrawingUndoLastPoint}
             onCancel={handleDrawingCancel}
             onFlipArc={handleFlipArc}
+          />
+
+          {/* EntityContextMenu (ADR-161: select mode right-click) */}
+          <EntityContextMenu
+            isOpen={entityContextMenu.isOpen}
+            onOpenChange={handleEntityContextMenuClose}
+            position={entityContextMenu.position}
+            selectedCount={selectedEntityIds.length}
+            canJoin={entityJoin.canJoin}
+            joinResultLabel={entityJoin.joinResultLabel}
+            onJoin={entityJoin.onJoin}
+            onDelete={entityJoin.onDelete}
+            onCancel={() => handleEntityContextMenuClose(false)}
           />
         </div>
       </div>

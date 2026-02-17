@@ -204,6 +204,33 @@ export function CancelIcon({ className, color }: IconProps) {
 }
 
 /**
+ * Join/merge icon (two lines merging into one)
+ * Used in: EntityContextMenu for joining entities
+ */
+export function JoinIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      <path d="M4 8h6l4 4 4-4h2" />
+      <path d="M4 16h6l4-4" />
+      <circle cx="20" cy="8" r="2" fill={color || 'currentColor'} />
+    </SvgWrapper>
+  );
+}
+
+/**
+ * Delete/trash icon (trash can)
+ * Used in: EntityContextMenu for deleting entities
+ */
+export function DeleteIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </SvgWrapper>
+  );
+}
+
+/**
  * Flip arc direction icon (two opposing arcs with arrows)
  * Used in: DrawingContextMenu for arc tools (arc-3p, arc-cse, arc-sce)
  *

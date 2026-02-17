@@ -48,6 +48,12 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleFlipArc: () => void;
   /** Legacy finish drawing for overlay polygons */
   finishDrawing: () => Promise<void>;
+  /** ADR-161: Selected entity IDs for join shortcut */
+  selectedEntityIds?: string[];
+  /** ADR-161: Join handler (J key) */
+  handleEntityJoin?: () => void;
+  /** ADR-161: Check if join is possible */
+  canEntityJoin?: boolean;
 }
 
 // ============================================================================
@@ -65,6 +71,9 @@ export function useCanvasKeyboardShortcuts({
   handleDrawingFinish,
   handleFlipArc,
   finishDrawing,
+  selectedEntityIds = [],
+  handleEntityJoin,
+  canEntityJoin = false,
 }: UseCanvasKeyboardShortcutsParams): void {
 
   // Handle keyboard shortcuts for drawing, delete, and local operations
@@ -122,11 +131,19 @@ export function useCanvasKeyboardShortcuts({
             handleFlipArc();
           }
           break;
+        // ADR-161: "J" key for Join entities in select mode
+        case 'j':
+        case 'J':
+          if (activeTool === 'select' && canEntityJoin && handleEntityJoin) {
+            e.preventDefault();
+            handleEntityJoin();
+          }
+          break;
       }
     };
 
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds]);
 }

@@ -175,6 +175,21 @@ export function entityToSegments(entity: GeometryEntity): Segment[] {
 }
 
 /**
+ * Check if two connected line segments are collinear (same direction / straight line)
+ * Uses cross-product test: if |AB × AC| < tolerance, points are collinear
+ *
+ * @param a Start of first segment
+ * @param b Shared endpoint (end of first / start of second)
+ * @param c End of second segment
+ * @param tolerance Cross-product tolerance (default: GAP_TOLERANCE for CAD-level precision)
+ */
+export function arePointsCollinear(a: Point2D, b: Point2D, c: Point2D, tolerance = GEOMETRY_CONSTANTS.GAP_TOLERANCE): boolean {
+  // Cross product: (b-a) × (c-a)
+  const cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  return Math.abs(cross) < tolerance;
+}
+
+/**
  * 🎯 CENTRALIZED POINT-IN-POLYGON TEST
  * Κεντρικοποιημένη μέθοδος για έλεγχο αν σημείο είναι μέσα σε πολύγωνο
  * Χρησιμοποιείται από selection systems, hit testing, και layer rendering

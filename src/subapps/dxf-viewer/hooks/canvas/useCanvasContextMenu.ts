@@ -1,13 +1,13 @@
 /**
- * 🏢 ENTERPRISE: useCanvasContextMenu Hook
+ * useCanvasContextMenu Hook
  *
- * @description Manages the AutoCAD-style right-click context menu during drawing operations.
- * Handles state, React preventDefault handler, native DOM listener, and close logic.
- *
- * EXTRACTED FROM: CanvasSection.tsx — ~35 lines of context menu logic
+ * @description Manages right-click context menus on the canvas:
+ * 1. DrawingContextMenu — during drawing/measurement operations
+ * 2. EntityContextMenu — in select mode with entities selected
  *
  * @see ADR-047: DrawingContextMenu
  * @see ADR-053: Drawing Context Menu Handler
+ * @see ADR-161: Entity Join System (EntityContextMenu)
  */
 
 'use client';
@@ -37,15 +37,21 @@ export interface UseCanvasContextMenuParams {
   hasUnifiedDrawingPointsRef: MutableRefObject<() => boolean>;
   /** Ref to draft polygon array (overlay drawing system) */
   draftPolygonRef: MutableRefObject<Array<[number, number]>>;
+  /** Currently selected DXF entity IDs (for entity context menu) */
+  selectedEntityIds?: string[];
 }
 
 export interface UseCanvasContextMenuReturn {
-  /** Context menu state (isOpen + position) */
+  /** Drawing context menu state (isOpen + position) */
   drawingContextMenu: ContextMenuState;
+  /** Entity context menu state (isOpen + position) */
+  entityContextMenu: ContextMenuState;
   /** React handler — prevents browser context menu on canvas (fallback) */
   handleDrawingContextMenu: (e: React.MouseEvent) => void;
   /** Close handler for DrawingContextMenu component */
   handleDrawingContextMenuClose: (open: boolean) => void;
+  /** Close handler for EntityContextMenu component */
+  handleEntityContextMenuClose: (open: boolean) => void;
 }
 
 // ============================================================================
@@ -58,9 +64,15 @@ export function useCanvasContextMenu({
   overlayMode,
   hasUnifiedDrawingPointsRef,
   draftPolygonRef,
+  selectedEntityIds = [],
 }: UseCanvasContextMenuParams): UseCanvasContextMenuReturn {
 
   const [drawingContextMenu, setDrawingContextMenu] = useState<ContextMenuState>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+  });
+
+  const [entityContextMenu, setEntityContextMenu] = useState<ContextMenuState>({
     isOpen: false,
     position: { x: 0, y: 0 },
   });
@@ -78,6 +90,13 @@ export function useCanvasContextMenu({
     }
   }, []);
 
+  // Close handler for EntityContextMenu component
+  const handleEntityContextMenuClose = useCallback((open: boolean) => {
+    if (!open) {
+      setEntityContextMenu(prev => ({ ...prev, isOpen: false }));
+    }
+  }, []);
+
   // Native DOM listener — more reliable than React synthetic events on canvas
   // Pattern: AutoCAD, Autodesk Viewer, BricsCAD
   useEffect(() => {
@@ -88,7 +107,7 @@ export function useCanvasContextMenu({
       e.preventDefault();
       e.stopPropagation();
 
-      // Only show OUR context menu when in drawing mode with points
+      // PRIORITY 1: Drawing context menu (during drawing with active points)
       const isUnifiedDrawing = isDrawingTool(activeTool) || isMeasurementTool(activeTool);
       const hasUnifiedPoints = hasUnifiedDrawingPointsRef.current();
       const isOverlayDrawing = overlayMode === 'draw';
@@ -99,6 +118,16 @@ export function useCanvasContextMenu({
           isOpen: true,
           position: { x: e.clientX, y: e.clientY },
         });
+        return;
+      }
+
+      // PRIORITY 2: Entity context menu (select mode with entities selected)
+      if (activeTool === 'select' && selectedEntityIds.length > 0) {
+        setEntityContextMenu({
+          isOpen: true,
+          position: { x: e.clientX, y: e.clientY },
+        });
+        return;
       }
     };
 
@@ -107,11 +136,13 @@ export function useCanvasContextMenu({
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds]);
 
   return {
     drawingContextMenu,
+    entityContextMenu,
     handleDrawingContextMenu,
     handleDrawingContextMenuClose,
+    handleEntityContextMenuClose,
   };
 }

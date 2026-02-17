@@ -1434,6 +1434,22 @@
     "togglePerf": "Performance Monitor",
     "pdfBackground": "PDF Background"
   },
+  "entityJoin": {
+    "menuTitle": "Join",
+    "joinAction": "Join",
+    "deleteAction": "Delete",
+    "cancelAction": "Cancel",
+    "resultLine": "Line",
+    "resultArc": "Arc",
+    "resultCircle": "Circle",
+    "resultPolyline": "Polyline",
+    "joinSuccess": "Joined {{count}} entities → {{type}}",
+    "joinFailed": "Join failed",
+    "cannotJoinClosed": "Cannot join closed entities",
+    "cannotJoinNonGeometric": "Cannot join non-geometric entities",
+    "entitiesNotConnected": "Entities are not connected",
+    "needTwoOrMore": "Select 2+ entities to join"
+  },
   "actionButtons": {
     "showGrid": "Show Grid",
     "hideGrid": "Hide Grid",

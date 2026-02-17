@@ -200,6 +200,7 @@
 | **ADR-182** | Parking & Storage Hierarchy Audit — 5 Findings | ✅ AUDIT_COMPLETE | 2026-02-16 | Data Architecture / Real Estate | [📄](./adrs/ADR-182-parking-storage-hierarchy-audit.md) |
 | **ADR-183** | Unified Grip System — DXF + Overlay Grip Interaction | ✅ IMPLEMENTED | 2026-02-16 | DXF Viewer / Grips | [📄](./adrs/ADR-183-unified-grip-system.md) |
 | **ADR-184** | Building Spaces Tabs (Storage, Parking, Units) | ✅ IMPLEMENTED | 2026-02-16 | Building Management | [📄](./adrs/ADR-184-building-spaces-tabs.md) |
+| **ADR-186** | Entity Join System — AutoCAD JOIN Semantics | ✅ IMPLEMENTED | 2026-02-17 | DXF Viewer / Entity Operations | [📄](./adrs/ADR-186-entity-join-system.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

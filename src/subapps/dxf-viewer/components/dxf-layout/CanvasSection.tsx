@@ -27,6 +27,7 @@ import {
 import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
+import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
@@ -282,8 +283,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentLevelId: levelManager.currentLevelId,
   });
 
-  const { drawingContextMenu, handleDrawingContextMenu, handleDrawingContextMenuClose } = useCanvasContextMenu({
+  const { drawingContextMenu, entityContextMenu, handleDrawingContextMenu, handleDrawingContextMenuClose, handleEntityContextMenuClose } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
+    selectedEntityIds,
   });
 
   const { handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = useDrawingUIHandlers({
@@ -325,6 +327,23 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setSelectedEntityIds, eventBus,
   });
 
+  // ADR-161: Entity Join System
+  const entityJoinHook = useEntityJoin({
+    levelManager,
+    executeCommand,
+    setSelectedEntityIds,
+  });
+
+  // ADR-161: Memoized join state (avoid recalculating on every render)
+  const entityJoinState = useMemo(() => {
+    const canJoin = entityJoinHook.canJoin(selectedEntityIds);
+    const preview = canJoin ? entityJoinHook.getJoinPreview(selectedEntityIds) : null;
+    return {
+      canJoin,
+      joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined,
+    };
+  }, [entityJoinHook, selectedEntityIds]);
+
   useCanvasKeyboardShortcuts({
     handleSmartDelete,
     dxfGripInteraction: unified.dxfProjection,
@@ -332,6 +351,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     selectedGrips: unified.selectedGrips,
     setSelectedGrips: unified.setSelectedGrips,
     activeTool, handleDrawingFinish, handleFlipArc, finishDrawing,
+    // ADR-161: Entity Join via J key
+    selectedEntityIds,
+    handleEntityJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
+    canEntityJoin: entityJoinState.canJoin,
   });
 
   // === Render ===
@@ -391,12 +414,20 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       handleUnifiedMouseMove={unified.handleMouseMove}
       handleDrawingContextMenu={handleDrawingContextMenu}
       handleDrawingContextMenuClose={handleDrawingContextMenuClose}
+      handleEntityContextMenuClose={handleEntityContextMenuClose}
       drawingState={{
         drawingHandlers,
         contextMenu: drawingContextMenu,
         draftPolygon,
         handleDrawingFinish, handleDrawingClose,
         handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
+      }}
+      entityContextMenu={entityContextMenu}
+      entityJoin={{
+        canJoin: entityJoinState.canJoin,
+        joinResultLabel: entityJoinState.joinResultLabel,
+        onJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
+        onDelete: () => handleSmartDelete(),
       }}
       pdf={{
         imageUrl: pdfImageUrl,
