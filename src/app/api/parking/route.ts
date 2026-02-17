@@ -283,7 +283,10 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       .get();
 
     const allSpots = mapParkingDocs(snapshot.docs);
-    const parkingSpots = allSpots.filter(spot => authorizedBuildingIds.has(spot.buildingId));
+    // Include unlinked spots (buildingId = null) + spots linked to authorized buildings
+    const parkingSpots = allSpots.filter(spot =>
+      !spot.buildingId || authorizedBuildingIds.has(spot.buildingId)
+    );
 
     logger.info('Found parking spots for company', { total: allSpots.length, authorized: parkingSpots.length });
 
