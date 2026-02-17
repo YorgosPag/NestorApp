@@ -121,15 +121,36 @@ export function useDxfSceneConversion({
         }
         case 'rectangle': {
           // DXF Standard: rectangles stored as closed polylines (4 vertices)
-          const e = entity as typeof entity & { corner1: Point2D; corner2: Point2D };
-          const { corner1, corner2 } = e;
-          const vertices: Point2D[] = [
-            corner1,
-            { x: corner2.x, y: corner1.y },
-            corner2,
-            { x: corner1.x, y: corner2.y },
-          ];
-          converted.push({ ...base, type: 'polyline' as const, vertices, closed: true } as DxfEntityUnion);
+          // Support both formats: corner1/corner2 (legacy/imported) and x/y/width/height (RectangleEntity)
+          const e = entity as typeof entity & {
+            corner1?: Point2D; corner2?: Point2D;
+            x?: number; y?: number; width?: number; height?: number;
+          };
+
+          let rectVertices: Point2D[];
+          if (e.corner1 && e.corner2) {
+            // Legacy/imported format: corner1 + corner2
+            rectVertices = [
+              e.corner1,
+              { x: e.corner2.x, y: e.corner1.y },
+              e.corner2,
+              { x: e.corner1.x, y: e.corner2.y },
+            ];
+          } else if (e.x !== undefined && e.y !== undefined && e.width !== undefined && e.height !== undefined) {
+            // RectangleEntity format: x, y, width, height
+            const c1: Point2D = { x: e.x, y: e.y };
+            const c2: Point2D = { x: e.x + e.width, y: e.y + e.height };
+            rectVertices = [
+              c1,
+              { x: c2.x, y: c1.y },
+              c2,
+              { x: c1.x, y: c2.y },
+            ];
+          } else {
+            dwarn('useDxfSceneConversion', 'Rectangle entity missing geometry:', entity.id);
+            break;
+          }
+          converted.push({ ...base, type: 'polyline' as const, vertices: rectVertices, closed: true } as DxfEntityUnion);
           break;
         }
         default:
