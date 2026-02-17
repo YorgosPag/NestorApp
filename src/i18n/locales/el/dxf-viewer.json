@@ -1552,5 +1552,17 @@
     "coordinates": "Συντεταγμένες",
     "shortcutsFallback": "D=Χάρακας | W=Παράθυρο Ζουμ | +/-=Ζουμ | F9=Πλέγμα | ESC=Άκυρο",
     "unknownTool": "Άγνωστο"
+  },
+  "aiAssistant": {
+    "title": "AI Σχεδίαση",
+    "placeholder": "Γράψε μια εντολή σχεδίασης, π.χ. «σχεδίασε γραμμή από 0,0 μέχρι 10,5»",
+    "inputPlaceholder": "Γράψε εντολή...",
+    "send": "Αποστολή",
+    "clear": "Καθαρισμός",
+    "thinking": "Σκέφτομαι...",
+    "entityCreated": "Δημιουργήθηκε {count, plural, one {# entity} other {# entities}}",
+    "error": "Σφάλμα κατά την εκτέλεση",
+    "toggleOpen": "Άνοιγμα AI βοηθού",
+    "toggleClose": "Κλείσιμο AI βοηθού"
   }
 }

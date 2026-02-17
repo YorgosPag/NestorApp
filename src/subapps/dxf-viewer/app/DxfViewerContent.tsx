@@ -13,6 +13,8 @@ import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/uti
 import { MOVEMENT_DETECTION } from '../config/tolerance-config';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../config/keyboard-shortcuts';
+// 🤖 ADR-185: AI Drawing Assistant feature flag
+import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
 
 // ✅ React stack suppression handled globally in layout.tsx via public/suppress-console.js
 
@@ -88,6 +90,8 @@ const DraggableOverlayToolbar = React.lazy(() => import('../ui/components/Dragga
 const DraggableOverlayProperties = React.lazy(() => import('../ui/components/DraggableOverlayProperties').then(mod => ({ default: mod.DraggableOverlayProperties })));
 // 🏢 PDF BACKGROUND: Lazy load PDF controls panel
 const PdfControlsPanel = React.lazy(() => import('../pdf-background').then(mod => ({ default: mod.PdfControlsPanel })));
+// 🤖 ADR-185: AI Drawing Assistant (lazy loaded, behind feature flag)
+const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAiChatPanel'));
 const ToolbarWithCursorCoordinates = React.lazy(() => import('../ui/components/ToolbarWithCursorCoordinates').then(mod => ({ default: mod.ToolbarWithCursorCoordinates })));
 
 // Layout Components - Canvas V2
@@ -146,6 +150,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // 🏢 PDF BACKGROUND: State για PDF controls panel visibility
   const [pdfPanelOpen, setPdfPanelOpen] = React.useState(false);
+
+  // 🤖 ADR-185: AI Drawing Assistant panel state
+  const [aiChatOpen, setAiChatOpen] = React.useState(false);
 
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern - DXF Viewer only)
   const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
@@ -360,6 +367,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     // 🏢 PDF BACKGROUND: Toggle PDF controls panel
     if (action === 'toggle-pdf-background') {
       setPdfPanelOpen(prev => !prev);
+      return;
+    }
+    // 🤖 ADR-185: Toggle AI Drawing Assistant
+    if (action === 'toggle-ai-assistant') {
+      setAiChatOpen(prev => !prev);
       return;
     }
     // Pass all other actions to original handleAction
@@ -1083,6 +1095,19 @@ Check console for detailed metrics`;
           onClose={() => setPdfPanelOpen(false)}
         />
       </React.Suspense>
+
+      {/* 🤖 ADR-185: AI Drawing Assistant Chat Panel */}
+      {USE_AI_DRAWING_ASSISTANT && (
+        <React.Suspense fallback={<div className="hidden" />}>
+          <DxfAiChatPanel
+            isOpen={aiChatOpen}
+            onClose={() => setAiChatOpen(false)}
+            getScene={levelManager.getLevelScene}
+            setScene={levelManager.setLevelScene}
+            levelId={levelManager.currentLevelId || '0'}
+          />
+        </React.Suspense>
+      )}
 
       {/* 🏢 ENTERPRISE: Performance Monitor - DXF Viewer only (Bentley/Autodesk pattern)
           - OFF by default for better performance
