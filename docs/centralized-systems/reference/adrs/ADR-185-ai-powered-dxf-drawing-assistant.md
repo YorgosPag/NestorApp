@@ -317,7 +317,7 @@ User message → Pipeline Orchestrator → Agentic Loop → OpenAI (tool calling
 
 ## 3. Αρχιτεκτονική Απόφαση
 
-### 3.1 Επιλεγμένο Pattern: **Agentic Tool Calling (Client-Side)**
+### 3.1 Επιλεγμένο Pattern: **Agentic Tool Calling (Server-Side)**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -700,7 +700,36 @@ src/
 
 ---
 
-## 9. Changelog
+## 9. Ανοιχτές Ερωτήσεις [ΠΡΟΣ ΣΥΖΗΤΗΣΗ]
+
+> Εντοπίστηκαν κατά τον έλεγχο γραμμή-γραμμή (2026-02-17). Πρέπει να απαντηθούν πριν ξεκινήσει η υλοποίηση.
+
+### Εκκρεμείς Αποφάσεις (Q-11+)
+
+| # | Ερώτηση | Αναφορά | Status |
+|---|---------|---------|--------|
+| **Q-11** | **Στυλ σχεδίασης τοίχων**: Μονή γραμμή (σκίτσο), διπλή γραμμή με πάχος (ρεαλιστικό), ή και τα δύο; | Section 0 → Q-11 | ΑΝΟΙΧΤΗ |
+| **Q-12** | **Error handling AI**: Τι γίνεται όταν η AI αποτύχει; Επιστρέφει λάθος συντεταγμένες; Δεν καταλαβαίνει την εντολή; Timeout; Πώς ειδοποιείται ο χρήστης; | — | ΑΝΟΙΧΤΗ |
+| **Q-13** | **Budget AI κλήσεων**: Πόσο budget ανά μήνα σε AI API calls; Αυτό καθορίζει model routing (gpt-4o-mini vs gpt-4o) και token limits. | Section 6.6 | ΑΝΟΙΧΤΗ |
+| **Q-14** | **Multi-level (όροφοι)**: Ο DXF Viewer υποστηρίζει levels. Η AI θα καταλαβαίνει "σχεδίασε στον 2ο όροφο"; Θα μπορεί να αλλάξει level; Είναι Phase 1 ή αργότερα; | Section 2.1 | ΑΝΟΙΧΤΗ |
+| **Q-15** | **Αλληλεπίδραση με imported DXF**: Αν ο χρήστης κάνει import ένα DXF αρχείο, η AI μπορεί να τροποποιήσει τα imported entities; Ή μόνο entities που δημιουργήθηκαν στον viewer; | UC-DXF-011 | ΑΝΟΙΧΤΗ |
+| **Q-16** | **Canvas state format**: Τι ακριβώς στέλνεται στην AI ως context; Entity list σε JSON; Summary (π.χ. "3 ορθογώνια, 5 γραμμές"); Viewport info; Ποιο είναι το max token budget; | Section 6.7 | ΑΝΟΙΧΤΗ |
+| **Q-17** | **Snap integration**: Τα AI-generated points περνούν μέσα από snap system (grid snap, entity snap, endpoint snap); Ποια snap modes ενεργοποιούνται; | Section 6.3 | ΑΝΟΙΧΤΗ |
+| **Q-18** | **Auth & permissions**: Πώς κλειδώνεται το AI panel; Feature flag; Role-based; Ποιοι ρόλοι έχουν πρόσβαση; | Q-01 | ΑΝΟΙΧΤΗ |
+| **Q-19** | **Offline/degraded mode**: Αν πέσει το OpenAI API (ή αλλάξει provider), ο DXF Viewer συνεχίζει να λειτουργεί κανονικά χωρίς AI; Ή εξαρτάται; | Section 6.6 | ΑΝΟΙΧΤΗ |
+| **Q-20** | **Server timeout**: Η Vercel έχει 10s default (60s με maxDuration). Σύνθετες εντολές (π.χ. κάτοψη) μπορεί να πάρουν >60s. Τι κάνουμε; Streaming; Chunked responses; | Section 6.7 | ΑΝΟΙΧΤΗ |
+| **Q-21** | **DXF Export**: Μετά τη σχεδίαση με AI, ο χρήστης μπορεί να κάνει export σε DXF file; Αυτό υπάρχει ήδη ή πρέπει να χτιστεί; | UC-DXF-016 | ΑΝΟΙΧΤΗ |
+
+### Αντιφάσεις που χρειάζουν διευκρίνιση
+
+| # | Αντίφαση | Πού βρέθηκε | Πρόταση |
+|---|----------|------------|---------|
+| **C-01** | **Μονάδες: m vs mm** — Q-07 λέει "μέτρα ως default", αλλά Section 6.7 λέει "εσωτερικά mm integers". Πρέπει να διευκρινιστεί: ο χρήστης μιλάει σε μέτρα, αλλά εσωτερικά αποθηκεύονται σε mm; Ή ο χρήστης βλέπει mm; | Q-07 vs 6.7 | Χρήστης σε m, εσωτερικά mm → αυτόματη μετατροπή |
+| **C-02** | **Vercel AI SDK migration**: Section 6.6 λέει "εισάγουμε στο Phase 1", αλλά η existing pipeline (ADR-171) χρησιμοποιεί OpenAI SDK directly. Μεταφέρουμε ΚΑΙ το existing pipeline σε Vercel AI SDK; Ή μόνο το DXF AI; | Section 6.6 vs ADR-171 | Μόνο DXF AI αρχικά, migrate existing αργότερα |
+
+---
+
+## 10. Changelog
 
 | Date | Change | By |
 |------|--------|-----|
@@ -711,3 +740,4 @@ src/
 | 2026-02-17 | Έρευνα #1: Geometry libraries, αρχιτεκτονική AI-CAD, performance patterns | Claude |
 | 2026-02-17 | Έρευνα #2: AI Provider abstraction, Vercel AI SDK, vendor lock-in avoidance | Claude + Γιώργος |
 | 2026-02-17 | Προσθήκη sections 6.5-6.8: Geometry Engine, Provider Abstraction, Performance, References | Claude |
+| 2026-02-17 | Έλεγχος γραμμή-γραμμή: 11 νέες ερωτήσεις (Q-12 → Q-21), 2 αντιφάσεις (C-01, C-02), fix τίτλου Section 3.1 | Claude |

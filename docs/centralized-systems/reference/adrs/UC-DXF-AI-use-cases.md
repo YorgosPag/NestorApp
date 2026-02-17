@@ -300,8 +300,26 @@
 
 ---
 
+---
+
+## Ανοιχτές Ερωτήσεις στα Detailed UCs
+
+> Εντοπίστηκαν κατά τον γραμμή-γραμμή έλεγχο (2026-02-17). Αφορούν τα ήδη αναλυτικά UC (001-008).
+
+| UC | Ερώτηση | Status |
+|----|---------|--------|
+| **UC-DXF-001** | **Server timeout**: Τι γίνεται αν η κλήση στο OpenAI κάνει timeout (Vercel 10s/60s); Retry; Fallback; Error message; | ΑΝΟΙΧΤΗ |
+| **UC-DXF-002** | **Entity selection via click**: Ο χρήστης μπορεί να κλικάρει ένα entity για να το επιλέξει αντί να το περιγράψει; ("Μετακίνησε **αυτό**" + click); | ΑΝΟΙΧΤΗ |
+| **UC-DXF-003** | **Geometry engine delegation**: Ο υπολογισμός offset/parallel γίνεται server-side μέσω geometry engine (Section 6.5); Πώς ακριβώς αλληλεπιδρά η AI με τον geometry engine; | ΑΝΟΙΧΤΗ |
+| **UC-DXF-006** | **Batched undo details**: Η Section 6.7 αναφέρει CommandGroup. Πώς ακριβώς αναγνωρίζεται ότι 50 entities ανήκουν στην ίδια AI εντολή; Transaction ID; | ΑΝΟΙΧΤΗ |
+| **UC-DXF-008** | **Pending point TTL**: Πόσο διαρκεί ένα "pending point"; Μέχρι να χρησιμοποιηθεί; Μέχρι timeout (π.χ. 30s); Μέχρι νέο click; | ΑΝΟΙΧΤΗ |
+| **UC-009 → 020** | Και τα 12 UCs χρειάζονται αναλυτική συμπλήρωση κύριας ροής, εναλλακτικών, και edge cases — θα γίνει κατά τη συζήτηση | ΑΝΟΙΧΤΗ |
+
+---
+
 ## Changelog
 
 | Date | Change | By |
 |------|--------|-----|
 | 2026-02-17 | Initial creation — 8 detailed UCs, 12 placeholders | Claude + Γιώργος |
+| 2026-02-17 | Προσθήκη 6 ανοιχτών ερωτήσεων στα detailed UCs (γραμμή-γραμμή έλεγχος) | Claude |
