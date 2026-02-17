@@ -14,10 +14,16 @@ export const TOLERANCE_CONFIG = {
   SNAP_DEFAULT: 10,         // Default snap tolerance in pixels
   SNAP_PRECISION: 1e-10,    // High-precision snap tolerance (geometric calculations)
   
-  // Hit testing
-  HIT_TEST_DEFAULT: 8,      // Default hit test tolerance
-  HIT_TEST_FALLBACK: 5,     // 🏢 ADR-105: Fallback tolerance for renderer hitTest methods
-  HIT_TEST_RADIUS: 12,      // Hit test radius for visual elements
+  // Hit testing (in PIXELS — must be converted to world units via / scale)
+  HIT_TEST_DEFAULT: 8,      // Default hit test tolerance (pixels)
+  HIT_TEST_FALLBACK: 5,     // 🏢 ADR-105: Fallback tolerance for renderer hitTest methods (pixels)
+  HIT_TEST_RADIUS: 12,      // Hit test radius for visual elements (pixels)
+
+  // 🏢 AutoCAD/MicroStation standard: Entity hover/select tolerance in PIXELS
+  // AutoCAD PICKBOX default = 3px, MicroStation Locate Tolerance default = 10px
+  // We use 4px as a good middle-ground for web (higher DPI than desktop CAD)
+  ENTITY_HOVER_PIXELS: 4,   // How close cursor must be to highlight entity (pixels)
+  ENTITY_SELECT_PIXELS: 4,  // How close cursor must be to select entity (pixels)
   
   // Grips and handles
   GRIP_APERTURE: 8,         // Default grip aperture size

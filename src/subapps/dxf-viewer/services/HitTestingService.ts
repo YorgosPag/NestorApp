@@ -83,10 +83,16 @@ export class HitTestingService {
       // Convert screen position to world position
       const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
 
+      // 🏢 AutoCAD/MicroStation standard: Convert pixel tolerance → world units
+      // Tolerance is defined in pixels and scales inversely with zoom.
+      // At high zoom (large scale), world tolerance shrinks → more precise.
+      // At low zoom (small scale), world tolerance grows — but stays pixel-consistent.
+      const pixelTolerance = options.tolerance || TOLERANCE_CONFIG.ENTITY_HOVER_PIXELS;
+      const worldTolerance = pixelTolerance / transform.scale;
+
       // Perform hit test using centralized HitTester
-      // 🏢 ADR-105: Use centralized fallback tolerance
       const hits = this.hitTester.hitTestPoint(worldPos, {
-        tolerance: options.tolerance || TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
+        tolerance: worldTolerance,
         maxResults: options.maxResults || 1,
         useSpatialIndex: true,
         layerFilter: options.layerFilter,

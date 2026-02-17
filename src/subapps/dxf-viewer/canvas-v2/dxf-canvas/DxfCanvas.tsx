@@ -232,9 +232,9 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       try {
         // ✅ ENTERPRISE MIGRATION: Get service from registry
         const hitTesting = serviceRegistry.get('hit-testing');
-        // 🏢 ADR-105: Use centralized fallback tolerance
+        // 🏢 AutoCAD standard: Pass pixel tolerance (HitTestingService converts to world units)
         const result = hitTesting.hitTest(screenPos, transform, viewport, {
-          tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
+          tolerance: TOLERANCE_CONFIG.ENTITY_HOVER_PIXELS,
           maxResults: 1
         });
 
