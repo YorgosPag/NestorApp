@@ -36,7 +36,7 @@ import {
   filterUnits,
   calculateStats,
 } from './StorageTab/utils';
-import { BuildingSpaceTable, BuildingSpaceCardGrid } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
 
 // ============================================================================
@@ -136,6 +136,8 @@ export function StorageTab({ building }: StorageTabProps) {
   const formType: StorageType = 'storage';
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<StorageUnit | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const filteredUnits = useMemo(() =>
     filterUnits(units, searchTerm, filterType, filterStatus, filterFloor),
@@ -199,18 +201,24 @@ export function StorageTab({ building }: StorageTabProps) {
     setEditingUnit(null);
   };
 
-  const handleDeleteUnit = async (unit: StorageUnit) => {
-    const confirmed = window.confirm(`Διαγραφή αποθήκης "${unit.code}";`);
-    if (!confirmed) return;
+  const handleDeleteClick = (unit: StorageUnit) => {
+    setConfirmDelete(unit);
+  };
 
-    setDeletingId(unit.id);
+  const handleDeleteConfirm = async () => {
+    if (!confirmDelete) return;
+
+    setConfirmLoading(true);
+    setDeletingId(confirmDelete.id);
     try {
-      await apiClient.delete(`/api/storages/${unit.id}`);
-      logger.info('Storage unit deleted via API', { id: unit.id });
+      await apiClient.delete(`/api/storages/${confirmDelete.id}`);
+      logger.info('Storage unit deleted via API', { id: confirmDelete.id });
       await fetchStorageUnits();
     } catch (error) {
       logger.error('Error deleting storage unit', { error });
     } finally {
+      setConfirmLoading(false);
+      setConfirmDelete(null);
       setDeletingId(null);
     }
   };
@@ -322,7 +330,7 @@ export function StorageTab({ building }: StorageTabProps) {
             actions={{
               onView: () => {},
               onEdit: handleEdit,
-              onDelete: handleDeleteUnit,
+              onDelete: handleDeleteClick,
             }}
             actionState={{ deletingId }}
           />
@@ -339,7 +347,7 @@ export function StorageTab({ building }: StorageTabProps) {
             actions={{
               onView: () => {},
               onEdit: handleEdit,
-              onDelete: handleDeleteUnit,
+              onDelete: handleDeleteClick,
             }}
             actionState={{ deletingId }}
           />
@@ -364,6 +372,25 @@ export function StorageTab({ building }: StorageTabProps) {
           formType={formType}
         />
       )}
+
+      {/* Centralized Confirm Dialog (delete) */}
+      <BuildingSpaceConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}
+        title={t('spaceConfirm.deleteStorage')}
+        description={
+          <>
+            {t('spaceConfirm.deleteStorageDesc')}{' '}
+            <strong>&quot;{confirmDelete?.code}&quot;</strong>;
+            <br /><br />
+            {t('spaceConfirm.irreversible')}
+          </>
+        }
+        confirmLabel={t('spaceActions.delete')}
+        onConfirm={handleDeleteConfirm}
+        loading={confirmLoading}
+        variant="destructive"
+      />
     </section>
   );
 }

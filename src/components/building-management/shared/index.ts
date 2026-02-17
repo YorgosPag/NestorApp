@@ -10,6 +10,7 @@
 export { BuildingSpaceTable } from './BuildingSpaceTable';
 export { BuildingSpaceCardGrid } from './BuildingSpaceCardGrid';
 export { BuildingSpaceActions } from './BuildingSpaceActions';
+export { BuildingSpaceConfirmDialog } from './BuildingSpaceConfirmDialog';
 
 export type {
   SpaceColumn,

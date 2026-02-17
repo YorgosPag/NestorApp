@@ -30,8 +30,16 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
 import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
-import { BuildingSpaceTable, BuildingSpaceCardGrid } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
+
+// ============================================================================
+// CONFIRM ACTION TYPE
+// ============================================================================
+
+type UnitConfirmAction =
+  | { type: 'delete'; item: Unit }
+  | { type: 'unlink'; item: Unit };
 
 // ============================================================================
 // TYPES
@@ -103,6 +111,8 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   // Action state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<UnitConfirmAction | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const iconSizes = useIconSizes();
 
@@ -168,36 +178,35 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   // CRUD HANDLERS
   // ============================================================================
 
-  const handleDelete = async (unit: Unit) => {
-    const confirmed = window.confirm(
-      `Διαγραφή μονάδας "${unit.name}";`
-    );
-    if (!confirmed) return;
-
-    setDeletingId(unit.id);
-    try {
-      await apiClient.delete(`/api/units/${unit.id}`);
-      await fetchUnits();
-    } catch (err) {
-      console.error('[UnitsTab] Delete error:', err);
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDeleteClick = (unit: Unit) => {
+    setConfirmAction({ type: 'delete', item: unit });
   };
 
-  const handleUnlink = async (unit: Unit) => {
-    const confirmed = window.confirm(
-      `Αποσύνδεση μονάδας "${unit.name}" από το κτίριο;\nΗ μονάδα θα παραμείνει στο σύστημα αλλά δεν θα ανήκει σε κτίριο.`
-    );
-    if (!confirmed) return;
+  const handleUnlinkClick = (unit: Unit) => {
+    setConfirmAction({ type: 'unlink', item: unit });
+  };
 
-    setUnlinkingId(unit.id);
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+
+    setConfirmLoading(true);
+    const { type, item } = confirmAction;
+
     try {
-      await apiClient.patch(`/api/units/${unit.id}`, { buildingId: null });
+      if (type === 'delete') {
+        setDeletingId(item.id);
+        await apiClient.delete(`/api/units/${item.id}`);
+      } else {
+        setUnlinkingId(item.id);
+        await apiClient.patch(`/api/units/${item.id}`, { buildingId: null });
+      }
       await fetchUnits();
     } catch (err) {
-      console.error('[UnitsTab] Unlink error:', err);
+      console.error(`[UnitsTab] ${type} error:`, err);
     } finally {
+      setConfirmLoading(false);
+      setConfirmAction(null);
+      setDeletingId(null);
       setUnlinkingId(null);
     }
   };
@@ -366,8 +375,8 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             actions={{
               onView: () => {},
               onEdit: () => setShowAddDialog(true),
-              onUnlink: handleUnlink,
-              onDelete: handleDelete,
+              onUnlink: handleUnlinkClick,
+              onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
           />
@@ -384,8 +393,8 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             actions={{
               onView: () => {},
               onEdit: () => setShowAddDialog(true),
-              onUnlink: handleUnlink,
-              onDelete: handleDelete,
+              onUnlink: handleUnlinkClick,
+              onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
           />
@@ -405,6 +414,41 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         onUnitAdded={fetchUnits}
         buildings={buildingsForDialog}
         buildingsLoading={false}
+      />
+
+      {/* Centralized Confirm Dialog (delete / unlink) */}
+      <BuildingSpaceConfirmDialog
+        open={!!confirmAction}
+        onOpenChange={(open) => { if (!open) setConfirmAction(null); }}
+        title={
+          confirmAction?.type === 'delete'
+            ? t('spaceConfirm.deleteUnit')
+            : t('spaceConfirm.unlinkUnit')
+        }
+        description={
+          confirmAction?.type === 'delete' ? (
+            <>
+              {t('spaceConfirm.deleteUnitDesc')}{' '}
+              <strong>&quot;{confirmAction.item.name}&quot;</strong>;
+              <br /><br />
+              {t('spaceConfirm.irreversible')}
+            </>
+          ) : (
+            <>
+              {t('spaceConfirm.unlinkUnitDesc')}
+              <br /><br />
+              <strong>{confirmAction?.item.name}</strong>
+            </>
+          )
+        }
+        confirmLabel={
+          confirmAction?.type === 'delete'
+            ? t('spaceActions.delete')
+            : t('spaceActions.unlink')
+        }
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+        variant={confirmAction?.type === 'delete' ? 'destructive' : 'warning'}
       />
     </section>
   );

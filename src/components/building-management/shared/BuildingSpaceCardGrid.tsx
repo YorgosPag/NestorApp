@@ -12,6 +12,7 @@
 
 import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
 import type { SpaceCardField, SpaceActions, SpaceActionState } from './types';
 
@@ -57,7 +58,7 @@ export function BuildingSpaceCardGrid<T>({
         const key = getKey(item);
 
         return (
-          <Card key={key} className="overflow-hidden">
+          <Card key={key} className={`overflow-hidden ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
             <CardContent className="p-4 space-y-3">
               <header className="flex items-center justify-between">
                 <h3 className="font-medium text-sm truncate">{getName(item)}</h3>

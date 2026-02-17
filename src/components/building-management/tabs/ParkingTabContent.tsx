@@ -32,8 +32,16 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
-import { BuildingSpaceTable, BuildingSpaceCardGrid } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
+
+// ============================================================================
+// CONFIRM ACTION TYPE
+// ============================================================================
+
+type ParkingConfirmAction =
+  | { type: 'delete'; item: ParkingSpot }
+  | { type: 'unlink'; item: ParkingSpot };
 
 // ============================================================================
 // TYPES
@@ -119,6 +127,8 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   // Delete & Unlink state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ParkingConfirmAction | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
@@ -263,58 +273,57 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   // DELETE
   // ============================================================================
 
-  const handleDelete = async (spot: ParkingSpot) => {
-    const confirmed = window.confirm(
-      `${tBuilding('tabs.labels.parking')}: ${spot.number} — Delete?`
-    );
-    if (!confirmed) return;
-
-    setDeletingId(spot.id);
-    try {
-      const result = await apiClient.delete<ParkingMutationResult>(
-        `/api/parking/${spot.id}`
-      );
-      if (result?.id) {
-        RealtimeService.dispatch('PARKING_DELETED', {
-          parkingSpotId: spot.id,
-          timestamp: Date.now(),
-        });
-        await fetchParkingSpots();
-      }
-    } catch (err) {
-      console.error('[ParkingTab] Delete error:', err);
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDeleteClick = (spot: ParkingSpot) => {
+    setConfirmAction({ type: 'delete', item: spot });
   };
 
   // ============================================================================
   // UNLINK — Disassociate parking spot from building (keeps spot in system)
   // ============================================================================
 
-  const handleUnlink = async (spot: ParkingSpot) => {
-    const confirmed = window.confirm(
-      `Αποσύνδεση θέσης ${spot.number} από το κτίριο;\nΗ θέση θα παραμείνει στο σύστημα αλλά δεν θα ανήκει σε κτίριο.`
-    );
-    if (!confirmed) return;
+  const handleUnlinkClick = (spot: ParkingSpot) => {
+    setConfirmAction({ type: 'unlink', item: spot });
+  };
 
-    setUnlinkingId(spot.id);
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+
+    setConfirmLoading(true);
+    const { type, item } = confirmAction;
+
     try {
-      const result = await apiClient.patch<ParkingMutationResult>(
-        `/api/parking/${spot.id}`,
-        { buildingId: null }
-      );
-      if (result?.id) {
-        RealtimeService.dispatch('PARKING_UPDATED', {
-          parkingSpotId: spot.id,
-          updates: { buildingId: null },
-          timestamp: Date.now(),
-        });
-        await fetchParkingSpots();
+      if (type === 'delete') {
+        setDeletingId(item.id);
+        const result = await apiClient.delete<ParkingMutationResult>(
+          `/api/parking/${item.id}`
+        );
+        if (result?.id) {
+          RealtimeService.dispatch('PARKING_DELETED', {
+            parkingSpotId: item.id,
+            timestamp: Date.now(),
+          });
+        }
+      } else {
+        setUnlinkingId(item.id);
+        const result = await apiClient.patch<ParkingMutationResult>(
+          `/api/parking/${item.id}`,
+          { buildingId: null }
+        );
+        if (result?.id) {
+          RealtimeService.dispatch('PARKING_UPDATED', {
+            parkingSpotId: item.id,
+            updates: { buildingId: null },
+            timestamp: Date.now(),
+          });
+        }
       }
+      await fetchParkingSpots();
     } catch (err) {
-      console.error('[ParkingTab] Unlink error:', err);
+      console.error(`[ParkingTab] ${type} error:`, err);
     } finally {
+      setConfirmLoading(false);
+      setConfirmAction(null);
+      setDeletingId(null);
       setUnlinkingId(null);
     }
   };
@@ -659,8 +668,8 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             actions={{
               onView: () => {},
               onEdit: startEdit,
-              onUnlink: handleUnlink,
-              onDelete: handleDelete,
+              onUnlink: handleUnlinkClick,
+              onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
           />
@@ -677,8 +686,8 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             actions={{
               onView: () => {},
               onEdit: startEdit,
-              onUnlink: handleUnlink,
-              onDelete: handleDelete,
+              onUnlink: handleUnlinkClick,
+              onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
             editingId={editingId}
@@ -727,6 +736,40 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           </footer>
         </>
       )}
+      {/* Centralized Confirm Dialog (delete / unlink) */}
+      <BuildingSpaceConfirmDialog
+        open={!!confirmAction}
+        onOpenChange={(open) => { if (!open) setConfirmAction(null); }}
+        title={
+          confirmAction?.type === 'delete'
+            ? tBuilding('spaceConfirm.deleteParking')
+            : tBuilding('spaceConfirm.unlinkParking')
+        }
+        description={
+          confirmAction?.type === 'delete' ? (
+            <>
+              {tBuilding('spaceConfirm.deleteParkingDesc')}{' '}
+              <strong>&quot;{confirmAction.item.number}&quot;</strong>;
+              <br /><br />
+              {tBuilding('spaceConfirm.irreversible')}
+            </>
+          ) : (
+            <>
+              {tBuilding('spaceConfirm.unlinkParkingDesc')}
+              <br /><br />
+              <strong>{confirmAction?.item.number}</strong>
+            </>
+          )
+        }
+        confirmLabel={
+          confirmAction?.type === 'delete'
+            ? tBuilding('spaceActions.delete')
+            : tBuilding('spaceActions.unlink')
+        }
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+        variant={confirmAction?.type === 'delete' ? 'destructive' : 'warning'}
+      />
     </section>
   );
 }

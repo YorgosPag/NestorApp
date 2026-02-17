@@ -1683,6 +1683,20 @@
     "delete": "Delete",
     "actions": "Actions"
   },
+  "spaceConfirm": {
+    "cancel": "Cancel",
+    "irreversible": "This action cannot be undone.",
+    "deleteUnit": "Delete Unit",
+    "deleteUnitDesc": "Are you sure you want to delete the unit",
+    "unlinkUnit": "Unlink Unit",
+    "unlinkUnitDesc": "The unit will remain in the system but will not belong to a building.",
+    "deleteParking": "Delete Parking Spot",
+    "deleteParkingDesc": "Are you sure you want to delete the parking spot",
+    "unlinkParking": "Unlink Parking Spot",
+    "unlinkParkingDesc": "The spot will remain in the system but will not belong to a building.",
+    "deleteStorage": "Delete Storage",
+    "deleteStorageDesc": "Are you sure you want to delete the storage"
+  },
   "storageListHeader": {
     "results": "{count} results",
     "selected": "{count} selected",
