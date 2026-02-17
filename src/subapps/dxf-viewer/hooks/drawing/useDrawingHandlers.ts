@@ -148,42 +148,26 @@ export function useDrawingHandlers(
   });
 
   // Unified snap function
-  // 🏢 ENTERPRISE (2026-02-17): Dead zone logic — prevents snapping back to the last placed point
-  // AutoCAD pattern: After placing a point, nearby snap to the SAME location is suppressed
-  // so the user can draw short entities without the cursor being pulled back.
   const applySnap = useCallback((point: Pt): Pt => {
     if (!snapEnabled || !findSnapPoint) {
+
       return point;
     }
 
     try {
       const snapResult = findSnapPoint(point.x, point.y);
       if (snapResult && snapResult.found && snapResult.snappedPoint) {
-        // 🏢 Dead zone check: If drawing is active and snap result matches the last placed point,
-        // skip snap to allow short entities. Without this, the cursor snaps back to the start
-        // point making it impossible to create short lines/entities near existing endpoints.
-        if (drawingState.isDrawing && drawingState.tempPoints.length > 0) {
-          const lastPoint = drawingState.tempPoints[drawingState.tempPoints.length - 1];
-          const dx = snapResult.snappedPoint.x - lastPoint.x;
-          const dy = snapResult.snappedPoint.y - lastPoint.y;
-          const distSq = dx * dx + dy * dy;
-          // Float precision guard: 0.0001 = ~0.01 world units
-          // This only blocks snapping to the EXACT same point, not nearby points
-          if (distSq < 0.0001) {
-            return point; // Use raw cursor position — don't snap back to start
-          }
-        }
 
-        // Update snap context for visual indicator
-        setCurrentSnapResult(snapResult);
         return snapResult.snappedPoint;
+      } else {
+
       }
     } catch (error) {
       if (DEBUG_DRAWING_HANDLERS) console.warn('🔺 Drawing snap error:', error, 'falling back to raw point');
     }
 
     return point;
-  }, [snapEnabled, findSnapPoint, drawingState.isDrawing, drawingState.tempPoints, setCurrentSnapResult]);
+  }, [snapEnabled, findSnapPoint]);
 
   // Drawing handlers
   // 🏢 ENTERPRISE (2026-01-27): IMMEDIATE preview clear on drawing completion

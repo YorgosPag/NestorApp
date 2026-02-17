@@ -595,11 +595,7 @@ export function useCentralizedMouseHandlers({
       let worldPoint = screenToWorldWithSnapshot(freshScreenPos, transform, snap);
 
       // Apply snap detection (in world coordinates)
-      // 🏢 ENTERPRISE (2026-02-17): Skip snap during drawing mode — useDrawingHandlers
-      // manages snap with dead zone logic to prevent snapping back to start point.
-      // Double-snap (here + applySnap) caused issues with short entity creation.
-      const inDrawingModeForSnap = isInDrawingMode(activeTool, overlayMode);
-      if (snapEnabled && findSnapPoint && !inDrawingModeForSnap) {
+      if (snapEnabled && findSnapPoint) {
         const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
         if (snapResult && snapResult.found && snapResult.snappedPoint) {
           worldPoint = snapResult.snappedPoint; // Use snapped WORLD coordinates
