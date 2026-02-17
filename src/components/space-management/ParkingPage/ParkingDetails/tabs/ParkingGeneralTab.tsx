@@ -5,18 +5,22 @@
  *
  * Γενικές πληροφορίες θέσης στάθμευσης.
  * Supports inline editing mode (toggled by parent header).
+ * Each section wrapped in Card for visual separation (Google Material pattern).
  * Follows BuildingDetails GeneralTabContent pattern.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatDate, formatCurrency, formatFloorString } from '@/lib/intl-utils';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
-import { Car, MapPin, Calendar, Euro, Layers } from 'lucide-react';
+import { Car, MapPin, Calendar, Euro, StickyNote } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -25,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ParkingGeneralTab');
@@ -95,6 +100,12 @@ function buildFormState(parking: ParkingSpot): ParkingFormState {
   };
 }
 
+function formatTimestamp(value: Date | { toDate: () => Date } | string): string {
+  if (value instanceof Date) return formatDate(value.toISOString());
+  if (typeof value === 'object' && 'toDate' in value) return formatDate(value.toDate().toISOString());
+  return formatDate(String(value));
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -106,6 +117,7 @@ export function ParkingGeneralTab({
   onSaveRef,
 }: ParkingGeneralTabProps) {
   const iconSizes = useIconSizes();
+  const typography = useTypography();
   const { t } = useTranslation('parking');
 
   // Form state for edit mode
@@ -194,258 +206,239 @@ export function ParkingGeneralTab({
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Basic Information */}
-      <section>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Car className={iconSizes.md} />
-          {t('general.basicInfo')}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.spotCode')}
-            </label>
-            {isEditing ? (
-              <Input
-                value={form.number}
-                onChange={(e) => updateField('number', e.target.value)}
-                className="mt-1"
-              />
-            ) : (
-              <p className="mt-1 text-sm">{parking.number || 'N/A'}</p>
-            )}
-          </fieldset>
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.type')}
-            </label>
-            {isEditing ? (
-              <Select
-                value={form.type}
-                onValueChange={(v) => updateField('type', v as ParkingSpotType)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PARKING_TYPES.map(pt => (
-                    <SelectItem key={pt.value} value={pt.value}>
-                      {t(pt.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <p className="mt-1 text-sm">{getTypeLabel(parking.type)}</p>
-            )}
-          </fieldset>
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.status')}
-            </label>
-            {isEditing ? (
-              <Select
-                value={form.status}
-                onValueChange={(v) => updateField('status', v as ParkingSpotStatus)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PARKING_STATUSES.map(ps => (
-                    <SelectItem key={ps.value} value={ps.value}>
-                      {t(ps.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <p className="mt-1 text-sm">{getStatusLabel(parking.status)}</p>
-            )}
-          </fieldset>
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.area')}
-            </label>
-            {isEditing ? (
-              <Input
-                type="number"
-                step="0.01"
-                value={form.area}
-                onChange={(e) => updateField('area', e.target.value)}
-                placeholder="m²"
-                className="mt-1"
-              />
-            ) : (
-              <p className="mt-1 text-sm">{parking.area ? `${parking.area} m²` : 'N/A'}</p>
-            )}
-          </fieldset>
-        </div>
-      </section>
+    <div className="p-4 space-y-4">
+      {/* ─── Basic Information Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Car className={cn(iconSizes.md, 'text-blue-500')} />
+            {t('general.basicInfo')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.spotCode')}</Label>
+              {isEditing ? (
+                <Input
+                  value={form.number}
+                  onChange={(e) => updateField('number', e.target.value)}
+                />
+              ) : (
+                <p className="text-sm font-medium">{parking.number || 'N/A'}</p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.type')}</Label>
+              {isEditing ? (
+                <Select
+                  value={form.type}
+                  onValueChange={(v) => updateField('type', v as ParkingSpotType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PARKING_TYPES.map(pt => (
+                      <SelectItem key={pt.value} value={pt.value}>
+                        {t(pt.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm font-medium">{getTypeLabel(parking.type)}</p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.status')}</Label>
+              {isEditing ? (
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => updateField('status', v as ParkingSpotStatus)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PARKING_STATUSES.map(ps => (
+                      <SelectItem key={ps.value} value={ps.value}>
+                        {t(ps.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm font-medium">{getStatusLabel(parking.status)}</p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.area')}</Label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.area}
+                  onChange={(e) => updateField('area', e.target.value)}
+                  placeholder="m²"
+                />
+              ) : (
+                <p className="text-sm font-medium">{parking.area ? `${parking.area} m²` : 'N/A'}</p>
+              )}
+            </fieldset>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Location */}
-      <section>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <MapPin className={iconSizes.md} />
-          {t('general.location')}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.floor')}
-            </label>
-            {isEditing ? (
-              <Input
-                value={form.floor}
-                onChange={(e) => updateField('floor', e.target.value)}
-                placeholder="-1"
-                className="mt-1"
-              />
-            ) : (
-              <p className="mt-1 text-sm">
-                {parking.floor ? formatFloorString(parking.floor) : 'N/A'}
+      {/* ─── Location Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
+            {t('general.location')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.floor')}</Label>
+              {isEditing ? (
+                <Input
+                  value={form.floor}
+                  onChange={(e) => updateField('floor', e.target.value)}
+                  placeholder="-1"
+                />
+              ) : (
+                <p className="text-sm font-medium">
+                  {parking.floor ? formatFloorString(parking.floor) : 'N/A'}
+                </p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.position')}</Label>
+              {isEditing ? (
+                <Input
+                  value={form.location}
+                  onChange={(e) => updateField('location', e.target.value)}
+                />
+              ) : (
+                <p className="text-sm font-medium">{parking.location || 'N/A'}</p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.buildingId')}</Label>
+              <p className="text-sm font-mono text-xs text-muted-foreground">
+                {parking.buildingId || 'N/A'}
               </p>
-            )}
-          </fieldset>
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.position')}
-            </label>
-            {isEditing ? (
-              <Input
-                value={form.location}
-                onChange={(e) => updateField('location', e.target.value)}
-                className="mt-1"
-              />
-            ) : (
-              <p className="mt-1 text-sm">{parking.location || 'N/A'}</p>
-            )}
-          </fieldset>
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.buildingId')}
-            </label>
-            <p className="mt-1 text-sm font-mono text-xs">{parking.buildingId || 'N/A'}</p>
-          </fieldset>
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.projectId')}
-            </label>
-            <p className="mt-1 text-sm font-mono text-xs">{parking.projectId || 'N/A'}</p>
-          </fieldset>
-        </div>
-      </section>
-
-      {/* Financial Information */}
-      <section>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Euro className={iconSizes.md} />
-          {t('general.financial')}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.price')}
-            </label>
-            {isEditing ? (
-              <Input
-                type="number"
-                step="0.01"
-                value={form.price}
-                onChange={(e) => updateField('price', e.target.value)}
-                placeholder="€"
-                className="mt-1"
-              />
-            ) : (
-              <p className="mt-1 text-sm">
-                {parking.price !== undefined && parking.price > 0
-                  ? formatCurrency(parking.price)
-                  : parking.price === 0
-                    ? t('general.priceValues.shared')
-                    : t('general.priceValues.notSet')}
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.projectId')}</Label>
+              <p className="text-sm font-mono text-xs text-muted-foreground">
+                {parking.projectId || 'N/A'}
               </p>
-            )}
-          </fieldset>
-          <fieldset>
-            <label className="text-sm font-medium text-muted-foreground">
-              {t('general.fields.pricePerSqm')}
-            </label>
-            <p className="mt-1 text-sm">
-              {parking.price && parking.area && parking.price > 0
-                ? formatCurrency(parking.price / parking.area)
-                : t('general.notCalculated')}
-            </p>
-          </fieldset>
-        </div>
-      </section>
+            </fieldset>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Notes */}
-      <section>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Layers className={iconSizes.md} />
-          {t('general.notes')}
-        </h3>
-        {isEditing ? (
-          <Textarea
-            value={form.notes}
-            onChange={(e) => updateField('notes', e.target.value)}
-            className="h-20 resize-none"
-          />
-        ) : (
-          parking.notes ? (
-            <p className="text-sm bg-muted/50 p-4 rounded-lg">{parking.notes}</p>
+      {/* ─── Financial Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Euro className={cn(iconSizes.md, 'text-amber-500')} />
+            {t('general.financial')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.price')}</Label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.price}
+                  onChange={(e) => updateField('price', e.target.value)}
+                  placeholder="€"
+                />
+              ) : (
+                <p className="text-sm font-medium">
+                  {parking.price !== undefined && parking.price > 0
+                    ? formatCurrency(parking.price)
+                    : parking.price === 0
+                      ? t('general.priceValues.shared')
+                      : t('general.priceValues.notSet')}
+                </p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('general.fields.pricePerSqm')}</Label>
+              <p className="text-sm font-medium">
+                {parking.price && parking.area && parking.price > 0
+                  ? formatCurrency(parking.price / parking.area)
+                  : t('general.notCalculated')}
+              </p>
+            </fieldset>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ─── Notes Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
+            {t('general.notes')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isEditing ? (
+            <Textarea
+              value={form.notes}
+              onChange={(e) => updateField('notes', e.target.value)}
+              className="h-20 resize-none"
+            />
           ) : (
-            <p className="text-sm text-muted-foreground">—</p>
-          )
-        )}
-      </section>
+            parking.notes ? (
+              <p className="text-sm bg-muted/50 p-3 rounded-md">{parking.notes}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">—</p>
+            )
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Update Information (read-only always) */}
-      <section>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Calendar className={iconSizes.md} />
-          {t('general.updateInfo')}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {parking.createdAt && (
-            <fieldset>
-              <label className="text-sm font-medium text-muted-foreground">
-                {t('general.fields.createdAt')}
-              </label>
-              <p className="mt-1 text-sm">{formatDate(
-                parking.createdAt instanceof Date
-                  ? parking.createdAt.toISOString()
-                  : typeof parking.createdAt === 'object' && 'toDate' in parking.createdAt
-                    ? (parking.createdAt as { toDate: () => Date }).toDate().toISOString()
-                    : String(parking.createdAt)
-              )}</p>
-            </fieldset>
-          )}
-          {parking.updatedAt && (
-            <fieldset>
-              <label className="text-sm font-medium text-muted-foreground">
-                {t('general.fields.lastUpdated')}
-              </label>
-              <p className="mt-1 text-sm">{formatDate(
-                parking.updatedAt instanceof Date
-                  ? parking.updatedAt.toISOString()
-                  : typeof parking.updatedAt === 'object' && 'toDate' in parking.updatedAt
-                    ? (parking.updatedAt as { toDate: () => Date }).toDate().toISOString()
-                    : String(parking.updatedAt)
-              )}</p>
-            </fieldset>
-          )}
-          {parking.createdBy && (
-            <fieldset>
-              <label className="text-sm font-medium text-muted-foreground">
-                {t('general.fields.createdBy')}
-              </label>
-              <p className="mt-1 text-sm">{parking.createdBy}</p>
-            </fieldset>
-          )}
-        </div>
-      </section>
+      {/* ─── Update Information Card (read-only always) ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
+            {t('general.updateInfo')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {parking.createdAt && (
+              <fieldset className="space-y-1.5">
+                <Label className="text-muted-foreground">{t('general.fields.createdAt')}</Label>
+                <p className="text-sm font-medium">{formatTimestamp(parking.createdAt)}</p>
+              </fieldset>
+            )}
+            {parking.updatedAt && (
+              <fieldset className="space-y-1.5">
+                <Label className="text-muted-foreground">{t('general.fields.lastUpdated')}</Label>
+                <p className="text-sm font-medium">{formatTimestamp(parking.updatedAt)}</p>
+              </fieldset>
+            )}
+            {parking.createdBy && (
+              <fieldset className="space-y-1.5">
+                <Label className="text-muted-foreground">{t('general.fields.createdBy')}</Label>
+                <p className="text-sm font-medium">{parking.createdBy}</p>
+              </fieldset>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
