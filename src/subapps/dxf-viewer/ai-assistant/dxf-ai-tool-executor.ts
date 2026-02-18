@@ -29,7 +29,7 @@ import type {
   UndoActionArgs,
 } from './types';
 import type { Entity, LineEntity, CircleEntity, RectangleEntity, PolylineEntity, SceneModel } from '../types/entities';
-import { completeEntity } from '../hooks/drawing/completeEntity';
+// NOTE: completeEntity deliberately NOT used here — see batch insert comment below
 import { generateEntityId } from '../systems/entity-creation/utils';
 import { DXF_AI_DEFAULTS, DXF_AI_LIMITS } from '../config/ai-assistant-config';
 import { EventBus } from '../systems/events';
@@ -385,37 +385,47 @@ export function executeDxfAiToolCalls(
     }
   }
 
-  // Insert entities one-by-one so each emits 'drawing:complete' with updatedScene.
-  // CRITICAL: completeEntities (batch) emits event WITHOUT updatedScene, which
-  // breaks the dual-scene sync (level manager → currentScene) in DxfViewerContent.
-  // Using individual completeEntity() ensures the sync handler receives the
-  // updatedScene directly and propagates it to the canvas renderer.
+  // ── Batch insert ALL entities at once ──
+  // CRITICAL: Do NOT call completeEntity/setScene in a loop!
+  // React batches state updates → getScene() returns stale state between calls →
+  // only the LAST entity survives. Solution: get scene ONCE, add all, set ONCE.
   if (entitiesToCreate.length > 0) {
-    const createdIds: string[] = [];
-    let failedCount = 0;
+    const scene = getScene(levelId);
 
-    for (const entity of entitiesToCreate) {
-      const result = completeEntity(entity, {
-        tool: 'select', // AI-created entities don't lock a drawing tool
-        levelId,
-        getScene,
-        setScene,
-        skipStyles: true, // AI entities have their own colors — skip toolbar style override
-      });
+    const baseScene: SceneModel = scene ?? {
+      entities: [],
+      layers: {
+        [DXF_AI_DEFAULTS.LAYER]: {
+          name: DXF_AI_DEFAULTS.LAYER,
+          color: DXF_AI_DEFAULTS.COLOR,
+          visible: true,
+          locked: false,
+        },
+      },
+      bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
+      units: 'mm',
+    };
 
-      if (result.success) {
-        createdIds.push(result.entityId);
-      } else {
-        failedCount++;
-      }
-    }
+    const updatedScene: SceneModel = {
+      ...baseScene,
+      entities: [...baseScene.entities, ...entitiesToCreate],
+    };
 
-    if (failedCount > 0) {
-      errors.push(`${failedCount} entity/ies απέτυχαν κατά τη δημιουργία`);
-    }
+    // Single atomic setScene — all entities added at once
+    setScene(levelId, updatedScene);
+
+    // Single event with updatedScene for dual-scene sync (ADR-057)
+    EventBus.emit('drawing:complete', {
+      tool: 'select',
+      entityId: entitiesToCreate[entitiesToCreate.length - 1].id,
+      updatedScene,
+      levelId,
+    });
+
+    const createdIds = entitiesToCreate.map(e => e.id);
 
     return {
-      success: createdIds.length > 0 || messages.length > 0,
+      success: true,
       entitiesCreated: createdIds,
       message: messages.join('\n'),
       error: errors.length > 0 ? errors.join('; ') : undefined,
