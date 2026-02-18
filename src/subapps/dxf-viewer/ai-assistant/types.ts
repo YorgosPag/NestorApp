@@ -87,13 +87,14 @@ export type DxfAiToolName =
   | 'draw_circle'
   | 'draw_polyline'
   | 'draw_shapes'
+  | 'draw_regular_polygon'
   | 'query_entities'
   | 'undo_action';
 
 /** A single tool call returned by the AI */
 export interface DxfAiToolCall {
   name: DxfAiToolName;
-  arguments: DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | DrawPolylineArgs | DrawShapesArgs | QueryEntitiesArgs | UndoActionArgs;
+  arguments: DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | DrawPolylineArgs | DrawShapesArgs | DrawRegularPolygonArgs | QueryEntitiesArgs | UndoActionArgs;
 }
 
 /** Arguments for draw_line tool */
@@ -155,6 +156,16 @@ export interface DrawShapeItem {
 /** Arguments for draw_shapes compound tool */
 export interface DrawShapesArgs {
   shapes: DrawShapeItem[];
+}
+
+/** Arguments for draw_regular_polygon tool — vertices computed by code, not AI */
+export interface DrawRegularPolygonArgs {
+  center_x: number;
+  center_y: number;
+  radius: number;
+  sides: number;
+  layer: string | null;
+  color: string | null;
 }
 
 /** Arguments for query_entities tool */

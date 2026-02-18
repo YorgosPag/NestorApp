@@ -117,10 +117,19 @@ Bounds: (${minX}, ${minY}) → (${maxX}, ${maxY})
 - draw_line: Σχεδίαση ΜΙΑ γραμμή
 - draw_rectangle: Σχεδίαση ΕΝΑ ορθογώνιο
 - draw_circle: Σχεδίαση ΕΝΑ κύκλο
-- draw_polyline: Σχεδίαση πολυγραμμής ή πολυγώνου (closed=true)
+- draw_polyline: Σχεδίαση πολυγραμμής (open) ή αυθαίρετου πολυγώνου (closed=true)
+- draw_regular_polygon: Κανονικό πολύγωνο (πεντάγωνο, εξάγωνο, οκτάγωνο κλπ.) — ο ΚΩΔΙΚΑΣ υπολογίζει ακριβείς κορυφές
 - draw_shapes: ΠΟΛΛΑΠΛΑ σχήματα σε ΜΙΑ κλήση! Χρησιμοποίησε αυτό ΠΑΝΤΑ για 2+ σχήματα.
 - query_entities: Αναζήτηση entities στον canvas
 - undo_action: Αναίρεση τελευταίων ενεργειών (count=N)
+
+ΚΡΙΣΙΜΟΣ ΚΑΝΟΝΑΣ ΚΑΝΟΝΙΚΩΝ ΠΟΛΥΓΩΝΩΝ:
+- Για κανονικά πολύγωνα (τρίγωνο, πεντάγωνο, εξάγωνο, οκτάγωνο κλπ.) → ΠΑΝΤΑ draw_regular_polygon
+- ΜΗΝ υπολογίζεις κορυφές χειροκίνητα — ο κώδικας τις υπολογίζει με πλήρη ακρίβεια
+- "πεντάγωνο ακτίνας 5" → draw_regular_polygon(center_x=0, center_y=0, radius=5, sides=5)
+- "εξάγωνο ακτίνας 8" → draw_regular_polygon(center_x=0, center_y=0, radius=8, sides=6)
+- "οκτάγωνο ακτίνας 10" → draw_regular_polygon(center_x=0, center_y=0, radius=10, sides=8)
+- "ισόπλευρο τρίγωνο ακτίνας 5" → draw_regular_polygon(center_x=0, center_y=0, radius=5, sides=3)
 
 ΚΡΙΣΙΜΟΣ ΚΑΝΟΝΑΣ ΠΟΛΛΑΠΛΩΝ ΣΧΗΜΑΤΩΝ:
 - Αν ο χρήστης ζητά 2+ σχήματα → ΥΠΟΧΡΕΩΤΙΚΑ χρησιμοποίησε draw_shapes (ΟΧΙ πολλαπλά draw_line)
@@ -156,11 +165,13 @@ Bounds: (${minX}, ${minY}) → (${maxX}, ${maxY})
 - "ορθογώνιο 4x3" → draw_rectangle(x=0, y=0, width=4, height=3)
 - "κύκλος ακτίνας 5" → draw_circle(center_x=0, center_y=0, radius=5)
 - "κύκλος διαμέτρου 10" → draw_circle(center_x=0, center_y=0, radius=5)
-- "κανονικό πεντάγωνο ακτίνας 5 στο (0,0)" → draw_polyline(vertices=[{x:5,y:0},{x:1.545,y:4.755},{x:-4.045,y:2.939},{x:-4.045,y:-2.939},{x:1.545,y:-4.755}], closed=true)
+- "κανονικό πεντάγωνο ακτίνας 5" → draw_regular_polygon(center_x=0, center_y=0, radius=5, sides=5)
+- "εξάγωνο ακτίνας 8 στο (10,10)" → draw_regular_polygon(center_x=10, center_y=10, radius=8, sides=6)
 
 ΠΑΡΑΔΕΙΓΜΑΤΑ POLYLINE:
 - "σχεδίασε τρίγωνο με κορυφές (0,0), (5,0), (2.5,4)" → draw_polyline(vertices=[{x:0,y:0},{x:5,y:0},{x:2.5,y:4}], closed=true)
 - "γραμμή σε σχήμα Γ από (0,0) μέχρι (5,0) μέχρι (5,3)" → draw_polyline(vertices=[{x:0,y:0},{x:5,y:0},{x:5,y:3}], closed=false)
+- "σχήμα Π πλάτους 10 ύψους 8" → draw_polyline(vertices=[{x:0,y:0},{x:0,y:8},{x:10,y:8},{x:10,y:0}], closed=false)
 
 ΠΑΡΑΔΕΙΓΜΑΤΑ UNDO:
 - "αναίρεσε" → undo_action(count=1)

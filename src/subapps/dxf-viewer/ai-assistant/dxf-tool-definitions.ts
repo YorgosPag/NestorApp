@@ -284,7 +284,53 @@ export const DXF_AI_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 7. undo_action ──
+  // ── 7. draw_regular_polygon ──
+  {
+    type: 'function',
+    function: {
+      name: 'draw_regular_polygon',
+      description:
+        'Draw a regular polygon (all sides equal, all angles equal) on the canvas. ' +
+        'Specify center, radius, and number of sides. Exact vertices are computed by code ' +
+        'using trigonometry — do NOT calculate coordinates manually. ' +
+        'Use this for pentagons (5), hexagons (6), octagons (8), triangles (3), etc. ' +
+        'ALWAYS prefer this over draw_polyline for regular polygons.',
+      parameters: {
+        type: 'object',
+        properties: {
+          center_x: {
+            type: 'number',
+            description: 'Center X coordinate',
+          },
+          center_y: {
+            type: 'number',
+            description: 'Center Y coordinate',
+          },
+          radius: {
+            type: 'number',
+            description: 'Radius — distance from center to each vertex (must be positive)',
+          },
+          sides: {
+            type: 'number',
+            description: 'Number of sides: 3=triangle, 5=pentagon, 6=hexagon, 8=octagon, etc.',
+          },
+          layer: {
+            type: ['string', 'null'],
+            description: 'Target layer name (null = default layer "0")',
+          },
+          color: {
+            type: ['string', 'null'],
+            description: 'Polygon color as hex string (null = default white)',
+          },
+        },
+        required: ['center_x', 'center_y', 'radius', 'sides', 'layer', 'color'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 8. undo_action ──
   {
     type: 'function',
     function: {

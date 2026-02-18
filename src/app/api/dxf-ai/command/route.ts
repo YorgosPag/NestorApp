@@ -72,6 +72,7 @@ const VALID_TOOL_NAMES = new Set<string>([
   'draw_circle',
   'draw_polyline',
   'draw_shapes',
+  'draw_regular_polygon',
   'query_entities',
   'undo_action',
 ]);

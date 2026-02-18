@@ -25,6 +25,7 @@ import type {
   DrawPolylineArgs,
   DrawShapesArgs,
   DrawShapeItem,
+  DrawRegularPolygonArgs,
   QueryEntitiesArgs,
   UndoActionArgs,
 } from './types';
@@ -320,6 +321,40 @@ export function executeDxfAiToolCalls(
           break;
         }
         entitiesToCreate.push(buildPolylineEntity(args));
+        entityCount++;
+        break;
+      }
+
+      case 'draw_regular_polygon': {
+        const args = call.arguments as DrawRegularPolygonArgs;
+        if (args.radius <= 0) {
+          errors.push(`Μη έγκυρη ακτίνα πολυγώνου: ${args.radius}`);
+          break;
+        }
+        const sides = Math.round(args.sides);
+        if (sides < 3 || sides > 100) {
+          errors.push(`Μη έγκυρος αριθμός πλευρών: ${args.sides} (απαιτούνται 3-100)`);
+          break;
+        }
+        if (entityCount >= DXF_AI_LIMITS.MAX_ENTITIES_PER_COMMAND) {
+          errors.push(`Μέγιστο όριο ${DXF_AI_LIMITS.MAX_ENTITIES_PER_COMMAND} entities ανά εντολή`);
+          break;
+        }
+        // Compute exact vertices using Math.cos/Math.sin — full precision
+        const polygonVertices: Array<{ x: number; y: number }> = [];
+        for (let i = 0; i < sides; i++) {
+          const angle = (2 * Math.PI * i) / sides;
+          polygonVertices.push({
+            x: args.center_x + args.radius * Math.cos(angle),
+            y: args.center_y + args.radius * Math.sin(angle),
+          });
+        }
+        entitiesToCreate.push(buildPolylineEntity({
+          vertices: polygonVertices,
+          closed: true,
+          layer: args.layer,
+          color: args.color,
+        }));
         entityCount++;
         break;
       }
