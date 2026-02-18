@@ -257,6 +257,24 @@ function extractSuggestions(content: string): string[] {
 // HANDLER
 // ============================================================================
 
+/** Max iterations for mini agentic loop (prevents runaway) */
+const MAX_LOOP_ITERATIONS = 3;
+
+/**
+ * Build simulated tool result messages to send back to OpenAI.
+ * The server doesn't execute drawing tools — it simulates success
+ * so OpenAI continues calling more tools if needed.
+ */
+function buildToolResultMessages(
+  rawCalls: ChatCompletionToolCall[],
+): Array<{ role: 'tool'; tool_call_id: string; content: string }> {
+  return rawCalls.map(call => ({
+    role: 'tool' as const,
+    tool_call_id: call.id,
+    content: `Tool ${call.function.name} executed successfully.`,
+  }));
+}
+
 async function handler(
   request: NextRequest,
   _ctx: AuthContext,
@@ -279,40 +297,72 @@ async function handler(
     // Build messages array
     const systemPrompt = buildDxfAiSystemPrompt(canvasContext);
 
-    const messages: ChatCompletionMessage[] = [
+    const conversationMessages: Array<ChatCompletionMessage | { role: 'assistant'; content: string | null; tool_calls?: ChatCompletionToolCall[] } | { role: 'tool'; tool_call_id: string; content: string }> = [
       { role: 'system', content: systemPrompt },
     ];
 
     // Add chat history (last N entries)
     for (const entry of chatHistory) {
-      messages.push({
+      conversationMessages.push({
         role: entry.role === 'user' ? 'user' : 'assistant',
         content: entry.content,
       });
     }
 
     // Add current user message
-    messages.push({ role: 'user', content: message });
+    conversationMessages.push({ role: 'user', content: message });
 
-    // Call OpenAI
-    const { message: assistantMessage } = await callOpenAI(
-      messages,
-      DXF_AI_TOOL_DEFINITIONS,
-      AI_ANALYSIS_DEFAULTS.OPENAI.TIMEOUT_MS,
-    );
+    // ── Mini Agentic Loop ──
+    // When OpenAI returns tool_calls, we send simulated results back
+    // so the model can continue calling more tools (e.g., "draw 3 lines").
+    // All tool_calls are collected and returned to the client for execution.
+    const allToolCalls: DxfAiToolCall[] = [];
+    let finalAnswer = '';
+    let iteration = 0;
 
-    // Extract results
-    const toolCalls = extractToolCalls(assistantMessage.tool_calls);
-    const answer = assistantMessage.content ?? '';
-    const suggestions = extractSuggestions(answer);
+    while (iteration < MAX_LOOP_ITERATIONS) {
+      iteration++;
 
+      const { message: assistantMessage, finishReason } = await callOpenAI(
+        conversationMessages as ChatCompletionMessage[],
+        DXF_AI_TOOL_DEFINITIONS,
+        AI_ANALYSIS_DEFAULTS.OPENAI.TIMEOUT_MS,
+      );
+
+      // Collect tool calls from this iteration
+      const iterationToolCalls = extractToolCalls(assistantMessage.tool_calls);
+      allToolCalls.push(...iterationToolCalls);
+
+      // If no tool calls or finish_reason is 'stop' → done
+      if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0 || finishReason === 'stop') {
+        finalAnswer = assistantMessage.content ?? '';
+        break;
+      }
+
+      // Model called tools → add assistant message + tool results to conversation
+      conversationMessages.push({
+        role: 'assistant',
+        content: assistantMessage.content,
+        tool_calls: assistantMessage.tool_calls,
+      });
+
+      const toolResults = buildToolResultMessages(assistantMessage.tool_calls);
+      conversationMessages.push(...toolResults);
+
+      // If we have text content alongside tool calls, save it
+      if (assistantMessage.content) {
+        finalAnswer = assistantMessage.content;
+      }
+    }
+
+    const suggestions = extractSuggestions(finalAnswer);
     const processingTimeMs = Date.now() - startTime;
 
-    logger.info(`DXF AI response: ${toolCalls.length} tool calls, ${answer.length} chars, ${processingTimeMs}ms`);
+    logger.info(`DXF AI response: ${allToolCalls.length} tool calls, ${iteration} iterations, ${processingTimeMs}ms`);
 
     return NextResponse.json({
-      answer,
-      toolCalls,
+      answer: finalAnswer,
+      toolCalls: allToolCalls,
       suggestions,
       processingTimeMs,
     });
