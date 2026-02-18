@@ -8,6 +8,11 @@
  * - Tool call execution on the canvas via executeDxfAiToolCalls()
  * - Loading/error states
  *
+ * CRITICAL: Uses refs for getScene/setScene/levelId/messages to prevent
+ * stale closures after await. Without refs, the async sendMessage function
+ * captures old values in its closure → executor reads stale scene → entities
+ * get overwritten → shapes appear to "not render".
+ *
  * @see ADR-185 (AI Drawing Assistant)
  * @since 2026-02-17
  */
@@ -98,6 +103,22 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // ── CRITICAL: Refs to prevent stale closures after await ──
+  // sendMessage is async. After `await fetch()`, React may have re-rendered
+  // and the closure's getScene/setScene/messages/levelId could be stale.
+  // Refs always point to the LATEST values.
+  const getSceneRef = useRef(getScene);
+  getSceneRef.current = getScene;
+
+  const setSceneRef = useRef(setScene);
+  setSceneRef.current = setScene;
+
+  const levelIdRef = useRef(levelId);
+  levelIdRef.current = levelId;
+
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -117,13 +138,13 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Build chat history from previous messages
-    const chatHistory: DxfAiChatHistoryEntry[] = messages
+    // Read LATEST messages from ref (not stale closure)
+    const chatHistory: DxfAiChatHistoryEntry[] = messagesRef.current
       .slice(-DXF_AI_LIMITS.MAX_HISTORY_ENTRIES)
       .map(m => ({ role: m.role, content: m.content }));
 
-    // Build canvas context
-    const canvasContext = buildCanvasContext(getScene, levelId);
+    // Read LATEST getScene/levelId from refs for canvas context
+    const canvasContext = buildCanvasContext(getSceneRef.current, levelIdRef.current);
 
     // Abort previous request if any
     abortControllerRef.current?.abort();
@@ -149,13 +170,13 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
 
       const data = await response.json() as DxfAiCommandResponse;
 
-      // Execute tool calls on canvas
+      // Execute tool calls on canvas — use REFS for latest scene functions
       let executionMessage = '';
       if (data.toolCalls.length > 0) {
         const execResult = executeDxfAiToolCalls(data.toolCalls, {
-          getScene,
-          setScene,
-          levelId,
+          getScene: getSceneRef.current,
+          setScene: setSceneRef.current,
+          levelId: levelIdRef.current,
         });
 
         if (execResult.entitiesCreated.length > 0) {
@@ -205,7 +226,7 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, getScene, setScene, levelId]);
+  }, []); // ← No dependencies! Reads everything from refs.
 
   const clearChat = useCallback(() => {
     abortControllerRef.current?.abort();

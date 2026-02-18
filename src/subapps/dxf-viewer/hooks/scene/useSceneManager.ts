@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { SceneModel } from '../../types/scene';
 
 export interface SceneManagerState {
@@ -14,6 +14,12 @@ export interface SceneManagerState {
 export function useSceneManager(): SceneManagerState {
   const [levelScenes, setLevelScenes] = useState<Record<string, SceneModel>>({});
 
+  // CRITICAL: Ref ensures getLevelScene ALWAYS reads latest scenes,
+  // even when called from stale closures (e.g., after await in AI executor).
+  // Without this, getLevelScene captures old levelScenes and returns stale data.
+  const levelScenesRef = useRef(levelScenes);
+  levelScenesRef.current = levelScenes;
+
   const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
     setLevelScenes(prev => {
       // No-op if pointer unchanged (avoids rerender loops)
@@ -22,9 +28,11 @@ export function useSceneManager(): SceneManagerState {
     });
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const getLevelScene = useCallback((levelId: string): SceneModel | null => {
-    return levelScenes[levelId] || null;
-  }, [levelScenes]);
+    // Read from ref → safe even when called from stale closures (after await)
+    return levelScenesRef.current[levelId] || null;
+  }, [levelScenes]); // Dependency kept so reference changes → triggers dependent useMemos/useEffects
 
   const clearLevelScene = useCallback((levelId: string) => {
 
