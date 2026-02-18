@@ -153,6 +153,7 @@ async function callOpenAI(
         messages,
         tools,
         tool_choice: 'auto' as const,
+        parallel_tool_calls: true,
       }),
       signal: controller.signal,
     });
