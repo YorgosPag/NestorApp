@@ -86,13 +86,14 @@ export type DxfAiToolName =
   | 'draw_rectangle'
   | 'draw_circle'
   | 'draw_polyline'
+  | 'draw_shapes'
   | 'query_entities'
   | 'undo_action';
 
 /** A single tool call returned by the AI */
 export interface DxfAiToolCall {
   name: DxfAiToolName;
-  arguments: DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | DrawPolylineArgs | QueryEntitiesArgs | UndoActionArgs;
+  arguments: DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | DrawPolylineArgs | DrawShapesArgs | QueryEntitiesArgs | UndoActionArgs;
 }
 
 /** Arguments for draw_line tool */
@@ -136,6 +137,24 @@ export interface DrawPolylineArgs {
   closed: boolean;
   layer: string | null;
   color: string | null;
+}
+
+/** A single shape in the draw_shapes compound tool */
+export interface DrawShapeItem {
+  shape_type: 'line' | 'rectangle' | 'circle' | 'polyline';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  vertices: DxfAiVertex[] | null;
+  closed: boolean | null;
+  color: string | null;
+  layer: string | null;
+}
+
+/** Arguments for draw_shapes compound tool */
+export interface DrawShapesArgs {
+  shapes: DrawShapeItem[];
 }
 
 /** Arguments for query_entities tool */

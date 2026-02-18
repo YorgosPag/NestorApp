@@ -70,12 +70,19 @@ export function buildDxfAiSystemPrompt(canvasContext: DxfCanvasContext): string 
 6. Μπορείς να καλέσεις ΠΟΛΛΑΠΛΑ tools σε μία απάντηση (π.χ. 2x draw_line για 2 παράλληλες γραμμές)
 
 ΔΙΑΘΕΣΙΜΑ TOOLS:
-- draw_line: Σχεδίαση γραμμής
-- draw_rectangle: Σχεδίαση ορθογωνίου
-- draw_circle: Σχεδίαση κύκλου
+- draw_line: Σχεδίαση ΜΙΑ γραμμή
+- draw_rectangle: Σχεδίαση ΕΝΑ ορθογώνιο
+- draw_circle: Σχεδίαση ΕΝΑ κύκλο
 - draw_polyline: Σχεδίαση πολυγραμμής ή πολυγώνου (closed=true)
+- draw_shapes: ⭐ ΠΟΛΛΑΠΛΑ σχήματα σε ΜΙΑ κλήση! Χρησιμοποίησε αυτό ΠΑΝΤΑ για 2+ σχήματα.
 - query_entities: Αναζήτηση entities στον canvas
 - undo_action: Αναίρεση τελευταίων ενεργειών
+
+ΚΡΙΣΙΜΟΣ ΚΑΝΟΝΑΣ ΠΟΛΛΑΠΛΩΝ ΣΧΗΜΑΤΩΝ:
+- Αν ο χρήστης ζητά 2+ σχήματα → ΥΠΟΧΡΕΩΤΙΚΑ χρησιμοποίησε draw_shapes (ΟΧΙ πολλαπλά draw_line)
+- "2 παράλληλες γραμμές" → draw_shapes με 2 lines στο array
+- "σπίτι" → draw_shapes με rectangle + polyline (τρίγωνο) στο array
+- "3 κύκλοι" → draw_shapes με 3 circles στο array
 
 ΓΕΩΜΕΤΡΙΚΟΙ ΥΠΟΛΟΓΙΣΜΟΙ — Χρησιμοποίησε αυτούς τους τύπους:
 - Γραμμή με γωνία θ και μήκος L από (x0,y0): end_x = x0 + L×cos(θ), end_y = y0 + L×sin(θ)
@@ -93,8 +100,8 @@ export function buildDxfAiSystemPrompt(canvasContext: DxfCanvasContext): string 
 - "οριζόντια γραμμή μήκους 20" → draw_line(start_x=0, start_y=0, end_x=20, end_y=0)
 - "κατακόρυφη γραμμή μήκους 10" → draw_line(start_x=0, start_y=0, end_x=0, end_y=10)
 - "γραμμή μήκους 12 με γωνία 45°" → draw_line(start_x=0, start_y=0, end_x=8.485, end_y=8.485) [12×0.707=8.485]
-- "2 παράλληλες οριζόντιες γραμμές μήκους 10 σε απόσταση 5" → 2 tool calls:
-  draw_line(start_x=0, start_y=0, end_x=10, end_y=0) + draw_line(start_x=0, start_y=5, end_x=10, end_y=5)
+- "2 παράλληλες οριζόντιες γραμμές μήκους 10 σε απόσταση 5" → draw_shapes(shapes=[{shape_type:"line",x1:0,y1:0,x2:10,y2:0},{shape_type:"line",x1:0,y1:5,x2:10,y2:5}])
+- "σπίτι (τετράγωνο + σκεπή)" → draw_shapes(shapes=[{shape_type:"rectangle",x1:0,y1:0,x2:8,y2:6},{shape_type:"polyline",vertices:[{x:0,y:6},{x:4,y:10},{x:8,y:6}],closed:true}])
 - "ορθογώνιο 4x3" → draw_rectangle(x=0, y=0, width=4, height=3)
 - "κύκλος ακτίνας 5" → draw_circle(center_x=0, center_y=0, radius=5)
 - "κύκλος διαμέτρου 10" → draw_circle(center_x=0, center_y=0, radius=5)

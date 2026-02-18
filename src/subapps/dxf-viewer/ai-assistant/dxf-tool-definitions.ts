@@ -228,7 +228,63 @@ export const DXF_AI_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
-  // ── 6. undo_action ──
+  // ── 6. draw_shapes (compound tool for multiple entities in one call) ──
+  {
+    type: 'function',
+    function: {
+      name: 'draw_shapes',
+      description:
+        'Draw MULTIPLE shapes in a single call. Use this when the user asks for 2+ shapes ' +
+        '(e.g. "2 parallel lines", "house = square + triangle roof", "3 vertical lines"). ' +
+        'Each shape has a type and coordinates. ALWAYS use this instead of calling draw_line/draw_rectangle/draw_circle ' +
+        'multiple times.',
+      parameters: {
+        type: 'object',
+        properties: {
+          shapes: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                shape_type: {
+                  type: 'string',
+                  description: 'Shape type: "line", "rectangle", "circle", "polyline"',
+                },
+                x1: { type: 'number', description: 'Line: start_x. Rectangle: origin_x. Circle: center_x. Polyline: not used (0).' },
+                y1: { type: 'number', description: 'Line: start_y. Rectangle: origin_y. Circle: center_y. Polyline: not used (0).' },
+                x2: { type: 'number', description: 'Line: end_x. Rectangle: width. Circle: radius. Polyline: not used (0).' },
+                y2: { type: 'number', description: 'Line: end_y. Rectangle: height. Circle: not used (0). Polyline: not used (0).' },
+                vertices: {
+                  type: ['array', 'null'],
+                  items: {
+                    type: 'object',
+                    properties: {
+                      x: { type: 'number' },
+                      y: { type: 'number' },
+                    },
+                    required: ['x', 'y'],
+                    additionalProperties: false,
+                  },
+                  description: 'Only for polyline: array of {x,y} vertices. null for other shapes.',
+                },
+                closed: { type: ['boolean', 'null'], description: 'Only for polyline: close the shape? null for other shapes.' },
+                color: { type: ['string', 'null'], description: 'Color hex string (null = default white)' },
+                layer: { type: ['string', 'null'], description: 'Layer name (null = default "0")' },
+              },
+              required: ['shape_type', 'x1', 'y1', 'x2', 'y2', 'vertices', 'closed', 'color', 'layer'],
+              additionalProperties: false,
+            },
+            description: 'Array of shapes to draw',
+          },
+        },
+        required: ['shapes'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 7. undo_action ──
   {
     type: 'function',
     function: {

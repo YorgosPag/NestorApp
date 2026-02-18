@@ -23,6 +23,8 @@ import type {
   DrawRectangleArgs,
   DrawCircleArgs,
   DrawPolylineArgs,
+  DrawShapesArgs,
+  DrawShapeItem,
   QueryEntitiesArgs,
   UndoActionArgs,
 } from './types';
@@ -84,6 +86,54 @@ function buildPolylineEntity(args: DrawPolylineArgs): PolylineEntity {
     layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
     color: args.color ?? DXF_AI_DEFAULTS.COLOR,
   };
+}
+
+// ============================================================================
+// COMPOUND SHAPE → ENTITY CONVERTER
+// ============================================================================
+
+function buildEntityFromShapeItem(item: DrawShapeItem): Entity | null {
+  switch (item.shape_type) {
+    case 'line': {
+      const lineArgs: DrawLineArgs = {
+        start_x: item.x1, start_y: item.y1,
+        end_x: item.x2, end_y: item.y2,
+        layer: item.layer, color: item.color,
+      };
+      if (validateLine(lineArgs)) return null;
+      return buildLineEntity(lineArgs);
+    }
+    case 'rectangle': {
+      const rectArgs: DrawRectangleArgs = {
+        x: item.x1, y: item.y1,
+        width: item.x2, height: item.y2,
+        layer: item.layer, color: item.color,
+      };
+      if (validateRectangle(rectArgs)) return null;
+      return buildRectangleEntity(rectArgs);
+    }
+    case 'circle': {
+      const circleArgs: DrawCircleArgs = {
+        center_x: item.x1, center_y: item.y1,
+        radius: item.x2,
+        layer: item.layer, color: item.color,
+      };
+      if (validateCircle(circleArgs)) return null;
+      return buildCircleEntity(circleArgs);
+    }
+    case 'polyline': {
+      if (!item.vertices || item.vertices.length < 2) return null;
+      const polyArgs: DrawPolylineArgs = {
+        vertices: item.vertices,
+        closed: item.closed ?? false,
+        layer: item.layer, color: item.color,
+      };
+      if (validatePolyline(polyArgs)) return null;
+      return buildPolylineEntity(polyArgs);
+    }
+    default:
+      return null;
+  }
 }
 
 // ============================================================================
@@ -271,6 +321,22 @@ export function executeDxfAiToolCalls(
         }
         entitiesToCreate.push(buildPolylineEntity(args));
         entityCount++;
+        break;
+      }
+
+      case 'draw_shapes': {
+        const args = call.arguments as DrawShapesArgs;
+        for (const shapeItem of args.shapes) {
+          if (entityCount >= DXF_AI_LIMITS.MAX_ENTITIES_PER_COMMAND) {
+            errors.push(`Μέγιστο όριο ${DXF_AI_LIMITS.MAX_ENTITIES_PER_COMMAND} entities ανά εντολή`);
+            break;
+          }
+          const entity = buildEntityFromShapeItem(shapeItem);
+          if (entity) {
+            entitiesToCreate.push(entity);
+            entityCount++;
+          }
+        }
         break;
       }
 
