@@ -214,24 +214,25 @@ export function GeneralTabContent({
         isEditing={effectiveIsEditing}
         errors={errors}
       />
-      {/* ENTERPRISE: Company Selector για σύνδεση Κτιρίου→Εταιρείας */}
-      <CompanySelectorCard
-        buildingId={String(building.id)}
-        currentCompanyId={building.companyId}
-        isEditing={effectiveIsEditing}
-        onCompanyChanged={(newCompanyId, companyName) => {
-          logger.info('Building linked to company', { buildingId: building.id, companyName, newCompanyId });
-        }}
-      />
-      {/* ENTERPRISE: Project Selector για σύνδεση Κτιρίου→Έργου */}
-      <ProjectSelectorCard
-        buildingId={String(building.id)}
-        currentProjectId={building.projectId}
-        isEditing={effectiveIsEditing}
-        onProjectChanged={(newProjectId) => {
-          logger.info('Building linked to project', { buildingId: building.id, newProjectId });
-        }}
-      />
+      {/* ENTERPRISE: Company + Project selectors side-by-side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CompanySelectorCard
+          buildingId={String(building.id)}
+          currentCompanyId={building.companyId}
+          isEditing={effectiveIsEditing}
+          onCompanyChanged={(newCompanyId, companyName) => {
+            logger.info('Building linked to company', { buildingId: building.id, companyName, newCompanyId });
+          }}
+        />
+        <ProjectSelectorCard
+          buildingId={String(building.id)}
+          currentProjectId={building.projectId}
+          isEditing={effectiveIsEditing}
+          onProjectChanged={(newProjectId) => {
+            logger.info('Building linked to project', { buildingId: building.id, newProjectId });
+          }}
+        />
+      </div>
       {/* ENTERPRISE: Multi-address management (ADR-167) */}
       <BuildingAddressesCard
         buildingId={String(building.id)}
