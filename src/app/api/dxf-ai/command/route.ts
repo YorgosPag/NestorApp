@@ -264,15 +264,31 @@ const MAX_LOOP_ITERATIONS = 3;
  * Build simulated tool result messages to send back to OpenAI.
  * The server doesn't execute drawing tools — it simulates success
  * so OpenAI continues calling more tools if needed.
+ *
+ * Results are descriptive to encourage the model to continue with remaining work.
  */
 function buildToolResultMessages(
   rawCalls: ChatCompletionToolCall[],
 ): Array<{ role: 'tool'; tool_call_id: string; content: string }> {
-  return rawCalls.map(call => ({
-    role: 'tool' as const,
-    tool_call_id: call.id,
-    content: `Tool ${call.function.name} executed successfully.`,
-  }));
+  return rawCalls.map(call => {
+    let description = '';
+    try {
+      const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
+      if (call.function.name === 'draw_line') {
+        description = ` from (${args.start_x},${args.start_y}) to (${args.end_x},${args.end_y})`;
+      } else if (call.function.name === 'draw_rectangle') {
+        description = ` ${args.width}x${args.height} at (${args.x},${args.y})`;
+      } else if (call.function.name === 'draw_circle') {
+        description = ` radius=${args.radius} at (${args.center_x},${args.center_y})`;
+      }
+    } catch { /* ignore parse errors */ }
+
+    return {
+      role: 'tool' as const,
+      tool_call_id: call.id,
+      content: `OK: ${call.function.name}${description} drawn. If user requested more items, continue calling tools for the remaining ones.`,
+    };
+  });
 }
 
 async function handler(
