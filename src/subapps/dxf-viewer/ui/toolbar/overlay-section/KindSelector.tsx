@@ -44,6 +44,7 @@ export const KindSelector: React.FC<KindSelectorProps> = ({
               variant={currentKind === kind ? 'default' : 'ghost'}
               size="icon-sm"
               onClick={() => onKindChange(kind as OverlayKind)}
+              aria-label={label}
             >
               <Icon className={`${iconSizes.sm} ${currentKind !== kind ? color : ''}`} />
             </Button>

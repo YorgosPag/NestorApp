@@ -220,6 +220,7 @@ export function LayerItem({
               <TooltipTrigger asChild>
                 <button
                   onClick={handleExpandToggle}
+                  aria-label={isLayerExpanded ? t('layerActions.collapseEntities') : t('layerActions.expandEntities')}
                   className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                 >
                   {isLayerExpanded ? (
@@ -239,6 +240,7 @@ export function LayerItem({
               <TooltipTrigger asChild>
                 <button
                   onClick={handleColorPickerToggle}
+                  aria-label={t('layerActions.changeColor')}
                   className={`${iconSizes.xs} rounded ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                   style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
                 />
@@ -278,6 +280,7 @@ export function LayerItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleVisibilityToggle}
+                aria-label={layer.visible ? t('layerActions.hide') : t('layerActions.show')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
@@ -291,6 +294,7 @@ export function LayerItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleEditClick}
+                aria-label={t('layerActions.rename')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 <Edit2 className={iconSizes.xs} />
@@ -304,6 +308,7 @@ export function LayerItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleDeleteClick}
+                aria-label={t('layerActions.delete')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${HOVER_TEXT_EFFECTS.RED}`}
               >
                 <Trash2 className={iconSizes.xs} />

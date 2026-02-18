@@ -37,6 +37,7 @@ export const OverlayModeButtons: React.FC<OverlayModeButtonsProps> = ({
             variant={currentMode === 'draw' ? 'default' : 'ghost'}
             size="icon-sm"
             onClick={() => onModeChange('draw')}
+            aria-label="Draw Mode (Create new polygons)"
           >
             <Pen className={`${iconSizes.sm} ${currentMode !== 'draw' ? OVERLAY_TOOLBAR_COLORS.draw : ''}`} />
           </Button>
@@ -51,6 +52,7 @@ export const OverlayModeButtons: React.FC<OverlayModeButtonsProps> = ({
             variant={currentMode === 'edit' ? 'default' : 'ghost'}
             size="icon-sm"
             onClick={() => onModeChange('edit')}
+            aria-label="Edit Mode (Modify existing polygons)"
           >
             <Edit className={`${iconSizes.sm} ${currentMode !== 'edit' ? OVERLAY_TOOLBAR_COLORS.edit : ''}`} />
           </Button>

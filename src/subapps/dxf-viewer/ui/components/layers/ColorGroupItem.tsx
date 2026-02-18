@@ -160,6 +160,7 @@ export function ColorGroupItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleExpandToggle}
+                aria-label={isExpanded ? t('layerActions.collapse') : t('layerActions.expand')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
               >
                 {isExpanded ? (
@@ -178,6 +179,7 @@ export function ColorGroupItem({
               <TooltipTrigger asChild>
                 <button
                   onClick={handleColorPickerToggle}
+                  aria-label={t('layerActions.changeColorGroup')}
                   className={`${iconSizes.sm} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
                 />
               </TooltipTrigger>
@@ -213,6 +215,7 @@ export function ColorGroupItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleVisibilityToggle}
+                aria-label={allVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
               >
                 {allVisible ? (
@@ -232,6 +235,7 @@ export function ColorGroupItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleEditClick}
+                aria-label={t('layerActions.renameGroup')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
               >
                 <Edit2 className={iconSizes.sm} />
@@ -245,6 +249,7 @@ export function ColorGroupItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleDeleteClick}
+                aria-label={t('layerActions.deleteGroup')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}
               >
                 <Trash2 className={iconSizes.sm} />
@@ -257,7 +262,7 @@ export function ColorGroupItem({
 
       {/* Individual Layers (when expanded) */}
       {isExpanded && layerNames.map((layerName: string) => (
-        <article key={layerName} className={PANEL_LAYOUT.MARGIN.LEFT_LG}>
+        <article key={layerName} aria-label={`Layer: ${layerName}`} className={PANEL_LAYOUT.MARGIN.LEFT_LG}>
           <LayerItem
             layerName={layerName}
             scene={scene}

@@ -112,7 +112,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={onSidebarToggle} className={`${iconSizes.xl} p-0`}>
+              <Button variant="ghost" size="sm" onClick={onSidebarToggle} aria-label="Toggle sidebar" className={`${iconSizes.xl} p-0`}>
                 <Menu className={iconSizes.md} />
               </Button>
             </TooltipTrigger>
@@ -130,6 +130,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
                 variant={activeTool === 'select' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => handleToolSelect('select')}
+                aria-label="Select tool"
                 className={`${iconSizes.xl} p-0`}
               >
                 <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>S</span>
@@ -147,6 +148,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
                 variant={activeTool === 'pan' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => handleToolSelect('pan')}
+                aria-label="Pan tool"
                 className={`${iconSizes.xl} p-0`}
               >
                 <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>P</span>
@@ -162,7 +164,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={() => handleToolSelect('zoom-in')} className={`${iconSizes.xl} p-0`}>
+              <Button variant="ghost" size="sm" onClick={() => handleToolSelect('zoom-in')} aria-label="Zoom in" className={`${iconSizes.xl} p-0`}>
                 <ZoomIn className={iconSizes.sm} />
               </Button>
             </TooltipTrigger>
@@ -174,7 +176,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={() => handleToolSelect('zoom-out')} className={`${iconSizes.xl} p-0`}>
+              <Button variant="ghost" size="sm" onClick={() => handleToolSelect('zoom-out')} aria-label="Zoom out" className={`${iconSizes.xl} p-0`}>
                 <ZoomOut className={iconSizes.sm} />
               </Button>
             </TooltipTrigger>
@@ -186,7 +188,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={() => handleToolSelect('zoom-extents')} className={`${iconSizes.xl} p-0`}>
+              <Button variant="ghost" size="sm" onClick={() => handleToolSelect('zoom-extents')} aria-label="Fit to view" className={`${iconSizes.xl} p-0`}>
                 <Maximize2 className={iconSizes.sm} />
               </Button>
             </TooltipTrigger>
@@ -201,7 +203,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={() => setMoreOpen(true)} className={`${iconSizes.xl} p-0`}>
+              <Button variant="ghost" size="sm" onClick={() => setMoreOpen(true)} aria-label={t('entitiesSettings.moreOptions')} className={`${iconSizes.xl} p-0`}>
                 <MoreHorizontal className={iconSizes.md} />
               </Button>
             </TooltipTrigger>

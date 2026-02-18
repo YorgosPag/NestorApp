@@ -271,6 +271,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowSimpleDialog(true)}
+                  aria-label="Enhanced DXF Import with Project Management"
                   className={`${iconSizes.xl} p-0`}
                 >
                   {/* 🎨 ENTERPRISE: Auto-assigned from DXF_ACTION_COLORS.importEnhanced */}

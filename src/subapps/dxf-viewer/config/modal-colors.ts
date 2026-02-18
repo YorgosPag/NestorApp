@@ -96,8 +96,8 @@ export const MODAL_COLOR_SCHEMES = {
     },
     text: {
       primary: 'text-blue-900 dark:text-blue-100',
-      secondary: 'text-blue-700 dark:text-blue-300',
-      accent: 'text-blue-600 dark:text-blue-400',
+      secondary: 'text-blue-700 dark:text-blue-200',
+      accent: 'text-blue-600 dark:text-blue-300',
     },
     border: {
       primary: `border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized primary border
@@ -115,8 +115,8 @@ export const MODAL_COLOR_SCHEMES = {
     },
     text: {
       primary: 'text-green-900 dark:text-green-100',
-      secondary: 'text-green-700 dark:text-green-300',
-      accent: 'text-green-600 dark:text-green-400',
+      secondary: 'text-green-700 dark:text-green-200',
+      accent: 'text-green-600 dark:text-green-300',
     },
     border: {
       primary: `border ${PANEL_COLORS.BORDER_SUCCESS_PRIMARY}`, // ✅ ENTERPRISE: Using centralized success border
@@ -134,8 +134,8 @@ export const MODAL_COLOR_SCHEMES = {
     },
     text: {
       primary: 'text-orange-900 dark:text-orange-100',
-      secondary: 'text-orange-700 dark:text-orange-300',
-      accent: 'text-orange-600 dark:text-orange-400',
+      secondary: 'text-orange-700 dark:text-orange-200',
+      accent: 'text-orange-600 dark:text-orange-300',
     },
     border: {
       primary: `border ${PANEL_COLORS.BORDER_WARNING_PRIMARY}`, // ✅ ENTERPRISE: Using centralized warning border
@@ -153,8 +153,8 @@ export const MODAL_COLOR_SCHEMES = {
     },
     text: {
       primary: 'text-red-900 dark:text-red-100',
-      secondary: 'text-red-700 dark:text-red-300',
-      accent: 'text-red-600 dark:text-red-400',
+      secondary: 'text-red-700 dark:text-red-200',
+      accent: 'text-red-600 dark:text-red-300',
     },
     border: {
       primary: `border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized error border

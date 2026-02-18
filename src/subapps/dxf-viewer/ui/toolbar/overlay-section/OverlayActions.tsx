@@ -40,6 +40,7 @@ export const OverlayActions: React.FC<OverlayActionsProps> = ({
               size="icon-sm"
               onClick={onDuplicate}
               disabled={!canDelete}
+              aria-label="Duplicate selected overlay"
             >
               <Copy className={`${iconSizes.sm} ${OVERLAY_TOOLBAR_COLORS.copy}`} />
             </Button>
@@ -57,6 +58,7 @@ export const OverlayActions: React.FC<OverlayActionsProps> = ({
               size="icon-sm"
               onClick={onDelete}
               disabled={!canDelete}
+              aria-label="Delete selected overlay"
             >
               <X className={`${iconSizes.sm} ${OVERLAY_TOOLBAR_COLORS.delete}`} />
             </Button>

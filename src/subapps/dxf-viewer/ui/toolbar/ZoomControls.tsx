@@ -153,6 +153,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
           <TooltipTrigger asChild>
             <button
               onClick={handleZoomOutClick}
+              aria-label={t('zoomControls.zoomOut', { percentage: ZOOM_STEP_PERCENTAGE })}
               className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
               <Minus className={iconSizes.xs} />
@@ -180,6 +181,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
           <TooltipTrigger asChild>
             <button
               onClick={handleZoomInClick}
+              aria-label={t('zoomControls.zoomIn', { percentage: ZOOM_STEP_PERCENTAGE })}
               className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
               <Plus className={iconSizes.xs} />

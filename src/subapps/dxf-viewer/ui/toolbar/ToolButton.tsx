@@ -86,6 +86,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
               size="sm"
               onClick={onClick}
               disabled={disabled}
+              aria-label={`${t(tool.label)} (${tool.hotkey})`}
               className={`${iconSizes.xl} p-0`}
             >
               {IconComponent ? (
@@ -115,6 +116,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                 size="sm"
                 onClick={handleMainClick}
                 disabled={disabled}
+                aria-label={`${t(tool.label)} (${tool.hotkey})`}
                 className="rounded-r-none px-2"
               >
                 {IconComponent ? (
@@ -135,6 +137,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                 size="sm"
                 onClick={handleDropdownToggle}
                 disabled={disabled}
+                aria-label={t('entitiesSettings.moreOptions')}
                 className="rounded-l-none px-1"
               >
                 <ChevronDown className={`${iconSizes.xs} ${iconColorClass}`} />
@@ -196,6 +199,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
             size="sm"
             onClick={action.onClick}
             disabled={action.disabled ?? false}
+            aria-label={action.hotkey ? `${translatedLabel} (${action.hotkey})` : translatedLabel}
             className={`${iconSizes.xl} p-0`}
           >
             {IconComponent ? (

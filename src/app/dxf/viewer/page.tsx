@@ -101,7 +101,7 @@ export default function DxfViewerPage() {
 
   return (
     <AdminGuard>
-      <main className="w-full h-full" role="application" aria-label="DXF Viewer">
+      <main className="w-full h-full" aria-label="DXF Viewer">
         <Suspense
           fallback={
             <section className={cn('w-full h-full flex items-center justify-center')} role="status" aria-live="polite">
