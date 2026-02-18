@@ -19,11 +19,27 @@ import { UI_COLORS } from './color-config';
 /** Safety limits to prevent abuse and runaway tool calls */
 export const DXF_AI_LIMITS = {
   /** Maximum entities a single AI command can create */
-  MAX_ENTITIES_PER_COMMAND: 10,
+  MAX_ENTITIES_PER_COMMAND: 50,
   /** Maximum user message length in characters */
-  MAX_MESSAGE_LENGTH: 500,
+  MAX_MESSAGE_LENGTH: 2000,
   /** Maximum chat history entries sent to API */
   MAX_HISTORY_ENTRIES: 6,
+} as const;
+
+// ============================================================================
+// PROMPT CONFIGURATION
+// ============================================================================
+
+/** Configuration for system prompt generation and sanitization */
+export const DXF_AI_PROMPT = {
+  /** Maximum layers to include in system prompt (prevents prompt bloat) */
+  MAX_LAYERS_IN_PROMPT: 50,
+  /** Maximum characters per layer name (sanitization against injection) */
+  MAX_LAYER_NAME_CHARS: 64,
+  /** Decimal places for bounds rounding in prompt */
+  BOUNDS_DECIMALS: 2,
+  /** Prompt version for tracking changes */
+  VERSION: '1.3',
 } as const;
 
 // ============================================================================
