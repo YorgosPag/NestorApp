@@ -66,6 +66,9 @@ export interface CompleteEntityOptions {
 
   /** Optional: Skip event emission (for internal operations) */
   skipEvent?: boolean;
+
+  /** Optional: Skip applyCompletionStyles (for AI-created entities with explicit colors) */
+  skipStyles?: boolean;
 }
 
 /**
@@ -127,12 +130,15 @@ export function completeEntity(
     return { success: false, entityId: entityId, error: 'Entity has invalid type' };
   }
 
-  const { tool, levelId, getScene, setScene, trackForUndo, skipToolPersistence, skipEvent } = options;
+  const { tool, levelId, getScene, setScene, trackForUndo, skipToolPersistence, skipEvent, skipStyles } = options;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 1: Apply completion styles (ADR-056)
+  // Skip for AI-created entities that have explicit colors/styles
   // ═══════════════════════════════════════════════════════════════════════════
-  applyCompletionStyles(entity as unknown as Record<string, unknown>);
+  if (!skipStyles) {
+    applyCompletionStyles(entity as unknown as Record<string, unknown>);
+  }
 
   // STEP 2: Add entity to scene
   const scene = getScene(levelId);

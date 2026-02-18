@@ -329,40 +329,16 @@ export function executeDxfAiToolCalls(
     let failedCount = 0;
 
     for (const entity of entitiesToCreate) {
-      // Save AI-specified color before completeEntity() overwrites it
-      // (applyCompletionStyles always replaces color with toolbar's current style)
-      const aiSpecifiedColor = entity.color;
-
       const result = completeEntity(entity, {
         tool: 'select', // AI-created entities don't lock a drawing tool
         levelId,
         getScene,
         setScene,
+        skipStyles: true, // AI entities have their own colors — skip toolbar style override
       });
 
       if (result.success) {
         createdIds.push(result.entityId);
-
-        // Restore AI-specified color if it differs from default
-        // (applyCompletionStyles overwrites ALL colors with toolbar color)
-        if (aiSpecifiedColor && aiSpecifiedColor !== DXF_AI_DEFAULTS.COLOR) {
-          const scene = getScene(levelId);
-          if (scene) {
-            const updatedEntities = scene.entities.map(e =>
-              e.id === result.entityId ? { ...e, color: aiSpecifiedColor } : e
-            );
-            const updatedScene: SceneModel = { ...scene, entities: updatedEntities };
-            setScene(levelId, updatedScene);
-
-            // Re-emit drawing:complete so canvas picks up the color change
-            EventBus.emit('drawing:complete', {
-              tool: 'select',
-              entityId: result.entityId,
-              updatedScene,
-              levelId,
-            });
-          }
-        }
       } else {
         failedCount++;
       }
