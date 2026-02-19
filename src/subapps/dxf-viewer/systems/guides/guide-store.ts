@@ -152,7 +152,9 @@ export class GuideStore implements IGridHeadlessAPI {
       parentId,
     };
 
-    this.guides.push(guide);
+    // CRITICAL: Create new array — useSyncExternalStore uses Object.is()
+    // Mutating in-place (push) keeps the same reference → React won't re-render
+    this.guides = [...this.guides, guide];
     this.notify();
     return guide;
   }
@@ -161,7 +163,8 @@ export class GuideStore implements IGridHeadlessAPI {
   restoreGuide(guide: Guide): void {
     // Avoid duplicates
     if (this.guides.some(g => g.id === guide.id)) return;
-    this.guides.push({ ...guide });
+    // CRITICAL: New array for useSyncExternalStore referential equality check
+    this.guides = [...this.guides, { ...guide }];
     this.notify();
   }
 
@@ -173,7 +176,8 @@ export class GuideStore implements IGridHeadlessAPI {
     const guide = this.guides[index];
     if (guide.locked) return undefined; // Cannot remove locked guide
 
-    this.guides.splice(index, 1);
+    // CRITICAL: New array for useSyncExternalStore referential equality check
+    this.guides = this.guides.filter(g => g.id !== id);
     this.notify();
     return guide;
   }
@@ -183,7 +187,10 @@ export class GuideStore implements IGridHeadlessAPI {
     const guide = this.guides.find(g => g.id === id);
     if (!guide || guide.locked) return false;
 
-    guide.offset = newOffset;
+    // CRITICAL: New array with updated guide — useSyncExternalStore needs new reference
+    this.guides = this.guides.map(g =>
+      g.id === id ? { ...g, offset: newOffset } : g
+    );
     this.notify();
     return true;
   }
