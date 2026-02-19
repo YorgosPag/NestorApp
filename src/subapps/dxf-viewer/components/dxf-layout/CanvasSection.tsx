@@ -414,6 +414,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     guideRemoveGuide: guideState.removeGuide,
     guideAddParallelGuide: guideState.addParallelGuide,
     guides: guideState.guides,
+    parallelRefGuideId,
+    setParallelRefGuideId,
   });
 
   const { handleSmartDelete } = useSmartDelete({

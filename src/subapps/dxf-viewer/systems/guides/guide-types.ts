@@ -87,6 +87,14 @@ export const GHOST_GUIDE_STYLE: GuideRenderStyle = {
   opacity: 0.25,
 };
 
+/** Guide rendering style for hover highlight (delete/parallel selection) */
+export const HIGHLIGHT_GUIDE_STYLE: GuideRenderStyle = {
+  color: '#FFD700', // Gold — high contrast against both dark and light backgrounds
+  lineWidth: 2,
+  dashPattern: [], // Solid line for clear highlight
+  opacity: 0.9,
+};
+
 // ============================================================================
 // SYSTEM LIMITS
 // ============================================================================

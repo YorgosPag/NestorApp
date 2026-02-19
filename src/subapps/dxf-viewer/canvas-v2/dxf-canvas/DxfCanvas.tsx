@@ -69,6 +69,7 @@ interface DxfCanvasProps {
   guides?: readonly Guide[];
   guidesVisible?: boolean;
   ghostGuide?: { axis: GridAxis; offset: number } | null;
+  highlightedGuideId?: string | null;
   onTransformChange?: (transform: ViewTransform) => void;
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
@@ -117,6 +118,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   guides,
   guidesVisible = true,
   ghostGuide,
+  highlightedGuideId,
   onTransformChange,
   onEntitySelect,
   onMouseMove,
@@ -194,6 +196,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   guidesRef.current = guides;
   const guidesVisibleRef = useRef(guidesVisible);
   guidesVisibleRef.current = guidesVisible;
+  const highlightedGuideIdRef = useRef(highlightedGuideId);
+  highlightedGuideIdRef.current = highlightedGuideId;
   const ghostGuideRef = useRef(ghostGuide);
   ghostGuideRef.current = ghostGuide;
 
@@ -456,7 +460,10 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
           const canvas = canvasRef.current;
           const ctx = canvas?.getContext('2d');
           if (ctx) {
-            guideRendererRef.current.renderGuides(ctx, currentGuides, currentTransform, currentViewport);
+            guideRendererRef.current.renderGuides(
+              ctx, currentGuides, currentTransform, currentViewport,
+              highlightedGuideIdRef.current,
+            );
           }
         }
         // Ghost guide preview (during placement)
@@ -536,7 +543,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // 🏢 ADR-119: Mark dirty when dependencies change
   useEffect(() => {
     isDirtyRef.current = true;
-  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide]);
+  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide, highlightedGuideId]);
 
   // 🏢 FIX (2026-02-13): Mark dirty when selection state changes so RAF loop re-renders
   // The actual selection box rendering now happens inside renderScene (step 4️⃣)

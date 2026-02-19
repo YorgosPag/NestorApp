@@ -136,6 +136,10 @@ export interface UseCanvasClickHandlerParams {
   guideRemoveGuide?: (guideId: string) => DeleteGuideCommand;
   guideAddParallelGuide?: (refId: string, dist: number) => CreateParallelGuideCommand;
   guides?: readonly Guide[];
+  /** Two-step parallel: currently selected reference guide ID */
+  parallelRefGuideId?: string | null;
+  /** Two-step parallel: setter for reference guide ID */
+  setParallelRefGuideId?: (id: string | null) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -163,6 +167,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     currentOverlays, handleOverlayClick,
     // ADR-189: Guide handlers
     guideAddGuide, guideRemoveGuide, guideAddParallelGuide, guides,
+    parallelRefGuideId, setParallelRefGuideId,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -265,32 +270,47 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       }
       return;
     }
-    if (activeTool === 'guide-parallel' && guideAddParallelGuide && guides && guides.length > 0) {
-      // ADR-189: Find nearest guide as reference — no distance limit
-      // The click position determines the offset for the new parallel guide
-      let nearestGuide: Guide | null = null;
-      let nearestDist = Infinity;
-      for (const guide of guides) {
-        if (!guide.visible) continue;
-        const dist = guide.axis === 'X'
-          ? Math.abs(worldPoint.x - guide.offset)
-          : Math.abs(worldPoint.y - guide.offset);
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestGuide = guide;
+    if (activeTool === 'guide-parallel' && guides && guides.length > 0) {
+      // ADR-189: Two-step parallel workflow
+      // Step 1: Select reference guide (click near a guide to highlight it)
+      // Step 2: Click at desired position to create parallel guide
+      if (!parallelRefGuideId && setParallelRefGuideId) {
+        // Step 1: Find nearest guide to use as reference
+        const hitToleranceWorld = 30 / transform.scale;
+        let nearestGuide: Guide | null = null;
+        let nearestDist = hitToleranceWorld;
+        for (const guide of guides) {
+          if (!guide.visible) continue;
+          const dist = guide.axis === 'X'
+            ? Math.abs(worldPoint.x - guide.offset)
+            : Math.abs(worldPoint.y - guide.offset);
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestGuide = guide;
+          }
         }
+        if (nearestGuide) {
+          setParallelRefGuideId(nearestGuide.id);
+          dlog('useCanvasClickHandler', 'Parallel step 1: reference guide selected', nearestGuide.id);
+        }
+        return;
       }
-      if (nearestGuide) {
-        const offsetDistance = nearestGuide.axis === 'X'
-          ? worldPoint.x - nearestGuide.offset
-          : worldPoint.y - nearestGuide.offset;
-        // MIN_OFFSET_DELTA check is in GuideStore.addGuideRaw — skip near-zero offsets
-        if (Math.abs(offsetDistance) > 0.01) {
-          guideAddParallelGuide(nearestGuide.id, offsetDistance);
-          dlog('useCanvasClickHandler', 'Parallel guide created from', nearestGuide.id, 'offset', offsetDistance);
-        } else {
-          dlog('useCanvasClickHandler', 'Parallel offset too small — click further from the guide');
+
+      // Step 2: Create parallel guide at click position
+      if (parallelRefGuideId && guideAddParallelGuide && setParallelRefGuideId) {
+        const refGuide = guides.find(g => g.id === parallelRefGuideId);
+        if (refGuide) {
+          const offsetDistance = refGuide.axis === 'X'
+            ? worldPoint.x - refGuide.offset
+            : worldPoint.y - refGuide.offset;
+          if (Math.abs(offsetDistance) > 0.01) {
+            guideAddParallelGuide(parallelRefGuideId, offsetDistance);
+            dlog('useCanvasClickHandler', 'Parallel step 2: guide created at offset', offsetDistance);
+          }
         }
+        // Reset reference for next parallel operation
+        setParallelRefGuideId(null);
+        return;
       }
       return;
     }
@@ -512,6 +532,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     setDraftPolygon, setIsSavingPolygon,
     // ADR-189
     guideAddGuide, guideRemoveGuide, guideAddParallelGuide, guides,
+    parallelRefGuideId, setParallelRefGuideId,
   ]);
 
   return { handleCanvasClick };

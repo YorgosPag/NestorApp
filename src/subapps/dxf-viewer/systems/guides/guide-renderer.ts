@@ -17,7 +17,7 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Guide, GuideRenderStyle } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE } from './guide-types';
+import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, HIGHLIGHT_GUIDE_STYLE } from './guide-types';
 // ADR-088: Pixel-perfect alignment for crisp 1px rendering
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-118: Centralized coordinate transforms (require to avoid circular deps — same as GridRenderer)
@@ -50,15 +50,21 @@ export class GuideRenderer {
     guides: readonly Guide[],
     transform: ViewTransform,
     viewport: Viewport,
+    highlightedGuideId?: string | null,
   ): void {
     if (guides.length === 0) return;
 
     ctx.save();
 
+    // Collect screen positions for intersection markers
+    const xPositions: number[] = [];
+    const yPositions: number[] = [];
+
     for (const guide of guides) {
       if (!guide.visible) continue;
 
-      const style = this.resolveStyle(guide);
+      const isHighlighted = guide.id === highlightedGuideId;
+      const style = isHighlighted ? HIGHLIGHT_GUIDE_STYLE : this.resolveStyle(guide);
       const screenPos = this.guideOffsetToScreen(guide.axis, guide.offset, transform, viewport);
 
       // Skip if entirely off-screen
@@ -66,6 +72,15 @@ export class GuideRenderer {
       if (guide.axis === 'Y' && (screenPos < -1 || screenPos > viewport.height + 1)) continue;
 
       this.drawGuideLine(ctx, guide.axis, screenPos, viewport, style);
+
+      // Collect for intersections
+      if (guide.axis === 'X') xPositions.push(screenPos);
+      else yPositions.push(screenPos);
+    }
+
+    // Draw intersection markers (small ✕) where X and Y guides cross
+    if (xPositions.length > 0 && yPositions.length > 0) {
+      this.drawIntersectionMarkers(ctx, xPositions, yPositions, viewport);
     }
 
     ctx.restore();
@@ -170,5 +185,47 @@ export class GuideRenderer {
     // Standard axis coloring
     const color = guide.axis === 'X' ? GUIDE_COLORS.X : GUIDE_COLORS.Y;
     return { ...DEFAULT_GUIDE_STYLE, color };
+  }
+
+  // ── Intersection Markers ──
+
+  /** Small ✕ size in pixels */
+  private static readonly MARKER_SIZE = 4;
+
+  /**
+   * Draw small ✕ markers at every intersection of X and Y guides.
+   * Provides visual reference points at grid intersections.
+   */
+  private drawIntersectionMarkers(
+    ctx: CanvasRenderingContext2D,
+    xPositions: readonly number[],
+    yPositions: readonly number[],
+    viewport: Viewport,
+  ): void {
+    const size = GuideRenderer.MARKER_SIZE;
+
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 0.8;
+
+    for (const sx of xPositions) {
+      // Skip if off-screen horizontally
+      if (sx < -size || sx > viewport.width + size) continue;
+
+      for (const sy of yPositions) {
+        // Skip if off-screen vertically
+        if (sy < -size || sy > viewport.height + size) continue;
+
+        const px = pixelPerfect(sx);
+        const py = pixelPerfect(sy);
+        ctx.beginPath();
+        ctx.moveTo(px - size, py - size);
+        ctx.lineTo(px + size, py + size);
+        ctx.moveTo(px + size, py - size);
+        ctx.lineTo(px - size, py + size);
+        ctx.stroke();
+      }
+    }
   }
 }
