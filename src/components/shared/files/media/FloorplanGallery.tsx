@@ -311,6 +311,7 @@ export function FloorplanGallery({
   // Canvas refs for DXF rendering (inline + fullscreen)
   const inlineCanvasRef = useRef<HTMLCanvasElement>(null);
   const modalCanvasRef = useRef<HTMLCanvasElement>(null);
+  const modalCanvasReadyRef = useRef(false);
 
   // Filter to only floorplan files
   const floorplanFiles = useMemo(() => filterFloorplanFiles(files), [files]);
@@ -525,9 +526,28 @@ export function FloorplanGallery({
   // DXF CANVAS RENDERING — FULLSCREEN MODAL
   // =========================================================================
 
+  // Reset modal canvas flag when fullscreen closes
   useEffect(() => {
-    if (!isFullscreen || !loadedScene || !modalCanvasRef.current || !isDxf) return;
-    renderDxfToCanvas(modalCanvasRef.current, loadedScene, modalZP.zoom, modalZP.panOffset);
+    if (!isFullscreen) modalCanvasReadyRef.current = false;
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    if (!isFullscreen || !loadedScene || !isDxf) return;
+
+    const doRender = () => {
+      if (!modalCanvasRef.current) return;
+      renderDxfToCanvas(modalCanvasRef.current, loadedScene, modalZP.zoom, modalZP.panOffset);
+      modalCanvasReadyRef.current = true;
+    };
+
+    if (!modalCanvasReadyRef.current) {
+      // First render: wait for Dialog open animation (duration-200) to finish
+      const timerId = setTimeout(doRender, 280);
+      return () => clearTimeout(timerId);
+    }
+
+    // Subsequent renders (zoom/pan changes): immediate
+    doRender();
   }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset]);
 
   // =========================================================================
@@ -680,7 +700,7 @@ export function FloorplanGallery({
         ref={zp.containerRef}
         {...zp.handlers}
         className={cn(
-          'flex-1 relative overflow-hidden bg-muted/30 select-none',
+          'flex-1 min-h-0 relative overflow-hidden bg-muted/30 select-none',
           zp.cursorClass,
           viewClassName,
         )}
@@ -860,7 +880,7 @@ export function FloorplanGallery({
       {/* =============================================================== */}
       <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
         <DialogContent
-          className="sm:max-w-[95vw] w-[95vw] h-[90vh] flex flex-col p-0 gap-0"
+          className="max-w-[95vw] w-[95vw] h-[90vh] flex flex-col p-0 gap-0"
           hideCloseButton
         >
           {/* Fullscreen Header */}
