@@ -162,4 +162,4 @@ export default EntityContextMenuInner;
 
 // ===== NAMED EXPORTS =====
 export { EntityContextMenuInner as EntityContextMenu };
-export type { EntityContextMenuProps, EntityContextMenuHandle };
+export type { EntityContextMenuProps };

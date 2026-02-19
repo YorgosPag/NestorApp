@@ -283,4 +283,4 @@ export default DrawingContextMenuInner;
 
 // ===== NAMED EXPORTS =====
 export { DrawingContextMenuInner as DrawingContextMenu };
-export type { DrawingContextMenuProps, DrawingContextMenuHandle };
+export type { DrawingContextMenuProps };
