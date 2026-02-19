@@ -190,7 +190,14 @@ export function useCanvasEffects({
   }, [drawingHandlers]);
 
   // === Auto-start drawing when tool changes ===
+  // Entity-picking angle tools are handled by useAngleEntityMeasurement (not the drawing pipeline)
+  const ENTITY_PICKING_TOOLS: ReadonlySet<string> = new Set([
+    'measure-angle-constraint', 'measure-angle-line-arc', 'measure-angle-two-arcs',
+  ]);
   useEffect(() => {
+    // Skip auto-start for entity-picking tools — they use their own state machine
+    if (ENTITY_PICKING_TOOLS.has(activeTool)) return;
+
     const isDrawing = isDrawingTool(activeTool);
     const isMeasurement = isMeasurementTool(activeTool);
 

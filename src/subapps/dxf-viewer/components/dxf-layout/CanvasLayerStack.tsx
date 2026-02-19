@@ -202,6 +202,9 @@ export interface CanvasLayerStackProps {
   guidesVisible?: boolean;
   ghostGuide?: { axis: import('../../ai-assistant/grid-types').GridAxis; offset: number } | null;
 
+  // === Entity-picking mode (angle measurement tools) ===
+  entityPickingActive?: boolean;
+
   // === External callback ===
   onMouseMove?: (worldPos: Point2D, event: React.MouseEvent) => void;
 }
@@ -222,6 +225,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
   handleDrawingContextMenu,
   drawingState, entityJoin, pdf, onMouseMove,
+  entityPickingActive,
   // ADR-189: Construction guides
   guides, guidesVisible, ghostGuide,
 }) => {
@@ -484,6 +488,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               isGripDragging={isGripDragging || dxfGripInteraction.isDraggingGrip}
               onGripMouseDown={(worldPos) => dxfGripInteraction.handleGripMouseDown(worldPos)}
               onGripMouseUp={(worldPos) => dxfGripInteraction.handleGripMouseUp(worldPos)}
+              entityPickingActive={entityPickingActive}
               data-canvas-type="dxf"
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`}
               onContextMenu={handleDrawingContextMenu}

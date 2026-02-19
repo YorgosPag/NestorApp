@@ -88,6 +88,8 @@ interface DxfCanvasProps {
   // 🏢 ENTERPRISE (2026-02-15): Grip drag-release callbacks
   onGripMouseDown?: (worldPos: Point2D) => boolean;
   onGripMouseUp?: (worldPos: Point2D) => boolean;
+  /** Entity-picking mode active (angle measurement tools) — enables hover highlighting */
+  entityPickingActive?: boolean;
 }
 
 export interface DxfCanvasRef {
@@ -131,6 +133,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   onHoverOverlay,
   onGripMouseDown,
   onGripMouseUp,
+  entityPickingActive,
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -254,6 +257,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     onHoverOverlay,
     onGripMouseDown,
     onGripMouseUp,
+    entityPickingActive,
     hitTestCallback: (scene, screenPos, transform, viewport) => {
       try {
         // ✅ ENTERPRISE MIGRATION: Get service from registry

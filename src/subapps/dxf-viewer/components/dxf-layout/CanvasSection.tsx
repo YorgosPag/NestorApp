@@ -517,6 +517,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           opacity: pdfOpacity,
         }}
         onMouseMove={props.onMouseMove}
+        entityPickingActive={angleEntityMeasurement.isActive}
         // ADR-189: Construction guides
         guides={guideState.guides}
         guidesVisible={guideState.guidesVisible}

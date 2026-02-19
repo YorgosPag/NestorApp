@@ -99,6 +99,8 @@ interface CentralizedMouseHandlersProps {
   // Return true = consumed (skip default behavior like marquee start or click processing)
   onGripMouseDown?: (worldPos: Point2D) => boolean;
   onGripMouseUp?: (worldPos: Point2D) => boolean;
+  // Entity-picking hover mode: when true, hover highlighting works during entity-picking tools
+  entityPickingActive?: boolean;
 }
 
 /**
@@ -128,7 +130,8 @@ export function useCentralizedMouseHandlers({
   onHoverEntity, // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
   onHoverOverlay, // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting
   onGripMouseDown, // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseDown
-  onGripMouseUp // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseUp
+  onGripMouseUp, // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseUp
+  entityPickingActive = false, // Entity-picking hover mode
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -480,7 +483,8 @@ export function useCentralizedMouseHandlers({
     }
 
     // 🏢 ENTERPRISE (2026-02-14/15): Unified hover highlighting — DXF entities > overlay priority
-    if (activeTool === 'select' && !panStateRef.current.isPanning && !cursor.isSelecting) {
+    // Also active during entity-picking mode (angle measurement, perpendicular, etc.)
+    if ((activeTool === 'select' || entityPickingActive) && !panStateRef.current.isPanning && !cursor.isSelecting) {
       const HOVER_THROTTLE_MS = 32; // ~30fps — smooth enough for visual hover feedback
       const hoverNow = performance.now();
       if (hoverNow - hoverThrottleRef.current >= HOVER_THROTTLE_MS) {
@@ -554,7 +558,7 @@ export function useCentralizedMouseHandlers({
     // Pan with MIDDLE button (handled above) or WHEEL (ZoomManager) is the CAD standard
     // The old code was: shouldPan = cursor.isDown && button === 0 && activeTool !== 'select'
     // This incorrectly made ALL tools except 'select' pan instead of executing their function
-  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers, isGripDragging]);
+  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers, isGripDragging, entityPickingActive]);
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
   // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Use e.currentTarget for consistent viewport
