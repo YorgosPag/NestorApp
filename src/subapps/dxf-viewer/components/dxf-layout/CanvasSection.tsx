@@ -246,11 +246,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [unified, mouseWorld]);
 
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
-    const worldPos = mouseWorld ?? { x: 0, y: 0 };
+    // 🏢 ENTERPRISE (2026-02-19): Apply snap to container mouseUp for overlay grip alignment
+    let worldPos = mouseWorld ?? { x: 0, y: 0 };
+    if (currentSnapResult?.found && currentSnapResult.snappedPoint) {
+      worldPos = currentSnapResult.snappedPoint;
+    }
     const consumed = await unified.handleMouseUp(worldPos);
     if (consumed) return;
     // No fallback needed — unified handles all grip commits
-  }, [unified, mouseWorld]);
+  }, [unified, mouseWorld, currentSnapResult]);
 
   // === Layer visibility: always show when drawing/editing ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';

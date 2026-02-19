@@ -367,8 +367,18 @@ export function useCentralizedMouseHandlers({
       });
     }
 
+    // 🏢 ENTERPRISE (2026-02-19): During grip drag, apply snap to preview position
+    // so the drag preview aligns with the snap indicator (ADR-183 snap integration)
+    let moveWorldPos = worldPos;
+    if (isGripDragging && snapEnabled && findSnapPoint) {
+      const gripSnapResult = findSnapPoint(worldPos.x, worldPos.y);
+      if (gripSnapResult && gripSnapResult.found && gripSnapResult.snappedPoint) {
+        moveWorldPos = gripSnapResult.snappedPoint;
+      }
+    }
+
     // Call parent callback (pass through - let parent decide throttling)
-    onMouseMove?.(screenPos, worldPos);
+    onMouseMove?.(screenPos, moveWorldPos);
 
     // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Call drawing hover for preview line
     // Uses centralized isInDrawingMode (Single Source of Truth)
@@ -515,7 +525,7 @@ export function useCentralizedMouseHandlers({
     // Pan with MIDDLE button (handled above) or WHEEL (ZoomManager) is the CAD standard
     // The old code was: shouldPan = cursor.isDown && button === 0 && activeTool !== 'select'
     // This incorrectly made ALL tools except 'select' pan instead of executing their function
-  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers]);
+  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers, isGripDragging]);
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
   // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Use e.currentTarget for consistent viewport
@@ -553,11 +563,21 @@ export function useCentralizedMouseHandlers({
 
     // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseUp commits grip drag
     // Must be checked BEFORE all click/selection logic
+    // 🏢 ENTERPRISE (2026-02-19): Apply snap to grip release position (ADR-183 snap integration)
     if (e.button === 0 && onGripMouseUp) {
       const upSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
       if (upSnap) {
         const upScreenPos = getScreenPosFromEvent(e, upSnap);
-        const upWorldPos = screenToWorldWithSnapshot(upScreenPos, transform, upSnap);
+        let upWorldPos = screenToWorldWithSnapshot(upScreenPos, transform, upSnap);
+
+        // Apply snap detection so grip endpoint aligns with target snap point
+        if (snapEnabled && findSnapPoint) {
+          const snapResult = findSnapPoint(upWorldPos.x, upWorldPos.y);
+          if (snapResult && snapResult.found && snapResult.snappedPoint) {
+            upWorldPos = snapResult.snappedPoint;
+          }
+        }
+
         if (onGripMouseUp(upWorldPos)) {
           // Grip drag committed — skip all further processing
           cursor.endSelection();
