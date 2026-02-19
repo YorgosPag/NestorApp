@@ -381,8 +381,11 @@ export function useUnifiedGripInteraction(
       if (nearGrip.source === 'dxf') {
         setActiveGrip(nearGrip);
         setPhase('dragging');
-        anchorRef.current = worldPos;
-        setCurrentWorldPos(worldPos);
+        // 🏢 ENTERPRISE (2026-02-19): Use grip's exact position as anchor, not click position.
+        // Click may be offset from grip center (within hit tolerance). Using click position
+        // would propagate that offset into the delta calculation, causing snap misalignment.
+        anchorRef.current = nearGrip.position;
+        setCurrentWorldPos(nearGrip.position);
 
         if (warmTimerRef.current) {
           clearTimeout(warmTimerRef.current);
@@ -455,8 +458,8 @@ export function useUnifiedGripInteraction(
             // Also set unified state
             setActiveGrip(nearGrip);
             setPhase('dragging');
-            anchorRef.current = worldPos;
-            setCurrentWorldPos(worldPos);
+            anchorRef.current = nearGrip.position;
+            setCurrentWorldPos(nearGrip.position);
           }
           return true;
         }
@@ -485,8 +488,8 @@ export function useUnifiedGripInteraction(
 
           setActiveGrip(nearGrip);
           setPhase('dragging');
-          anchorRef.current = worldPos;
-          setCurrentWorldPos(worldPos);
+          anchorRef.current = nearGrip.position;
+          setCurrentWorldPos(nearGrip.position);
 
           if (warmTimerRef.current) {
             clearTimeout(warmTimerRef.current);

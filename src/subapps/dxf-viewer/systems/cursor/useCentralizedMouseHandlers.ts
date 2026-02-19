@@ -8,7 +8,7 @@
 // 🔍 STOP 1 DEBUG FLAG (2026-02-01): Enable for tracing coordinate flow
 const DEBUG_MOUSE_HANDLERS = false; // 🔧 DISABLED (2026-02-02) - z-index fix complete
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import { useCursor } from './CursorSystem';
 import { isPointInRulerArea } from './utils';
 import {
@@ -21,6 +21,7 @@ import { canvasEventBus, CANVAS_EVENTS } from '../../rendering/canvas/core/Canva
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
+import type { Entity } from '../../types/entities';
 import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection';
 // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Centralized tool & mode detection (Single Source of Truth)
 import { isInDrawingMode } from '../tools/ToolStateManager';
@@ -137,9 +138,33 @@ export function useCentralizedMouseHandlers({
 
   // ✅ SNAP DETECTION: Get snap context and manager
   const { snapEnabled, setCurrentSnapResult } = useSnapContext();
+
+  // 🏢 ENTERPRISE (2026-02-19): Convert color layer polygons to snap-compatible entities
+  // so overlay vertices appear as snap targets (endpoint, midpoint, etc.)
+  const overlaySnapEntities = useMemo<Entity[]>(() => {
+    if (!colorLayers || colorLayers.length === 0) return [];
+    const entities: Entity[] = [];
+    for (const layer of colorLayers) {
+      if (!layer.visible || layer.isDraft) continue;
+      for (const polygon of layer.polygons) {
+        if (polygon.vertices.length < 2) continue;
+        entities.push({
+          id: `overlay_${layer.id}_${polygon.id}`,
+          type: 'lwpolyline' as const,
+          vertices: polygon.vertices,
+          closed: true,
+          layer: layer.name,
+          color: layer.color,
+        } satisfies Entity);
+      }
+    }
+    return entities;
+  }, [colorLayers]);
+
   const { findSnapPoint } = useSnapManager(activeCanvasRef, {
     // 🏢 ENTERPRISE: DxfScene extends SceneModel - safe cast
     scene: scene as import('../../types/scene').SceneModel | null,
+    overlayEntities: overlaySnapEntities,
     onSnapPoint: () => {
       // TODO: Use this callback in next steps if needed
     }
