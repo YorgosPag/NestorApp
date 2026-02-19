@@ -107,6 +107,6 @@ export function GeneralTabContent({ building }: { building: Building }) {
       <FilesCard />
       <LegalInfoCard />
       <SettingsCard />
-    </div>
+    </section>
   );
 }
