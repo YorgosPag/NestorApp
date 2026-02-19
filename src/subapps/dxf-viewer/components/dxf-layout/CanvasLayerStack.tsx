@@ -64,8 +64,10 @@ interface Viewport {
 /** Minimal universal selection interface for DxfCanvas callbacks */
 interface UniversalSelectionForStack {
   clearByType: (type: 'overlay' | 'dxf-entity') => void;
+  clearAll: () => void;
   select: (id: string, type: 'overlay' | 'dxf-entity') => void;
   selectMultiple: (items: Array<{ id: string; type: 'overlay' | 'dxf-entity' }>) => void;
+  addMultiple: (items: Array<{ id: string; type: 'overlay' | 'dxf-entity' }>) => void;
 }
 
 /** Zoom system methods used by CanvasLayerStack */
@@ -237,6 +239,30 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
     universalSelection.clearByType('dxf-entity');
     if (entityIds.length > 0) {
       universalSelection.selectMultiple(
+        entityIds.map(id => ({ id, type: 'dxf-entity' as const }))
+      );
+    }
+  };
+
+  // 🏢 ENTERPRISE (2026-02-19): AutoCAD-style unified marquee selection handler
+  // One marquee → one atomic clear+add for ALL types (overlays + DXF entities).
+  // Fixes race condition where separate selectMultiple() calls overwrote each other
+  // (selectMultiple creates a new empty Map, so the second call wiped the first).
+  const handleUnifiedMarqueeResult = ({ layerIds, entityIds }: { layerIds: string[]; entityIds: string[] }) => {
+    // Step 1: Clear all previous selection (atomic reset)
+    universalSelection.clearAll();
+
+    // Step 2: Add overlays/color-layers
+    if (layerIds.length > 0) {
+      universalSelection.addMultiple(
+        layerIds.map(id => ({ id, type: 'overlay' as const }))
+      );
+    }
+
+    // Step 3: Add DXF entities + update rendering state
+    setSelectedEntityIds(entityIds);
+    if (entityIds.length > 0) {
+      universalSelection.addMultiple(
         entityIds.map(id => ({ id, type: 'dxf-entity' as const }))
       );
     }
@@ -429,6 +455,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               onLayerSelected={handleOverlayClick}
               onMultiLayerSelected={handleMultiOverlayClick}
               onEntitiesSelected={handleDxfEntitiesSelected}
+              onUnifiedMarqueeResult={handleUnifiedMarqueeResult}
               onHoverEntity={setHoveredEntityId}
               onHoverOverlay={setHoveredOverlayId}
               onEntitySelect={handleDxfEntitySelect}

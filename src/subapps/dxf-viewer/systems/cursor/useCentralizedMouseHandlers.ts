@@ -86,6 +86,10 @@ interface CentralizedMouseHandlersProps {
   onDrawingHover?: (worldPos: Point2D) => void;
   // 🏢 ENTERPRISE (2026-02-13): Callback for marquee-selected DXF entities (separate from layers)
   onEntitiesSelected?: (entityIds: string[]) => void;
+  // 🏢 ENTERPRISE (2026-02-19): Unified marquee result — AutoCAD-style combined selection
+  // When provided, replaces separate onMultiLayerSelected/onEntitiesSelected for marquee selection.
+  // Ensures both entity types are selected in ONE atomic operation (no overwrite race).
+  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[] }) => void;
   // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover entity highlighting
   onHoverEntity?: (entityId: string | null) => void;
   // 🏢 ENTERPRISE (2026-02-15): Overlay polygon hover highlighting (unified pipeline)
@@ -119,6 +123,7 @@ export function useCentralizedMouseHandlers({
   isGripDragging = false, // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
   onDrawingHover, // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
   onEntitiesSelected, // 🏢 ENTERPRISE (2026-02-13): DXF entity marquee selection callback
+  onUnifiedMarqueeResult, // 🏢 ENTERPRISE (2026-02-19): Unified marquee result (AutoCAD-style)
   onHoverEntity, // 🏢 ENTERPRISE (2026-02-14): AutoCAD-style hover highlighting
   onHoverOverlay, // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting
   onGripMouseDown, // 🏢 ENTERPRISE (2026-02-15): Grip drag-release — mouseDown
@@ -622,7 +627,8 @@ export function useCentralizedMouseHandlers({
       // for DXF entities even when no overlays exist. The UniversalMarqueeSelector handles
       // both entity and color layer selection independently.
       const hasEntityCallback = !!onEntitiesSelected;
-      if (marqueeSnap && (hasMultiCallback || hasSingleCallback || hasEntityCallback)) {
+      const hasUnifiedCallback = !!onUnifiedMarqueeResult;
+      if (marqueeSnap && (hasUnifiedCallback || hasMultiCallback || hasSingleCallback || hasEntityCallback)) {
         // 🏢 ENTERPRISE (2026-01-30): Use fresh rect from unified snapshot
         // 🏢 ADR-105: Use centralized fallback tolerance
         const selectionResult = UniversalMarqueeSelector.performSelection(
@@ -643,25 +649,32 @@ export function useCentralizedMouseHandlers({
 
         if (selectionResult.selectedIds.length > 0) {
           const breakdown = selectionResult.breakdown;
-          // 🏢 ENTERPRISE (2026-02-13): Route entity IDs and layer IDs to separate callbacks
           const layerAndOverlayIds = [
             ...(breakdown?.layerIds ?? []),
             ...(breakdown?.overlayIds ?? [])
           ];
           const entityIds = breakdown?.entityIds ?? [];
 
-          if (layerAndOverlayIds.length > 0) {
-            if (hasMultiCallback) {
-              onMultiLayerSelected(layerAndOverlayIds);
-            } else if (hasSingleCallback) {
-              layerAndOverlayIds.forEach(layerId => {
-                onLayerSelected(layerId, cursor.position!);
-              });
+          // 🏢 ENTERPRISE (2026-02-19): AutoCAD-style unified marquee result
+          // One marquee → one atomic selection update for ALL types (layers + entities).
+          // Eliminates race condition where separate selectMultiple() calls overwrote each other.
+          if (hasUnifiedCallback) {
+            onUnifiedMarqueeResult({ layerIds: layerAndOverlayIds, entityIds });
+          } else {
+            // Legacy: separate callbacks (kept for backward compatibility)
+            if (layerAndOverlayIds.length > 0) {
+              if (hasMultiCallback) {
+                onMultiLayerSelected(layerAndOverlayIds);
+              } else if (hasSingleCallback) {
+                layerAndOverlayIds.forEach(layerId => {
+                  onLayerSelected(layerId, cursor.position!);
+                });
+              }
             }
-          }
 
-          if (entityIds.length > 0 && hasEntityCallback) {
-            onEntitiesSelected(entityIds);
+            if (entityIds.length > 0 && hasEntityCallback) {
+              onEntitiesSelected(entityIds);
+            }
           }
         } else {
           // 🏢 ENTERPRISE (2026-01-25): Check if this was a "click" (small drag) vs actual marquee

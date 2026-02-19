@@ -71,6 +71,8 @@ interface DxfCanvasProps {
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   onMultiLayerSelected?: (layerIds: string[]) => void;
   onEntitiesSelected?: (entityIds: string[]) => void;
+  // 🏢 ENTERPRISE (2026-02-19): Unified marquee result — AutoCAD-style combined selection
+  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[] }) => void;
   isGripDragging?: boolean;
   onHoverEntity?: (entityId: string | null) => void;
   // 🏢 ENTERPRISE (2026-02-15): Overlay hover highlighting callback
@@ -111,6 +113,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   onLayerSelected,
   onMultiLayerSelected,
   onEntitiesSelected,
+  onUnifiedMarqueeResult,
   isGripDragging = false,
   onHoverEntity,
   onHoverOverlay,
@@ -222,6 +225,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     onLayerSelected,
     onMultiLayerSelected,
     onEntitiesSelected,
+    onUnifiedMarqueeResult,
     canvasRef: canvasRef,
     isGripDragging,
     onHoverEntity,
