@@ -1564,6 +1564,60 @@ Drones για aerial survey + grid verification στο εργοτάξιο.
 8. **Performance Budgets & Benchmarks** → §8.9
 9. **QA Plan + Acceptance Criteria** → §8.10
 10. **Future Interop Appendix** (IFC mapping, import/export) → §8.4
+11. **Regulated Markets Strategy** (compliance, fabrication, plugins) → §11
+
+---
+
+## 11. Στρατηγική Διείσδυσης σε Ρυθμιζόμενες Αγορές (China Strategy)
+
+> Βάσει έρευνας στην κινεζική αγορά AEC (2025-2026): PKPM-AID, Glodon, PowerChina "电建数绘",
+> Gstarsoft "1+1+N" model, CSCEC/CRCC prefabrication, TU Delft LoC Grid.
+> Η Κίνα οδηγεί τις εξελίξεις στην ενσωμάτωση AI σε mega-projects υποδομής.
+
+### 11.1 Τρεις Κυρίαρχες Κατευθύνσεις (Κίνα 2025-2026)
+
+| Τάση | Περιγραφή | Σημασία για ADR-189 |
+|------|-----------|---------------------|
+| **AI-mandatory (όχι AI-ready)** | Από 2026, η κινεζική κυβέρνηση απαιτεί BIM正向设计 (Forward Design) σε 24 πιλοτικές πόλεις. Εθνική πλατφόρμα ελέγχου μελετών (全国施工图审查平台) χρησιμοποιεί AI. | Το grid δεν είναι overlay — είναι **θεμέλιο** υποχρεωτικού ψηφιακού μοντέλου. C19 + C14 πρέπει να υποστηρίζουν αυτόματο compliance checking. |
+| **Κάθετη ενοποίηση (Ecosystem)** | Πλατφόρμες που καλύπτουν ΟΛΟ τον κύκλο ζωής: 勘察→设计→施工→运维 (έρευνα→σχεδιασμός→κατασκευή→συντήρηση). PKPM "设计智能体 Agent" (Design AI Agents). | Το C20 (Plugin System) είναι η "καρδιά" — API για τρίτους. Μοντέλο "1+1+N" (1 πλατφόρμα + 1 πρότυπο + Ν εφαρμογές). |
+| **Prefabrication + Smart Sites** | CSCEC, CRCC: μαζική προκατασκευή. 智慧工地监管平台 (Smart Site Supervision). Σύνδεση ψηφιακού μοντέλου → εργοτάξιο (total stations, ρομπότ). | P3 (Fabrication Exports) + P4 (Tolerances) + P12 (Robotics) = κρίσιμα για prefab. Λάθος χιλιοστών στο grid → αδυναμία συναρμολόγησης. |
+
+### 11.2 Απαιτήσεις Ρυθμιζόμενων Αγορών (CN1-CN6)
+
+| # | Απαίτηση | Σύνδεση ADR | Περιγραφή | Κινεζική Αναγκαιότητα |
+|---|----------|-------------|-----------|----------------------|
+| **CN1** | Υποχρεωτική BIM Forward Design | C19, C14 | Grids δημιουργούνται ως μέρος αρχικού μοντέλου, ΟΧΙ ύστερο overlay. Enforce creation flow. | Νομοθεσία 2026 για κυβερνητικά έργα σε 24 πόλεις |
+| **CN2** | Αυτόματος Έλεγχος Συμμόρφωσης | C19 | Grid αυτο-ελέγχεται vs τοπικούς κανονισμούς (αποστάσεις, ύψη). JSON output για κρατικές πλατφόρμες. | Εθνικό σύστημα ελέγχου μελετών (AI-based) |
+| **CN3** | Εξαγωγή CNC & Ρομποτική Κατασκευή | P3, C9 | IFC για prefab, DSTV για χάλυβα, G-code για ρομπότ οπλισμού. | Τεράστια κλίμακα προκατασκευής (CSCEC, CRCC) |
+| **CN4** | NURBS & Σύνθετη Γεωμετρία | B76 | Grids πάνω σε NURBS επιφάνειες (φράγματα, ουρανοξύστες). | PowerChina "电建数绘" — υδροηλεκτρικά / mega-projects |
+| **CN5** | Plugin API για Τοπικά Οικοσυστήματα | C20 | Αρθρωτό, τεκμηριωμένο API — κινεζικές εταιρείες αναπτύσσουν πρόσθετα. | Μοντέλο "1+1+N" (Gstarsoft 浩辰软件) |
+| **CN6** | Υπολογισμός Άνθρακα & Βελτιστοποίηση Υλικών | B74, B75, P9 | Grid προτείνει βελτιστοποίηση για μείωση υλικών/CO₂. | Πολιτική "双碳" (Dual Carbon) + "好房子" (Green Housing) |
+
+### 11.3 Εφαρμοσιμότητα στην Ελληνική/Ευρωπαϊκή Αγορά
+
+Οι απαιτήσεις CN1-CN6 δεν αφορούν μόνο την Κίνα — αντικατοπτρίζουν παγκόσμιες τάσεις:
+
+| CN | Αντίστοιχη Ευρωπαϊκή Τάση |
+|----|---------------------------|
+| CN1 | EU BIM Mandate (UK Level 2, Nordic BIM, ISO 19650) |
+| CN2 | Eurocode compliance checking, CE marking automation |
+| CN3 | Industry 4.0 (Γερμανία), Offsite Manufacturing (UK) |
+| CN4 | Infrastructure projects (TEN-T, ΤΑΠ pipeline) |
+| CN5 | Open BIM Alliance, buildingSMART plugins |
+| CN6 | EU Taxonomy, LEED/BREEAM, Green Deal targets |
+
+> **Στρατηγικό πλεονέκτημα**: Σχεδιάζοντας για τις πιο απαιτητικές αγορές (Κίνα),
+> το σύστημα αυτόματα καλύπτει και τις λιγότερο ρυθμιζόμενες (Ελλάδα, ΕΕ).
+
+### 11.4 Niche High-Complexity Markets
+
+| Τύπος Έργου | Γιατί χρειάζεται advanced grid | Σύνδεση ADR |
+|-------------|-------------------------------|-------------|
+| **Φράγματα** | NURBS επιφάνειες, curved grids, τεράστιες κλίμακες | B76, P11 |
+| **Σήραγγες** | Κυλινδρικοί κάνναβοι, curved + 3D | B76, B62 |
+| **Γέφυρες** | Γραμμικά mega-projects, coordinate offset | P11, P5 |
+| **Ουρανοξύστες** | Πολλοί όροφοι, per-floor grids, 4D phasing | §8.1, P6 |
+| **Εργοστάσια prefab** | Χιλιοστομετρική ακρίβεια, CNC/robot export | P3, P4, P12 |
 
 ---
 
@@ -1611,4 +1665,5 @@ Drones για aerial survey + grid verification στο εργοτάξιο.
 | 2026-02-19 | Implementation Design (§8): Scope Boxes, Snap Tracking, Curved Grid, IFC mapping, Coordinate System, Data Model, State Machine, Hit-testing, Performance, QA, Observability, Labels. Proposed TOC (§9) |
 | 2026-02-19 | Industry Research & AI Readiness: B56-B93 (38 νέα features σε 8 κατηγορίες: AI/ML, 3D/4D, VR/AR, Collaboration, Sustainability, Geometry, UI/UX, Security). C14-C20 (7 νέα κεντρικοποιημένα συστήματα). §10 Future-Proofing (Parametric Binding, Generative Design, Scan-to-BIM, Digital Twin). **Σύνολο: 93 features + 20 centralized systems** |
 | 2026-02-19 | Deep Industry Analysis P1-P8: Optimization Objectives (P1), Smart Guide Suggestions (P2), Fabrication-Ready Exports (P3), Tolerance-Aware Grid (P4), Hierarchical Grids (P5), 4D Phasing (P6), Constraint Satisfaction (P7), Grid Pattern Library (P8). Πηγές: TU Delft LoC Grid, ALLPLAN 2025, SAO papers, EN 13670, LandXML. |
-| 2026-02-19 | Global Trends P9-P12: AI Copilot κόστους/άνθρακα (P9, PKPM/Glodon), AI Watchdog ανωμαλιών (P10, Nemetschek/Google Cloud), Dynamic Coordinate Offset mega-projects (P11, Linear Engineering), Robotics & Drones export (P12, G-code/waypoints). **Σύνολο: 93 features + 12 deep proposals + 20 centralized systems** |
+| 2026-02-19 | Global Trends P9-P12: AI Copilot κόστους/άνθρακα (P9, PKPM/Glodon), AI Watchdog ανωμαλιών (P10, Nemetschek/Google Cloud), Dynamic Coordinate Offset mega-projects (P11, Linear Engineering), Robotics & Drones export (P12, G-code/waypoints). |
+| 2026-02-19 | §11 China Strategy: Ρυθμιζόμενες αγορές CN1-CN6 (BIM Forward Design, Compliance Checking, CNC/Robotics Export, NURBS, Plugin API, Carbon). Εφαρμοσιμότητα ΕΕ. Niche markets (φράγματα, σήραγγες, γέφυρες, ουρανοξύστες, prefab). **ΤΕΛΙΚΟ: 93 features + 12 proposals + 6 CN requirements + 20 systems** |
