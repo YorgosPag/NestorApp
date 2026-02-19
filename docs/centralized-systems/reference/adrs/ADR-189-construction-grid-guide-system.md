@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | DRAFT — Συλλογή απαιτήσεων ✅ + Implementation Design ✅ + Industry Research & AI Readiness ✅ (93 features, 20 systems). Έτοιμο για phased implementation. |
+| **Status** | DRAFT — Συλλογή απαιτήσεων ✅ + Implementation Design ✅ + Global Market Research ✅ (120 features, 25 systems, 16 proposals, 6 CN reqs). Έτοιμο για phased implementation. |
 | **Date** | 2026-02-19 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -675,6 +675,20 @@
 | **C19** | **Data Validation Engine** | Grids, Constraints | ML-based checks + building code validation. |
 | **C20** | **Modular Plugin System** | Όλα | Plugin API για custom extensions τρίτων. |
 
+### 7.6 Global Market Systems (C21-C25)
+
+> Νέα systems για 5G/IoT, Robotics, EU Compliance, Metaverse, Quantum readiness.
+
+| # | Σύστημα | Ωφελεί | Σημείωση |
+|---|---------|--------|----------|
+| **C21** | **5G/IoT Integration Layer** | Guides, Sites | Real-time data από 5G smart sites (CSCEC pattern). Sensor feeds → grid updates. |
+| **C22** | **Robotics Export Engine** | BIM, Grids | Robot paths, G-code, waypoints. Cobots, drones, humanoids. |
+| **C23** | **EN Compliance Validator** | Όλα | Auto-check vs EN ISO 19650, CEN/TC 442, DIN/VOB. Country-specific rules. |
+| **C24** | **Metaverse Pipeline** | Rendering | Export σε Unity/UE5, VR walkthroughs, haptic integration. |
+| **C25** | **Quantum API Wrapper** | Optimization | Hooks για quantum computing σε μελλοντικές βελτιστοποιήσεις. |
+
+> **Σύνολο**: C1-C25 = **25 κεντρικοποιημένα συστήματα**.
+
 **Updated Centralization Diagram:**
 
 ```
@@ -943,8 +957,72 @@ Green design focus (Skanska, Vinci sustainability programs).
 | **B93** | Compliance Checkers | Auto-validate vs building codes (spacing min/max). | ArchiCAD code checking |
 
 > **Σύνολο**: B56-B93 = **38 νέα features** σε 8 κατηγορίες.
-> **Συνολικά features ADR-189**: B1-B93 = **93 features**.
-> **Στρατηγική**: MVP πρώτα (core B1-B55), μετά incremental integration B56-B93.
+
+### 4.19 Global Market Innovations — B94-B120
+
+> Βάσει έρευνας Revit 2026, Bentley OpenBuildings, Glodon 5D BIM, PKPM-AID, CSCEC smart sites,
+> EN ISO 19650, CEN/TC 442, BIM 6.0 lifecycle trends, quantum computing readiness.
+
+#### 4.19.1 China-Specific Innovations (Υψηλή — Market Penetration)
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B94** | 5G Real-Time Grid Sync | Sync grids με onsite 5G data — auto-updates βάσει hazards/αλλαγών. | CSCEC 5G smart sites |
+| **B95** | Seismic-Aware Grids | Auto-optimize grid spacing βάσει σεισμικών κανονισμών (GB 50011). | PKPM seismic analysis |
+| **B96** | 5D Grid Cost Simulator | Ενσωμάτωση κόστους/χρόνου στο grid — αυτόματα quantity takeoff. | Glodon 5D BIM (Cubicost) |
+| **B97** | Vertical AI Modules | Domain-specific AI models (δομικός/οικονομικός/ενεργειακός κάνναβος). | China vertical AI trend |
+
+#### 4.19.2 European Compliance & Green (Υψηλή — EU Mandates)
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B98** | EN ISO 19650 Templates | Pre-built workflows για information delivery κατά ISO 19650. | EU BIM standards |
+| **B99** | CEN Data Dictionary Integration | Auto-map grid properties σε EU data dictionaries (CEN/TC 442). | buildingSMART CDE |
+| **B100** | EU Green Deal Checker | Validate grids vs sustainability mandates (BREEAM, LEED, EU Taxonomy). | EU EcoDesigner trend |
+| **B101** | DIN/VOB Grid Standards | Templates για γερμανικά/ευρωπαϊκά πρότυπα κατασκευής. | Bentley Speedikon |
+
+#### 4.19.3 Metaverse & Immersive (Μεσαία — 2026 Trends)
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B102** | Metaverse Grid Export | Export σε Unity/UE5 για virtual collaboration environments. | Trends 2026 |
+| **B103** | Haptic VR Snaps | Tactile feedback στο VR κατά snap σε guides — immersive σχεδιασμός. | Robotics haptics |
+| **B104** | AR Onsite Grid Overlay | AR glasses overlay grids σε πραγματικό εργοτάξιο — real-time alignment. | Revit AR / HoloLens |
+
+#### 4.19.4 Robotics & Autonomous (Υψηλή — Construction 2.0)
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B105** | Robot Path Generation | Δημιουργία paths από grids για cobots (rebar, bricklaying). | China rebar robots |
+| **B106** | Drone Auto-Grid Mapping | Drones σαρώνουν εργοτάξιο → auto-update grid as-built vs design. | CSCEC drones |
+| **B107** | Humanoid Robot Interface | API για humanoid robot control μέσω grid waypoints. | Trends 2026 humanoids |
+| **B108** | Agentic AI for Sites | AI agents ως "digital crew" — αυτόνομη εκτέλεση tasks βάσει grid. | Procore AI trends |
+
+#### 4.19.5 Quantum & Advanced Computing (Χαμηλή — Long-Term)
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B109** | Quantum Solver Hooks | API hooks για quantum computing σε complex grid optimization. | Future quantum trends |
+| **B110** | Electro-Industrial Stack | Simulate AI power demands πάνω σε grids (data center layouts). | China grid AI power |
+
+#### 4.19.6 BIM 6.0 & Lifecycle (Μεσαία)
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B111** | BIM 6.0 Data Flows | Lifecycle data continuity πέρα από 5D (maintenance, demolition). | BIM trends 2026 |
+| **B112** | Predictive Clash AI | AI προβλέπει clashes πριν την κατασκευή βάσει grid patterns. | Revit/Dynamo AI |
+
+#### 4.19.7 Additional Features
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B113** | Multi-Language Support | UI/standards σε κινεζικά, γερμανικά, αγγλικά, ελληνικά + localized standards. | PKPM/Glodon i18n |
+| **B114** | Power Grid Simulation | Simulate ενεργειακές ανάγκες AI data centers βάσει grid layout. | China AI power trend |
+| **B115-B120** | Custom Extension Slots | 6 reserved slots για user-defined/market-specific extensions. | Plugin architecture |
+
+> **Σύνολο B94-B120**: 27 νέα features (21 concrete + 6 extension slots).
+> **Συνολικά features ADR-189**: B1-B120 = **120 features**.
+> **Στρατηγική**: MVP (B1-B55) → Industry expansion (B56-B93) → Global market (B94-B120).
 
 ---
 
@@ -1545,8 +1623,58 @@ Drones για aerial survey + grid verification στο εργοτάξιο.
 - `exportToDroneFlightPlan(guides)` → verification flight path πάνω από grid points
 - X markers + axis labels embedded στα waypoint data
 
-> **Σύνολο P1-P12**: 12 deep proposals ← ακαδημαϊκή + βιομηχανική + παγκόσμια έρευνα (Ευρώπη, ΗΠΑ, Κίνα).
-> **Κλειδί**: Η αρχιτεκτονική C1-C20 + headless API ήδη υποστηρίζει **ΟΛΑ** αυτά χωρίς refactoring.
+### 10.8 Global Market Deep Proposals — P13-P16
+
+> Βάσει Revit 2026, CSCEC 5G/robotics, EN ISO 19650, quantum computing trends.
+> Αναρίθμηση P13-P16 (τα P9-P12 ήδη υπάρχουν σε §10.7).
+
+#### P13: 5G Smart Construction Ecosystem
+
+**Έμπνευση**: CSCEC 5G sites — full IoT/AI integration στο εργοτάξιο.
+**Βάθος**: Ο κάνναβος γίνεται **live data endpoint** — 5G sensors τροφοδοτούν:
+- Real-time hazard detection → auto-adjust grid safety zones
+- Structural monitoring → grid alerts αν settlement > tolerance
+- Worker tracking → grid-based safety perimeter enforcement
+
+**Τεχνική**: C21 (5G/IoT Layer) → WebSocket feeds → Guide Data Model update.
+Δεν αλλάζει geometry — αλλάζει **metadata + visual alerts** σε real-time.
+
+#### P14: BIM-Robotics Bridge
+
+**Έμπνευση**: China rebar robots, bricklaying cobots, drone verification flights.
+**Βάθος**: Auto-generate robot task sequences από grid topology:
+- Rebar robot: grid intersections → rebar placement coordinates + bending angles
+- Bricklaying cobot: grid cells → wall segments → brick course paths
+- Drone: grid verification → as-built vs design deviation map
+
+**Τεχνική**: C22 (Robotics Export Engine) → task graph generation.
+Input: `GuideLine[]` + `GuidePoint[]`. Output: robot-specific instructions.
+
+#### P15: EU-China Hybrid Standards
+
+**Έμπνευση**: Η ανάγκη για cross-market compliance σε global projects.
+**Βάθος**: Templates που αυτόματα μετατρέπουν standards:
+- Grid labels: Eurocode → GB (China) → AS (Australia) → AISC (USA)
+- Seismic zones: EN 1998 ↔ GB 50011 ↔ ASCE 7
+- Fire zones: EN 1991-1-2 ↔ GB 50016
+- Material specs: EN 206 (concrete) ↔ GB/T 14902
+
+**Τεχνική**: C23 (EN Compliance Validator) + standard mapping engine.
+User selects target market → auto-validate + suggest corrections.
+
+#### P16: Quantum-Enhanced Grid Optimization
+
+**Έμπνευση**: Quantum computing trends — combinatorial optimization.
+**Βάθος**: Massive grid variant generation (πέρα από B59 Generative Variants):
+- Κλασικά: 100 variants σε 30 δευτερόλεπτα
+- Quantum: 10,000 variants σε 5 δευτερόλεπτα
+- Use cases: Mega-project grid optimization, multi-constraint satisfaction
+
+**Τεχνική**: C25 (Quantum API Wrapper) → abstract interface.
+Σήμερα: classical solver. Αύριο: quantum solver (swap engine, same API).
+
+> **Σύνολο P1-P16**: 16 deep proposals ← ακαδημαϊκή + βιομηχανική + παγκόσμια έρευνα (Ευρώπη, ΗΠΑ, Κίνα).
+> **Κλειδί**: Η αρχιτεκτονική C1-C25 + headless API ήδη υποστηρίζει **ΟΛΑ** αυτά χωρίς refactoring.
 
 ---
 
@@ -1666,4 +1794,5 @@ Drones για aerial survey + grid verification στο εργοτάξιο.
 | 2026-02-19 | Industry Research & AI Readiness: B56-B93 (38 νέα features σε 8 κατηγορίες: AI/ML, 3D/4D, VR/AR, Collaboration, Sustainability, Geometry, UI/UX, Security). C14-C20 (7 νέα κεντρικοποιημένα συστήματα). §10 Future-Proofing (Parametric Binding, Generative Design, Scan-to-BIM, Digital Twin). **Σύνολο: 93 features + 20 centralized systems** |
 | 2026-02-19 | Deep Industry Analysis P1-P8: Optimization Objectives (P1), Smart Guide Suggestions (P2), Fabrication-Ready Exports (P3), Tolerance-Aware Grid (P4), Hierarchical Grids (P5), 4D Phasing (P6), Constraint Satisfaction (P7), Grid Pattern Library (P8). Πηγές: TU Delft LoC Grid, ALLPLAN 2025, SAO papers, EN 13670, LandXML. |
 | 2026-02-19 | Global Trends P9-P12: AI Copilot κόστους/άνθρακα (P9, PKPM/Glodon), AI Watchdog ανωμαλιών (P10, Nemetschek/Google Cloud), Dynamic Coordinate Offset mega-projects (P11, Linear Engineering), Robotics & Drones export (P12, G-code/waypoints). |
-| 2026-02-19 | §11 China Strategy: Ρυθμιζόμενες αγορές CN1-CN6 (BIM Forward Design, Compliance Checking, CNC/Robotics Export, NURBS, Plugin API, Carbon). Εφαρμοσιμότητα ΕΕ. Niche markets (φράγματα, σήραγγες, γέφυρες, ουρανοξύστες, prefab). **ΤΕΛΙΚΟ: 93 features + 12 proposals + 6 CN requirements + 20 systems** |
+| 2026-02-19 | §11 China Strategy: Ρυθμιζόμενες αγορές CN1-CN6 (BIM Forward Design, Compliance Checking, CNC/Robotics Export, NURBS, Plugin API, Carbon). Εφαρμοσιμότητα ΕΕ. Niche markets. |
+| 2026-02-19 | Global Market Expansion: §4.19 B94-B120 (27 features: 5G, seismic, 5D cost, EU compliance, metaverse, robotics, quantum, BIM 6.0). §7.6 C21-C25 (5G/IoT, Robotics Export, EN Compliance, Metaverse, Quantum). §10.8 P13-P16 (5G ecosystem, BIM-Robotics bridge, EU-China hybrid standards, quantum optimization). **ΤΕΛΙΚΟ: 120 features + 16 proposals + 6 CN requirements + 25 systems** |
