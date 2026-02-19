@@ -760,7 +760,7 @@
       "timeline": "Timeline",
       "analytics": "Analytics",
       "storage": "Storages",
-      "contracts": "Contracts",
+      "contracts": "Building Documents",
       "customerContracts": "Customer Contracts",
       "protocols": "Protocols",
       "photos": "Photos",
@@ -1081,8 +1081,8 @@
       "noBuilding": "Select a building to view its videos."
     },
     "contracts": {
-      "title": "Building Contracts",
-      "noBuilding": "Select a building to view its contracts."
+      "title": "Building Documents",
+      "noBuilding": "Select a building to view its documents."
     },
     "timeline": {
       "header": {

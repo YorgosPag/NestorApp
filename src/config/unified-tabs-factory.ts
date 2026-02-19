@@ -459,15 +459,11 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
           {
             id: 'contracts',
             value: 'contracts',
-            icon: 'file-signature',
-            description: 'tabs.contracts.description',
+            icon: 'file-text',
+            description: 'Έγγραφα κτιρίου (συμβόλαια, άδειες, μελέτες κ.λπ.)',
             order: 9,
             enabled: true,
-            component: 'PlaceholderTab',
-            componentProps: {
-              title: 'tabs.labels.customerContracts',
-              icon: 'FileSignature'
-            }
+            component: 'BuildingDocumentsTab'
           },
           {
             id: 'protocols',
