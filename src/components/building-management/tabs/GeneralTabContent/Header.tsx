@@ -38,7 +38,7 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
 
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <CommonBadge
           status="company"
           customLabel={`ID: ${building.id}`}

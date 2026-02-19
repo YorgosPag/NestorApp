@@ -40,14 +40,14 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <Settings className={iconSizes.md} />
           {t('tabs.general.technicalSpecs.title')}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <CardContent className="p-2 pt-0">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
           <div className="space-y-2">
             <Label>{t('tabs.general.technicalSpecs.totalArea')}</Label>
             <Input
@@ -108,11 +108,11 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
         </div>
 
         {costPerSqm > 0 && (
-          <div className={`mt-6 p-4 ${colors.bg.info} rounded-lg`}>
-            <h4 className={`font-medium ${colors.text.info} mb-2`}>
+          <div className={`mt-2 p-2 ${colors.bg.info} rounded-lg`}>
+            <h4 className={`font-medium ${colors.text.info}`}>
               💡 {t('tabs.general.technicalSpecs.autoCalculations')}
             </h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               <div>
                 <span className={`${colors.text.info}`}>{t('tabs.general.technicalSpecs.costPerSqm')}</span>
                 <p className="font-semibold">{formatCurrency(costPerSqm, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>

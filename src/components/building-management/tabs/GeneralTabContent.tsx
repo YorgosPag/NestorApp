@@ -187,7 +187,7 @@ export function GeneralTabContent({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <Header
         building={building}
         isEditing={effectiveIsEditing}
@@ -212,7 +212,7 @@ export function GeneralTabContent({
         errors={errors}
       />
       {/* ENTERPRISE: Company + Project selectors side-by-side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <CompanySelectorCard
           buildingId={String(building.id)}
           currentCompanyId={building.companyId}

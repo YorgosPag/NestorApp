@@ -29,13 +29,13 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
   const typography = useTypography();
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
           {t('tabs.general.basicInfo.title')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-2 pt-0 space-y-2">
         <div className="space-y-2">
           <Label>{t('tabs.general.basicInfo.buildingTitle')}</Label>
           <Input

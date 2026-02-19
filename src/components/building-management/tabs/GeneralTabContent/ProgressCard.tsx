@@ -26,14 +26,14 @@ export function ProgressCard({ progress }: ProgressCardProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <TrendingUp className={iconSizes.md} />
           {t('tabs.general.progress.title')}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-2 pt-0">
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>{t('tabs.general.progress.completionPercentage')}</Label>
             <CommonBadge

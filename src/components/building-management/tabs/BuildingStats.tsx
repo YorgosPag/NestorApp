@@ -71,7 +71,7 @@ export function BuildingStats({ buildingId }: BuildingStatsProps) {
     <UnifiedDashboard
       stats={dashboardStats}
       columns={3}
-      className="mb-4"
+      className="mb-2"
     />
   );
 }

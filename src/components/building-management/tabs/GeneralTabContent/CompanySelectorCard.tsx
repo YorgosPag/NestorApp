@@ -155,13 +155,13 @@ export function CompanySelectorCard({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <Building2 className={iconSizes.md} />
           {t('companySelector.title')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-2 pt-0 space-y-2">
         {/* Company Selector */}
         <fieldset className="space-y-2">
           <Label htmlFor="company-selector">{t('companySelector.label')}</Label>

@@ -172,13 +172,13 @@ export function ProjectSelectorCard({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <FolderKanban className={iconSizes.md} />
           {t('projectSelector.title')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-2 pt-0 space-y-2">
         {/* Project Selector */}
         <fieldset className="space-y-2">
           <Label htmlFor="project-selector">{t('projectSelector.label')}</Label>

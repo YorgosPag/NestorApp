@@ -318,7 +318,7 @@ export function BuildingAddressesCard({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <div className="flex items-center justify-between">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <MapPin className={iconSizes.md} />
@@ -338,7 +338,7 @@ export function BuildingAddressesCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="p-2 pt-0 space-y-2">
 
         {/* ============================================================ */}
         {/* MODE 1: Building WITH project — Select from project addresses */}
@@ -353,11 +353,11 @@ export function BuildingAddressesCard({
             ) : projectAddresses.length === 0 ? (
               /* Project has no addresses registered */
               <section className="text-center py-8 border-2 border-dashed rounded-lg">
-                <AlertTriangle className={`${iconSizes.xl} mx-auto mb-4 text-amber-500`} />
+                <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} />
                 <h3 className="text-lg font-semibold mb-2">
                   {t('address.labels.projectNoAddresses')}
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-2">
                   {t('address.labels.projectNoAddressesHint')}
                 </p>
                 <Button
@@ -376,7 +376,7 @@ export function BuildingAddressesCard({
                   {t('address.labels.selectFromProject')}
                 </p>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {projectAddresses.map((projAddr) => {
                     const selected = isAddressSelected(projAddr);
                     const isPrimaryInBuilding = localAddresses.find(
@@ -388,7 +388,7 @@ export function BuildingAddressesCard({
                         key={projAddr.id}
                         id={`building-address-card-${projAddr.id}`}
                         className={cn(
-                          'relative border-2 rounded-lg p-4 transition-all cursor-pointer',
+                          'relative border-2 rounded-lg p-2 transition-all cursor-pointer',
                           selected
                             ? 'border-primary bg-primary/5 shadow-sm'
                             : 'border-muted hover:border-muted-foreground/30'
@@ -403,7 +403,7 @@ export function BuildingAddressesCard({
                           }
                         }}
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2">
                           {/* Selection indicator */}
                           <div className={cn(
                             'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
@@ -416,7 +416,7 @@ export function BuildingAddressesCard({
 
                           {/* Address content */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">
                                 {formatAddressLine(projAddr)}
                               </span>
@@ -470,7 +470,7 @@ export function BuildingAddressesCard({
 
                 {/* Warning: no address selected */}
                 {selectedCount === 0 && (
-                  <section className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <section className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
                     <AlertTriangle className={cn(iconSizes.sm, 'text-amber-600 dark:text-amber-400 shrink-0')} />
                     <p className="text-sm text-amber-700 dark:text-amber-300">
                       {t('address.labels.noAddressSelected')}
@@ -515,7 +515,7 @@ export function BuildingAddressesCard({
 
             {/* Inline Add Form */}
             {isAddFormOpen && (
-              <div className="border-2 border-primary rounded-lg p-6 bg-card space-y-4">
+              <div className="border-2 border-primary rounded-lg p-2 bg-card space-y-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Plus className={iconSizes.md} />
@@ -538,7 +538,7 @@ export function BuildingAddressesCard({
                   onChange={setTempAddress}
                   externalValues={dragUpdatedAddress}
                 />
-                <div className="flex gap-3 justify-end pt-4 border-t">
+                <div className="flex gap-2 justify-end pt-2 border-t">
                   <Button variant="outline" onClick={() => { setIsAddFormOpen(false); setTempAddress(null); setDragUpdatedAddress(null); }} disabled={isSaving}>
                     {t('tabs.general.header.cancel')}
                   </Button>
@@ -552,9 +552,9 @@ export function BuildingAddressesCard({
             {/* Empty state */}
             {localAddresses.length === 0 && !isAddFormOpen && (
               <section className="text-center py-8 border-2 border-dashed rounded-lg">
-                <MapPin className={`${iconSizes.xl} mx-auto mb-4 text-muted-foreground`} />
+                <MapPin className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
                 <h3 className="text-lg font-semibold mb-2">{t('address.labels.noAddresses')}</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-2">
                   {t('address.labels.addFirstAddress')}
                 </p>
                 <Button onClick={() => setIsAddFormOpen(true)}>
@@ -566,16 +566,16 @@ export function BuildingAddressesCard({
 
             {/* Address list (manual mode) */}
             {localAddresses.length > 0 && !isAddFormOpen && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {localAddresses.map((address, index) => (
                   <div
                     key={address.id}
                     id={`building-address-card-${address.id}`}
-                    className="relative border rounded-lg p-6 hover:shadow-md transition-shadow"
+                    className="relative border rounded-lg p-2 hover:shadow-md transition-shadow"
                   >
                     {editingIndex === index ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between mb-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-2">
                           <h4 className="text-lg font-semibold flex items-center gap-2">
                             <Pencil className={iconSizes.md} />
                             {t('address.labels.editAddress')}
@@ -598,7 +598,7 @@ export function BuildingAddressesCard({
                           initialValues={address}
                           externalValues={editDragAddress}
                         />
-                        <div className="flex gap-3 justify-end pt-4 border-t">
+                        <div className="flex gap-2 justify-end pt-2 border-t">
                           <Button variant="outline" onClick={() => { setEditingIndex(null); setEditedAddress(null); setEditDragAddress(null); }} disabled={isSaving}>
                             {t('tabs.general.header.cancel')}
                           </Button>
@@ -630,7 +630,7 @@ export function BuildingAddressesCard({
                             </Button>
                           )}
                         </div>
-                        <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
+                        <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
                           <span>ID: {address.id.slice(0, 8)}...</span>
                           {address.blockSide && <span className="ml-4">{t(`address.blockSides.${address.blockSide}`)}</span>}
                           {address.type && <span className="ml-4">{t(`address.types.${address.type}`)}</span>}

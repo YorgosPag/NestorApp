@@ -49,7 +49,7 @@ export function FilesCard() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <nav className="flex items-center justify-between" role="toolbar" aria-label="File management tools">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <FileText className={iconSizes.md} />
@@ -72,7 +72,7 @@ export function FilesCard() {
           </div>
         </nav>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-2 pt-0">
         {/* 🏢 ADR-054: Using centralized FileUploadZone with drag & drop */}
         <FileUploadZone
           onUpload={handleFileUpload}
@@ -81,11 +81,11 @@ export function FilesCard() {
           enableCompression
         />
 
-        <section className="mt-6 space-y-3" role="region" aria-labelledby="existing-files-heading">
+        <section className="mt-2 space-y-2" role="region" aria-labelledby="existing-files-heading">
           <h4 id="existing-files-heading" className="text-sm font-medium text-foreground">{t('tabs.general.files.existingFiles')}</h4>
 
-          <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Contract.pdf">
-            <div className="flex items-center space-x-3">
+          <article className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Contract.pdf">
+            <div className="flex items-center space-x-2">
               <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.errorSubtle} dark:${colors.text.errorStrong} ${quick.card} flex items-center justify-center`}>
                 <FileText className={`${iconSizes.md} text-red-600`} />
               </div>
@@ -101,8 +101,8 @@ export function FilesCard() {
             </div>
           </article>
 
-          <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Progress Feb 2025.jpg">
-            <div className="flex items-center space-x-3">
+          <article className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Progress Feb 2025.jpg">
+            <div className="flex items-center space-x-2">
               <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.successSubtle} dark:${colors.text.successStrong} ${quick.card} flex items-center justify-center`}>
                  <FileImage className={`${iconSizes.md} text-green-600`} />
               </div>
@@ -119,8 +119,8 @@ export function FilesCard() {
           </article>
         </section>
 
-        <aside className={`mt-4 p-3 ${colors.bg.info} ${quick.info} dark:${getStatusBorder('info')} hidden`} id="upload-progress" role="status" aria-label="Upload progress">
-          <div className="flex items-center space-x-3">
+        <aside className={`mt-2 p-2 ${colors.bg.info} ${quick.info} dark:${getStatusBorder('info')} hidden`} id="upload-progress" role="status" aria-label="Upload progress">
+          <div className="flex items-center space-x-2">
             <div className="flex-shrink-0"><AnimatedSpinner size="medium" /></div>
             <div className="flex-1">
               <p className="text-sm font-medium text-blue-900 dark:text-blue-200">{t('tabs.general.files.uploadInProgress')}</p>
