@@ -486,8 +486,15 @@ Check console for detailed metrics`;
         return;
       }
 
-      // ⌨️ ESC to exit layering mode
+      // ⌨️ ESC to exit layering mode — full cleanup in one press
       if (matchesShortcut(event, 'escape') && activeTool === 'layering') {
+        // 🏢 FIX (2026-02-19): Reset overlayMode + cancel polygon + change tool
+        // Previously only changed activeTool, leaving overlayMode as 'draw'
+        // This caused the user to need 2 Escape presses instead of 1
+        if (overlayMode === 'draw') {
+          setOverlayMode('select');
+          eventBus.emit('overlay:cancel-polygon', undefined as unknown as void);
+        }
         handleToolChange('select');
       }
     };
@@ -498,7 +505,7 @@ Check console for detailed metrics`;
       document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [activeTool, handleToolChange]);
+  }, [activeTool, handleToolChange, overlayMode, setOverlayMode, eventBus]);
 
   // 🚨 FIXED: Initialize canvasTransform only once to prevent infinite loops
   const isInitializedRef = React.useRef(false);
