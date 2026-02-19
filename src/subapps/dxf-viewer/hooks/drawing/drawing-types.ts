@@ -73,6 +73,7 @@ export type DrawingTool =
   | 'circle-3p' | 'circle-chord-sagitta' | 'circle-2p-radius' | 'circle-best-fit'
   | 'polyline' | 'polygon'
   | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle'
+  | 'measure-angle-line-arc' | 'measure-angle-two-arcs' | 'measure-angle-measuregeom' | 'measure-angle-constraint'
   | 'arc-3p' | 'arc-cse' | 'arc-sce';
 
 export interface DrawingState {
