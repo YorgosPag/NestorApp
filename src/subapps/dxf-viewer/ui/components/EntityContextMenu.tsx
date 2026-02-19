@@ -9,11 +9,14 @@
  * - Delete (Del) — always enabled
  * - Cancel (Esc) — close menu
  *
+ * 🏢 PERF (2026-02-19): Imperative handle pattern — parent calls open(x,y)
+ * instead of passing isOpen/position props. Prevents CanvasLayerStack re-render.
+ *
  * @see ADR-161: Entity Join System
  * @see ADR-047: Drawing Tool Keyboard Shortcuts & Context Menu (pattern reference)
  */
 
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,19 +24,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
 import styles from './DrawingContextMenu.module.css';
+import { cn } from '@/lib/utils';
 import { JoinIcon, DeleteIcon, CancelIcon } from '../icons/MenuIcons';
 
 // ===== TYPES =====
 
+/** Imperative handle exposed via ref — parent calls open() to show menu */
+export interface EntityContextMenuHandle {
+  open: (x: number, y: number) => void;
+  close: () => void;
+}
+
 interface EntityContextMenuProps {
-  /** Whether the menu is open */
-  isOpen: boolean;
-  /** Callback when menu open state changes */
-  onOpenChange: (open: boolean) => void;
-  /** Position of the menu (CSS coordinates) */
-  position: { x: number; y: number };
   /** Number of currently selected entities */
   selectedCount: number;
   /** Whether Join is possible for current selection */
@@ -50,44 +53,50 @@ interface EntityContextMenuProps {
 
 // ===== MAIN COMPONENT =====
 
-export default function EntityContextMenu({
-  isOpen,
-  onOpenChange,
-  position,
+const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContextMenuProps>(({
   selectedCount,
   canJoin,
   joinResultLabel,
   onJoin,
   onDelete,
   onCancel,
-}: EntityContextMenuProps) {
+}, ref) => {
   const triggerRef = useRef<HTMLSpanElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Update trigger position when menu opens
-  useEffect(() => {
-    if (isOpen && triggerRef.current) {
-      triggerRef.current.style.left = `${position.x}px`;
-      triggerRef.current.style.top = `${position.y}px`;
-    }
-  }, [isOpen, position]);
+  // 🏢 PERF: Imperative handle — parent calls open(x, y) directly
+  useImperativeHandle(ref, () => ({
+    open: (x: number, y: number) => {
+      if (triggerRef.current) {
+        triggerRef.current.style.left = `${x}px`;
+        triggerRef.current.style.top = `${y}px`;
+      }
+      setIsOpen(true);
+    },
+    close: () => setIsOpen(false),
+  }), []);
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    setIsOpen(open);
+  }, []);
 
   const handleJoin = useCallback(() => {
     onJoin();
-    onOpenChange(false);
-  }, [onJoin, onOpenChange]);
+    setIsOpen(false);
+  }, [onJoin]);
 
   const handleDelete = useCallback(() => {
     onDelete();
-    onOpenChange(false);
-  }, [onDelete, onOpenChange]);
+    setIsOpen(false);
+  }, [onDelete]);
 
   const handleCancel = useCallback(() => {
     onCancel();
-    onOpenChange(false);
-  }, [onCancel, onOpenChange]);
+    setIsOpen(false);
+  }, [onCancel]);
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       {/* Hidden trigger positioned at right-click location */}
       <DropdownMenuTrigger asChild>
         <span
@@ -144,8 +153,13 @@ export default function EntityContextMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+});
 
-// ===== NAMED EXPORT FOR BARREL =====
-export { EntityContextMenu };
-export type { EntityContextMenuProps };
+EntityContextMenuInner.displayName = 'EntityContextMenu';
+
+// Default export for backward compatibility
+export default EntityContextMenuInner;
+
+// ===== NAMED EXPORTS =====
+export { EntityContextMenuInner as EntityContextMenu };
+export type { EntityContextMenuProps, EntityContextMenuHandle };

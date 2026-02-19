@@ -5,6 +5,10 @@
  * 1. DrawingContextMenu — during drawing/measurement operations
  * 2. EntityContextMenu — in select mode with entities selected
  *
+ * 🏢 PERF (2026-02-19): Uses imperative refs instead of useState.
+ * Opening the context menu no longer triggers a re-render of CanvasSection
+ * or CanvasLayerStack. Only the menu component itself re-renders (~94ms saved).
+ *
  * @see ADR-047: DrawingContextMenu
  * @see ADR-053: Drawing Context Menu Handler
  * @see ADR-161: Entity Join System (EntityContextMenu)
@@ -12,19 +16,16 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, type RefObject, type MutableRefObject } from 'react';
+import { useCallback, useEffect, type RefObject, type MutableRefObject } from 'react';
 
 import { isDrawingTool, isMeasurementTool } from '../../systems/tools/ToolStateManager';
 import type { OverlayEditorMode } from '../../overlays/types';
+import type { DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
+import type { EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-interface ContextMenuState {
-  isOpen: boolean;
-  position: { x: number; y: number };
-}
 
 export interface UseCanvasContextMenuParams {
   /** Container element ref for native DOM listener */
@@ -39,19 +40,15 @@ export interface UseCanvasContextMenuParams {
   draftPolygonRef: MutableRefObject<Array<[number, number]>>;
   /** Currently selected DXF entity IDs (for entity context menu) */
   selectedEntityIds?: string[];
+  /** Imperative ref to DrawingContextMenu */
+  drawingMenuRef: RefObject<DrawingContextMenuHandle | null>;
+  /** Imperative ref to EntityContextMenu */
+  entityMenuRef: RefObject<EntityContextMenuHandle | null>;
 }
 
 export interface UseCanvasContextMenuReturn {
-  /** Drawing context menu state (isOpen + position) */
-  drawingContextMenu: ContextMenuState;
-  /** Entity context menu state (isOpen + position) */
-  entityContextMenu: ContextMenuState;
   /** React handler — prevents browser context menu on canvas (fallback) */
   handleDrawingContextMenu: (e: React.MouseEvent) => void;
-  /** Close handler for DrawingContextMenu component */
-  handleDrawingContextMenuClose: (open: boolean) => void;
-  /** Close handler for EntityContextMenu component */
-  handleEntityContextMenuClose: (open: boolean) => void;
 }
 
 // ============================================================================
@@ -65,36 +62,14 @@ export function useCanvasContextMenu({
   hasUnifiedDrawingPointsRef,
   draftPolygonRef,
   selectedEntityIds = [],
+  drawingMenuRef,
+  entityMenuRef,
 }: UseCanvasContextMenuParams): UseCanvasContextMenuReturn {
-
-  const [drawingContextMenu, setDrawingContextMenu] = useState<ContextMenuState>({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-  });
-
-  const [entityContextMenu, setEntityContextMenu] = useState<ContextMenuState>({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-  });
 
   // React handler — ALWAYS prevent browser context menu on canvas
   const handleDrawingContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  }, []);
-
-  // Close handler for DrawingContextMenu component
-  const handleDrawingContextMenuClose = useCallback((open: boolean) => {
-    if (!open) {
-      setDrawingContextMenu(prev => ({ ...prev, isOpen: false }));
-    }
-  }, []);
-
-  // Close handler for EntityContextMenu component
-  const handleEntityContextMenuClose = useCallback((open: boolean) => {
-    if (!open) {
-      setEntityContextMenu(prev => ({ ...prev, isOpen: false }));
-    }
   }, []);
 
   // Native DOM listener — more reliable than React synthetic events on canvas
@@ -114,19 +89,15 @@ export function useCanvasContextMenu({
       const hasOverlayPoints = draftPolygonRef.current.length > 0;
 
       if ((isUnifiedDrawing && hasUnifiedPoints) || (isOverlayDrawing && hasOverlayPoints)) {
-        setDrawingContextMenu({
-          isOpen: true,
-          position: { x: e.clientX, y: e.clientY },
-        });
+        // 🏢 PERF: Imperative call — no setState, no parent re-render
+        drawingMenuRef.current?.open(e.clientX, e.clientY);
         return;
       }
 
       // PRIORITY 2: Entity context menu (select mode with entities selected)
       if (activeTool === 'select' && selectedEntityIds.length > 0) {
-        setEntityContextMenu({
-          isOpen: true,
-          position: { x: e.clientX, y: e.clientY },
-        });
+        // 🏢 PERF: Imperative call — no setState, no parent re-render
+        entityMenuRef.current?.open(e.clientX, e.clientY);
         return;
       }
     };
@@ -136,13 +107,9 @@ export function useCanvasContextMenu({
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef]);
 
   return {
-    drawingContextMenu,
-    entityContextMenu,
     handleDrawingContextMenu,
-    handleDrawingContextMenuClose,
-    handleEntityContextMenuClose,
   };
 }

@@ -29,6 +29,10 @@ import { useSpecialTools } from '../../hooks/tools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useNotifications } from '../../../../providers/NotificationProvider';
+// 🏢 PERF (2026-02-19): Imperative context menus — no parent re-render on open
+import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
+import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
+import type { ToolType } from '../../ui/toolbar/types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
@@ -286,9 +290,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentLevelId: levelManager.currentLevelId,
   });
 
-  const { drawingContextMenu, entityContextMenu, handleDrawingContextMenu, handleDrawingContextMenuClose, handleEntityContextMenuClose } = useCanvasContextMenu({
+  // 🏢 PERF (2026-02-19): Imperative refs for context menus — open() doesn't re-render canvas
+  const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
+  const entityMenuRef = useRef<EntityContextMenuHandle>(null);
+
+  const { handleDrawingContextMenu } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
-    selectedEntityIds,
+    selectedEntityIds, drawingMenuRef, entityMenuRef,
   });
 
   const { handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = useDrawingUIHandlers({
@@ -373,83 +381,108 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === Render ===
   return (
-    <CanvasLayerStack
-      transform={transform}
-      viewport={viewport}
-      activeTool={activeTool}
-      overlayMode={overlayMode}
-      showLayers={showLayers}
-      showDxfCanvas={showDxfCanvas}
-      showLayerCanvas={showLayerCanvas}
-      containerRef={containerRef}
-      dxfCanvasRef={dxfCanvasRef}
-      overlayCanvasRef={overlayCanvasRef}
-      previewCanvasRef={previewCanvasRef}
-      drawingHandlersRef={drawingHandlersRef}
-      entitySelectedOnMouseDownRef={entitySelectedOnMouseDownRef}
-      dxfScene={dxfScene}
-      colorLayers={colorLayers}
-      colorLayersWithDraft={colorLayersWithDraft}
-      settings={{
-        crosshair: crosshairSettings,
-        cursor: cursorCanvasSettings,
-        snap: snapSettings,
-        ruler: rulerSettings,
-        grid: gridSettings,
-        gridMajorInterval,
-        selection: selectionSettings,
-        grip: gripSettings,
-        globalRuler: globalRulerSettings,
-      }}
-      gripState={unified.gripStateForStack}
-      entityState={{
-        selectedEntityIds, setSelectedEntityIds,
-        hoveredEntityId, setHoveredEntityId,
-        hoveredOverlayId, setHoveredOverlayId,
-      }}
-      zoomSystem={zoomSystem}
-      dxfGripInteraction={unified.dxfProjection}
-      universalSelection={universalSelection}
-      currentSnapResult={currentSnapResult}
-      setTransform={setTransform}
-      mouseCss={mouseCss}
-      updateMouseCss={updateMouseCss}
-      updateMouseWorld={updateMouseWorld}
-      containerHandlers={{
-        onMouseMove: handleContainerMouseMove,
-        onMouseDown: handleContainerMouseDown,
-        onMouseUp: handleContainerMouseUp,
-        onMouseEnter: handleContainerMouseEnter,
-        onMouseLeave: handleContainerMouseLeave,
-      }}
-      handleOverlayClick={handleOverlayClick}
-      handleMultiOverlayClick={handleMultiOverlayClick}
-      handleCanvasClick={handleCanvasClick}
-      handleUnifiedMouseMove={unified.handleMouseMove}
-      handleDrawingContextMenu={handleDrawingContextMenu}
-      handleDrawingContextMenuClose={handleDrawingContextMenuClose}
-      handleEntityContextMenuClose={handleEntityContextMenuClose}
-      drawingState={{
-        drawingHandlers,
-        contextMenu: drawingContextMenu,
-        draftPolygon,
-        handleDrawingFinish, handleDrawingClose,
-        handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
-      }}
-      entityContextMenu={entityContextMenu}
-      entityJoin={{
-        canJoin: entityJoinState.canJoin,
-        joinResultLabel: entityJoinState.joinResultLabel,
-        onJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
-        onDelete: () => handleSmartDelete(),
-      }}
-      pdf={{
-        imageUrl: pdfImageUrl,
-        transform: pdfTransform,
-        enabled: pdfEnabled,
-        opacity: pdfOpacity,
-      }}
-      onMouseMove={props.onMouseMove}
-    />
+    <>
+      <CanvasLayerStack
+        transform={transform}
+        viewport={viewport}
+        activeTool={activeTool}
+        overlayMode={overlayMode}
+        showLayers={showLayers}
+        showDxfCanvas={showDxfCanvas}
+        showLayerCanvas={showLayerCanvas}
+        containerRef={containerRef}
+        dxfCanvasRef={dxfCanvasRef}
+        overlayCanvasRef={overlayCanvasRef}
+        previewCanvasRef={previewCanvasRef}
+        drawingHandlersRef={drawingHandlersRef}
+        entitySelectedOnMouseDownRef={entitySelectedOnMouseDownRef}
+        dxfScene={dxfScene}
+        colorLayers={colorLayers}
+        colorLayersWithDraft={colorLayersWithDraft}
+        settings={{
+          crosshair: crosshairSettings,
+          cursor: cursorCanvasSettings,
+          snap: snapSettings,
+          ruler: rulerSettings,
+          grid: gridSettings,
+          gridMajorInterval,
+          selection: selectionSettings,
+          grip: gripSettings,
+          globalRuler: globalRulerSettings,
+        }}
+        gripState={unified.gripStateForStack}
+        entityState={{
+          selectedEntityIds, setSelectedEntityIds,
+          hoveredEntityId, setHoveredEntityId,
+          hoveredOverlayId, setHoveredOverlayId,
+        }}
+        zoomSystem={zoomSystem}
+        dxfGripInteraction={unified.dxfProjection}
+        universalSelection={universalSelection}
+        currentSnapResult={currentSnapResult}
+        setTransform={setTransform}
+        mouseCss={mouseCss}
+        updateMouseCss={updateMouseCss}
+        updateMouseWorld={updateMouseWorld}
+        containerHandlers={{
+          onMouseMove: handleContainerMouseMove,
+          onMouseDown: handleContainerMouseDown,
+          onMouseUp: handleContainerMouseUp,
+          onMouseEnter: handleContainerMouseEnter,
+          onMouseLeave: handleContainerMouseLeave,
+        }}
+        handleOverlayClick={handleOverlayClick}
+        handleMultiOverlayClick={handleMultiOverlayClick}
+        handleCanvasClick={handleCanvasClick}
+        handleUnifiedMouseMove={unified.handleMouseMove}
+        handleDrawingContextMenu={handleDrawingContextMenu}
+        drawingState={{
+          drawingHandlers,
+          draftPolygon,
+          handleDrawingFinish, handleDrawingClose,
+          handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
+        }}
+        entityJoin={{
+          canJoin: entityJoinState.canJoin,
+          joinResultLabel: entityJoinState.joinResultLabel,
+          onJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
+          onDelete: () => handleSmartDelete(),
+        }}
+        pdf={{
+          imageUrl: pdfImageUrl,
+          transform: pdfTransform,
+          enabled: pdfEnabled,
+          opacity: pdfOpacity,
+        }}
+        onMouseMove={props.onMouseMove}
+      />
+
+      {/* 🏢 PERF (2026-02-19): Context menus rendered OUTSIDE CanvasLayerStack.
+          Opening the menu triggers re-render ONLY in the menu component itself,
+          not the entire canvas stack (~94ms saved per right-click). */}
+      <DrawingContextMenu
+        ref={drawingMenuRef}
+        activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
+        pointCount={
+          overlayMode === 'draw'
+            ? draftPolygon.length
+            : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)
+        }
+        onFinish={handleDrawingFinish}
+        onClose={handleDrawingClose}
+        onUndoLastPoint={handleDrawingUndoLastPoint}
+        onCancel={handleDrawingCancel}
+        onFlipArc={handleFlipArc}
+      />
+      <EntityContextMenu
+        ref={entityMenuRef}
+        selectedCount={selectedEntityIds.length}
+        canJoin={entityJoinState.canJoin}
+        joinResultLabel={entityJoinState.joinResultLabel}
+        onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)}
+        onDelete={() => handleSmartDelete()}
+        onCancel={() => entityMenuRef.current?.close()}
+      />
+    </>
   );
 };

@@ -17,8 +17,8 @@ import { PreviewCanvas, type PreviewCanvasHandle } from '../../canvas-v2/preview
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
-import DrawingContextMenu from '../../ui/components/DrawingContextMenu';
-import EntityContextMenu from '../../ui/components/EntityContextMenu';
+// 🏢 PERF (2026-02-19): DrawingContextMenu + EntityContextMenu moved to CanvasSection
+// They now use imperative refs and render outside the canvas stack to avoid re-rendering
 import { PdfBackgroundCanvas } from '../../pdf-background';
 import type { PdfBackgroundTransform } from '../../pdf-background';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
@@ -39,7 +39,7 @@ import type { GridSettings, RulerSettings, SnapSettings, SelectionSettings } fro
 import type { GripSettings } from '../../types/gripSettings';
 import type { RulerSettings as GlobalRulerSettings } from '../../systems/rulers-grid/config';
 import type { SnapResult } from '../../snapping/extended-types';
-import type { ToolType } from '../../ui/toolbar/types';
+// ToolType import removed — context menus moved to CanvasSection (PERF 2026-02-19)
 import type {
   VertexHoverInfo,
   EdgeHoverInfo,
@@ -166,13 +166,11 @@ export interface CanvasLayerStackProps {
   /** ADR-183: Unified grip mouse move handler (replaces handleLayerCanvasMouseMove bridge hack) */
   handleUnifiedMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
   handleDrawingContextMenu: (e: React.MouseEvent) => void;
-  handleDrawingContextMenuClose: (open: boolean) => void;
-  handleEntityContextMenuClose: (open: boolean) => void;
 
   // === Drawing state (grouped) ===
+  // 🏢 PERF (2026-02-19): contextMenu removed — now imperative refs in CanvasSection
   drawingState: {
     drawingHandlers: DrawingHandlersReturn;
-    contextMenu: { isOpen: boolean; position: { x: number; y: number } };
     draftPolygon: Array<[number, number]>;
     handleDrawingFinish: () => void;
     handleDrawingClose: () => void;
@@ -181,8 +179,7 @@ export interface CanvasLayerStackProps {
     handleFlipArc: () => void;
   };
 
-  // === Entity context menu state (ADR-161) ===
-  entityContextMenu: { isOpen: boolean; position: { x: number; y: number } };
+  // === Entity context menu (ADR-161) — menu rendering moved to CanvasSection ===
   entityJoin: {
     canJoin: boolean;
     joinResultLabel?: string;
@@ -216,14 +213,14 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   mouseCss, updateMouseCss, updateMouseWorld,
   containerHandlers,
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
-  handleDrawingContextMenu, handleDrawingContextMenuClose, handleEntityContextMenuClose,
-  drawingState, entityContextMenu, entityJoin, pdf, onMouseMove,
+  handleDrawingContextMenu,
+  drawingState, entityJoin, pdf, onMouseMove,
 }) => {
   // --- Destructure grouped props ---
   const { crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings } = settings;
   const { draggingVertex, draggingEdgeMidpoint, hoveredVertexInfo, hoveredEdgeInfo, draggingOverlayBody, dragPreviewPosition } = gripState;
   const { selectedEntityIds, setSelectedEntityIds, hoveredEntityId, setHoveredEntityId, hoveredOverlayId, setHoveredOverlayId } = entityState;
-  const { drawingHandlers, contextMenu: drawingContextMenu, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = drawingState;
+  const { drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = drawingState;
 
   // --- Computed values ---
   const isGripDragging = draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null;
@@ -500,36 +497,8 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />
 
-          {/* DrawingContextMenu */}
-          <DrawingContextMenu
-            isOpen={drawingContextMenu.isOpen}
-            onOpenChange={handleDrawingContextMenuClose}
-            position={drawingContextMenu.position}
-            activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
-            pointCount={
-              overlayMode === 'draw'
-                ? draftPolygon.length
-                : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)
-            }
-            onFinish={handleDrawingFinish}
-            onClose={handleDrawingClose}
-            onUndoLastPoint={handleDrawingUndoLastPoint}
-            onCancel={handleDrawingCancel}
-            onFlipArc={handleFlipArc}
-          />
-
-          {/* EntityContextMenu (ADR-161: select mode right-click) */}
-          <EntityContextMenu
-            isOpen={entityContextMenu.isOpen}
-            onOpenChange={handleEntityContextMenuClose}
-            position={entityContextMenu.position}
-            selectedCount={selectedEntityIds.length}
-            canJoin={entityJoin.canJoin}
-            joinResultLabel={entityJoin.joinResultLabel}
-            onJoin={entityJoin.onJoin}
-            onDelete={entityJoin.onDelete}
-            onCancel={() => handleEntityContextMenuClose(false)}
-          />
+          {/* 🏢 PERF (2026-02-19): Context menus moved to CanvasSection (imperative refs).
+              Opening the menu no longer re-renders the canvas stack. */}
         </div>
       </div>
     </>
