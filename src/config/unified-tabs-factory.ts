@@ -355,11 +355,20 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'ParkingPhotosTab'
           },
           {
+            id: 'videos',
+            value: 'videos',
+            icon: 'video',
+            description: 'Βίντεο θέσης στάθμευσης',
+            order: 6,
+            enabled: true,
+            component: 'ParkingVideosTab'
+          },
+          {
             id: 'history',
             value: 'history',
             icon: 'history',
             description: 'Ιστορικό χρήσης θέσης στάθμευσης',
-            order: 6,
+            order: 7,
             enabled: true,
             component: 'ParkingHistoryTab'
           }

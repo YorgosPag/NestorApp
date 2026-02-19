@@ -133,6 +133,7 @@ export interface ParkingTabLabelsConfig {
   readonly statistics: string;
   readonly documents: string;
   readonly photos: string;
+  readonly videos: string;
   readonly history: string;
 }
 
@@ -276,6 +277,7 @@ export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
   statistics: "tabs.labels.statistics",
   documents: "tabs.labels.documents",
   photos: "tabs.labels.photos",
+  videos: "tabs.labels.videos",
   history: "tabs.labels.history"
 } as const;
 
