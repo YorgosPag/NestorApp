@@ -1807,6 +1807,11 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-20 | **Three-step parallel workflow**: Step 1 click → select reference (highlight), Step 2 click → choose side (left/right or above/below), Step 3 → prompt dialog for distance. Replaces two-step workflow |
 | 2026-02-20 | **Smoother PromptDialog animation**: 350ms `cubic-bezier(0.16, 1, 0.3, 1)` entrance, soft scale (0.97→1), minimal translateY (-4px→0) |
 | 2026-02-20 | **Phase 1A COMPLETE** — All 14 commands from §3.1 status: X ✅, Z ✅, Parallel ✅, Delete ✅ (remaining: XZ diagonal, Perpendicular, Segments, Distance, Arc segments, Arc distance, Circle intersection, Arc-line intersection, Add point, Delete point) |
+| 2026-02-20 | **Phase 1B START**: Keyboard chord shortcuts (G→X/Z/P/D/V) via chord leader pattern in EnhancedDXFToolbar |
+| 2026-02-20 | **GuideContextMenu**: Right-click on guide → Delete, Lock/Unlock, Edit Label, Toggle Visibility. Imperative handle pattern (no parent re-render) |
+| 2026-02-20 | **GuideStore expanded**: `setGuideLocked()`, `setGuideLabel()` methods for context menu operations |
+| 2026-02-20 | **Guide visibility toggle button**: Eye/EyeOff action button in toolbar, connected to GuideStore singleton via useSyncExternalStore |
+| 2026-02-20 | **Hotkey labels in dropdown**: Guide tools show G→X, G→Z, G→P, G→D in toolbar dropdown menu |
 
 ---
 
@@ -1866,3 +1871,47 @@ User selects target market → auto-validate + suggest corrections.
 - [x] Per-axis color coding (cyan X, tomato Y, purple parallel)
 - [x] i18n translations (EN + EL)
 - [x] Centralized prompt dialog (reusable system)
+
+---
+
+## 13. Phase 1B Implementation Details (2026-02-20)
+
+### 13.1 Files Created (1)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `ui/components/GuideContextMenu.tsx` | ~200 | Right-click context menu for guides: Delete, Lock/Unlock, Edit Label, Toggle Visibility, Cancel |
+
+### 13.2 Files Modified (10)
+
+| File | Changes |
+|------|---------|
+| `config/keyboard-shortcuts.ts` | Added `DXF_GUIDE_CHORD_MAP`, `GUIDE_CHORD_LEADER`, `GUIDE_CHORD_TIMEOUT_MS` for chord shortcuts |
+| `ui/toolbar/EnhancedDXFToolbar.tsx` | Chord leader system: G press starts 350ms window, second key (X/Z/P/D/V) resolves to guide action |
+| `ui/toolbar/toolDefinitions.tsx` | Hotkey labels (G→X, G→Z, G→P, G→D) in dropdown + Eye/EyeOff toggle-guides action button |
+| `ui/toolbar/types.ts` | Added `hotkey?: string` to dropdown options, `guidesVisible?: boolean` to toolbar props |
+| `ui/toolbar/ToolButton.tsx` | Render hotkey badge in dropdown items |
+| `hooks/useDxfViewerState.ts` | Handle `toggle-guides` action via GuideStore singleton |
+| `hooks/state/useGuideState.ts` | Added `getStore()` accessor for direct lock/label operations |
+| `hooks/canvas/useCanvasContextMenu.ts` | PRIORITY 0.5: Guide hit-testing on right-click → GuideContextMenu.open() |
+| `systems/guides/guide-store.ts` | Added `setGuideLocked()`, `setGuideLabel()` mutation methods |
+| `components/dxf-layout/CanvasSection.tsx` | GuideContextMenu ref + handlers (delete, lock, edit label), JSX render |
+| `components/dxf-layout/ToolbarSection.tsx` | `useSyncExternalStore` for guidesVisible → toolbar toggle button |
+| `i18n/locales/{en,el}/dxf-viewer.json` | Added: editLabel, enterLabel, showGuides, hideGuides translations |
+
+### 13.3 Architecture Decisions
+
+1. **Chord shortcut pattern** — G key starts 350ms chord window; if no second key, falls back to grip-edit. Preserves backward compatibility
+2. **Guide context menu follows imperative handle pattern** — `forwardRef` + `useImperativeHandle` for `open(x, y, guide)`, same as EntityContextMenu
+3. **Hit-testing in context menu hook** — PRIORITY 0.5 (before drawing/entity menus), 30px tolerance, world-space distance calculation
+4. **GuideStore direct access for non-undoable ops** — Lock/label changes are immediate (no Command pattern), accessible via `getStore()`
+5. **Guide visibility via singleton subscription** — ToolbarSection subscribes directly to GuideStore for toggle button state, avoiding prop drilling
+
+### 13.4 Features Implemented
+
+- [x] Keyboard chord shortcuts: G→X (vertical), G→Z (horizontal), G→P (parallel), G→D (delete), G→V (visibility)
+- [x] Right-click context menu on guides (Delete, Lock/Unlock, Edit Label, Toggle All, Cancel)
+- [x] Guide visibility toggle button in toolbar (Eye/EyeOff icon)
+- [x] Hotkey labels displayed in guide dropdown menu
+- [x] Guide locking (prevents delete/move)
+- [x] Guide label editing via PromptDialog

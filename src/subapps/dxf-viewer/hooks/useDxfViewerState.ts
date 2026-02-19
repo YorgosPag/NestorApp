@@ -21,6 +21,8 @@ import { useCommandHistory } from '../core/commands';
 import { useToolState, toolStateStore } from '../stores/ToolStateStore';
 // 🏢 ENTERPRISE FIX (2026-02-02): Get reactive transform from CanvasContext
 import { useCanvasContext } from '../contexts/CanvasContext';
+// 📐 ADR-189: Guide visibility toggle via keyboard chord (G → V)
+import { getGlobalGuideStore } from '../systems/guides';
 
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
@@ -183,6 +185,12 @@ export function useDxfViewerState() {
         // Pan tool is handled by tool change, not action
         handleToolChange('pan');
         break;
+      // 📐 ADR-189: Toggle construction guide visibility (chord: G → V)
+      case 'toggle-guides': {
+        const guideStore = getGlobalGuideStore();
+        guideStore.setVisible(!guideStore.isVisible());
+        break;
+      }
       default:
         console.warn('Unknown action:', action);
     }

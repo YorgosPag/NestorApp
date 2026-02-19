@@ -43,6 +43,8 @@ export interface UseGuideStateReturn {
   toggleSnap: () => void;
   /** Clear all guides (not undoable) */
   clearAll: () => void;
+  /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
+  getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
 
 /**
@@ -133,6 +135,8 @@ export function useGuideState(): UseGuideStateReturn {
     store.clear();
   }, [store]);
 
+  const getStore = useCallback(() => store, [store]);
+
   return {
     guides,
     guidesVisible,
@@ -144,5 +148,6 @@ export function useGuideState(): UseGuideStateReturn {
     toggleVisibility,
     toggleSnap,
     clearAll,
+    getStore,
   };
 }

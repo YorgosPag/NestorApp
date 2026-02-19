@@ -11,6 +11,7 @@ import {
   ArrowDownUp, // ADR-189: Guide vertical icon
   ArrowLeftRight, // ADR-189: Guide horizontal icon
   CopyPlus, // ADR-189: Parallel guide icon
+  Eye, EyeOff, // ADR-189: Guide visibility toggle
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -239,13 +240,13 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
         id: 'guide-x' as ToolType,
         icon: ArrowDownUp,
         label: DXF_DRAWING_TOOL_LABELS.GUIDE_X,
-        hotkey: '',
+        hotkey: 'G→X',
         colorClass: DXF_TOOL_GROUP_COLORS.GUIDES,
         dropdownOptions: [
-          { id: 'guide-x' as ToolType, icon: ArrowDownUp, label: DXF_DRAWING_TOOL_LABELS.GUIDE_X },
-          { id: 'guide-z' as ToolType, icon: ArrowLeftRight, label: DXF_DRAWING_TOOL_LABELS.GUIDE_Z },
-          { id: 'guide-parallel' as ToolType, icon: CopyPlus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PARALLEL },
-          { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE },
+          { id: 'guide-x' as ToolType, icon: ArrowDownUp, label: DXF_DRAWING_TOOL_LABELS.GUIDE_X, hotkey: 'G→X' },
+          { id: 'guide-z' as ToolType, icon: ArrowLeftRight, label: DXF_DRAWING_TOOL_LABELS.GUIDE_Z, hotkey: 'G→Z' },
+          { id: 'guide-parallel' as ToolType, icon: CopyPlus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PARALLEL, hotkey: 'G→P' },
+          { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
         ],
       },
     ],
@@ -307,6 +308,7 @@ export const createActionButtons = (props: {
   showGrid: boolean;
   autoCrop: boolean;
   showCursorSettings?: boolean;
+  guidesVisible?: boolean;
   onAction: (action: string, data?: number | string | boolean) => void;
 }): ActionDefinition[] => [
   // ⌨️ ENTERPRISE: All hotkeys from centralized keyboard-shortcuts.ts
@@ -348,6 +350,16 @@ export const createActionButtons = (props: {
     active: props.showGrid,
     colorClass: DXF_ACTION_COLORS.grid,
     onClick: () => props.onAction('grid')
+  },
+  // ADR-189: Toggle construction guide visibility
+  {
+    id: 'toggle-guides',
+    icon: props.guidesVisible ? EyeOff : Eye,
+    label: props.guidesVisible ? 'actionButtons.hideGuides' : 'actionButtons.showGuides',
+    hotkey: 'G→V',
+    active: props.guidesVisible,
+    colorClass: DXF_ACTION_COLORS.grid,
+    onClick: () => props.onAction('toggle-guides')
   },
   {
     id: 'autocrop',

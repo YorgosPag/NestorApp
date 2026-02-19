@@ -1,6 +1,8 @@
 'use client';
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { ToolbarWithCursorCoordinates } from '../../ui/components/ToolbarWithCursorCoordinates';
+// ADR-189: Guide visibility state for toolbar toggle button
+import { getGlobalGuideStore } from '../../systems/guides';
 import { useOverlayStore } from '../../overlays/overlay-store';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
@@ -45,6 +47,14 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - using CursorContext (SSoT)
     ...dxfProps
   } = props;
+
+  // ADR-189: Subscribe to guide visibility for toggle button
+  const guideStore = getGlobalGuideStore();
+  const guidesVisible = useSyncExternalStore(
+    (cb) => guideStore.subscribe(cb),
+    () => guideStore.isVisible(),
+    () => guideStore.isVisible(),
+  );
 
   const overlayStore = useOverlayStore();
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
@@ -122,6 +132,8 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           showCoordinates
           // ADR-176: Mobile sidebar toggle
           onSidebarToggle={onSidebarToggle}
+          // ADR-189: Guide visibility toggle
+          guidesVisible={guidesVisible}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
 

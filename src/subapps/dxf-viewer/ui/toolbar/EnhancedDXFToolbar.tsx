@@ -24,7 +24,7 @@ import { FolderUp } from 'lucide-react';
 // 🎨 ENTERPRISE: Centralized DXF toolbar colors - Single source of truth
 import { DXF_ACTION_COLORS } from '../../config/toolbar-colors';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
-import { matchesShortcut } from '../../config/keyboard-shortcuts';
+import { matchesShortcut, DXF_GUIDE_CHORD_MAP, GUIDE_CHORD_TIMEOUT_MS } from '../../config/keyboard-shortcuts';
 import UploadDxfButton from '../UploadDxfButton';
 import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 // 🏢 ADR-050: Overlay Toolbar Integration
@@ -79,12 +79,28 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
 
   // ADR-176: Mobile sidebar toggle
   onSidebarToggle,
+
+  // ADR-189: Guide visibility
+  guidesVisible = true,
 }) => {
   // 🏢 ENTERPRISE HOOKS: Design system integration
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized background management
   const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
+
+  // 📐 ADR-189: Guide chord state — tracks pending chord leader key
+  const chordRef = React.useRef<{ timer: ReturnType<typeof setTimeout> } | null>(null);
+
+  // Cleanup chord timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (chordRef.current) {
+        clearTimeout(chordRef.current.timer);
+        chordRef.current = null;
+      }
+    };
+  }, []);
 
   // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
   // Uses matchesShortcut() from keyboard-shortcuts.ts for ALL shortcut matching
@@ -94,6 +110,32 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
         return;
+      }
+
+      // ────────────────────────────────────────────────────
+      // 📐 ADR-189: Guide chord resolution (G → X/Z/P/D/V)
+      // If we're inside a chord window, resolve the second key
+      // ────────────────────────────────────────────────────
+      if (chordRef.current) {
+        clearTimeout(chordRef.current.timer);
+        chordRef.current = null;
+
+        const secondKey = e.key.toUpperCase();
+        const chordEntry = DXF_GUIDE_CHORD_MAP[secondKey];
+
+        if (chordEntry) {
+          e.preventDefault();
+          if (chordEntry.toolType) {
+            onToolChange(chordEntry.toolType);
+          } else {
+            onAction(chordEntry.action.replace('action:', ''));
+          }
+          return;
+        }
+
+        // Not a valid chord → execute the deferred grip-edit
+        onToolChange('grip-edit');
+        // Don't return — let the current key be processed below
       }
 
       // ⌨️ CTRL SHORTCUTS - Actions with Ctrl/Cmd modifier
@@ -119,7 +161,23 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       if (matchesShortcut(e, 'measureArea')) { e.preventDefault(); onToolChange('measure-area'); return; }
       if (matchesShortcut(e, 'measureAngle')) { e.preventDefault(); onToolChange('measure-angle'); return; }
       if (matchesShortcut(e, 'zoomWindow')) { e.preventDefault(); onToolChange('zoom-window' as ToolType); return; }
-      if (matchesShortcut(e, 'gripEdit')) { e.preventDefault(); onToolChange('grip-edit'); return; }
+
+      // 📐 ADR-189: G key starts chord window instead of immediately activating grip-edit
+      // Chord: G → X (guide-x), G → Z (guide-z), G → P (parallel), G → D (delete), G → V (visibility)
+      // If no second key within timeout → falls back to grip-edit
+      if (matchesShortcut(e, 'gripEdit')) {
+        e.preventDefault();
+        chordRef.current = {
+          timer: setTimeout(() => {
+            if (chordRef.current) {
+              chordRef.current = null;
+              onToolChange('grip-edit');
+            }
+          }, GUIDE_CHORD_TIMEOUT_MS),
+        };
+        return;
+      }
+
       if (matchesShortcut(e, 'layering')) { e.preventDefault(); onToolChange('layering'); return; }
 
       // ⌨️ ACTION SHORTCUTS - View toggles (no modifier)
@@ -159,6 +217,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     showGrid,
     autoCrop,
     showCursorSettings: showCursorSettings || false,
+    guidesVisible,
     onAction: (action, data) => {
       onAction(action, data as string | number | Record<string, unknown>);
     }

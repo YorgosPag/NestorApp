@@ -161,7 +161,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                   className="w-full justify-start rounded-none first:rounded-t-md last:rounded-b-md"
                 >
                   {OptionIcon && <OptionIcon className={`${iconSizes.sm} mr-2 ${iconColorClass}`} />}
-                  {t(option.label)}
+                  <span className="flex-1 text-left">{t(option.label)}</span>
+                  {option.hotkey && <span className={`ml-2 text-[10px] ${colors.text.muted}`}>{option.hotkey}</span>}
                 </Button>
               );
             })}

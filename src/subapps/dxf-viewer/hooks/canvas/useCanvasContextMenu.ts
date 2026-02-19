@@ -22,6 +22,10 @@ import { isDrawingTool, isMeasurementTool } from '../../systems/tools/ToolStateM
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import type { EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
+// ADR-189: Guide context menu
+import type { GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
+import type { Guide } from '../../systems/guides/guide-types';
+import type { ViewTransform } from '../../rendering/types/Types';
 
 // ============================================================================
 // TYPES
@@ -48,6 +52,13 @@ export interface UseCanvasContextMenuParams {
   rotationPhase?: string;
   /** ADR-188: Callback to show PromptDialog for rotation angle input */
   onRotationAnglePrompt?: () => void;
+  // ADR-189: Guide context menu
+  /** Imperative ref to GuideContextMenu */
+  guideMenuRef?: RefObject<GuideContextMenuHandle | null>;
+  /** Current construction guides (for hit-testing on right-click) */
+  guides?: readonly Guide[];
+  /** Current canvas transform (for world-to-screen conversion during hit-testing) */
+  transformRef?: MutableRefObject<ViewTransform>;
 }
 
 export interface UseCanvasContextMenuReturn {
@@ -70,6 +81,9 @@ export function useCanvasContextMenu({
   entityMenuRef,
   rotationPhase,
   onRotationAnglePrompt,
+  guideMenuRef,
+  guides,
+  transformRef,
 }: UseCanvasContextMenuParams): UseCanvasContextMenuReturn {
 
   // React handler — ALWAYS prevent browser context menu on canvas
@@ -92,6 +106,37 @@ export function useCanvasContextMenu({
       if (activeTool === 'rotate' && rotationPhase === 'awaiting-angle' && onRotationAnglePrompt) {
         onRotationAnglePrompt();
         return;
+      }
+
+      // PRIORITY 0.5: ADR-189 — Guide context menu (right-click near a construction guide)
+      if (guideMenuRef?.current && guides && guides.length > 0 && transformRef?.current && container) {
+        const rect = container.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const { scale, offsetX, offsetY } = transformRef.current;
+        const worldX = (screenX - offsetX) / scale;
+        const worldY = (screenY - offsetY) / scale;
+
+        // Hit-test: find nearest guide within 30px screen tolerance
+        const toleranceWorld = 30 / scale;
+        let nearestGuide: Guide | null = null;
+        let nearestDist = Infinity;
+
+        for (const guide of guides) {
+          if (!guide.visible) continue;
+          const dist = guide.axis === 'X'
+            ? Math.abs(worldX - guide.offset)
+            : Math.abs(worldY - guide.offset);
+          if (dist < toleranceWorld && dist < nearestDist) {
+            nearestDist = dist;
+            nearestGuide = guide;
+          }
+        }
+
+        if (nearestGuide) {
+          guideMenuRef.current.open(e.clientX, e.clientY, nearestGuide);
+          return;
+        }
       }
 
       // PRIORITY 1: Drawing context menu (during drawing with active points)
@@ -119,7 +164,7 @@ export function useCanvasContextMenu({
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, guides, transformRef]);
 
   return {
     handleDrawingContextMenu,

@@ -654,6 +654,33 @@ export const DXF_DEBUG_SHORTCUTS: Record<string, ShortcutDefinition> = {
 } as const;
 
 // ============================================================================
+// 📐 GUIDE SHORTCUTS (ADR-189: Construction Grid & Guide System)
+// Pattern: Chord shortcuts — press G (leader), then second key within 350ms
+// Reference: AutoCAD custom aliases, Vim leader-key pattern
+// ============================================================================
+
+/**
+ * Guide chord shortcuts — not matched via `matchesShortcut()` because they
+ * are two-key sequences (G → X). Instead, the chord resolution logic in
+ * EnhancedDXFToolbar reads this map to resolve the second key.
+ *
+ * Leader key: G (shared with grip-edit — 350ms chord window)
+ */
+export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: ToolType; descriptionKey: string }> = {
+  X: { action: 'tool:guide-x', toolType: 'guide-x' as ToolType, descriptionKey: 'shortcuts.guides.guideX' },
+  Z: { action: 'tool:guide-z', toolType: 'guide-z' as ToolType, descriptionKey: 'shortcuts.guides.guideZ' },
+  P: { action: 'tool:guide-parallel', toolType: 'guide-parallel' as ToolType, descriptionKey: 'shortcuts.guides.guideParallel' },
+  D: { action: 'tool:guide-delete', toolType: 'guide-delete' as ToolType, descriptionKey: 'shortcuts.guides.guideDelete' },
+  V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },
+} as const;
+
+/** Leader key for guide chords */
+export const GUIDE_CHORD_LEADER = 'G' as const;
+
+/** Chord window timeout in ms (time to press second key after leader) */
+export const GUIDE_CHORD_TIMEOUT_MS = 350 as const;
+
+// ============================================================================
 // 🔗 COMBINED SHORTCUTS MAP (All shortcuts in one place)
 // ============================================================================
 

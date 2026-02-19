@@ -60,7 +60,7 @@ export interface ToolDefinition {
   hotkey: string;
   /** 🎨 ENTERPRISE: Color class for icon (from HOVER_TEXT_EFFECTS) */
   colorClass?: string;
-  dropdownOptions?: { id: ToolType; icon: React.ComponentType<React.ComponentProps<'svg'>> | string; label: string; }[];
+  dropdownOptions?: { id: ToolType; icon: React.ComponentType<React.ComponentProps<'svg'>> | string; label: string; hotkey?: string; }[];
 }
 
 export interface ActionDefinition {
@@ -274,4 +274,7 @@ export interface EnhancedDXFToolbarPropsExtended {
 
   /** ADR-176: Mobile sidebar toggle callback */
   onSidebarToggle?: () => void;
+
+  /** ADR-189: Whether construction guides are visible */
+  guidesVisible?: boolean;
 }

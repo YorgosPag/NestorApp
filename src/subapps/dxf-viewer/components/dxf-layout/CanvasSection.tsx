@@ -39,6 +39,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 PERF (2026-02-19): Imperative context menus — no parent re-render on open
 import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
+// ADR-189: Guide context menu
+import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
@@ -282,6 +284,34 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
+  // ADR-189: Guide context menu handlers
+  const handleGuideContextDelete = useCallback((guideId: string) => {
+    guideState.removeGuide(guideId);
+  }, [guideState]);
+
+  const handleGuideContextToggleLock = useCallback((guideId: string) => {
+    const store = guideState.getStore();
+    const guide = store.getGuideById(guideId);
+    if (guide) {
+      store.setGuideLocked(guideId, !guide.locked);
+    }
+  }, [guideState]);
+
+  const handleGuideContextEditLabel = useCallback((guideId: string, currentLabel: string | null) => {
+    showPromptDialog({
+      title: t('promptDialog.editLabel'),
+      label: t('promptDialog.enterLabel'),
+      placeholder: currentLabel ?? '',
+      defaultValue: currentLabel ?? '',
+      inputType: 'text',
+    }).then((result) => {
+      if (result !== null) {
+        const store = guideState.getStore();
+        store.setGuideLabel(guideId, result || null);
+      }
+    });
+  }, [showPromptDialog, t, guideState]);
+
   // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes)
   const highlightedGuideId = useMemo<string | null>(() => {
     if (!mouseWorld || !guideState.guides.length) return null;
@@ -394,6 +424,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🏢 PERF (2026-02-19): Imperative refs for context menus — open() doesn't re-render canvas
   const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
   const entityMenuRef = useRef<EntityContextMenuHandle>(null);
+  const guideMenuRef = useRef<GuideContextMenuHandle>(null);
 
   // ADR-188: Entity Rotation Tool (must be before useCanvasContextMenu + useCanvasClickHandler)
   const rotationTool = useRotationTool({
@@ -432,6 +463,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     selectedEntityIds, drawingMenuRef, entityMenuRef,
     rotationPhase: rotationTool.phase,
     onRotationAnglePrompt: handleRotationAnglePrompt,
+    // ADR-189: Guide context menu support
+    guideMenuRef,
+    guides: guideState.guides,
+    transformRef,
   });
 
   const { handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = useDrawingUIHandlers({
@@ -665,6 +700,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)}
         onDelete={() => handleSmartDelete()}
         onCancel={() => entityMenuRef.current?.close()}
+      />
+      <GuideContextMenu
+        ref={guideMenuRef}
+        onDelete={handleGuideContextDelete}
+        onToggleLock={handleGuideContextToggleLock}
+        onEditLabel={handleGuideContextEditLabel}
+        onToggleVisibility={guideState.toggleVisibility}
+        guidesVisible={guideState.guidesVisible}
+        onCancel={() => guideMenuRef.current?.close()}
       />
 
       {/* ADR-189: Centralized prompt dialog (parallel guide distance, future tools) */}

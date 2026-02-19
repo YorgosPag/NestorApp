@@ -1447,7 +1447,9 @@
     "selectReference": "Κάντε κλικ κοντά σε οδηγό για επιλογή αναφοράς",
     "rotationAngle": "Γωνία Περιστροφής",
     "enterAngle": "Εισαγάγετε γωνία σε μοίρες",
-    "anglePlaceholder": "π.χ. 45"
+    "anglePlaceholder": "π.χ. 45",
+    "editLabel": "Επεξεργασία Ετικέτας Οδηγού",
+    "enterLabel": "Ετικέτα για αυτόν τον οδηγό"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",
@@ -1469,7 +1471,9 @@
     "showGrid": "Εμφάνιση Πλέγματος",
     "hideGrid": "Απόκρυψη Πλέγματος",
     "autoCropOn": "Auto-Crop ΟΝ",
-    "autoCropOff": "Auto-Crop OFF"
+    "autoCropOff": "Auto-Crop OFF",
+    "showGuides": "Εμφάνιση Οδηγών",
+    "hideGuides": "Απόκρυψη Οδηγών"
   },
   "textTemplates": {
     "normalText": {

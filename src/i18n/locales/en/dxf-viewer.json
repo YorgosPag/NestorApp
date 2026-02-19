@@ -1453,7 +1453,9 @@
     "selectReference": "Click near a guide to select as reference",
     "rotationAngle": "Rotation Angle",
     "enterAngle": "Enter angle in degrees",
-    "anglePlaceholder": "e.g. 45"
+    "anglePlaceholder": "e.g. 45",
+    "editLabel": "Edit Guide Label",
+    "enterLabel": "Label for this guide"
   },
   "entityJoin": {
     "menuTitle": "Join",
@@ -1475,7 +1477,9 @@
     "showGrid": "Show Grid",
     "hideGrid": "Hide Grid",
     "autoCropOn": "Auto-Crop ON",
-    "autoCropOff": "Auto-Crop OFF"
+    "autoCropOff": "Auto-Crop OFF",
+    "showGuides": "Show Guides",
+    "hideGuides": "Hide Guides"
   },
   "textTemplates": {
     "normalText": {
