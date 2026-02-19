@@ -1804,6 +1804,8 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-20 | Two-step parallel guide workflow: Step 1 click → select reference (highlight), Step 2 → prompt dialog for distance |
 | 2026-02-20 | Intersection ✕ markers at all X/Y guide crossing points |
 | 2026-02-20 | **Centralized PromptDialog system** (systems/prompt-dialog/): store + hook + component. Reusable across all DXF viewer tools for numeric/text input |
+| 2026-02-20 | **Three-step parallel workflow**: Step 1 click → select reference (highlight), Step 2 click → choose side (left/right or above/below), Step 3 → prompt dialog for distance. Replaces two-step workflow |
+| 2026-02-20 | **Smoother PromptDialog animation**: 350ms `cubic-bezier(0.16, 1, 0.3, 1)` entrance, soft scale (0.97→1), minimal translateY (-4px→0) |
 | 2026-02-20 | **Phase 1A COMPLETE** — All 14 commands from §3.1 status: X ✅, Z ✅, Parallel ✅, Delete ✅ (remaining: XZ diagonal, Perpendicular, Segments, Distance, Arc segments, Arc distance, Circle intersection, Arc-line intersection, Add point, Delete point) |
 
 ---
@@ -1846,13 +1848,14 @@ User selects target market → auto-validate + suggest corrections.
 2. **Rendering at step 2.5** — between grid (step 2) and rulers (step 3) in DxfCanvas RAF loop
 3. **Immutable state for React** — `useSyncExternalStore` requires new array references; all mutations use spread/filter/map
 4. **Centralized PromptDialog** — Promise-based `prompt()` callable from any hook; single overlay rendered in CanvasSection
-5. **Parallel guide via dialog** — Step 1: click to select reference (highlight), Step 2: typed distance in prompt dialog (not click position)
+5. **Three-step parallel workflow** — Step 1: click to select reference guide (highlight), Step 2: click on desired side (determines ±sign), Step 3: typed distance in prompt dialog (sign × distance = final offset)
+6. **PromptDialog soft entrance** — 350ms `cubic-bezier(0.16, 1, 0.3, 1)` animation, state machine `closed→entering→open`, createPortal to document.body at z-10001
 
 ### 12.4 Features Implemented
 
 - [x] Vertical guide (X) — 1 click placement
 - [x] Horizontal guide (Z/Y) — 1 click placement
-- [x] Parallel guide — 1 click reference + distance input dialog
+- [x] Parallel guide — 3-step: click reference → click side → distance dialog
 - [x] Delete guide — 1 click (30px tolerance)
 - [x] Ghost guide preview during placement
 - [x] Guide hover highlight (gold, 2px, in delete/parallel modes)
