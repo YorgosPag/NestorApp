@@ -191,7 +191,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentStatus, currentKind, activeTool, overlayMode,
   });
 
-  const { circleTTT, linePerpendicular, lineParallel } = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement } = useSpecialTools({ activeTool, levelManager });
   const { currentSnapResult } = useSnapContext();
 
   // === Cursor + touch gestures (ADR-176) ===
@@ -235,6 +235,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
+
+  // ADR-189: Ghost guide preview (follows cursor when guide tool is active)
+  const ghostGuide = useMemo(() => {
+    if (!mouseWorld) return null;
+    if (activeTool === 'guide-x') return { axis: 'X' as const, offset: mouseWorld.x };
+    if (activeTool === 'guide-z') return { axis: 'Y' as const, offset: mouseWorld.y };
+    return null;
+  }, [activeTool, mouseWorld]);
 
   // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -335,7 +343,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform,
     activeTool, overlayMode,
-    circleTTT, linePerpendicular, lineParallel,
+    circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
     dxfGripInteraction: unified.dxfProjection,
     // ADR-188: Rotation tool click routing
     rotationIsActive: rotationTool.isActive,
@@ -352,6 +360,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     draggingOverlayBody: unified.draggingOverlayBody,
     setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
+    // ADR-189: Guide click handlers
+    guideAddGuide: guideState.addGuide,
+    guideRemoveGuide: guideState.removeGuide,
+    guideAddParallelGuide: guideState.addParallelGuide,
+    guides: guideState.guides,
   });
 
   const { handleSmartDelete } = useSmartDelete({
@@ -505,6 +518,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         // ADR-189: Construction guides
         guides={guideState.guides}
         guidesVisible={guideState.guidesVisible}
+        ghostGuide={ghostGuide}
       />
 
       {/* 🏢 PERF (2026-02-19): Context menus rendered OUTSIDE CanvasLayerStack.

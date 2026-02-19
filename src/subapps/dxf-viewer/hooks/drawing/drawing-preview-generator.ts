@@ -95,8 +95,7 @@ export function generatePreviewEntity(
       tool === 'measure-distance-continuous' ||
       tool === 'measure-area' ||
       tool === 'measure-angle' ||
-      tool === 'measure-angle-line-arc' || tool === 'measure-angle-two-arcs' ||
-      tool === 'measure-angle-measuregeom' || tool === 'measure-angle-constraint';
+      tool === 'measure-angle-measuregeom';
 
     // All tools that need a starting dot
     const needsStartDot =
@@ -105,8 +104,7 @@ export function generatePreviewEntity(
       tool === 'circle-2p-diameter' || tool === 'circle-3p' || tool === 'circle-chord-sagitta' ||
       tool === 'circle-2p-radius' || tool === 'polygon' || tool === 'polyline' ||
       tool === 'measure-area' || tool === 'measure-angle' ||
-      tool === 'measure-angle-line-arc' || tool === 'measure-angle-two-arcs' ||
-      tool === 'measure-angle-measuregeom' || tool === 'measure-angle-constraint' ||
+      tool === 'measure-angle-measuregeom' ||
       tool === 'arc-3p' || tool === 'arc-cse' || tool === 'arc-sce';
 
     if (needsStartDot) {
@@ -327,8 +325,7 @@ export function applyPreviewStyling(
   // Only apply styling for recognized drawing tools
   const isStylableTool =
     tool === 'polygon' || tool === 'polyline' || tool === 'measure-angle' ||
-    tool === 'measure-angle-line-arc' || tool === 'measure-angle-two-arcs' ||
-    tool === 'measure-angle-measuregeom' || tool === 'measure-angle-constraint' ||
+    tool === 'measure-angle-measuregeom' ||
     tool === 'measure-area' || tool === 'line' || tool === 'measure-distance' ||
     tool === 'measure-distance-continuous' || tool === 'rectangle' ||
     tool === 'circle' || tool === 'circle-diameter' || tool === 'circle-2p-diameter' ||
@@ -402,8 +399,7 @@ export function applyPreviewStyling(
   // Add measurement flag for measurement tools
   const isMeasurementTool =
     tool === 'measure-distance' || tool === 'measure-area' || tool === 'measure-angle' ||
-    tool === 'measure-angle-line-arc' || tool === 'measure-angle-two-arcs' ||
-    tool === 'measure-angle-measuregeom' || tool === 'measure-angle-constraint';
+    tool === 'measure-angle-measuregeom';
   if (isMeasurementTool) {
     if (entity.type === 'polyline') {
       (entity as ExtendedPolylineEntity).measurement = true;
@@ -476,9 +472,7 @@ export function createPartialPreview(
 
   // ── Pattern B: measure-angle variants (measurement dot at 1pt, measurement polyline at 2pt) ─
   // ADR-188: All angle measurement tools share the same 3-point partial preview pattern
-  if (tool === 'measure-angle' || tool === 'measure-angle-line-arc' ||
-      tool === 'measure-angle-two-arcs' || tool === 'measure-angle-measuregeom' ||
-      tool === 'measure-angle-constraint') {
+  if (tool === 'measure-angle' || tool === 'measure-angle-measuregeom') {
     if (points.length === 1) {
       return {
         id: 'preview_partial',

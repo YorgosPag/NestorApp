@@ -57,7 +57,7 @@ import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from
 /** Measurement tools that create overlay entities */
 const MEASUREMENT_TOOLS: ReadonlySet<DrawingTool> = new Set([
   'measure-distance', 'measure-distance-continuous', 'measure-angle', 'measure-area',
-  'measure-angle-line-arc', 'measure-angle-two-arcs', 'measure-angle-measuregeom', 'measure-angle-constraint',
+  'measure-angle-measuregeom',
 ]);
 
 /** Drawing tools that create persistent entities */
@@ -333,8 +333,7 @@ export function useUnifiedDrawing() {
     // Polyline, polygon, measure-angle variants, measure-area: minimum 2 points
     const isFinishable =
       currentTool === 'polyline' || currentTool === 'measure-angle' ||
-      currentTool === 'measure-angle-line-arc' || currentTool === 'measure-angle-two-arcs' ||
-      currentTool === 'measure-angle-measuregeom' || currentTool === 'measure-angle-constraint' ||
+      currentTool === 'measure-angle-measuregeom' ||
       currentTool === 'polygon' || currentTool === 'measure-area';
 
     if (isFinishable && cleanedPoints.length >= 2) {

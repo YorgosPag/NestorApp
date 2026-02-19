@@ -20,6 +20,8 @@ import { useEffect } from 'react';
 import { useCircleTTT } from '../drawing/useCircleTTT';
 import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
+import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
+import type { AngleMeasurementEntity } from '../../types/entities';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -48,6 +50,8 @@ export interface UseSpecialToolsReturn {
   linePerpendicular: ReturnType<typeof useLinePerpendicular>;
   /** Line Parallel hook return */
   lineParallel: ReturnType<typeof useLineParallel>;
+  /** Angle entity measurement hook return */
+  angleEntityMeasurement: ReturnType<typeof useAngleEntityMeasurement>;
 }
 
 // ============================================================================
@@ -181,6 +185,40 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   }, [activeTool, activateLineParallel, deactivateLineParallel]);
 
   // ============================================================================
+  // ANGLE ENTITY MEASUREMENT TOOL (constraint, line-arc, two-arcs)
+  // ============================================================================
+
+  const angleEntityMeasurement = useAngleEntityMeasurement({
+    onMeasurementCreated: (measurementEntity: AngleMeasurementEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+
+      const updatedScene = {
+        ...scene,
+        entities: [...(scene.entities || []), measurementEntity]
+      };
+      levelManager.setLevelScene(levelId, updatedScene);
+      console.debug('📐 [AngleEntityMeasurement] Angle added to scene:', measurementEntity.id);
+    }
+  });
+
+  // Auto-activate/deactivate based on activeTool
+  const ANGLE_ENTITY_TOOLS: ReadonlySet<string> = new Set([
+    'measure-angle-constraint', 'measure-angle-line-arc', 'measure-angle-two-arcs'
+  ]);
+  const { activate: activateAngle, deactivate: deactivateAngle } = angleEntityMeasurement;
+  useEffect(() => {
+    if (ANGLE_ENTITY_TOOLS.has(activeTool)) {
+      activateAngle(activeTool as AngleEntityVariant);
+    } else {
+      deactivateAngle();
+    }
+  }, [activeTool, activateAngle, deactivateAngle]);
+
+  // ============================================================================
   // RETURN
   // ============================================================================
 
@@ -188,6 +226,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     circleTTT,
     linePerpendicular,
     lineParallel,
+    angleEntityMeasurement,
   };
 }
 

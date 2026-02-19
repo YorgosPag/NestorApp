@@ -271,12 +271,12 @@
       "shortcuts": "ESC=Cancel"
     },
     "measure-angle-constraint": {
-      "name": "Parametric Angle",
-      "description": "Parametric angle constraint",
+      "name": "Angle Constraint",
+      "description": "Angle between two lines",
       "steps": [
-        "Select 1st entity",
-        "Select 2nd entity",
-        "Enter angle value"
+        "Select 1st line",
+        "Select 2nd line",
+        "Display angle"
       ],
       "shortcuts": "ESC=Cancel"
     },

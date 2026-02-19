@@ -254,10 +254,7 @@ export function createEntityFromTool(
       }
       break;
     case 'measure-angle':
-    case 'measure-angle-line-arc':
-    case 'measure-angle-two-arcs':
     case 'measure-angle-measuregeom':
-    case 'measure-angle-constraint':
       if (points.length >= 2) {
         if (points.length === 2) {
           const polyline = {
@@ -429,10 +426,7 @@ export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean
     case 'circle-2p-diameter':
       return pointCount >= 2;
     case 'measure-angle':
-    case 'measure-angle-line-arc':
-    case 'measure-angle-two-arcs':
     case 'measure-angle-measuregeom':
-    case 'measure-angle-constraint':
     case 'arc-3p':
     case 'arc-cse':
     case 'arc-sce':
