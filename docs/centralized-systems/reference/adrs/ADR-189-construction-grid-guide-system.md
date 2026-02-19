@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | DRAFT — Συλλογή απαιτήσεων ✅ + Implementation Design ✅. Έτοιμο για phased implementation. |
+| **Status** | DRAFT — Συλλογή απαιτήσεων ✅ + Implementation Design ✅ + Industry Research & AI Readiness ✅ (93 features, 20 systems). Έτοιμο για phased implementation. |
 | **Date** | 2026-02-19 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -660,6 +660,66 @@
     └────────────┘    └─────────────┘    └──────────────┘
 ```
 
+### 7.5 Extended Centralized Systems — AI/3D/Cloud (C14-C20)
+
+> Βάσει industry research (Autodesk, Bentley, Trimble, Graphisoft) και τάσεων ConTech.
+> Επεκτείνουν τα C1-C13 για AI, 3D rendering, collaboration, και plugin extensibility.
+
+| # | Σύστημα | Ωφελεί | Σημείωση |
+|---|---------|--------|----------|
+| **C14** | **AI Integration Layer** | Guides, Entities, Layouts | Hooks για ML models (TensorFlow.js, cloud APIs). Headless API για AI agents. |
+| **C15** | **3D Rendering Pipeline** | Guides, DXF, Hatches | Μετάβαση 2D→3D rendering. WebGL/Three.js abstraction. |
+| **C16** | **Collaboration Engine** | Ολα τα shared features | Real-time co-editing via WebSockets. Conflict resolution (CRDT). |
+| **C17** | **Simulation Interface** | Guides, Energy/Materials | API σε external sim tools (EnergyPlus, structural analysis). |
+| **C18** | **AR/VR Exporter** | Guides, Models | Export σε Unity/UE4 compatible formats. Spatial anchors. |
+| **C19** | **Data Validation Engine** | Grids, Constraints | ML-based checks + building code validation. |
+| **C20** | **Modular Plugin System** | Όλα | Plugin API για custom extensions τρίτων. |
+
+**Updated Centralization Diagram:**
+
+```
+                    ┌─────────────────────────────────┐
+                    │   ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ΣΥΣΤΗΜΑΤΑ     │
+                    │      C1-C13 + C14-C20            │
+                    └──────────┬──────────────────────┘
+                               │
+       ┌───────────────────────┼────────────────────────┐
+       │                       │                         │
+ ┌─────▼──────┐    ┌──────────▼──────────┐    ┌────────▼────────┐
+ │  Rendering │    │    Interaction      │    │     Data        │
+ │  Engine    │    │    Engine           │    │     Engine      │
+ ├────────────┤    ├─────────────────────┤    ├─────────────────┤
+ │ C1 Render  │    │ C3 State Machine   │    │ C7 Undo/Redo   │
+ │ C4 Layers  │    │ C5 Shortcuts       │    │ C8 Snap Ext.   │
+ │ C15 3D     │    │ C6 Context Menu    │    │ C9 Import/Exp  │
+ │ Pipeline   │    │ C2 Eyedropper      │    │ C11 Constraints│
+ │            │    │ C12 Multi-sel.     │    │ C19 Validation │
+ └─────┬──────┘    └──────────┬──────────┘    └────────┬────────┘
+       │                      │                         │
+       └──────────────────────┼─────────────────────────┘
+                              │
+       ┌──────────────────────┼─────────────────────────┐
+       │                      │                          │
+ ┌─────▼──────┐    ┌─────────▼─────────┐    ┌──────────▼──────┐
+ │   NEW      │    │   CROSS-CUTTING   │    │   ECOSYSTEM     │
+ │   LAYER    │    │   SERVICES        │    │   SERVICES      │
+ ├────────────┤    ├───────────────────┤    ├─────────────────┤
+ │ C14 AI     │    │ C16 Collab.      │    │ C18 AR/VR Exp. │
+ │ Integration│    │ C17 Simulation   │    │ C20 Plugin Sys. │
+ │ Layer      │    │ C13 Auto-Dim.    │    │                 │
+ └─────┬──────┘    └────────┬──────────┘    └────────┬────────┘
+       │                    │                         │
+       └────────────────────┼─────────────────────────┘
+                            │
+       ┌────────────────────┼─────────────────────────┐
+       │                    │                          │
+ ┌─────▼──────┐    ┌───────▼──────┐    ┌──────────────▼─┐
+ │  GUIDES    │    │  DXF         │    │  COLOR         │
+ │  SYSTEM    │    │  ENTITIES    │    │  LAYERS        │
+ │  (ADR-189) │    │  (existing)  │    │  (existing)    │
+ └────────────┘    └──────────────┘    └────────────────┘
+```
+
 ### 4.13 UI: Floating Panel με Tabs (Γιώργος ✅)
 
 > Με 55+ features, χρειάζεται σωστή οργάνωση UI χωρίς clutter.
@@ -775,6 +835,116 @@
 | MEP | Αποστάσεις σωληνώσεων |
 
 **→ Θα δημιουργηθεί ξεχωριστό ADR για Auto-Dimensioning System**
+
+### 4.18 Extended Enhancements — Industry Research & AI Readiness (B56-B93)
+
+> Βασισμένο σε έρευνα αγοράς CAD/BIM (Autodesk, Trimble, Bentley, Graphisoft, McNeel, Dassault)
+> και τάσεις κατασκευαστικών εταιρειών (Skanska, Bechtel, AECOM, Vinci, Bouygues).
+> Στόχος: **Future-proof & AI-ready** — η υποδομή πρέπει να τις υποστηρίζει από τον σχεδιασμό.
+
+#### 4.18.1 AI & Machine Learning (Υψηλή Προτεραιότητα)
+
+API hooks για ML models (TensorFlow.js ή cloud APIs). Headless API ανεξάρτητο UI.
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B56** | AI Auto-Grid Generation | Αυτόματη δημιουργία πλέγματος βάσει ανάλυσης DXF (detect walls → suggest spacing). Input: "Optimize for concrete slab". | Autodesk Dreamcatcher, Grasshopper |
+| **B57** | Predictive Snap Suggestions | ML προβλέπει επόμενα snap points βάσει ιστορικού χρήστη (π.χ. "συχνά 4m spacing"). | Revit Dynamo AI extensions |
+| **B58** | Anomaly Detection | Scan grids για errors (uneven spacing, clashes) — προτείνει fixes. | Tekla AI clash detection |
+| **B59** | Generative Variants | Πολλαπλά grid layouts (3-5 variants) βάσει constraints (loads, terrain, cost). | Bentley Generative Components |
+| **B60** | Natural Language Input | "Φτιάξε κάνναβο 5x5μ για κτίριο 20x30, αξόνες Α-Δ / 1-5" → auto-generate. | NLP/LLM integration |
+| **B61** | Learning from User Edits | ML μαθαίνει από manual adjustments → αυτόματα update global presets. | ArchiCAD ML pilots |
+
+**Υποδομή ΤΩΡΑ**: Headless `createGrid(config)` API ανεξάρτητο UI. Visual State Machine (C3) → "Ghost/AI-suggested" state.
+
+#### 4.18.2 3D/4D & VR/AR Επέκταση (Μεσαία Προτεραιότητα)
+
+Επέκταση από B28-B30/B46 σε πολυδιάστατα (Revit levels + grids pattern).
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B62** | 3D Grid Volumes | Grids σε 3D (XY + Z planes) — volumetric snaps για elevations. | Revit 3D datum grids |
+| **B63** | 4D Sequencing | Time-based grids (phase 1: foundation; phase 2: upper levels). | Tekla 4D BIM |
+| **B64** | VR Preview Mode | Export grids σε VR (Oculus/HTC) για walkthrough — onsite alignment. | Skanska VR safety, BIMx |
+| **B65** | AR Overlay | Mobile app: overlay grids on camera feed (HoloLens-style) για εργοτάξιο. | Autodesk AR tools, Bechtel onsite |
+| **B66** | Point Cloud Integration | Import scans → auto-align grids to real terrain/buildings. | Trimble RealWorks |
+
+**Υποδομή ΤΩΡΑ**: `{x, y, z?}` coordinates. `plane: 'xy' | 'xz' | 'yz'` στο Data Model.
+
+#### 4.18.3 Collaboration & Cloud (Υψηλή Προτεραιότητα)
+
+Σύγχρονες κατασκευές απαιτούν real-time sharing (BIM 360 pattern).
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B67** | Real-Time Co-Editing | Multi-user: βλέπεις τους οδηγούς άλλων live, conflict resolution. | Bentley iTwin |
+| **B68** | Version Control | Git-like για grids: branches, merges, history. | Autodesk BIM 360 |
+| **B69** | Cloud Sync | Auto-save grids σε cloud — access από mobile/desktop. | Vectorworks Cloud |
+| **B70** | Commenting on Guides | Σημειώσεις/tags σε οδηγούς (π.χ. "Ελέγξτε spacing εδώ") — shareable. | Revit worksharing |
+| **B71** | Blockchain Audit | Immutable logs για edits — legal/compliance σε μεγάλα projects. | AECOM digital twins |
+
+#### 4.18.4 Sustainability & Optimization (Μεσαία Προτεραιότητα)
+
+Green design focus (Skanska, Vinci sustainability programs).
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B72** | Eco-Grid Presets | Grids optimized για υλικά (ελάχιστο ατσάλι μέσω spacing algo). | Bentley sustainability tools |
+| **B73** | Energy Simulation Hooks | Σύνδεση με sim tools (EnergyPlus) — adjust grids για solar/ventilation. | ArchiCAD EcoDesigner |
+| **B74** | Material Waste Calculator | Εκτίμηση σπατάλης υλικών βάσει grid spacing — πρόταση βελτιώσεων. | Trimble Tekla |
+| **B75** | Carbon Footprint Estimator | Υπολογισμός CO₂ από grid design — AI optimize για χαμηλές εκπομπές. | Autodesk Insight |
+
+#### 4.18.5 Advanced Geometry & Parametrics (Υψηλή Προτεραιότητα)
+
+Επέκταση B34/B46 σε πιο σύνθετες γεωμετρίες.
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B76** | Non-Linear Grids | Curved/organic grids (Bezier, NURBS) για freeform architecture. | Rhino advanced curves |
+| **B77** | Adaptive Spacing | Dynamic spacing που αλλάζει βάσει φορτίων (πυκνότερο κοντά σε στηρίξεις). | SolidWorks parametrics |
+| **B78** | Constraint Solver | Επίλυση εξισώσεων (π.χ. "total span=20m, n=5 → auto-space 4m"). | Grasshopper solvers |
+| **B79** | GIS Integration | Import geospatial data → grids ευθυγραμμισμένα με τοπογραφία. | MicroStation GIS |
+| **B80** | Fractal Subdivision | Recursive snaps (υποδιαίρεση μέσων σημείων αναδρομικά). | Advanced math, Rhino |
+
+**Υποδομή ΤΩΡΑ**: Constraint Engine (C11) hooks. Batch generation API χωρίς performance penalty (Spatial Indexing).
+
+#### 4.18.6 UI/UX & Accessibility (Μεσαία Προτεραιότητα)
+
+Βελτιώσεις πέρα από B13/B22/B50 — inclusivity & accessibility.
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B81** | Voice Commands | "Add vertical guide at 5m" — hands-free λειτουργία. | Autodesk voice pilots |
+| **B82** | Accessibility Mode | High-contrast grids, screen reader support για labels. | WCAG σε CAD (Autodesk) |
+| **B83** | Tutorial Overlays | Guided tours για νέους χρήστες ("Click here for parallel"). | SketchUp tutorials |
+| **B84** | Customizable Toolbar | Drag-drop εργαλείων στο panel — user-defined layouts. | Vectorworks |
+| **B85** | Mobile Optimization | Touch gestures για guides σε tablets (pinch-zoom snaps). | ArchiCAD mobile |
+
+#### 4.18.7 Data & Integration Extensions (Χαμηλή Προτεραιότητα)
+
+Επέκταση C9/C11 για ecosystem ανοιχτό σε τρίτους.
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B86** | API for Extensions | Open API: 3rd-party plugins (π.χ. custom AI grids). | Revit API |
+| **B87** | IoT Sensor Link | Real-time: guides update από site sensors (π.χ. level changes). | Bechtel IoT |
+| **B88** | IFC Export | Grids ως IFC elements για BIM interoperability. | Tekla IFC |
+| **B89** | Analytics Dashboard | Stats: grid complexity, edit history — project management. | BIM 360 analytics |
+| **B90** | Scripting Language | Built-in (Lua/Python) για custom guide scripts. | MicroStation VBA |
+
+#### 4.18.8 Security & Compliance (Υψηλή Προτεραιότητα)
+
+Για large-scale projects με πολλούς συνεργάτες.
+
+| # | Βελτίωση | Περιγραφή | Έμπνευση |
+|---|----------|-----------|----------|
+| **B91** | Role-Based Access | Admins: edit grids — Viewers: μόνο view. | Autodesk Vault |
+| **B92** | Encryption for Grids | Encrypted data για sensitive projects (infrastructure). | Turner Construction security |
+| **B93** | Compliance Checkers | Auto-validate vs building codes (spacing min/max). | ArchiCAD code checking |
+
+> **Σύνολο**: B56-B93 = **38 νέα features** σε 8 κατηγορίες.
+> **Συνολικά features ADR-189**: B1-B93 = **93 features**.
+> **Στρατηγική**: MVP πρώτα (core B1-B55), μετά incremental integration B56-B93.
 
 ---
 
@@ -1141,6 +1311,176 @@ type GuideStyleRef = { groupId?: string; override?: Partial<GuideStyle> };
 
 ---
 
+## 10. Future-Proofing & AI Readiness (Βλέποντας στο Μέλλον)
+
+> Στρατηγικές προβλέψεις βάσει industry research (Autodesk, Trimble, Bentley, Graphisoft, McNeel).
+> Αυτές οι λειτουργίες μπορεί να υλοποιηθούν σε Phase 3+, αλλά η **υποδομή** (Data Model & Rendering & API)
+> πρέπει να τις υποστηρίζει **από τον σχεδιασμό**.
+
+### 10.1 Παραμετρική Σύνδεση (Parametric Entity Binding — "Μαγνητικός Κάνναβος")
+
+Η μετάβαση από CAD σε BIM απαιτεί ο κάνναβος να μην είναι απλώς οπτικός οδηγός,
+αλλά **μαγνητικός σκελετός** ελέγχου γεωμετρίας.
+
+| Concept | Περιγραφή | Υποδομή που χρειάζεται ΤΩΡΑ |
+|---------|-----------|------------------------------|
+| **Magnetic Guides** | Entity (κολόνα, τοίχος) "κουμπώνει" σε οδηγό. Drag οδηγού → entity ακολουθεί αυτόματα. | Guide Data Model: πεδίο `attachedEntityIds: string[]` στο `GuideLine`. |
+| **Grid Auto-Heal** | Διαγραφή ενδιάμεσου άξονα → αυτόματη ανακατανομή αποστάσεων γειτονικών (αν υπάρχει constraint ισαπόστασης). | Constraint Engine (C11) hooks. |
+| **Bidirectional Binding** | Μετακίνηση entity → ο οδηγός "ακολουθεί" (weak binding mode). | Event system: `onEntityMoved → updateGuidePosition`. |
+
+**Γιατί είναι κρίσιμο**: Αυτό είναι το **#1 differentiator** μεταξύ CAD και BIM.
+Χωρίς parametric binding, ο κάνναβος παραμένει "static reference lines".
+Με parametric binding, γίνεται **"intelligent structural skeleton"**.
+
+### 10.2 AI & Generative Design (Παραγωγικός Σχεδιασμός)
+
+| Concept | Περιγραφή | Υποδομή ΤΩΡΑ |
+|---------|-----------|--------------|
+| **AI Prompt to Grid** | Text input: "Δημιούργησε δομικό κάνναβο 20x30m με υποστυλώματα ανά 5m". AI κάνει parse + καλεί headless API. | Headless `createGrid(config)` API ανεξάρτητο UI. |
+| **Auto-Optimum Layout** | Επιλογή περιγράμματος → αλγόριθμος προτείνει 3 εναλλακτικούς καννάβους βάσει κατασκευαστικών κανόνων. | B39 (Περιμετρικοί Οδηγοί) → bounding polygon API. |
+| **Predictive Snapping** | AI μαθαίνει pattern χρήστη. 3 οδηγοί ανά 4μ → ghost preview 4ου στα 4μ πριν κλικ (Tab to accept). | Visual State Machine (C3): "Ghost/AI-suggested" state. |
+
+### 10.3 Computer Vision & Scan-to-BIM
+
+| Concept | Περιγραφή | Υποδομή ΤΩΡΑ |
+|---------|-----------|--------------|
+| **Raster to Grid (OCR)** | Εισαγωγή 2D κάτοψης (εικόνα/PDF). AI → edge detection → αναγνώριση τοίχων → αυτόματοι κεντρικοί άξονες. | Batch guide generation API. Spatial Indexing. |
+| **Point Cloud Alignment** | Ευθυγράμμιση κάνναβου με νέφη σημείων (point clouds) από 3D scanners εργοταξίου. | 3D coordinates `{x, y, z?}` στο Data Model. |
+
+### 10.4 Digital Twin & IoT Readiness
+
+| Concept | Περιγραφή |
+|---------|-----------|
+| **Spatial Anchors** | Κάθε σημείο τομής (X marker) αποκτά μοναδικό ID (π.χ. `Node_A1`) + σύνδεση με εξωτερικά δεδομένα (αισθητήρες θερμοκρασίας, asset tags συντήρησης). |
+| **Clash Rule Zones** | Η περιοχή μεταξύ αξόνων ορίζεται ως "Zone". Ασύμβατο hatch σε zone (π.χ. σωληνώσεις σε ζώνη ρεύματος) → κάνναβος κόκκινος. |
+| **Live Construction Tracking** | Αισθητήρες εργοταξίου ενημερώνουν grid positions σε real-time (IoT → WebSocket → Guide update). |
+
+### 10.5 Στρατηγική Υλοποίησης Future Features
+
+```
+Phase 1 (ΤΩΡΑ):   Core B1-B55 + Data Model + Rendering + Snap Integration
+                    └── Η υποδομή πρέπει ΗΔΗ να υποστηρίζει extensions
+
+Phase 2 (Μεσαία):  B56-B61 (AI basics) + B76-B80 (Advanced Geometry)
+                    + C14 (AI Layer) + C19 (Validation)
+                    └── Quick wins με μεγάλο ROI
+
+Phase 3 (Future):   B62-B66 (3D/VR/AR) + B67-B71 (Collaboration)
+                    + C15 (3D Pipeline) + C16 (Collab Engine)
+                    └── Μετάβαση σε full BIM/3D
+
+Phase 4 (Vision):   B72-B75 (Sustainability) + B86-B93 (Ecosystem)
+                    + C17-C20 (Simulation, AR/VR, Plugins)
+                    └── Πλήρες ecosystem — competing με enterprise tools
+```
+
+> **Αρχή**: Η υποδομή C1-C20 ήδη χτίζεται ως **καθαρό API** ανεξάρτητο UI.
+> Αυτό σημαίνει ότι στο μέλλον ένα AI Agent ή LLM integration μπορεί
+> να καλεί τις ίδιες συναρτήσεις στο παρασκήνιο.
+
+### 10.6 Βαθιά Ανάλυση Βιομηχανίας — Προτάσεις P1-P8
+
+> Βάσει ακαδημαϊκής έρευνας (TU Delft LoC Grid, SAO optimization papers),
+> industry leaders (ALLPLAN 2025 AI Visualizer, Tekla rebar digitization),
+> και κατασκευαστικών προτύπων (ανοχές bolt-ball grid, LandXML).
+> **3 Μακρο-τάσεις**: Generative Design, Design-to-Fabrication, AI as Design Partner.
+
+#### P1: Βελτιστοποίηση Κάνναβου με Στόχους (Optimization Objectives)
+
+**Σχέση με**: B2 (Auto Grid), B56 (AI Auto-Grid), B59 (Generative Variants)
+**Βάθος**: Ο χρήστης δεν δίνει μόνο αποστάσεις, αλλά και **στόχους** (objective functions):
+- "Ελαχιστοποίησε χρήση υλικού για κολώνες ανά 5μ"
+- "Μεγιστοποίησε φυσικό φωτισμό για προσανατολισμό ΝΝΔ"
+- "Ελαχιστοποίησε κόστος θεμελίωσης για έδαφος κατηγορίας Γ"
+
+**Τεχνική**: Εισαγωγή Parametric Objectives στο `createGrid(config)` API.
+Αναζήτηση σε design space (Bayesian optimization ή SAO — Sequential Approximate Optimization).
+
+#### P2: AI Προτάσεις "Έξυπνων Οδηγών" (Smart Guide Suggestions)
+
+**Σχέση με**: B57 (Predictive Snap), B61 (Learning from Edits)
+**Βάθος**: Contextual pattern recognition με domain-specific γνώση:
+- 2 κάθετοι οδηγοί ανά 15cm σε τοίχο → "Θα ήθελες να συνεχίσω σε όλο το μήκος;"
+- Οδηγοί για οπλισμό Φ10 → "Να εφαρμόσω τυπικό βήμα 15/20cm σε όλη την πλάκα;"
+- Pattern: τοίχος + 2 παράλληλοι → "Πρόσθεση ενδιάμεσου για σωλήνωση;"
+
+**Τεχνική**: Pattern matching + lightweight ML model. Contextual prompts μέσω C3 (Visual State Machine).
+
+#### P3: Εξαγωγή σε Μορφότυπα Κατασκευής (Fabrication-Ready Exports)
+
+**Σχέση με**: B26 (CSV Export), B88 (IFC Export), C9 (Import/Export)
+**Βάθος**: Πέρα από CSV — μορφότυπα που "διαβάζουν" μηχανήματα εργοταξίου:
+- **LandXML**: Για σταθμούς χωροστάθμησης (total stations) → αυτοματοποιημένη χάραξη κτιρίου
+- **DSTV/NC**: Για CNC κοπή μεταλλικών στοιχείων βάσει καννάβου
+- **Rebar schedules**: Πίνακες οπλισμού βάσει θέσεων καννάβου
+
+**Τεχνική**: Exporters per μορφότυπο. Plugin system (C20) για custom exporters.
+
+#### P4: "Συμμορφούμενος" Κάνναβος (Tolerance-Aware Grid) ⭐ ΝΕΑ ΙΔΕΑ
+
+**Σχέση με**: B93 (Compliance Checkers) — αλλά πιο βαθύ
+**Βάθος**: Κάθε snap point / guide line αποκτά **tolerance zone**:
+- Κολόνα στο σημείο A1 → εμφάνιση κύκλου ανοχής ±5mm (κατά EN 13670)
+- Δοκός στον οδηγό Z3 → ανοχή ±10mm κατά μήκος
+- Visual: αχνός κύκλος/ζώνη γύρω από snap point (toggle on/off)
+
+**Τεχνική**: Νέα ιδιότητα `tolerance?: number` στο `GuidePoint` + `GuideLine`.
+Rendering: Circle/band overlay σε tolerance mode. Ρύθμιση ανά `GuideGroup`.
+
+#### P5: Ιεραρχικός Κάνναβος (Hierarchical & Scalable Grids)
+
+**Σχέση με**: B23 (Structural Presets), B30 (Grid Rotation)
+**Βάθος**: Parent-child σχέση μεταξύ καννάβων:
+- **Βασικός δομικός κάνναβος**: 8x8μ (κολόνες, τοίχα)
+- **Βοηθητικός λεπτομέρειας**: 0.5x0.5μ μέσα σε φάτνωμα (οπλισμός, είδη υγιεινής)
+- **Μεταφορά parent → μετακίνηση child**: Αν αλλάξει θέση η κολόνα A1, ο εσωτερικός κάνναβος ακολουθεί
+
+**Τεχνική**: `parentGridId?: string` στο `GuideGroup`. Transform inheritance (translation + rotation).
+Εξέλιξη: Groups of groups με ιεραρχικό μετασχηματισμό.
+
+#### P6: Κάνναβος με Χρονική Διάσταση (4D Grids — Construction Phasing)
+
+**Σχέση με**: B63 (4D Sequencing)
+**Βάθος**: Σύνδεση καννάβου με χρονοδιάγραμμα έργου:
+- Στάδιο 1: Θεμελίωση → ενεργός κάνναβος A (βασικά σημεία)
+- Στάδιο 2: Σκελετός → ενεργός κάνναβος B (υποστυλώματα + δοκοί)
+- Στάδιο 3: Τοιχοποιία → ενεργός κάνναβος C (χωρίσματα)
+- Timeline slider: φιλτράρισμα εμφάνισης κατά φάση
+
+**Τεχνική**: `constructionPhase?: string` στο `GuideLine` + `GuideGroup`.
+Filter UI: dropdown ή timeline slider ανά φάση κατασκευής.
+
+#### P7: Κάνναβος με Βάση Σχέσεις (Constraint Satisfaction)
+
+**Σχέση με**: B34 (Equidistant), B78 (Constraint Solver)
+**Βάθος**: Ορισμός καννάβου από **σχέσεις αντί αριθμών**:
+- "Ο άξονας Β = μέση απόσταση μεταξύ Α και Γ"
+- "Απόσταση Γ-Δ = 1.5 × απόσταση Α-Β"
+- "Τρεις ισαπέχοντες μεταξύ Α και Ε"
+- Αλλαγή Α-Β → αυτόματη ενημέρωση Γ-Δ (live)
+
+**Τεχνική**: Lightweight constraint solver (simplex ή Newton-Raphson).
+`constraints?: ConstraintDef[]` στο `GuideGroup`. C11 (Constraint Engine) integration.
+
+#### P8: Βιβλιοθήκη Patterns Καννάβων (Grid Pattern Library)
+
+**Σχέση με**: B23 (Structural Presets) — αλλά πολύ πιο εξελιγμένο
+**Βάθος**: Αποθήκευση + κοινοποίηση custom grid patterns:
+- "Τυπική πτέρυγα νοσοκομείου" (6×4 κάνναβος, 7.2m ανοίγματα, central corridor)
+- "Γέφυρα — τυπικό άνοιγμα" (3 δοκοί, ενίσχυση στηρίξεων)
+- "Κατοικία — μπάνιο" (υδραυλικός κάνναβος 0.5m)
+
+**Parametric patterns**: Αποθηκεύονται ΟΧΙ μόνο θέσεις, αλλά και **σχέσεις** (P7).
+Κατά την εφαρμογή: prompt για παραμέτρους (αριθμός αξόνων, μήκος, βήμα).
+
+**Τεχνική**: JSON schema για patterns. Cloud sharing (C16 Collaboration Engine).
+Pattern = `{ guides: GuideLine[], constraints: ConstraintDef[], params: ParamDef[] }`.
+
+> **Σύνολο P1-P8**: 8 deep proposals ← ακαδημαϊκή + βιομηχανική έρευνα.
+> **Κλειδί**: Η αρχιτεκτονική C1-C20 + headless API ήδη υποστηρίζει αυτές τις επεκτάσεις.
+
+---
+
 ## 9. Proposed Implementation TOC
 
 > Οδηγός για τη σειρά υλοποίησης — αναφορά σε ενότητες του ADR.
@@ -1170,6 +1510,15 @@ type GuideStyleRef = { groupId?: string; override?: Partial<GuideStyle> };
 - [Archicad — Curved Grid System](https://graphisoft.com/downloads/archicad)
 - [buildingSMART — IFC IfcGrid/IfcGridAxis](https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/schema/ifcproductextension/lexical/ifcgrid.htm)
 - [Tekla — Grid Labels & Customization](https://support.tekla.com/doc/tekla-structures)
+- [Autodesk Dreamcatcher — Generative Design](https://autodeskresearch.com/projects/dreamcatcher)
+- [Bentley Generative Components](https://www.bentley.com/software/generativecomponents/)
+- [Bentley iTwin — Digital Twins](https://www.bentley.com/software/itwin-platform/)
+- [Rhino Grasshopper — Algorithmic Design](https://www.grasshopper3d.com/)
+- [Trimble RealWorks — Point Cloud Processing](https://geospatial.trimble.com/products-and-solutions/trimble-realworks)
+- [Vectorworks — Cloud Services](https://www.vectorworks.net/cloud-services)
+- [Autodesk BIM 360 — Construction Management](https://construction.autodesk.com/)
+- [ArchiCAD EcoDesigner — Energy Evaluation](https://graphisoft.com/solutions/ecodesigner)
+- [Autodesk Insight — Building Performance](https://insight.autodesk.com/)
 
 ---
 
@@ -1191,3 +1540,5 @@ type GuideStyleRef = { groupId?: string; override?: Partial<GuideStyle> };
 | 2026-02-19 | B49-B55 εγκρίθηκαν. **Συλλογή απαιτήσεων ΟΛΟΚΛΗΡΩΘΗΚΕ** — 55 features. Ανάλυση κεντρικοποίησης (§7) |
 | 2026-02-19 | UI: Floating Panel 3 επιπέδων (§4.13). Hatches vs Guides πρόβλεψη (§4.14) |
 | 2026-02-19 | Implementation Design (§8): Scope Boxes, Snap Tracking, Curved Grid, IFC mapping, Coordinate System, Data Model, State Machine, Hit-testing, Performance, QA, Observability, Labels. Proposed TOC (§9) |
+| 2026-02-19 | Industry Research & AI Readiness: B56-B93 (38 νέα features σε 8 κατηγορίες: AI/ML, 3D/4D, VR/AR, Collaboration, Sustainability, Geometry, UI/UX, Security). C14-C20 (7 νέα κεντρικοποιημένα συστήματα). §10 Future-Proofing (Parametric Binding, Generative Design, Scan-to-BIM, Digital Twin). **Σύνολο: 93 features + 20 centralized systems** |
+| 2026-02-19 | Deep Industry Analysis P1-P8: Optimization Objectives (P1), Smart Guide Suggestions (P2), Fabrication-Ready Exports (P3), Tolerance-Aware Grid (P4), Hierarchical Grids (P5), 4D Phasing (P6), Constraint Satisfaction (P7), Grid Pattern Library (P8). Πηγές: TU Delft LoC Grid, ALLPLAN 2025, SAO papers, EN 13670, LandXML. **Σύνολο: 93 features + 8 deep proposals + 20 centralized systems** |
