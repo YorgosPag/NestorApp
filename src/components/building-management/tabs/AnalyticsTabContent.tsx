@@ -18,7 +18,7 @@ export default function AnalyticsTabContent({ building }: AnalyticsTabContentPro
   const [analyticsView, setAnalyticsView] = useState<'overview' | 'financial' | 'progress' | 'comparison'>('overview');
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-2">
       <Header
         timeRange={timeRange}
         setTimeRange={setTimeRange}
@@ -32,6 +32,6 @@ export default function AnalyticsTabContent({ building }: AnalyticsTabContentPro
       {analyticsView === 'financial' && <AnalyticsFinancial building={building} />}
       {analyticsView === 'progress' && <AnalyticsProgress building={building} />}
       {analyticsView === 'comparison' && <AnalyticsComparison />}
-    </div>
+    </section>
   );
 }

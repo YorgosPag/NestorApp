@@ -24,7 +24,7 @@ const MapTabContent = ({ building }: MapTabContentProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-2">
       <MapHeader mapView={mapView} setMapView={setMapView} />
       <LocationInfoCard building={building} coordinates={coordinates} />
       <InteractiveMap
@@ -37,7 +37,7 @@ const MapTabContent = ({ building }: MapTabContentProps) => {
       />
       <NearbyProjectsList />
       <LocationAnalyticsGrid />
-    </div>
+    </section>
   );
 };
 

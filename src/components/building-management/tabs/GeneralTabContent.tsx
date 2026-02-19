@@ -199,10 +199,10 @@ export function GeneralTabContent({
       />
       {/* ENTERPRISE: Show save error if any */}
       {saveError && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative dark:bg-red-900 dark:border-red-700 dark:text-red-300">
+        <aside className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded relative dark:bg-red-900 dark:border-red-700 dark:text-red-300">
           <strong className="font-bold">Σφάλμα: </strong>
           <span>{saveError}</span>
-        </div>
+        </aside>
       )}
       <BuildingStats buildingId={String(building.id)} />
       <BasicInfoCard

@@ -30,7 +30,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-2">
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-muted-foreground">{t('tabs.timeline.forecast.originalSchedule')}</span>

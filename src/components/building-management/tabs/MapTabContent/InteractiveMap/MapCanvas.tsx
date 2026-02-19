@@ -90,7 +90,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     </div>
 
                     {/* Scale indicator */}
-                    <div className={`absolute bottom-4 left-4 ${colors.bg.primary} opacity-90 px-3 py-2 ${quick.input} text-sm`}>
+                    <div className={`absolute bottom-4 left-4 ${colors.bg.primary} opacity-90 px-2 py-2 ${quick.input} text-sm`}>
                         <div className="flex items-center gap-2">
                             <div className={`${iconSizes.xl4} h-1 bg-black`} />
                             <span>100m</span>
@@ -98,7 +98,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     </div>
 
                     {/* Map type indicator */}
-                    <div className={`absolute top-4 right-4 ${colors.bg.primary} opacity-90 px-3 py-2 ${quick.input} text-sm font-medium`}>
+                    <div className={`absolute top-4 right-4 ${colors.bg.primary} opacity-90 px-2 py-2 ${quick.input} text-sm font-medium`}>
                         {mapView === 'street' ? t('tabs.map.views.street') :
                             mapView === 'satellite' ? t('tabs.map.views.satellite') :
                                 t('tabs.map.views.hybrid')}

@@ -23,7 +23,7 @@ const VideosTabContent = ({ building }: VideosTabContentProps) => {
   const hoverBorderEffects = createHoverBorderEffects(borderTokens);
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-2">
       <header className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">{t('videos.title')}</h3>
         <Button>
@@ -32,7 +32,7 @@ const VideosTabContent = ({ building }: VideosTabContentProps) => {
         </Button>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
         {[1, 2, 3].map((index) => (
           <article
             key={index}
@@ -45,7 +45,7 @@ const VideosTabContent = ({ building }: VideosTabContentProps) => {
           </article>
         ))}
       </section>
-    </div>
+    </section>
   );
 };
 

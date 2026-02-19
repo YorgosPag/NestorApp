@@ -117,7 +117,7 @@ export function useMapStyles(config: MapStyleConfig = {}): MapStyleClasses {
       bounceContainer: 'animate-bounce',
       marker: cn(
         // Base marker styles
-        'p-3 rounded-full shadow-lg border-4',
+        'p-2 rounded-full shadow-lg border-4',
         // 🎨 DYNAMIC COLORS: Auto-generated CSS
         markerBackgroundClass
       ),
@@ -198,7 +198,7 @@ export function useProjectMarkerStyles(markerColor?: string) {
     containerClass: 'relative group',
     wrapperClass: 'relative group',
     bounceClass: 'animate-bounce',
-    markerClass: cn('p-3 rounded-full shadow-lg border-4', markerClass),
+    markerClass: cn('p-2 rounded-full shadow-lg border-4', markerClass),
     tooltipClass: cn(
       'absolute top-14 left-1/2 transform -translate-x-1/2',
       'bg-black/75 text-white text-xs rounded px-2 py-1 whitespace-nowrap',
@@ -249,7 +249,7 @@ export function useNearbyProjectMarkerStyles(
       // Tooltip styling με centralized patterns
       tooltipClass: cn(
         'absolute bottom-10 left-1/2 transform -translate-x-1/2',
-        'bg-black/90 text-white px-3 py-2 rounded text-xs whitespace-nowrap',
+        'bg-black/90 text-white px-2 py-2 rounded text-xs whitespace-nowrap',
         'opacity-0 group-hover:opacity-100 transition-opacity'
       ),
 

@@ -73,10 +73,10 @@ export function NearbyProjectsList() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2">
                     {nearbyProjects.map((project) => (
-                        <div key={project.id} className={`flex items-center justify-between p-4 ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}>
-                            <div className="flex items-center gap-3">
+                        <div key={project.id} className={`flex items-center justify-between p-2 ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}>
+                            <div className="flex items-center gap-2">
                                 <div className={cn(
                                     `${iconSizes.xs} rounded-full`,
                                     project.status === 'active' ? bg.info :

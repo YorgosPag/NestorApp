@@ -40,7 +40,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
     const { quick, getStatusBorder } = useBorderTokens();
     const colors = useSemanticColors();
     return (
-        <div className="relative flex items-start gap-4">
+        <div className="relative flex items-start gap-2">
             <div className={cn(
                 "relative z-10 flex h-12 w-12 items-center justify-center shadow-sm rounded-full",
                 quick.card, // Using centralized border system
@@ -78,7 +78,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                     </div>
                 </div>
 
-                <p className="text-muted-foreground mb-3">
+                <p className="text-muted-foreground mb-2">
                     {milestone.description}
                 </p>
 
@@ -90,7 +90,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 />
 
                 {milestone.status === 'in-progress' && (
-                    <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
+                    <div className={`mt-2 p-2 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
                         <div className={`flex items-center gap-2 text-sm ${colors.text.info}`}>
                             <Clock className={iconSizes.sm} />
                             <span className="font-medium">{t('tabs.timeline.milestone.nextSteps')}</span>
@@ -102,7 +102,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 )}
 
                 {milestone.status === 'completed' && (
-                    <div className={`mt-4 flex items-center gap-2 text-sm ${colors.text.success}`}>
+                    <div className={`mt-2 flex items-center gap-2 text-sm ${colors.text.success}`}>
                         <CheckCircle className={iconSizes.sm} />
                         <span>{t('tabs.timeline.milestone.completedAt', { date: formatDate(milestone.date) })}</span>
                     </div>

@@ -27,8 +27,8 @@ export function MapControls({
     const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     return (
-        <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="mt-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
                     <Checkbox
                         id="nearby-projects"

@@ -106,7 +106,7 @@ export function BuildingPhotosTab({
   // If no building, companyId, or userId, show placeholder
   if (!resolvedBuilding?.id || !companyId || !currentUserId) {
     return (
-      <section className="p-6 text-center text-muted-foreground">
+      <section className="p-2 text-center text-muted-foreground">
         <p>{t('tabs.photos.noBuilding', 'Επιλέξτε ένα κτίριο για να δείτε τις φωτογραφίες.')}</p>
       </section>
     );

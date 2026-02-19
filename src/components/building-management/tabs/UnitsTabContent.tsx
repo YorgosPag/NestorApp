@@ -289,7 +289,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   if (loading) {
     return (
-      <section className="flex items-center justify-center py-12">
+      <section className="flex items-center justify-center py-2">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </section>
     );
@@ -297,7 +297,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   if (error) {
     return (
-      <section className="flex flex-col items-center gap-2 py-12">
+      <section className="flex flex-col items-center gap-2 py-2">
         <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={fetchUnits}>
           Retry
@@ -401,7 +401,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
       {/* Content — Centralized shared components */}
       {filteredUnits.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="py-2 text-center text-sm text-muted-foreground">
           {t('tabs.labels.units')} — 0
         </p>
       ) : viewMode === 'cards' ? (

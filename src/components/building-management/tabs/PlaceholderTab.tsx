@@ -36,19 +36,19 @@ const PlaceholderTab = ({ title = 'Content', icon: Icon, building, ...additional
 
   // 🏢 ENTERPRISE: Icon resolution - supports string names and React components
   // String icons are resolved via centralized IconMapping
-  const FallbackIcon = () => <div className={`${iconSizes.xl3} text-muted-foreground mb-4 text-4xl`}>📦</div>;
+  const FallbackIcon = () => <span className={`${iconSizes.xl3} text-muted-foreground mb-2 text-4xl`}>📦</span>;
   const IconComponent = typeof Icon === 'string'
     ? getIconComponent(Icon)
     : Icon || FallbackIcon;
 
   return (
     <section className={`flex flex-col items-center justify-center ${iconSizes.xl12} ${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} bg-muted/50`}>
-      <IconComponent className={`${iconSizes.xl3} text-muted-foreground mb-4`} />
+      <IconComponent className={`${iconSizes.xl3} text-muted-foreground mb-2`} />
       <h2 className="text-xl font-semibold text-muted-foreground mb-2">{translatedTitle}</h2>
       <p className="text-sm text-muted-foreground text-center max-w-md">
         {t('placeholder.comingSoon', { title: translatedTitle.toLowerCase() })}
       </p>
-      <Button variant="outline" className="mt-4">
+      <Button variant="outline" className="mt-2">
         <Plus className={`${iconSizes.sm} mr-2`} />
         {t('placeholder.add', { title: translatedTitle })}
       </Button>

@@ -22,8 +22,8 @@ export function CriticalPathCard() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg dark:bg-orange-950/30">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg dark:bg-orange-950/30">
                         <div>
                             <p className="font-medium text-orange-900 dark:text-orange-300">{t('tabs.timeline.criticalPath.mecInstallations')}</p>
                             <p className="text-sm text-orange-700 dark:text-orange-400">{t('tabs.timeline.criticalPath.affectsDelivery')}</p>
@@ -36,7 +36,7 @@ export function CriticalPathCard() {
                         />
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg dark:bg-yellow-950/30">
+                    <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg dark:bg-yellow-950/30">
                         <div>
                             <p className="font-medium text-yellow-900 dark:text-yellow-300">{t('tabs.timeline.criticalPath.finalWorks')}</p>
                             <p className="text-sm text-yellow-700 dark:text-yellow-400">{t('tabs.timeline.criticalPath.dependsOnPrevious')}</p>

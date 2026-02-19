@@ -80,7 +80,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
   };
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-2">
       <Header
         building={building}
         isEditing={isEditing}

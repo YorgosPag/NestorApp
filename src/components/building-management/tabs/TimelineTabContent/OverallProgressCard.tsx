@@ -37,7 +37,7 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                     size="md"
                     showPercentage={false}
                 />
-                <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <dl className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                     <div className="text-center">
                         <dd className="text-2xl font-bold text-green-600">{milestones.filter(m => m.status === 'completed').length}</dd>
                         <dt className="text-muted-foreground">{t('tabs.timeline.overallProgress.completed')}</dt>

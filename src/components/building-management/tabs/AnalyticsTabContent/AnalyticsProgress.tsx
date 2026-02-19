@@ -56,7 +56,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                     </section>
 
                     <section className={`mt-2 p-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 ${quick.card}`}>
-                        <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                        <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
                             <Target className={`${iconSizes.md} text-blue-600`} />
                             {t('tabs.analytics.progress.forecastsAndRecommendations')}
                         </h4>

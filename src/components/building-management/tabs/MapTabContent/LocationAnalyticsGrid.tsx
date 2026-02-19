@@ -17,13 +17,13 @@ export function LocationAnalyticsGrid() {
     const AreaQualityIcon = NAVIGATION_ENTITIES.unit.icon;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">{t('tabs.map.analytics.transportation.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
                                 <Train className={iconSizes.sm} />
@@ -54,7 +54,7 @@ export function LocationAnalyticsGrid() {
                     <CardTitle className="text-base">{t('tabs.map.analytics.services.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
                                 <Building className={iconSizes.sm} />
@@ -85,7 +85,7 @@ export function LocationAnalyticsGrid() {
                     <CardTitle className="text-base">{t('tabs.map.analytics.areaRating.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
                                 <TrendingUp className={iconSizes.sm} />

@@ -64,7 +64,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">{t('customers.loading')}</div>
+          <p className="text-center py-2">{t('customers.loading')}</p>
         </CardContent>
       </Card>
     );
@@ -80,9 +80,9 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-red-600">
+          <p className="text-center py-2 text-red-600">
             {t('customers.error.loadingPrefix')} {error}
-          </div>
+          </p>
         </CardContent>
       </Card>
     );
@@ -98,12 +98,12 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <Users className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-4`} />
+          <figure className="text-center py-2">
+            <Users className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-2`} />
             <p className="text-sm text-muted-foreground">
               {t('customers.empty.message')}
             </p>
-          </div>
+          </figure>
         </CardContent>
       </Card>
     );
@@ -122,13 +122,13 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <div className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
-          <div>{t('customers.table.name')}</div>
-          <div>{t('customers.table.phone')}</div>
-          <div>{t('customers.table.email')}</div>
-          <div className="text-right pr-3">{t('customers.table.units')}</div>
-          <div className="text-right">{t('customers.table.actions')}</div>
-        </div>
+        <header className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-2 pb-2 mb-2 border-b border-border text-sm font-medium text-muted-foreground">
+          <span>{t('customers.table.name')}</span>
+          <span>{t('customers.table.phone')}</span>
+          <span>{t('customers.table.email')}</span>
+          <span className="text-right pr-2">{t('customers.table.units')}</span>
+          <span className="text-right">{t('customers.table.actions')}</span>
+        </header>
 
         {/* Table Content */}
         <section className="space-y-1" aria-label={t('customers.ariaLabel')}>

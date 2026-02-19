@@ -346,13 +346,13 @@ export function BuildingAddressesCard({
         {hasProject && (
           <>
             {loadingProject ? (
-              <section className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+              <section className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
                 <Loader2 className={cn(iconSizes.md, 'animate-spin')} />
                 <span>{t('address.labels.loadingProjectAddresses')}</span>
               </section>
             ) : projectAddresses.length === 0 ? (
               /* Project has no addresses registered */
-              <section className="text-center py-8 border-2 border-dashed rounded-lg">
+              <section className="text-center py-2 border-2 border-dashed rounded-lg">
                 <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} />
                 <h3 className="text-lg font-semibold mb-2">
                   {t('address.labels.projectNoAddresses')}
@@ -551,7 +551,7 @@ export function BuildingAddressesCard({
 
             {/* Empty state */}
             {localAddresses.length === 0 && !isAddFormOpen && (
-              <section className="text-center py-8 border-2 border-dashed rounded-lg">
+              <section className="text-center py-2 border-2 border-dashed rounded-lg">
                 <MapPin className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
                 <h3 className="text-lg font-semibold mb-2">{t('address.labels.noAddresses')}</h3>
                 <p className="text-sm text-muted-foreground mb-2">
@@ -632,8 +632,8 @@ export function BuildingAddressesCard({
                         </div>
                         <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
                           <span>ID: {address.id.slice(0, 8)}...</span>
-                          {address.blockSide && <span className="ml-4">{t(`address.blockSides.${address.blockSide}`)}</span>}
-                          {address.type && <span className="ml-4">{t(`address.types.${address.type}`)}</span>}
+                          {address.blockSide && <span className="ml-2">{t(`address.blockSides.${address.blockSide}`)}</span>}
+                          {address.type && <span className="ml-2">{t(`address.types.${address.type}`)}</span>}
                         </div>
                       </>
                     )}

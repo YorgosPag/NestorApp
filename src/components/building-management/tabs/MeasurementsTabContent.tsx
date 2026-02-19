@@ -117,7 +117,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   if (loading) {
     return (
-      <section className="flex items-center justify-center py-20">
+      <section className="flex items-center justify-center py-2">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </section>
     );
@@ -127,7 +127,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   if (error) {
     return (
-      <section className="flex flex-col items-center justify-center py-20 gap-2">
+      <section className="flex flex-col items-center justify-center py-2 gap-2">
         <AlertCircle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-destructive">{error}</p>
       </section>
@@ -138,7 +138,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   if (items.length === 0) {
     return (
-      <section className="flex flex-col items-center justify-center py-20 gap-2">
+      <section className="flex flex-col items-center justify-center py-2 gap-2">
         <Ruler className="h-12 w-12 text-muted-foreground/50" />
         <header className="text-center">
           <h3 className="font-semibold">{t('tabs.measurements.empty.title')}</h3>

@@ -275,10 +275,10 @@ export function BOQItemEditor({
             e.preventDefault();
             void handleSave();
           }}
-          className="space-y-6"
+          className="space-y-2"
         >
           {/* Section: Basic Info */}
-          <fieldset className="space-y-4">
+          <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-muted-foreground">
               {t('tabs.measurements.editor.sections.basic')}
             </legend>
@@ -336,11 +336,11 @@ export function BOQItemEditor({
 
           {/* Section: Scope (only for create) */}
           {!isEdit && (
-            <fieldset className="space-y-4">
+            <fieldset className="space-y-2">
               <legend className="text-sm font-semibold text-muted-foreground">
                 {t('tabs.measurements.editor.sections.scope')}
               </legend>
-              <section className="flex items-center gap-4">
+              <section className="flex items-center gap-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -368,11 +368,11 @@ export function BOQItemEditor({
           )}
 
           {/* Section: Quantities */}
-          <fieldset className="space-y-4">
+          <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-muted-foreground">
               {t('tabs.measurements.editor.sections.quantities')}
             </legend>
-            <section className="grid grid-cols-2 gap-4">
+            <section className="grid grid-cols-2 gap-2">
               {/* Measurement Unit */}
               <article className="space-y-1.5">
                 <Label>{t('tabs.measurements.editor.fields.measurementUnit')}</Label>
@@ -447,11 +447,11 @@ export function BOQItemEditor({
           </fieldset>
 
           {/* Section: Cost per Unit */}
-          <fieldset className="space-y-4">
+          <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-muted-foreground">
               {t('tabs.measurements.editor.sections.costs')}
             </legend>
-            <section className="grid grid-cols-3 gap-4">
+            <section className="grid grid-cols-3 gap-2">
               <article className="space-y-1.5">
                 <Label>{t('tabs.measurements.editor.fields.materialUnitCost')}</Label>
                 <Input
@@ -486,7 +486,7 @@ export function BOQItemEditor({
           </fieldset>
 
           {/* Section: Computed Totals */}
-          <fieldset className="space-y-2 rounded-lg bg-muted/50 p-4">
+          <fieldset className="space-y-2 rounded-lg bg-muted/50 p-2">
             <legend className="text-sm font-semibold text-muted-foreground">
               {t('tabs.measurements.editor.sections.totals')}
             </legend>
@@ -505,7 +505,7 @@ export function BOQItemEditor({
           </fieldset>
 
           {/* Section: Links & Notes */}
-          <fieldset className="space-y-4">
+          <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-muted-foreground">
               {t('tabs.measurements.editor.sections.link')}
             </legend>

@@ -448,7 +448,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
   if (loading) {
     return (
-      <section className="flex items-center justify-center py-12">
+      <section className="flex items-center justify-center py-2">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </section>
     );
@@ -456,7 +456,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
   if (error) {
     return (
-      <section className="flex flex-col items-center gap-2 py-12">
+      <section className="flex flex-col items-center gap-2 py-2">
         <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={fetchParkingSpots}>
           Retry
@@ -708,7 +708,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
       {/* Content — Centralized shared components */}
       {filteredSpots.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="py-2 text-center text-sm text-muted-foreground">
           {tBuilding('tabs.labels.parking')} — 0
         </p>
       ) : viewMode === 'cards' ? (

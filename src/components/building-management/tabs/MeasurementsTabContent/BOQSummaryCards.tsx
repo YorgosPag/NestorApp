@@ -88,13 +88,13 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
   return (
     <section
       aria-label={t('tabs.measurements.title')}
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2"
     >
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <Card key={card.labelKey} className="overflow-hidden">
-            <CardContent className="p-4">
+            <CardContent className="p-2">
               <header className="flex items-center gap-2 mb-2">
                 <Icon className={cn('h-4 w-4', card.accentClass)} />
                 <span className="text-sm text-muted-foreground">

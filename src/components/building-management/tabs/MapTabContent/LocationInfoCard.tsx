@@ -28,8 +28,8 @@ export function LocationInfoCard({ building, coordinates }: LocationInfoCardProp
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="space-y-2">
                         <div>
                             <Label className="text-sm font-medium">{t('tabs.general.location.address')}</Label>
                             <p className="text-sm text-muted-foreground mt-1">
@@ -54,7 +54,7 @@ export function LocationInfoCard({ building, coordinates }: LocationInfoCardProp
                         </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         <div>
                             <Label className="text-sm font-medium">{t('tabs.general.location.areaInfo')}</Label>
                             <div className="mt-2 space-y-2">

@@ -129,7 +129,7 @@ export function BOQCategoryAccordion({
         <span className="font-medium">
           {group.code} — {group.name}
         </span>
-        <span className="flex items-center gap-3 text-sm text-muted-foreground">
+        <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>
             {group.items.length} {t('tabs.measurements.table.items')}
           </span>

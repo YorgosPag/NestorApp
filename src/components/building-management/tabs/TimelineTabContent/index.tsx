@@ -39,7 +39,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
   );
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-2">
       <TimelineHeader milestones={milestones} />
       <OverallProgressCard building={building} milestones={milestones} />
       <TimelineMilestones
@@ -48,7 +48,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
         getStatusText={translatedGetStatusText}
         getTypeIcon={getTypeIcon}
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <CriticalPathCard />
         <CompletionForecastCard milestones={milestones} />
       </div>
