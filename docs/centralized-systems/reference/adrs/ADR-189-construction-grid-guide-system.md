@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | DRAFT — Συλλογή απαιτήσεων ✅ + Implementation Design ✅ + Global Market Research ✅ (120 features, 25 systems, 16 proposals, 6 CN reqs). Έτοιμο για phased implementation. |
+| **Status** | PHASE 1A COMPLETE ✅ — Foundation guides (X/Z/parallel/delete), hover highlight, intersection markers, snap engine, undo/redo, prompt dialog. Έτοιμο για Phase 1B (diagonal, labels, panel). |
 | **Date** | 2026-02-19 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -1796,3 +1796,70 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-19 | Global Trends P9-P12: AI Copilot κόστους/άνθρακα (P9, PKPM/Glodon), AI Watchdog ανωμαλιών (P10, Nemetschek/Google Cloud), Dynamic Coordinate Offset mega-projects (P11, Linear Engineering), Robotics & Drones export (P12, G-code/waypoints). |
 | 2026-02-19 | §11 China Strategy: Ρυθμιζόμενες αγορές CN1-CN6 (BIM Forward Design, Compliance Checking, CNC/Robotics Export, NURBS, Plugin API, Carbon). Εφαρμοσιμότητα ΕΕ. Niche markets. |
 | 2026-02-19 | Global Market Expansion: §4.19 B94-B120 (27 features: 5G, seismic, 5D cost, EU compliance, metaverse, robotics, quantum, BIM 6.0). §7.6 C21-C25 (5G/IoT, Robotics Export, EN Compliance, Metaverse, Quantum). §10.8 P13-P16 (5G ecosystem, BIM-Robotics bridge, EU-China hybrid standards, quantum optimization). **ΤΕΛΙΚΟ: 120 features + 16 proposals + 6 CN requirements + 25 systems** |
+| 2026-02-19 | **Phase 1A Implementation START**: guide-types.ts, guide-store.ts, guide-commands.ts, guide-renderer.ts, GuideSnapEngine.ts, useGuideState.ts, toolbar tools, DxfCanvas step 2.5, CanvasSection wiring |
+| 2026-02-19 | **CRITICAL BUG FIX**: GuideStore immutable updates — `useSyncExternalStore` needs new array references on mutation. Fixed push→spread, splice→filter, in-place→map |
+| 2026-02-19 | i18n translations (EN+EL) for all guide tools and snap modes |
+| 2026-02-19 | Fix guide-delete hit tolerance (10→30px), guide-parallel distance limit removed |
+| 2026-02-20 | Guide hover highlight (HIGHLIGHT_GUIDE_STYLE: gold, 2px, solid, 0.9 opacity) in delete/parallel modes |
+| 2026-02-20 | Two-step parallel guide workflow: Step 1 click → select reference (highlight), Step 2 → prompt dialog for distance |
+| 2026-02-20 | Intersection ✕ markers at all X/Y guide crossing points |
+| 2026-02-20 | **Centralized PromptDialog system** (systems/prompt-dialog/): store + hook + component. Reusable across all DXF viewer tools for numeric/text input |
+| 2026-02-20 | **Phase 1A COMPLETE** — All 14 commands from §3.1 status: X ✅, Z ✅, Parallel ✅, Delete ✅ (remaining: XZ diagonal, Perpendicular, Segments, Distance, Arc segments, Arc distance, Circle intersection, Arc-line intersection, Add point, Delete point) |
+
+---
+
+## 12. Phase 1A Implementation Details (2026-02-19 → 2026-02-20)
+
+### 12.1 Files Created (9)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `systems/guides/guide-types.ts` | ~110 | Guide interface, GuideRenderStyle, GUIDE_COLORS, GUIDE_LIMITS, HIGHLIGHT/GHOST/DEFAULT styles |
+| `systems/guides/guide-store.ts` | ~180 | GuideStore singleton — CRUD, observer pattern, `useSyncExternalStore`-safe immutable ops |
+| `systems/guides/guide-commands.ts` | ~200 | CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand — ICommand pattern |
+| `systems/guides/guide-renderer.ts` | ~230 | GuideRenderer — infinite lines, ghost preview, hover highlight, intersection ✕ markers |
+| `systems/guides/index.ts` | ~20 | Barrel exports |
+| `hooks/state/useGuideState.ts` | ~120 | React hook bridging GuideStore — useSyncExternalStore + command dispatch |
+| `snapping/engines/GuideSnapEngine.ts` | ~100 | BaseSnapEngine subclass — snap to X/Y guide offsets |
+| `systems/prompt-dialog/prompt-dialog-store.ts` | ~140 | PromptDialogStore — Promise-based `prompt()`, singleton, observer |
+| `systems/prompt-dialog/usePromptDialog.ts` | ~70 | React hook — `prompt()`, `confirm()`, `cancel()`, reactive snapshot |
+| `systems/prompt-dialog/PromptDialog.tsx` | ~200 | Modal overlay — input, validation, Enter/Escape, unit suffix, dark theme |
+| `systems/prompt-dialog/index.ts` | ~25 | Barrel exports |
+
+### 12.2 Files Modified (9)
+
+| File | Changes |
+|------|---------|
+| `snapping/extended-types.ts` | Added `GUIDE` to ExtendedSnapType enum |
+| `snapping/orchestrator/SnapEngineRegistry.ts` | Register GuideSnapEngine |
+| `ui/toolbar/types.ts` | Added guide-x, guide-z, guide-parallel, guide-delete to ToolType |
+| `ui/toolbar/toolDefinitions.tsx` | New "Guides" tool group with 4 tools |
+| `canvas-v2/dxf-canvas/DxfCanvas.tsx` | guides/guidesVisible/ghostGuide/highlightedGuideId props, step 2.5 rendering |
+| `components/dxf-layout/CanvasLayerStack.tsx` | Pass-through guide props |
+| `components/dxf-layout/CanvasSection.tsx` | useGuideState, usePromptDialog, parallel ref state, highlightedGuideId, ghostGuide, PromptDialog render |
+| `hooks/canvas/useCanvasClickHandler.ts` | Priority 1.6 guide click routing — X/Z placement, delete, parallel ref selection |
+| `i18n/locales/{en,el}/dxf-viewer.json` | Guide tool labels, snap mode labels, prompt dialog translations |
+
+### 12.3 Architecture Decisions
+
+1. **Guides are NOT DXF entities** — they live in `GuideStore` (separate from `ISceneManager`), do not export to DXF
+2. **Rendering at step 2.5** — between grid (step 2) and rulers (step 3) in DxfCanvas RAF loop
+3. **Immutable state for React** — `useSyncExternalStore` requires new array references; all mutations use spread/filter/map
+4. **Centralized PromptDialog** — Promise-based `prompt()` callable from any hook; single overlay rendered in CanvasSection
+5. **Parallel guide via dialog** — Step 1: click to select reference (highlight), Step 2: typed distance in prompt dialog (not click position)
+
+### 12.4 Features Implemented
+
+- [x] Vertical guide (X) — 1 click placement
+- [x] Horizontal guide (Z/Y) — 1 click placement
+- [x] Parallel guide — 1 click reference + distance input dialog
+- [x] Delete guide — 1 click (30px tolerance)
+- [x] Ghost guide preview during placement
+- [x] Guide hover highlight (gold, 2px, in delete/parallel modes)
+- [x] Intersection ✕ markers at X/Y crossings
+- [x] Guide snap engine (snaps to guide offsets)
+- [x] Undo/redo (via ICommand pattern)
+- [x] Global visibility toggle
+- [x] Per-axis color coding (cyan X, tomato Y, purple parallel)
+- [x] i18n translations (EN + EL)
+- [x] Centralized prompt dialog (reusable system)

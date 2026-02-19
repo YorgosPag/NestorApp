@@ -1443,6 +1443,15 @@
     "guideParallel": "Parallel Guide",
     "guideDelete": "Delete Guide"
   },
+  "promptDialog": {
+    "confirm": "OK",
+    "cancel": "Cancel",
+    "invalidNumber": "Please enter a valid number",
+    "parallelDistance": "Parallel Guide Distance",
+    "enterDistance": "Distance from reference guide",
+    "distancePlaceholder": "e.g. 100",
+    "selectReference": "Click near a guide to select as reference"
+  },
   "entityJoin": {
     "menuTitle": "Join",
     "joinAction": "Join",

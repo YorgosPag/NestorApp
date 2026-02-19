@@ -32,7 +32,10 @@ import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInter
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 // ADR-189: Construction Guide System
 import { useGuideState } from '../../hooks/state/useGuideState';
+// ADR-189: Centralized prompt dialog for distance input (parallel guides, future tools)
+import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 PERF (2026-02-19): Imperative context menus — no parent re-render on open
 import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
@@ -125,6 +128,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const universalSelection = useUniversalSelection();
   const { execute: executeCommand } = useCommandHistory();
   const { warning: notifyWarning, success: notifySuccess } = useNotifications();
+  const { t } = useTranslation('dxf-viewer');
   useCommandHistoryKeyboard();
 
   // Stable refs to avoid stale closures in mouse event callbacks
@@ -162,6 +166,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === ADR-189: Construction Guide state ===
   const guideState = useGuideState();
+  const { prompt: showPromptDialog } = usePromptDialog();
 
   // === DXF scene (must be before unified grip system) ===
   const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
@@ -236,7 +241,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
 
-  // ADR-189: Two-step parallel guide workflow — step 1: select reference, step 2: place parallel
+  // ADR-189: Two-step parallel guide workflow — step 1: select reference, step 2: prompt for distance
   const [parallelRefGuideId, setParallelRefGuideId] = useState<string | null>(null);
 
   // ADR-189: Reset parallel reference when switching away from guide-parallel tool
@@ -245,6 +250,41 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setParallelRefGuideId(null);
     }
   }, [activeTool]);
+
+  // ADR-189: When reference guide is selected, show prompt dialog for distance input
+  useEffect(() => {
+    if (!parallelRefGuideId || activeTool !== 'guide-parallel') return;
+
+    const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
+    if (!refGuide) {
+      setParallelRefGuideId(null);
+      return;
+    }
+
+    // Show prompt dialog — async, resolves when user confirms or cancels
+    showPromptDialog({
+      title: t('promptDialog.parallelDistance'),
+      label: t('promptDialog.enterDistance'),
+      placeholder: t('promptDialog.distancePlaceholder'),
+      inputType: 'number',
+      unit: 'mm',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (n === 0) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const distance = parseFloat(result);
+        if (!isNaN(distance) && Math.abs(distance) > 0.001) {
+          guideState.addParallelGuide(parallelRefGuideId, distance);
+        }
+      }
+      // Reset reference regardless of confirm/cancel
+      setParallelRefGuideId(null);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parallelRefGuideId]);
 
   // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes)
   const highlightedGuideId = useMemo<string | null>(() => {
@@ -280,14 +320,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (!mouseWorld) return null;
     if (activeTool === 'guide-x') return { axis: 'X' as const, offset: mouseWorld.x };
     if (activeTool === 'guide-z') return { axis: 'Y' as const, offset: mouseWorld.y };
-
-    // Parallel step 2: ghost follows cursor along the reference guide's axis
-    if (activeTool === 'guide-parallel' && parallelRefGuideId) {
-      const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
-      if (refGuide) {
-        return { axis: refGuide.axis, offset: refGuide.axis === 'X' ? mouseWorld.x : mouseWorld.y };
-      }
-    }
     return null;
   }, [activeTool, mouseWorld, parallelRefGuideId, guideState.guides]);
 
@@ -409,10 +441,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     draggingOverlayBody: unified.draggingOverlayBody,
     setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
-    // ADR-189: Guide click handlers
+    // ADR-189: Guide click handlers (parallel Step 2 handled by PromptDialog)
     guideAddGuide: guideState.addGuide,
     guideRemoveGuide: guideState.removeGuide,
-    guideAddParallelGuide: guideState.addParallelGuide,
     guides: guideState.guides,
     parallelRefGuideId,
     setParallelRefGuideId,
@@ -607,6 +638,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onDelete={() => handleSmartDelete()}
         onCancel={() => entityMenuRef.current?.close()}
       />
+
+      {/* ADR-189: Centralized prompt dialog (parallel guide distance, future tools) */}
+      <PromptDialog />
     </>
   );
 };

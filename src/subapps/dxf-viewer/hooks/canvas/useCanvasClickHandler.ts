@@ -40,7 +40,7 @@ import { dlog, dwarn } from '../../debug';
 // ADR-189: Guide system imports
 import type { Guide } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import type { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand } from '../../systems/guides/guide-commands';
+import type { CreateGuideCommand, DeleteGuideCommand } from '../../systems/guides/guide-commands';
 
 // ============================================================================
 // TYPES
@@ -135,11 +135,10 @@ export interface UseCanvasClickHandlerParams {
   // ── ADR-189: Construction guide handlers ────────────────────────────
   guideAddGuide?: (axis: GridAxis, offset: number) => CreateGuideCommand;
   guideRemoveGuide?: (guideId: string) => DeleteGuideCommand;
-  guideAddParallelGuide?: (refId: string, dist: number) => CreateParallelGuideCommand;
   guides?: readonly Guide[];
   /** Two-step parallel: currently selected reference guide ID */
   parallelRefGuideId?: string | null;
-  /** Two-step parallel: setter for reference guide ID */
+  /** Two-step parallel: setter for reference guide ID (Step 2 handled by PromptDialog) */
   setParallelRefGuideId?: (id: string | null) => void;
 }
 
@@ -167,7 +166,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     draggingOverlayBody, setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
     // ADR-189: Guide handlers
-    guideAddGuide, guideRemoveGuide, guideAddParallelGuide, guides,
+    guideAddGuide, guideRemoveGuide, guides,
     parallelRefGuideId, setParallelRefGuideId,
   } = params;
 
@@ -271,12 +270,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       }
       return;
     }
-    if (activeTool === 'guide-parallel' && guides && guides.length > 0) {
-      // ADR-189: Two-step parallel workflow
-      // Step 1: Select reference guide (click near a guide to highlight it)
-      // Step 2: Click at desired position to create parallel guide
-      if (!parallelRefGuideId && setParallelRefGuideId) {
-        // Step 1: Find nearest guide to use as reference
+    if (activeTool === 'guide-parallel' && guides && guides.length > 0 && setParallelRefGuideId) {
+      // ADR-189: Parallel workflow — Step 1: select reference guide.
+      // Step 2 (distance input) is handled by PromptDialog in CanvasSection.
+      if (!parallelRefGuideId) {
         const hitToleranceWorld = 30 / transform.scale;
         let nearestGuide: Guide | null = null;
         let nearestDist = hitToleranceWorld;
@@ -292,26 +289,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         }
         if (nearestGuide) {
           setParallelRefGuideId(nearestGuide.id);
-          dlog('useCanvasClickHandler', 'Parallel step 1: reference guide selected', nearestGuide.id);
+          dlog('useCanvasClickHandler', 'Parallel: reference guide selected → prompt dialog will open', nearestGuide.id);
         }
-        return;
-      }
-
-      // Step 2: Create parallel guide at click position
-      if (parallelRefGuideId && guideAddParallelGuide && setParallelRefGuideId) {
-        const refGuide = guides.find(g => g.id === parallelRefGuideId);
-        if (refGuide) {
-          const offsetDistance = refGuide.axis === 'X'
-            ? worldPoint.x - refGuide.offset
-            : worldPoint.y - refGuide.offset;
-          if (Math.abs(offsetDistance) > 0.01) {
-            guideAddParallelGuide(parallelRefGuideId, offsetDistance);
-            dlog('useCanvasClickHandler', 'Parallel step 2: guide created at offset', offsetDistance);
-          }
-        }
-        // Reset reference for next parallel operation
-        setParallelRefGuideId(null);
-        return;
       }
       return;
     }
@@ -539,7 +518,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     currentOverlays, handleOverlayClick,
     setDraftPolygon, setIsSavingPolygon,
     // ADR-189
-    guideAddGuide, guideRemoveGuide, guideAddParallelGuide, guides,
+    guideAddGuide, guideRemoveGuide, guides,
     parallelRefGuideId, setParallelRefGuideId,
   ]);
 

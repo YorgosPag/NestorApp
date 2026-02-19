@@ -1437,6 +1437,15 @@
     "guideParallel": "Παράλληλος Οδηγός",
     "guideDelete": "Διαγραφή Οδηγού"
   },
+  "promptDialog": {
+    "confirm": "OK",
+    "cancel": "Ακύρωση",
+    "invalidNumber": "Εισαγάγετε έγκυρο αριθμό",
+    "parallelDistance": "Απόσταση Παράλληλου Οδηγού",
+    "enterDistance": "Απόσταση από τον οδηγό αναφοράς",
+    "distancePlaceholder": "π.χ. 100",
+    "selectReference": "Κάντε κλικ κοντά σε οδηγό για επιλογή αναφοράς"
+  },
   "entityJoin": {
     "menuTitle": "Ένωση",
     "joinAction": "Ένωση",
