@@ -127,7 +127,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   if (error) {
     return (
-      <section className="flex flex-col items-center justify-center py-20 gap-3">
+      <section className="flex flex-col items-center justify-center py-20 gap-2">
         <AlertCircle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-destructive">{error}</p>
       </section>
@@ -138,7 +138,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
   if (items.length === 0) {
     return (
-      <section className="flex flex-col items-center justify-center py-20 gap-4">
+      <section className="flex flex-col items-center justify-center py-20 gap-2">
         <Ruler className="h-12 w-12 text-muted-foreground/50" />
         <header className="text-center">
           <h3 className="font-semibold">{t('tabs.measurements.empty.title')}</h3>
@@ -167,12 +167,12 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   // --- MAIN CONTENT ---
 
   return (
-    <section className="space-y-6 p-1">
+    <section className="space-y-2 p-2">
       {/* Summary Cards */}
       <BOQSummaryCards items={items} />
 
       {/* Filter Bar + Actions */}
-      <header className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
         <section className="flex-1 w-full">
           <BOQFilterBar
             filters={filters}

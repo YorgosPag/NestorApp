@@ -19,11 +19,11 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
     const { t } = useTranslation('building');
     const { quick } = useBorderTokens();
     return (
-        <div className="space-y-6">
+        <section className="space-y-2">
             {/* Financial Summary */}
-            <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <section className="grid grid-cols-1 md:grid-cols-4 gap-2">
                 <Card>
-                    <CardContent className="p-4 text-center">
+                    <CardContent className="p-2 text-center">
                         <div className="text-lg font-bold text-green-600">
                             {formatCurrency(building.totalValue || 0)}
                         </div>
@@ -32,7 +32,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 </Card>
 
                 <Card>
-                    <CardContent className="p-4 text-center">
+                    <CardContent className="p-2 text-center">
                         <div className="text-lg font-bold text-blue-600">
                             {formatCurrency((building.totalValue || 0) * 0.75)}
                         </div>
@@ -41,7 +41,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 </Card>
 
                 <Card>
-                    <CardContent className="p-4 text-center">
+                    <CardContent className="p-2 text-center">
                         <div className="text-lg font-bold text-orange-600">
                             {formatCurrency((building.totalValue || 0) * 0.25)}
                         </div>
@@ -50,7 +50,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 </Card>
 
                 <Card>
-                    <CardContent className="p-4 text-center">
+                    <CardContent className="p-2 text-center">
                         <div className="text-lg font-bold text-purple-600">
                             {formatNumber(((building.totalValue || 0) / building.totalArea))}€/m²
                         </div>
@@ -65,16 +65,16 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                     <CardTitle>{t('tabs.analytics.financial.cashFlows')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <ul className="space-y-2">
                         {monthlyProgress.map((month, index) => (
-                            <div key={month.month} className={`flex items-center justify-between p-3 ${quick.card}`}>
-                                <div className="flex items-center gap-3">
+                            <li key={month.month} className={`flex items-center justify-between p-2 ${quick.card}`}>
+                                <span className="flex items-center gap-2">
                                     <div className="text-sm font-medium w-12">{month.month}</div>
                                     <div className="text-sm text-muted-foreground">
                                         {t('tabs.analytics.financial.monthlyExpense')} {formatCurrency(month.cost)}
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-4">
+                                </span>
+                                <span className="flex items-center gap-2">
                                     <div className="text-sm">
                                         {t('tabs.analytics.financial.cumulative')} {formatCurrency(monthlyProgress.slice(0, index + 1).reduce((sum, m) => sum + m.cost, 0))}
                                     </div>
@@ -83,12 +83,12 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                                     )}>
                                         {month.cost < 95000 ? t('tabs.analytics.financial.withinBudget') : t('tabs.analytics.financial.attention')}
                                     </div>
-                                </div>
-                            </div>
+                                </span>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 </CardContent>
             </Card>
-        </div>
+        </section>
     );
 }

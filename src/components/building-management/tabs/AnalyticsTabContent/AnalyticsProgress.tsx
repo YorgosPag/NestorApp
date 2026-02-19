@@ -22,9 +22,9 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                 <CardTitle>{t('tabs.analytics.progress.title')}</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className={`text-center p-4 ${quick.card}`}>
+                <article className="space-y-2">
+                    <section className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <figure className={`text-center p-2 ${quick.card}`}>
                             <div className="text-3xl font-bold text-blue-600 mb-2">{building.progress}%</div>
                             <div className="text-sm text-muted-foreground">{t('tabs.analytics.progress.totalProgress')}</div>
                             <ThemeProgressBar
@@ -33,34 +33,34 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                               size="md"
                               showPercentage={false}
                             />
-                        </div>
+                        </figure>
 
-                        <div className={`text-center p-4 ${quick.card}`}>
-                            <div className="text-3xl font-bold text-green-600 mb-2">88%</div>
-                            <div className="text-sm text-muted-foreground">{t('tabs.analytics.progress.efficiency')}</div>
+                        <figure className={`text-center p-2 ${quick.card}`}>
+                            <p className="text-3xl font-bold text-green-600 mb-2">88%</p>
+                            <figcaption className="text-sm text-muted-foreground">{t('tabs.analytics.progress.efficiency')}</figcaption>
                             <ThemeProgressBar
                               progress={88}
                               label=""
                               size="md"
                               showPercentage={false}
                             />
-                        </div>
+                        </figure>
 
-                        <div className={`text-center p-4 ${quick.card}`}>
-                            <div className="text-3xl font-bold text-orange-600 mb-2">12</div>
-                            <div className="text-sm text-muted-foreground">{t('tabs.analytics.progress.daysDelay')}</div>
-                            <div className="mt-2 text-xs text-orange-600">
+                        <figure className={`text-center p-2 ${quick.card}`}>
+                            <p className="text-3xl font-bold text-orange-600 mb-2">12</p>
+                            <figcaption className="text-sm text-muted-foreground">{t('tabs.analytics.progress.daysDelay')}</figcaption>
+                            <span className="mt-2 text-xs text-orange-600">
                                 {t('tabs.analytics.progress.withinAcceptableLimits')}
-                            </div>
-                        </div>
-                    </div>
+                            </span>
+                        </figure>
+                    </section>
 
-                    <section className={`mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 ${quick.card}`}>
+                    <section className={`mt-2 p-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 ${quick.card}`}>
                         <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                             <Target className={`${iconSizes.md} text-blue-600`} />
                             {t('tabs.analytics.progress.forecastsAndRecommendations')}
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                             <div>
                                 <div className="font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
                                     <CheckCircle className={iconSizes.sm} />
@@ -85,7 +85,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                             </div>
                         </div>
                     </section>
-                </div>
+                </article>
             </CardContent>
         </Card>
     );

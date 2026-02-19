@@ -29,15 +29,15 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
     ];
 
     return (
-        <div>
-            <div className="flex items-center justify-between">
-                <div>
+        <header>
+            <section className="flex items-center justify-between">
+                <hgroup>
                     <h3 className="text-lg font-semibold">{t('tabs.analytics.title')}</h3>
                     <p className="text-sm text-muted-foreground">
                         {t('tabs.analytics.subtitle')}
                     </p>
-                </div>
-                <div className="flex items-center gap-2">
+                </hgroup>
+                <nav className="flex items-center gap-2">
                     <Select value={timeRange} onValueChange={setTimeRange}>
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder={t('tabs.analytics.timeRange.placeholder')} />
@@ -52,10 +52,10 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
                     <Button variant="outline" size="sm">
                         <BarChart3 className={`${iconSizes.sm} mr-2`} /> {t('tabs.analytics.exportReport')}
                     </Button>
-                </div>
-            </div>
+                </nav>
+            </section>
 
-            <div className="flex gap-2 mt-4">
+            <nav className="flex gap-2 mt-2">
                 {viewConfig.map((view) => (
                     <Button
                         key={view.id}
@@ -66,7 +66,7 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
                         {view.icon} {t(view.labelKey)}
                     </Button>
                 ))}
-            </div>
-        </div>
+            </nav>
+        </header>
     );
 }

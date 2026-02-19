@@ -21,15 +21,15 @@ export default function AnalyticsComparison() {
     ];
 
     return (
-        <div className="space-y-6">
+        <section className="space-y-2">
             <Card>
                 <CardHeader>
                     <CardTitle>{t('tabs.analytics.comparison.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <ul className="space-y-2">
                         {comparisonMetrics.map((item) => (
-                            <div key={item.metricKey} className={`flex items-center justify-between p-4 ${quick.card}`}>
+                            <li key={item.metricKey} className={`flex items-center justify-between p-2 ${quick.card}`}>
                                 <div className="flex-1">
                                     <div className="font-medium">{t(`tabs.analytics.comparison.metrics.${item.metricKey}`)}</div>
                                     <div className="text-sm text-muted-foreground">
@@ -45,11 +45,11 @@ export default function AnalyticsComparison() {
                                         ? `↗️ ${t('tabs.analytics.comparison.better')}`
                                         : `↘️ ${t('tabs.analytics.comparison.worse')}`}
                                 </div>
-                            </div>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 </CardContent>
             </Card>
-        </div>
+        </section>
     );
 }

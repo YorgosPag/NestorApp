@@ -125,7 +125,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
   }, [building.name, building.progress, milestones, isExporting, companyName, projectName]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-2">
       {/* View Toggle: Milestones | Gantt (ADR-034) */}
       <TimelineViewToggle activeView={activeView} onViewChange={setActiveView} />
 
@@ -160,7 +160,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
             getStatusText={wrappedGetStatusText}
             getTypeIcon={getTypeIcon}
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <CriticalPathCard />
             <CompletionForecastCard milestones={milestones} />
           </div>

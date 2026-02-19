@@ -19,78 +19,78 @@ export default function KPICards() {
     };
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
             <Card>
-                <CardContent className="p-4">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{kpis.costEfficiency}%</div>
-                        <div className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.costEfficiency')}</div>
-                        <div className={cn("text-xs px-2 py-1 rounded mt-1", getEfficiencyColor(kpis.costEfficiency))}>
+                <CardContent className="p-2">
+                    <figure className="text-center">
+                        <p className="text-2xl font-bold text-blue-600">{kpis.costEfficiency}%</p>
+                        <figcaption className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.costEfficiency')}</figcaption>
+                        <span className={cn("text-xs px-2 py-1 rounded mt-1 inline-block", getEfficiencyColor(kpis.costEfficiency))}>
                             {getEfficiencyLabel(kpis.costEfficiency)}
-                        </div>
-                    </div>
+                        </span>
+                    </figure>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardContent className="p-4">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{kpis.timeEfficiency}%</div>
-                        <div className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.timeEfficiency')}</div>
-                        <div className={cn("text-xs px-2 py-1 rounded mt-1", getEfficiencyColor(kpis.timeEfficiency))}>
+                <CardContent className="p-2">
+                    <figure className="text-center">
+                        <p className="text-2xl font-bold text-green-600">{kpis.timeEfficiency}%</p>
+                        <figcaption className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.timeEfficiency')}</figcaption>
+                        <span className={cn("text-xs px-2 py-1 rounded mt-1 inline-block", getEfficiencyColor(kpis.timeEfficiency))}>
                             {getEfficiencyLabel(kpis.timeEfficiency)}
-                        </div>
-                    </div>
+                        </span>
+                    </figure>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardContent className="p-4">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">{kpis.qualityScore}%</div>
-                        <div className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.qualityScore')}</div>
-                        <div className={cn("text-xs px-2 py-1 rounded mt-1", getEfficiencyColor(kpis.qualityScore))}>
+                <CardContent className="p-2">
+                    <figure className="text-center">
+                        <p className="text-2xl font-bold text-purple-600">{kpis.qualityScore}%</p>
+                        <figcaption className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.qualityScore')}</figcaption>
+                        <span className={cn("text-xs px-2 py-1 rounded mt-1 inline-block", getEfficiencyColor(kpis.qualityScore))}>
                             {t('tabs.analytics.kpi.exceptional')}
-                        </div>
-                    </div>
+                        </span>
+                    </figure>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardContent className="p-4">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-orange-600">{kpis.roi}%</div>
-                        <div className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.roi')}</div>
-                        <div className="text-xs px-2 py-1 rounded mt-1 text-green-800 dark:text-green-300">
+                <CardContent className="p-2">
+                    <figure className="text-center">
+                        <p className="text-2xl font-bold text-orange-600">{kpis.roi}%</p>
+                        <figcaption className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.roi')}</figcaption>
+                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-800 dark:text-green-300">
                             {t('tabs.analytics.kpi.aboveTarget')}
-                        </div>
-                    </div>
+                        </span>
+                    </figure>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardContent className="p-4">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">{kpis.profitMargin}%</div>
-                        <div className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.profitMargin')}</div>
-                        <div className="text-xs px-2 py-1 rounded mt-1 text-green-800 dark:text-green-300">
+                <CardContent className="p-2">
+                    <figure className="text-center">
+                        <p className="text-2xl font-bold text-red-600">{kpis.profitMargin}%</p>
+                        <figcaption className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.profitMargin')}</figcaption>
+                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-800 dark:text-green-300">
                             {t('tabs.analytics.kpi.withinTarget')}
-                        </div>
-                    </div>
+                        </span>
+                    </figure>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardContent className="p-4">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-600">{kpis.riskLevel}</div>
-                        <div className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.riskLevel')}</div>
-                        <div className="text-xs px-2 py-1 rounded mt-1 text-green-800 dark:text-green-300">
+                <CardContent className="p-2">
+                    <figure className="text-center">
+                        <p className="text-2xl font-bold text-gray-600">{kpis.riskLevel}</p>
+                        <figcaption className="text-xs text-muted-foreground">{t('tabs.analytics.kpi.riskLevel')}</figcaption>
+                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-800 dark:text-green-300">
                             {t('tabs.analytics.kpi.underControl')}
-                        </div>
-                    </div>
+                        </span>
+                    </figure>
                 </CardContent>
             </Card>
-        </div>
+        </section>
     );
 }

@@ -443,7 +443,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
   if (error) {
     return (
-      <section className="flex flex-col items-center gap-3 py-12">
+      <section className="flex flex-col items-center gap-2 py-12">
         <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={fetchParkingSpots}>
           Retry
@@ -453,7 +453,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-4">
+    <section className="flex flex-col gap-2 p-2">
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -487,8 +487,8 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <CardContent className="p-2">
+          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-2">
             <label className="relative md:col-span-2">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
               <Input
@@ -534,11 +534,11 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
       {/* Create Form — Expanded with all parking fields */}
       {showCreateForm && (
         <form
-          className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4"
+          className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2"
           onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
         >
           {/* Row 1: Number, Type, Status */}
-          <fieldset className="grid grid-cols-3 gap-3">
+          <fieldset className="grid grid-cols-3 gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
                 Κωδικός *
@@ -585,7 +585,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           </fieldset>
 
           {/* Row 2: Floor, Location, Area, Price */}
-          <fieldset className="grid grid-cols-4 gap-3">
+          <fieldset className="grid grid-cols-4 gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
                 Όροφος

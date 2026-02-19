@@ -289,7 +289,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   if (error) {
     return (
-      <section className="flex flex-col items-center gap-3 py-12">
+      <section className="flex flex-col items-center gap-2 py-12">
         <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={fetchUnits}>
           Retry
@@ -299,7 +299,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-4">
+    <section className="flex flex-col gap-2 p-2">
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -332,8 +332,8 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <CardContent className="p-2">
+          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-2">
             <label className="relative md:col-span-2">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
               <Input

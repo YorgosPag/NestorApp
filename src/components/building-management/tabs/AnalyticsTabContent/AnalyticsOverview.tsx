@@ -20,33 +20,33 @@ export default function AnalyticsOverview() {
     const { quick } = useBorderTokens();
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {/* Cost Breakdown */}
             <Card>
                 <CardHeader>
                     <CardTitle>{t('tabs.analytics.overview.costAnalysis')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <ul className="space-y-2">
                         {costBreakdown.map((item) => (
-                            <div key={item.category}>
-                                <div className="flex items-center justify-between mb-2">
+                            <li key={item.category}>
+                                <header className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium">{item.category}</span>
                                     <span className="text-sm text-muted-foreground">
                                         {formatCurrency(item.amount)} ({item.percentage}%)
                                     </span>
-                                </div>
+                                </header>
                                 <div className="w-full bg-muted rounded-full h-3">
                                     <div
                                         className={cn("h-3 rounded-full", TRANSITION_PRESETS.SLOW_ALL, item.color)}
                                         style={analyticsOverviewStyles.progressBars.item(item.percentage)}
                                      />
                                 </div>
-                            </div>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
 
-                    <aside className={`mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 ${quick.card}`}>
+                    <aside className={`mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 ${quick.card}`}>
                         <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
                             <Lightbulb className={iconSizes.sm} />
                             {t('tabs.analytics.overview.analysis')}
@@ -64,9 +64,9 @@ export default function AnalyticsOverview() {
                     <CardTitle>{t('tabs.analytics.overview.progressVsPlanned')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <ul className="space-y-2">
                         {monthlyProgress.map((month) => (
-                            <div key={month.month} className="space-y-2">
+                            <li key={month.month} className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium">{month.month}</span>
                                     <span className="text-xs text-muted-foreground">
@@ -88,11 +88,11 @@ export default function AnalyticsOverview() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 </CardContent>
             </Card>
-        </div>
+        </section>
     );
 }
