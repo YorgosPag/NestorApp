@@ -38,8 +38,12 @@ export interface UseRotationPreviewProps {
   selectedEntityIds: string[];
   levelManager: LevelManagerLike;
   transform: ViewTransform;
-  /** Callback returning the canvas element to draw on */
+  /** Callback returning the canvas element to draw on (PreviewCanvas) */
   getCanvas: () => HTMLCanvasElement | null;
+  /** Callback returning the DxfCanvas element — used for viewport calculation
+   *  to ensure worldToScreen uses the SAME dimensions as the click handler.
+   *  Falls back to getCanvas() if not provided. */
+  getViewportElement?: () => HTMLElement | null;
   /** Current cursor world position */
   cursorWorld: Point2D | null;
 }
@@ -52,7 +56,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
   const {
     phase, basePoint, currentAngle,
     selectedEntityIds, levelManager,
-    transform, getCanvas,
+    transform, getCanvas, getViewportElement,
     cursorWorld,
   } = props;
 
@@ -78,24 +82,26 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear
+    // 🏢 FIX (2026-02-20): Explicit ctx transform — guarantees DPR scaling regardless of
+    // prior state. Same pattern as PreviewRenderer.render() (lines 322-325).
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Nothing to draw if not in angle-picking phase
     if (phase !== 'awaiting-angle' || !basePoint) return;
 
-    // 🏢 FIX (2026-02-19): Use FRESH viewport from the actual canvas element
-    // React state viewport (from useViewportManager) may lag behind actual dimensions
-    // when UI changes (e.g., DynamicInput appearing) cause container resize.
-    // The click path uses getBoundingClientRect() per event → we must match here.
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 FIX (2026-02-20): Viewport from the DxfCanvas element (= same element used in
+    // click handler's getPointerSnapshotFromElement). This eliminates any viewport mismatch
+    // between the click path and the preview rendering path.
+    // Fallback to PreviewCanvas dimensions if DxfCanvas ref not available.
+    const viewportElement = getViewportElement?.() ?? canvas;
+    const rect = viewportElement.getBoundingClientRect();
     const freshViewport = { width: rect.width, height: rect.height };
 
-    // 🏢 FIX (2026-02-19): PreviewCanvas context has ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    // from PreviewRenderer.updateSize() — ALL drawing is automatically scaled by DPR.
-    // Do NOT multiply coordinates by dpr — that causes double-DPR scaling and
-    // the crosshair appears at the wrong position on HiDPI displays (DPR > 1.0).
-    // Draw in CSS pixel coordinates only — same pattern as PreviewRenderer.renderLine().
+    // Draw in CSS pixel coordinates — DPR scaling handled by ctx.setTransform above.
+    // Same pattern as PreviewRenderer.renderLine().
 
     // Convert pivot to screen coords (CSS pixels)
     const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, freshViewport);
@@ -179,7 +185,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
 
       ctx.restore();
     }
-  }, [phase, basePoint, currentAngle, selectedEntityIds, getEntity, transform, getCanvas, cursorWorld]);
+  }, [phase, basePoint, currentAngle, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement, cursorWorld]);
 
   // Clear canvas ONLY when transitioning FROM awaiting-angle → idle/base-point
   // (never on every render — that would wipe the drawing tool preview)
@@ -188,7 +194,13 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       const canvas = getCanvas();
       if (canvas) {
         const ctx = canvas.getContext('2d');
-        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        if (ctx) {
+          // 🏢 Same explicit transform pattern as drawFrame
+          const clearDpr = window.devicePixelRatio || 1;
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.setTransform(clearDpr, 0, 0, clearDpr, 0, 0);
+        }
       }
     }
     prevPhaseRef.current = phase;

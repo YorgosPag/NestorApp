@@ -236,13 +236,60 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
 
+  // ADR-189: Two-step parallel guide workflow — step 1: select reference, step 2: place parallel
+  const [parallelRefGuideId, setParallelRefGuideId] = useState<string | null>(null);
+
+  // ADR-189: Reset parallel reference when switching away from guide-parallel tool
+  useEffect(() => {
+    if (activeTool !== 'guide-parallel') {
+      setParallelRefGuideId(null);
+    }
+  }, [activeTool]);
+
+  // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes)
+  const highlightedGuideId = useMemo<string | null>(() => {
+    if (!mouseWorld || !guideState.guides.length) return null;
+
+    // Highlight only in guide-delete, guide-parallel (step 1: selecting ref), or guide-parallel (step 2: show ref)
+    const needsHighlight =
+      activeTool === 'guide-delete' ||
+      (activeTool === 'guide-parallel' && !parallelRefGuideId);
+    if (!needsHighlight) {
+      // If ref is selected, highlight the reference guide
+      return parallelRefGuideId;
+    }
+
+    const hitToleranceWorld = 30 / transform.scale;
+    let nearestId: string | null = null;
+    let nearestDist = hitToleranceWorld;
+    for (const guide of guideState.guides) {
+      if (!guide.visible) continue;
+      const dist = guide.axis === 'X'
+        ? Math.abs(mouseWorld.x - guide.offset)
+        : Math.abs(mouseWorld.y - guide.offset);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestId = guide.id;
+      }
+    }
+    return nearestId;
+  }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, transform.scale]);
+
   // ADR-189: Ghost guide preview (follows cursor when guide tool is active)
   const ghostGuide = useMemo(() => {
     if (!mouseWorld) return null;
     if (activeTool === 'guide-x') return { axis: 'X' as const, offset: mouseWorld.x };
     if (activeTool === 'guide-z') return { axis: 'Y' as const, offset: mouseWorld.y };
+
+    // Parallel step 2: ghost follows cursor along the reference guide's axis
+    if (activeTool === 'guide-parallel' && parallelRefGuideId) {
+      const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
+      if (refGuide) {
+        return { axis: refGuide.axis, offset: refGuide.axis === 'X' ? mouseWorld.x : mouseWorld.y };
+      }
+    }
     return null;
-  }, [activeTool, mouseWorld]);
+  }, [activeTool, mouseWorld, parallelRefGuideId, guideState.guides]);
 
   // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -397,7 +444,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [entityJoinHook, selectedEntityIds]);
 
   // ADR-188: Rotation ghost preview (rubber band + ghost entities)
-  // 🏢 FIX (2026-02-19): viewport removed — preview now reads fresh dimensions from canvas DOM
+  // 🏢 FIX (2026-02-20): getViewportElement returns the DxfCanvas element so that
+  // worldToScreen uses the SAME dimensions as the click handler (getPointerSnapshotFromElement).
+  // This eliminates viewport mismatch between the click path and preview rendering.
   useRotationPreview({
     phase: rotationTool.phase,
     basePoint: rotationTool.basePoint,
@@ -406,6 +455,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     levelManager,
     transform,
     getCanvas: () => previewCanvasRef.current?.getCanvas() ?? null,
+    getViewportElement: () => {
+      const canvas = dxfCanvasRef?.current?.getCanvas?.();
+      return canvas instanceof HTMLElement ? canvas : null;
+    },
     cursorWorld: mouseWorld,
   });
 
@@ -517,11 +570,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           opacity: pdfOpacity,
         }}
         onMouseMove={props.onMouseMove}
-        entityPickingActive={angleEntityMeasurement.isActive}
+        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity'}
         // ADR-189: Construction guides
         guides={guideState.guides}
         guidesVisible={guideState.guidesVisible}
         ghostGuide={ghostGuide}
+        highlightedGuideId={highlightedGuideId}
       />
 
       {/* 🏢 PERF (2026-02-19): Context menus rendered OUTSIDE CanvasLayerStack.
