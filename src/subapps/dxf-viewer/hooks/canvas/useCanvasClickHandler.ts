@@ -65,6 +65,7 @@ interface SpecialToolLike {
 interface AngleEntityToolLike {
   isActive: boolean;
   isWaitingForEntitySelection: boolean;
+  currentStep: 0 | 1;
   onEntityClick: (entity: AnySceneEntity, point: Point2D) => boolean;
   acceptsEntityType: (entityType: string) => boolean;
 }
@@ -347,9 +348,16 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
           }
 
           if (isHit) {
+            const stepBeforeClick = angleEntityMeasurement.currentStep;
             const accepted = angleEntityMeasurement.onEntityClick(entity as AnySceneEntity, worldPoint);
             if (accepted) {
-              dlog('useCanvasClickHandler', 'AngleEntityMeasurement entity accepted:', entity.id);
+              // Visual feedback: highlight first entity, clear after measurement created
+              if (stepBeforeClick === 0) {
+                setSelectedEntityIds([entity.id]);
+              } else {
+                setSelectedEntityIds([]);
+              }
+              dlog('useCanvasClickHandler', 'AngleEntityMeasurement entity accepted:', entity.id, 'step:', stepBeforeClick);
               return;
             }
           }

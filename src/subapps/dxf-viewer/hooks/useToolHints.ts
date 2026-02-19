@@ -15,9 +15,10 @@
  * - Type-safe: full TypeScript support
  */
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useDrawingMachine } from '../core/state-machine/useDrawingMachine';
+import { toolHintOverrideStore } from './toolHintOverrideStore';
 import type { ToolType, ToolHint, ToolHintsResult } from '../ui/toolbar/types';
 
 /**
@@ -39,6 +40,12 @@ export function useToolHints(activeTool: ToolType): ToolHintsResult {
   const { t, isNamespaceReady } = useTranslation('tool-hints');
   const { pointCount } = useDrawingMachine();
 
+  // Entity-picking tools (angle measurement, etc.) write dynamic hint text here
+  const hintOverride = useSyncExternalStore(
+    toolHintOverrideStore.subscribe,
+    toolHintOverrideStore.getSnapshot,
+  );
+
   return useMemo(() => {
     // Default result for tools without hints or loading state
     const defaultResult: ToolHintsResult = {
@@ -53,6 +60,18 @@ export function useToolHints(activeTool: ToolType): ToolHintsResult {
     // Namespace not ready yet
     if (!isNamespaceReady) {
       return defaultResult;
+    }
+
+    // Entity-picking override: show dynamic text from the active tool's state machine
+    if (hintOverride) {
+      return {
+        hint: null,
+        currentStep: 0,
+        totalSteps: 0,
+        currentStepText: hintOverride,
+        hasHints: true,
+        isReady: true,
+      };
     }
 
     // No tool selected
@@ -104,7 +123,7 @@ export function useToolHints(activeTool: ToolType): ToolHintsResult {
       hasHints: true,
       isReady: true,
     };
-  }, [activeTool, pointCount, t, isNamespaceReady]);
+  }, [activeTool, pointCount, t, isNamespaceReady, hintOverride]);
 }
 
 /**

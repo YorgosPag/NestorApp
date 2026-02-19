@@ -14,7 +14,7 @@
  * @module hooks/tools/useAngleEntityMeasurement
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, AngleMeasurementEntity, LineEntity, ArcEntity } from '../../types/entities';
 import { isLineEntity, isArcEntity, generateEntityId } from '../../types/entities';
@@ -24,6 +24,7 @@ import {
   angleBetweenTwoArcs,
   type AngleMeasurementResult,
 } from '../../utils/angle-entity-math';
+import { toolHintOverrideStore } from '../toolHintOverrideStore';
 
 // ============================================================================
 // TYPES
@@ -281,6 +282,22 @@ export function useAngleEntityMeasurement(
     const prompts = VARIANT_PROMPTS[s.variant];
     return s.currentStep === 0 ? prompts.step0 : prompts.step1;
   }, []);
+
+  // ── Sync hint override store with current step ─────────────────
+  useEffect(() => {
+    if (!state.isActive || !state.variant) {
+      toolHintOverrideStore.setOverride(null);
+      return;
+    }
+
+    const prompts = VARIANT_PROMPTS[state.variant];
+    const text = state.error
+      ? `⚠️ ${state.error}`
+      : (state.currentStep === 0 ? prompts.step0 : prompts.step1);
+    toolHintOverrideStore.setOverride(text);
+
+    return () => { toolHintOverrideStore.setOverride(null); };
+  }, [state.isActive, state.variant, state.currentStep, state.error]);
 
   // ── Return ───────────────────────────────────────────────────────
 
