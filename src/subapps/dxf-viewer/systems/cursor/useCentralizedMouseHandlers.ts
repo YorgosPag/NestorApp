@@ -319,7 +319,11 @@ export function useCentralizedMouseHandlers({
     // 🏢 ENTERPRISE: Middle button (button === 1) NEVER starts selection - it's for pan only!
     // 🏢 ENTERPRISE (2026-01-25): Skip selection when grip drag is in progress
     // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized isToolInteractive
-    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging) {
+    // 🏢 FIX (2026-02-19): Skip marquee start when rotation tool is active — rotation needs
+    // direct clicks (Path A) not marquee fallback (Path B), to ensure snap is applied and
+    // to avoid entity re-selection interference that can cause pivot point offset
+    const isRotationActive = activeTool === 'rotate';
+    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive) {
       cursor.startSelection(screenPos);
     }
   }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);

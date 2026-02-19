@@ -377,6 +377,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [entityJoinHook, selectedEntityIds]);
 
   // ADR-188: Rotation ghost preview (rubber band + ghost entities)
+  // 🏢 FIX (2026-02-19): viewport removed — preview now reads fresh dimensions from canvas DOM
   useRotationPreview({
     phase: rotationTool.phase,
     basePoint: rotationTool.basePoint,
@@ -384,7 +385,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     selectedEntityIds,
     levelManager,
     transform,
-    viewport,
     getCanvas: () => previewCanvasRef.current?.getCanvas() ?? null,
     cursorWorld: mouseWorld,
   });

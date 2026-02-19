@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useRef, useEffect } from 'react';
-import type { Point2D, Viewport, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { AnySceneEntity } from '../../types/entities';
 import { rotatePoint } from '../../utils/rotation-math';
@@ -38,7 +38,6 @@ export interface UseRotationPreviewProps {
   selectedEntityIds: string[];
   levelManager: LevelManagerLike;
   transform: ViewTransform;
-  viewport: Viewport;
   /** Callback returning the canvas element to draw on */
   getCanvas: () => HTMLCanvasElement | null;
   /** Current cursor world position */
@@ -53,7 +52,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
   const {
     phase, basePoint, currentAngle,
     selectedEntityIds, levelManager,
-    transform, viewport, getCanvas,
+    transform, getCanvas,
     cursorWorld,
   } = props;
 
@@ -87,12 +86,19 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
 
     const dpr = window.devicePixelRatio || 1;
 
+    // 🏢 FIX (2026-02-19): Use FRESH viewport from the actual canvas element
+    // React state viewport (from useViewportManager) may lag behind actual dimensions
+    // when UI changes (e.g., DynamicInput appearing) cause container resize.
+    // The click path uses getBoundingClientRect() per event → we must match here.
+    const rect = canvas.getBoundingClientRect();
+    const freshViewport = { width: rect.width, height: rect.height };
+
     // Convert pivot to screen coords
-    const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, viewport);
+    const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, freshViewport);
 
     // === 1. Draw rubber band line: pivot → cursor ===
     if (cursorWorld) {
-      const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, viewport);
+      const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, freshViewport);
 
       ctx.save();
       ctx.strokeStyle = '#FFD700';
@@ -164,12 +170,12 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
         if (!entity) continue;
 
         const dxfEntity = entity as unknown as DxfEntityUnion;
-        drawGhostEntity(ctx, dxfEntity, basePoint, currentAngle, transform, viewport, dpr);
+        drawGhostEntity(ctx, dxfEntity, basePoint, currentAngle, transform, freshViewport, dpr);
       }
 
       ctx.restore();
     }
-  }, [phase, basePoint, currentAngle, selectedEntityIds, getEntity, transform, viewport, getCanvas, cursorWorld]);
+  }, [phase, basePoint, currentAngle, selectedEntityIds, getEntity, transform, getCanvas, cursorWorld]);
 
   // Clear canvas ONLY when transitioning FROM awaiting-angle → idle/base-point
   // (never on every render — that would wipe the drawing tool preview)
