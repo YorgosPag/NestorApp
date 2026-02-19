@@ -268,7 +268,7 @@ const AccordionContent = React.forwardRef<
     {...props}
   >
     <div className={cn(
-      "pb-4 pt-0",
+      "pb-2 pt-0",
       variant === 'bordered' || variant === 'card' ? "" : "" // Already handled by content variants
     )}>
       {children}
