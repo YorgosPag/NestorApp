@@ -168,6 +168,8 @@ export function useCentralizedMouseHandlers({
     // 🏢 ENTERPRISE: DxfScene extends SceneModel - safe cast
     scene: scene as import('../../types/scene').SceneModel | null,
     overlayEntities: overlaySnapEntities,
+    // 🏢 FIX (2026-02-20): Pass current zoom scale for correct pixel→world tolerance conversion
+    scale: transform.scale,
     onSnapPoint: () => {
       // TODO: Use this callback in next steps if needed
     }

@@ -16,6 +16,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { UI_FONTS, buildUIFont, LINE_DASH_PATTERNS, TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // 🏢 ADR-086: Centralized Angle Formatting
 import { formatAngle } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { isTextEntity } from '../../types/entities';
 
 export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
@@ -26,6 +28,7 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
   const text = entity.text;
   // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
   const height = entity.fontSize || entity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+  const rotation = entity.rotation ?? 0;
 
   if (!position || !text) return;
 
@@ -49,7 +52,20 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
   ctx.lineWidth = 1;
   ctx.globalAlpha = 0.6;
   ctx.setLineDash([...LINE_DASH_PATTERNS.TEXT_BOUNDING]); // 🏢 ADR-083
-  ctx.strokeRect(screenPos.x, screenPos.y, width, screenHeight);
+
+  // 🏢 FIX (2026-02-20): Respect text rotation — bounding box must follow the text angle.
+  // Without this, vertical dimension text ("2.95" rotated 90°) gets a horizontal box.
+  // Same rotation logic as TextRenderer.render() (negate angle for Y-flip).
+  let normalizedRotation = rotation % 360;
+  if (normalizedRotation < 0) normalizedRotation += 360;
+
+  if (normalizedRotation !== 0) {
+    ctx.translate(screenPos.x, screenPos.y);
+    ctx.rotate(degToRad(-normalizedRotation));
+    ctx.strokeRect(0, 0, width, screenHeight);
+  } else {
+    ctx.strokeRect(screenPos.x, screenPos.y, width, screenHeight);
+  }
 
   ctx.restore();
 }

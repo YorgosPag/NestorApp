@@ -130,9 +130,12 @@ export function useDrawingHandlers(
   const { state: rulersGridState } = useRulersGridContext();
   const gridStep = rulersGridState?.grid?.visual?.step || 10;
 
+  // 🏢 FIX (2026-02-20): Pass current zoom scale for correct pixel→world tolerance conversion
+  const currentTransform = canvasOps.getTransform();
   const { snapManager, findSnapPoint } = useSnapManager(canvasRef, {
     scene: currentScene,
     gridStep, // 🔲 GRID SNAP: Pass grid step for grid snapping
+    scale: currentTransform.scale,
     onSnapPoint: (point) => {
 
     }

@@ -72,7 +72,9 @@ export const useOverlayDrawing = ({
   const [snapPoint, setSnapPoint] = useState<{x: number, y: number} | null>(null);
 
   // Snap manager
+  // 🏢 FIX (2026-02-20): Pass current zoom scale for correct pixel→world tolerance conversion
   const snapManager = useSnapManager(overlayCanvasRef, {
+    scale: canvasTransform.scale,
     onSnapPoint: (point: {x: number, y: number} | null) => {
       setSnapPoint(point);
     }

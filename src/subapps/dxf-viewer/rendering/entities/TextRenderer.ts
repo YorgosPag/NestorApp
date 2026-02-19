@@ -202,13 +202,29 @@ export class TextRenderer extends BaseEntityRenderer {
     const position = entity.position as Point2D;
     const text = entity.text as string;
     const height = this.extractTextHeight(entity);
+    const rotation = ('rotation' in entity) ? entity.rotation as number : 0;
 
     if (!position || !text) return false;
 
     // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
     const width = text.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 
-    // Check if point is within text bounds (world coordinates)
+    // 🏢 FIX (2026-02-20): Rotation-aware hit testing.
+    // Transform the test point into the text's LOCAL coordinate system before
+    // checking the axis-aligned bounding box. Without this, vertical dimension
+    // text (rotated 90°) had a horizontal hit zone — catching clicks from far away.
+    let testPoint = point;
+    if (rotation !== 0) {
+      const rad = degToRad(-rotation); // Inverse rotation to go from world → local
+      const dx = point.x - position.x;
+      const dy = point.y - position.y;
+      testPoint = {
+        x: position.x + dx * Math.cos(rad) - dy * Math.sin(rad),
+        y: position.y + dx * Math.sin(rad) + dy * Math.cos(rad),
+      };
+    }
+
+    // Check if point is within text bounds (local coordinates, axis-aligned)
     const minX = position.x;
     const maxX = position.x + width;
     const minY = position.y - height;
@@ -216,9 +232,9 @@ export class TextRenderer extends BaseEntityRenderer {
 
     const worldTolerance = tolerance / this.transform.scale;
 
-    return point.x >= minX - worldTolerance &&
-           point.x <= maxX + worldTolerance &&
-           point.y >= minY - worldTolerance &&
-           point.y <= maxY + worldTolerance;
+    return testPoint.x >= minX - worldTolerance &&
+           testPoint.x <= maxX + worldTolerance &&
+           testPoint.y >= minY - worldTolerance &&
+           testPoint.y <= maxY + worldTolerance;
   }
 }

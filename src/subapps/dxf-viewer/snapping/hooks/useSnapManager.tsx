@@ -2,7 +2,7 @@
 
 const DEBUG_SNAP_MANAGER = false; // 🔍 DISABLED - set to true only for debugging
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { ProSnapEngineV2 as SnapManager } from '../ProSnapEngineV2';
 import { useSnapContext } from '../context/SnapContext';
 import { ExtendedSnapType } from '../extended-types';
@@ -10,18 +10,6 @@ import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../extended-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { dlog, dwarn } from '../../debug';
-
-// Debug interface for entity inspection
-interface EntityDebugInfo {
-  type: string;
-  id: string;
-  points?: number;
-  center?: Point2D;
-  radius?: number;
-  start?: Point2D;
-  end?: Point2D;
-  fullEntity: Entity;
-}
 
 /**
  * 🏢 ENTERPRISE: Canvas wrapper interface for components that wrap HTMLCanvasElement
@@ -45,9 +33,12 @@ function isCanvasWrapper(element: unknown): element is CanvasWrapper {
 
 interface UseSnapManagerOptions {
   scene?: SceneModel | null;
-  overlayEntities?: Entity[]; // 🔺 NEW: Include overlay entities for unified snapping
+  overlayEntities?: Entity[]; // 🔺 Include overlay entities for unified snapping
   onSnapPoint?: (point: Point2D | null) => void;
   gridStep?: number; // 🔲 GRID SNAP: Grid step in world units for grid snapping
+  /** 🏢 Current zoom scale — REQUIRED for correct pixel→world tolerance conversion.
+   *  Without this, snap tolerances default to world units (5px = 5 world units = massive!) */
+  scale?: number;
 }
 
 export const useSnapManager = (
@@ -56,7 +47,34 @@ export const useSnapManager = (
 ) => {
   const { snapEnabled, enabledModes } = useSnapContext();
   const snapManagerRef = useRef<SnapManager | null>(null);
-  const { scene, overlayEntities, onSnapPoint, gridStep } = options;
+  const { scene, overlayEntities, onSnapPoint, gridStep, scale } = options;
+
+  // 🏢 ENTERPRISE (2026-02-20): Ref-based viewport synchronization.
+  // The current zoom scale is stored in a ref so that findSnapPoint() always
+  // reads the latest value WITHOUT causing re-renders or callback instability.
+  // This is the same pattern used by AutoCAD's Viewport Dependency Injection
+  // (scale context passed alongside every coordinate operation).
+  const scaleRef = useRef(scale ?? 1);
+
+  // Update scaleRef whenever the external scale changes
+  useEffect(() => {
+    if (scale !== undefined && scale > 0) {
+      scaleRef.current = scale;
+
+      // 🏢 Synchronize snap engine viewport immediately on zoom change
+      if (snapManagerRef.current) {
+        const s = scale;
+        snapManagerRef.current.setViewport({
+          scale: s,
+          worldPerPixelAt: () => 1 / s,
+          worldToScreen: (p: Point2D) => ({
+            x: p.x * s,
+            y: p.y * s,
+          }),
+        });
+      }
+    }
+  }, [scale]);
 
   // Initialize SnapManager
   useEffect(() => {
@@ -131,37 +149,19 @@ export const useSnapManager = (
         return;
       }
 
-      // Create viewport from canvas (with proper HTMLCanvasElement access)
-      if (canvasRef.current) {
-        try {
-          // 🏢 ENTERPRISE: Use type guard instead of 'as any'
-          const canvasElement = isCanvasWrapper(canvasRef.current) && canvasRef.current.getCanvas
-            ? canvasRef.current.getCanvas()
-            : canvasRef.current;
-          
-          if (canvasElement && typeof canvasElement.getContext === 'function') {
-            const transform = canvasElement.getContext('2d')?.getTransform();
-            
-            if (transform) {
-              const viewport = {
-                scale: transform.a || 1,
-                worldPerPixelAt: () => 1 / (transform.a || 1),
-                worldToScreen: (p: Point2D) => ({
-                  x: p.x * transform.a + transform.e,
-                  y: p.y * transform.d + transform.f
-                })
-              };
-              
-              snapManagerRef.current.setViewport(viewport);
+      // 🏢 FIX (2026-02-20): Set viewport from scaleRef (always current zoom).
+      // Previously used canvas.getContext('2d').getTransform().a which returns DPR,
+      // NOT the zoom scale — causing wpp to always be ~1.0 regardless of zoom.
+      const currentScale = scaleRef.current;
+      snapManagerRef.current.setViewport({
+        scale: currentScale,
+        worldPerPixelAt: () => 1 / currentScale,
+        worldToScreen: (p: Point2D) => ({
+          x: p.x * currentScale,
+          y: p.y * currentScale,
+        }),
+      });
 
-            }
-          }
-        } catch (error) {
-          if (DEBUG_SNAP_MANAGER) dwarn('Snap', 'Could not set viewport:', error);
-          // Continue without viewport - better than crashing
-        }
-      }
-      
       if (DEBUG_SNAP_MANAGER) {
         dlog('Snap', '[useSnapManager] Calling initialize with', allEntities.length, 'entities');
       }
@@ -172,66 +172,52 @@ export const useSnapManager = (
         dlog('Snap', '[useSnapManager] initialize() completed');
       }
 
-      if (allEntities.length > 0) {
+      if (allEntities.length > 0 && DEBUG_SNAP_MANAGER) {
         // Debug: Log entity types to understand what we're working with
         const entityTypes = allEntities.reduce((types, entity) => {
           types[entity.type] = (types[entity.type] || 0) + 1;
           return types;
         }, {} as Record<string, number>);
 
-        if (DEBUG_SNAP_MANAGER) {
-          dlog('Snap', '[useSnapManager] Entity types:', entityTypes);
-        }
-
-        // Sample first few entities to see their structure
-        allEntities.slice(0, 3).forEach((entity, i) => {
-          if (DEBUG_SNAP_MANAGER) {
-            const debugInfo: EntityDebugInfo = {
-              type: entity.type,
-              id: entity.id,
-              fullEntity: entity
-            };
-
-            // Type-safe property extraction based on entity type
-            if ('points' in entity && Array.isArray(entity.points)) {
-              debugInfo.points = entity.points.length;
-            }
-            if ('center' in entity && entity.center) {
-              debugInfo.center = entity.center as Point2D;
-            }
-            if ('radius' in entity && typeof entity.radius === 'number') {
-              debugInfo.radius = entity.radius;
-            }
-            if ('start' in entity && entity.start) {
-              debugInfo.start = entity.start as Point2D;
-            }
-            if ('end' in entity && entity.end) {
-              debugInfo.end = entity.end as Point2D;
-            }
-
-          }
-        });
-      } else {
-
+        dlog('Snap', '[useSnapManager] Entity types:', entityTypes);
       }
-    } else {
-
     }
   }, [scene, overlayEntities]);
 
-  // Return the snap manager instance for external use
+  // 🏢 ENTERPRISE: Stable findSnapPoint callback.
+  // Reads zoom scale from scaleRef (always current) — no extra parameters needed.
+  // The callback reference stays stable across renders (no deps on scale).
+  const findSnapPoint = useCallback((worldX: number, worldY: number) => {
+    if (DEBUG_SNAP_MANAGER) {
+      dlog('Snap', '[useSnapManager.findSnapPoint] Called with:', { worldX, worldY });
+    }
+
+    if (!snapManagerRef.current) return null;
+
+    // 🏢 FIX (2026-02-20): Ensure viewport is synchronized with latest zoom scale
+    // before every snap calculation. Using ref-based read means zero re-renders
+    // and the value is always current (even between React render cycles).
+    const currentScale = scaleRef.current;
+    if (currentScale > 0) {
+      snapManagerRef.current.setViewport({
+        scale: currentScale,
+        worldPerPixelAt: () => 1 / currentScale,
+        worldToScreen: (p: Point2D) => ({
+          x: p.x * currentScale,
+          y: p.y * currentScale,
+        }),
+      });
+    }
+
+    const result = snapManagerRef.current.findSnapPoint({ x: worldX, y: worldY });
+    if (DEBUG_SNAP_MANAGER) {
+      dlog('Snap', '[useSnapManager.findSnapPoint] Result:', result);
+    }
+    return result;
+  }, []);
+
   return {
     snapManager: snapManagerRef.current,
-    findSnapPoint: (worldX: number, worldY: number) => {
-      if (DEBUG_SNAP_MANAGER) {
-        dlog('Snap', '[useSnapManager.findSnapPoint] Called with:', { worldX, worldY });
-        dlog('Snap', '[useSnapManager.findSnapPoint] snapManagerRef.current:', !!snapManagerRef.current);
-      }
-      const result = snapManagerRef.current?.findSnapPoint({ x: worldX, y: worldY }) || null;
-      if (DEBUG_SNAP_MANAGER) {
-        dlog('Snap', '[useSnapManager.findSnapPoint] Result:', result);
-      }
-      return result;
-    }
+    findSnapPoint,
   };
 };
