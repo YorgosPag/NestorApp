@@ -32,6 +32,9 @@ export const DXF_TOOL_GROUP_COLORS = {
 
   /** Zoom/Navigation tools - emerald for view control */
   ZOOM: HOVER_TEXT_EFFECTS.EMERALD,
+
+  /** ADR-189: Construction guide tools - teal for reference geometry */
+  GUIDES: HOVER_TEXT_EFFECTS.TEAL,
 } as const;
 
 /**

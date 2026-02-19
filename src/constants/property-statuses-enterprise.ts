@@ -1423,7 +1423,12 @@ export const DXF_DRAWING_TOOL_LABELS = {
   ARC: 'tools.arc',
   ARC_3P: 'tools.arc3p',                       // 3-Point Arc (Start → Point on Arc → End)
   ARC_CENTER_START_END: 'tools.arcCenterStartEnd', // Center → Start → End
-  ARC_START_CENTER_END: 'tools.arcStartCenterEnd'  // Start → Center → End
+  ARC_START_CENTER_END: 'tools.arcStartCenterEnd', // Start → Center → End
+  // ADR-189: Construction guide tools
+  GUIDE_X: 'tools.guideX',
+  GUIDE_Z: 'tools.guideZ',
+  GUIDE_PARALLEL: 'tools.guideParallel',
+  GUIDE_DELETE: 'tools.guideDelete',
 } as const;
 
 /**

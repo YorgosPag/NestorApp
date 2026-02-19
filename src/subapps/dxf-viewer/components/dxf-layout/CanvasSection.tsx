@@ -30,6 +30,8 @@ import { useRotationTool } from '../../hooks/tools/useRotationTool';
 import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
+// ADR-189: Construction Guide System
+import { useGuideState } from '../../hooks/state/useGuideState';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 // 🏢 PERF (2026-02-19): Imperative context menus — no parent re-render on open
 import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
@@ -157,6 +159,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     showGrid,
   });
   const gripSettings = useGripStyles();
+
+  // === ADR-189: Construction Guide state ===
+  const guideState = useGuideState();
 
   // === DXF scene (must be before unified grip system) ===
   const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
@@ -497,6 +502,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           opacity: pdfOpacity,
         }}
         onMouseMove={props.onMouseMove}
+        // ADR-189: Construction guides
+        guides={guideState.guides}
+        guidesVisible={guideState.guidesVisible}
       />
 
       {/* 🏢 PERF (2026-02-19): Context menus rendered OUTSIDE CanvasLayerStack.

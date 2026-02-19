@@ -45,7 +45,12 @@ export type ToolType =
   | 'measure-radius'
   | 'measure-perimeter'
   | 'layering'
-  | 'grip-edit';
+  | 'grip-edit'
+  // ADR-189: Construction guide tools
+  | 'guide-x'
+  | 'guide-z'
+  | 'guide-parallel'
+  | 'guide-delete';
 
 
 export interface ToolDefinition {

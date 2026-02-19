@@ -26,6 +26,10 @@ import type { GridSettings, RulerSettings, ColorLayer } from '../layer-canvas/la
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
 import { createUIRenderContext } from '../../rendering/ui/core/UIRenderContext';
+// ADR-189: Construction Guide Renderer
+import { GuideRenderer } from '../../systems/guides/guide-renderer';
+import type { Guide } from '../../systems/guides/guide-types';
+import type { GridAxis } from '../../ai-assistant/grid-types';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // ✅ ADR-002: Centralized canvas theme
@@ -61,6 +65,10 @@ interface DxfCanvasProps {
   activeTool?: string; // ✅ ADD: Tool context για pan/select behavior
   overlayMode?: 'select' | 'draw' | 'edit'; // 🎯 OVERLAY MODE: Pass overlay mode for drawing detection
   colorLayers?: ColorLayer[]; // ✅ ADD: Color layers για fit to view bounds calculation
+  // ADR-189: Construction Guide System
+  guides?: readonly Guide[];
+  guidesVisible?: boolean;
+  ghostGuide?: { axis: GridAxis; offset: number } | null;
   onTransformChange?: (transform: ViewTransform) => void;
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
@@ -103,6 +111,10 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   activeTool,
   overlayMode, // 🎯 OVERLAY MODE: Destructure overlay mode
   colorLayers = [], // ✅ ADD: Color layers for fit to view
+  // ADR-189: Construction guides
+  guides,
+  guidesVisible = true,
+  ghostGuide,
   onTransformChange,
   onEntitySelect,
   onMouseMove,
@@ -129,6 +141,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // ✅ ADD: Grid and Ruler renderer refs για independent UI
   const gridRendererRef = useRef<GridRenderer | null>(null);
   const rulerRendererRef = useRef<RulerRenderer | null>(null);
+  // ADR-189: Guide renderer ref
+  const guideRendererRef = useRef<GuideRenderer | null>(null);
 
   // 🏢 ADR-118: Centralized canvas resize hook
   // Handles viewport priority resolution (viewportProp > ref > state) and ResizeObserver
@@ -171,6 +185,14 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // 🏢 FIX (2026-02-13): ActiveTool ref for RAF callback — avoids stale closure
   const activeToolRef = useRef(activeTool);
   activeToolRef.current = activeTool;
+
+  // ADR-189: Guide refs for RAF callback — avoids stale closure
+  const guidesRef = useRef(guides);
+  guidesRef.current = guides;
+  const guidesVisibleRef = useRef(guidesVisible);
+  guidesVisibleRef.current = guidesVisible;
+  const ghostGuideRef = useRef(ghostGuide);
+  ghostGuideRef.current = ghostGuide;
 
   // ✅ IMPERATIVE HANDLE: Expose methods για external controls
   useImperativeHandle(ref, () => ({
@@ -279,6 +301,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         // ✅ ADD: Initialize Grid and Ruler renderers για independent UI
         gridRendererRef.current = new GridRenderer();
         rulerRendererRef.current = new RulerRenderer();
+        // ADR-189: Initialize Guide renderer
+        guideRendererRef.current = new GuideRenderer();
       }
     } catch (error) {
       console.error('Failed to initialize DXF renderer:', error);
@@ -421,6 +445,27 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         }
       }
 
+      // 2.5️⃣ RENDER GUIDES (ADR-189: construction reference lines — between grid and rulers)
+      if (guideRendererRef.current && guidesVisibleRef.current) {
+        const currentGuides = guidesRef.current;
+        if (currentGuides && currentGuides.length > 0) {
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            guideRendererRef.current.renderGuides(ctx, currentGuides, currentTransform, currentViewport);
+          }
+        }
+        // Ghost guide preview (during placement)
+        const currentGhost = ghostGuideRef.current;
+        if (currentGhost) {
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            guideRendererRef.current.renderGhostGuide(ctx, currentGhost.axis, currentGhost.offset, currentTransform, currentViewport);
+          }
+        }
+      }
+
       // 3️⃣ RENDER RULERS (after grid, so it's on top of grid)
       if (rulerRendererRef.current && rulerSettings?.enabled) {
         const canvas = canvasRef.current;
@@ -463,6 +508,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       console.error('Failed to render DXF scene:', error);
     }
   // 🏢 FIX (2026-02-01): REMOVED transform, viewport from dependencies - using refs instead
+  // ADR-189: guides/ghostGuide use refs, no need in deps
   }, [scene, renderOptions, gridSettings, rulerSettings]);
 
   // 🏢 ADR-119: Register with UnifiedFrameScheduler for centralized RAF
@@ -486,7 +532,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // 🏢 ADR-119: Mark dirty when dependencies change
   useEffect(() => {
     isDirtyRef.current = true;
-  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings]);
+  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide]);
 
   // 🏢 FIX (2026-02-13): Mark dirty when selection state changes so RAF loop re-renders
   // The actual selection box rendering now happens inside renderScene (step 4️⃣)

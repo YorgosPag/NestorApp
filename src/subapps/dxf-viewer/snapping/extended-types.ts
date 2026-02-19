@@ -37,6 +37,7 @@ export enum ExtendedSnapType {
   PARALLEL = 'parallel',
   ORTHO = 'ortho',
   GRID = 'grid',
+  GUIDE = 'guide',  // ADR-189: Construction guide snap
   AUTO = 'auto'
 }
 
@@ -105,7 +106,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.MIDPOINT,
     ExtendedSnapType.CENTER,
     ExtendedSnapType.INTERSECTION,
-    ExtendedSnapType.GRID
+    ExtendedSnapType.GRID,
+    ExtendedSnapType.GUIDE  // ADR-189: Guide snap enabled by default
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
@@ -123,6 +125,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.INSERTION,
     ExtendedSnapType.NEAREST,
     ExtendedSnapType.NEAR,
+    ExtendedSnapType.GUIDE,  // ADR-189: Construction guide snap
     ExtendedSnapType.GRID,
     ExtendedSnapType.AUTO
   ],
@@ -141,7 +144,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.GRID]: 12,          // standard για grid
     [ExtendedSnapType.NEAREST]: 10,       // στενή για να μην "αρπάζει" όλα
     [ExtendedSnapType.QUADRANT]: 12,      // standard για quadrants
-    [ExtendedSnapType.PARALLEL]: 14       // ευρύτερη για parallel detection
+    [ExtendedSnapType.PARALLEL]: 14,      // ευρύτερη για parallel detection
+    [ExtendedSnapType.GUIDE]: 12          // ADR-189: guide snap tolerance
   }
 };
 

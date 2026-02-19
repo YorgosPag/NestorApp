@@ -57,6 +57,11 @@ const UI_COLORS_BASE = {
   GRID_BLUE: '#4444ff',
   GRID_AXES_GRAY: '#666666',
 
+  // ADR-189: Construction guide colors
+  GUIDE_X: '#00BCD4',        // Cyan — vertical (X-axis) guides
+  GUIDE_Z: '#FF6347',        // Tomato — horizontal (Y-axis) guides
+  GUIDE_PARALLEL: '#9370DB', // Purple — parallel offset guides
+
   // Indicators
   INDICATOR_BLUE: '#0099ff',
   

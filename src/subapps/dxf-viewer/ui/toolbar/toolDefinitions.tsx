@@ -7,7 +7,10 @@ import {
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
   FileUp, // 🏢 ENTERPRISE: PDF Background icon
   Sparkles, // 🤖 ADR-185: AI Drawing Assistant icon
-  RotateCw // 🏢 ADR-188: Entity Rotation System icon
+  RotateCw, // 🏢 ADR-188: Entity Rotation System icon
+  ArrowDownUp, // ADR-189: Guide vertical icon
+  ArrowLeftRight, // ADR-189: Guide horizontal icon
+  CopyPlus, // ADR-189: Parallel guide icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -17,7 +20,7 @@ import {
   DXF_EDITING_TOOL_LABELS,
   DXF_MEASUREMENT_TOOL_LABELS,
   DXF_ZOOM_TOOL_LABELS,
-  DXF_UTILITY_TOOL_LABELS
+  DXF_UTILITY_TOOL_LABELS,
 } from '../../../../constants/property-statuses-enterprise';
 import {
   CircleRadiusIcon,
@@ -141,7 +144,9 @@ export const DXF_TOOL_GROUP_KEYS = {
   DRAWING: 'toolGroups.drawing',
   TOOLS: 'toolGroups.tools',
   MEASUREMENTS: 'toolGroups.measurements',
-  ZOOM: 'toolGroups.zoom'
+  ZOOM: 'toolGroups.zoom',
+  // ADR-189: Construction guide tools
+  GUIDES: 'toolGroups.guides',
 } as const;
 
 export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
@@ -225,6 +230,25 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
       // 🎨 ENTERPRISE: Delete uses getDxfToolColor with override (RED for danger)
       { id: 'delete' as ToolType, icon: Trash2, label: DXF_EDITING_TOOL_LABELS.DELETE, hotkey: getShortcutDisplayLabel('delete'), colorClass: getDxfToolColor('TOOLS', 'delete') },
     ]
+  },
+  // ADR-189: Construction Guide Tools
+  {
+    name: DXF_TOOL_GROUP_KEYS.GUIDES,
+    tools: [
+      {
+        id: 'guide-x' as ToolType,
+        icon: ArrowDownUp,
+        label: DXF_DRAWING_TOOL_LABELS.GUIDE_X,
+        hotkey: '',
+        colorClass: DXF_TOOL_GROUP_COLORS.GUIDES,
+        dropdownOptions: [
+          { id: 'guide-x' as ToolType, icon: ArrowDownUp, label: DXF_DRAWING_TOOL_LABELS.GUIDE_X },
+          { id: 'guide-z' as ToolType, icon: ArrowLeftRight, label: DXF_DRAWING_TOOL_LABELS.GUIDE_Z },
+          { id: 'guide-parallel' as ToolType, icon: CopyPlus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PARALLEL },
+          { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE },
+        ],
+      },
+    ],
   },
   {
     name: DXF_TOOL_GROUP_KEYS.MEASUREMENTS,

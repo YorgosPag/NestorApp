@@ -37,6 +37,7 @@ import { NearSnapEngine } from '../engines/NearSnapEngine';
 import { PerpendicularSnapEngine } from '../engines/PerpendicularSnapEngine';
 import { OrthoSnapEngine } from '../engines/OrthoSnapEngine';
 import { GridSnapEngine } from '../engines/GridSnapEngine';
+import { GuideSnapEngine } from '../engines/GuideSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -72,6 +73,8 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.PERPENDICULAR, new PerpendicularSnapEngine());
     this.engines.set(ExtendedSnapType.ORTHO, new OrthoSnapEngine());
     this.engines.set(ExtendedSnapType.GRID, new GridSnapEngine());
+    // ADR-189: Construction guide snap
+    this.engines.set(ExtendedSnapType.GUIDE, new GuideSnapEngine());
 
   }
 
@@ -136,6 +139,17 @@ export class SnapEngineRegistry {
       if (majorInterval !== undefined) {
         gridEngine.setMajorInterval(majorInterval);
       }
+    }
+  }
+
+  /**
+   * ADR-189: Update guide snap engine with current guides
+   * Called when GuideStore changes
+   */
+  updateGuideData(guides: readonly import('../../systems/guides/guide-types').Guide[]): void {
+    const guideEngine = this.engines.get(ExtendedSnapType.GUIDE);
+    if (guideEngine && guideEngine instanceof GuideSnapEngine) {
+      guideEngine.setGuides(guides);
     }
   }
 

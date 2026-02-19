@@ -91,6 +91,11 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
 
   // 🏢 ENTERPRISE: Layering tool - ALWAYS preserves overlay mode (it's the overlay management tool!)
   'layering': { id: 'layering', category: 'utility', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
+  // ADR-189: Construction guide tools
+  'guide-x': { id: 'guide-x', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'guide-z': { id: 'guide-z', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'guide-parallel': { id: 'guide-parallel', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'guide-delete': { id: 'guide-delete', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 // ============================================================================

@@ -197,6 +197,11 @@ export interface CanvasLayerStackProps {
     opacity: number;
   };
 
+  // === ADR-189: Construction guides ===
+  guides?: readonly import('../../systems/guides/guide-types').Guide[];
+  guidesVisible?: boolean;
+  ghostGuide?: { axis: import('../../ai-assistant/grid-types').GridAxis; offset: number } | null;
+
   // === External callback ===
   onMouseMove?: (worldPos: Point2D, event: React.MouseEvent) => void;
 }
@@ -217,6 +222,8 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
   handleDrawingContextMenu,
   drawingState, entityJoin, pdf, onMouseMove,
+  // ADR-189: Construction guides
+  guides, guidesVisible, ghostGuide,
 }) => {
   // --- Destructure grouped props ---
   const { crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings } = settings;
@@ -464,6 +471,9 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               crosshairSettings={crosshairSettings}
               gridSettings={gridSettings}
               rulerSettings={dxfRulerSettings}
+              guides={guides}
+              guidesVisible={guidesVisible}
+              ghostGuide={ghostGuide}
               onLayerSelected={handleOverlayClickWithEntityClear}
               onMultiLayerSelected={handleMultiOverlayClickWithEntityClear}
               onEntitiesSelected={handleDxfEntitiesSelected}
