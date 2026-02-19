@@ -15,7 +15,7 @@ interface BuildingDetailsProps {
   building: Building | null;
 }
 
-export function BuildingDetails({ building }: BuildingDetailsProps) {
+export const BuildingDetails = React.memo(function BuildingDetails({ building }: BuildingDetailsProps) {
   // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
 
@@ -76,4 +76,8 @@ export function BuildingDetails({ building }: BuildingDetailsProps) {
       }}
     />
   );
-}
+}, (prev, next) => {
+  // [PERF] Only re-render when building identity changes — avoids
+  // re-rendering the heavy BuildingTabs panel on unrelated parent updates.
+  return prev.building?.id === next.building?.id;
+});

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
@@ -25,7 +25,7 @@ interface BuildingsListProps {
   onSelectBuilding?: (building: Building) => void;
 }
 
-export function BuildingsList({
+export const BuildingsList = React.memo(function BuildingsList({
   buildings,
   selectedBuilding,
   onSelectBuilding,
@@ -40,13 +40,13 @@ export function BuildingsList({
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
 
-  const toggleFavorite = (buildingId: string) => {
-    setFavorites(prev => 
-      prev.includes(buildingId) 
+  const toggleFavorite = useCallback((buildingId: string) => {
+    setFavorites(prev =>
+      prev.includes(buildingId)
         ? prev.filter(id => id !== buildingId)
         : [...prev, buildingId]
     );
-  };
+  }, []);
 
   // [ENTERPRISE] Filter buildings using centralized search
   const filteredBuildings = useMemo(() => {
@@ -66,46 +66,51 @@ export function BuildingsList({
     );
   }, [buildings, searchTerm]);
 
-  const sortedBuildings = [...filteredBuildings].sort((a, b) => {
-    let aValue, bValue;
+  const sortedBuildings = useMemo(() => {
+    return [...filteredBuildings].sort((a, b) => {
+      let aValue, bValue;
 
-    switch (sortBy) {
-      case 'name':
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
-        break;
-      case 'progress':
-        aValue = a.progress;
-        bValue = b.progress;
-        break;
-      case 'value':
-        aValue = a.totalValue;
-        bValue = b.totalValue;
-        break;
-      case 'area':
-        aValue = a.totalArea;
-        bValue = b.totalArea;
-        break;
-      case 'date':
-        // Assuming buildings have a createdAt or updatedAt field
-        // If not available, we can use id as a proxy for creation order
-        aValue = new Date(a.createdAt || a.id).getTime();
-        bValue = new Date(b.createdAt || b.id).getTime();
-        break;
-      default:
-        return 0;
-    }
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'progress':
+          aValue = a.progress;
+          bValue = b.progress;
+          break;
+        case 'value':
+          aValue = a.totalValue;
+          bValue = b.totalValue;
+          break;
+        case 'area':
+          aValue = a.totalArea;
+          bValue = b.totalArea;
+          break;
+        case 'date':
+          aValue = new Date(a.createdAt || a.id).getTime();
+          bValue = new Date(b.createdAt || b.id).getTime();
+          break;
+        default:
+          return 0;
+      }
 
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc'
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    } else {
-      return sortOrder === 'asc'
-        ? (aValue as number) - (bValue as number)
-        : (bValue as number) - (aValue as number);
-    }
-  });
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortOrder === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      } else {
+        return sortOrder === 'asc'
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
+      }
+    });
+  }, [filteredBuildings, sortBy, sortOrder]);
+
+  // [PERF] Stable callback: pass building by id to avoid arrow fn per item
+  const handleSelect = useCallback((building: Building) => {
+    onSelectBuilding?.(building);
+  }, [onSelectBuilding]);
 
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
@@ -171,7 +176,7 @@ export function BuildingsList({
               building={building}
               isSelected={selectedBuilding?.id === building.id}
               isFavorite={favorites.includes(building.id)}
-              onSelect={() => onSelectBuilding?.(building)}
+              onSelect={() => handleSelect(building)}
               onToggleFavorite={() => toggleFavorite(building.id)}
             />
           ))}
@@ -179,4 +184,4 @@ export function BuildingsList({
       </ScrollArea>
     </EntityListColumn>
   );
-}
+});

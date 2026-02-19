@@ -73,6 +73,10 @@ export function BuildingsPageContent() {
   // [ENTERPRISE] Add Building Dialog state (create-only, not for editing)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
+  // [PERF] Stable callback refs to prevent child re-renders
+  const handleOpenAddDialog = React.useCallback(() => setIsAddDialogOpen(true), []);
+  const handleCloseMobileDetails = React.useCallback(() => setSelectedBuilding(null), [setSelectedBuilding]);
+
   // [ENTERPRISE] Sync selectedBuilding with NavigationContext for breadcrumb display
   React.useEffect(() => {
     if (selectedBuilding && companies.length > 0 && projects.length > 0) {
@@ -212,7 +216,7 @@ export function BuildingsPageContent() {
           setShowDashboard={setShowDashboard}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          onNewBuilding={() => setIsAddDialogOpen(true)}
+          onNewBuilding={handleOpenAddDialog}
         />
 
         {showDashboard && (
@@ -267,7 +271,7 @@ export function BuildingsPageContent() {
               {/* [MOBILE] Slide-in BuildingDetails when building is selected */}
               <MobileDetailsSlideIn
                 isOpen={!!selectedBuilding}
-                onClose={() => setSelectedBuilding(null)}
+                onClose={handleCloseMobileDetails}
                 title={selectedBuilding?.name || t('pages.buildings.details.title')}
                 actionButtons={
                   <>

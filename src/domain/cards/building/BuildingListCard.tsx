@@ -92,7 +92,7 @@ const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
  * />
  * ```
  */
-export function BuildingListCard({
+export const BuildingListCard = React.memo(function BuildingListCard({
   building,
   isSelected = false,
   isFavorite,
@@ -182,7 +182,18 @@ export function BuildingListCard({
       aria-label={t('accessibility.buildingCard', { name: building.name || building.id })}
     />
   );
-}
+}, (prev, next) => {
+  // [PERF] Custom comparator: skip re-render when visual output is identical.
+  // onSelect/onToggleFavorite are arrow fns in .map() — always new refs — so we
+  // intentionally exclude them. They capture stable data via closure.
+  return (
+    prev.building === next.building &&
+    prev.isSelected === next.isSelected &&
+    prev.isFavorite === next.isFavorite &&
+    prev.compact === next.compact &&
+    prev.className === next.className
+  );
+});
 
 BuildingListCard.displayName = 'BuildingListCard';
 
