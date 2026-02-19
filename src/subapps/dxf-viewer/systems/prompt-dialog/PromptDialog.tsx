@@ -149,12 +149,13 @@ export const PromptDialog: React.FC = () => {
 
   const dialogContent = (
     <>
-      {/* Backdrop — fade in */}
+      {/* Backdrop — soft fade in */}
       <div
-        className={`fixed inset-0 ${colors.bg.modalBackdrop} transition-opacity duration-200 ease-out`}
+        className={`fixed inset-0 ${colors.bg.modalBackdrop}`}
         style={{
           zIndex: 10000,
           opacity: isVisible ? 1 : 0,
+          transition: 'opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
         onClick={handleBackdropClick}
         aria-hidden="true"
@@ -166,7 +167,7 @@ export const PromptDialog: React.FC = () => {
         style={{ zIndex: 10001 }}
         onClick={handleBackdropClick}
       >
-        {/* Dialog box — scale + fade in */}
+        {/* Dialog box — soft scale + fade in */}
         <div
           className={`
             w-80 max-w-[90vw]
@@ -174,11 +175,11 @@ export const PromptDialog: React.FC = () => {
             ${getStatusBorder('muted')}
             ${PANEL_LAYOUT.ROUNDED.LG}
             ${PANEL_LAYOUT.SHADOW['2XL']}
-            transition-all duration-200 ease-out
           `}
           style={{
             opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(-8px)',
+            transform: isVisible ? 'scale(1) translateY(0)' : 'scale(0.97) translateY(-4px)',
+            transition: 'opacity 350ms cubic-bezier(0.16, 1, 0.3, 1), transform 350ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
           role="dialog"
           aria-modal="true"
