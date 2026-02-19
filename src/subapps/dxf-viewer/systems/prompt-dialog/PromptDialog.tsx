@@ -12,6 +12,7 @@
  * - Numeric validation (comma → dot conversion)
  * - Unit suffix display (mm, °, m)
  * - Error message from custom `validate` function
+ * - Smooth fade-in / scale entrance animation
  * - Dark-theme compatible via centralized design tokens
  *
  * @see ADR-189 (Construction Grid & Guide System)
@@ -51,22 +52,31 @@ export const PromptDialog: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Animation state: 'closed' → 'entering' → 'open'
+  const [animState, setAnimState] = useState<'closed' | 'entering' | 'open'>('closed');
 
   const { isOpen, options } = snapshot;
 
-  // Auto-focus and pre-fill when dialog opens
+  // Animate in when dialog opens
   useEffect(() => {
     if (isOpen && options) {
       setValue(options.defaultValue ?? '');
       setError(null);
-      // Defer focus to next frame so DOM is ready
-      requestAnimationFrame(() => {
+      // Start animation: mount with initial state, then transition
+      setAnimState('entering');
+      const raf = requestAnimationFrame(() => {
+        // Trigger CSS transition by moving to 'open' state
+        setAnimState('open');
+        // Focus input after transition starts
         if (inputRef.current) {
           inputRef.current.focus();
           inputRef.current.select();
         }
       });
+      return () => cancelAnimationFrame(raf);
     }
+    setAnimState('closed');
+    return undefined;
   }, [isOpen, options]);
 
   // Normalize input: comma → dot for numeric fields
@@ -134,22 +144,29 @@ export const PromptDialog: React.FC = () => {
   const confirmLabel = options.confirmText ?? t('promptDialog.confirm');
   const cancelLabel = options.cancelText ?? t('promptDialog.cancel');
 
+  // Animation CSS: backdrop fades in, dialog scales + fades
+  const isVisible = animState === 'open';
+
   const dialogContent = (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — fade in */}
       <div
-        className={`fixed inset-0 ${colors.bg.modalBackdrop} ${PANEL_LAYOUT.TRANSITION.OPACITY}`}
-        style={{ zIndex: 10000 }}
+        className={`fixed inset-0 ${colors.bg.modalBackdrop} transition-opacity duration-200 ease-out`}
+        style={{
+          zIndex: 10000,
+          opacity: isVisible ? 1 : 0,
+        }}
         onClick={handleBackdropClick}
         aria-hidden="true"
       />
 
-      {/* Dialog */}
+      {/* Dialog container */}
       <div
         className="fixed inset-0 flex items-center justify-center"
         style={{ zIndex: 10001 }}
         onClick={handleBackdropClick}
       >
+        {/* Dialog box — scale + fade in */}
         <div
           className={`
             w-80 max-w-[90vw]
@@ -157,7 +174,12 @@ export const PromptDialog: React.FC = () => {
             ${getStatusBorder('muted')}
             ${PANEL_LAYOUT.ROUNDED.LG}
             ${PANEL_LAYOUT.SHADOW['2XL']}
+            transition-all duration-200 ease-out
           `}
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(-8px)',
+          }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="prompt-dialog-title"

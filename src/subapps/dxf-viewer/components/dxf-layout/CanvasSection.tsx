@@ -241,7 +241,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
 
-  // ADR-189: Two-step parallel guide workflow — step 1: select reference, step 2: prompt for distance
+  // ADR-189: Parallel guide workflow — highlighted reference + prompt dialog
   const [parallelRefGuideId, setParallelRefGuideId] = useState<string | null>(null);
 
   // ADR-189: Reset parallel reference when switching away from guide-parallel tool
@@ -251,17 +251,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [activeTool]);
 
-  // ADR-189: When reference guide is selected, show prompt dialog for distance input
-  useEffect(() => {
-    if (!parallelRefGuideId || activeTool !== 'guide-parallel') return;
+  // ADR-189: Callback invoked by click handler when user selects a reference guide.
+  // Opens the prompt dialog directly — no useEffect chain, no stale closures.
+  const handleParallelGuideSelected = useCallback((refGuideId: string) => {
+    setParallelRefGuideId(refGuideId);
 
-    const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
-    if (!refGuide) {
-      setParallelRefGuideId(null);
-      return;
-    }
-
-    // Show prompt dialog — async, resolves when user confirms or cancels
     showPromptDialog({
       title: t('promptDialog.parallelDistance'),
       label: t('promptDialog.enterDistance'),
@@ -277,14 +271,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       if (result !== null) {
         const distance = parseFloat(result);
         if (!isNaN(distance) && Math.abs(distance) > 0.001) {
-          guideState.addParallelGuide(parallelRefGuideId, distance);
+          guideState.addParallelGuide(refGuideId, distance);
         }
       }
-      // Reset reference regardless of confirm/cancel
+      // Reset highlight regardless of confirm/cancel
       setParallelRefGuideId(null);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parallelRefGuideId]);
+  }, [showPromptDialog, t, guideState]);
 
   // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes)
   const highlightedGuideId = useMemo<string | null>(() => {
@@ -441,12 +434,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     draggingOverlayBody: unified.draggingOverlayBody,
     setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
-    // ADR-189: Guide click handlers (parallel Step 2 handled by PromptDialog)
+    // ADR-189: Guide click handlers
     guideAddGuide: guideState.addGuide,
     guideRemoveGuide: guideState.removeGuide,
     guides: guideState.guides,
-    parallelRefGuideId,
-    setParallelRefGuideId,
+    onParallelGuideSelected: handleParallelGuideSelected,
   });
 
   const { handleSmartDelete } = useSmartDelete({

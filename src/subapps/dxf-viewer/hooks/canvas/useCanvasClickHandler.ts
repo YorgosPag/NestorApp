@@ -136,10 +136,9 @@ export interface UseCanvasClickHandlerParams {
   guideAddGuide?: (axis: GridAxis, offset: number) => CreateGuideCommand;
   guideRemoveGuide?: (guideId: string) => DeleteGuideCommand;
   guides?: readonly Guide[];
-  /** Two-step parallel: currently selected reference guide ID */
-  parallelRefGuideId?: string | null;
-  /** Two-step parallel: setter for reference guide ID (Step 2 handled by PromptDialog) */
-  setParallelRefGuideId?: (id: string | null) => void;
+  /** Callback invoked when user selects a reference guide for parallel creation.
+   *  CanvasSection opens the PromptDialog and handles the rest. */
+  onParallelGuideSelected?: (refGuideId: string) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -167,7 +166,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     currentOverlays, handleOverlayClick,
     // ADR-189: Guide handlers
     guideAddGuide, guideRemoveGuide, guides,
-    parallelRefGuideId, setParallelRefGuideId,
+    onParallelGuideSelected,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -270,27 +269,24 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       }
       return;
     }
-    if (activeTool === 'guide-parallel' && guides && guides.length > 0 && setParallelRefGuideId) {
-      // ADR-189: Parallel workflow — Step 1: select reference guide.
-      // Step 2 (distance input) is handled by PromptDialog in CanvasSection.
-      if (!parallelRefGuideId) {
-        const hitToleranceWorld = 30 / transform.scale;
-        let nearestGuide: Guide | null = null;
-        let nearestDist = hitToleranceWorld;
-        for (const guide of guides) {
-          if (!guide.visible) continue;
-          const dist = guide.axis === 'X'
-            ? Math.abs(worldPoint.x - guide.offset)
-            : Math.abs(worldPoint.y - guide.offset);
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestGuide = guide;
-          }
+    if (activeTool === 'guide-parallel' && guides && guides.length > 0 && onParallelGuideSelected) {
+      // ADR-189: Find nearest guide → invoke callback (opens PromptDialog in CanvasSection)
+      const hitToleranceWorld = 30 / transform.scale;
+      let nearestGuide: Guide | null = null;
+      let nearestDist = hitToleranceWorld;
+      for (const guide of guides) {
+        if (!guide.visible) continue;
+        const dist = guide.axis === 'X'
+          ? Math.abs(worldPoint.x - guide.offset)
+          : Math.abs(worldPoint.y - guide.offset);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestGuide = guide;
         }
-        if (nearestGuide) {
-          setParallelRefGuideId(nearestGuide.id);
-          dlog('useCanvasClickHandler', 'Parallel: reference guide selected → prompt dialog will open', nearestGuide.id);
-        }
+      }
+      if (nearestGuide) {
+        onParallelGuideSelected(nearestGuide.id);
+        dlog('useCanvasClickHandler', 'Parallel: reference guide selected → prompt dialog', nearestGuide.id, nearestGuide.axis);
       }
       return;
     }
@@ -519,7 +515,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     setDraftPolygon, setIsSavingPolygon,
     // ADR-189
     guideAddGuide, guideRemoveGuide, guides,
-    parallelRefGuideId, setParallelRefGuideId,
+    onParallelGuideSelected,
   ]);
 
   return { handleCanvasClick };
