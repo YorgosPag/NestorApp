@@ -40,8 +40,8 @@ export function StorageTabFilters({
 
     return (
         <Card>
-            <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <CardContent className="p-2">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
                     <div className="relative md:col-span-2">
                         <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
                         <Input

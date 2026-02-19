@@ -106,14 +106,14 @@ const accordionTriggerVariants = cva(
     variants: {
       variant: {
         default: INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER,
-        bordered: `${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER} px-4`,
+        bordered: `${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER} px-2`,
         ghost: `${HOVER_BACKGROUND_EFFECTS.ACCENT} px-2`,
-        card: `${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER} px-4`
+        card: `${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER} px-2`
       },
       size: {
         sm: "py-2 text-sm",
-        md: "py-4 text-base",
-        lg: "py-5 text-lg"
+        md: "py-2 text-base",
+        lg: "py-2 text-lg"
       }
     },
     defaultVariants: {
@@ -129,9 +129,9 @@ const accordionContentVariants = cva(
     variants: {
       variant: {
         default: "",
-        bordered: "px-4",
+        bordered: "px-2",
         ghost: "px-2",
-        card: "px-4"
+        card: "px-2"
       },
       size: {
         sm: "text-xs",

@@ -560,7 +560,7 @@ export function FloorplanGallery({
         role="status"
         aria-label={emptyMessage || t('floorplan.noFloorplans')}
       >
-        <Map className={cn(iconSizes.xl, colors.text.muted, 'mb-4')} aria-hidden="true" />
+        <Map className={cn(iconSizes.xl, colors.text.muted, 'mb-2')} aria-hidden="true" />
         <p className={cn('text-sm', colors.text.muted)}>
           {emptyMessage || t('floorplan.noFloorplans')}
         </p>
@@ -715,7 +715,7 @@ export function FloorplanGallery({
         {isLoading && (
           <section className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">
             <AnimatedSpinner size="large" />
-            <span className="mt-3 text-sm">{t('floorplan.loading')}</span>
+            <span className="mt-2 text-sm">{t('floorplan.loading')}</span>
           </section>
         )}
 
@@ -768,7 +768,7 @@ export function FloorplanGallery({
         {isDxf && !currentFile?.processedData && !isLoading && !sceneError && (
           <section className="flex flex-col items-center justify-center h-full">
             <AnimatedSpinner size="large" />
-            <span className="mt-3 text-sm">{t('floorplan.processing')}</span>
+            <span className="mt-2 text-sm">{t('floorplan.processing')}</span>
           </section>
         )}
       </figure>

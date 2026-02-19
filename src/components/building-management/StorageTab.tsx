@@ -282,9 +282,9 @@ export function StorageTab({ building }: StorageTabProps) {
 
   if (loading) {
     return (
-      <section className="flex items-center justify-center py-12" role="status" aria-live="polite">
+      <section className="flex items-center justify-center py-2" role="status" aria-live="polite">
         <article className="text-center">
-          <Spinner size="large" className="mx-auto mb-4" />
+          <Spinner size="large" className="mx-auto mb-2" />
           <p className="text-muted-foreground">{t('tabs.storageTab.loading')}</p>
         </article>
       </section>
@@ -292,7 +292,7 @@ export function StorageTab({ building }: StorageTabProps) {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-4">
+    <section className="flex flex-col gap-2 p-2">
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -347,7 +347,7 @@ export function StorageTab({ building }: StorageTabProps) {
 
       {/* Content — Centralized shared components */}
       {filteredUnits.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="py-2 text-center text-sm text-muted-foreground">
           {t('tabs.labels.storages')} — 0
         </p>
       ) : viewMode === 'cards' ? (

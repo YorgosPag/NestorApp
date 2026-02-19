@@ -587,9 +587,9 @@ export function AddBuildingDialog({
             ================================================================ */}
             <TabsContent value="features" className={spacing.margin.top.md}>
               {/* Checkbox Features */}
-              <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <section className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
                 {/* Has Parking */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <Checkbox
                     id="hasParking"
                     checked={formData.hasParking}
@@ -604,7 +604,7 @@ export function AddBuildingDialog({
                 </div>
 
                 {/* Has Elevator */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <Checkbox
                     id="hasElevator"
                     checked={formData.hasElevator}
@@ -619,7 +619,7 @@ export function AddBuildingDialog({
                 </div>
 
                 {/* Has Garden */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <Checkbox
                     id="hasGarden"
                     checked={formData.hasGarden}
@@ -634,7 +634,7 @@ export function AddBuildingDialog({
                 </div>
 
                 {/* Has Pool */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <Checkbox
                     id="hasPool"
                     checked={formData.hasPool}
@@ -649,7 +649,7 @@ export function AddBuildingDialog({
                 </div>
 
                 {/* Accessibility */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <Checkbox
                     id="accessibility"
                     checked={formData.accessibility}
@@ -735,7 +735,7 @@ export function AddBuildingDialog({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-2">
             <CancelButton onClick={() => onOpenChange(false)} disabled={loading} />
             <SaveButton loading={loading} />
           </DialogFooter>

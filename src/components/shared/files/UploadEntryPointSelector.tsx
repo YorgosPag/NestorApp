@@ -118,7 +118,7 @@ export function UploadEntryPointSelector({
   };
 
   return (
-    <section className={cn('space-y-3', className)} role="radiogroup" aria-label={t('upload.selectDocumentType')}>
+    <section className={cn('space-y-2', className)} role="radiogroup" aria-label={t('upload.selectDocumentType')}>
       {/* Header */}
       <header>
         <h3 className="text-sm font-semibold text-foreground mb-1">
@@ -142,7 +142,7 @@ export function UploadEntryPointSelector({
                   type="button"
                   onClick={() => onSelect(entryPoint)}
                   className={cn(
-                    'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all',
+                    'flex flex-col items-center gap-2 p-2 rounded-lg border-2 transition-all',
                     'hover:shadow-md hover:scale-105',
                     'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
                     isSelected
@@ -189,7 +189,7 @@ export function UploadEntryPointSelector({
 
       {/* Selected description */}
       {selectedEntryPointId && (
-        <footer className="p-3 bg-muted/50 rounded-md border border-border">
+        <footer className="p-2 bg-muted/50 rounded-md border border-border">
           {entryPoints
             .filter((ep) => ep.id === selectedEntryPointId)
             .map((ep) => (
@@ -216,7 +216,7 @@ export function UploadEntryPointSelector({
             placeholder={t('upload.customTitlePlaceholder')}
             required
             className={cn(
-              'w-full px-3 py-2 rounded-md border bg-background text-foreground',
+              'w-full px-2 py-2 rounded-md border bg-background text-foreground',
               'placeholder:text-muted-foreground',
               'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
               'transition-colors',

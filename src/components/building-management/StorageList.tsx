@@ -58,7 +58,7 @@ export function StorageList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <StorageListHeader
         totalCount={units.length}
         selectedCount={selectedUnits.length}

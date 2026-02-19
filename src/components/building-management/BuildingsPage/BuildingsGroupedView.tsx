@@ -39,8 +39,8 @@ export function BuildingsGroupedView({
 
   if (viewMode === 'grid') {
     return (
-      <div className="flex-1 p-4 overflow-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="flex-1 p-2 overflow-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           {filteredBuildings.map((building) => (
             <BuildingCard
               key={building.id}
@@ -56,11 +56,11 @@ export function BuildingsGroupedView({
 
   if (viewMode === 'byType') {
     return (
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-2 overflow-auto">
         {Object.entries(groupedByType).map(([type, buildingsOfType]) => (
-          <div key={type} className="mb-8">
-            <h2 className="text-xl font-bold mb-4 capitalize border-b pb-2">{t(`category.${type}`, { defaultValue: type })} ({buildingsOfType.length})</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div key={type} className="mb-2">
+            <h2 className="text-xl font-bold mb-2 capitalize border-b pb-2">{t(`category.${type}`, { defaultValue: type })} ({buildingsOfType.length})</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {buildingsOfType.map((building) => (
                 <BuildingCard
                   key={building.id}
@@ -78,11 +78,11 @@ export function BuildingsGroupedView({
 
   if (viewMode === 'byStatus') {
     return (
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-2 overflow-auto">
         {Object.entries(groupedByStatus).map(([status, buildingsOfStatus]) => (
-          <div key={status} className="mb-8">
-            <h2 className="text-xl font-bold mb-4 capitalize border-b pb-2">{t(`status.${status}`, { defaultValue: status })} ({buildingsOfStatus.length})</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div key={status} className="mb-2">
+            <h2 className="text-xl font-bold mb-2 capitalize border-b pb-2">{t(`status.${status}`, { defaultValue: status })} ({buildingsOfStatus.length})</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {buildingsOfStatus.map((building) => (
                 <BuildingCard
                   key={building.id}

@@ -158,7 +158,7 @@ export function BuildingSpaceLinkDialog({
               {filtered.map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between py-3 px-2 hover:bg-muted/50 rounded-md"
+                  className="flex items-center justify-between py-2 px-2 hover:bg-muted/50 rounded-md"
                 >
                   <article className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{item.label}</p>
@@ -171,7 +171,7 @@ export function BuildingSpaceLinkDialog({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="ml-3 shrink-0"
+                    className="ml-2 shrink-0"
                     onClick={() => handleLink(item.id)}
                     disabled={linkingId === item.id}
                   >

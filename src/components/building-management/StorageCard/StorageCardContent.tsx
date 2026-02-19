@@ -34,7 +34,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
     const { quick } = useBorderTokens();
     const TypeIcon = getTypeIcon(unit.type);
     return (
-        <CardContent className="p-4 space-y-4">
+        <CardContent className="p-2 space-y-2">
             <div>
                 <h4 className={`font-semibold text-foreground truncate flex items-center gap-2 ${GROUP_HOVER_PATTERNS.ACCENT_ON_GROUP}`}>
                     <TypeIcon className={iconSizes.sm} />
@@ -45,7 +45,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                         {/* 🏢 ENTERPRISE: Using centralized floor icon/color */}
@@ -64,7 +64,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                 </div>
             </div>
 
-            <div className={`pt-3 ${quick.separatorH}`}>
+            <div className={`pt-2 ${quick.separatorH}`}>
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="text-xs text-muted-foreground">{t('storage.card.labels.price')}</div>
@@ -78,7 +78,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             </div>
 
             {unit.linkedProperty && (
-                <div className={`pt-3 ${quick.separatorH}`}>
+                <div className={`pt-2 ${quick.separatorH}`}>
                     <div className="flex items-center gap-1.5 text-sm">
                         <Link className={`${iconSizes.sm} text-primary`} />
                         <span className="text-muted-foreground">{t('storage.card.labels.linked')}</span>
@@ -88,7 +88,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             )}
 
             {unit.features && unit.features.length > 0 && (
-                <div className={`pt-3 ${quick.separatorH}`}>
+                <div className={`pt-2 ${quick.separatorH}`}>
                     <div className="flex flex-wrap gap-2">
                         {unit.features.slice(0, 3).map((feature, index) => (
                             <CommonBadge

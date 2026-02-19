@@ -21,8 +21,8 @@ export function StorageListSummary({ units }: StorageListSummaryProps) {
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <CardContent className="p-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
           <div className="text-center">
             <div className="font-semibold text-foreground">
               {availableCount}

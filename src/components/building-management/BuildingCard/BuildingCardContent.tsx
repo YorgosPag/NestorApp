@@ -15,7 +15,7 @@ interface BuildingCardContentProps {
 
 export function BuildingCardContent({ building }: BuildingCardContentProps) {
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-2 space-y-2">
       <BuildingCardTitle name={building.name} description={building.description} />
       <BuildingCardLocation address={building.address} city={building.city} />
       <BuildingCardProgress progress={building.progress} />

@@ -509,7 +509,7 @@ export function ConstructionPhaseDialog({
                     role="combobox"
                     aria-expanded={namePopoverOpen}
                     className={cn(
-                      'w-full justify-between h-10 px-3 py-2',
+                      'w-full justify-between h-10 px-2 py-2',
                       typographyTokens.body.sm,
                       errors.name ? 'border-destructive' : 'border-input',
                       INTERACTIVE_PATTERNS.ACCENT_HOVER,

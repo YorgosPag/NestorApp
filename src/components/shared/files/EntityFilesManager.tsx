@@ -579,7 +579,7 @@ export function EntityFilesManager({
                 role="tab"
                 aria-selected={activeTab === 'files'}
                 aria-controls="files-panel"
-                className={cn('px-3', activeTab === 'files' && 'bg-primary text-primary-foreground')}
+                className={cn('px-2', activeTab === 'files' && 'bg-primary text-primary-foreground')}
               >
                 <FileText className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
                 {t('manager.filesTitle')}
@@ -591,7 +591,7 @@ export function EntityFilesManager({
                 role="tab"
                 aria-selected={activeTab === 'trash'}
                 aria-controls="trash-panel"
-                className={cn('px-3', activeTab === 'trash' && 'bg-red-500 text-white hover:bg-red-600')}
+                className={cn('px-2', activeTab === 'trash' && 'bg-red-500 text-white hover:bg-red-600')}
               >
                 <Trash2 className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
                 {t('trash.title')}
@@ -740,10 +740,10 @@ export function EntityFilesManager({
         </nav>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-2">
         {/* Upload Pipeline (conditional) - Only show on files tab */}
         {activeTab === 'files' && showUploadZone && (
-          <div className="space-y-4 p-4 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+          <div className="space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
             {/* Step 1: Entry Point Selection */}
             <UploadEntryPointSelector
               entityType={entityType}
@@ -769,7 +769,7 @@ export function EntityFilesManager({
                     uploading={uploading}
                   />
                 ) : (
-                  <div className="p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                  <div className="p-2 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
                     <ArrowUp className={iconSizes.sm} aria-hidden="true" />
                     {t('manager.enterTitleToContinue')}
                   </div>
@@ -779,7 +779,7 @@ export function EntityFilesManager({
 
             {/* Hint when no entry point selected */}
             {!selectedEntryPoint && (
-              <div className="p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <div className="p-2 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
                 <ArrowUp className={iconSizes.sm} aria-hidden="true" />
                 {t('manager.selectDocumentType')}
               </div>
@@ -789,7 +789,7 @@ export function EntityFilesManager({
 
         {/* Error display */}
         {error && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+          <div className="p-2 bg-destructive/10 border border-destructive/20 rounded-md">
             <p className="text-sm text-destructive">{t('manager.errorLoading')}: {error.message}</p>
           </div>
         )}

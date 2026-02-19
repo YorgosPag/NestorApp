@@ -450,7 +450,7 @@ export function FileUploadZone({
 
   return (
     <section
-      className={`${borderStyle} ${quick.card} p-6 text-center cursor-pointer ${bgStyle} ${INTERACTIVE_PATTERNS.DROPZONE_HOVER} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`${borderStyle} ${quick.card} p-2 text-center cursor-pointer ${bgStyle} ${INTERACTIVE_PATTERNS.DROPZONE_HOVER} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       role="region"
       aria-label={t('uploadZone.uploadZone')}
       onDragOver={handleDragOver}
@@ -476,7 +476,7 @@ export function FileUploadZone({
       </div>
 
       {/* Instructions */}
-      <div className="mt-4 space-y-2">
+      <div className="mt-2 space-y-2">
         {uploading || isProcessing ? (
           <p className="text-sm font-medium text-foreground">
             {isProcessing ? (t('uploadZone.processing') || 'Επεξεργασία αρχείων...') : t('uploadZone.uploading')}

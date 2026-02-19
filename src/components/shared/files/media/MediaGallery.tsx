@@ -237,7 +237,7 @@ export function MediaGallery({
   }
 
   return (
-    <section className={cn('flex flex-col gap-4', className)} aria-label={t('media.gallery')}>
+    <section className={cn('flex flex-col gap-2', className)} aria-label={t('media.gallery')}>
       {/* Toolbar */}
       {showToolbar && (
         <header className="flex flex-wrap items-center gap-2 pb-2 border-b">
@@ -384,7 +384,7 @@ export function MediaGallery({
         aria-label={t('media.mediaItems')}
         className={cn(
           gallery.state.viewMode === 'grid'
-            ? 'grid gap-3 auto-rows-fr'
+            ? 'grid gap-2 auto-rows-fr'
             : 'flex flex-col gap-2'
         )}
         style={gallery.state.viewMode === 'grid' ? {
@@ -413,7 +413,7 @@ export function MediaGallery({
         <DialogContent className="max-w-4xl p-0 overflow-hidden">
           {videoPreviewFile && (
             <article className="flex flex-col">
-              <header className="p-4 border-b">
+              <header className="p-2 border-b">
                 <h2 className="text-lg font-semibold truncate">{videoPreviewFile.displayName}</h2>
               </header>
               <VideoPlayer

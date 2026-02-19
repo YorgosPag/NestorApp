@@ -65,14 +65,14 @@ export function BuildingSpaceCardGrid<T>({
   const isExpandable = !!renderExpandedContent;
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
       {items.map((item) => {
         const key = getKey(item);
         const isExpanded = expandedId === key;
 
         return (
           <Card key={key} className={`overflow-hidden ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="p-2 space-y-2">
               <header className="flex items-center justify-between">
                 <span className="flex items-center gap-1 min-w-0">
                   {isExpandable && (

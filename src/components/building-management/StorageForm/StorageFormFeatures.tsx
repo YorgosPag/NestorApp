@@ -42,7 +42,7 @@ export function StorageFormFeatures({
           {t('storage.form.features.title')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2">
         <div>
           <Label className="text-sm font-medium mb-2 block">{t('storage.form.features.labels.commonFeatures')}</Label>
           <div className="flex flex-wrap gap-2">

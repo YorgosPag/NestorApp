@@ -358,7 +358,7 @@ export function VideoPlayer({
     return (
       <div
         className={cn(
-          'flex flex-col items-center justify-center bg-muted rounded-lg p-8',
+          'flex flex-col items-center justify-center bg-muted rounded-lg p-2',
           className
         )}
       >
@@ -428,7 +428,7 @@ export function VideoPlayer({
         <div
           className={cn(
             'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent',
-            'p-4 transition-opacity duration-300',
+            'p-2 transition-opacity duration-300',
             showControlsOverlay ? 'opacity-100' : 'opacity-0 pointer-events-none'
           )}
         >
@@ -441,7 +441,7 @@ export function VideoPlayer({
             aria-valuemax={100}
             aria-valuenow={Math.round(progressPercent)}
             onClick={handleSeek}
-            className="relative h-1 bg-white/30 rounded-full cursor-pointer mb-3 group"
+            className="relative h-1 bg-white/30 rounded-full cursor-pointer mb-2 group"
           >
             {/* Buffered */}
             <div

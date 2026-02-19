@@ -42,7 +42,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
   };
 
   return (
-    <div className="flex items-center gap-1 mr-3">
+    <div className="flex items-center gap-1 mr-2">
       <ToolbarButton
         tooltip={t('toolbar.actions.new')}
         onClick={handleNewBuilding}

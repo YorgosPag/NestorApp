@@ -139,7 +139,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
 
   if (units.length === 0) {
     return (
-      <Card className="mt-6">
+      <Card className="mt-2">
         <CardHeader>
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
         </CardHeader>
@@ -151,7 +151,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   }
 
   return (
-    <Card className="mt-6">
+    <Card className="mt-2">
       <CardHeader>
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
         <CardDescription>{t('unitsTable.description')}</CardDescription>

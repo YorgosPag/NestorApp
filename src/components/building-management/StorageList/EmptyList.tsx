@@ -13,8 +13,8 @@ export function EmptyList() {
   const iconSizes = useIconSizes();
   return (
     <Card>
-      <CardContent className="p-12 text-center">
-        <Archive className={`${iconSizes.xl2} text-muted-foreground mx-auto mb-4`} />
+      <CardContent className="p-2 text-center">
+        <Archive className={`${iconSizes.xl2} text-muted-foreground mx-auto mb-2`} />
         <h3 className="text-lg font-semibold text-foreground mb-2">
           {t('emptyList.noUnitsFound')}
         </h3>

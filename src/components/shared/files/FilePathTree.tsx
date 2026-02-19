@@ -546,7 +546,7 @@ export function FilePathTree({
 
   if (files.length === 0) {
     return (
-      <section className={cn('p-4 text-center text-muted-foreground', className)}>
+      <section className={cn('p-2 text-center text-muted-foreground', className)}>
         <p className="text-sm">{t('list.noFiles')}</p>
       </section>
     );
@@ -558,7 +558,7 @@ export function FilePathTree({
         className={cn('rounded-lg border bg-card', className)}
         aria-label={t('tree.title')}
       >
-        <header className="px-4 py-2 border-b bg-muted/50">
+        <header className="px-2 py-2 border-b bg-muted/50">
           <h3 className="text-sm font-semibold">{t('tree.title')}</h3>
         </header>
 

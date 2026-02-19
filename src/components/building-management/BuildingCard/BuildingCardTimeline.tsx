@@ -24,7 +24,7 @@ export function BuildingCardTimeline({ building }: BuildingCardTimelineProps) {
   if (!building.completionDate) return null;
 
   return (
-    <div className="px-6 pb-6 pt-2 border-t border-border/50">
+    <div className="px-2 pb-2 pt-2 border-t border-border/50">
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-muted-foreground">
           <Calendar className={iconSizes.xs} />

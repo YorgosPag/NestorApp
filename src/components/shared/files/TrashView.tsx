@@ -238,18 +238,18 @@ export function TrashView({
   // Loading state
   if (loading) {
     return (
-      <section className="space-y-4" role="status" aria-label={t('list.loadingFiles')}>
+      <section className="space-y-2" role="status" aria-label={t('list.loadingFiles')}>
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trash2 className={`${iconSizes.md} text-muted-foreground`} />
             <h2 className="text-lg font-semibold">{t('trash.title')}</h2>
           </div>
         </header>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className={`p-4 bg-card ${quick.card} border animate-pulse`}
+              className={`p-2 bg-card ${quick.card} border animate-pulse`}
               aria-hidden="true"
             >
               <div className="flex items-center space-x-3">
@@ -269,7 +269,7 @@ export function TrashView({
   // Error state
   if (error) {
     return (
-      <section className={`p-6 ${colors.bg.error} ${quick.card} border border-red-200`}>
+      <section className={`p-2 ${colors.bg.error} ${quick.card} border border-red-200`}>
         <div className="flex items-center gap-2 text-red-600">
           <AlertTriangle className={iconSizes.md} />
           <p>{error.message}</p>
@@ -278,7 +278,7 @@ export function TrashView({
           variant="outline"
           size="sm"
           onClick={fetchTrashedFiles}
-          className="mt-4"
+          className="mt-2"
         >
           <RefreshCw className={`${iconSizes.sm} mr-2`} />
           {t('manager.refresh')}
@@ -290,7 +290,7 @@ export function TrashView({
   // Empty state
   if (trashedFiles.length === 0) {
     return (
-      <section className="space-y-4">
+      <section className="space-y-2">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trash2 className={`${iconSizes.md} text-muted-foreground`} />
@@ -306,7 +306,7 @@ export function TrashView({
           </Button>
         </header>
         <div
-          className={`p-8 text-center ${colors.bg.muted} ${quick.card}`}
+          className={`p-2 text-center ${colors.bg.muted} ${quick.card}`}
           role="status"
           aria-label={t('trash.noTrashedFiles')}
         >
@@ -322,7 +322,7 @@ export function TrashView({
 
   // Trashed files list
   return (
-    <section className="space-y-4">
+    <section className="space-y-2">
       {/* Header */}
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -343,7 +343,7 @@ export function TrashView({
       </header>
 
       {/* Stats */}
-      <div className="flex gap-4 text-sm">
+      <div className="flex gap-2 text-sm">
         <span className="flex items-center gap-1 text-muted-foreground">
           <HardDrive className={iconSizes.xs} />
           {t('trash.stats.totalFiles')}: {trashedFiles.length}
@@ -357,7 +357,7 @@ export function TrashView({
       </div>
 
       {/* Files list */}
-      <div className="space-y-3" role="list" aria-label={t('trash.title')}>
+      <div className="space-y-2" role="list" aria-label={t('trash.title')}>
         {trashedFiles.map((file) => {
           const daysUntilPurge = getDaysUntilPurge(file.purgeAt);
           const holdDisplay = getHoldTypeDisplay(file.hold, t);
@@ -366,7 +366,7 @@ export function TrashView({
           return (
             <article
               key={file.id}
-              className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               role="listitem"
               aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
             >
@@ -388,7 +388,7 @@ export function TrashView({
                   </p>
 
                   {/* Metadata */}
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
                     {/* File size */}
                     <span className="flex items-center gap-1">
                       <HardDrive className={iconSizes.xs} aria-hidden="true" />

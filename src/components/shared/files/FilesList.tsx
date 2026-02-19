@@ -176,11 +176,11 @@ export function FilesList({
   // Loading state
   if (loading) {
     return (
-      <section className="space-y-3" role="status" aria-label={t('list.loadingFiles')}>
+      <section className="space-y-2" role="status" aria-label={t('list.loadingFiles')}>
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className={`p-4 bg-card ${quick.card} border animate-pulse`}
+            className={`p-2 bg-card ${quick.card} border animate-pulse`}
             aria-hidden="true"
           >
             <div className="flex items-center space-x-3">
@@ -200,7 +200,7 @@ export function FilesList({
   if (files.length === 0) {
     return (
       <section
-        className={`p-8 text-center ${colors.bg.muted} ${quick.card}`}
+        className={`p-2 text-center ${colors.bg.muted} ${quick.card}`}
         role="status"
         aria-label={t('list.noFiles')}
       >
@@ -212,7 +212,7 @@ export function FilesList({
 
   // Files list
   return (
-    <section className="space-y-3" role="region" aria-labelledby="files-list-heading">
+    <section className="space-y-2" role="region" aria-labelledby="files-list-heading">
       <h3 id="files-list-heading" className="sr-only">
         {t('list.filesList')}
       </h3>
@@ -223,7 +223,7 @@ export function FilesList({
         return (
           <article
             key={file.id}
-            className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+            className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
           >
             {/* File info */}
@@ -244,7 +244,7 @@ export function FilesList({
                 </p>
 
                 {/* Metadata */}
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                   {/* File size */}
                   <span className="flex items-center gap-1">
                     <HardDrive className={iconSizes.xs} aria-hidden="true" />

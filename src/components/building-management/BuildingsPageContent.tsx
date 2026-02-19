@@ -185,7 +185,7 @@ export function BuildingsPageContent() {
         <PageContainer ariaLabel={t('pages.buildings.loading')}>
           <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
-              <AnimatedSpinner size="large" className="mx-auto mb-4" />
+              <AnimatedSpinner size="large" className="mx-auto mb-2" />
               <p>{t('pages.buildings.loadingMessage')}</p>
             </div>
           </section>
@@ -199,7 +199,7 @@ export function BuildingsPageContent() {
         <PageContainer ariaLabel={t('pages.buildings.error.pageLabel')}>
           <section className="flex-1 flex items-center justify-center" role="alert" aria-label={t('pages.buildings.error.ariaLabel')}>
             <div className={`text-center ${colors.text.error}`}>
-              <p className="mb-4">[ERROR] {t('pages.buildings.error.title')}</p>
+              <p className="mb-2">[ERROR] {t('pages.buildings.error.title')}</p>
               <p className="text-sm">{buildingsError}</p>
             </div>
           </section>

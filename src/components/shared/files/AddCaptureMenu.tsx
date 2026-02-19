@@ -335,7 +335,7 @@ export function AddCaptureMenu({
       <>
         {/* Upload file - always available, opens entry point selector */}
         {allowedSources.includes('upload') && (
-          <DropdownMenuItem onClick={handleUploadClick} className="gap-3 py-3">
+          <DropdownMenuItem onClick={handleUploadClick} className="gap-2 py-2">
             <Upload className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.upload')}</span>
@@ -350,7 +350,7 @@ export function AddCaptureMenu({
 
         {/* Camera capture */}
         {allowedSources.includes('camera') && (
-          <DropdownMenuItem onClick={handleCameraCapture} className="gap-3 py-3">
+          <DropdownMenuItem onClick={handleCameraCapture} className="gap-2 py-2">
             <Camera className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.photo')}</span>
@@ -363,7 +363,7 @@ export function AddCaptureMenu({
 
         {/* Video capture */}
         {allowedSources.includes('video') && (
-          <DropdownMenuItem onClick={handleVideoCapture} className="gap-3 py-3">
+          <DropdownMenuItem onClick={handleVideoCapture} className="gap-2 py-2">
             <Video className={iconSizes.md} />
             <div className="flex flex-col">
               <span className="font-medium">{t('capture.video')}</span>
@@ -378,7 +378,7 @@ export function AddCaptureMenu({
         {allowedSources.includes('microphone') && (
           <DropdownMenuItem
             onClick={handleAudioCapture}
-            className={cn('gap-3 py-3', isRecording && 'bg-red-50 text-red-600')}
+            className={cn('gap-2 py-2', isRecording && 'bg-red-50 text-red-600')}
           >
             <Mic className={cn(iconSizes.md, isRecording && 'animate-pulse')} />
             <div className="flex flex-col">
@@ -398,7 +398,7 @@ export function AddCaptureMenu({
         {allowedSources.includes('text') && (
           <DropdownMenuItem
             onClick={() => setIsTextNoteOpen(true)}
-            className="gap-3 py-3"
+            className="gap-2 py-2"
           >
             <FileText className={iconSizes.md} />
             <div className="flex flex-col">
@@ -464,7 +464,7 @@ export function AddCaptureMenu({
 
   // Text note dialog/sheet
   const textNoteContent = isTextNoteOpen && (
-    <div className="space-y-4 p-4">
+    <div className="space-y-2 p-2">
       <Textarea
         value={textNote}
         onChange={(e) => setTextNote(e.target.value)}

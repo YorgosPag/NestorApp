@@ -25,7 +25,7 @@ export function LegalInfoCard() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div className="space-y-2">
             <Label>{t('tabs.general.legalInfo.contractNumber')}</Label>
             <Input disabled className="bg-muted" />

@@ -55,7 +55,7 @@ export function SearchAndFilters({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2">
       <div className="flex-1 min-w-[300px]">
         <SearchInput
           value={searchTerm}

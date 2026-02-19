@@ -21,7 +21,7 @@ export function StorageMapPlaceholder() {
             <CardContent>
                 <section className={`${iconSizes.xl12} bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border border-dashed ${quick.muted} flex items-center justify-center`}>
                     <div className="text-center">
-                        <MapPin className={`${iconSizes.xl3} text-muted-foreground mx-auto mb-4`} />
+                        <MapPin className={`${iconSizes.xl3} text-muted-foreground mx-auto mb-2`} />
                         <p className="text-muted-foreground">{t('storageMap.description')}</p>
                         <p className="text-sm text-muted-foreground mt-2">{t('storageMap.comingSoon')}</p>
                     </div>

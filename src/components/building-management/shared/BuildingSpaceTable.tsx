@@ -236,7 +236,7 @@ export function BuildingSpaceTable<T>({
               </TableRow>
               {isExpandable && isExpanded && (
                 <TableRow>
-                  <TableCell colSpan={totalCols} className="bg-muted/30 p-4">
+                  <TableCell colSpan={totalCols} className="bg-muted/30 p-2">
                     {renderExpandedContent(item)}
                   </TableCell>
                 </TableRow>
