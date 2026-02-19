@@ -42,6 +42,11 @@ export interface GridSettings extends UIElementSettings {
   readonly majorGridWeight: number; // Major grid line thickness
   readonly minorGridWeight: number; // Minor grid line thickness
 
+  // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon (consolidated from rulers-grid/config.ts)
+  readonly showOrigin: boolean;     // Show origin crosshair at world (0,0)
+  readonly showAxes: boolean;       // Show X/Y axis lines through origin
+  readonly axesColor: string;       // Color for axis lines
+  readonly axesWeight: number;      // Line width for axis lines
 }
 
 /**
@@ -89,6 +94,12 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   // ✅ ENTERPRISE FIX: Default values for missing properties
   majorGridWeight: 2,    // Thicker major grid lines
   minorGridWeight: 1,    // Standard minor grid lines
+
+  // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon defaults
+  showOrigin: true,      // Show origin crosshair at world (0,0) — AutoCAD always shows UCS icon
+  showAxes: true,        // Show X/Y axis lines through origin
+  axesColor: UI_COLORS.RULER_DARK_GRAY, // Neutral gray for axes
+  axesWeight: 2,         // Prominent axis lines
 
   zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
 };

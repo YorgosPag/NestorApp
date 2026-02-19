@@ -56,6 +56,12 @@ export class LegacyGridAdapter {
       majorGridWeight: 2,
       minorGridWeight: 1,
 
+      // 🏢 ORIGIN & AXES: Use settings from legacy input (or defaults)
+      showOrigin: settings.showOrigin ?? true,
+      showAxes: settings.showAxes ?? true,
+      axesColor: settings.axesColor ?? '#555555',
+      axesWeight: settings.axesWeight ?? 2,
+
       zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
     };
 

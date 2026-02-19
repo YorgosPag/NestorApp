@@ -11,8 +11,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 // UI_COLORS, RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS — removed: dashed selection overlay replaced by inline grips
 // 🏢 ENTERPRISE: Refresh cached bounds before render to prevent stale clear/draw mismatch
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
-// 🏢 ADR-102: Centralized Origin Markers
-import { renderOriginMarker } from '../../rendering/ui/origin/OriginMarkerUtils';
+// 🏢 Origin markers consolidated into GridRenderer (eliminates OriginMarkerUtils duplication)
 
 // ✅ ΝΕΟ: Import unified rendering system
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
@@ -90,9 +89,7 @@ export class DxfRenderer {
     // Clear canvas using exact same fresh dimensions as rendering viewport
     this.ctx.clearRect(0, 0, canvasRect.width, canvasRect.height);
 
-    // 🏢 ADR-102: Centralized Origin Marker (Single Source of Truth)
-    // Only DxfCanvas renders the origin marker - eliminates dual-canvas alignment issues
-    renderOriginMarker(this.ctx, transform, actualViewport, { variant: 'dxf' });
+    // 🏢 Origin marker now rendered by GridRenderer (consolidated — no duplication)
 
     // Early return if no scene
       if (!scene || !scene.entities.length) {

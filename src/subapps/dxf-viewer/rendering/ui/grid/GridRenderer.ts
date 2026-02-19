@@ -18,6 +18,8 @@ import type {
 import { addCirclePath } from '../../primitives/canvasPaths';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { WORLD_ORIGIN } from '../../../config/geometry-constants';
+// 🏢 ADR-088: Pixel-perfect alignment for crisp 1px rendering
+import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
 
 /**
  * 🔺 CENTRALIZED GRID RENDERER
@@ -116,6 +118,15 @@ export class GridRenderer implements UIRenderer {
         console.warn('⚠️ GridRenderer: Unknown style:', settings.style);
     }
 
+    // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon — unified rendering (eliminates OriginMarkerUtils duplication)
+    // Rendered AFTER grid so axes appear on top of grid lines
+    ctx.globalAlpha = 1.0; // Axes always fully opaque (not affected by grid opacity)
+    if (settings.showAxes) {
+      this.renderAxes(ctx, viewport, settings, transform);
+    }
+    if (settings.showOrigin) {
+      this.renderOriginCrosshair(ctx, viewport, settings, transform);
+    }
 
     ctx.restore();
 
@@ -292,6 +303,100 @@ export class GridRenderer implements UIRenderer {
     ctx.stroke();
   }
 
+
+  // ============================================================================
+  // ORIGIN & AXES RENDERING — AutoCAD UCS Icon Pattern
+  // ============================================================================
+
+  /** Size of origin crosshair arms in pixels */
+  private static readonly ORIGIN_ARM_LENGTH = 20;
+  /** Size of the X/Y axis label text */
+  private static readonly AXIS_LABEL_FONT = 'bold 11px monospace';
+
+  /**
+   * 🏢 Render X/Y axis lines through world origin (0,0)
+   * AutoCAD draws infinite axis lines through origin in a distinct color.
+   * We draw full-viewport lines for X and Y axes.
+   */
+  private renderAxes(
+    ctx: CanvasRenderingContext2D,
+    viewport: Viewport,
+    settings: GridSettings,
+    transform: { scale: number; offsetX: number; offsetY: number }
+  ): void {
+    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
+    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
+    const ox = pixelPerfect(screenOrigin.x);
+    const oy = pixelPerfect(screenOrigin.y);
+
+    ctx.strokeStyle = settings.axesColor;
+    ctx.lineWidth = settings.axesWeight;
+    ctx.beginPath();
+
+    // X-axis: horizontal line spanning full viewport
+    ctx.moveTo(0, oy);
+    ctx.lineTo(viewport.width, oy);
+
+    // Y-axis: vertical line spanning full viewport
+    ctx.moveTo(ox, 0);
+    ctx.lineTo(ox, viewport.height);
+
+    ctx.stroke();
+  }
+
+  /**
+   * 🏢 Render origin crosshair icon at world (0,0)
+   * AutoCAD UCS icon: small L-shape / crosshair marking the exact origin.
+   * We draw a prominent crosshair with colored X/Y arms and axis labels.
+   */
+  private renderOriginCrosshair(
+    ctx: CanvasRenderingContext2D,
+    viewport: Viewport,
+    settings: GridSettings,
+    transform: { scale: number; offsetX: number; offsetY: number }
+  ): void {
+    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
+    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
+    const ox = pixelPerfect(screenOrigin.x);
+    const oy = pixelPerfect(screenOrigin.y);
+    const arm = GridRenderer.ORIGIN_ARM_LENGTH;
+
+    ctx.save();
+    ctx.lineCap = 'square';
+
+    // X-axis arm (RED — right from origin, AutoCAD convention)
+    ctx.strokeStyle = '#E74C3C';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(ox + arm, oy);
+    ctx.stroke();
+
+    // Y-axis arm (GREEN — up from origin, AutoCAD convention)
+    ctx.strokeStyle = '#2ECC71';
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(ox, oy - arm); // Negative Y = up in screen coords
+    ctx.stroke();
+
+    // Axis labels
+    ctx.font = GridRenderer.AXIS_LABEL_FONT;
+    ctx.fillStyle = '#E74C3C';
+    ctx.fillText('X', ox + arm + 4, oy + 4);
+    ctx.fillStyle = '#2ECC71';
+    ctx.fillText('Y', ox - 4, oy - arm - 4);
+
+    // Origin dot (small white circle with dark border)
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    addCirclePath(ctx, { x: ox, y: oy }, 3);
+    ctx.fill();
+    ctx.strokeStyle = settings.axesColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.restore();
+  }
 
   /**
    * Calculate adaptive opacity based on grid size

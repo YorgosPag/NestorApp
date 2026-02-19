@@ -44,6 +44,11 @@ export interface GridContextSettings {
     minorGridWeight?: number;
     style?: 'lines' | 'dots' | 'crosses';
     subDivisions?: number;
+    // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon
+    showOrigin?: boolean;
+    showAxes?: boolean;
+    axesColor?: string;
+    axesWeight?: number;
   };
 }
 
@@ -260,7 +265,13 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
     showMajorGrid: true,
     showMinorGrid: true,
     adaptiveOpacity: false, // ❌ DISABLE to always show
-    minVisibleSize: 0 // ✅ ALWAYS SHOW regardless of zoom
+    minVisibleSize: 0, // ✅ ALWAYS SHOW regardless of zoom
+
+    // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon (from panel settings)
+    showOrigin: gridContextSettings?.visual?.showOrigin ?? true,
+    showAxes: gridContextSettings?.visual?.showAxes ?? true,
+    axesColor: gridContextSettings?.visual?.axesColor ?? UI_COLORS.RULER_DARK_GRAY,
+    axesWeight: gridContextSettings?.visual?.axesWeight ?? 2,
   }), [gridContextSettings, showGrid]);
 
   /**

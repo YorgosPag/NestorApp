@@ -95,26 +95,10 @@ export interface SnapResult {
 }
 
 // === GRID TYPES ===
-export interface GridSettings {
-  enabled: boolean;
-  visible?: boolean;  // ✅ ENTERPRISE: Visibility control
-  size: number;
-  color: string;
-  opacity: number;
-  style: 'dots' | 'lines' | 'crosses'; // ✅ ENTERPRISE: Added 'crosses' style
-
-  // ✅ EXTENDED PROPERTIES: Advanced grid configuration
-  majorGridColor?: string;
-  minorGridColor?: string;
-  lineWidth?: number;
-  majorGridWeight?: number;
-  minorGridWeight?: number;
-  majorInterval?: number;
-  showMajorGrid?: boolean;
-  showMinorGrid?: boolean;
-  adaptiveOpacity?: boolean;
-  minVisibleSize?: number;
-}
+// 🏢 ENTERPRISE: Single Source of Truth = GridTypes.ts (eliminates duplication)
+// Mutable version for Canvas V2 API consumers (GridTypes.ts has readonly properties)
+import type { GridSettings as RendererGridSettings } from '../../rendering/ui/grid/GridTypes';
+export type GridSettings = { -readonly [K in keyof RendererGridSettings]: RendererGridSettings[K] };
 
 // === RULERS TYPES ===
 // Type alias για Layer canvas compatibility - references main RulerSettings

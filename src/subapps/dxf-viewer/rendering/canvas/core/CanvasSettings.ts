@@ -135,6 +135,11 @@ export class CanvasSettings {
         majorGridWeight: 1.5,
         minorGridWeight: 0.5,
         opacity: 0.5,
+        // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon
+        showOrigin: true,
+        showAxes: true,
+        axesColor: UI_COLORS.RULER_DARK_GRAY,
+        axesWeight: 2,
         zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
       },
       rulers: {
