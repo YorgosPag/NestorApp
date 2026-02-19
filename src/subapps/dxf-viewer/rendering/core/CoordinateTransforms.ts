@@ -20,9 +20,9 @@ export const COORDINATE_LAYOUT = {
   RULER_TOP_HEIGHT: 30,
   MARGINS: {
     left: 30,   // Space for vertical ruler (synchronized with ruler width)
-    top: 30,    // Space for horizontal ruler
+    top: 30,    // Y-inversion anchor: used in formula screenY = (height - top) — NOT a top-of-screen margin
     right: 0,   // No right margin
-    bottom: 30  // Space for coordinates/status
+    bottom: 30  // Space for bottom horizontal ruler / coordinates
   }
 } as const;
 

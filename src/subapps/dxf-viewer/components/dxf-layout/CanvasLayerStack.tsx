@@ -460,8 +460,8 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
             isActive={crosshairSettings.enabled}
             rulerMargins={{
               left: rulerSettings.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
-              top: rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT,
-              bottom: COORDINATE_LAYOUT.MARGINS.bottom,
+              top: 0,     // 🏢 FIX: No ruler at top — horizontal ruler is at BOTTOM (excluded by CSS height)
+              bottom: 0,  // 🏢 FIX: CSS height already excludes the bottom ruler area
             }}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{ height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)` }}
