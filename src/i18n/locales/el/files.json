@@ -347,7 +347,15 @@
     "dxfViewer": "Προβολή DXF",
     "pdfViewer": "Προβολή PDF",
     "imageViewer": "Προβολή εικόνας",
-    "keyboardNav": "Χρησιμοποιήστε τα βέλη αριστερά/δεξιά για πλοήγηση"
+    "keyboardNav": "Χρησιμοποιήστε τα βέλη αριστερά/δεξιά για πλοήγηση",
+    "close": "Κλείσιμο",
+    "noSceneData": "Δεν φορτώθηκαν δεδομένα κάτοψης",
+    "galleryLabel": "Συλλογή κατόψεων",
+    "navigation": "Πλοήγηση κατόψεων",
+    "actions": "Ενέργειες κάτοψης",
+    "untitled": "Χωρίς τίτλο",
+    "processing": "Επεξεργασία κάτοψης...",
+    "canvasAlt": "Κάτοψη: {fileName}"
   },
   "errorReporting": {
     "sending": "Αποστολή...",

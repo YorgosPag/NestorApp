@@ -93,3 +93,10 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
   - MODIFIED: `parkingMappings.ts` + `mappings/index.ts` — registered ParkingFloorplanTab component
   - MODIFIED: `tabs.ts` labels — added parkingFloorplan to ParkingTabLabelsConfig
   - Bidirectional: same Firestore path as building's ParkingTabContent expandable row
+- **2026-02-19**: Added wheel zoom, drag pan, fullscreen modal to FloorplanGallery
+  - NEW: `useZoomPan` hook (`src/hooks/useZoomPan.ts`) — centralized zoom+pan with wheel, mouse drag, pinch, touch
+  - MODIFIED: `FloorplanGallery.tsx` — replaced manual zoom state with useZoomPan, added fullscreen Dialog modal
+  - Extracted `renderDxfToCanvas()` for DXF canvas reuse between inline and fullscreen views
+  - Fullscreen modal: independent zoom/pan instance, Expand button in toolbar, close with X or Escape
+  - Image zoom via CSS transform (contentStyle), DXF zoom via canvas re-render with panOffset
+  - i18n: added close, noSceneData, galleryLabel, navigation, actions, untitled, processing, canvasAlt keys

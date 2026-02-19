@@ -347,7 +347,15 @@
     "dxfViewer": "DXF Viewer",
     "pdfViewer": "PDF Viewer",
     "imageViewer": "Image Viewer",
-    "keyboardNav": "Use left/right arrow keys to navigate"
+    "keyboardNav": "Use left/right arrow keys to navigate",
+    "close": "Close",
+    "noSceneData": "No floorplan data loaded",
+    "galleryLabel": "Floorplan gallery",
+    "navigation": "Floorplan navigation",
+    "actions": "Floorplan actions",
+    "untitled": "Untitled",
+    "processing": "Processing floorplan...",
+    "canvasAlt": "Floorplan: {fileName}"
   },
   "errorReporting": {
     "sending": "Sending...",
