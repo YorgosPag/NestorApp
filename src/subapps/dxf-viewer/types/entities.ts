@@ -462,9 +462,10 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
       };
     case 'text':
       // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-      // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
-      const textWidth = entity.text.length * (entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-      const textHeight = entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+      // 🏢 FIX (2026-02-20): Use entity.height (DXF standard) before fontSize fallback
+      // DXF entities store text size in `height` (e.g. 2.5), NOT `fontSize`
+      const textWidth = entity.text.length * (entity.height || entity.fontSize || 2.5) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+      const textHeight = entity.height || entity.fontSize || 2.5;
       return {
         minX: entity.position.x,
         minY: entity.position.y - textHeight,

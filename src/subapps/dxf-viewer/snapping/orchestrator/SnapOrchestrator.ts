@@ -114,39 +114,53 @@ export class SnapOrchestrator {
     const allCandidates: SnapCandidate[] = [];
     const context = this.contextManager.createEngineContext(cursorPoint, this.entities, excludeEntityId);
 
+    // 🏢 FIX (2026-02-20): Sub-pixel early-exit threshold.
+    // If a snap candidate is closer than ~1 pixel in world units, stop iterating modes.
+    // This prevents expensive engines (PERPENDICULAR, PARALLEL, NEAREST) from running
+    // when a high-quality snap was already found by a cheaper engine (ENDPOINT, MIDPOINT).
+    const viewport = this.contextManager.getViewport();
+    const subPixelThreshold = viewport
+      ? viewport.worldPerPixelAt(cursorPoint) * 1.5  // 1.5 pixels in world units
+      : 0; // No early-exit if viewport unavailable
+
     // Εκτέλεση όλων των enabled engines
     for (const snapType of settings.priority) {
       if (!settings.enabledTypes.has(snapType)) continue;
-      
+
       const engine = this.registry.getEngine(snapType);
       if (!engine) {
-
         continue;
       }
 
-      if (shouldLog) {
-
-      }
       const result = engine.findSnapCandidates(cursorPoint, context);
-      
+
       // Guard against null/undefined result
       if (!result) {
         if (DEBUG_SNAP_ORCHESTRATOR) console.warn(`🔺 SnapOrchestrator: ${snapType} engine returned null/undefined result`);
         continue;
       }
-      
+
       // Early return αν το engine το ζητάει
       if (result.earlyReturn) {
         return result.earlyReturn;
       }
-      
+
       // Guard against invalid candidates array
       if (Array.isArray(result.candidates)) {
         allCandidates.push(...result.candidates);
       } else {
         if (DEBUG_SNAP_ORCHESTRATOR) console.warn(`🔺 SnapOrchestrator: Invalid candidates from ${snapType} engine:`, result.candidates);
       }
-      
+
+      // 🏢 FIX (2026-02-20): Early-exit when high-quality snap found.
+      // If any candidate is sub-pixel distance, no need to run remaining engines.
+      if (subPixelThreshold > 0 && allCandidates.length > 0) {
+        const bestDistance = Math.min(...allCandidates.map(c => c.distance));
+        if (bestDistance <= subPixelThreshold) {
+          break;
+        }
+      }
+
       // Αν έχουμε αρκετούς candidates, σταματάμε
       if (allCandidates.length >= context.maxCandidates) {
         break;

@@ -9,7 +9,9 @@ import { SpatialFactory, type ISpatialIndex, type SpatialQueryOptions, type Spat
 import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
 // 🏢 ADR-071: Centralized geometry utilities
-import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
+import { pointToLineDistance, clamp, degToRad } from '../entities/shared/geometry-utils';
+// 🏢 ADR-107: Text metrics for text hit-testing width estimation
+import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 // 🏢 ENTERPRISE (2026-02-15): Centralized point-in-polygon for closed polyline/area hit-test
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-109: Centralized Distance Calculation
@@ -531,6 +533,12 @@ export class HitTester {
       case 'rectangle':
       case 'rect':
         return this.hitTestRectangle(entity, point, tolerance);
+      // 🏢 FIX (2026-02-20): Precise text hit-test — rotation-aware bounding box
+      // BEFORE: text/mtext fell through to default → any spatial index candidate accepted
+      // This caused text to highlight from huge distances (especially with inflated bounds)
+      case 'text':
+      case 'mtext':
+        return this.hitTestText(entity, point, tolerance);
       // 🏢 ENTERPRISE (2026-02-15): Angle measurement hit-test — test both arm segments
       case 'angle-measurement':
         return this.hitTestAngleMeasurement(entity, point, tolerance);
@@ -657,6 +665,68 @@ export class HitTester {
           edgeIndex: i
         };
       }
+    }
+
+    return null;
+  }
+
+  /**
+   * 🏢 FIX (2026-02-20): Precise text/mtext hit testing
+   * Rotation-aware bounding box check — same logic as TextRenderer.hitTest().
+   *
+   * BEFORE: text/mtext fell through to generic default (always accepted if in spatial index).
+   * Combined with inflated spatial index bounds (fontSize fallback = 12 vs actual height = 2.5),
+   * this caused texts to highlight from huge distances.
+   *
+   * AFTER: Proper width/height estimation, rotation transform, and tolerance-aware AABB check.
+   */
+  private hitTestText(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+    if (!('position' in entity) || !('text' in entity)) return null;
+
+    const position = entity.position as Point2D;
+    const text = entity.text as string;
+    if (!position || !text) return null;
+
+    // Height priority chain matching TextRenderer.extractTextHeight() and Bounds.calculateTextBounds()
+    const height = ('height' in entity && typeof entity.height === 'number' && entity.height > 0)
+      ? entity.height as number
+      : ('fontSize' in entity && typeof entity.fontSize === 'number' && entity.fontSize > 0)
+        ? entity.fontSize as number
+        : 2.5; // AutoCAD Standard DIMTXT default
+
+    const rotation = ('rotation' in entity && typeof entity.rotation === 'number')
+      ? entity.rotation as number
+      : 0;
+
+    // 🏢 ADR-107: Width estimation matching Bounds.ts and TextRenderer.ts
+    const width = text.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+
+    // Rotation-aware hit test: transform test point into text's local coordinate system
+    let testPoint = point;
+    if (rotation !== 0) {
+      const rad = degToRad(-rotation); // Inverse rotation: world → local
+      const dx = point.x - position.x;
+      const dy = point.y - position.y;
+      testPoint = {
+        x: position.x + dx * Math.cos(rad) - dy * Math.sin(rad),
+        y: position.y + dx * Math.sin(rad) + dy * Math.cos(rad),
+      };
+    }
+
+    // Axis-aligned bounding box check in local coordinates
+    const minX = position.x;
+    const maxX = position.x + width;
+    const minY = position.y - height;
+    const maxY = position.y;
+
+    if (testPoint.x >= minX - tolerance &&
+        testPoint.x <= maxX + tolerance &&
+        testPoint.y >= minY - tolerance &&
+        testPoint.y <= maxY + tolerance) {
+      return {
+        hitType: 'entity',
+        hitPoint: point
+      };
     }
 
     return null;

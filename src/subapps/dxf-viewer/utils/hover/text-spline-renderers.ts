@@ -13,7 +13,7 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-086: Centralized Font Definitions
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 // 🏢 ADR-142: Centralized Default Font Size
-import { UI_FONTS, buildUIFont, LINE_DASH_PATTERNS, TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
+import { UI_FONTS, buildUIFont, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🏢 ADR-086: Centralized Angle Formatting
 import { formatAngle } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
@@ -26,8 +26,9 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
 
   const position = entity.position;
   const text = entity.text;
-  // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
-  const height = entity.fontSize || entity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+  // 🏢 FIX (2026-02-20): DXF entities use `height` (e.g. 2.5), NOT `fontSize`
+  // Priority: height → fontSize → 2.5 (AutoCAD Standard DIMTXT default)
+  const height = entity.height || entity.fontSize || 2.5;
   const rotation = entity.rotation ?? 0;
 
   if (!position || !text) return;

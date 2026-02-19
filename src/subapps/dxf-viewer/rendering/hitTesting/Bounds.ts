@@ -38,6 +38,8 @@ interface TextEntityProperties {
   position: Point2D;
   text: string;
   fontSize?: number;
+  height?: number;      // 🏢 DXF text height (primary property from DXF parser)
+  rotation?: number;    // 🏢 DXF text rotation in degrees (for rotated AABB)
 }
 
 interface SplineEntityProperties {
@@ -219,20 +221,75 @@ export class BoundsCalculator {
 
   /**
    * 🔺 TEXT BOUNDS
-   * Εκτίμηση βάσει font size - θα μπορούσε να βελτιωθεί με measureText
+   * Rotation-aware bounding box for text entities.
+   *
+   * 🏢 FIX (2026-02-20): Use entity.height (DXF standard) with proper fallback chain.
+   * BEFORE: Used entity.fontSize || DEFAULT_FONT_SIZE (12) — but DXF entities have
+   * `height` (e.g. 2.5), NOT `fontSize` → bounds were ~5x inflated → spatial index
+   * returned text candidates from huge distances.
+   *
+   * AFTER: height || fontSize || 2.5 (AutoCAD Standard DIMTXT default)
+   * Matches TextRenderer.extractTextHeight() priority chain.
+   *
+   * Also handles rotation: for rotated text (e.g. vertical dimension text at 90°),
+   * the AABB is computed from the rotated corners of the text rectangle.
    */
   private static calculateTextBounds(entity: EntityModel, tolerance: number): BoundingBox {
     // 🏢 ENTERPRISE: Type-safe casting for TextEntity properties
     const textEntity = entity as EntityWithText;
     const position = textEntity.position;
     const text = textEntity.text || '';
-    // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
-    const fontSize = textEntity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+
+    // 🏢 FIX (2026-02-20): Priority chain matching TextRenderer.extractTextHeight()
+    // DXF entities store text size in `height`, NOT `fontSize`
+    const textHeight = textEntity.height || textEntity.fontSize || 2.5;
 
     // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-    const estimatedWidth = text.length * fontSize * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-    const estimatedHeight = fontSize;
+    const estimatedWidth = text.length * textHeight * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+    const estimatedHeight = textHeight;
 
+    // 🏢 FIX (2026-02-20): Rotation-aware AABB
+    // For rotated text (e.g. vertical dimension "2.95" at 90°), compute the axis-aligned
+    // bounding box of the rotated text rectangle. Without this, the AABB for rotated text
+    // extends incorrectly in one axis.
+    const rotation = textEntity.rotation ?? 0;
+    let normalizedRotation = rotation % 360;
+    if (normalizedRotation < 0) normalizedRotation += 360;
+
+    if (normalizedRotation !== 0) {
+      // Rotate the 4 corners of the text rectangle around position
+      const rad = normalizedRotation * (Math.PI / 180);
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      // Text rectangle corners relative to position (origin)
+      // DXF: insertion = baseline-left, text extends right and up
+      const corners = [
+        { x: 0, y: 0 },
+        { x: estimatedWidth, y: 0 },
+        { x: estimatedWidth, y: estimatedHeight },
+        { x: 0, y: estimatedHeight },
+      ];
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const corner of corners) {
+        const rx = corner.x * cos - corner.y * sin + position.x;
+        const ry = corner.x * sin + corner.y * cos + position.y;
+        minX = Math.min(minX, rx);
+        minY = Math.min(minY, ry);
+        maxX = Math.max(maxX, rx);
+        maxY = Math.max(maxY, ry);
+      }
+
+      return this.createBoundingBox(
+        minX - tolerance,
+        minY - tolerance,
+        maxX + tolerance,
+        maxY + tolerance
+      );
+    }
+
+    // Non-rotated: simple axis-aligned box
     return this.createBoundingBox(
       position.x - tolerance,
       position.y - tolerance,
