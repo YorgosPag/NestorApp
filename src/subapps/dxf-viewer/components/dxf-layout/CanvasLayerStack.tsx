@@ -268,6 +268,18 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
     }
   };
 
+  // 🏢 FIX (2026-02-19): Clear DXF entity visual highlight when overlay/color-layer is clicked.
+  // Without this, selectedEntityIds persists and DxfCanvas keeps rendering the old entity as highlighted.
+  const handleOverlayClickWithEntityClear = (overlayId: string, point: Point2D) => {
+    setSelectedEntityIds([]);
+    handleOverlayClick(overlayId, point);
+  };
+
+  const handleMultiOverlayClickWithEntityClear = (layerIds: string[]) => {
+    setSelectedEntityIds([]);
+    handleMultiOverlayClick(layerIds);
+  };
+
   const handleDxfEntitySelect = (entityId: string | null) => {
     if (entityId) {
       setSelectedEntityIds(prev => {
@@ -419,8 +431,8 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
                 selectionBox: null,
                 gripSettings,
               }}
-              onLayerClick={handleOverlayClick}
-              onMultiLayerClick={handleMultiOverlayClick}
+              onLayerClick={handleOverlayClickWithEntityClear}
+              onMultiLayerClick={handleMultiOverlayClickWithEntityClear}
               onCanvasClick={handleCanvasClick}
               onDrawingHover={drawingHandlersRef.current?.onDrawingHover}
               draggingOverlay={draggingOverlayDelta}
@@ -452,8 +464,8 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               crosshairSettings={crosshairSettings}
               gridSettings={gridSettings}
               rulerSettings={dxfRulerSettings}
-              onLayerSelected={handleOverlayClick}
-              onMultiLayerSelected={handleMultiOverlayClick}
+              onLayerSelected={handleOverlayClickWithEntityClear}
+              onMultiLayerSelected={handleMultiOverlayClickWithEntityClear}
               onEntitiesSelected={handleDxfEntitiesSelected}
               onUnifiedMarqueeResult={handleUnifiedMarqueeResult}
               onHoverEntity={setHoveredEntityId}
