@@ -45,6 +45,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     showGrid,
     showLayers,
     overlayMode = 'select',
+    setOverlayMode,
     currentStatus = 'for-sale',
     currentKind = 'unit',
     ...restProps
@@ -348,6 +349,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     };
   }, [entityJoinHook, selectedEntityIds]);
 
+  // 🏢 FIX (2026-02-19): Callback to exit overlay draw mode on Escape
+  // Resets overlayMode from 'draw' → 'select' so drawing doesn't persist
+  const handleExitDrawMode = useCallback(() => {
+    if (overlayMode === 'draw' && setOverlayMode) {
+      setOverlayMode('select');
+    }
+  }, [overlayMode, setOverlayMode]);
+
   useCanvasKeyboardShortcuts({
     handleSmartDelete,
     dxfGripInteraction: unified.dxfProjection,
@@ -359,6 +368,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     selectedEntityIds,
     handleEntityJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
     canEntityJoin: entityJoinState.canJoin,
+    onExitDrawMode: handleExitDrawMode,
   });
 
   // === Render ===

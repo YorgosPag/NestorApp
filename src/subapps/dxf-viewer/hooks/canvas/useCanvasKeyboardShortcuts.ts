@@ -54,6 +54,8 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleEntityJoin?: () => void;
   /** ADR-161: Check if join is possible */
   canEntityJoin?: boolean;
+  /** Callback to exit overlay draw mode on Escape (resets overlayMode to 'select') */
+  onExitDrawMode?: () => void;
 }
 
 // ============================================================================
@@ -74,6 +76,7 @@ export function useCanvasKeyboardShortcuts({
   selectedEntityIds = [],
   handleEntityJoin,
   canEntityJoin = false,
+  onExitDrawMode,
 }: UseCanvasKeyboardShortcutsParams): void {
 
   // Handle keyboard shortcuts for drawing, delete, and local operations
@@ -104,6 +107,10 @@ export function useCanvasKeyboardShortcuts({
             break; // Consumed by grip interaction
           }
           setDraftPolygon([]);
+          // 🏢 FIX (2026-02-19): Escape must also exit overlay draw mode
+          // Previously only cleared draft points but overlayMode stayed 'draw',
+          // causing next click to resume polygon drawing unexpectedly
+          onExitDrawMode?.();
           // 🏢 ENTERPRISE: Escape also clears grip selection
           if (selectedGrips.length > 0) {
             setSelectedGrips([]);
@@ -145,5 +152,5 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode]);
 }
