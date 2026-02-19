@@ -58,6 +58,8 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
   } = props;
 
   const rafRef = useRef<number>(0);
+  /** Track previous phase to clear canvas ONLY on transition out of awaiting-angle */
+  const prevPhaseRef = useRef<RotationPhase>('idle');
 
   /** Read an entity from the current level scene (read-only) */
   const getEntity = useCallback((entityId: string): AnySceneEntity | null => {
@@ -169,23 +171,28 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     }
   }, [phase, basePoint, currentAngle, selectedEntityIds, getEntity, transform, viewport, getCanvas, cursorWorld]);
 
-  // Schedule rendering on every relevant change
+  // Clear canvas ONLY when transitioning FROM awaiting-angle → idle/base-point
+  // (never on every render — that would wipe the drawing tool preview)
   useEffect(() => {
-    if (phase !== 'awaiting-angle') {
-      // Clear canvas when not in angle mode
+    if (prevPhaseRef.current === 'awaiting-angle' && phase !== 'awaiting-angle') {
       const canvas = getCanvas();
       if (canvas) {
         const ctx = canvas.getContext('2d');
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
       }
-      return;
     }
+    prevPhaseRef.current = phase;
+  }, [phase, getCanvas]);
+
+  // Schedule rendering on every relevant change (only when active)
+  useEffect(() => {
+    if (phase !== 'awaiting-angle') return;
 
     rafRef.current = requestAnimationFrame(drawFrame);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [phase, drawFrame, getCanvas]);
+  }, [phase, drawFrame]);
 }
 
 // ============================================================================
