@@ -12,6 +12,8 @@
 
 import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChevronRight, ChevronDown } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
 import type { SpaceCardField, SpaceActions, SpaceActionState } from './types';
@@ -35,6 +37,12 @@ interface BuildingSpaceCardGridProps<T> {
   actions?: SpaceActions<T>;
   /** Loading state for action icons */
   actionState?: SpaceActionState;
+  /** ID of the currently expanded card (for inline floorplans) */
+  expandedId?: string | null;
+  /** Toggle expand for a card */
+  onToggleExpand?: (id: string) => void;
+  /** Render expanded content inside the card (e.g. floorplan inline) */
+  renderExpandedContent?: (item: T) => ReactNode;
 }
 
 // ============================================================================
@@ -49,19 +57,41 @@ export function BuildingSpaceCardGrid<T>({
   fields,
   actions,
   actionState,
+  expandedId,
+  onToggleExpand,
+  renderExpandedContent,
 }: BuildingSpaceCardGridProps<T>) {
   const hasActions = actions && (actions.onView || actions.onEdit || actions.onUnlink || actions.onDelete);
+  const isExpandable = !!renderExpandedContent;
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {items.map((item) => {
         const key = getKey(item);
+        const isExpanded = expandedId === key;
 
         return (
           <Card key={key} className={`overflow-hidden ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
             <CardContent className="p-4 space-y-3">
               <header className="flex items-center justify-between">
-                <h3 className="font-medium text-sm truncate">{getName(item)}</h3>
+                <span className="flex items-center gap-1 min-w-0">
+                  {isExpandable && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => onToggleExpand?.(key)}
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                    >
+                      {isExpanded
+                        ? <ChevronDown className="h-3.5 w-3.5" />
+                        : <ChevronRight className="h-3.5 w-3.5" />
+                      }
+                    </Button>
+                  )}
+                  <h3 className="font-medium text-sm truncate">{getName(item)}</h3>
+                </span>
                 {renderStatus(item)}
               </header>
 
@@ -73,6 +103,12 @@ export function BuildingSpaceCardGrid<T>({
                   </span>
                 ))}
               </dl>
+
+              {isExpandable && isExpanded && (
+                <section className="border-t border-border pt-3">
+                  {renderExpandedContent(item)}
+                </section>
+              )}
 
               {hasActions && (
                 <footer className="border-t border-border pt-2">

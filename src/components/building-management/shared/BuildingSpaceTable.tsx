@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { Fragment, useMemo, useState, useCallback, type ReactNode } from 'react';
 import {
   Table,
   TableBody,
@@ -22,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
@@ -56,6 +57,12 @@ interface BuildingSpaceTableProps<T> {
   renderEditRow?: (item: T) => React.ReactNode;
   /** ID of the item currently being edited inline */
   editingId?: string | null;
+  /** ID of the currently expanded row (for inline floorplans) */
+  expandedId?: string | null;
+  /** Toggle expand for a row */
+  onToggleExpand?: (id: string) => void;
+  /** Render expanded content below the row (e.g. floorplan inline) */
+  renderExpandedContent?: (item: T) => ReactNode;
 }
 
 // ============================================================================
@@ -70,6 +77,9 @@ export function BuildingSpaceTable<T>({
   actionState,
   renderEditRow,
   editingId,
+  expandedId,
+  onToggleExpand,
+  renderExpandedContent,
 }: BuildingSpaceTableProps<T>) {
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
@@ -131,6 +141,13 @@ export function BuildingSpaceTable<T>({
   };
 
   // ============================================================================
+  // EXPAND SUPPORT
+  // ============================================================================
+
+  const isExpandable = !!renderExpandedContent;
+  const totalCols = columns.length + (isExpandable ? 1 : 0) + (hasActions ? 1 : 0);
+
+  // ============================================================================
   // RENDER
   // ============================================================================
 
@@ -138,6 +155,7 @@ export function BuildingSpaceTable<T>({
     <Table>
       <TableHeader>
         <TableRow>
+          {isExpandable && <TableHead className="w-10" />}
           {columns.map((col) => {
             const isSortable = !!col.sortValue;
 
@@ -163,39 +181,67 @@ export function BuildingSpaceTable<T>({
         {sortedItems.map((item) => {
           const key = getKey(item);
           const isEditing = editingId === key;
+          const isExpanded = expandedId === key;
 
           // If inline editing is active for this row, render custom edit row
           if (isEditing && renderEditRow) {
             return (
               <TableRow key={key}>
+                {isExpandable && <TableCell />}
                 {renderEditRow(item)}
               </TableRow>
             );
           }
 
           return (
-            <TableRow key={key}>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.key}
-                  className={col.alignRight ? 'text-right' : ''}
-                >
-                  {col.render(item)}
-                </TableCell>
-              ))}
-              {hasActions && (
-                <TableCell className="text-right">
-                  <BuildingSpaceActions
-                    onView={actions.onView ? () => actions.onView?.(item) : undefined}
-                    onEdit={actions.onEdit ? () => actions.onEdit?.(item) : undefined}
-                    onUnlink={actions.onUnlink ? () => actions.onUnlink?.(item) : undefined}
-                    onDelete={actions.onDelete ? () => actions.onDelete?.(item) : undefined}
-                    isUnlinking={actionState?.unlinkingId === key}
-                    isDeleting={actionState?.deletingId === key}
-                  />
-                </TableCell>
+            <Fragment key={key}>
+              <TableRow>
+                {isExpandable && (
+                  <TableCell className="w-10 p-0 text-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => onToggleExpand?.(key)}
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                    >
+                      {isExpanded
+                        ? <ChevronDown className="h-4 w-4" />
+                        : <ChevronRight className="h-4 w-4" />
+                      }
+                    </Button>
+                  </TableCell>
+                )}
+                {columns.map((col) => (
+                  <TableCell
+                    key={col.key}
+                    className={col.alignRight ? 'text-right' : ''}
+                  >
+                    {col.render(item)}
+                  </TableCell>
+                ))}
+                {hasActions && (
+                  <TableCell className="text-right">
+                    <BuildingSpaceActions
+                      onView={actions.onView ? () => actions.onView?.(item) : undefined}
+                      onEdit={actions.onEdit ? () => actions.onEdit?.(item) : undefined}
+                      onUnlink={actions.onUnlink ? () => actions.onUnlink?.(item) : undefined}
+                      onDelete={actions.onDelete ? () => actions.onDelete?.(item) : undefined}
+                      isUnlinking={actionState?.unlinkingId === key}
+                      isDeleting={actionState?.deletingId === key}
+                    />
+                  </TableCell>
+                )}
+              </TableRow>
+              {isExpandable && isExpanded && (
+                <TableRow>
+                  <TableCell colSpan={totalCols} className="bg-muted/30 p-4">
+                    {renderExpandedContent(item)}
+                  </TableCell>
+                </TableRow>
               )}
-            </TableRow>
+            </Fragment>
           );
         })}
       </TableBody>

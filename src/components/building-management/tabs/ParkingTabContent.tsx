@@ -32,7 +32,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 
 // ============================================================================
@@ -132,6 +132,19 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+
+  // Expand state (for inline floorplans)
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const toggleExpand = useCallback(
+    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
+    []
+  );
+
+  // Auto-collapse expanded row when editing starts
+  useEffect(() => {
+    if (editingId) setExpandedId(null);
+  }, [editingId]);
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
@@ -713,6 +726,16 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
+            expandedId={expandedId}
+            onToggleExpand={toggleExpand}
+            renderExpandedContent={(s) => (
+              <SpaceFloorplanInline
+                entityType="parking_spot"
+                entityId={s.id}
+                entityLabel={s.number}
+                projectId={building.projectId}
+              />
+            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredSpots.length} {tBuilding('tabs.labels.parking')}
@@ -732,6 +755,16 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             }}
             actionState={{ unlinkingId, deletingId }}
             editingId={editingId}
+            expandedId={expandedId}
+            onToggleExpand={toggleExpand}
+            renderExpandedContent={(s) => (
+              <SpaceFloorplanInline
+                entityType="parking_spot"
+                entityId={s.id}
+                entityLabel={s.number}
+                projectId={building.projectId}
+              />
+            )}
             renderEditRow={() => (
               <>
                 <TableCell>

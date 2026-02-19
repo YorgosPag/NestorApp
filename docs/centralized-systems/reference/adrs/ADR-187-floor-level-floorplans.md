@@ -81,3 +81,9 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
 ## Changelog
 
 - **2026-02-19**: Initial implementation — expandable floor rows with inline EntityFilesManager
+- **2026-02-19**: Extended expand pattern to Storage, Parking, Units tabs via centralized shared components
+  - NEW: `SpaceFloorplanInline` — generic inline floorplan for storage_unit, parking_spot, unit
+  - MODIFIED: `BuildingSpaceTable` — added expandedId/onToggleExpand/renderExpandedContent props
+  - MODIFIED: `BuildingSpaceCardGrid` — same expand props for cards view
+  - MODIFIED: `StorageTab`, `ParkingTabContent`, `UnitsTabContent` — wired expandable floorplans
+  - Storage path pattern: `companies/{companyId}/entities/{entityType}/{id}/domains/construction/categories/floorplans/`

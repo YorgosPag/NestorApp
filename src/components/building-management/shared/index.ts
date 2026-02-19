@@ -12,6 +12,7 @@ export { BuildingSpaceCardGrid } from './BuildingSpaceCardGrid';
 export { BuildingSpaceActions } from './BuildingSpaceActions';
 export { BuildingSpaceConfirmDialog } from './BuildingSpaceConfirmDialog';
 export { BuildingSpaceLinkDialog } from './BuildingSpaceLinkDialog';
+export { SpaceFloorplanInline } from './SpaceFloorplanInline';
 export type { LinkableItem } from './BuildingSpaceLinkDialog';
 
 export type {

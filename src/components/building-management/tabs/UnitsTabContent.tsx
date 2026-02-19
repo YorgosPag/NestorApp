@@ -30,7 +30,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
 import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 
 // ============================================================================
@@ -114,6 +114,14 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [confirmAction, setConfirmAction] = useState<UnitConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+
+  // Expand state (for inline floorplans)
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const toggleExpand = useCallback(
+    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
+    []
+  );
 
   const iconSizes = useIconSizes();
 
@@ -411,6 +419,16 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
+            expandedId={expandedId}
+            onToggleExpand={toggleExpand}
+            renderExpandedContent={(u) => (
+              <SpaceFloorplanInline
+                entityType="unit"
+                entityId={u.id}
+                entityLabel={u.name}
+                projectId={building.projectId}
+              />
+            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.units')}
@@ -429,6 +447,16 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
+            expandedId={expandedId}
+            onToggleExpand={toggleExpand}
+            renderExpandedContent={(u) => (
+              <SpaceFloorplanInline
+                entityType="unit"
+                entityId={u.id}
+                entityLabel={u.name}
+                projectId={building.projectId}
+              />
+            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.units')}

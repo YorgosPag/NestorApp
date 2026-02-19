@@ -36,7 +36,7 @@ import {
   filterUnits,
   calculateStats,
 } from './StorageTab/utils';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from './shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from './shared';
 
 // ============================================================================
@@ -135,6 +135,12 @@ export function StorageTab({ building }: StorageTabProps) {
   const [showForm, setShowForm] = useState(false);
   const formType: StorageType = 'storage';
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const toggleExpand = useCallback(
+    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
+    []
+  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<StorageUnit | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -362,6 +368,16 @@ export function StorageTab({ building }: StorageTabProps) {
               onDelete: handleDeleteClick,
             }}
             actionState={{ deletingId }}
+            expandedId={expandedId}
+            onToggleExpand={toggleExpand}
+            renderExpandedContent={(u) => (
+              <SpaceFloorplanInline
+                entityType="storage_unit"
+                entityId={u.id}
+                entityLabel={u.code}
+                projectId={building.project}
+              />
+            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.storages')}
@@ -379,6 +395,16 @@ export function StorageTab({ building }: StorageTabProps) {
               onDelete: handleDeleteClick,
             }}
             actionState={{ deletingId }}
+            expandedId={expandedId}
+            onToggleExpand={toggleExpand}
+            renderExpandedContent={(u) => (
+              <SpaceFloorplanInline
+                entityType="storage_unit"
+                entityId={u.id}
+                entityLabel={u.code}
+                projectId={building.project}
+              />
+            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.storages')}
