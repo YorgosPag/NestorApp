@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | DRAFT — Συλλογή απαιτήσεων ✅ ΟΛΟΚΛΗΡΩΘΗΚΕ. Επόμενο: Σχεδιασμός υλοποίησης |
+| **Status** | DRAFT — Συλλογή απαιτήσεων ✅ + Implementation Design ✅. Έτοιμο για phased implementation. |
 | **Date** | 2026-02-19 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -791,6 +791,373 @@
 
 ---
 
+---
+
+## 8. Implementation Design (Enterprise CAD/BIM Patterns)
+
+> Ενότητες που μετατρέπουν το ADR από "feature list" σε **υλοποιήσιμο spec**.
+> Patterns από: Revit, AutoCAD, Archicad, Tekla, Bentley, IFC/buildingSMART.
+
+### 8.1 Datum Extents & Scope Boxes (Revit pattern)
+
+Στα BIM εργαλεία τα grids/levels είναι **datums** με κανόνες "extents" και μηχανισμό ελέγχου ανά view.
+
+#### View Extents Model
+
+| Τύπος | Περιγραφή |
+|-------|-----------|
+| **Global Extents** | Η περασιά εκτείνεται σε ολόκληρο το σχέδιο — default |
+| **View-specific Extents** | Η περασιά εμφανίζεται μέχρι ένα σημείο σε **αυτό** το view (floor tab / view mode) |
+| **Scope Box** | Ορθογώνιο/πολύγωνο "περιοχής" που ορίζει extents + visibility για ομάδα οδηγών |
+
+#### Scope Box Αντικείμενο
+
+- Ορθογώνιο ή πολύγωνο στο canvas
+- Οι οδηγοί **εντός** scope box εμφανίζονται, εκτός = κρυφοί
+- Ένας scope box μπορεί να αντιστοιχεί σε **ομάδα οδηγών** (group)
+- **Propagate extents**: "Εφάρμοσε τα ίδια extents σε άλλους ορόφους/views"
+
+#### Bubble Rules (ετικέτες αξόνων)
+
+| Κανόνας | Περιγραφή |
+|---------|-----------|
+| **Bubble ανά άκρο** | Εμφάνιση ετικέτας στην αρχή, στο τέλος, ή και στα δύο |
+| **Hide/Show ανά άκρο** | Κρύψε bubble στο ένα άκρο, δείξε στο άλλο |
+| **Auto-offset** | Αν η περασιά κόβεται από crop/scope box, το bubble μετατοπίζεται εκτός crop |
+| **Collision avoidance** | Bubbles δεν επικαλύπτονται — αυτόματη μετατόπιση |
+
+### 8.2 Snap Tracking & Alignment Paths (AutoCAD pattern — ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ)
+
+> AutoCAD: Object Snap Tracking (F11) + Polar Tracking — προσωρινές "γραμμές ευθυγράμμισης".
+> Αυτό είναι **διαφορετικό** από μόνιμους οδηγούς — snap-driven, αυτόματο.
+
+#### Temporary Tracking Lines
+
+| Χαρακτηριστικό | Περιγραφή |
+|----------------|-----------|
+| **Εμφάνιση** | Αυτόματα, μόνο κατά τη σχεδίαση — εξαφανίζονται μόλις τελειώσεις |
+| **Πηγή** | Ξεκινούν από snap points (endpoints, intersections, guide points) |
+| **Κατεύθυνση** | Οριζόντια/κατακόρυφη ή σε polar angles (0°/30°/45°/60°/90°) |
+| **Στυλ** | Πολύ αχνό dashed — ακόμα πιο αχνό από τους μόνιμους οδηγούς |
+| **Αποθήκευση** | ΟΧΙ — δεν αποθηκεύονται, δεν εκτυπώνονται |
+
+#### Tracking Point Primitives
+
+- Hover πάνω σε snap point → **tracking point** ενεργοποιείται
+- Μετακίνηση σταυρονήματος → εμφανίζεται **tracking line** από εκείνο το σημείο
+- Πολλαπλά tracking points ταυτόχρονα → τομή tracking lines = ακριβής θέση
+
+#### Priority & Conflict Rules
+
+| Προτεραιότητα | Τύπος |
+|---------------|-------|
+| 1 (υψηλότερη) | Guide intersection snap |
+| 2 | Entity endpoint snap |
+| 3 | Tracking line intersection |
+| 4 | Entity midpoint snap |
+| 5 | Grid snap |
+| 6 (χαμηλότερη) | Polar tracking |
+
+#### UI / Shortcuts
+
+| Shortcut | Ενέργεια |
+|----------|----------|
+| **F11** | Toggle Object Snap Tracking |
+| **F10** | Toggle Polar Tracking |
+| **Shift+Right-click** | Snap override menu |
+| Polar presets | 0°/90° (default), 0°/45°/90°, 0°/30°/60°/90°, 0°/15°/... |
+
+### 8.3 Curved / Radial Grid System ως First-Class (Archicad pattern)
+
+> Archicad: ρητή έννοια curved grid system (κυκλικά + ακτινικά grids) με αυτόματη ονομασία.
+
+#### Grid System Types
+
+| Τύπος | Περιγραφή | Ονομασία |
+|-------|-----------|----------|
+| **Linear** | Ευθύγραμμοι οδηγοί X/Z | Α, Β, Γ... / 1, 2, 3... |
+| **Radial** | Ακτινικοί οδηγοί από κέντρο | R1, R2, R3... ή A°, B°... |
+| **Circular** | Ομόκεντροι κύκλοι (δακτύλιοι) | C1, C2... ή D=5.00, D=10.00 |
+
+#### Naming Schemes per Direction
+
+| Κατεύθυνση | Default | Παραδείγματα |
+|------------|---------|-------------|
+| **X-direction** | Αριθμοί (1, 2, 3...) | 1, 2, 2A, 3... |
+| **Z-direction** | Γράμματα (Α, Β, Γ...) | Α, Β, Γ... ή A, B, C... |
+| **Radial** | R + αριθμός | R1, R2, R3... |
+| **Circular** | C + αριθμός ή D= | C1, C2... |
+| **Εξαιρέσεις** | Αποφυγή Ι/Ο (μοιάζουν 1/0) | Παράλειψη I, O σε naming |
+
+#### Axis Bubbles Rules για Κυκλικά
+
+- Ακτινικοί: bubble στην εξωτερική πλευρά, **στρέφεται** προς το κέντρο
+- Κυκλικοί: bubble στην αρχή του τόξου, label = ακτίνα ή αριθμός
+
+### 8.4 IFC Interoperability (buildingSMART — future-proof)
+
+> IfcGrid / IfcGridAxis — επίσημες BIM οντότητες. Δεν υλοποιούμε τώρα, αλλά **σχεδιάζουμε** για compatibility.
+
+#### IFC Mapping
+
+| Δικό μας | IFC Entity | Geometry |
+|----------|-----------|----------|
+| Περασιά X/Z (ευθύγραμμη) | `IfcGridAxis` | `IfcLine` |
+| Περασιά XZ (λοξή) | `IfcGridAxis` | `IfcLine` με direction |
+| Κυκλικός οδηγός | `IfcGridAxis` | `IfcCircle` |
+| Παράλληλος (offset) | `IfcGridAxis` | `IfcOffsetCurve2D` |
+| Ομάδα οδηγών | `IfcGrid` | Contains N × `IfcGridAxis` |
+| Axis label | `IfcGridAxis.AxisTag` | String identifier |
+
+#### Schema Versioning
+
+- Κάθε save format περιέχει `schemaVersion: number`
+- Αν αύριο προστεθεί IFC export → migration path χωρίς να σπάσουν παλιά saves
+- Forward-compatible: αγνοούνται άγνωστα πεδία
+
+### 8.5 Coordinate System & Plane Locks (Bentley pattern)
+
+#### Axis Convention Contract
+
+| Σύστημα | X | Y/Z | Χρήση |
+|---------|---|-----|-------|
+| **DXF standard** | → Δεξιά | ↑ Πάνω (Y) | Αρχείο DXF |
+| **Viewer canvas** | → Δεξιά | ↓ Κάτω (Y inverted) | Screen rendering |
+| **UI Labels** | X (οριζόντιος) | Z (κάθετος) — convention Fespa/Τέκτων | Status bar, prompts |
+| **3D (μελλοντικό)** | X | Y | Z (ύψος) |
+
+**ΣΗΜΑΝΤΙΚΟ**: Ο Τέκτονας χρησιμοποιεί **X/Z** (ΟΧΙ X/Y) στην κάτοψη. Πρέπει:
+- Internal: πάντα `{x, y, z?}` (standard)
+- UI display: configurable label mapping (X/Y ή X/Z)
+
+#### Plane Lock
+
+| Mode | Περιγραφή |
+|------|-----------|
+| **XY plane** (default) | Κάτοψη — ο κάνναβος σχεδιάζεται στο XY |
+| **XZ plane** | Όψη τοίχου — κάνναβος σε τοίχο (μελλοντικό) |
+| **YZ plane** | Πλάγια όψη (μελλοντικό) |
+| **Custom plane** | Ορισμός arbitrary plane (πολύ μελλοντικό) |
+
+#### Numerical Precision & Tolerances
+
+| Παράμετρος | Τιμή | Χρήση |
+|------------|------|-------|
+| **Snap tolerance** | 5px (screen) | Πόσο κοντά πρέπει ο cursor |
+| **Intersection tolerance** | 0.001mm (world) | Πότε θεωρούνται 2 γραμμές ότι τέμνονται |
+| **Dedup tolerance** | 0.01mm (world) | Πότε θεωρούνται 2 σημεία ίδια |
+| **Coordinate precision** | 6 decimals | Εσωτερική αποθήκευση |
+| **Display precision** | 2 decimals (configurable) | UI εμφάνιση |
+
+### 8.6 Data Model & Persistence Schema
+
+#### Core Entities
+
+```typescript
+interface GuideLine {
+  id: string;                    // Immutable UUID
+  type: 'x' | 'z' | 'xz' | 'perpendicular' | 'parallel' | 'radial';
+  plane: 'xy' | 'xz' | 'yz';   // 3D-ready
+  origin: Point3D;               // {x, y, z?}
+  direction?: Vector3D;          // For xz/radial
+  endPoint?: Point3D;            // For finite lines (xz)
+  parentId?: string;             // For perpendicular/parallel (reference)
+  offset?: number;               // For parallel (distance from parent)
+  groupId?: string;              // Group membership
+  label?: string;                // Axis label (Α, Β, 1, 2...)
+  style: GuideStyleRef;          // Color, dash, opacity
+  locked: boolean;
+  visible: boolean;
+  floor: string | 'global';      // Per-floor or global
+  schemaVersion: number;
+}
+
+interface GuidePoint {
+  id: string;
+  position: Point3D;
+  sourceType: 'intersection' | 'subdivision' | 'distance' | 'manual';
+  sourceGuideIds?: string[];     // Which guides created this point
+  groupId?: string;
+  visible: boolean;
+  floor: string | 'global';
+}
+
+interface GuideGroup {
+  id: string;
+  name: string;                  // "Δομικός Κάνναβος"
+  color: string;                 // Hex color
+  dashPattern: number[];         // [6, 3] etc.
+  opacity: number;               // 0.0 - 1.0
+  locked: boolean;
+  visible: boolean;
+  scopeBoxId?: string;           // Optional scope box
+}
+
+interface ScopeBox {
+  id: string;
+  boundary: Point3D[];           // Polygon vertices
+  appliesTo: string[];           // Guide group IDs
+  floors: string[];              // Which floors
+}
+
+type Point3D = { x: number; y: number; z?: number };
+type Vector3D = { dx: number; dy: number; dz?: number };
+type GuideStyleRef = { groupId?: string; override?: Partial<GuideStyle> };
+```
+
+#### Per-Floor vs Global Grid
+
+| Στρατηγική | Περιγραφή |
+|-----------|-----------|
+| **Global grid** | Κοινός κάνναβος σε ΟΛΟΥΣ τους ορόφους (structural grid) |
+| **Per-floor overrides** | Μικρές αλλαγές ανά όροφο (π.χ. extra guide σε όροφο 3) |
+| **Per-floor grid** | Εντελώς διαφορετικός κάνναβος ανά όροφο (σπάνιο) |
+
+### 8.7 Interaction State Machine
+
+#### Command Lifecycle
+
+```
+[idle] → (select command) → [preview] → (click/input) → [commit] → [idle]
+                                  ↓
+                            (Esc/cancel) → [idle]
+```
+
+#### Input Modes
+
+| Mode | Trigger | Behavior |
+|------|---------|----------|
+| **Click mode** | Default | Κλικ στο canvas |
+| **Numeric input** | Πληκτρολόγηση αριθμού | Capture keyboard → apply value |
+| **Popup dialog** | Σύνθετη εντολή (Σε Τμήματα) | Modal dialog → OK/Cancel |
+| **Drag mode** | Mouse down + move | Real-time preview |
+
+#### Cancel/Confirm Semantics
+
+| Πλήκτρο | Ενέργεια |
+|---------|----------|
+| **Esc** | Cancel τρέχουσα εντολή, επιστροφή στο idle |
+| **Enter** | Confirm numeric input |
+| **Right-click** | Cancel ή context menu (configurable) |
+| **Double-click** | Ολοκλήρωση multi-step εντολής |
+
+### 8.8 Hit-Testing & Selection Rules
+
+| Παράμετρος | Τιμή | Σημείωση |
+|------------|------|----------|
+| **Pick tolerance** | 5px (screen-space) | Ανεξάρτητο zoom |
+| **Priority: Guide vs Entity** | Entity > Guide (default) | Configurable |
+| **Hover intent** | 150ms delay | Αποφυγή flickering |
+| **Multi-select rectangle** | Shift+drag ή marquee mode | Batch selection |
+
+### 8.9 Performance Budgets
+
+| Μετρική | Στόχος |
+|---------|--------|
+| **Max guides** | 500 γραμμές + 5000 σημεία χωρίς lag |
+| **Render time** | < 2ms per frame (60fps budget: 16ms) |
+| **Pan/Zoom** | 60fps σε max guide density |
+| **Snap lookup** | < 1ms (spatial index: R-tree ή grid hash) |
+| **Input latency** | < 50ms click-to-visual |
+
+#### Optimization Strategy
+
+- **Spatial Index**: R-tree ή grid hash για guide points → O(log n) lookup
+- **Render Batching**: Ομαδοποίηση γραμμών ανά group → single drawCall per group
+- **View Frustum Culling**: Σχεδίαση μόνο ορατών guides (viewport intersection)
+- **Level-of-Detail**: Σε πολύ μακρινό zoom → μόνο major axes, κρύψε minor
+
+### 8.10 QA Plan & Acceptance Criteria
+
+#### Test Matrix
+
+| Κατηγορία | Tests |
+|-----------|-------|
+| **Snap correctness** | Guide intersection, endpoint, midpoint — pixel-perfect |
+| **Precision** | Coordinate round-trip (create → save → load → verify) |
+| **Rotation** | Single guide, group, whole grid — angle accuracy |
+| **Parallel offset** | Distance accuracy ±0.001mm |
+| **Arc subdivision** | Equal arc-length segments |
+| **Undo/Redo** | Full round-trip: create → undo → redo → verify identical |
+| **Import/Export** | Coordinate CSV round-trip, IFC mapping (μελλοντικό) |
+
+#### Golden Tests (Geometry)
+
+- 2 perpendicular lines → intersection at exact point
+- Parallel offset 5.000m → verify distance = 5.000m ±0.001mm
+- Arc subdivision N=4 → verify equal arc lengths
+- Rotation 45° → verify coordinates with trigonometric precision
+
+### 8.11 Observability
+
+#### Counters & Metrics
+
+| Counter | Σκοπός |
+|---------|--------|
+| `guide.count.lines` | Πλήθος γραμμών-οδηγών |
+| `guide.count.points` | Πλήθος snap points |
+| `guide.render.time_ms` | Χρόνος rendering per frame |
+| `guide.snap.candidates` | Snap candidates ανά frame |
+| `guide.input.latency_ms` | Click-to-visual latency |
+| `guide.undo.depth` | Βάθος undo stack |
+
+#### Error Taxonomy
+
+| Error | Αιτία | Χειρισμός |
+|-------|-------|-----------|
+| **Near-parallel** | 2 γραμμές σχεδόν παράλληλες → unstable intersection | Threshold: αν γωνία < 0.1° → ignore intersection |
+| **Degenerate arc** | Ακτίνα → 0 ή → ∞ | Minimum radius threshold |
+| **Huge coordinates** | Σημεία σε > 10km | Warning + auto-clip |
+| **Duplicate guide** | Ίδια θέση/κατεύθυνση | Auto-dedup with tolerance |
+
+### 8.12 Grid Labels & Drawings (Tekla pattern)
+
+#### Label Placement Policies
+
+| Policy | Περιγραφή |
+|--------|-----------|
+| **Top/Bottom** | Labels πάνω ή/και κάτω (Z-direction guides) |
+| **Left/Right** | Labels αριστερά ή/και δεξιά (X-direction guides) |
+| **Collision avoidance** | Αυτόματη μετατόπιση αν labels επικαλύπτονται |
+| **Outside viewport** | Αν η περασιά κόβεται, label μετατοπίζεται στο visible edge |
+
+#### Formatting Policies
+
+| Ρύθμιση | Default | Παραδείγματα |
+|---------|---------|-------------|
+| **Μονάδες** | Μέτρα (m) | m, cm, mm, ft, in |
+| **Δεκαδικά** | 2 | 5.00, 5.000 |
+| **Rounding** | Nearest 0.01 | 5.005 → 5.01 |
+| **Prefix** | Κανένα | "Ax-", "Grid-" |
+
+#### Label Templates
+
+| Template | Format | Παράδειγμα |
+|----------|--------|-----------|
+| **Structural** | Αριθμοί + Γράμματα | 1, 2, 3 / Α, Β, Γ |
+| **Architectural** | Letters + Numbers | A, B, C / 1, 2, 3 |
+| **MEP** | Prefix + Number | MEP-1, MEP-2 |
+| **Custom** | User-defined | Ελεύθερο |
+
+---
+
+## 9. Proposed Implementation TOC
+
+> Οδηγός για τη σειρά υλοποίησης — αναφορά σε ενότητες του ADR.
+
+1. **Terminology & Coordinate Conventions** → §8.5
+2. **Data Model + Storage Schema + Versioning** → §8.6
+3. **Rendering Pipeline** (order, batching, DPI, constant-pixel widths) → §4.12, §4.2
+4. **Interaction State Machine** (commands, cancel/confirm, numeric input) → §8.7
+5. **Snap Integration** (priority, tracking, tolerances) → §8.2, §8.5
+6. **View/Floor Model** (global vs per-floor, extents/scope boxes) → §8.1
+7. **Labels/Bubbles** (placement, collision, visibility rules) → §8.3, §8.12
+8. **Performance Budgets & Benchmarks** → §8.9
+9. **QA Plan + Acceptance Criteria** → §8.10
+10. **Future Interop Appendix** (IFC mapping, import/export) → §8.4
+
+---
+
 ## 6. Πηγές
 
 - [LH Λογισμική — Ενεργή οντότητα κάνναβος στο Fespa (Video)](https://www.lhlogismiki.gr/video/fespa-kannavos/)
@@ -798,6 +1165,11 @@
 - [Fespa — Εισαγωγή Δεδομένων](https://www.lhlogismiki.gr/proionta/statika/fespa/skyrodema-eisagogi-dedomenon/)
 - [Fespa 4 Manual — DocPlayer (μερικό)](https://docplayer.gr/2296012-Fespa-4-for-windows-to-episiuo-egheiridio-anaforas-a-egheiridio-heirisuoy-athina-septeuvrios-2007.html)
 - [Tekton — Σχεδιαστικό Πρόγραμμα](https://www.lhlogismiki.gr/proionta/sxediastika/tekton/)
+- [Revit — Grid/Level Datums & Scope Boxes](https://help.autodesk.com/view/RVT/2024/ENU/?guid=GUID-GRID)
+- [AutoCAD — Object Snap Tracking (OTRACK)](https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-OSNAP-TRACKING)
+- [Archicad — Curved Grid System](https://graphisoft.com/downloads/archicad)
+- [buildingSMART — IFC IfcGrid/IfcGridAxis](https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/schema/ifcproductextension/lexical/ifcgrid.htm)
+- [Tekla — Grid Labels & Customization](https://support.tekla.com/doc/tekla-structures)
 
 ---
 
@@ -818,3 +1190,4 @@
 | 2026-02-19 | B41-B48 εγκρίθηκαν. Πλήρες Visual Rendering System (§4.12). Ιδέες B49-B55 |
 | 2026-02-19 | B49-B55 εγκρίθηκαν. **Συλλογή απαιτήσεων ΟΛΟΚΛΗΡΩΘΗΚΕ** — 55 features. Ανάλυση κεντρικοποίησης (§7) |
 | 2026-02-19 | UI: Floating Panel 3 επιπέδων (§4.13). Hatches vs Guides πρόβλεψη (§4.14) |
+| 2026-02-19 | Implementation Design (§8): Scope Boxes, Snap Tracking, Curved Grid, IFC mapping, Coordinate System, Data Model, State Machine, Hit-testing, Performance, QA, Observability, Labels. Proposed TOC (§9) |
