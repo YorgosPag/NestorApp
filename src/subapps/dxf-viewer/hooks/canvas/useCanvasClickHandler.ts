@@ -240,9 +240,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       dlog('useCanvasClickHandler', 'Guide Z added at offset', worldPoint.y);
       return;
     }
-    if (activeTool === 'guide-delete' && guideRemoveGuide && guides) {
-      // Find nearest guide within hit tolerance
-      const hitToleranceWorld = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+    if (activeTool === 'guide-delete' && guideRemoveGuide && guides && guides.length > 0) {
+      // ADR-189: Find the nearest visible guide — generous tolerance (30px)
+      const hitToleranceWorld = 30 / transform.scale;
       let nearestGuide: Guide | null = null;
       let nearestDist = hitToleranceWorld;
       for (const guide of guides) {
@@ -258,14 +258,18 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       if (nearestGuide) {
         guideRemoveGuide(nearestGuide.id);
         dlog('useCanvasClickHandler', 'Guide deleted:', nearestGuide.id);
+      } else {
+        dlog('useCanvasClickHandler', 'No guide within delete tolerance', {
+          worldPoint, tolerance: hitToleranceWorld, guideCount: guides.length
+        });
       }
       return;
     }
-    if (activeTool === 'guide-parallel' && guideAddParallelGuide && guides) {
-      // Find nearest guide to use as reference, then create parallel at click offset
-      const hitToleranceWorld = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+    if (activeTool === 'guide-parallel' && guideAddParallelGuide && guides && guides.length > 0) {
+      // ADR-189: Find nearest guide as reference — no distance limit
+      // The click position determines the offset for the new parallel guide
       let nearestGuide: Guide | null = null;
-      let nearestDist = hitToleranceWorld;
+      let nearestDist = Infinity;
       for (const guide of guides) {
         if (!guide.visible) continue;
         const dist = guide.axis === 'X'
@@ -280,8 +284,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         const offsetDistance = nearestGuide.axis === 'X'
           ? worldPoint.x - nearestGuide.offset
           : worldPoint.y - nearestGuide.offset;
-        guideAddParallelGuide(nearestGuide.id, offsetDistance);
-        dlog('useCanvasClickHandler', 'Parallel guide created from', nearestGuide.id, 'offset', offsetDistance);
+        // MIN_OFFSET_DELTA check is in GuideStore.addGuideRaw — skip near-zero offsets
+        if (Math.abs(offsetDistance) > 0.01) {
+          guideAddParallelGuide(nearestGuide.id, offsetDistance);
+          dlog('useCanvasClickHandler', 'Parallel guide created from', nearestGuide.id, 'offset', offsetDistance);
+        } else {
+          dlog('useCanvasClickHandler', 'Parallel offset too small — click further from the guide');
+        }
       }
       return;
     }

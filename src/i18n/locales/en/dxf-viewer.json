@@ -1353,7 +1353,8 @@
       "node": "Node",
       "insertion": "Insertion",
       "near": "Near",
-      "ortho": "Ortho"
+      "ortho": "Ortho",
+      "guide": "Guide"
     },
     "tooltips": {
       "auto": "Auto Snap - Automatically detects the best snap points (F11)",
@@ -1371,7 +1372,8 @@
       "node": "Nodes - Snap to nodes and points (D)",
       "insertion": "Insertion - Snap to insertion points (INS)",
       "near": "Near - Snap near objects (R)",
-      "ortho": "Ortho - Constrain to horizontal/vertical lines (F8)"
+      "ortho": "Ortho - Constrain to horizontal/vertical lines (F8)",
+      "guide": "Guide - Snap to construction guide lines (G)"
     },
     "ui": {
       "showAdvanced": "Show advanced features",
@@ -1383,7 +1385,8 @@
     "drawing": "Drawing",
     "tools": "Tools",
     "measurements": "Measurements",
-    "zoom": "Zoom"
+    "zoom": "Zoom",
+    "guides": "Guides"
   },
   "tools": {
     "select": "Select",
@@ -1434,7 +1437,11 @@
     "runTests": "Run Tests",
     "togglePerf": "Performance Monitor",
     "pdfBackground": "PDF Background",
-    "aiAssistant": "AI Drawing"
+    "aiAssistant": "AI Drawing",
+    "guideX": "Vertical Guide",
+    "guideZ": "Horizontal Guide",
+    "guideParallel": "Parallel Guide",
+    "guideDelete": "Delete Guide"
   },
   "entityJoin": {
     "menuTitle": "Join",
