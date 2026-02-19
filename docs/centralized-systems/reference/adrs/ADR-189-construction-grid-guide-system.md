@@ -1476,8 +1476,77 @@ Filter UI: dropdown ή timeline slider ανά φάση κατασκευής.
 **Τεχνική**: JSON schema για patterns. Cloud sharing (C16 Collaboration Engine).
 Pattern = `{ guides: GuideLine[], constraints: ConstraintDef[], params: ParamDef[] }`.
 
-> **Σύνολο P1-P8**: 8 deep proposals ← ακαδημαϊκή + βιομηχανική έρευνα.
-> **Κλειδί**: Η αρχιτεκτονική C1-C20 + headless API ήδη υποστηρίζει αυτές τις επεκτάσεις.
+### 10.7 Παγκόσμιες Τάσεις 2025-2026 — Προτάσεις P9-P12
+
+> Βάσει έρευνας σε: Κίνα (PKPM-AID, Glodon, Country Garden Robotics),
+> Ευρώπη (Nemetschek AI-first + Google Cloud), Mega-Projects (Linear Engineering),
+> και Robotics/Drones layout automation.
+> Στόχος: Absolute AI-readiness + construction site integration.
+
+#### P9: AI Copilot Δομικής & Περιβαλλοντικής Βελτιστοποίησης (PKPM/Glodon Pattern)
+
+**Έμπνευση**: PKPM-AID (πρώτο εμπορικό AI δομικού σχεδιασμού, PKPM + Arup).
+Glodon: απευθείας BOQ + LCA (Life Cycle Assessment) από BIM μοντέλα.
+
+**Βάθος**: Ο κάνναβος γίνεται **"δυναμικός φορέας κόστους και άνθρακα"**:
+- Μεγαλώνεις βήμα από 5m σε 6m → AI υπολογίζει **άμεσα** αλλαγή στον οπλισμό
+- Δυναμική ενημέρωση CO₂ footprint κατά το drag μιας περασιάς
+- Real-time cost estimation ανά αλλαγή spacing
+
+**Τεχνική**: Νέα properties στο Data Model:
+- `materialCostIndex?: number` — δείκτης κόστους υλικού ανά grid cell
+- `embodiedCarbon?: number` — ενσωματωμένος άνθρακας (kgCO₂/m²)
+- Διασύνδεση C17 (Simulation Interface) → real-time feedback στο UI κατά drag
+
+#### P10: Συνεχής Ανίχνευση Ανωμαλιών — AI Watchdog (Nemetschek/Google Cloud Pattern)
+
+**Έμπνευση**: Nemetschek "AI-first" στρατηγική σε συνεργασία με Google Cloud.
+Continuous anomaly detection 24/7 στο background.
+
+**Βάθος**: Αντί ο χρήστης να τρέξει "Clash Detection" στο τέλος, **AI watchdog σιωπηλά παρακολουθεί**:
+- Οδηγός στα 4.95m αντί 5.0m (human error) → "Impact-based recommendation" **αμέσως**
+- Uneven spacing pattern σε δομικό κάνναβο → πρόταση διόρθωσης
+- Παράλληλοι οδηγοί σε πολύ μικρή απόσταση (< min structural span) → warning
+- Δεν δείχνει μόνο σφάλμα — δείχνει **λύση + impact**
+
+**Τεχνική**: Background Web Worker με ML heuristics (C14 AI Integration Layer).
+UI: Διακριτικό "AI Tip" badge δίπλα στον cursor. Non-intrusive notifications.
+
+#### P11: Δυναμική Αντιστάθμιση Συντεταγμένων — Mega-Projects (Linear Engineering Pattern)
+
+**Έμπνευση**: Κινεζικές έρευνες για τεράστια γραμμικά έργα (σιδηρόδρομοι, ενεργειακά δίκτυα).
+Πρόβλημα: floating-point jitter σε μεγάλες συντεταγμένες (X > 1,000,000).
+
+**Βάθος**: Σε mega-projects (χιλιόμετρα), οι WebGL/Canvas coordinates χάνουν ακρίβεια:
+- Floating-point 64-bit → ~15 significant digits
+- X: 4,500,000.123 → visual "τρέμουλο" (jitter) στο rendering
+- Λύση: **Dynamic coordinate offset** — μετατόπιση origin στη θέση κάμερας
+
+**Τεχνική**:
+- Data Model: αποθηκεύει **absolute coordinates** (μεγάλοι αριθμοί)
+- Rendering Engine (C1): αφαιρεί camera offset **πριν** σχεδιάσει → τοπικό rendering σε μικρούς αριθμούς
+- Pattern: `renderX = worldX - cameraX` → pixel-perfect rendering ανεξαρτήτως κλίμακας
+- Bonus: Ελαχιστοποιεί z-fighting σε μελλοντικό 3D (C15)
+
+#### P12: Robotics & Drones Layout Export (Site Execution Pattern)
+
+**Έμπνευση**: Country Garden (Κίνα) — κατασκευαστικά ρομπότ. Trimble layout robots.
+Drones για aerial survey + grid verification στο εργοτάξιο.
+
+**Βάθος**: Ο κάνναβος γίνεται **"Robotics-ready"**:
+- X markers → **Robotic Waypoint Mesh** → ρομπότ χάραξης μαρκάρει στο μπετό
+- Ακρίβεια: χιλιοστομετρική (±1mm) — laser/χρώμα πάνω σε πλάκα
+- Drones: verification flights → σύγκριση as-built vs design grid
+- Μορφότυπα: G-code, Robotic APIs JSON/XML, Trimble Layout Manager
+
+**Τεχνική**: C9 (Import/Export) → νέοι exporters:
+- `exportToGcode(guides)` → G-code waypoints για layout robots
+- `exportToRoboticAPI(guides)` → JSON schema συμβατό με autonomous machines
+- `exportToDroneFlightPlan(guides)` → verification flight path πάνω από grid points
+- X markers + axis labels embedded στα waypoint data
+
+> **Σύνολο P1-P12**: 12 deep proposals ← ακαδημαϊκή + βιομηχανική + παγκόσμια έρευνα (Ευρώπη, ΗΠΑ, Κίνα).
+> **Κλειδί**: Η αρχιτεκτονική C1-C20 + headless API ήδη υποστηρίζει **ΟΛΑ** αυτά χωρίς refactoring.
 
 ---
 
@@ -1541,4 +1610,5 @@ Pattern = `{ guides: GuideLine[], constraints: ConstraintDef[], params: ParamDef
 | 2026-02-19 | UI: Floating Panel 3 επιπέδων (§4.13). Hatches vs Guides πρόβλεψη (§4.14) |
 | 2026-02-19 | Implementation Design (§8): Scope Boxes, Snap Tracking, Curved Grid, IFC mapping, Coordinate System, Data Model, State Machine, Hit-testing, Performance, QA, Observability, Labels. Proposed TOC (§9) |
 | 2026-02-19 | Industry Research & AI Readiness: B56-B93 (38 νέα features σε 8 κατηγορίες: AI/ML, 3D/4D, VR/AR, Collaboration, Sustainability, Geometry, UI/UX, Security). C14-C20 (7 νέα κεντρικοποιημένα συστήματα). §10 Future-Proofing (Parametric Binding, Generative Design, Scan-to-BIM, Digital Twin). **Σύνολο: 93 features + 20 centralized systems** |
-| 2026-02-19 | Deep Industry Analysis P1-P8: Optimization Objectives (P1), Smart Guide Suggestions (P2), Fabrication-Ready Exports (P3), Tolerance-Aware Grid (P4), Hierarchical Grids (P5), 4D Phasing (P6), Constraint Satisfaction (P7), Grid Pattern Library (P8). Πηγές: TU Delft LoC Grid, ALLPLAN 2025, SAO papers, EN 13670, LandXML. **Σύνολο: 93 features + 8 deep proposals + 20 centralized systems** |
+| 2026-02-19 | Deep Industry Analysis P1-P8: Optimization Objectives (P1), Smart Guide Suggestions (P2), Fabrication-Ready Exports (P3), Tolerance-Aware Grid (P4), Hierarchical Grids (P5), 4D Phasing (P6), Constraint Satisfaction (P7), Grid Pattern Library (P8). Πηγές: TU Delft LoC Grid, ALLPLAN 2025, SAO papers, EN 13670, LandXML. |
+| 2026-02-19 | Global Trends P9-P12: AI Copilot κόστους/άνθρακα (P9, PKPM/Glodon), AI Watchdog ανωμαλιών (P10, Nemetschek/Google Cloud), Dynamic Coordinate Offset mega-projects (P11, Linear Engineering), Robotics & Drones export (P12, G-code/waypoints). **Σύνολο: 93 features + 12 deep proposals + 20 centralized systems** |
