@@ -34,6 +34,8 @@ type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'cu
 export interface UseRotationPreviewProps {
   phase: RotationPhase;
   basePoint: Point2D | null;
+  /** Reference direction point (from awaiting-reference phase) */
+  referencePoint: Point2D | null;
   currentAngle: number;
   selectedEntityIds: string[];
   levelManager: LevelManagerLike;
@@ -54,7 +56,7 @@ export interface UseRotationPreviewProps {
 
 export function useRotationPreview(props: UseRotationPreviewProps): void {
   const {
-    phase, basePoint, currentAngle,
+    phase, basePoint, referencePoint, currentAngle,
     selectedEntityIds, levelManager,
     transform, getCanvas, getViewportElement,
     cursorWorld,
@@ -89,24 +91,35 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Nothing to draw if not in angle-picking phase
-    if (phase !== 'awaiting-angle' || !basePoint) return;
+    // Only draw during reference or angle phases
+    const isReferencePhase = phase === 'awaiting-reference';
+    const isAnglePhase = phase === 'awaiting-angle';
+    if ((!isReferencePhase && !isAnglePhase) || !basePoint) return;
 
     // 🏢 FIX (2026-02-20): Viewport from the DxfCanvas element (= same element used in
     // click handler's getPointerSnapshotFromElement). This eliminates any viewport mismatch
     // between the click path and the preview rendering path.
-    // Fallback to PreviewCanvas dimensions if DxfCanvas ref not available.
     const viewportElement = getViewportElement?.() ?? canvas;
     const rect = viewportElement.getBoundingClientRect();
     const freshViewport = { width: rect.width, height: rect.height };
 
-    // Draw in CSS pixel coordinates — DPR scaling handled by ctx.setTransform above.
-    // Same pattern as PreviewRenderer.renderLine().
-
     // Convert pivot to screen coords (CSS pixels)
     const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, freshViewport);
 
-    // === 1. Draw rubber band line: pivot → cursor ===
+    // === Base point marker (crosshair) — visible in BOTH phases ===
+    const markerSize = 8;
+    ctx.save();
+    ctx.strokeStyle = '#FF4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pivotScreen.x - markerSize, pivotScreen.y);
+    ctx.lineTo(pivotScreen.x + markerSize, pivotScreen.y);
+    ctx.moveTo(pivotScreen.x, pivotScreen.y - markerSize);
+    ctx.lineTo(pivotScreen.x, pivotScreen.y + markerSize);
+    ctx.stroke();
+    ctx.restore();
+
+    // === Rubber band line: pivot → cursor — visible in BOTH phases ===
     if (cursorWorld) {
       const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, freshViewport);
 
@@ -120,29 +133,54 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
+    }
 
-      // === 2. Draw angle arc near pivot ===
+    // === Reference phase: only base marker + rubber band (drawn above) ===
+    if (isReferencePhase) return;
+
+    // === Angle phase: reference line + angle arc + tooltip + ghost entities ===
+
+    // Draw reference direction line (dimmed) from pivot to reference point
+    if (referencePoint) {
+      const refScreen = CoordinateTransforms.worldToScreen(referencePoint, transform, freshViewport);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(pivotScreen.x, pivotScreen.y);
+      ctx.lineTo(refScreen.x, refScreen.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    if (cursorWorld) {
+      const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, freshViewport);
+
+      // Angle arc near pivot (from reference direction to cursor direction)
       const arcRadius = 30;
-      const startRad = 0; // Reference angle (east)
-      const endRad = degToRad(currentAngle);
+      const refAngleRad = referencePoint
+        ? Math.atan2(-(referencePoint.y - basePoint.y), referencePoint.x - basePoint.x)
+        : 0;
+      const endRad = refAngleRad - degToRad(currentAngle);
 
       ctx.save();
       ctx.strokeStyle = '#FFD700';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      // In screen coords, Y is inverted → negate angle for correct visual
       ctx.arc(
         pivotScreen.x,
         pivotScreen.y,
         arcRadius,
-        -startRad,  // Canvas Y-flip
-        -endRad,    // Canvas Y-flip
-        currentAngle > 0 // CCW positive in world = CW in screen
+        refAngleRad,
+        endRad,
+        currentAngle > 0
       );
       ctx.stroke();
       ctx.restore();
 
-      // === 3. Draw angle tooltip near cursor ===
+      // Angle tooltip near cursor
       const angleText = `${currentAngle.toFixed(1)}°`;
       ctx.save();
       ctx.font = '12px monospace';
@@ -155,20 +193,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       ctx.restore();
     }
 
-    // === 4. Draw base point marker (crosshair) ===
-    const markerSize = 8;
-    ctx.save();
-    ctx.strokeStyle = '#FF4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(pivotScreen.x - markerSize, pivotScreen.y);
-    ctx.lineTo(pivotScreen.x + markerSize, pivotScreen.y);
-    ctx.moveTo(pivotScreen.x, pivotScreen.y - markerSize);
-    ctx.lineTo(pivotScreen.x, pivotScreen.y + markerSize);
-    ctx.stroke();
-    ctx.restore();
-
-    // === 5. Draw ghost entities (semi-transparent rotated copies) ===
+    // Ghost entities (semi-transparent rotated copies)
     if (Math.abs(currentAngle) > 0.01) {
       ctx.save();
       ctx.globalAlpha = 0.4;
@@ -185,17 +210,19 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
 
       ctx.restore();
     }
-  }, [phase, basePoint, currentAngle, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement, cursorWorld]);
+  }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement, cursorWorld]);
 
-  // Clear canvas ONLY when transitioning FROM awaiting-angle → idle/base-point
-  // (never on every render — that would wipe the drawing tool preview)
+  // Clear canvas when transitioning from active preview phase → idle/base-point
+  const PREVIEW_PHASES: ReadonlySet<RotationPhase> = new Set(['awaiting-reference', 'awaiting-angle']);
   useEffect(() => {
-    if (prevPhaseRef.current === 'awaiting-angle' && phase !== 'awaiting-angle') {
+    const wasPreviewActive = PREVIEW_PHASES.has(prevPhaseRef.current);
+    const isPreviewActive = PREVIEW_PHASES.has(phase);
+
+    if (wasPreviewActive && !isPreviewActive) {
       const canvas = getCanvas();
       if (canvas) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          // 🏢 Same explicit transform pattern as drawFrame
           const clearDpr = window.devicePixelRatio || 1;
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -206,9 +233,9 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     prevPhaseRef.current = phase;
   }, [phase, getCanvas]);
 
-  // Schedule rendering on every relevant change (only when active)
+  // Schedule rendering during both reference and angle phases
   useEffect(() => {
-    if (phase !== 'awaiting-angle') return;
+    if (phase !== 'awaiting-reference' && phase !== 'awaiting-angle') return;
 
     rafRef.current = requestAnimationFrame(drawFrame);
     return () => {

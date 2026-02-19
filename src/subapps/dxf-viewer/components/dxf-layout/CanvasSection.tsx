@@ -452,6 +452,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useRotationPreview({
     phase: rotationTool.phase,
     basePoint: rotationTool.basePoint,
+    referencePoint: rotationTool.referencePoint,
     currentAngle: rotationTool.currentAngle,
     selectedEntityIds,
     levelManager,

@@ -3,13 +3,15 @@
  *
  * ADR-188: Entity Rotation System
  *
- * State machine (AutoCAD ROTATE pattern):
- *   idle → awaiting-entity → awaiting-base-point → awaiting-angle → (execute) → awaiting-base-point
+ * State machine (AutoCAD ROTATE with Reference pattern):
+ *   idle → awaiting-entity → awaiting-base-point → awaiting-reference → awaiting-angle → (execute) → awaiting-base-point
  *
  * When activeTool === 'rotate':
  *   - If entities are already selected → skip straight to awaiting-base-point
  *   - If NO entities selected → awaiting-entity (clicks select entities normally)
  *   - Once entities are selected → transition to awaiting-base-point
+ *   - Click base point → awaiting-reference (user defines 0° direction)
+ *   - Click reference point → awaiting-angle (mouse rotates around base)
  *
  * @module hooks/tools/useRotationTool
  */
@@ -21,13 +23,14 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/Preview
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
+import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type RotationPhase = 'idle' | 'awaiting-entity' | 'awaiting-base-point' | 'awaiting-angle';
+export type RotationPhase = 'idle' | 'awaiting-entity' | 'awaiting-base-point' | 'awaiting-reference' | 'awaiting-angle';
 
 /** Subset of useLevels return type needed by rotation tool */
 type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'setLevelScene' | 'currentLevelId'>;
@@ -50,13 +53,15 @@ export interface UseRotationToolReturn {
   phase: RotationPhase;
   /** The chosen base point (pivot), or null if not yet picked */
   basePoint: Point2D | null;
+  /** The reference direction point (clicked by user in awaiting-reference phase) */
+  referencePoint: Point2D | null;
   /** The current rotation angle in degrees (updated on mouse move) */
   currentAngle: number;
   /** Whether the rotation tool is active (activeTool === 'rotate') */
   isActive: boolean;
-  /** Whether the tool is collecting geometric input (base-point or angle — intercepts clicks) */
+  /** Whether the tool is collecting geometric input (base-point, reference, or angle — intercepts clicks) */
   isCollectingInput: boolean;
-  /** Handle canvas click — routes to base-point or angle selection */
+  /** Handle canvas click — routes to base-point, reference, or angle selection */
   handleRotationClick: (worldPoint: Point2D) => void;
   /** Handle mouse move — updates angle + triggers preview redraw */
   handleRotationMouseMove: (worldPoint: Point2D) => void;
@@ -84,19 +89,19 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
   const [phase, setPhase] = useState<RotationPhase>('idle');
   const [basePoint, setBasePoint] = useState<Point2D | null>(null);
+  const [referencePoint, setReferencePoint] = useState<Point2D | null>(null);
   const [currentAngle, setCurrentAngle] = useState(0);
 
-  // Ref for start angle (angle from pivot to first mouse position after base point)
+  // Ref for start angle (angle from pivot to reference point — set explicitly by click)
   const startAngleRef = useRef(0);
-  const firstMoveAfterBaseRef = useRef(true);
 
   // isActive: rotation tool is the current tool (even without selection)
   const isActive = activeTool === 'rotate';
 
-  // isCollectingInput: rotation tool needs clicks for base-point or angle
+  // isCollectingInput: rotation tool needs clicks for base-point, reference, or angle
   // (NOT awaiting-entity — that phase lets clicks pass through for entity selection)
   const isCollectingInput = isActive && selectedEntityIds.length > 0
-    && (phase === 'awaiting-base-point' || phase === 'awaiting-angle');
+    && (phase === 'awaiting-base-point' || phase === 'awaiting-reference' || phase === 'awaiting-angle');
 
   // Track previous states to detect transitions
   const wasActiveRef = useRef(false);
@@ -127,13 +132,14 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
         setPhase('awaiting-entity');
       }
       setBasePoint(null);
+      setReferencePoint(null);
       setCurrentAngle(0);
-      firstMoveAfterBaseRef.current = true;
       previewCanvasRef.current?.clear();
     } else if (!toolIsRotate && wasActiveRef.current) {
       // Transition: leaving rotation mode
       setPhase('idle');
       setBasePoint(null);
+      setReferencePoint(null);
       setCurrentAngle(0);
       previewCanvasRef.current?.clear();
     } else if (toolIsRotate && wasActiveRef.current) {
@@ -147,6 +153,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
         // Entities deselected during rotation → back to awaiting-entity
         setPhase('awaiting-entity');
         setBasePoint(null);
+        setReferencePoint(null);
         setCurrentAngle(0);
         previewCanvasRef.current?.clear();
       }
@@ -163,10 +170,24 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     if (!isCollectingInput) return;
 
     if (phase === 'awaiting-base-point') {
-      // Save pivot and transition to angle selection
+      // Save pivot and transition to reference direction
       setBasePoint(worldPoint);
+      setReferencePoint(null);
       startAngleRef.current = 0;
-      firstMoveAfterBaseRef.current = true;
+      setCurrentAngle(0);
+      setPhase('awaiting-reference');
+      return;
+    }
+
+    if (phase === 'awaiting-reference' && basePoint) {
+      // Set reference direction (0° angle) and transition to angle picking
+      const dx = worldPoint.x - basePoint.x;
+      const dy = worldPoint.y - basePoint.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.001) return; // Too close to base point — ignore
+
+      setReferencePoint(worldPoint);
+      startAngleRef.current = angleBetweenPointsDeg(basePoint, worldPoint);
       setCurrentAngle(0);
       setPhase('awaiting-angle');
       return;
@@ -195,8 +216,8 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
       // Reset for next rotation (continuous mode)
       setPhase('awaiting-base-point');
       setBasePoint(null);
+      setReferencePoint(null);
       setCurrentAngle(0);
-      firstMoveAfterBaseRef.current = true;
       return;
     }
   }, [isCollectingInput, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
@@ -207,12 +228,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   const handleRotationMouseMove = useCallback((worldPoint: Point2D) => {
     if (phase !== 'awaiting-angle' || !basePoint) return;
 
-    // On first mouse move after base point selection, record the reference angle
-    if (firstMoveAfterBaseRef.current) {
-      startAngleRef.current = angleBetweenPointsDeg(basePoint, worldPoint);
-      firstMoveAfterBaseRef.current = false;
-    }
-
+    // Reference angle was set explicitly in awaiting-reference phase
     const rawAngle = angleBetweenPointsDeg(basePoint, worldPoint);
     const angle = rawAngle - startAngleRef.current;
     setCurrentAngle(angle);
@@ -225,6 +241,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     previewCanvasRef.current?.clear();
     setPhase('idle');
     setBasePoint(null);
+    setReferencePoint(null);
     setCurrentAngle(0);
     onToolChange?.('select');
   }, [previewCanvasRef, onToolChange]);
@@ -254,19 +271,31 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     // Reset for next rotation
     setPhase('awaiting-base-point');
     setBasePoint(null);
+    setReferencePoint(null);
     setCurrentAngle(0);
-    firstMoveAfterBaseRef.current = true;
   }, [phase, basePoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
 
   // Prompt text based on phase
   let prompt = '';
-  if (phase === 'awaiting-entity') prompt = 'Select entity to rotate';
-  else if (phase === 'awaiting-base-point') prompt = 'Specify base point';
-  else if (phase === 'awaiting-angle') prompt = 'Specify rotation angle';
+  if (phase === 'awaiting-entity') prompt = 'Επιλέξτε οντότητα για περιστροφή';
+  else if (phase === 'awaiting-base-point') prompt = 'Κλικ: κέντρο περιστροφής';
+  else if (phase === 'awaiting-reference') prompt = 'Κλικ: κατεύθυνση αναφοράς';
+  else if (phase === 'awaiting-angle') prompt = 'Μετακίνηση: περιστροφή — Κλικ: επιβεβαίωση';
+
+  // Sync prompt to toolbar status bar via external store
+  useEffect(() => {
+    if (!isActive || phase === 'idle') {
+      toolHintOverrideStore.setOverride(null);
+      return;
+    }
+    toolHintOverrideStore.setOverride(prompt);
+    return () => { toolHintOverrideStore.setOverride(null); };
+  }, [isActive, phase, prompt]);
 
   return {
     phase,
     basePoint,
+    referencePoint,
     currentAngle,
     isActive,
     isCollectingInput,
