@@ -25,24 +25,32 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
   const position = entity.position;
   const text = entity.text;
   // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
-  const height = entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
-  
+  const height = entity.fontSize || entity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+
   if (!position || !text) return;
-  
+
+  // 🏢 FIX (2026-02-20): Compute screenHeight from world-to-screen transform
+  // instead of using raw world units. Measure vertical distance between two world points.
   const screenPos = worldToScreen(position);
-  const screenHeight = height;
-  
-  // Simple text bounding box
+  const screenPosUp = worldToScreen({ x: position.x, y: position.y + height });
+  const screenHeight = Math.abs(screenPos.y - screenPosUp.y);
+
+  // Skip if text is too small on screen to warrant a hover box
+  if (screenHeight < 2) return;
+
+  // Measure text width at screen scale
   ctx.save();
   ctx.font = buildUIFont(screenHeight, 'arial');
   const metrics = ctx.measureText(text);
   const width = metrics.width;
-  
-  // Draw bounding rectangle
+
+  // Draw subtle bounding rectangle (non-destructive overlay)
   ctx.strokeStyle = UI_COLORS.BRIGHT_YELLOW;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.6;
   ctx.setLineDash([...LINE_DASH_PATTERNS.TEXT_BOUNDING]); // 🏢 ADR-083
-  ctx.strokeRect(screenPos.x, screenPos.y - screenHeight, width, screenHeight);
-  
+  ctx.strokeRect(screenPos.x, screenPos.y, width, screenHeight);
+
   ctx.restore();
 }
 

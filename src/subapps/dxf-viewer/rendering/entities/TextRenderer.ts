@@ -68,63 +68,65 @@ export class TextRenderer extends BaseEntityRenderer {
     // Setup style
     this.setupStyle(entity, options);
 
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ ✅ ZOOM-RESPONSIVE TEXT (2026-01-03)                                   ║
+    // ║ Τα κείμενα κλιμακώνονται με το zoom όπως όλες οι άλλες οντότητες.     ║
+    // ║ Χρησιμοποιεί: screenHeight = worldHeight × scale                       ║
+    // ║ Έτσι τα κείμενα διαστάσεων ακολουθούν τις γραμμές τους.               ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    const screenPos = this.worldToScreen(position);
+    const screenHeight = height * this.transform.scale;
+
+    this.ctx.save();
+
+    // ✅ SIMPLIFIED: Direct font setting
+    this.ctx.font = buildUIFont(screenHeight, 'arial');
+    this.ctx.fillStyle = ('color' in entity ? entity.color : undefined) || UI_COLORS.DEFAULT_ENTITY;
+    this.ctx.textAlign = 'left';
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🔧 DXF BASELINE FIX (2026-01-03)                                       ║
+    // ║                                                                        ║
+    // ║ DXF: insertion point = baseline (κάτω από τα γράμματα)                ║
+    // ║ Canvas με Y-flip (worldToScreen): Πρέπει να χρησιμοποιήσουμε 'top'    ║
+    // ║                                                                        ║
+    // ║ ΠΡΙΝ: 'bottom' → κείμενα εμφανίζονταν ΠΑΝΩ από το insertion point    ║
+    // ║ ΤΩΡΑ: 'top' → κείμενα εμφανίζονται ΚΑΤΩ (σωστό μετά Y-flip!)         ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    this.ctx.textBaseline = 'top';
+
+    // Apply rotation if needed
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🔧 DXF ROTATION FIX v3 (2026-01-03)                                    ║
+    // ║ Βάσει έρευνας: ezdxf, FreeCAD, libdxfrw                               ║
+    // ║                                                                        ║
+    // ║ DXF: Counter-clockwise (CCW), 0° = +X direction                       ║
+    // ║ Canvas: Clockwise (CW) - positive angles rotate clockwise             ║
+    // ║ worldToScreen: Y-flip (screenY = height - worldY)                     ║
+    // ║                                                                        ║
+    // ║ ΚΡΙΣΙΜΟ: Λόγω Y-flip, πρέπει να ΑΝΤΙΣΤΡΕΨΟΥΜΕ τη γωνία!              ║
+    // ║ DXF CCW 90° → Canvas -90° (ή 270°)                                    ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    // Normalize rotation angle (DXF μπορεί να έχει -360, -315, κλπ)
+    let normalizedRotation = rotation % 360;
+    if (normalizedRotation < 0) normalizedRotation += 360;
+
+    if (normalizedRotation !== 0) {
+      this.ctx.translate(screenPos.x, screenPos.y);
+      // ΑΝΤΙΣΤΡΟΦΗ γωνίας λόγω Y-flip στο worldToScreen
+      // DXF CCW → Canvas CW με αντιστροφή
+      // 🏢 ADR-067: Use centralized angle conversion
+      this.ctx.rotate(degToRad(-normalizedRotation));
+      this.ctx.fillText(text, 0, 0);
+    } else {
+      this.ctx.fillText(text, screenPos.x, screenPos.y);
+    }
+
+    this.ctx.restore();
+
+    // 🏢 FIX (2026-02-20): Render hover overlay AFTER text, not INSTEAD of text.
+    // Previously, hovered text was replaced by only the bounding box (text vanished).
     if (options.hovered) {
       HoverManager.renderHover(entity as TextEntity, this.ctx, options, this.worldToScreen.bind(this));
-    } else {
-      // ╔════════════════════════════════════════════════════════════════════════╗
-      // ║ ✅ ZOOM-RESPONSIVE TEXT (2026-01-03)                                   ║
-      // ║ Τα κείμενα κλιμακώνονται με το zoom όπως όλες οι άλλες οντότητες.     ║
-      // ║ Χρησιμοποιεί: screenHeight = worldHeight × scale                       ║
-      // ║ Έτσι τα κείμενα διαστάσεων ακολουθούν τις γραμμές τους.               ║
-      // ╚════════════════════════════════════════════════════════════════════════╝
-      const screenPos = this.worldToScreen(position);
-      const screenHeight = height * this.transform.scale;
-
-      this.ctx.save();
-
-      // ✅ SIMPLIFIED: Direct font setting
-      this.ctx.font = buildUIFont(screenHeight, 'arial');
-      this.ctx.fillStyle = ('color' in entity ? entity.color : undefined) || UI_COLORS.DEFAULT_ENTITY;
-      this.ctx.textAlign = 'left';
-      // ╔════════════════════════════════════════════════════════════════════════╗
-      // ║ 🔧 DXF BASELINE FIX (2026-01-03)                                       ║
-      // ║                                                                        ║
-      // ║ DXF: insertion point = baseline (κάτω από τα γράμματα)                ║
-      // ║ Canvas με Y-flip (worldToScreen): Πρέπει να χρησιμοποιήσουμε 'top'    ║
-      // ║                                                                        ║
-      // ║ ΠΡΙΝ: 'bottom' → κείμενα εμφανίζονταν ΠΑΝΩ από το insertion point    ║
-      // ║ ΤΩΡΑ: 'top' → κείμενα εμφανίζονται ΚΑΤΩ (σωστό μετά Y-flip!)         ║
-      // ╚════════════════════════════════════════════════════════════════════════╝
-      this.ctx.textBaseline = 'top';
-
-      // Apply rotation if needed
-      // ╔════════════════════════════════════════════════════════════════════════╗
-      // ║ 🔧 DXF ROTATION FIX v3 (2026-01-03)                                    ║
-      // ║ Βάσει έρευνας: ezdxf, FreeCAD, libdxfrw                               ║
-      // ║                                                                        ║
-      // ║ DXF: Counter-clockwise (CCW), 0° = +X direction                       ║
-      // ║ Canvas: Clockwise (CW) - positive angles rotate clockwise             ║
-      // ║ worldToScreen: Y-flip (screenY = height - worldY)                     ║
-      // ║                                                                        ║
-      // ║ ΚΡΙΣΙΜΟ: Λόγω Y-flip, πρέπει να ΑΝΤΙΣΤΡΕΨΟΥΜΕ τη γωνία!              ║
-      // ║ DXF CCW 90° → Canvas -90° (ή 270°)                                    ║
-      // ╚════════════════════════════════════════════════════════════════════════╝
-      // Normalize rotation angle (DXF μπορεί να έχει -360, -315, κλπ)
-      let normalizedRotation = rotation % 360;
-      if (normalizedRotation < 0) normalizedRotation += 360;
-
-      if (normalizedRotation !== 0) {
-        this.ctx.translate(screenPos.x, screenPos.y);
-        // ΑΝΤΙΣΤΡΟΦΗ γωνίας λόγω Y-flip στο worldToScreen
-        // DXF CCW → Canvas CW με αντιστροφή
-        // 🏢 ADR-067: Use centralized angle conversion
-        this.ctx.rotate(degToRad(-normalizedRotation));
-        this.ctx.fillText(text, 0, 0);
-      } else {
-        this.ctx.fillText(text, screenPos.x, screenPos.y);
-      }
-
-      this.ctx.restore();
     }
 
     // Use centralized finalization
