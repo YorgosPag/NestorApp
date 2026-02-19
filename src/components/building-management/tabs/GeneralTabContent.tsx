@@ -6,15 +6,12 @@ import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 import { TechnicalSpecsCard } from './GeneralTabContent/TechnicalSpecsCard';
 import { ProgressCard } from './GeneralTabContent/ProgressCard';
 import { FilesCard } from './GeneralTabContent/FilesCard';
-import { LegalInfoCard } from './GeneralTabContent/LegalInfoCard';
-import { SettingsCard } from './GeneralTabContent/SettingsCard';
 import { CompanySelectorCard } from './GeneralTabContent/CompanySelectorCard';
 import { ProjectSelectorCard } from './GeneralTabContent/ProjectSelectorCard';
 import { BuildingAddressesCard } from './GeneralTabContent/BuildingAddressesCard';
 import type { Building } from '../BuildingsPageContent';
 import { validateForm } from './GeneralTabContent/utils';
 import { BuildingStats } from './BuildingStats';
-import { BuildingUnitsTable } from './GeneralTabContent/BuildingUnitsTable';
 // ENTERPRISE: Firestore persistence for building updates
 import { updateBuilding } from '../building-services';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -248,10 +245,7 @@ export function GeneralTabContent({
         errors={errors}
       />
       <ProgressCard progress={building.progress} />
-      <BuildingUnitsTable buildingId={String(building.id)} />
       <FilesCard />
-      <LegalInfoCard />
-      <SettingsCard />
     </div>
   );
 }
