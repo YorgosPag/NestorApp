@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
+import type { GridGuide, GridGroup } from '../../ai-assistant/grid-types';
 
 // Event type definitions - centralized and type-safe
 export interface DrawingEventMap {
@@ -77,6 +78,13 @@ export interface DrawingEventMap {
   'overlay:cancel-polygon': void; // Signal to cancel the current draft polygon
   // 🏢 ENTERPRISE (2026-01-26): Toolbar delete command - ADR-032
   'toolbar:delete': void; // Signal to delete selected grips/overlays with undo support
+
+  // 🏢 ADR-189: Grid & Guide System events (activated when Grid System is implemented)
+  'grid:guide-added': { guide: GridGuide };
+  'grid:guide-removed': { guideId: string };
+  'grid:guide-moved': { guideId: string; newOffset: number };
+  'grid:group-created': { group: GridGroup };
+  'grid:snap-toggled': { enabled: boolean };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

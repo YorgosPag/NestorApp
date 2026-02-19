@@ -14,6 +14,15 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
+import type {
+  AddGuideArgs,
+  RemoveGuideArgs,
+  MoveGuideArgs,
+  CreateGridGroupArgs,
+  SetGridSpacingArgs,
+  ToggleGridSnapArgs,
+  GridContextSnapshot,
+} from './grid-types';
 
 // ============================================================================
 // CHAT MESSAGE TYPES
@@ -49,6 +58,8 @@ export interface DxfCanvasContext {
   };
   units: string;
   currentLayer: string;
+  /** Grid state snapshot (null until Grid System ADR-189 is implemented) */
+  gridContext: GridContextSnapshot | null;
 }
 
 // ============================================================================
@@ -89,12 +100,24 @@ export type DxfAiToolName =
   | 'draw_shapes'
   | 'draw_regular_polygon'
   | 'query_entities'
-  | 'undo_action';
+  | 'undo_action'
+  // Grid tools (ADR-189 — activated when Grid System is implemented)
+  | 'add_grid_guide'
+  | 'remove_grid_guide'
+  | 'move_grid_guide'
+  | 'create_grid_group'
+  | 'set_grid_spacing'
+  | 'toggle_grid_snap';
 
 /** A single tool call returned by the AI */
 export interface DxfAiToolCall {
   name: DxfAiToolName;
-  arguments: DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | DrawPolylineArgs | DrawShapesArgs | DrawRegularPolygonArgs | QueryEntitiesArgs | UndoActionArgs;
+  arguments:
+    | DrawLineArgs | DrawRectangleArgs | DrawCircleArgs | DrawPolylineArgs
+    | DrawShapesArgs | DrawRegularPolygonArgs | QueryEntitiesArgs | UndoActionArgs
+    // Grid tool arguments (ADR-189)
+    | AddGuideArgs | RemoveGuideArgs | MoveGuideArgs
+    | CreateGridGroupArgs | SetGridSpacingArgs | ToggleGridSnapArgs;
 }
 
 /** Arguments for draw_line tool */

@@ -74,6 +74,7 @@ function buildCanvasContext(
       bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
       units: 'mm',
       currentLayer: DXF_AI_DEFAULTS.LAYER,
+      gridContext: null, // ADR-189: populated when Grid System is implemented
     };
   }
 
@@ -88,6 +89,7 @@ function buildCanvasContext(
     },
     units: scene.units,
     currentLayer: layerNames[0] ?? DXF_AI_DEFAULTS.LAYER,
+    gridContext: null, // ADR-189: populated when Grid System is implemented
   };
 }
 

@@ -73,6 +73,9 @@ export function buildDxfAiSystemPrompt(canvasContext: DxfCanvasContext): string 
   const maxX = roundBound(canvasContext.bounds.max.x, d);
   const maxY = roundBound(canvasContext.bounds.max.y, d);
 
+  // Build optional grid context section (ADR-189: activated when Grid System is implemented)
+  const gridSection = buildGridContextSection(canvasContext);
+
   return `Είσαι ο CAD Drawing Assistant του Nestor DXF Viewer.
 Βοηθάς τους χρήστες να σχεδιάζουν γεωμετρικά σχήματα στον καμβά μέσω φυσικής γλώσσας.
 
@@ -175,5 +178,53 @@ Bounds: (${minX}, ${minY}) → (${maxX}, ${maxY})
 
 ΠΑΡΑΔΕΙΓΜΑΤΑ UNDO:
 - "αναίρεσε" → undo_action(count=1)
-- "αναίρεσε τις 3 τελευταίες" → undo_action(count=3)`;
+- "αναίρεσε τις 3 τελευταίες" → undo_action(count=3)${gridSection}`;
+}
+
+// ============================================================================
+// GRID CONTEXT SECTION BUILDER (ADR-189)
+// ============================================================================
+
+/**
+ * Build optional grid context section for the system prompt.
+ * Returns empty string when gridContext is null (Grid System not yet implemented).
+ * When activated, provides grid state awareness to the AI.
+ */
+function buildGridContextSection(canvasContext: DxfCanvasContext): string {
+  if (!canvasContext.gridContext) {
+    return '';
+  }
+
+  const gc = canvasContext.gridContext;
+  const groupCount = gc.groups.length;
+  const totalGuides = gc.groups.reduce((sum, g) => sum + g.guides.length, 0);
+
+  const groupSummaries = gc.groups
+    .slice(0, 5) // Cap at 5 groups in prompt
+    .map(g => `  - "${g.name}" (${g.guides.length} guides, spacing: ${g.spacing ?? 'irregular'})`)
+    .join('\n');
+
+  return `
+
+=== GRID STATE (DATA) ===
+Grid visible: ${gc.gridVisible ? 'yes' : 'no'}
+Snap to grid: ${gc.snapToGrid ? 'enabled' : 'disabled'}
+Groups: ${groupCount} (${totalGuides} total guides)
+Active group: ${gc.activeGroupId ?? 'none'}
+${groupSummaries}
+=== END GRID STATE ===
+
+GRID TOOLS (κάνάβοι & οδηγοί):
+- add_grid_guide: Προσθήκη guide (axis X=κάθετο, Y=οριζόντιο)
+- remove_grid_guide: Αφαίρεση guide by ID
+- move_grid_guide: Μετακίνηση guide σε νέο offset
+- create_grid_group: Δημιουργία ομάδας guides (π.χ. "δομικός κάναβος 5μ")
+- set_grid_spacing: Αλλαγή ομοιόμορφου spacing
+- toggle_grid_snap: Ενεργ./Απενεργ. snap-to-grid
+
+GRID ΠΑΡΑΔΕΙΓΜΑΤΑ:
+- "δημιούργησε κάναβο 5x5 μέτρα" → create_grid_group(name="Grid", axis="both", spacing=5, count=5, origin_x=0, origin_y=0)
+- "πρόσθεσε οδηγό στα 12 μέτρα οριζόντια" → add_grid_guide(axis="Y", offset=12, label=null, group_id=null)
+- "μετακίνησε τον οδηγό A στα 8" → move_grid_guide(guide_id="...", new_offset=8)
+- "ενεργοποίησε snap στον κάναβο" → toggle_grid_snap(enabled=true)`;
 }

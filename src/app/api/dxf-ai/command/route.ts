@@ -75,6 +75,13 @@ const VALID_TOOL_NAMES = new Set<string>([
   'draw_regular_polygon',
   'query_entities',
   'undo_action',
+  // Grid tools (ADR-189 — activated when Grid System is implemented)
+  'add_grid_guide',
+  'remove_grid_guide',
+  'move_grid_guide',
+  'create_grid_group',
+  'set_grid_spacing',
+  'toggle_grid_snap',
 ]);
 
 function isValidToolName(name: string): name is DxfAiToolName {
