@@ -139,6 +139,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'move',
   },
+  // 🏢 ADR-188: Entity Rotation System
+  // 'R' is taken by rectangle → Shift+R for rotate
+  rotate: {
+    key: 'R',
+    modifier: 'shift',
+    descriptionKey: 'shortcuts.tools.rotate',
+    action: 'tool:rotate',
+    category: 'tool',
+    toolType: 'rotate',
+  },
   gripEdit: {
     key: 'G',
     modifier: 'none',

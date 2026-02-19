@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { CanvasLayerStack } from './CanvasLayerStack';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useOverlayStore } from '../../overlays/overlay-store';
@@ -26,6 +26,8 @@ import {
 } from '../../hooks/canvas';
 import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
+import { useRotationTool } from '../../hooks/tools/useRotationTool';
+import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -315,11 +317,24 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDragPreviewPosition: unified.setDragPreviewPosition,
   });
 
+  // ADR-188: Entity Rotation Tool (must be before useCanvasClickHandler which references it)
+  const rotationTool = useRotationTool({
+    activeTool,
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    previewCanvasRef,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+  });
+
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform,
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel,
     dxfGripInteraction: unified.dxfProjection,
+    // ADR-188: Rotation tool click routing
+    rotationIsActive: rotationTool.isActive,
+    handleRotationClick: rotationTool.handleRotationClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     isNearFirstPoint, finishDrawingWithPolygonRef,
@@ -361,6 +376,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     };
   }, [entityJoinHook, selectedEntityIds]);
 
+  // ADR-188: Rotation ghost preview (rubber band + ghost entities)
+  useRotationPreview({
+    phase: rotationTool.phase,
+    basePoint: rotationTool.basePoint,
+    currentAngle: rotationTool.currentAngle,
+    selectedEntityIds,
+    levelManager,
+    transform,
+    viewport,
+    getCanvas: () => previewCanvasRef.current?.getCanvas() ?? null,
+    cursorWorld: mouseWorld,
+  });
+
+  // ADR-188: Route mouse moves to rotation tool when active
+  useEffect(() => {
+    if (rotationTool.isActive && mouseWorld) {
+      rotationTool.handleRotationMouseMove(mouseWorld);
+    }
+  }, [mouseWorld, rotationTool.isActive, rotationTool.handleRotationMouseMove]);
+
   // 🏢 FIX (2026-02-19): Callback to exit overlay draw mode on Escape
   // Resets overlayMode from 'draw' → 'select' so drawing doesn't persist
   const handleExitDrawMode = useCallback(() => {
@@ -381,6 +416,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleEntityJoin: () => entityJoinHook.joinEntities(selectedEntityIds),
     canEntityJoin: entityJoinState.canJoin,
     onExitDrawMode: handleExitDrawMode,
+    // ADR-188: Rotation tool Escape handling
+    handleRotationEscape: rotationTool.handleRotationEscape,
+    rotationIsActive: rotationTool.isActive,
   });
 
   // === Render ===

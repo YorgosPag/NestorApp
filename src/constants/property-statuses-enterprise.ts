@@ -1433,6 +1433,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
 export const DXF_EDITING_TOOL_LABELS = {
   GRIP_EDIT: 'tools.gripEdit',
   MOVE: 'tools.move',
+  ROTATE: 'tools.rotate',
   COPY: 'tools.copy',
   DELETE: 'tools.delete'
 } as const;

@@ -1409,6 +1409,7 @@
     "layering": "Layers",
     "gripEdit": "Grip Edit",
     "move": "Move Objects",
+    "rotate": "Rotate",
     "copy": "Copy",
     "delete": "Delete",
     "measureDistance": "Measure Distance",

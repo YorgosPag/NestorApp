@@ -1,6 +1,6 @@
 # ADR-188: Entity Rotation System — DXF Viewer
 
-**Status**: RESEARCH COMPLETE — Implementation Pending
+**Status**: PHASE 1 IMPLEMENTED — Core Rotation + UI + Preview
 **Date**: 2026-02-19
 **Author**: Claude Opus 4.6 + Giorgos Pagonis
 **Scope**: DXF Viewer (`src/subapps/dxf-viewer/`)
@@ -311,8 +311,73 @@ EXECUTE
 
 ---
 
-## 10. Changelog
+## 10. Implementation Details (Phase 1)
+
+### 10.1 Files Created
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `utils/rotation-math.ts` | ~80 | `rotatePoint()`, `rotateEntity()`, `angleBetweenPointsDeg()` — SSoT rotation math |
+| `core/commands/entity-commands/RotateEntityCommand.ts` | ~200 | ICommand with undo/redo, merge support (500ms window), snapshot-based |
+| `hooks/tools/useRotationTool.ts` | ~240 | State machine: idle → awaiting-base-point → awaiting-angle → execute |
+| `hooks/tools/useRotationPreview.ts` | ~250 | Ghost entity rendering (line, circle, arc, polyline, text, angle-measurement) + rubber band + angle arc + tooltip |
+
+### 10.2 Files Modified
+
+| File | Change |
+|------|--------|
+| `ui/toolbar/types.ts` | Added `'rotate'` to ToolType union |
+| `systems/tools/ToolStateManager.ts` | Registered rotate tool metadata (editing, canInterrupt, allowsContinuous) |
+| `config/keyboard-shortcuts.ts` | Added `Shift+R` shortcut for rotate |
+| `ui/toolbar/toolDefinitions.tsx` | Added rotate tool entry with RotateCw icon |
+| `constants/property-statuses-enterprise.ts` | Added `ROTATE: 'tools.rotate'` label |
+| `hooks/canvas/useCanvasClickHandler.ts` | Added rotation click priority (between grips and special tools) |
+| `hooks/canvas/useCanvasKeyboardShortcuts.ts` | Added Escape cancels rotation |
+| `components/dxf-layout/CanvasSection.tsx` | Wired useRotationTool + useRotationPreview + mouse move routing |
+| `i18n/locales/en/dxf-viewer.json` | Added `tools.rotate: "Rotate"` |
+| `i18n/locales/el/dxf-viewer.json` | Added `tools.rotate: "Περιστροφή"` |
+
+### 10.3 Entity Support Matrix
+
+| Entity | Rotation Logic | Ghost Preview |
+|--------|---------------|---------------|
+| Line | Rotate start + end | ✅ |
+| Circle | Rotate center | ✅ |
+| Arc | Rotate center + offset angles | ✅ |
+| Polyline | Rotate all vertices | ✅ |
+| Text | Rotate position + accumulate rotation field | ✅ |
+| Angle Measurement | Rotate vertex + point1 + point2 | ✅ |
+
+### 10.4 User Flow
+
+```
+1. Select entities → click Rotate tool (or Shift+R)
+2. "Specify base point" → click pivot
+3. "Specify rotation angle" → mouse shows ghost preview
+4. Click to confirm OR type angle in DynamicInput
+5. Entities rotated, Ctrl+Z to undo
+6. Tool stays in continuous mode (next rotation)
+7. Escape cancels and returns to select
+```
+
+### 10.5 Architecture Decisions
+
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| Shortcut | `Shift+R` | `R` taken by rectangle |
+| Preview | PreviewCanvas getCanvas() | No React re-renders (60fps RAF) |
+| Multi-entity | Single command, N entities | Atomic undo/redo |
+| Angle direction | CCW positive | DXF/AutoCAD convention |
+| Storage | Degrees | DXF spec |
+| Tool category | 'editing' | Same as 'move' |
+| Scene access | LevelManagerLike + adapter | Matches useEntityJoin pattern |
+| Click routing | Priority 1.5 in useCanvasClickHandler | Between grips and special tools |
+
+---
+
+## 11. Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-02-19 | ADR-188 created — research complete, codebase audit + AutoCAD/MicroStation comparison |
+| 2026-02-19 | Phase 1 IMPLEMENTED — 4 new files, 10 modified, 0 new TS errors |

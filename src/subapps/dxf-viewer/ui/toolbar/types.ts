@@ -30,6 +30,7 @@ export type ToolType =
   | 'polygon'
   | 'ellipse'
   | 'move'
+  | 'rotate'
   | 'copy'
   | 'delete'
   | 'measure'

@@ -6,7 +6,8 @@ import {
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
   FileUp, // 🏢 ENTERPRISE: PDF Background icon
-  Sparkles // 🤖 ADR-185: AI Drawing Assistant icon
+  Sparkles, // 🤖 ADR-185: AI Drawing Assistant icon
+  RotateCw // 🏢 ADR-188: Entity Rotation System icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -219,6 +220,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
       // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
       { id: 'grip-edit' as ToolType, icon: Edit, label: DXF_EDITING_TOOL_LABELS.GRIP_EDIT, hotkey: getShortcutDisplayLabel('gripEdit'), colorClass: DXF_TOOL_GROUP_COLORS.TOOLS },
       { id: 'move' as ToolType, icon: Move, label: DXF_EDITING_TOOL_LABELS.MOVE, hotkey: getShortcutDisplayLabel('move'), colorClass: DXF_TOOL_GROUP_COLORS.TOOLS },
+      { id: 'rotate' as ToolType, icon: RotateCw, label: DXF_EDITING_TOOL_LABELS.ROTATE, hotkey: getShortcutDisplayLabel('rotate'), colorClass: DXF_TOOL_GROUP_COLORS.TOOLS },
       { id: 'copy' as ToolType, icon: Copy, label: DXF_EDITING_TOOL_LABELS.COPY, hotkey: getShortcutDisplayLabel('copy'), colorClass: DXF_TOOL_GROUP_COLORS.TOOLS },
       // 🎨 ENTERPRISE: Delete uses getDxfToolColor with override (RED for danger)
       { id: 'delete' as ToolType, icon: Trash2, label: DXF_EDITING_TOOL_LABELS.DELETE, hotkey: getShortcutDisplayLabel('delete'), colorClass: getDxfToolColor('TOOLS', 'delete') },

@@ -56,6 +56,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   canEntityJoin?: boolean;
   /** Callback to exit overlay draw mode on Escape (resets overlayMode to 'select') */
   onExitDrawMode?: () => void;
+  /** ADR-188: Rotation tool cancel handler */
+  handleRotationEscape?: () => void;
+  /** ADR-188: Whether the rotation tool is active */
+  rotationIsActive?: boolean;
 }
 
 // ============================================================================
@@ -77,6 +81,8 @@ export function useCanvasKeyboardShortcuts({
   handleEntityJoin,
   canEntityJoin = false,
   onExitDrawMode,
+  handleRotationEscape,
+  rotationIsActive = false,
 }: UseCanvasKeyboardShortcutsParams): void {
 
   // Handle keyboard shortcuts for drawing, delete, and local operations
@@ -102,6 +108,11 @@ export function useCanvasKeyboardShortcuts({
 
       switch (e.key) {
         case 'Escape':
+          // ADR-188: Escape cancels rotation tool first (highest priority when active)
+          if (rotationIsActive && handleRotationEscape) {
+            handleRotationEscape();
+            break;
+          }
           // 🏢 ENTERPRISE (2026-02-15): Escape cancels grip following mode first
           if (dxfGripInteraction.handleGripEscape()) {
             break; // Consumed by grip interaction
@@ -152,5 +163,5 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive]);
 }

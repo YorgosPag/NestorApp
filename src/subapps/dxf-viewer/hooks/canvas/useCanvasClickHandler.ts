@@ -79,6 +79,12 @@ export interface UseCanvasClickHandlerParams {
   lineParallel: SpecialToolLike;
   dxfGripInteraction: DxfGripInteractionLike;
 
+  // ── ADR-188: Rotation tool ────────────────────────────────────────────
+  /** Whether the rotation tool is active and collecting input */
+  rotationIsActive?: boolean;
+  /** Click handler for rotation state machine */
+  handleRotationClick?: (worldPoint: Point2D) => void;
+
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;
 
@@ -123,6 +129,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     viewportReady, viewport, transform,
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, dxfGripInteraction,
+    rotationIsActive = false, handleRotationClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     isNearFirstPoint, finishDrawingWithPolygonRef,
@@ -142,7 +149,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
 
     // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)
-    if (!isInteractiveTool(activeTool) && dxfGripInteraction.handleGripClick(worldPoint)) {
+    if (!isInteractiveTool(activeTool) && activeTool !== 'rotate' && dxfGripInteraction.handleGripClick(worldPoint)) {
+      return;
+    }
+
+    // PRIORITY 1.5: ADR-188 — Rotation tool click (base point or angle confirmation)
+    if (rotationIsActive && handleRotationClick) {
+      handleRotationClick(worldPoint);
       return;
     }
 
@@ -307,6 +320,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     viewportReady, viewport, transform,
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, dxfGripInteraction,
+    rotationIsActive, handleRotationClick,
     levelManager,
     draftPolygon, isSavingPolygon, isNearFirstPoint,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
