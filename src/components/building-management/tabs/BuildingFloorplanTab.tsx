@@ -114,16 +114,16 @@ export function BuildingFloorplanTab({
   // If no building, companyId, or userId, show placeholder
   if (!resolvedBuilding?.id || !companyId || !currentUserId) {
     return (
-      <section className="p-6 text-center text-muted-foreground">
+      <section className="p-2 text-center text-muted-foreground">
         <p>{t('tabs.floorplan.noBuilding', 'Επιλέξτε ένα κτίριο για να δείτε τις κατόψεις.')}</p>
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-2">
       {/* IFC-compliant info banner: per-floor plans live in the Floors tab */}
-      <aside className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+      <aside className="mx-2 mt-2 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
         <Info className="h-4 w-4 shrink-0" />
         <p>{t('tabs.floorplan.floorLevelBanner')}</p>
       </aside>

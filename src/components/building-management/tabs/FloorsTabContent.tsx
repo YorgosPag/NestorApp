@@ -240,7 +240,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
 
   if (error) {
     return (
-      <section className="flex flex-col items-center gap-3 py-12">
+      <section className="flex flex-col items-center gap-2 py-12">
         <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={fetchFloors}>
           Retry
@@ -250,7 +250,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-4">
+    <section className="flex flex-col gap-2 p-2">
       {/* Header */}
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -271,7 +271,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
       {/* Inline Create Form */}
       {showCreateForm && (
         <form
-          className="grid grid-cols-[80px_1fr_120px_auto] items-end gap-2 rounded-lg border border-border bg-muted/30 p-3"
+          className="grid grid-cols-[80px_1fr_120px_auto] items-end gap-2 rounded-lg border border-border bg-muted/30 p-2"
           onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
         >
           <fieldset className="flex flex-col gap-1">
@@ -348,11 +348,11 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium uppercase text-muted-foreground">
                 <th className="w-10 px-2 py-2">{/* expand toggle */}</th>
-                <th className="w-20 px-3 py-2">{t('tabs.floors.number')}</th>
-                <th className="px-3 py-2">{t('tabs.floors.name')}</th>
-                <th className="w-32 px-3 py-2">{t('tabs.floors.elevation')}</th>
-                <th className="w-20 px-3 py-2 text-center">{t('tabs.floors.units')}</th>
-                <th className="w-24 px-3 py-2 text-right">{t('tabs.floors.actions')}</th>
+                <th className="w-20 px-2 py-2">{t('tabs.floors.number')}</th>
+                <th className="px-2 py-2">{t('tabs.floors.name')}</th>
+                <th className="w-32 px-2 py-2">{t('tabs.floors.elevation')}</th>
+                <th className="w-20 px-2 py-2 text-center">{t('tabs.floors.units')}</th>
+                <th className="w-24 px-2 py-2 text-right">{t('tabs.floors.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -387,7 +387,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                       {isEditing ? (
                         /* Editing row */
                         <>
-                          <td className="px-3 py-1.5">
+                          <td className="px-2 py-2">
                             <Input
                               type="number"
                               value={editNumber}
@@ -396,7 +396,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                               disabled={saving}
                             />
                           </td>
-                          <td className="px-3 py-1.5">
+                          <td className="px-2 py-2">
                             <Input
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
@@ -404,7 +404,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                               disabled={saving}
                             />
                           </td>
-                          <td className="px-3 py-1.5">
+                          <td className="px-2 py-2">
                             <Input
                               type="number"
                               step="0.01"
@@ -415,10 +415,10 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                               disabled={saving}
                             />
                           </td>
-                          <td className="px-3 py-1.5 text-center text-muted-foreground">
+                          <td className="px-2 py-2 text-center text-muted-foreground">
                             {floor.units ?? 0}
                           </td>
-                          <td className="px-3 py-1.5">
+                          <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
@@ -444,22 +444,22 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                       ) : (
                         /* Display row */
                         <>
-                          <td className="px-3 py-2 font-mono text-sm font-medium">
+                          <td className="px-2 py-2 font-mono text-sm font-medium">
                             {floor.number}
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-2">
                             <span className="flex items-center gap-2">
                               {floor.name}
                               <Map className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden="true" />
                             </span>
                           </td>
-                          <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                          <td className="px-2 py-2 font-mono text-xs text-muted-foreground">
                             {formatElevation(floor.elevation)}
                           </td>
-                          <td className="px-3 py-2 text-center text-muted-foreground">
+                          <td className="px-2 py-2 text-center text-muted-foreground">
                             {floor.units ?? 0}
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
@@ -491,7 +491,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                     {/* Expandable floorplan row */}
                     {isExpanded && (
                       <tr key={`${floor.id}-floorplan`} className="bg-muted/5">
-                        <td colSpan={COLUMN_COUNT} className="px-4 py-4">
+                        <td colSpan={COLUMN_COUNT} className="px-2 py-2">
                           <FloorFloorplanInline
                             floorId={floor.id}
                             floorName={floor.name}
