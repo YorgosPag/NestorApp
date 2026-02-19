@@ -99,7 +99,7 @@ export interface ProSnapSettings {
 // Default settings για Pro Snap Engine
 export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
   enabled: false,
-  snapDistance: 12,
+  snapDistance: 7,
   enabledTypes: new Set([
     ExtendedSnapType.AUTO,
     ExtendedSnapType.ENDPOINT,
@@ -133,19 +133,22 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
   gridStep: 50,
   orthogonalOnly: false,
   tabCycling: true,
-  // Βελτιστοποιημένες ανοχές ανά mode (industry best practices)
+  // 🏢 Βελτιστοποιημένες ανοχές ανά mode (AutoCAD dense-drawing standards)
+  // AutoCAD APERTURE default = 10px, experienced users: 3-5px for dense drawings
+  // Reduced ~50% from initial values to prevent excessive snap attraction on
+  // plans with 3,000+ entities (typical apartment floor plan).
   perModePxTolerance: {
-    [ExtendedSnapType.ENDPOINT]: 10,      // στενή ακτίνα για ακρίβεια
-    [ExtendedSnapType.INTERSECTION]: 12,  // standard για intersections
-    [ExtendedSnapType.MIDPOINT]: 10,      // στενή για ακρίβεια
-    [ExtendedSnapType.CENTER]: 10,        // στενή για κέντρα
-    [ExtendedSnapType.PERPENDICULAR]: 14, // ευρύτερη για geometric snaps
-    [ExtendedSnapType.TANGENT]: 14,       // ευρύτερη για tangents
-    [ExtendedSnapType.GRID]: 12,          // standard για grid
-    [ExtendedSnapType.NEAREST]: 10,       // στενή για να μην "αρπάζει" όλα
-    [ExtendedSnapType.QUADRANT]: 12,      // standard για quadrants
-    [ExtendedSnapType.PARALLEL]: 14,      // ευρύτερη για parallel detection
-    [ExtendedSnapType.GUIDE]: 12          // ADR-189: guide snap tolerance
+    [ExtendedSnapType.ENDPOINT]: 5,       // tight — precision snapping
+    [ExtendedSnapType.INTERSECTION]: 6,   // slightly wider for intersections
+    [ExtendedSnapType.MIDPOINT]: 5,       // tight — precision snapping
+    [ExtendedSnapType.CENTER]: 5,         // tight — precision snapping
+    [ExtendedSnapType.PERPENDICULAR]: 8,  // wider for geometric construction
+    [ExtendedSnapType.TANGENT]: 8,        // wider for geometric construction
+    [ExtendedSnapType.GRID]: 8,           // wider for grid (fewer candidates)
+    [ExtendedSnapType.NEAREST]: 5,        // tight — avoid grabbing everything
+    [ExtendedSnapType.QUADRANT]: 6,       // slightly wider for quadrants
+    [ExtendedSnapType.PARALLEL]: 8,       // wider for parallel detection
+    [ExtendedSnapType.GUIDE]: 7           // ADR-189: guide snap tolerance
   }
 };
 

@@ -22,16 +22,16 @@ export class SnapPresets {
         ExtendedSnapType.CENTER,
         ExtendedSnapType.GRID
       ]),
-      snapDistance: 12,
+      snapDistance: 7,
       showSnapMarkers: true,
       showSnapTooltips: true,
       perModePxTolerance: {
-        [ExtendedSnapType.ENDPOINT]: 8,
-        [ExtendedSnapType.INTERSECTION]: 10,
-        [ExtendedSnapType.MIDPOINT]: 8,
-        [ExtendedSnapType.CENTER]: 8,
-        [ExtendedSnapType.PERPENDICULAR]: 12,
-        [ExtendedSnapType.GRID]: 10
+        [ExtendedSnapType.ENDPOINT]: 5,
+        [ExtendedSnapType.INTERSECTION]: 6,
+        [ExtendedSnapType.MIDPOINT]: 5,
+        [ExtendedSnapType.CENTER]: 5,
+        [ExtendedSnapType.PERPENDICULAR]: 8,
+        [ExtendedSnapType.GRID]: 8
       }
     });
   }
@@ -50,17 +50,17 @@ export class SnapPresets {
         ExtendedSnapType.QUADRANT,
         ExtendedSnapType.PERPENDICULAR
       ]),
-      snapDistance: 15,
+      snapDistance: 8,
       showSnapMarkers: true,
       showSnapTooltips: true,
       perModePxTolerance: {
-        [ExtendedSnapType.ENDPOINT]: 10,
-        [ExtendedSnapType.INTERSECTION]: 12,
-        [ExtendedSnapType.MIDPOINT]: 10,
-        [ExtendedSnapType.CENTER]: 10,
-        [ExtendedSnapType.TANGENT]: 14,
-        [ExtendedSnapType.QUADRANT]: 12,
-        [ExtendedSnapType.PERPENDICULAR]: 14
+        [ExtendedSnapType.ENDPOINT]: 5,
+        [ExtendedSnapType.INTERSECTION]: 6,
+        [ExtendedSnapType.MIDPOINT]: 5,
+        [ExtendedSnapType.CENTER]: 5,
+        [ExtendedSnapType.TANGENT]: 8,
+        [ExtendedSnapType.QUADRANT]: 6,
+        [ExtendedSnapType.PERPENDICULAR]: 8
       }
     });
   }
@@ -75,7 +75,7 @@ export class SnapPresets {
         ExtendedSnapType.MIDPOINT,
         ExtendedSnapType.INTERSECTION
       ]),
-      snapDistance: 20,
+      snapDistance: 10,
       showSnapMarkers: true,
       showSnapTooltips: false,
       autoMode: true

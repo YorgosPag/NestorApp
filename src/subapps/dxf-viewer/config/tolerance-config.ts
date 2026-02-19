@@ -10,20 +10,20 @@ export const TOLERANCE_CONFIG = {
   SELECTION_MIN: 2,         // Minimum selection tolerance
   SELECTION_MAX: 20,        // Maximum selection tolerance
   
-  // Snap tolerances  
-  SNAP_DEFAULT: 10,         // Default snap tolerance in pixels
+  // Snap tolerances (AutoCAD APERTURE default = 10px; reduced for dense drawings)
+  SNAP_DEFAULT: 6,          // Default snap tolerance in pixels
   SNAP_PRECISION: 1e-10,    // High-precision snap tolerance (geometric calculations)
   
   // Hit testing (in PIXELS — must be converted to world units via / scale)
-  HIT_TEST_DEFAULT: 8,      // Default hit test tolerance (pixels)
-  HIT_TEST_FALLBACK: 5,     // 🏢 ADR-105: Fallback tolerance for renderer hitTest methods (pixels)
-  HIT_TEST_RADIUS: 12,      // Hit test radius for visual elements (pixels)
+  HIT_TEST_DEFAULT: 6,      // Default hit test tolerance (pixels)
+  HIT_TEST_FALLBACK: 4,     // 🏢 ADR-105: Fallback tolerance for renderer hitTest methods (pixels)
+  HIT_TEST_RADIUS: 8,       // Hit test radius for visual elements (pixels)
 
   // 🏢 AutoCAD/MicroStation standard: Entity hover/select tolerance in PIXELS
   // AutoCAD PICKBOX default = 3px, MicroStation Locate Tolerance default = 10px
-  // We use 4px as a good middle-ground for web (higher DPI than desktop CAD)
-  ENTITY_HOVER_PIXELS: 4,   // How close cursor must be to highlight entity (pixels)
-  ENTITY_SELECT_PIXELS: 4,  // How close cursor must be to select entity (pixels)
+  // Reduced to 3px for dense floor plans (3,000+ entities)
+  ENTITY_HOVER_PIXELS: 3,   // How close cursor must be to highlight entity (pixels)
+  ENTITY_SELECT_PIXELS: 3,  // How close cursor must be to select entity (pixels)
   
   // Grips and handles
   GRIP_APERTURE: 8,         // Default grip aperture size
@@ -47,7 +47,7 @@ export interface HoverToleranceConfig {
 }
 
 export const HOVER_TOLERANCE_CONFIG: HoverToleranceConfig = {
-  basePixels: 5,
+  basePixels: 3,
   scaleWithZoom: true,
 };
 
@@ -226,8 +226,8 @@ export const ARC_TESSELLATION = {
  * const searchRadius = SNAP_SEARCH_RADIUS.REFERENCE_POINT; // 200
  */
 export const SNAP_SEARCH_RADIUS = {
-  /** Reference point search radius (OrthoSnapEngine) */
-  REFERENCE_POINT: 200,
+  /** Reference point search radius (OrthoSnapEngine) — in world units */
+  REFERENCE_POINT: 100,
 } as const;
 
 /**
@@ -243,10 +243,10 @@ export const SNAP_SEARCH_RADIUS = {
  * const searchRadius = radius * SNAP_RADIUS_MULTIPLIERS.STANDARD; // radius * 2
  */
 export const SNAP_RADIUS_MULTIPLIERS = {
-  /** Standard multiplier (2x) - Ortho, Perpendicular, Extension */
-  STANDARD: 2,
-  /** Extended multiplier (3x) - Parallel (needs wider search for parallel line detection) */
-  EXTENDED: 3,
+  /** Standard multiplier (1.5x) - Ortho, Perpendicular, Extension */
+  STANDARD: 1.5,
+  /** Extended multiplier (2x) - Parallel (needs wider search for parallel line detection) */
+  EXTENDED: 2,
 } as const;
 
 /**
@@ -288,8 +288,8 @@ export const SNAP_GEOMETRY = {
  * const radius = context.snapRadius || SNAP_DEFAULTS.FALLBACK_RADIUS;
  */
 export const SNAP_DEFAULTS = {
-  /** Fallback snap radius when context.snapRadius is undefined (20 pixels) */
-  FALLBACK_RADIUS: 20,
+  /** Fallback snap radius when context.snapRadius is undefined (10 pixels) */
+  FALLBACK_RADIUS: 10,
 } as const;
 
 // ===== POLYGON CLOSE TOLERANCES =====
