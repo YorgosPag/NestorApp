@@ -345,8 +345,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
     dxfGripInteraction: unified.dxfProjection,
-    // ADR-188: Rotation tool click routing
-    rotationIsActive: rotationTool.isActive,
+    // ADR-188: Rotation tool click routing — isCollectingInput is true ONLY during
+    // base-point and angle phases (not during awaiting-entity, where clicks should
+    // fall through to entity selection instead of being consumed by rotation)
+    rotationIsActive: rotationTool.isCollectingInput,
     handleRotationClick: rotationTool.handleRotationClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
@@ -436,7 +438,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onExitDrawMode: handleExitDrawMode,
     // ADR-188: Rotation tool Escape handling
     handleRotationEscape: rotationTool.handleRotationEscape,
-    rotationIsActive: rotationTool.isActive,
+    rotationIsActive: rotationTool.isCollectingInput,
   });
 
   // === Render ===

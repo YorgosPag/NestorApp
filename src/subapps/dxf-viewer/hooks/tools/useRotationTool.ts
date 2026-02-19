@@ -1,13 +1,15 @@
 /**
  * USE ROTATION TOOL — State machine hook for entity rotation
  *
- * 🏢 ADR-188: Entity Rotation System
+ * ADR-188: Entity Rotation System
  *
- * State machine:
- *   idle → awaiting-base-point → awaiting-angle → (execute) → idle
+ * State machine (AutoCAD ROTATE pattern):
+ *   idle → awaiting-entity → awaiting-base-point → awaiting-angle → (execute) → awaiting-base-point
  *
- * The hook is active when activeTool === 'rotate' AND entities are selected.
- * It exposes click/move/escape handlers that CanvasSection routes to the canvas.
+ * When activeTool === 'rotate':
+ *   - If entities are already selected → skip straight to awaiting-base-point
+ *   - If NO entities selected → awaiting-entity (clicks select entities normally)
+ *   - Once entities are selected → transition to awaiting-base-point
  *
  * @module hooks/tools/useRotationTool
  */
@@ -25,7 +27,7 @@ import type { useLevels } from '../../systems/levels';
 // TYPES
 // ============================================================================
 
-export type RotationPhase = 'idle' | 'awaiting-base-point' | 'awaiting-angle';
+export type RotationPhase = 'idle' | 'awaiting-entity' | 'awaiting-base-point' | 'awaiting-angle';
 
 /** Subset of useLevels return type needed by rotation tool */
 type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'setLevelScene' | 'currentLevelId'>;
@@ -50,8 +52,10 @@ export interface UseRotationToolReturn {
   basePoint: Point2D | null;
   /** The current rotation angle in degrees (updated on mouse move) */
   currentAngle: number;
-  /** Whether the rotation tool is actively collecting input */
+  /** Whether the rotation tool is active (activeTool === 'rotate') */
   isActive: boolean;
+  /** Whether the tool is collecting geometric input (base-point or angle — intercepts clicks) */
+  isCollectingInput: boolean;
   /** Handle canvas click — routes to base-point or angle selection */
   handleRotationClick: (worldPoint: Point2D) => void;
   /** Handle mouse move — updates angle + triggers preview redraw */
@@ -86,10 +90,17 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   const startAngleRef = useRef(0);
   const firstMoveAfterBaseRef = useRef(true);
 
-  const isActive = activeTool === 'rotate' && selectedEntityIds.length > 0;
+  // isActive: rotation tool is the current tool (even without selection)
+  const isActive = activeTool === 'rotate';
 
-  // Track previous active state to clear preview ONLY on rotation transitions
+  // isCollectingInput: rotation tool needs clicks for base-point or angle
+  // (NOT awaiting-entity — that phase lets clicks pass through for entity selection)
+  const isCollectingInput = isActive && selectedEntityIds.length > 0
+    && (phase === 'awaiting-base-point' || phase === 'awaiting-angle');
+
+  // Track previous states to detect transitions
   const wasActiveRef = useRef(false);
+  const prevEntityCountRef = useRef(0);
 
   // Build scene manager adapter on demand
   const getSceneManager = useCallback(() => {
@@ -101,36 +112,55 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     );
   }, [levelManager]);
 
-  // Reset when rotation activates/deactivates
-  // CRITICAL: Only clear PreviewCanvas on actual rotation transitions,
-  // never during drawing tool usage (that would wipe rubber-band preview)
+  // ── State machine transitions ──────────────────────────────────────────
   useEffect(() => {
-    const nowActive = activeTool === 'rotate' && selectedEntityIds.length > 0;
+    const toolIsRotate = activeTool === 'rotate';
+    const hasEntities = selectedEntityIds.length > 0;
 
-    if (nowActive && !wasActiveRef.current) {
-      // Transition: inactive → active (entering rotation mode)
-      setPhase('awaiting-base-point');
+    if (toolIsRotate && !wasActiveRef.current) {
+      // Transition: entering rotation mode
+      if (hasEntities) {
+        // Entities already selected → skip to base-point
+        setPhase('awaiting-base-point');
+      } else {
+        // No entities → prompt user to select
+        setPhase('awaiting-entity');
+      }
       setBasePoint(null);
       setCurrentAngle(0);
       firstMoveAfterBaseRef.current = true;
       previewCanvasRef.current?.clear();
-    } else if (!nowActive && wasActiveRef.current) {
-      // Transition: active → inactive (leaving rotation mode)
+    } else if (!toolIsRotate && wasActiveRef.current) {
+      // Transition: leaving rotation mode
       setPhase('idle');
       setBasePoint(null);
       setCurrentAngle(0);
       previewCanvasRef.current?.clear();
+    } else if (toolIsRotate && wasActiveRef.current) {
+      // Still in rotation mode — check if entities were just selected
+      const prevCount = prevEntityCountRef.current;
+      if (prevCount === 0 && hasEntities && phase === 'awaiting-entity') {
+        // Entity just selected during awaiting-entity → transition to base-point
+        setPhase('awaiting-base-point');
+        previewCanvasRef.current?.clear();
+      } else if (hasEntities && prevCount > 0 && selectedEntityIds.length === 0) {
+        // Entities deselected during rotation → back to awaiting-entity
+        setPhase('awaiting-entity');
+        setBasePoint(null);
+        setCurrentAngle(0);
+        previewCanvasRef.current?.clear();
+      }
     }
-    // No clear() when rotation was never active — preserves drawing preview
 
-    wasActiveRef.current = nowActive;
-  }, [activeTool, selectedEntityIds.length]);
+    wasActiveRef.current = toolIsRotate;
+    prevEntityCountRef.current = selectedEntityIds.length;
+  }, [activeTool, selectedEntityIds.length, phase, previewCanvasRef]);
 
   /**
    * Handle canvas click during rotation
    */
   const handleRotationClick = useCallback((worldPoint: Point2D) => {
-    if (!isActive) return;
+    if (!isCollectingInput) return;
 
     if (phase === 'awaiting-base-point') {
       // Save pivot and transition to angle selection
@@ -169,7 +199,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
       firstMoveAfterBaseRef.current = true;
       return;
     }
-  }, [isActive, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
+  }, [isCollectingInput, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
 
   /**
    * Handle mouse move — update angle for preview
@@ -229,17 +259,17 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   }, [phase, basePoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
 
   // Prompt text based on phase
-  const prompt = phase === 'awaiting-base-point'
-    ? 'Specify base point'
-    : phase === 'awaiting-angle'
-      ? 'Specify rotation angle'
-      : '';
+  let prompt = '';
+  if (phase === 'awaiting-entity') prompt = 'Select entity to rotate';
+  else if (phase === 'awaiting-base-point') prompt = 'Specify base point';
+  else if (phase === 'awaiting-angle') prompt = 'Specify rotation angle';
 
   return {
     phase,
     basePoint,
     currentAngle,
     isActive,
+    isCollectingInput,
     handleRotationClick,
     handleRotationMouseMove,
     handleRotationEscape,

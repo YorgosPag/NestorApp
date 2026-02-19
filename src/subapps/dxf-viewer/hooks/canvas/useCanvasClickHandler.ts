@@ -177,6 +177,52 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.3: ADR-188 — Rotation tool entity selection (awaiting-entity phase)
+    // When rotation tool is active but NOT collecting geometric input (= awaiting-entity
+    // phase), clicks select an entity. The rotation state machine then auto-transitions
+    // to awaiting-base-point via its useEffect.
+    if (activeTool === 'rotate' && !rotationIsActive) {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+
+        for (const entity of scene.entities) {
+          let isHit = false;
+
+          if (isLineEntity(entity)) {
+            isHit = pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
+          } else if (isArcEntity(entity)) {
+            isHit = pointToArcDistance(worldPoint, entity) <= hitTolerance;
+          } else if (isPolylineEntity(entity)) {
+            if (entity.vertices && entity.vertices.length >= 2) {
+              for (let i = 0; i < entity.vertices.length - 1; i++) {
+                if (pointToLineDistance(worldPoint, entity.vertices[i], entity.vertices[i + 1]) <= hitTolerance) {
+                  isHit = true;
+                  break;
+                }
+              }
+              if (!isHit && entity.closed && entity.vertices.length > 2) {
+                isHit = pointToLineDistance(worldPoint, entity.vertices[entity.vertices.length - 1], entity.vertices[0]) <= hitTolerance;
+              }
+            }
+          }
+
+          if (isHit) {
+            setSelectedEntityIds([entity.id]);
+            universalSelection.clearByType('dxf-entity');
+            universalSelection.select(entity.id, 'dxf-entity');
+            dlog('useCanvasClickHandler', 'Rotation entity selected:', entity.id);
+            return;
+          }
+        }
+      }
+      // Click on empty space during awaiting-entity → do nothing (stay in phase)
+      return;
+    }
+
     // PRIORITY 1.5: ADR-188 — Rotation tool click (base point or angle confirmation)
     if (rotationIsActive && handleRotationClick) {
       handleRotationClick(worldPoint);

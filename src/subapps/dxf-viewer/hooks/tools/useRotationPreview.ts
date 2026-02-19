@@ -84,8 +84,6 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     // Nothing to draw if not in angle-picking phase
     if (phase !== 'awaiting-angle' || !basePoint) return;
 
-    const dpr = window.devicePixelRatio || 1;
-
     // 🏢 FIX (2026-02-19): Use FRESH viewport from the actual canvas element
     // React state viewport (from useViewportManager) may lag behind actual dimensions
     // when UI changes (e.g., DynamicInput appearing) cause container resize.
@@ -93,7 +91,13 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     const rect = canvas.getBoundingClientRect();
     const freshViewport = { width: rect.width, height: rect.height };
 
-    // Convert pivot to screen coords
+    // 🏢 FIX (2026-02-19): PreviewCanvas context has ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    // from PreviewRenderer.updateSize() — ALL drawing is automatically scaled by DPR.
+    // Do NOT multiply coordinates by dpr — that causes double-DPR scaling and
+    // the crosshair appears at the wrong position on HiDPI displays (DPR > 1.0).
+    // Draw in CSS pixel coordinates only — same pattern as PreviewRenderer.renderLine().
+
+    // Convert pivot to screen coords (CSS pixels)
     const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, freshViewport);
 
     // === 1. Draw rubber band line: pivot → cursor ===
@@ -102,28 +106,28 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
 
       ctx.save();
       ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 1 * dpr;
-      ctx.setLineDash([6 * dpr, 4 * dpr]);
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
       ctx.beginPath();
-      ctx.moveTo(pivotScreen.x * dpr, pivotScreen.y * dpr);
-      ctx.lineTo(cursorScreen.x * dpr, cursorScreen.y * dpr);
+      ctx.moveTo(pivotScreen.x, pivotScreen.y);
+      ctx.lineTo(cursorScreen.x, cursorScreen.y);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
 
       // === 2. Draw angle arc near pivot ===
-      const arcRadius = 30 * dpr;
+      const arcRadius = 30;
       const startRad = 0; // Reference angle (east)
       const endRad = degToRad(currentAngle);
 
       ctx.save();
       ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 1.5 * dpr;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       // In screen coords, Y is inverted → negate angle for correct visual
       ctx.arc(
-        pivotScreen.x * dpr,
-        pivotScreen.y * dpr,
+        pivotScreen.x,
+        pivotScreen.y,
         arcRadius,
         -startRad,  // Canvas Y-flip
         -endRad,    // Canvas Y-flip
@@ -135,26 +139,26 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       // === 3. Draw angle tooltip near cursor ===
       const angleText = `${currentAngle.toFixed(1)}°`;
       ctx.save();
-      ctx.font = `${12 * dpr}px monospace`;
+      ctx.font = '12px monospace';
       ctx.fillStyle = '#FFD700';
       ctx.fillText(
         angleText,
-        cursorScreen.x * dpr + 15 * dpr,
-        cursorScreen.y * dpr - 10 * dpr
+        cursorScreen.x + 15,
+        cursorScreen.y - 10
       );
       ctx.restore();
     }
 
     // === 4. Draw base point marker (crosshair) ===
-    const markerSize = 8 * dpr;
+    const markerSize = 8;
     ctx.save();
     ctx.strokeStyle = '#FF4444';
-    ctx.lineWidth = 2 * dpr;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(pivotScreen.x * dpr - markerSize, pivotScreen.y * dpr);
-    ctx.lineTo(pivotScreen.x * dpr + markerSize, pivotScreen.y * dpr);
-    ctx.moveTo(pivotScreen.x * dpr, pivotScreen.y * dpr - markerSize);
-    ctx.lineTo(pivotScreen.x * dpr, pivotScreen.y * dpr + markerSize);
+    ctx.moveTo(pivotScreen.x - markerSize, pivotScreen.y);
+    ctx.lineTo(pivotScreen.x + markerSize, pivotScreen.y);
+    ctx.moveTo(pivotScreen.x, pivotScreen.y - markerSize);
+    ctx.lineTo(pivotScreen.x, pivotScreen.y + markerSize);
     ctx.stroke();
     ctx.restore();
 
@@ -163,14 +167,14 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       ctx.save();
       ctx.globalAlpha = 0.4;
       ctx.strokeStyle = '#00BFFF';
-      ctx.lineWidth = 1.5 * dpr;
+      ctx.lineWidth = 1.5;
 
       for (const entityId of selectedEntityIds) {
         const entity = getEntity(entityId);
         if (!entity) continue;
 
         const dxfEntity = entity as unknown as DxfEntityUnion;
-        drawGhostEntity(ctx, dxfEntity, basePoint, currentAngle, transform, freshViewport, dpr);
+        drawGhostEntity(ctx, dxfEntity, basePoint, currentAngle, transform, freshViewport);
       }
 
       ctx.restore();
@@ -212,12 +216,10 @@ function drawGhostEntity(
   angleDeg: number,
   transform: ViewTransform,
   viewport: { width: number; height: number },
-  dpr: number
 ): void {
-  const toScreen = (p: Point2D) => {
-    const s = CoordinateTransforms.worldToScreen(p, transform, viewport);
-    return { x: s.x * dpr, y: s.y * dpr };
-  };
+  // 🏢 FIX (2026-02-19): Draw in CSS pixels — DPR scaling handled by canvas transform
+  const toScreen = (p: Point2D) =>
+    CoordinateTransforms.worldToScreen(p, transform, viewport);
 
   switch (entity.type) {
     case 'line': {
@@ -232,7 +234,7 @@ function drawGhostEntity(
 
     case 'circle': {
       const c = toScreen(rotatePoint(entity.center, pivot, angleDeg));
-      const radiusScreen = entity.radius * transform.scale * dpr;
+      const radiusScreen = entity.radius * transform.scale;
       ctx.beginPath();
       ctx.arc(c.x, c.y, radiusScreen, 0, Math.PI * 2);
       ctx.stroke();
@@ -241,7 +243,7 @@ function drawGhostEntity(
 
     case 'arc': {
       const c = toScreen(rotatePoint(entity.center, pivot, angleDeg));
-      const radiusScreen = entity.radius * transform.scale * dpr;
+      const radiusScreen = entity.radius * transform.scale;
       const startRad = degToRad(entity.startAngle + angleDeg);
       const endRad = degToRad(entity.endAngle + angleDeg);
       ctx.beginPath();
@@ -270,7 +272,7 @@ function drawGhostEntity(
     case 'text': {
       const pos = toScreen(rotatePoint(entity.position, pivot, angleDeg));
       ctx.save();
-      const fontSize = Math.max(8, entity.height * transform.scale * dpr);
+      const fontSize = Math.max(8, entity.height * transform.scale);
       ctx.font = `${fontSize}px sans-serif`;
       ctx.fillStyle = '#00BFFF';
       const totalRotation = (entity.rotation ?? 0) + angleDeg;
