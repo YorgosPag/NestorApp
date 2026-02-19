@@ -20,6 +20,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Info } from 'lucide-react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -120,21 +121,29 @@ export function BuildingFloorplanTab({
   }
 
   return (
-    <EntityFilesManager
-      companyId={companyId}
-      currentUserId={currentUserId}
-      entityType="building"
-      entityId={String(resolvedBuilding.id)}
-      entityLabel={resolvedBuilding.name || `Κτίριο ${resolvedBuilding.id}`}
-      projectId={resolvedBuilding.projectId}
-      domain="construction"
-      category="floorplans"
-      purpose="building-floorplan"
-      entryPointCategoryFilter="floorplans"
-      displayStyle="floorplan-gallery"
-      acceptedTypes={FLOORPLAN_ACCEPT}
-      companyName={companyDisplayName}
-    />
+    <section className="flex flex-col gap-3">
+      {/* IFC-compliant info banner: per-floor plans live in the Floors tab */}
+      <aside className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+        <Info className="h-4 w-4 shrink-0" />
+        <p>{t('tabs.floorplan.floorLevelBanner')}</p>
+      </aside>
+
+      <EntityFilesManager
+        companyId={companyId}
+        currentUserId={currentUserId}
+        entityType="building"
+        entityId={String(resolvedBuilding.id)}
+        entityLabel={resolvedBuilding.name || `Κτίριο ${resolvedBuilding.id}`}
+        projectId={resolvedBuilding.projectId}
+        domain="construction"
+        category="floorplans"
+        purpose="building-floorplan"
+        entryPointCategoryFilter="floorplans"
+        displayStyle="floorplan-gallery"
+        acceptedTypes={FLOORPLAN_ACCEPT}
+        companyName={companyDisplayName}
+      />
+    </section>
   );
 }
 

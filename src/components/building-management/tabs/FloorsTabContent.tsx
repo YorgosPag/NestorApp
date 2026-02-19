@@ -4,8 +4,13 @@
  * Displays, creates, edits and deletes building floors (IfcBuildingStorey).
  * Each floor has: number (level), name, elevation (metres).
  *
+ * Each floor row is expandable — clicking the floorplan indicator opens an
+ * inline EntityFilesManager for uploading/viewing that floor's floorplan.
+ * This follows IFC 4.3 (ISO 16739): floor plans belong to IfcBuildingStorey.
+ *
  * @module components/building-management/tabs/FloorsTabContent
  * @see ADR-180 (IFC Floor Management System)
+ * @see ADR-179 (Floorplan types)
  */
 
 'use client';
@@ -15,7 +20,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Layers, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronRight, Map } from 'lucide-react';
+import { FloorFloorplanInline } from './FloorFloorplanInline';
 import type { Building } from '@/types/building/contracts';
 
 // ============================================================================
@@ -60,6 +66,9 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Expand/collapse state for floorplan inline viewer
+  const [expandedFloorId, setExpandedFloorId] = useState<string | null>(null);
+
   // Inline create state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createNumber, setCreateNumber] = useState('0');
@@ -76,6 +85,14 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
 
   // Delete state
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // ============================================================================
+  // EXPAND / COLLAPSE
+  // ============================================================================
+
+  const toggleFloorExpand = (floorId: string) => {
+    setExpandedFloorId((prev) => (prev === floorId ? null : floorId));
+  };
 
   // ============================================================================
   // FETCH FLOORS
@@ -204,6 +221,12 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
   };
 
   // ============================================================================
+  // COLUMN COUNT — used for colSpan on expanded floorplan row
+  // ============================================================================
+
+  const COLUMN_COUNT = 6; // expand + number + name + elevation + units + actions
+
+  // ============================================================================
   // RENDER
   // ============================================================================
 
@@ -324,6 +347,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium uppercase text-muted-foreground">
+                <th className="w-10 px-2 py-2">{/* expand toggle */}</th>
                 <th className="w-20 px-3 py-2">{t('tabs.floors.number')}</th>
                 <th className="px-3 py-2">{t('tabs.floors.name')}</th>
                 <th className="w-32 px-3 py-2">{t('tabs.floors.elevation')}</th>
@@ -332,107 +356,153 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
               </tr>
             </thead>
             <tbody>
-              {floors.map((floor) => (
-                <tr key={floor.id} className="border-b border-border/50 hover:bg-muted/20">
-                  {editingId === floor.id ? (
-                    /* Editing row */
-                    <>
-                      <td className="px-3 py-1.5">
-                        <Input
-                          type="number"
-                          value={editNumber}
-                          onChange={(e) => setEditNumber(e.target.value)}
-                          className="h-8 w-16"
-                          disabled={saving}
-                        />
+              {floors.map((floor) => {
+                const isExpanded = expandedFloorId === floor.id;
+                const isEditing = editingId === floor.id;
+
+                return (
+                  <>
+                    {/* Data row */}
+                    <tr
+                      key={floor.id}
+                      className={`border-b border-border/50 hover:bg-muted/20 ${isExpanded ? 'bg-muted/10' : ''}`}
+                    >
+                      {/* Expand toggle */}
+                      <td className="px-2 py-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => toggleFloorExpand(floor.id)}
+                          title={isExpanded ? t('tabs.floors.collapseFloor') : t('tabs.floors.expandFloor')}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-primary" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
                       </td>
-                      <td className="px-3 py-1.5">
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="h-8"
-                          disabled={saving}
-                        />
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editElevation}
-                          onChange={(e) => setEditElevation(e.target.value)}
-                          placeholder="—"
-                          className="h-8 w-24"
-                          disabled={saving}
-                        />
-                      </td>
-                      <td className="px-3 py-1.5 text-center text-muted-foreground">
-                        {floor.units ?? 0}
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <nav className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={handleSaveEdit}
-                            disabled={saving || !editName.trim()}
-                          >
-                            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={cancelEdit}
-                            disabled={saving}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </nav>
-                      </td>
-                    </>
-                  ) : (
-                    /* Display row */
-                    <>
-                      <td className="px-3 py-2 font-mono text-sm font-medium">
-                        {floor.number}
-                      </td>
-                      <td className="px-3 py-2">{floor.name}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-                        {formatElevation(floor.elevation)}
-                      </td>
-                      <td className="px-3 py-2 text-center text-muted-foreground">
-                        {floor.units ?? 0}
-                      </td>
-                      <td className="px-3 py-2">
-                        <nav className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => startEdit(floor)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(floor)}
-                            disabled={deletingId === floor.id}
-                          >
-                            {deletingId === floor.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                        </nav>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
+
+                      {isEditing ? (
+                        /* Editing row */
+                        <>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              type="number"
+                              value={editNumber}
+                              onChange={(e) => setEditNumber(e.target.value)}
+                              className="h-8 w-16"
+                              disabled={saving}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="h-8"
+                              disabled={saving}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={editElevation}
+                              onChange={(e) => setEditElevation(e.target.value)}
+                              placeholder="—"
+                              className="h-8 w-24"
+                              disabled={saving}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5 text-center text-muted-foreground">
+                            {floor.units ?? 0}
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <nav className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={handleSaveEdit}
+                                disabled={saving || !editName.trim()}
+                              >
+                                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={cancelEdit}
+                                disabled={saving}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </nav>
+                          </td>
+                        </>
+                      ) : (
+                        /* Display row */
+                        <>
+                          <td className="px-3 py-2 font-mono text-sm font-medium">
+                            {floor.number}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="flex items-center gap-2">
+                              {floor.name}
+                              <Map className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden="true" />
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                            {formatElevation(floor.elevation)}
+                          </td>
+                          <td className="px-3 py-2 text-center text-muted-foreground">
+                            {floor.units ?? 0}
+                          </td>
+                          <td className="px-3 py-2">
+                            <nav className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => startEdit(floor)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => handleDelete(floor)}
+                                disabled={deletingId === floor.id}
+                              >
+                                {deletingId === floor.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            </nav>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+
+                    {/* Expandable floorplan row */}
+                    {isExpanded && (
+                      <tr key={`${floor.id}-floorplan`} className="bg-muted/5">
+                        <td colSpan={COLUMN_COUNT} className="px-4 py-4">
+                          <FloorFloorplanInline
+                            floorId={floor.id}
+                            floorName={floor.name}
+                            projectId={building.projectId}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
             </tbody>
           </table>
 

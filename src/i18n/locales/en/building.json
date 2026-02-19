@@ -756,7 +756,7 @@
   "tabs": {
     "labels": {
       "general": "General",
-      "floorplan": "Floor Plan",
+      "floorplan": "General Floor Plan",
       "timeline": "Timeline",
       "analytics": "Analytics",
       "storage": "Storages",
@@ -835,7 +835,13 @@
       "elevationPlaceholder": "e.g. 0.00",
       "editSuccess": "Floor updated",
       "deleteSuccess": "Floor deleted",
-      "createSuccess": "Floor created"
+      "createSuccess": "Floor created",
+      "floorplan": "Floor Plan",
+      "hasFloorplan": "Has floor plan",
+      "noFloorplan": "No floor plan",
+      "uploadFloorplan": "Upload floor plan",
+      "expandFloor": "Show floor plan",
+      "collapseFloor": "Hide floor plan"
     },
     "measurements": {
       "title": "Measurements",
@@ -1044,8 +1050,9 @@
       }
     },
     "floorplan": {
-      "title": "Building Floor Plan",
+      "title": "General Building Floor Plan",
       "noBuilding": "Select a building to view its floor plans.",
+      "floorLevelBanner": "For per-floor plans, go to the Floors tab.",
       "addFloorplan": "Add Floor Plan",
       "editFloorplan": "Edit Floor Plan",
       "loading": "Loading floor plan...",

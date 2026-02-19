@@ -756,7 +756,7 @@
   "tabs": {
     "labels": {
       "general": "Γενικά",
-      "floorplan": "Κάτοψη Κτιρίου",
+      "floorplan": "Γενική Κάτοψη",
       "timeline": "Χρονοδιάγραμμα",
       "analytics": "Αναλυτικά",
       "storage": "Αποθήκες",
@@ -835,7 +835,13 @@
       "elevationPlaceholder": "π.χ. 0.00",
       "editSuccess": "Ο όροφος ενημερώθηκε",
       "deleteSuccess": "Ο όροφος διαγράφηκε",
-      "createSuccess": "Ο όροφος δημιουργήθηκε"
+      "createSuccess": "Ο όροφος δημιουργήθηκε",
+      "floorplan": "Κάτοψη",
+      "hasFloorplan": "Υπάρχει κάτοψη",
+      "noFloorplan": "Χωρίς κάτοψη",
+      "uploadFloorplan": "Ανεβάστε κάτοψη ορόφου",
+      "expandFloor": "Εμφάνιση κάτοψης",
+      "collapseFloor": "Απόκρυψη κάτοψης"
     },
     "measurements": {
       "title": "Επιμετρήσεις",
@@ -1044,8 +1050,9 @@
       }
     },
     "floorplan": {
-      "title": "Κάτοψη Κτιρίου",
+      "title": "Γενική Κάτοψη Κτιρίου",
       "noBuilding": "Επιλέξτε ένα κτίριο για να δείτε τις κατόψεις.",
+      "floorLevelBanner": "Για κατόψεις ανά όροφο, μεταβείτε στο tab «Όροφοι».",
       "addFloorplan": "Προσθήκη Κάτοψης",
       "editFloorplan": "Επεξεργασία Κάτοψης",
       "loading": "Φόρτωση κάτοψης...",

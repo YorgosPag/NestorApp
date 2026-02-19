@@ -202,6 +202,7 @@
 | **ADR-184** | Building Spaces Tabs (Storage, Parking, Units) | ✅ IMPLEMENTED | 2026-02-16 | Building Management | [📄](./adrs/ADR-184-building-spaces-tabs.md) |
 | **ADR-185** | AI-Powered DXF Drawing Assistant | 🟡 PHASE_1_IMPLEMENTED | 2026-02-17 | AI Architecture / DXF Viewer | [📄](./adrs/ADR-185-ai-powered-dxf-drawing-assistant.md) |
 | **ADR-186** | Entity Join System — AutoCAD JOIN Semantics | ✅ IMPLEMENTED | 2026-02-17 | DXF Viewer / Entity Operations | [📄](./adrs/ADR-186-entity-join-system.md) |
+| **ADR-187** | Floor-Level Floorplans (IFC-Compliant) | ✅ IMPLEMENTED | 2026-02-19 | Building Management | [📄](./adrs/ADR-187-floor-level-floorplans.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
