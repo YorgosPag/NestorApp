@@ -44,6 +44,10 @@ export interface UseCanvasContextMenuParams {
   drawingMenuRef: RefObject<DrawingContextMenuHandle | null>;
   /** Imperative ref to EntityContextMenu */
   entityMenuRef: RefObject<EntityContextMenuHandle | null>;
+  /** ADR-188: Rotation phase — enables right-click angle input during awaiting-angle */
+  rotationPhase?: string;
+  /** ADR-188: Callback to show PromptDialog for rotation angle input */
+  onRotationAnglePrompt?: () => void;
 }
 
 export interface UseCanvasContextMenuReturn {
@@ -64,6 +68,8 @@ export function useCanvasContextMenu({
   selectedEntityIds = [],
   drawingMenuRef,
   entityMenuRef,
+  rotationPhase,
+  onRotationAnglePrompt,
 }: UseCanvasContextMenuParams): UseCanvasContextMenuReturn {
 
   // React handler — ALWAYS prevent browser context menu on canvas
@@ -81,6 +87,12 @@ export function useCanvasContextMenu({
     const handleNativeContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
+      // PRIORITY 0: ADR-188 — Rotation angle input (right-click during awaiting-angle → PromptDialog)
+      if (activeTool === 'rotate' && rotationPhase === 'awaiting-angle' && onRotationAnglePrompt) {
+        onRotationAnglePrompt();
+        return;
+      }
 
       // PRIORITY 1: Drawing context menu (during drawing with active points)
       const isUnifiedDrawing = isDrawingTool(activeTool) || isMeasurementTool(activeTool);
@@ -107,7 +119,7 @@ export function useCanvasContextMenu({
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt]);
 
   return {
     handleDrawingContextMenu,

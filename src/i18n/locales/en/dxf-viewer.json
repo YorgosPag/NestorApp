@@ -1450,7 +1450,10 @@
     "parallelDistance": "Parallel Guide Distance",
     "enterDistance": "Distance from reference guide",
     "distancePlaceholder": "e.g. 100",
-    "selectReference": "Click near a guide to select as reference"
+    "selectReference": "Click near a guide to select as reference",
+    "rotationAngle": "Rotation Angle",
+    "enterAngle": "Enter angle in degrees",
+    "anglePlaceholder": "e.g. 45"
   },
   "entityJoin": {
     "menuTitle": "Join",

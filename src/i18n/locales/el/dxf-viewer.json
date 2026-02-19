@@ -1444,7 +1444,10 @@
     "parallelDistance": "Απόσταση Παράλληλου Οδηγού",
     "enterDistance": "Απόσταση από τον οδηγό αναφοράς",
     "distancePlaceholder": "π.χ. 100",
-    "selectReference": "Κάντε κλικ κοντά σε οδηγό για επιλογή αναφοράς"
+    "selectReference": "Κάντε κλικ κοντά σε οδηγό για επιλογή αναφοράς",
+    "rotationAngle": "Γωνία Περιστροφής",
+    "enterAngle": "Εισαγάγετε γωνία σε μοίρες",
+    "anglePlaceholder": "π.χ. 45"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",

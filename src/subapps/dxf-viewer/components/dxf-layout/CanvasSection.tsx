@@ -251,11 +251,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [activeTool]);
 
-  // ADR-189: Callback invoked by click handler when user selects a reference guide.
-  // Opens the prompt dialog directly — no useEffect chain, no stale closures.
-  const handleParallelGuideSelected = useCallback((refGuideId: string) => {
+  // ADR-189: Step 1 — user clicks near a guide → highlight it as reference
+  const handleParallelRefSelected = useCallback((refGuideId: string) => {
     setParallelRefGuideId(refGuideId);
+  }, []);
 
+  // ADR-189: Step 2 — user clicks on desired side → determines direction, opens dialog
+  const handleParallelSideChosen = useCallback((refGuideId: string, sign: 1 | -1) => {
     showPromptDialog({
       title: t('promptDialog.parallelDistance'),
       label: t('promptDialog.enterDistance'),
@@ -271,7 +273,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       if (result !== null) {
         const distance = parseFloat(result);
         if (!isNaN(distance) && Math.abs(distance) > 0.001) {
-          guideState.addParallelGuide(refGuideId, distance);
+          // Apply sign from step 2 to the entered distance
+          guideState.addParallelGuide(refGuideId, Math.abs(distance) * sign);
         }
       }
       // Reset highlight regardless of confirm/cancel
@@ -313,6 +316,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (!mouseWorld) return null;
     if (activeTool === 'guide-x') return { axis: 'X' as const, offset: mouseWorld.x };
     if (activeTool === 'guide-z') return { axis: 'Y' as const, offset: mouseWorld.y };
+    // Step 2 preview: ghost follows cursor along reference guide's axis
+    if (activeTool === 'guide-parallel' && parallelRefGuideId) {
+      const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
+      if (refGuide) {
+        return { axis: refGuide.axis, offset: refGuide.axis === 'X' ? mouseWorld.x : mouseWorld.y };
+      }
+    }
     return null;
   }, [activeTool, mouseWorld, parallelRefGuideId, guideState.guides]);
 
@@ -385,9 +395,43 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
   const entityMenuRef = useRef<EntityContextMenuHandle>(null);
 
+  // ADR-188: Entity Rotation Tool (must be before useCanvasContextMenu + useCanvasClickHandler)
+  const rotationTool = useRotationTool({
+    activeTool,
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    previewCanvasRef,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+  });
+
+  // ADR-188: Right-click during awaiting-angle → PromptDialog for typed angle input
+  const handleRotationAnglePrompt = useCallback(async () => {
+    const result = await showPromptDialog({
+      title: t('promptDialog.rotationAngle'),
+      label: t('promptDialog.enterAngle'),
+      placeholder: t('promptDialog.anglePlaceholder'),
+      inputType: 'number',
+      unit: '°',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n)) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    });
+    if (result !== null) {
+      const angle = parseFloat(result);
+      if (!isNaN(angle) && Math.abs(angle) > 0.001) {
+        rotationTool.handleAngleInput(angle);
+      }
+    }
+  }, [showPromptDialog, t, rotationTool]);
+
   const { handleDrawingContextMenu } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
     selectedEntityIds, drawingMenuRef, entityMenuRef,
+    rotationPhase: rotationTool.phase,
+    onRotationAnglePrompt: handleRotationAnglePrompt,
   });
 
   const { handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = useDrawingUIHandlers({
@@ -400,16 +444,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     fitToOverlay,
     setDraggingOverlayBody: unified.setDraggingOverlayBody,
     setDragPreviewPosition: unified.setDragPreviewPosition,
-  });
-
-  // ADR-188: Entity Rotation Tool (must be before useCanvasClickHandler which references it)
-  const rotationTool = useRotationTool({
-    activeTool,
-    selectedEntityIds,
-    levelManager,
-    executeCommand,
-    previewCanvasRef,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
   });
 
   const { handleCanvasClick } = useCanvasClickHandler({
@@ -434,11 +468,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     draggingOverlayBody: unified.draggingOverlayBody,
     setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
-    // ADR-189: Guide click handlers
+    // ADR-189: Guide click handlers (3-step parallel: ref → side → dialog)
     guideAddGuide: guideState.addGuide,
     guideRemoveGuide: guideState.removeGuide,
     guides: guideState.guides,
-    onParallelGuideSelected: handleParallelGuideSelected,
+    parallelRefGuideId,
+    onParallelRefSelected: handleParallelRefSelected,
+    onParallelSideChosen: handleParallelSideChosen,
   });
 
   const { handleSmartDelete } = useSmartDelete({
