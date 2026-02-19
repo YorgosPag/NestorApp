@@ -87,3 +87,9 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
   - MODIFIED: `BuildingSpaceCardGrid` — same expand props for cards view
   - MODIFIED: `StorageTab`, `ParkingTabContent`, `UnitsTabContent` — wired expandable floorplans
   - Storage path pattern: `companies/{companyId}/entities/{entityType}/{id}/domains/construction/categories/floorplans/`
+- **2026-02-19**: Added dedicated Floorplan tab to Parking detail page (sidebar → Θέσεις Στάθμευσης → select → tab "Κάτοψη Θ.Σ.")
+  - NEW: `ParkingFloorplanTab` — standalone tab with EntityFilesManager for parking_spot floorplans
+  - MODIFIED: `unified-tabs-factory.ts` — added parkingFloorplan tab (order: 2, icon: map)
+  - MODIFIED: `parkingMappings.ts` + `mappings/index.ts` — registered ParkingFloorplanTab component
+  - MODIFIED: `tabs.ts` labels — added parkingFloorplan to ParkingTabLabelsConfig
+  - Bidirectional: same Firestore path as building's ParkingTabContent expandable row

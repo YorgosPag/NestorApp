@@ -20,6 +20,7 @@
 // ============================================================================
 
 import { ParkingGeneralTab } from '@/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
+import { ParkingFloorplanTab } from '@/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingFloorplanTab';
 
 // ============================================================================
 // SHARED COMPONENTS (reused from their original locations)
@@ -33,6 +34,7 @@ import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab
 
 export const PARKING_COMPONENT_MAPPING = {
   'ParkingGeneralTab': ParkingGeneralTab,
+  'ParkingFloorplanTab': ParkingFloorplanTab,
   'ParkingStatsTab': PlaceholderTab,
   'ParkingDocumentsTab': PlaceholderTab,
   'ParkingPhotosTab': PlaceholderTab,

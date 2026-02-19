@@ -142,9 +142,11 @@ export const CONTACT_COMPONENT_MAPPING = {
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { ParkingGeneralTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
+import { ParkingFloorplanTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingFloorplanTab';
 
 export const PARKING_COMPONENT_MAPPING = {
   'ParkingGeneralTab': ParkingGeneralTab,
+  'ParkingFloorplanTab': ParkingFloorplanTab,
   'ParkingStatsTab': PlaceholderTab,
   'ParkingDocumentsTab': PlaceholderTab,
   'ParkingPhotosTab': PlaceholderTab,

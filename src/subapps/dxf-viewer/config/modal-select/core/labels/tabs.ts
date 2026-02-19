@@ -129,6 +129,7 @@ export interface StorageTabLabelsConfig {
  */
 export interface ParkingTabLabelsConfig {
   readonly general: string;
+  readonly parkingFloorplan: string;
   readonly statistics: string;
   readonly documents: string;
   readonly photos: string;
@@ -271,6 +272,7 @@ export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
  */
 export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
   general: "tabs.labels.general",
+  parkingFloorplan: "tabs.labels.parkingFloorplan",
   statistics: "tabs.labels.statistics",
   documents: "tabs.labels.documents",
   photos: "tabs.labels.photos",
