@@ -88,6 +88,9 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
   const isActive = activeTool === 'rotate' && selectedEntityIds.length > 0;
 
+  // Track previous active state to clear preview ONLY on rotation transitions
+  const wasActiveRef = useRef(false);
+
   // Build scene manager adapter on demand
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
@@ -98,20 +101,29 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     );
   }, [levelManager]);
 
-  // Reset when tool changes or selection changes
+  // Reset when rotation activates/deactivates
+  // CRITICAL: Only clear PreviewCanvas on actual rotation transitions,
+  // never during drawing tool usage (that would wipe rubber-band preview)
   useEffect(() => {
-    if (activeTool === 'rotate' && selectedEntityIds.length > 0) {
+    const nowActive = activeTool === 'rotate' && selectedEntityIds.length > 0;
+
+    if (nowActive && !wasActiveRef.current) {
+      // Transition: inactive → active (entering rotation mode)
       setPhase('awaiting-base-point');
       setBasePoint(null);
       setCurrentAngle(0);
       firstMoveAfterBaseRef.current = true;
       previewCanvasRef.current?.clear();
-    } else {
+    } else if (!nowActive && wasActiveRef.current) {
+      // Transition: active → inactive (leaving rotation mode)
       setPhase('idle');
       setBasePoint(null);
       setCurrentAngle(0);
       previewCanvasRef.current?.clear();
     }
+    // No clear() when rotation was never active — preserves drawing preview
+
+    wasActiveRef.current = nowActive;
   }, [activeTool, selectedEntityIds.length]);
 
   /**
