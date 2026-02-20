@@ -237,6 +237,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // When rotation tool is active but NOT collecting geometric input (= awaiting-entity
     // phase), clicks select an entity. The rotation state machine then auto-transitions
     // to awaiting-base-point via its useEffect.
+    // 🔍 TEMP DEBUG
+    console.log('[ROTATE-DEBUG] Click:', { activeTool, rotationIsActive, worldPoint });
     if (activeTool === 'rotate' && !rotationIsActive) {
       const scene = levelManager.currentLevelId
         ? levelManager.getLevelScene(levelManager.currentLevelId)
@@ -244,11 +246,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
 
       if (scene?.entities) {
         const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
-        dlog('useCanvasClickHandler', 'Rotation entity search:', {
+        // 🔍 TEMP DEBUG: Production-visible log for colored layer rotation issue
+        console.log('[ROTATE-DEBUG] Entity search:', {
           entityCount: scene.entities.length,
-          types: scene.entities.map(e => e.type),
+          types: scene.entities.map(e => `${e.id}(${e.type})`),
           hitTolerance,
           worldPoint,
+          scale: transform.scale,
         });
 
         for (const entity of scene.entities) {
@@ -331,17 +335,18 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
                     worldPoint.y <= entity.position.y + hitTolerance;
           }
 
-          dlog('useCanvasClickHandler', `Rotation hit-test: ${entity.id} (${entity.type})`, { isHit });
+          // 🔍 TEMP DEBUG
+          console.log(`[ROTATE-DEBUG] ${entity.id} (${entity.type}): isHit=${isHit}`);
 
           if (isHit) {
             setSelectedEntityIds([entity.id]);
             universalSelection.clearByType('dxf-entity');
             universalSelection.select(entity.id, 'dxf-entity');
-            dlog('useCanvasClickHandler', 'Rotation entity SELECTED:', entity.id, entity.type);
+            console.log('[ROTATE-DEBUG] ✅ SELECTED:', entity.id, entity.type);
             return;
           }
         }
-        dlog('useCanvasClickHandler', 'Rotation: no entity hit at', worldPoint);
+        console.log('[ROTATE-DEBUG] ❌ No entity hit at', worldPoint);
       }
       // Click on empty space during awaiting-entity → do nothing (stay in phase)
       return;
