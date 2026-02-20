@@ -102,13 +102,10 @@ export class SnapOrchestrator {
       return this.processor.processResults(cursorPoint, [], settings);
     }
 
-    // Έλεγχος αν έχουμε entities - αν όχι, επιστρέφουμε κενό αποτέλεσμα
-    if (this.entities.length === 0) {
-      if (DEBUG_SNAP_ORCHESTRATOR) {
-        console.log('🎭 [SnapOrchestrator] findSnapPoint: No entities stored!');
-      }
-      return this.processor.processResults(cursorPoint, [], settings);
-    }
+    // 🏢 FIX (2026-02-21): Removed entities.length === 0 early-exit.
+    // Guide, Grid, and ConstructionPoint engines don't depend on scene entities —
+    // they read from their own singleton stores. Returning early here blocked
+    // snap-to-guide on empty scenes (Στοιχεία: 0).
 
     // Debug logging (limited frequency)
     const shouldLog = DEBUG_SNAP_ORCHESTRATOR && Math.random() < 0.01; // 1% of calls
