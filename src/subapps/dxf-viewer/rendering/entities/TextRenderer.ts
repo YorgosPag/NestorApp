@@ -32,7 +32,6 @@ import type { Point2D } from '../types/Types';
 import type { TextEntity, Entity } from '../../types/entities';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isTextEntity, isMTextEntity } from '../../types/entities';
-import { HoverManager } from '../../utils/hover';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
@@ -123,11 +122,9 @@ export class TextRenderer extends BaseEntityRenderer {
 
     this.ctx.restore();
 
-    // 🏢 FIX (2026-02-20): Render hover overlay AFTER text, not INSTEAD of text.
-    // Previously, hovered text was replaced by only the bounding box (text vanished).
-    if (options.hovered) {
-      HoverManager.renderHover(entity as TextEntity, this.ctx, options, this.worldToScreen.bind(this));
-    }
+    // 🏢 FIX (2026-02-20): Text hover uses PhaseManager glow (shadowColor/shadowBlur)
+    // from setupStyle(). No additional bounding box overlay needed — the yellow dashed
+    // rectangle was visually distracting and non-standard. AutoCAD-style: glow only.
 
     // Use centralized finalization
     this.finalizeRendering(entity, options);

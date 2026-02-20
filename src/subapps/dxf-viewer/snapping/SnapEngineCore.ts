@@ -48,6 +48,11 @@ export class SnapEngineCore implements SnapEngineInterface {
 
   setViewport(viewport?: Viewport): void {
     this.viewport = viewport || undefined;
+    // 🏢 FIX (2026-02-20): Forward viewport to orchestrator's SnapContextManager.
+    // BEFORE: viewport was stored locally but NEVER forwarded — the orchestrator
+    // used stale viewport from initialize() → worldPerPixel stayed wrong → snap
+    // tolerances were in raw world units instead of pixels/scale.
+    this.orchestrator.setViewport(viewport || null);
   }
 
   findSnapPoint(cursorPoint: Point2D, excludeEntityId?: string): ProSnapResult {

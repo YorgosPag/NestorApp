@@ -52,6 +52,15 @@ export class SnapOrchestrator {
     this.contextManager = new SnapContextManager(settings);
   }
 
+  /**
+   * 🏢 FIX (2026-02-20): Update viewport for pixel→world tolerance conversion.
+   * Called from SnapEngineCore.setViewport() on every zoom change and mouse move.
+   * BEFORE: viewport was only set during initialize() — never updated afterwards.
+   */
+  setViewport(viewport: Viewport | null): void {
+    this.contextManager.setViewport(viewport);
+  }
+
   initialize(entities: Entity[], viewport?: Viewport): void {
     if (DEBUG_SNAP_ORCHESTRATOR) {
       console.log('🎭 [SnapOrchestrator] initialize called with', entities.length, 'entities');
