@@ -498,7 +498,12 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData);
+        // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
+        const createdBy = user?.uid;
+        const fileRecordOptions = selectedCompanyId && createdBy
+          ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, createdBy }
+          : undefined;
+        saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData, fileRecordOptions);
       } else {
         saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', projectFloorplanData);
       }
@@ -1073,6 +1078,25 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               </ModalActions>
               <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
                 {t('wizard.floorplanSections.hintSitePlan')}
+              </p>
+            </ProjectModalContainer>
+          )}
+
+          {/* 🏢 Building General Floorplan — single button, same pattern as project-level site plan */}
+          {currentStep === 'building' && selectedBuildingId && (
+            <ProjectModalContainer title={t('wizard.floorplanSections.selectForBuilding')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
+              <ModalActions alignment="center">
+                <Button
+                  onClick={() => handleLoadFloorplan('building')}
+                  variant="default"
+                  size="default"
+                  className={MODAL_DIMENSIONS.BUTTONS.flex}
+                >
+                  {t('wizard.floorplanTypes.buildingGeneral')}
+                </Button>
+              </ModalActions>
+              <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
+                {t('wizard.floorplanSections.hintBuilding')}
               </p>
             </ProjectModalContainer>
           )}

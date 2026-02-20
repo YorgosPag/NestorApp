@@ -18,13 +18,15 @@
  */
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
+import { FileRecordService } from '@/services/file-record.service';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -85,6 +87,20 @@ export interface BuildingFloorplanData {
 }
 
 /**
+ * 🏢 ENTERPRISE: Optional parameters for FileRecord creation
+ * When provided, saveFloorplan() also creates a FileRecord so
+ * the file appears in BuildingFloorplanTab (EntityFilesManager).
+ */
+export interface BuildingFloorplanSaveOptions {
+  /** Company ID — required for FileRecord creation */
+  companyId: string;
+  /** Project ID — recommended for canonical storage path */
+  projectId?: string;
+  /** User ID who performed the upload */
+  createdBy: string;
+}
+
+/**
  * Legacy Firestore document structure (for backward compatibility)
  * Supports both DXF and PDF formats stored in Firestore
  * @deprecated Will be removed after full migration to enterprise storage
@@ -128,11 +144,20 @@ export class BuildingFloorplanService {
    * Handles two formats:
    * - DXF floorplans: Uses DxfFirestoreService.saveToStorage() for enterprise storage
    * - PDF floorplans: Uses legacy Firestore (metadata only, PDF stored elsewhere)
+   *
+   * When `options` is provided (companyId + createdBy), also creates a FileRecord
+   * so the file appears in BuildingFloorplanTab → EntityFilesManager.
+   *
+   * @param buildingId - Building ID
+   * @param type - 'building' or 'storage'
+   * @param data - Floorplan data (scene or PDF)
+   * @param options - Optional: enables FileRecord creation for building tab visibility
    */
   static async saveFloorplan(
     buildingId: string,
     type: 'building' | 'storage',
-    data: BuildingFloorplanData
+    data: BuildingFloorplanData,
+    options?: BuildingFloorplanSaveOptions
   ): Promise<boolean> {
     try {
       const fileId = this.generateFileId(buildingId, type);
@@ -196,6 +221,12 @@ export class BuildingFloorplanService {
           },
           timestamp: Date.now(),
         });
+
+        // 🏢 ENTERPRISE: Create FileRecord so file appears in BuildingFloorplanTab
+        // Pattern follows FloorFloorplanService — 3-step canonical upload
+        if (options?.companyId && options?.createdBy) {
+          await this.createFileRecord(buildingId, type, data, options);
+        }
       } else {
         floorplanLogger.error(`Enterprise save failed for ${type}`, { buildingId });
       }
@@ -207,6 +238,77 @@ export class BuildingFloorplanService {
         error: error instanceof Error ? error.message : String(error)
       });
       return false;
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Create FileRecord for building floorplan
+   *
+   * Follows the 3-step canonical upload pattern (ADR-031):
+   * 1. createPendingFileRecord() → Firestore `files` collection
+   * 2. Upload scene JSON to Firebase Storage
+   * 3. finalizeFileRecord() → status: ready + downloadUrl
+   *
+   * This makes the floorplan visible in BuildingFloorplanTab → EntityFilesManager.
+   */
+  private static async createFileRecord(
+    buildingId: string,
+    type: 'building' | 'storage',
+    data: BuildingFloorplanData,
+    options: BuildingFloorplanSaveOptions
+  ): Promise<void> {
+    try {
+      const fileName = data.fileName || `${buildingId}_${type}_floorplan.json`;
+
+      // Step 1: Create pending FileRecord
+      const purpose = type === 'building' ? 'building-floorplan' : 'storage-floorplan';
+      const entityLabel = type === 'building' ? `Building ${buildingId}` : `Storage ${buildingId}`;
+
+      const createResult = await FileRecordService.createPendingFileRecord({
+        companyId: options.companyId,
+        projectId: options.projectId,
+        entityType: ENTITY_TYPES.BUILDING,
+        entityId: buildingId,
+        domain: FILE_DOMAINS.CONSTRUCTION,
+        category: FILE_CATEGORIES.FLOORPLANS,
+        originalFilename: fileName,
+        contentType: 'application/json',
+        createdBy: options.createdBy,
+        entityLabel,
+        purpose,
+        descriptors: [buildingId, `general-${type}`],
+      });
+
+      // Step 2: Upload scene JSON to Storage
+      const sceneJson = JSON.stringify(data.scene);
+      const sceneBytes = new TextEncoder().encode(sceneJson);
+
+      const storageRef = ref(storage, createResult.storagePath);
+      const uploadResult = await uploadBytes(storageRef, sceneBytes, {
+        contentType: 'application/json',
+      });
+
+      // Step 3: Get download URL and finalize
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
+
+      await FileRecordService.finalizeFileRecord({
+        fileId: createResult.fileId,
+        sizeBytes: sceneBytes.length,
+        downloadUrl,
+      });
+
+      floorplanLogger.info(`FileRecord created for ${type} floorplan`, {
+        buildingId,
+        fileId: createResult.fileId,
+        storagePath: createResult.storagePath,
+      });
+    } catch (error) {
+      // Non-blocking: FileRecord creation failure should not break the main save
+      floorplanLogger.warn(`FileRecord creation failed (non-blocking)`, {
+        buildingId,
+        type,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

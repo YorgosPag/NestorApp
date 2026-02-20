@@ -261,6 +261,7 @@
       "project": "Project Floorplan",
       "parking": "Parking Floorplan",
       "building": "Building Floorplan",
+      "buildingGeneral": "Building General Floorplan",
       "storage": "Storage Floorplan",
       "unit": "Unit Floorplan",
       "floor": "Floor Plan"
