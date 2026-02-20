@@ -258,7 +258,10 @@ export class BuildingFloorplanService {
     options: BuildingFloorplanSaveOptions
   ): Promise<void> {
     try {
-      const fileName = data.fileName || `${buildingId}_${type}_floorplan.json`;
+      // Use .json extension for the scene data (NOT the original .dxf)
+      const baseName = (data.fileName || `${buildingId}_${type}_floorplan`)
+        .replace(/\.[^.]+$/, ''); // Strip original extension
+      const jsonFileName = `${baseName}.json`;
 
       // Step 1: Create pending FileRecord
       const purpose = type === 'building' ? 'building-floorplan' : 'storage-floorplan';
@@ -271,11 +274,12 @@ export class BuildingFloorplanService {
         entityId: buildingId,
         domain: FILE_DOMAINS.CONSTRUCTION,
         category: FILE_CATEGORIES.FLOORPLANS,
-        originalFilename: fileName,
+        originalFilename: jsonFileName,
         contentType: 'application/json',
         createdBy: options.createdBy,
         entityLabel,
         purpose,
+        ext: 'json',
         descriptors: [buildingId, `general-${type}`],
       });
 
@@ -297,18 +301,15 @@ export class BuildingFloorplanService {
         downloadUrl,
       });
 
-      floorplanLogger.info(`FileRecord created for ${type} floorplan`, {
-        buildingId,
-        fileId: createResult.fileId,
-        storagePath: createResult.storagePath,
-      });
+      // Production-visible success log (bypasses logger suppression)
+      // eslint-disable-next-line no-console
+      console.log(`[BuildingFloorplan] FileRecord created: ${createResult.fileId} for building ${buildingId}`);
     } catch (error) {
-      // Non-blocking: FileRecord creation failure should not break the main save
-      floorplanLogger.warn(`FileRecord creation failed (non-blocking)`, {
-        buildingId,
-        type,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      // Production-visible error (bypasses logger suppression for debugging)
+      // eslint-disable-next-line no-console
+      console.error(`[BuildingFloorplan] FileRecord creation FAILED for building ${buildingId}:`,
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 

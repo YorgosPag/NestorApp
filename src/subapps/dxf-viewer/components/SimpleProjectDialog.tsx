@@ -503,6 +503,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         const fileRecordOptions = selectedCompanyId && createdBy
           ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, createdBy }
           : undefined;
+        // eslint-disable-next-line no-console
+        console.log('[Pipeline→Building] FileRecord options:', {
+          hasOptions: !!fileRecordOptions,
+          companyId: selectedCompanyId || '(empty)',
+          projectId: selectedProjectId || '(empty)',
+          buildingId: selectedBuildingId,
+          createdBy: createdBy || '(empty)',
+        });
         saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData, fileRecordOptions);
       } else {
         saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', projectFloorplanData);
