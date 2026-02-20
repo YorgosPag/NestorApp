@@ -14,6 +14,8 @@
 
 import type { GridAxis, GridGuideStyle } from '../../ai-assistant/grid-types';
 import type { Point2D } from '../../rendering/types/Types';
+// 🏢 ADR-189: Centralized hover highlight config (single source of truth)
+import { HOVER_HIGHLIGHT } from '../../config/color-config';
 
 // Re-export for convenience
 export type { GridAxis } from '../../ai-assistant/grid-types';
@@ -94,12 +96,14 @@ export const GHOST_GUIDE_STYLE: GuideRenderStyle = {
   opacity: 0.25,
 };
 
-/** Guide rendering style for hover highlight (delete/parallel selection) */
+/** Guide rendering style for hover highlight (delete/parallel selection)
+ * 🏢 Centralized: Values from HOVER_HIGHLIGHT.GUIDE (color-config.ts)
+ */
 export const HIGHLIGHT_GUIDE_STYLE: GuideRenderStyle = {
-  color: '#FFD700', // Gold — high contrast against both dark and light backgrounds
-  lineWidth: 2,
-  dashPattern: [], // Solid line for clear highlight
-  opacity: 0.9,
+  color: HOVER_HIGHLIGHT.GUIDE.glowColor,
+  lineWidth: HOVER_HIGHLIGHT.GUIDE.lineWidth,
+  dashPattern: [...HOVER_HIGHLIGHT.GUIDE.dashPattern],
+  opacity: HOVER_HIGHLIGHT.GUIDE.opacity,
 };
 
 // ============================================================================

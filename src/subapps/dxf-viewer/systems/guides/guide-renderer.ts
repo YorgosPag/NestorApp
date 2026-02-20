@@ -18,6 +18,8 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import type { Guide, GuideRenderStyle } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, HIGHLIGHT_GUIDE_STYLE } from './guide-types';
+// 🏢 Centralized hover highlight config — shadowBlur glow for highlighted guides
+import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-088: Pixel-perfect alignment for crisp 1px rendering
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-118: Centralized coordinate transforms (require to avoid circular deps — same as GridRenderer)
@@ -72,7 +74,7 @@ export class GuideRenderer {
       if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
         const style = isHighlighted ? HIGHLIGHT_GUIDE_STYLE : this.resolveDiagonalStyle();
         const { screenStart, screenEnd } = this.drawDiagonalGuideLine(
-          ctx, guide.startPoint, guide.endPoint, transform, viewport, style,
+          ctx, guide.startPoint, guide.endPoint, transform, viewport, style, isHighlighted,
         );
         diagonalGuides.push({ guide, screenStart, screenEnd });
         continue;
@@ -86,7 +88,7 @@ export class GuideRenderer {
       if (guide.axis === 'X' && (screenPos < -1 || screenPos > viewport.width + 1)) continue;
       if (guide.axis === 'Y' && (screenPos < -1 || screenPos > viewport.height + 1)) continue;
 
-      this.drawGuideLine(ctx, guide.axis, screenPos, viewport, style);
+      this.drawGuideLine(ctx, guide.axis, screenPos, viewport, style, isHighlighted);
 
       // Collect for intersections
       if (guide.axis === 'X') xPositions.push(screenPos);
@@ -160,6 +162,7 @@ export class GuideRenderer {
 
   /**
    * Draw a single guide line spanning the full viewport.
+   * 🏢 Centralized hover glow: when highlighted, applies shadowBlur from HOVER_HIGHLIGHT.GUIDE
    */
   private drawGuideLine(
     ctx: CanvasRenderingContext2D,
@@ -167,6 +170,7 @@ export class GuideRenderer {
     screenPos: number,
     viewport: Viewport,
     style: GuideRenderStyle,
+    highlighted = false,
   ): void {
     const pos = pixelPerfect(screenPos);
 
@@ -174,6 +178,12 @@ export class GuideRenderer {
     ctx.lineWidth = style.lineWidth;
     ctx.globalAlpha = style.opacity;
     ctx.setLineDash(style.dashPattern);
+
+    // 🏢 Centralized glow effect — consistent with entity hover (PhaseManager)
+    if (highlighted) {
+      ctx.shadowColor = HOVER_HIGHLIGHT.GUIDE.glowColor;
+      ctx.shadowBlur = HOVER_HIGHLIGHT.GUIDE.shadowBlur;
+    }
 
     ctx.beginPath();
 
@@ -189,7 +199,11 @@ export class GuideRenderer {
 
     ctx.stroke();
 
-    // Reset dash pattern to avoid leaking into subsequent draws
+    // Reset shadow and dash pattern to avoid leaking into subsequent draws
+    if (highlighted) {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+    }
     ctx.setLineDash([]);
   }
 
@@ -198,6 +212,7 @@ export class GuideRenderer {
   /**
    * Draw a diagonal guide line segment (world coordinates → screen).
    * Returns screen positions for intersection marker calculations.
+   * 🏢 Centralized hover glow: when highlighted, applies shadowBlur from HOVER_HIGHLIGHT.GUIDE
    */
   private drawDiagonalGuideLine(
     ctx: CanvasRenderingContext2D,
@@ -206,6 +221,7 @@ export class GuideRenderer {
     transform: ViewTransform,
     viewport: Viewport,
     style: GuideRenderStyle,
+    highlighted = false,
   ): { screenStart: Point2D; screenEnd: Point2D } {
     const { CoordinateTransforms: CT } = require('../../rendering/core/CoordinateTransforms');
     const screenStart: Point2D = CT.worldToScreen(worldStart, transform, viewport);
@@ -216,11 +232,22 @@ export class GuideRenderer {
     ctx.globalAlpha = style.opacity;
     ctx.setLineDash(style.dashPattern);
 
+    // 🏢 Centralized glow effect — consistent with entity hover (PhaseManager)
+    if (highlighted) {
+      ctx.shadowColor = HOVER_HIGHLIGHT.GUIDE.glowColor;
+      ctx.shadowBlur = HOVER_HIGHLIGHT.GUIDE.shadowBlur;
+    }
+
     ctx.beginPath();
     ctx.moveTo(screenStart.x, screenStart.y);
     ctx.lineTo(screenEnd.x, screenEnd.y);
     ctx.stroke();
 
+    // Reset shadow and dash pattern
+    if (highlighted) {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+    }
     ctx.setLineDash([]);
     return { screenStart, screenEnd };
   }
