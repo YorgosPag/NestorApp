@@ -98,6 +98,8 @@ export interface BuildingFloorplanSaveOptions {
   projectId?: string;
   /** User ID who performed the upload */
   createdBy: string;
+  /** Original DXF file — stored as FileRecord for FloorplanGallery rendering */
+  originalFile?: File;
 }
 
 /**
@@ -258,10 +260,12 @@ export class BuildingFloorplanService {
     options: BuildingFloorplanSaveOptions
   ): Promise<void> {
     try {
-      // Use .json extension for the scene data (NOT the original .dxf)
-      const baseName = (data.fileName || `${buildingId}_${type}_floorplan`)
-        .replace(/\.[^.]+$/, ''); // Strip original extension
-      const jsonFileName = `${baseName}.json`;
+      const fileName = data.fileName || `${buildingId}_${type}_floorplan.dxf`;
+
+      // Determine what to upload: original DXF file (preferred) or fallback to scene JSON
+      const hasOriginalFile = !!options.originalFile;
+      const contentType = hasOriginalFile ? (options.originalFile!.type || 'application/dxf') : 'application/json';
+      const ext = hasOriginalFile ? 'dxf' : 'json';
 
       // Step 1: Create pending FileRecord
       const purpose = type === 'building' ? 'building-floorplan' : 'storage-floorplan';
@@ -274,38 +278,50 @@ export class BuildingFloorplanService {
         entityId: buildingId,
         domain: FILE_DOMAINS.CONSTRUCTION,
         category: FILE_CATEGORIES.FLOORPLANS,
-        originalFilename: jsonFileName,
-        contentType: 'application/json',
+        originalFilename: fileName,
+        contentType,
         createdBy: options.createdBy,
         entityLabel,
         purpose,
-        ext: 'json',
+        ext,
         descriptors: [buildingId, `general-${type}`],
       });
 
-      // Step 2: Upload scene JSON to Storage
-      const sceneJson = JSON.stringify(data.scene);
-      const sceneBytes = new TextEncoder().encode(sceneJson);
-
+      // Step 2: Upload file to Storage
       const storageRef = ref(storage, createResult.storagePath);
-      const uploadResult = await uploadBytes(storageRef, sceneBytes, {
-        contentType: 'application/json',
-      });
+      let uploadSize: number;
 
-      // Step 3: Get download URL and finalize
-      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      if (hasOriginalFile) {
+        // Upload original DXF binary — FloorplanGallery can render this
+        const uploadResult = await uploadBytes(storageRef, options.originalFile!, {
+          contentType,
+        });
+        uploadSize = options.originalFile!.size;
+        const downloadUrl = await getDownloadURL(uploadResult.ref);
+        await FileRecordService.finalizeFileRecord({
+          fileId: createResult.fileId,
+          sizeBytes: uploadSize,
+          downloadUrl,
+        });
+      } else {
+        // Fallback: upload scene JSON (for backward compatibility)
+        const sceneJson = JSON.stringify(data.scene);
+        const sceneBytes = new TextEncoder().encode(sceneJson);
+        const uploadResult = await uploadBytes(storageRef, sceneBytes, {
+          contentType: 'application/json',
+        });
+        uploadSize = sceneBytes.length;
+        const downloadUrl = await getDownloadURL(uploadResult.ref);
+        await FileRecordService.finalizeFileRecord({
+          fileId: createResult.fileId,
+          sizeBytes: uploadSize,
+          downloadUrl,
+        });
+      }
 
-      await FileRecordService.finalizeFileRecord({
-        fileId: createResult.fileId,
-        sizeBytes: sceneBytes.length,
-        downloadUrl,
-      });
-
-      // Production-visible success log (bypasses logger suppression)
       // eslint-disable-next-line no-console
-      console.log(`[BuildingFloorplan] FileRecord created: ${createResult.fileId} for building ${buildingId}`);
+      console.log(`[BuildingFloorplan] FileRecord created: ${createResult.fileId} (${ext}, ${uploadSize} bytes)`);
     } catch (error) {
-      // Production-visible error (bypasses logger suppression for debugging)
       // eslint-disable-next-line no-console
       console.error(`[BuildingFloorplan] FileRecord creation FAILED for building ${buildingId}:`,
         error instanceof Error ? error.message : String(error)

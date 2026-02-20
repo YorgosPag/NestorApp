@@ -501,7 +501,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
         const createdBy = user?.uid;
         const fileRecordOptions = selectedCompanyId && createdBy
-          ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, createdBy }
+          ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
           : undefined;
         // eslint-disable-next-line no-console
         console.log('[Pipeline→Building] FileRecord options:', {
