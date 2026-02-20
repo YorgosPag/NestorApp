@@ -1822,6 +1822,9 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-20 | **Fix parallel-from-diagonal**: CreateParallelGuideCommand handles XZ references (shifts start/end perpendicularly), cross product sign detection, ghost diagonal preview for XZ parallel |
 | 2026-02-20 | **Fix guide-delete for XZ**: Hit detection uses `pointToSegmentDistance` for diagonal guides |
 | 2026-02-20 | **Perpendicular guide tool (G→N)**: 1-click — X→Y swap, Y→X swap, XZ→perpendicular diagonal through projection point. Hover highlight in perpendicular mode |
+| 2026-02-20 | **Phase 1C Construction Snap Points**: ConstructionPointStore (singleton+observer), 4 tools: Segment Points (G→S), Distance Points (G→A), Add Point (G→Q), Delete Point (G→W) |
+| 2026-02-20 | **ConstructionPointSnapEngine**: Reads directly from singleton store (no manual sync), X marker rendering with highlight/snap feedback |
+| 2026-02-20 | **Batch undo/redo**: AddConstructionPointBatchCommand uses groupId — entire Segments/Distance batch undone atomically |
 
 ---
 
@@ -2003,3 +2006,98 @@ New type guard and math utilities:
 - [x] Perpendicular guide tool — 1-click (G→N): X→Y, Y→X, XZ→perpendicular diagonal
 - [x] Hover highlight in perpendicular mode
 - [x] i18n translations (EN + EL)
+
+---
+
+## 15. Phase 1C — Construction Snap Points (2026-02-20)
+
+### 15.1 Data Model
+
+New `ConstructionPoint` interface in `guide-types.ts`:
+```typescript
+interface ConstructionPoint {
+  readonly id: string;           // Unique ID (crypto.randomUUID)
+  readonly point: Point2D;       // World coordinates
+  readonly label: string | null; // Optional text label
+  visible: boolean;              // Visibility toggle
+  locked: boolean;               // Lock prevents delete
+  readonly createdAt: string;    // ISO timestamp
+  readonly groupId: string | null; // Batch link for Segments/Distance
+}
+```
+
+Constants: `CONSTRUCTION_POINT_LIMITS = { MAX_POINTS: 5000, MIN_DISTANCE: 0.001, HIT_RADIUS_PX: 6 }`
+
+### 15.2 Files Created (4)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `systems/guides/construction-point-store.ts` | ~300 | ConstructionPointStore singleton — addPoint, addPointsBatch, restorePoint, restorePointsBatch, removePointById, removePointsByGroupId, findNearestPoint, clearAll. Observer + immutable arrays for useSyncExternalStore |
+| `systems/guides/construction-point-commands.ts` | ~120 | ICommand classes: AddConstructionPointCommand, AddConstructionPointBatchCommand, DeleteConstructionPointCommand |
+| `hooks/state/useConstructionPointState.ts` | ~130 | React hook — useSyncExternalStore bridge, computeSegmentPoints(), computeDistancePoints() math |
+| `snapping/engines/ConstructionPointSnapEngine.ts` | ~90 | BaseSnapEngine subclass — reads directly from singleton store (no setPoints call needed) |
+
+### 15.3 Files Modified (17)
+
+| File | Changes |
+|------|---------|
+| `systems/guides/guide-types.ts` | ConstructionPoint interface, CONSTRUCTION_POINT_LIMITS constant |
+| `systems/guides/guide-renderer.ts` | `renderConstructionPoints()`, `drawConstructionPointMarker()` — X/+ markers, gold highlight, snap feedback |
+| `systems/guides/index.ts` | Barrel exports for new store, commands, types |
+| `snapping/extended-types.ts` | `CONSTRUCTION_POINT` in ExtendedSnapType enum, default enabled, priority, tolerance 6px |
+| `snapping/orchestrator/SnapEngineRegistry.ts` | Register ConstructionPointSnapEngine instance |
+| `config/tolerance-config.ts` | `CONSTRUCTION_POINT: 1` in SNAP_ENGINE_PRIORITIES |
+| `ui/toolbar/types.ts` | 4 new ToolType entries: guide-segments, guide-distance, guide-add-point, guide-delete-point |
+| `ui/toolbar/toolDefinitions.tsx` | 4 dropdown entries with icons (ScissorsLineDashed, Ruler, Plus, Minus) and hotkeys |
+| `systems/tools/ToolStateManager.ts` | 4 tool state entries (segments/distance: non-continuous; add/delete: continuous) |
+| `config/keyboard-shortcuts.ts` | G→S (segments), G→A (distance), G→Q (add point), G→W (delete point) |
+| `constants/property-statuses-enterprise.ts` | GUIDE_SEGMENTS, GUIDE_DISTANCE, GUIDE_ADD_POINT, GUIDE_DELETE_POINT labels |
+| `hooks/canvas/useCanvasClickHandler.ts` | Priority 1.8–1.86 click routing for 4 tools |
+| `components/dxf-layout/CanvasSection.tsx` | cpState hook, segments/distance 2-step state, prompt dialogs, highlightedPointId, ghostSegmentLine |
+| `components/dxf-layout/CanvasLayerStack.tsx` | constructionPoints, highlightedPointId, ghostSegmentLine props |
+| `canvas-v2/dxf-canvas/DxfCanvas.tsx` | constructionPoints, highlightedPointId, ghostSegmentLine props + refs + render calls (step 2.6) |
+| `ui/components/ProSnapToolbar.tsx` | CONSTRUCTION_POINT key in SNAP_MODE_KEYS record |
+| `i18n/locales/{en,el}/dxf-viewer.json` | Tool labels, dialog texts, snap mode labels |
+
+### 15.4 Architecture Decisions
+
+1. **Singleton Store read** — ConstructionPointSnapEngine reads directly from `getGlobalConstructionPointStore()` in `findSnapCandidates()` (no manual sync/setPoints call needed). Avoids complex wiring through SnapOrchestrator → SnapEngineRegistry chain
+2. **Batch undo via groupId** — Segments/Distance tools create multiple points with shared `groupId`. `AddConstructionPointBatchCommand.undo()` calls `removePointsByGroupId()` → atomic batch removal. `redo()` restores all via `restorePointsBatch()`
+3. **Ghost segment line** — Reuses same `{ start, end }` pattern as ghostDiagonalGuide. Rendered via `renderGhostDiagonalGuide()` (same visual style)
+4. **X → + snap feedback** — Default ✕ marker (4px, white 0.5α). On snap → + pattern (horizontal+vertical). On delete hover → gold glow highlight
+5. **Rendering at step 2.6** — After guides (2.5), before rulers (3). Ensures points appear above guides but below UI
+
+### 15.5 Math: Segment Points
+
+```typescript
+// segmentCount + 1 points (including start and end)
+for (let i = 0; i <= segmentCount; i++) {
+  const t = i / segmentCount;
+  points.push({ x: start.x + t * dx, y: start.y + t * dy });
+}
+```
+
+### 15.6 Math: Distance Points
+
+```typescript
+// Fixed interval along direction vector, always includes start and end
+let d = distance;
+while (d < totalLen - MIN_DISTANCE) {
+  points.push({ x: start.x + ux * d, y: start.y + uy * d });
+  d += distance;
+}
+```
+
+### 15.7 Features Implemented
+
+- [x] Add Point tool (G→Q) — 1-click, continuous mode
+- [x] Delete Point tool (G→W) — 1-click near marker, gold hover highlight, continuous mode
+- [x] Segment Points tool (G→S) — 2-click + dialog (segment count ≥ 2), batch create
+- [x] Distance Points tool (G→A) — 2-click + dialog (distance > 0), batch create
+- [x] Ghost segment preview (dashed line from start to cursor during step 1)
+- [x] X marker rendering (white ✕, snapped +, delete highlight gold)
+- [x] Snap to construction points (ConstructionPointSnapEngine, reads from singleton)
+- [x] Batch undo/redo (groupId-based atomic operations)
+- [x] Keyboard chord shortcuts (G→S/A/Q/W)
+- [x] i18n translations (EN + EL)
+- [x] ProSnapToolbar integration (CONSTRUCTION_POINT mode toggle)
