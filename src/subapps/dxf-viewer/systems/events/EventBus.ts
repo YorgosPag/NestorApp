@@ -85,6 +85,8 @@ export interface DrawingEventMap {
   'grid:guide-moved': { guideId: string; newOffset: number };
   'grid:group-created': { group: GridGroup };
   'grid:snap-toggled': { enabled: boolean };
+  // 🏢 ADR-189 §4.13: Guide panel → canvas highlight communication
+  'grid:guide-panel-highlight': { guideId: string | null };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

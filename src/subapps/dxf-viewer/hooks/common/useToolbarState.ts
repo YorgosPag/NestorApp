@@ -19,6 +19,8 @@ export function useToolbarState() {
   const [showLayers, setShowLayers] = useState(true); // ✅ DEFAULT: Show colored layers by default
   const [showCalibration, setShowCalibration] = useState(false);
   const [showCursorSettings, setShowCursorSettings] = useState(false);
+  // ADR-189 §4.13: Guide Panel visibility
+  const [showGuidePanel, setShowGuidePanel] = useState(false);
 
   // Tool change handler
   const handleToolChange = useCallback((
@@ -71,6 +73,7 @@ export function useToolbarState() {
   const toggleLayers = useCallback(() => setShowLayers(p => !p), []);
   const toggleCalibration = useCallback(() => setShowCalibration(p => !p), []);
   const toggleCursorSettings = useCallback(() => setShowCursorSettings(p => !p), []);
+  const toggleGuidePanel = useCallback(() => setShowGuidePanel(p => !p), []);
 
   return {
     // State - activeTool removed, now managed by parent
@@ -78,12 +81,14 @@ export function useToolbarState() {
     showLayers,
     showCalibration,
     showCursorSettings,
-    
+    showGuidePanel,
+
     // Actions - setActiveTool removed, now managed by parent
     handleToolChange,
     toggleGrid,
     toggleLayers,
     toggleCalibration,
-    toggleCursorSettings
+    toggleCursorSettings,
+    toggleGuidePanel
   };
 }

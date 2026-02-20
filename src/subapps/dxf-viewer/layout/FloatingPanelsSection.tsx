@@ -18,6 +18,8 @@ import type { ToolType } from '../ui/toolbar/types';
 import { ColorManager } from '../ui/components/ColorManager';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import CursorSettingsPanel from '../ui/CursorSettingsPanel';
+// ADR-189 §4.13: Guide Panel
+import { GuidePanel } from '../ui/panels/guide-panel';
 import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
 import { DraggableOverlayToolbar } from '../ui/components/DraggableOverlayToolbar';
 import { DraggableOverlayProperties } from '../ui/components/DraggableOverlayProperties';
@@ -47,6 +49,7 @@ interface FloatingPanelsSectionProps {
   // Settings Panels
   showCursorSettings: boolean;
   showCalibration: boolean;
+  showGuidePanel: boolean;
   handleAction: (action: string) => void;
 
   // Overlay Toolbar
@@ -91,6 +94,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   floatingRef,
   showCursorSettings,
   showCalibration,
+  showGuidePanel,
   handleAction,
   activeTool,
   overlayMode,
@@ -169,6 +173,14 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         <CursorSettingsPanel
           isVisible={showCursorSettings}
           onClose={() => handleAction('toggle-cursor-settings')}
+        />
+      )}
+
+      {/* ADR-189 §4.13: GUIDE PANEL */}
+      {showGuidePanel && (
+        <GuidePanel
+          isVisible={showGuidePanel}
+          onClose={() => handleAction('toggle-guide-panel')}
         />
       )}
 

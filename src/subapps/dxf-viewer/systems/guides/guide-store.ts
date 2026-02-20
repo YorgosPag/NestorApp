@@ -242,6 +242,18 @@ export class GuideStore implements IGridHeadlessAPI {
     return true;
   }
 
+  /** Set individual guide visibility (separate from global visibility) */
+  setGuideVisible(id: string, visible: boolean): boolean {
+    const guide = this.guides.find(g => g.id === id);
+    if (!guide || guide.visible === visible) return false;
+
+    this.guides = this.guides.map(g =>
+      g.id === id ? { ...g, visible } : g
+    );
+    this.notify();
+    return true;
+  }
+
   /** Set guide locked state */
   setGuideLocked(id: string, locked: boolean): boolean {
     const guide = this.guides.find(g => g.id === id);

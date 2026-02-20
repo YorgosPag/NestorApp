@@ -469,6 +469,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return nearestId;
   }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, transform.scale]);
 
+  // ADR-189 §4.13: Panel highlight — hover over guide row in GuidePanel → highlight on canvas
+  const [panelHighlightGuideId, setPanelHighlightGuideId] = useState<string | null>(null);
+  useEffect(() => {
+    return eventBus.on('grid:guide-panel-highlight', ({ guideId }) => {
+      setPanelHighlightGuideId(guideId);
+    });
+  }, [eventBus]);
+
+  // Merge: panel highlight takes precedence when no tool-based highlight
+  const effectiveHighlightedGuideId = highlightedGuideId ?? panelHighlightGuideId;
+
   // ADR-189: Ghost guide preview (follows cursor when guide tool is active)
   const ghostGuide = useMemo(() => {
     if (!mouseWorld) return null;
@@ -890,7 +901,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         ghostGuide={ghostGuide}
         ghostDiagonalGuide={ghostDiagonalGuide}
         ghostSegmentLine={ghostSegmentLine}
-        highlightedGuideId={highlightedGuideId}
+        highlightedGuideId={effectiveHighlightedGuideId}
         constructionPoints={cpState.points}
         highlightedPointId={highlightedPointId}
       />

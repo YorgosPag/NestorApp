@@ -30,7 +30,7 @@ import type { OverlayEditorMode, Overlay } from '../../overlays/types';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
 import type { SelectedGrip } from '../grips/useGripSystem';
-import { isLineEntity, isPolylineEntity, isArcEntity } from '../../types/entities';
+import { isLineEntity, isPolylineEntity, isArcEntity, isCircleEntity, isRectangleEntity, isRectEntity } from '../../types/entities';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
@@ -252,6 +252,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
             isHit = pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
           } else if (isArcEntity(entity)) {
             isHit = pointToArcDistance(worldPoint, entity) <= hitTolerance;
+          } else if (isCircleEntity(entity)) {
+            // Circle hit-test: distance from point to circumference
+            const dx = worldPoint.x - entity.center.x;
+            const dy = worldPoint.y - entity.center.y;
+            const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+            isHit = Math.abs(distFromCenter - entity.radius) <= hitTolerance;
           } else if (isPolylineEntity(entity)) {
             if (entity.vertices && entity.vertices.length >= 2) {
               for (let i = 0; i < entity.vertices.length - 1; i++) {
@@ -262,6 +268,21 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
               }
               if (!isHit && entity.closed && entity.vertices.length > 2) {
                 isHit = pointToLineDistance(worldPoint, entity.vertices[entity.vertices.length - 1], entity.vertices[0]) <= hitTolerance;
+              }
+            }
+          } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
+            // Rectangle hit-test: check all 4 edges
+            const x = entity.x;
+            const y = entity.y;
+            const w = entity.width;
+            const h = entity.height;
+            const corners = [
+              { x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }
+            ];
+            for (let i = 0; i < 4; i++) {
+              if (pointToLineDistance(worldPoint, corners[i], corners[(i + 1) % 4]) <= hitTolerance) {
+                isHit = true;
+                break;
               }
             }
           }

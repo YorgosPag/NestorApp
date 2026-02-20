@@ -1609,5 +1609,27 @@
     "error": "Error during execution",
     "toggleOpen": "Open AI assistant",
     "toggleClose": "Close AI assistant"
+  },
+  "guidePanel": {
+    "title": "Guides & Points",
+    "toggleAll": "Toggle All",
+    "deleteAllGuides": "Delete All Guides",
+    "deleteAllPoints": "Delete All Points",
+    "snapToGuides": "Snap to Guides",
+    "xGuides": "Vertical (X)",
+    "yGuides": "Horizontal (Y)",
+    "xzGuides": "Diagonal (XZ)",
+    "individualPoints": "Individual Points",
+    "stats": "{{guideCount}} guides, {{pointCount}} points",
+    "empty": "No guides or points yet",
+    "editLabel": "Edit Label",
+    "editLabelMessage": "Guide label",
+    "noLabel": "Unlabeled",
+    "hide": "Hide",
+    "show": "Show",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "delete": "Delete",
+    "deleteGroup": "Delete Group"
   }
 }

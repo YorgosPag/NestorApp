@@ -540,6 +540,8 @@ export class HitTester {
       case 'mtext':
         return this.hitTestText(entity, point, tolerance);
       // 🏢 ENTERPRISE (2026-02-15): Angle measurement hit-test — test both arm segments
+      case 'arc':
+        return this.hitTestArc(entity, point, tolerance);
       case 'angle-measurement':
         return this.hitTestAngleMeasurement(entity, point, tolerance);
       default:

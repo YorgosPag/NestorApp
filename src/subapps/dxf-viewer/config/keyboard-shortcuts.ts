@@ -678,6 +678,7 @@ export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: To
   W: { action: 'tool:guide-delete-point', toolType: 'guide-delete-point' as ToolType, descriptionKey: 'shortcuts.guides.guideDeletePoint' },
   D: { action: 'tool:guide-delete', toolType: 'guide-delete' as ToolType, descriptionKey: 'shortcuts.guides.guideDelete' },
   V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },
+  L: { action: 'action:toggle-guide-panel', descriptionKey: 'shortcuts.guides.guidePanel' },
 } as const;
 
 /** Leader key for guide chords */

@@ -200,6 +200,10 @@ export function useDxfViewerState() {
         guideStore.setVisible(!guideStore.isVisible());
         break;
       }
+      // 📐 ADR-189 §4.13: Toggle Guide Panel (chord: G → L)
+      case 'toggle-guide-panel':
+        toolbarState.toggleGuidePanel();
+        break;
       default:
         console.warn('Unknown action:', action);
     }

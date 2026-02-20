@@ -1603,5 +1603,27 @@
     "error": "Σφάλμα κατά την εκτέλεση",
     "toggleOpen": "Άνοιγμα AI βοηθού",
     "toggleClose": "Κλείσιμο AI βοηθού"
+  },
+  "guidePanel": {
+    "title": "Οδηγοί & Σημεία",
+    "toggleAll": "Εναλλαγή Όλων",
+    "deleteAllGuides": "Διαγραφή Όλων Οδηγών",
+    "deleteAllPoints": "Διαγραφή Όλων Σημείων",
+    "snapToGuides": "Snap σε Οδηγούς",
+    "xGuides": "Κατακόρυφοι (X)",
+    "yGuides": "Οριζόντιοι (Y)",
+    "xzGuides": "Λοξοί (XZ)",
+    "individualPoints": "Μεμονωμένα Σημεία",
+    "stats": "{{guideCount}} οδηγοί, {{pointCount}} σημεία",
+    "empty": "Δεν υπάρχουν οδηγοί ή σημεία",
+    "editLabel": "Επεξεργασία Ετικέτας",
+    "editLabelMessage": "Ετικέτα οδηγού",
+    "noLabel": "Χωρίς ετικέτα",
+    "hide": "Απόκρυψη",
+    "show": "Εμφάνιση",
+    "lock": "Κλείδωμα",
+    "unlock": "Ξεκλείδωμα",
+    "delete": "Διαγραφή",
+    "deleteGroup": "Διαγραφή Ομάδας"
   }
 }
