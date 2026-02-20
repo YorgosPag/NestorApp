@@ -29,6 +29,8 @@ const ALL_MODES: ExtendedSnapType[] = [
   ExtendedSnapType.PARALLEL,
   ExtendedSnapType.ORTHO,
   ExtendedSnapType.GRID,
+  ExtendedSnapType.GUIDE,               // ADR-189: Construction guide snap
+  ExtendedSnapType.CONSTRUCTION_POINT,   // ADR-189: Construction snap points
   ExtendedSnapType.AUTO
 ];
 
@@ -56,9 +58,14 @@ interface SnapProviderProps {
 export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
   const [snapState, setSnapState] = useState<SnapState>(() => {
     const initialState = {} as SnapState;
-    // Set default enabled snaps - ONLY ENDPOINT by default (exclusive mode)
+    // Set default enabled snaps - ENDPOINT + infrastructure types (guide, grid, construction point)
     ALL_MODES.forEach(type => {
-      initialState[type] = (type === ExtendedSnapType.ENDPOINT);
+      initialState[type] = (
+        type === ExtendedSnapType.ENDPOINT ||
+        type === ExtendedSnapType.GUIDE ||
+        type === ExtendedSnapType.CONSTRUCTION_POINT ||
+        type === ExtendedSnapType.GRID
+      );
     });
     return initialState;
   });
