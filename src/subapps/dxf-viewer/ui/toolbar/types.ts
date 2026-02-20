@@ -49,6 +49,7 @@ export type ToolType =
   // ADR-189: Construction guide tools
   | 'guide-x'
   | 'guide-z'
+  | 'guide-xz'         // ADR-189 §3.3: Diagonal guide (3-click)
   | 'guide-parallel'
   | 'guide-delete';
 

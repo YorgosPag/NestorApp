@@ -69,6 +69,7 @@ interface DxfCanvasProps {
   guides?: readonly Guide[];
   guidesVisible?: boolean;
   ghostGuide?: { axis: GridAxis; offset: number } | null;
+  ghostDiagonalGuide?: { start: Point2D; end: Point2D } | null;
   highlightedGuideId?: string | null;
   onTransformChange?: (transform: ViewTransform) => void;
   onEntitySelect?: (entityId: string | null) => void;
@@ -118,6 +119,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   guides,
   guidesVisible = true,
   ghostGuide,
+  ghostDiagonalGuide,
   highlightedGuideId,
   onTransformChange,
   onEntitySelect,
@@ -200,6 +202,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   highlightedGuideIdRef.current = highlightedGuideId;
   const ghostGuideRef = useRef(ghostGuide);
   ghostGuideRef.current = ghostGuide;
+  const ghostDiagonalGuideRef = useRef(ghostDiagonalGuide);
+  ghostDiagonalGuideRef.current = ghostDiagonalGuide;
 
   // ✅ IMPERATIVE HANDLE: Expose methods για external controls
   useImperativeHandle(ref, () => ({
@@ -475,6 +479,17 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
             guideRendererRef.current.renderGhostGuide(ctx, currentGhost.axis, currentGhost.offset, currentTransform, currentViewport);
           }
         }
+        // Ghost diagonal guide preview (3-click placement — ADR-189 §3.3)
+        const currentGhostDiagonal = ghostDiagonalGuideRef.current;
+        if (currentGhostDiagonal) {
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            guideRendererRef.current.renderGhostDiagonalGuide(
+              ctx, currentGhostDiagonal.start, currentGhostDiagonal.end, currentTransform, currentViewport,
+            );
+          }
+        }
       }
 
       // 3️⃣ RENDER RULERS (after grid, so it's on top of grid)
@@ -543,7 +558,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // 🏢 ADR-119: Mark dirty when dependencies change
   useEffect(() => {
     isDirtyRef.current = true;
-  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide, highlightedGuideId]);
+  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide, ghostDiagonalGuide, highlightedGuideId]);
 
   // 🏢 FIX (2026-02-13): Mark dirty when selection state changes so RAF loop re-renders
   // The actual selection box rendering now happens inside renderScene (step 4️⃣)

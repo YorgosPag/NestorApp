@@ -1440,6 +1440,7 @@
     "aiAssistant": "AI Drawing",
     "guideX": "Vertical Guide",
     "guideZ": "Horizontal Guide",
+    "guideXZ": "Diagonal Guide",
     "guideParallel": "Parallel Guide",
     "guideDelete": "Delete Guide"
   },

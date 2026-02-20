@@ -669,6 +669,7 @@ export const DXF_DEBUG_SHORTCUTS: Record<string, ShortcutDefinition> = {
 export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: ToolType; descriptionKey: string }> = {
   X: { action: 'tool:guide-x', toolType: 'guide-x' as ToolType, descriptionKey: 'shortcuts.guides.guideX' },
   Z: { action: 'tool:guide-z', toolType: 'guide-z' as ToolType, descriptionKey: 'shortcuts.guides.guideZ' },
+  K: { action: 'tool:guide-xz', toolType: 'guide-xz' as ToolType, descriptionKey: 'shortcuts.guides.guideXZ' },
   P: { action: 'tool:guide-parallel', toolType: 'guide-parallel' as ToolType, descriptionKey: 'shortcuts.guides.guideParallel' },
   D: { action: 'tool:guide-delete', toolType: 'guide-delete' as ToolType, descriptionKey: 'shortcuts.guides.guideDelete' },
   V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },

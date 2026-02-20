@@ -40,7 +40,7 @@ import { dlog, dwarn } from '../../debug';
 // ADR-189: Guide system imports
 import type { Guide } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import type { CreateGuideCommand, DeleteGuideCommand } from '../../systems/guides/guide-commands';
+import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/guide-commands';
 
 // ============================================================================
 // TYPES
@@ -142,6 +142,21 @@ export interface UseCanvasClickHandlerParams {
   onParallelRefSelected?: (refGuideId: string) => void;
   /** Step 2 callback: user clicked on a side → determines direction + opens dialog */
   onParallelSideChosen?: (refGuideId: string, sign: 1 | -1) => void;
+
+  // ── ADR-189 §3.3: Diagonal guide 3-click workflow ────────────────────
+  guideAddDiagonalGuide?: (startPoint: Point2D, endPoint: Point2D) => CreateDiagonalGuideCommand;
+  /** Current step of the diagonal workflow (0=start, 1=direction, 2=end) */
+  diagonalStep?: 0 | 1 | 2;
+  /** Start point (set after step 0) */
+  diagonalStartPoint?: Point2D | null;
+  /** Direction point (set after step 1) */
+  diagonalDirectionPoint?: Point2D | null;
+  /** Step 0 callback: set the start point */
+  onDiagonalStartSet?: (point: Point2D) => void;
+  /** Step 1 callback: set the direction point */
+  onDiagonalDirectionSet?: (point: Point2D) => void;
+  /** Step 2 callback: set the end point + create guide + reset */
+  onDiagonalComplete?: () => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -170,6 +185,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // ADR-189: Guide handlers
     guideAddGuide, guideRemoveGuide, guides,
     parallelRefGuideId, onParallelRefSelected, onParallelSideChosen,
+    // ADR-189 §3.3: Diagonal guide handlers
+    guideAddDiagonalGuide,
+    diagonalStep = 0, diagonalStartPoint, diagonalDirectionPoint,
+    onDiagonalStartSet, onDiagonalDirectionSet, onDiagonalComplete,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -237,6 +256,37 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
 
     // PRIORITY 1.6: ADR-189 — Construction guide tools
+
+    // ADR-189 §3.3: Diagonal (XZ) guide — 3-click state machine
+    if (activeTool === 'guide-xz') {
+      if (diagonalStep === 0 && onDiagonalStartSet) {
+        // Step 0 → 1: Set start point
+        onDiagonalStartSet(worldPoint);
+        dlog('useCanvasClickHandler', 'Diagonal step 0: start set', worldPoint);
+        return;
+      }
+      if (diagonalStep === 1 && onDiagonalDirectionSet) {
+        // Step 1 → 2: Set direction point
+        onDiagonalDirectionSet(worldPoint);
+        dlog('useCanvasClickHandler', 'Diagonal step 1: direction set', worldPoint);
+        return;
+      }
+      if (diagonalStep === 2 && diagonalStartPoint && diagonalDirectionPoint && guideAddDiagonalGuide) {
+        // Step 2 → 0: Project click onto direction line → create guide → reset
+        const dx = diagonalDirectionPoint.x - diagonalStartPoint.x;
+        const dy = diagonalDirectionPoint.y - diagonalStartPoint.y;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq > 0) {
+          const t = ((worldPoint.x - diagonalStartPoint.x) * dx + (worldPoint.y - diagonalStartPoint.y) * dy) / lenSq;
+          const endPoint = { x: diagonalStartPoint.x + t * dx, y: diagonalStartPoint.y + t * dy };
+          guideAddDiagonalGuide(diagonalStartPoint, endPoint);
+          dlog('useCanvasClickHandler', 'Diagonal step 2: guide created', { start: diagonalStartPoint, end: endPoint });
+        }
+        onDiagonalComplete?.();
+      }
+      return;
+    }
+
     if (activeTool === 'guide-x' && guideAddGuide) {
       guideAddGuide('X', worldPoint.x);
       dlog('useCanvasClickHandler', 'Guide X added at offset', worldPoint.x);

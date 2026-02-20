@@ -11,6 +11,7 @@
  */
 
 import type { ICommand, SerializedCommand } from '../../core/commands/interfaces';
+import type { Point2D } from '../../rendering/types/Types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import type { Guide } from './guide-types';
 import type { GuideStore } from './guide-store';
@@ -246,5 +247,93 @@ export class CreateParallelGuideCommand implements ICommand {
 
   getAffectedEntityIds(): string[] {
     return this.createdGuide ? [this.createdGuide.id] : [];
+  }
+}
+
+// ============================================================================
+// CREATE DIAGONAL GUIDE COMMAND
+// ============================================================================
+
+/**
+ * Command for creating a diagonal (XZ) construction guide.
+ * Defined by start and end points. Supports undo (remove) and redo (re-add).
+ *
+ * @see ADR-189 §3.3 (Περασιά XZ — 3-click diagonal guide)
+ */
+export class CreateDiagonalGuideCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'CreateDiagonalGuide';
+  readonly type = 'create-diagonal-guide';
+  readonly timestamp: number;
+
+  private createdGuide: Guide | null = null;
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly startPoint: Point2D,
+    private readonly endPoint: Point2D,
+    private readonly label: string | null = null,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+  }
+
+  execute(): void {
+    if (this.createdGuide) {
+      // Re-execute (redo) — restore the exact same guide
+      this.store.restoreGuide(this.createdGuide);
+    } else {
+      // First execution
+      this.createdGuide = this.store.addDiagonalGuideRaw(
+        this.startPoint, this.endPoint, this.label,
+      ) ?? null;
+    }
+  }
+
+  undo(): void {
+    if (this.createdGuide) {
+      this.store.removeGuideById(this.createdGuide.id);
+    }
+  }
+
+  redo(): void {
+    this.execute();
+  }
+
+  getDescription(): string {
+    const sx = this.startPoint.x.toFixed(1);
+    const sy = this.startPoint.y.toFixed(1);
+    const ex = this.endPoint.x.toFixed(1);
+    const ey = this.endPoint.y.toFixed(1);
+    return `Create diagonal guide from (${sx}, ${sy}) to (${ex}, ${ey})`;
+  }
+
+  canMergeWith(): boolean {
+    return false;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: {
+        startPoint: this.startPoint,
+        endPoint: this.endPoint,
+        label: this.label,
+        guideId: this.createdGuide?.id ?? null,
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuide ? [this.createdGuide.id] : [];
+  }
+
+  /** Get the created guide (after execution) */
+  getCreatedGuide(): Guide | null {
+    return this.createdGuide;
   }
 }

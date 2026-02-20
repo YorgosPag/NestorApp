@@ -201,6 +201,7 @@ export interface CanvasLayerStackProps {
   guides?: readonly import('../../systems/guides/guide-types').Guide[];
   guidesVisible?: boolean;
   ghostGuide?: { axis: import('../../ai-assistant/grid-types').GridAxis; offset: number } | null;
+  ghostDiagonalGuide?: { start: import('../../rendering/types/Types').Point2D; end: import('../../rendering/types/Types').Point2D } | null;
   highlightedGuideId?: string | null;
 
   // === Entity-picking mode (angle measurement tools) ===
@@ -228,7 +229,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   drawingState, entityJoin, pdf, onMouseMove,
   entityPickingActive,
   // ADR-189: Construction guides
-  guides, guidesVisible, ghostGuide, highlightedGuideId,
+  guides, guidesVisible, ghostGuide, ghostDiagonalGuide, highlightedGuideId,
 }) => {
   // --- Destructure grouped props ---
   const { crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings } = settings;
@@ -479,6 +480,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               guides={guides}
               guidesVisible={guidesVisible}
               ghostGuide={ghostGuide}
+              ghostDiagonalGuide={ghostDiagonalGuide}
               highlightedGuideId={highlightedGuideId}
               onLayerSelected={handleOverlayClickWithEntityClear}
               onMultiLayerSelected={handleMultiOverlayClickWithEntityClear}

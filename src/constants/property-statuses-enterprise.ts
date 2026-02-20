@@ -1427,6 +1427,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
   // ADR-189: Construction guide tools
   GUIDE_X: 'tools.guideX',
   GUIDE_Z: 'tools.guideZ',
+  GUIDE_XZ: 'tools.guideXZ',
   GUIDE_PARALLEL: 'tools.guideParallel',
   GUIDE_DELETE: 'tools.guideDelete',
 } as const;

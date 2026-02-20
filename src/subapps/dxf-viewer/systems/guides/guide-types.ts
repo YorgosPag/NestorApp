@@ -13,6 +13,7 @@
  */
 
 import type { GridAxis, GridGuideStyle } from '../../ai-assistant/grid-types';
+import type { Point2D } from '../../rendering/types/Types';
 
 // Re-export for convenience
 export type { GridAxis } from '../../ai-assistant/grid-types';
@@ -25,9 +26,9 @@ export type { GridAxis } from '../../ai-assistant/grid-types';
 export interface Guide {
   /** Unique identifier (e.g. "guide_X_001") */
   readonly id: string;
-  /** Axis: 'X' = vertical line, 'Y' = horizontal line */
+  /** Axis: 'X' = vertical line, 'Y' = horizontal line, 'XZ' = diagonal (finite segment) */
   readonly axis: GridAxis;
-  /** Offset from origin along the perpendicular axis (in canvas/world units) */
+  /** Offset from origin along the perpendicular axis (in canvas/world units). For XZ: unused (0). */
   offset: number;
   /** Optional user-visible label (e.g. "A", "1") */
   label: string | null;
@@ -41,6 +42,10 @@ export interface Guide {
   readonly createdAt: string;
   /** Optional reference to parent guide (for parallel guides) */
   readonly parentId: string | null;
+  /** Start point for diagonal (XZ) guides. Undefined for axis-aligned guides. */
+  readonly startPoint?: Point2D;
+  /** End point for diagonal (XZ) guides. Undefined for axis-aligned guides. */
+  readonly endPoint?: Point2D;
 }
 
 // ============================================================================
@@ -65,6 +70,8 @@ export const GUIDE_COLORS = {
   X: '#00BCD4',
   /** Tomato — horizontal (Z/Y-axis) guides */
   Y: '#FF6347',
+  /** Indigo — diagonal (XZ) guides */
+  XZ: '#6366F1',
   /** Purple — parallel offset guides */
   PARALLEL: '#9370DB',
   /** Ghost preview (during placement) */
@@ -108,3 +115,56 @@ export const GUIDE_LIMITS = {
   /** Minimum offset between two guides on the same axis (prevents duplicates) */
   MIN_OFFSET_DELTA: 0.001,
 } as const;
+
+// ============================================================================
+// TYPE GUARDS & UTILITIES
+// ============================================================================
+
+/** Type guard: checks if a guide is a diagonal (XZ) guide with defined endpoints */
+export function isDiagonalGuide(guide: Guide): guide is Guide & { readonly startPoint: Point2D; readonly endPoint: Point2D } {
+  return guide.axis === 'XZ' && guide.startPoint !== undefined && guide.endPoint !== undefined;
+}
+
+/**
+ * Distance from a point to a line segment (clamped to endpoints).
+ * Reused by GuideStore.findNearestGuide() and GuideSnapEngine.
+ */
+export function pointToSegmentDistance(point: Point2D, segStart: Point2D, segEnd: Point2D): number {
+  const dx = segEnd.x - segStart.x;
+  const dy = segEnd.y - segStart.y;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq === 0) {
+    return Math.sqrt((point.x - segStart.x) ** 2 + (point.y - segStart.y) ** 2);
+  }
+
+  const t = Math.max(0, Math.min(1, ((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq));
+  const projX = segStart.x + t * dx;
+  const projY = segStart.y + t * dy;
+  return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
+}
+
+/**
+ * Project a point onto a line segment, returning the projected point and parameter t.
+ * t is clamped to [0, 1] (bounded to segment endpoints).
+ */
+export function projectPointOnSegment(
+  point: Point2D,
+  segStart: Point2D,
+  segEnd: Point2D,
+): { snapPoint: Point2D; distance: number; t: number } {
+  const dx = segEnd.x - segStart.x;
+  const dy = segEnd.y - segStart.y;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq === 0) {
+    const d = Math.sqrt((point.x - segStart.x) ** 2 + (point.y - segStart.y) ** 2);
+    return { snapPoint: { x: segStart.x, y: segStart.y }, distance: d, t: 0 };
+  }
+
+  const t = Math.max(0, Math.min(1, ((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq));
+  const snapPoint = { x: segStart.x + t * dx, y: segStart.y + t * dy };
+  const distance = Math.sqrt((point.x - snapPoint.x) ** 2 + (point.y - snapPoint.y) ** 2);
+
+  return { snapPoint, distance, t };
+}

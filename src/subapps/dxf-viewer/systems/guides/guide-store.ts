@@ -21,8 +21,9 @@ import type {
   ToggleGridSnapArgs,
   GridOperationResult,
 } from '../../ai-assistant/grid-types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { Guide } from './guide-types';
-import { GUIDE_LIMITS } from './guide-types';
+import { GUIDE_LIMITS, pointToSegmentDistance } from './guide-types';
 import { generateEntityId } from '../entity-creation/utils';
 
 // ============================================================================
@@ -96,9 +97,17 @@ export class GuideStore implements IGridHeadlessAPI {
 
     for (const guide of this.guides) {
       if (!guide.visible) continue;
-      const dist = guide.axis === 'X'
-        ? Math.abs(worldX - guide.offset)
-        : Math.abs(worldY - guide.offset);
+
+      let dist: number;
+      if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+        // Diagonal guide: perpendicular distance to segment
+        dist = pointToSegmentDistance({ x: worldX, y: worldY }, guide.startPoint, guide.endPoint);
+      } else {
+        dist = guide.axis === 'X'
+          ? Math.abs(worldX - guide.offset)
+          : Math.abs(worldY - guide.offset);
+      }
+
       if (dist < bestDist) {
         bestDist = dist;
         nearest = guide;
@@ -154,6 +163,44 @@ export class GuideStore implements IGridHeadlessAPI {
 
     // CRITICAL: Create new array — useSyncExternalStore uses Object.is()
     // Mutating in-place (push) keeps the same reference → React won't re-render
+    this.guides = [...this.guides, guide];
+    this.notify();
+    return guide;
+  }
+
+  /** Add a diagonal (XZ) guide defined by start and end points. Returns created guide or undefined. */
+  addDiagonalGuideRaw(
+    startPoint: Point2D,
+    endPoint: Point2D,
+    label: string | null = null,
+  ): Guide | undefined {
+    if (this.guides.length >= GUIDE_LIMITS.MAX_GUIDES) {
+      console.warn(`[GuideStore] Max guides limit reached (${GUIDE_LIMITS.MAX_GUIDES})`);
+      return undefined;
+    }
+
+    // Validate minimum length (avoid zero-length diagonals)
+    const dx = endPoint.x - startPoint.x;
+    const dy = endPoint.y - startPoint.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    if (length < GUIDE_LIMITS.MIN_OFFSET_DELTA) {
+      return undefined;
+    }
+
+    const guide: Guide = {
+      id: `guide_${generateEntityId()}`,
+      axis: 'XZ',
+      offset: 0,  // Not used for diagonal guides
+      label,
+      style: null,
+      visible: true,
+      locked: false,
+      createdAt: new Date().toISOString(),
+      parentId: null,
+      startPoint: { x: startPoint.x, y: startPoint.y },
+      endPoint: { x: endPoint.x, y: endPoint.y },
+    };
+
     this.guides = [...this.guides, guide];
     this.notify();
     return guide;

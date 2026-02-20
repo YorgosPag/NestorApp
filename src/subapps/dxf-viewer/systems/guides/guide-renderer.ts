@@ -60,10 +60,25 @@ export class GuideRenderer {
     const xPositions: number[] = [];
     const yPositions: number[] = [];
 
+    // ADR-189 §3.3: Collect diagonal guides for intersection calculation
+    const diagonalGuides: Array<{ guide: Guide; screenStart: Point2D; screenEnd: Point2D }> = [];
+
     for (const guide of guides) {
       if (!guide.visible) continue;
 
       const isHighlighted = guide.id === highlightedGuideId;
+
+      // ADR-189 §3.3: Diagonal (XZ) guides — finite line segment
+      if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+        const style = isHighlighted ? HIGHLIGHT_GUIDE_STYLE : this.resolveDiagonalStyle();
+        const { screenStart, screenEnd } = this.drawDiagonalGuideLine(
+          ctx, guide.startPoint, guide.endPoint, transform, viewport, style,
+        );
+        diagonalGuides.push({ guide, screenStart, screenEnd });
+        continue;
+      }
+
+      // Axis-aligned guides (X / Y)
       const style = isHighlighted ? HIGHLIGHT_GUIDE_STYLE : this.resolveStyle(guide);
       const screenPos = this.guideOffsetToScreen(guide.axis, guide.offset, transform, viewport);
 
@@ -81,6 +96,11 @@ export class GuideRenderer {
     // Draw intersection markers (small ✕) where X and Y guides cross
     if (xPositions.length > 0 && yPositions.length > 0) {
       this.drawIntersectionMarkers(ctx, xPositions, yPositions, viewport);
+    }
+
+    // ADR-189 §3.3: Draw intersection markers where diagonal guides cross axis-aligned guides
+    if (diagonalGuides.length > 0 && (xPositions.length > 0 || yPositions.length > 0)) {
+      this.drawDiagonalIntersectionMarkers(ctx, diagonalGuides, xPositions, yPositions, viewport);
     }
 
     ctx.restore();
@@ -171,6 +191,122 @@ export class GuideRenderer {
 
     // Reset dash pattern to avoid leaking into subsequent draws
     ctx.setLineDash([]);
+  }
+
+  // ── Diagonal Guide Rendering (ADR-189 §3.3) ──
+
+  /**
+   * Draw a diagonal guide line segment (world coordinates → screen).
+   * Returns screen positions for intersection marker calculations.
+   */
+  private drawDiagonalGuideLine(
+    ctx: CanvasRenderingContext2D,
+    worldStart: Point2D,
+    worldEnd: Point2D,
+    transform: ViewTransform,
+    viewport: Viewport,
+    style: GuideRenderStyle,
+  ): { screenStart: Point2D; screenEnd: Point2D } {
+    const { CoordinateTransforms: CT } = require('../../rendering/core/CoordinateTransforms');
+    const screenStart: Point2D = CT.worldToScreen(worldStart, transform, viewport);
+    const screenEnd: Point2D = CT.worldToScreen(worldEnd, transform, viewport);
+
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = style.lineWidth;
+    ctx.globalAlpha = style.opacity;
+    ctx.setLineDash(style.dashPattern);
+
+    ctx.beginPath();
+    ctx.moveTo(screenStart.x, screenStart.y);
+    ctx.lineTo(screenEnd.x, screenEnd.y);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    return { screenStart, screenEnd };
+  }
+
+  /**
+   * Render a ghost preview for diagonal guide during 3-click placement.
+   */
+  renderGhostDiagonalGuide(
+    ctx: CanvasRenderingContext2D,
+    worldStart: Point2D,
+    worldEnd: Point2D,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    ctx.save();
+    this.drawDiagonalGuideLine(ctx, worldStart, worldEnd, transform, viewport, GHOST_GUIDE_STYLE);
+    ctx.restore();
+  }
+
+  /**
+   * Resolve the render style for a diagonal (XZ) guide.
+   */
+  private resolveDiagonalStyle(): GuideRenderStyle {
+    return { ...DEFAULT_GUIDE_STYLE, color: GUIDE_COLORS.XZ, dashPattern: [6, 3] };
+  }
+
+  /**
+   * Draw intersection markers where diagonal guides cross axis-aligned guides.
+   * For each XZ guide and X/Y guide, compute the intersection point.
+   */
+  private drawDiagonalIntersectionMarkers(
+    ctx: CanvasRenderingContext2D,
+    diagonals: Array<{ guide: Guide; screenStart: Point2D; screenEnd: Point2D }>,
+    xScreenPositions: readonly number[],
+    yScreenPositions: readonly number[],
+    viewport: Viewport,
+  ): void {
+    const size = GuideRenderer.MARKER_SIZE;
+
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 0.8;
+
+    for (const { screenStart: s, screenEnd: e } of diagonals) {
+      const dx = e.x - s.x;
+      const dy = e.y - s.y;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) continue;
+
+      // Intersection with vertical (X) guides: solve for screen X = xPos
+      for (const xPos of xScreenPositions) {
+        if (Math.abs(dx) < 0.001) continue; // Parallel to vertical — no intersection
+        const t = (xPos - s.x) / dx;
+        if (t < 0 || t > 1) continue; // Outside segment
+        const iy = s.y + t * dy;
+        if (iy < -size || iy > viewport.height + size) continue;
+
+        const px = pixelPerfect(xPos);
+        const py = pixelPerfect(iy);
+        ctx.beginPath();
+        ctx.moveTo(px - size, py - size);
+        ctx.lineTo(px + size, py + size);
+        ctx.moveTo(px + size, py - size);
+        ctx.lineTo(px - size, py + size);
+        ctx.stroke();
+      }
+
+      // Intersection with horizontal (Y) guides: solve for screen Y = yPos
+      for (const yPos of yScreenPositions) {
+        if (Math.abs(dy) < 0.001) continue; // Parallel to horizontal — no intersection
+        const t = (yPos - s.y) / dy;
+        if (t < 0 || t > 1) continue; // Outside segment
+        const ix = s.x + t * dx;
+        if (ix < -size || ix > viewport.width + size) continue;
+
+        const px = pixelPerfect(ix);
+        const py = pixelPerfect(yPos);
+        ctx.beginPath();
+        ctx.moveTo(px - size, py - size);
+        ctx.lineTo(px + size, py + size);
+        ctx.moveTo(px + size, py - size);
+        ctx.lineTo(px - size, py + size);
+        ctx.stroke();
+      }
+    }
   }
 
   /**

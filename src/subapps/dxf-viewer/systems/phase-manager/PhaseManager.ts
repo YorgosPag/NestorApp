@@ -44,7 +44,7 @@ import type {
 
 // Centralized configuration
 // 🏢 ADR-119: Centralized Opacity Constants
-import { UI_COLORS, OPACITY } from '../../config/color-config';
+import { UI_COLORS, OPACITY, HOVER_HIGHLIGHT } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-097: Centralized Line Dash Patterns
 import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
@@ -324,10 +324,10 @@ export class PhaseManager {
     this.ctx.strokeStyle = entity.color || '#FFFFFF';
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044: Slightly thicker than normal
     this.ctx.setLineDash([]);
-    this.ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119
-    // AutoCAD-style glow
-    this.ctx.shadowColor = UI_COLORS.ENTITY_HOVER_GLOW;
-    this.ctx.shadowBlur = 8;
+    this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.opacity;
+    // AutoCAD-style glow — centralized in HOVER_HIGHLIGHT config
+    this.ctx.shadowColor = HOVER_HIGHLIGHT.ENTITY.glowColor;
+    this.ctx.shadowBlur = HOVER_HIGHLIGHT.ENTITY.shadowBlur;
   }
 
   // ==========================================================================

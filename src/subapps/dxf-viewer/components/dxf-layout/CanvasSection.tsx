@@ -32,6 +32,8 @@ import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInter
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 // ADR-189: Construction Guide System
 import { useGuideState } from '../../hooks/state/useGuideState';
+import { pointToSegmentDistance } from '../../systems/guides/guide-types';
+import type { Point2D } from '../../rendering/types/Types';
 // ADR-189: Centralized prompt dialog for distance input (parallel guides, future tools)
 import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -246,10 +248,24 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-189: Parallel guide workflow — highlighted reference + prompt dialog
   const [parallelRefGuideId, setParallelRefGuideId] = useState<string | null>(null);
 
+  // ADR-189 §3.3: Diagonal guide 3-click workflow state
+  const [diagonalStep, setDiagonalStep] = useState<0 | 1 | 2>(0);
+  const [diagonalStartPoint, setDiagonalStartPoint] = useState<Point2D | null>(null);
+  const [diagonalDirectionPoint, setDiagonalDirectionPoint] = useState<Point2D | null>(null);
+
   // ADR-189: Reset parallel reference when switching away from guide-parallel tool
   useEffect(() => {
     if (activeTool !== 'guide-parallel') {
       setParallelRefGuideId(null);
+    }
+  }, [activeTool]);
+
+  // ADR-189 §3.3: Reset diagonal state when switching away from guide-xz tool
+  useEffect(() => {
+    if (activeTool !== 'guide-xz') {
+      setDiagonalStep(0);
+      setDiagonalStartPoint(null);
+      setDiagonalDirectionPoint(null);
     }
   }, [activeTool]);
 
@@ -283,6 +299,23 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setParallelRefGuideId(null);
     });
   }, [showPromptDialog, t, guideState]);
+
+  // ADR-189 §3.3: Diagonal guide 3-click callbacks
+  const handleDiagonalStartSet = useCallback((point: Point2D) => {
+    setDiagonalStartPoint(point);
+    setDiagonalStep(1);
+  }, []);
+
+  const handleDiagonalDirectionSet = useCallback((point: Point2D) => {
+    setDiagonalDirectionPoint(point);
+    setDiagonalStep(2);
+  }, []);
+
+  const handleDiagonalComplete = useCallback(() => {
+    setDiagonalStep(0);
+    setDiagonalStartPoint(null);
+    setDiagonalDirectionPoint(null);
+  }, []);
 
   // ADR-189: Guide context menu handlers
   const handleGuideContextDelete = useCallback((guideId: string) => {
@@ -330,9 +363,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     let nearestDist = hitToleranceWorld;
     for (const guide of guideState.guides) {
       if (!guide.visible) continue;
-      const dist = guide.axis === 'X'
-        ? Math.abs(mouseWorld.x - guide.offset)
-        : Math.abs(mouseWorld.y - guide.offset);
+      let dist: number;
+      if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+        dist = pointToSegmentDistance(mouseWorld, guide.startPoint, guide.endPoint);
+      } else {
+        dist = guide.axis === 'X'
+          ? Math.abs(mouseWorld.x - guide.offset)
+          : Math.abs(mouseWorld.y - guide.offset);
+      }
       if (dist < nearestDist) {
         nearestDist = dist;
         nearestId = guide.id;
@@ -355,6 +393,31 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
     return null;
   }, [activeTool, mouseWorld, parallelRefGuideId, guideState.guides]);
+
+  // ADR-189 §3.3: Ghost diagonal guide preview (3-click workflow)
+  const ghostDiagonalGuide = useMemo(() => {
+    if (activeTool !== 'guide-xz' || !mouseWorld) return null;
+
+    if (diagonalStep === 1 && diagonalStartPoint) {
+      // Step 1: Free direction — line from start to cursor
+      return { start: diagonalStartPoint, end: mouseWorld };
+    }
+
+    if (diagonalStep === 2 && diagonalStartPoint && diagonalDirectionPoint) {
+      // Step 2: Constrained — project cursor onto direction line
+      const dx = diagonalDirectionPoint.x - diagonalStartPoint.x;
+      const dy = diagonalDirectionPoint.y - diagonalStartPoint.y;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) return null;
+      const t = ((mouseWorld.x - diagonalStartPoint.x) * dx + (mouseWorld.y - diagonalStartPoint.y) * dy) / lenSq;
+      return {
+        start: diagonalStartPoint,
+        end: { x: diagonalStartPoint.x + t * dx, y: diagonalStartPoint.y + t * dy },
+      };
+    }
+
+    return null;
+  }, [activeTool, mouseWorld, diagonalStep, diagonalStartPoint, diagonalDirectionPoint]);
 
   // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -510,6 +573,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     parallelRefGuideId,
     onParallelRefSelected: handleParallelRefSelected,
     onParallelSideChosen: handleParallelSideChosen,
+    // ADR-189 §3.3: Diagonal guide 3-click workflow
+    guideAddDiagonalGuide: guideState.addDiagonalGuide,
+    diagonalStep,
+    diagonalStartPoint,
+    diagonalDirectionPoint,
+    onDiagonalStartSet: handleDiagonalStartSet,
+    onDiagonalDirectionSet: handleDiagonalDirectionSet,
+    onDiagonalComplete: handleDiagonalComplete,
   });
 
   const { handleSmartDelete } = useSmartDelete({
@@ -672,6 +743,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         guides={guideState.guides}
         guidesVisible={guideState.guidesVisible}
         ghostGuide={ghostGuide}
+        ghostDiagonalGuide={ghostDiagonalGuide}
         highlightedGuideId={highlightedGuideId}
       />
 

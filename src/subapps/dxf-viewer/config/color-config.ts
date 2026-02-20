@@ -61,6 +61,7 @@ const UI_COLORS_BASE = {
   GUIDE_X: '#00BCD4',        // Cyan — vertical (X-axis) guides
   GUIDE_Z: '#FF6347',        // Tomato — horizontal (Y-axis) guides
   GUIDE_PARALLEL: '#9370DB', // Purple — parallel offset guides
+  GUIDE_XZ: '#6366F1',       // Indigo — diagonal (XZ) guides
 
   // Indicators
   INDICATOR_BLUE: '#0099ff',
@@ -702,4 +703,31 @@ export const PREVIEW_DEFAULTS = {
   showGrips: true,
   gripSize: 6,
   gripColor: UI_COLORS.BRIGHT_GREEN,
+} as const;
+
+/**
+ * 🏢 CENTRALIZED HOVER HIGHLIGHT CONFIG
+ *
+ * Single source of truth for ALL hover highlighting across the DXF viewer.
+ * Previously scattered: PhaseManager (entity glow) vs guide-types (guide gold).
+ *
+ * @see PhaseManager.ts — applyHighlightedStyle()
+ * @see guide-types.ts — HIGHLIGHT_GUIDE_STYLE
+ * @see guide-renderer.ts — drawGuideLine() with glow
+ */
+export const HOVER_HIGHLIGHT = {
+  /** Entity hover — AutoCAD-style shadow glow (soft, diffuse) */
+  ENTITY: {
+    glowColor: UI_COLORS.ENTITY_HOVER_GLOW,  // '#FFFF00' yellow
+    shadowBlur: 8,
+    opacity: OPACITY.OPAQUE,
+  },
+  /** Guide hover — consistent glow effect (was harsh solid gold) */
+  GUIDE: {
+    glowColor: '#FFD700',   // Gold — distinct from entity yellow
+    shadowBlur: 6,          // Softer glow, consistent with entity hover
+    lineWidth: 1.5,         // Was 2 → slightly thinner for softer feel
+    opacity: 0.85,          // Was 0.9 → slightly softer
+    dashPattern: [] as readonly number[],
+  },
 } as const;

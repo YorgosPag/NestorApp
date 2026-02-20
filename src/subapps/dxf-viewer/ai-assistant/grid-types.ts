@@ -25,7 +25,7 @@ import type { GhostableEntity } from '../rendering/utils/ghost-entity-renderer';
 // ============================================================================
 
 /** Axis direction for a grid guide line */
-export type GridAxis = 'X' | 'Y';
+export type GridAxis = 'X' | 'Y' | 'XZ';
 
 /** Visual style for a grid guide */
 export interface GridGuideStyle {

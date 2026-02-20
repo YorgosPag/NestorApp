@@ -12,9 +12,10 @@
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 
 // ============================================================================
@@ -37,6 +38,8 @@ export interface UseGuideStateReturn {
   removeGuide: (guideId: string) => DeleteGuideCommand;
   /** Add a parallel guide relative to a reference guide. Returns the command. */
   addParallelGuide: (referenceGuideId: string, offsetDistance: number) => CreateParallelGuideCommand;
+  /** Add a diagonal (XZ) guide from startPoint to endPoint. Returns the command. */
+  addDiagonalGuide: (startPoint: Point2D, endPoint: Point2D, label?: string | null) => CreateDiagonalGuideCommand;
   /** Toggle global guide visibility */
   toggleVisibility: () => void;
   /** Toggle snap-to-guide */
@@ -121,6 +124,18 @@ export function useGuideState(): UseGuideStateReturn {
     return cmd;
   }, [store]);
 
+  const addDiagonalGuide = useCallback((startPoint: Point2D, endPoint: Point2D, label: string | null = null): CreateDiagonalGuideCommand => {
+    const cmd = new CreateDiagonalGuideCommand(store, startPoint, endPoint, label);
+    cmd.execute();
+
+    const createdGuide = cmd.getCreatedGuide();
+    if (createdGuide) {
+      EventBus.emit('grid:guide-added', { guide: createdGuide });
+    }
+
+    return cmd;
+  }, [store]);
+
   const toggleVisibility = useCallback(() => {
     store.setVisible(!store.isVisible());
   }, [store]);
@@ -145,6 +160,7 @@ export function useGuideState(): UseGuideStateReturn {
     addGuide,
     removeGuide,
     addParallelGuide,
+    addDiagonalGuide,
     toggleVisibility,
     toggleSnap,
     clearAll,

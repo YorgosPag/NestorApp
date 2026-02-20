@@ -8,12 +8,13 @@
 // Types
 export type { Guide, GuideRenderStyle, GridAxis } from './guide-types';
 export { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, GUIDE_LIMITS } from './guide-types';
+export { isDiagonalGuide, pointToSegmentDistance, projectPointOnSegment } from './guide-types';
 
 // Store
 export { GuideStore, getGlobalGuideStore } from './guide-store';
 
 // Commands
-export { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand } from './guide-commands';
+export { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand } from './guide-commands';
 
 // Renderer
 export { GuideRenderer } from './guide-renderer';

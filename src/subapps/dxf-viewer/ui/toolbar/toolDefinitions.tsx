@@ -10,6 +10,7 @@ import {
   RotateCw, // 🏢 ADR-188: Entity Rotation System icon
   ArrowDownUp, // ADR-189: Guide vertical icon
   ArrowLeftRight, // ADR-189: Guide horizontal icon
+  Slash, // ADR-189 §3.3: Diagonal guide icon
   CopyPlus, // ADR-189: Parallel guide icon
   Eye, EyeOff, // ADR-189: Guide visibility toggle
 } from "lucide-react";
@@ -245,6 +246,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
         dropdownOptions: [
           { id: 'guide-x' as ToolType, icon: ArrowDownUp, label: DXF_DRAWING_TOOL_LABELS.GUIDE_X, hotkey: 'G→X' },
           { id: 'guide-z' as ToolType, icon: ArrowLeftRight, label: DXF_DRAWING_TOOL_LABELS.GUIDE_Z, hotkey: 'G→Z' },
+          { id: 'guide-xz' as ToolType, icon: Slash, label: DXF_DRAWING_TOOL_LABELS.GUIDE_XZ, hotkey: 'G→K' },
           { id: 'guide-parallel' as ToolType, icon: CopyPlus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PARALLEL, hotkey: 'G→P' },
           { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
         ],

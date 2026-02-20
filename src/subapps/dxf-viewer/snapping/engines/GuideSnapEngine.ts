@@ -18,6 +18,7 @@ import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, type SnapEngineContext, type SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 import type { Guide } from '../../systems/guides/guide-types';
+import { projectPointOnSegment } from '../../systems/guides/guide-types';
 
 /**
  * Snap engine for construction guide lines.
@@ -64,7 +65,12 @@ export class GuideSnapEngine extends BaseSnapEngine {
       let distance: number;
       let snapPoint: Point2D;
 
-      if (guide.axis === 'X') {
+      if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+        // ADR-189 §3.3: Diagonal guide — perpendicular snap to segment
+        const result = projectPointOnSegment(cursorPoint, guide.startPoint, guide.endPoint);
+        distance = result.distance;
+        snapPoint = result.snapPoint;
+      } else if (guide.axis === 'X') {
         // Vertical guide — snap X to guide offset, keep cursor Y
         distance = Math.abs(cursorPoint.x - guide.offset);
         snapPoint = { x: guide.offset, y: cursorPoint.y };
@@ -84,7 +90,7 @@ export class GuideSnapEngine extends BaseSnapEngine {
         ));
       }
 
-      // Performance: cap at 4 candidates (max 2 X + 2 Y nearby guides)
+      // Performance: cap at 4 candidates
       if (candidates.length >= 4) break;
     }
 
