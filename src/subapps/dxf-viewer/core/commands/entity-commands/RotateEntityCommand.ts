@@ -18,7 +18,7 @@ import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
 import { rotateEntity } from '../../../utils/rotation-math';
-import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
+import type { Entity } from '../../../types/entities';
 
 /**
  * Command for rotating multiple entities around a pivot point.
@@ -58,7 +58,7 @@ export class RotateEntityCommand implements ICommand {
         this.entitySnapshots.set(entityId, deepClone(entity));
 
         // Calculate and apply rotated geometry
-        const updates = rotateEntity(entity as unknown as DxfEntityUnion, this.pivot, this.angleDeg);
+        const updates = rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg);
         this.sceneManager.updateEntity(entityId, updates as Partial<SceneEntity>);
       }
     }
@@ -86,7 +86,7 @@ export class RotateEntityCommand implements ICommand {
     for (const entityId of this.entityIds) {
       const snapshot = this.entitySnapshots.get(entityId);
       if (snapshot) {
-        const updates = rotateEntity(snapshot as unknown as DxfEntityUnion, this.pivot, this.angleDeg);
+        const updates = rotateEntity(snapshot as unknown as Entity, this.pivot, this.angleDeg);
         this.sceneManager.updateEntity(entityId, updates as Partial<SceneEntity>);
       }
     }

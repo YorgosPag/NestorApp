@@ -14,7 +14,7 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
-import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
+import type { Entity } from '../types/entities';
 // 🏢 ADR-067: Centralized angle conversion
 import { degToRad, normalizeAngleDeg } from '../rendering/entities/shared/geometry-utils';
 
@@ -53,20 +53,22 @@ export function rotatePoint(point: Point2D, pivot: Point2D, angleDeg: number): P
  * - LINE:  rotate start + end vertices
  * - CIRCLE: rotate center only (radius invariant)
  * - ARC: rotate center + offset startAngle/endAngle by θ
- * - POLYLINE: rotate all vertices
+ * - POLYLINE/LWPOLYLINE: rotate all vertices
+ * - RECTANGLE/RECT: rotate origin + accumulate rotation + recompute corners
  * - TEXT: rotate position + accumulate rotation field
- * - ANGLE-MEASUREMENT: rotate vertex + point1 + point2, recalculate angle
+ * - ANGLE-MEASUREMENT: rotate vertex + point1 + point2
+ * - ELLIPSE: rotate center + offset rotation angle
  *
- * @param entity   - Entity to rotate
+ * @param entity   - Entity to rotate (Enterprise Entity type)
  * @param pivot    - Rotation center
  * @param angleDeg - Angle in degrees (positive = CCW)
  * @returns Partial entity update object
  */
 export function rotateEntity(
-  entity: DxfEntityUnion,
+  entity: Entity,
   pivot: Point2D,
   angleDeg: number
-): Partial<DxfEntityUnion> {
+): Partial<Entity> {
   switch (entity.type) {
     case 'line':
       return {
@@ -87,11 +89,42 @@ export function rotateEntity(
       };
 
     case 'polyline':
+    case 'lwpolyline':
       return {
         vertices: entity.vertices.map(v => rotatePoint(v, pivot, angleDeg)),
       };
 
-    case 'text': {
+    case 'rectangle':
+    case 'rect': {
+      const currentRotation = entity.rotation ?? 0;
+      const newRotation = normalizeAngleDeg(currentRotation + angleDeg);
+      const origin = rotatePoint({ x: entity.x, y: entity.y }, pivot, angleDeg);
+
+      const updates: Partial<Entity> = {
+        x: origin.x,
+        y: origin.y,
+        rotation: newRotation,
+      };
+
+      // Recompute corners if present (used by grip interaction)
+      if (entity.corner1 && entity.corner2) {
+        updates.corner1 = rotatePoint(entity.corner1, pivot, angleDeg);
+        updates.corner2 = rotatePoint(entity.corner2, pivot, angleDeg);
+      }
+
+      return updates;
+    }
+
+    case 'ellipse': {
+      const currentRot = entity.rotation ?? 0;
+      return {
+        center: rotatePoint(entity.center, pivot, angleDeg),
+        rotation: normalizeAngleDeg(currentRot + angleDeg),
+      };
+    }
+
+    case 'text':
+    case 'mtext': {
       const currentRotation = entity.rotation ?? 0;
       return {
         position: rotatePoint(entity.position, pivot, angleDeg),
@@ -110,6 +143,11 @@ export function rotateEntity(
         point2: newPoint2,
       };
     }
+
+    case 'spline':
+      return {
+        controlPoints: entity.controlPoints.map(v => rotatePoint(v, pivot, angleDeg)),
+      };
 
     default:
       return {};
