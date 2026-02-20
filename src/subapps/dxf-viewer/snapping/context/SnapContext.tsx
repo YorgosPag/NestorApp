@@ -5,7 +5,7 @@
  * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Βήμα 3: Αποθήκευση στο Context
  * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
  */
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, type ReactNode, useCallback } from 'react';
 import { ExtendedSnapType } from '../extended-types';
 import type { ProSnapResult } from '../extended-types';
 
@@ -143,10 +143,6 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
       return next;
     });
   };
-
-  useEffect(() => {
-
-  }, [snapEnabled, enabledModes.size, Array.from(enabledModes).join(',')]);
 
   const contextValue: SnapContextType = {
     snapState,

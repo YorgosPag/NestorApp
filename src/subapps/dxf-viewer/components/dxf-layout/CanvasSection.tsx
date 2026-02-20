@@ -13,7 +13,9 @@ import { useGripStyles } from '../../settings-provider';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { useZoom } from '../../systems/zoom';
 import { dwarn, derr } from '../../debug';
-import { useSnapContext } from '../../snapping/context/SnapContext';
+// 🚀 PERF (2026-02-20): CanvasSection no longer subscribes to SnapContext.
+// Snap result is read imperatively from ImmediateSnapStore to avoid re-renders.
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { usePdfBackgroundStore } from '../../pdf-background';
 import { useEventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
@@ -201,7 +203,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
 
   const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement } = useSpecialTools({ activeTool, levelManager });
-  const { currentSnapResult } = useSnapContext();
+  // 🚀 PERF (2026-02-20): Removed currentSnapResult from SnapContext subscription.
+  // CanvasSection is heavy (~dozens of hooks); re-rendering on every snap update (30×/sec)
+  // caused "heavy cursor movement". Now uses ImmediateSnapStore (zero-cost imperative read).
 
   // === Cursor + touch gestures (ADR-176) ===
   const { updatePosition, setActive } = useCursorActions();
@@ -459,14 +463,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
     // 🏢 ENTERPRISE (2026-02-19): Apply snap to container mouseUp for overlay grip alignment
+    // 🚀 PERF (2026-02-20): Read from imperative store — no SnapContext re-render needed
     let worldPos = mouseWorld ?? { x: 0, y: 0 };
-    if (currentSnapResult?.found && currentSnapResult.snappedPoint) {
-      worldPos = currentSnapResult.snappedPoint;
+    const snapResult = getImmediateSnap();
+    if (snapResult?.found && snapResult.point) {
+      worldPos = snapResult.point;
     }
     const consumed = await unified.handleMouseUp(worldPos);
     if (consumed) return;
     // No fallback needed — unified handles all grip commits
-  }, [unified, mouseWorld, currentSnapResult]);
+  }, [unified, mouseWorld]);
 
   // === Layer visibility: always show when drawing/editing ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
@@ -724,7 +730,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         zoomSystem={zoomSystem}
         dxfGripInteraction={unified.dxfProjection}
         universalSelection={universalSelection}
-        currentSnapResult={currentSnapResult}
+        /* 🚀 PERF (2026-02-20): currentSnapResult removed — CanvasLayerStack reads from SnapContext directly */
         setTransform={setTransform}
         mouseCss={mouseCss}
         updateMouseCss={updateMouseCss}

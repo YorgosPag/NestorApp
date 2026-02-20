@@ -58,6 +58,8 @@ import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
 import { setImmediatePosition } from './ImmediatePositionStore';
+// 🚀 PERF (2026-02-20): ImmediateSnapStore — bypass React re-renders for snap results
+import { setImmediateSnap, clearImmediateSnap } from './ImmediateSnapStore';
 // 🏢 ADR-096: Centralized Interaction Timing Constants
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
@@ -200,17 +202,21 @@ export function useCentralizedMouseHandlers({
     clickCount: 0
   });
 
-  // 🚀 PERFORMANCE: Throttle snap detection to max 60fps (16ms interval)
+  // 🚀 PERFORMANCE: Throttle snap detection (max 30fps for heavy scenes)
   const snapThrottleRef = useRef<{
     lastSnapTime: number;
     pendingWorldPos: Point2D | null;
     rafId: number | null;
     lastSnapFound: boolean; // 🚀 PERFORMANCE (2026-01-27): Track last snap state to avoid unnecessary state updates
+    lastSnapX: number; // 🚀 PERF (2026-02-20): Cache last snap point to skip redundant setState
+    lastSnapY: number;
   }>({
     lastSnapTime: 0,
     pendingWorldPos: null,
     rafId: null,
-    lastSnapFound: false
+    lastSnapFound: false,
+    lastSnapX: NaN,
+    lastSnapY: NaN
   });
 
   // 🚀 PERFORMANCE (2026-01-27): Separate throttle for cursor context updates
@@ -448,30 +454,54 @@ export function useCentralizedMouseHandlers({
           const snap = findSnapPoint(worldPos.x, worldPos.y);
 
           if (snap && snap.found && snap.snappedPoint) {
-            // 🚀 PERFORMANCE (2026-01-27): Always update on snap found
-            setSnapResults([{
-              point: snap.snappedPoint,
-              type: snap.activeMode || 'default',
-              entityId: snap.snapPoint?.entityId || null,
-              distance: snap.snapPoint?.distance || 0,
-              priority: 0
-            }]);
-            setCurrentSnapResult(snap);
+            // 🚀 PERF (2026-02-20): Skip React setState if snap point unchanged.
+            // With dense drawings (3000+ entities), snap finds a point on nearly every
+            // mouse move. Without this check, 60 setState/sec → 60 re-renders/sec.
+            // Compare in screen pixels (scale × world) to ignore sub-pixel noise.
+            const sx = snap.snappedPoint.x;
+            const sy = snap.snappedPoint.y;
+            const snapMoved = Math.abs(sx - snapThrottle.lastSnapX) > 0.001
+              || Math.abs(sy - snapThrottle.lastSnapY) > 0.001;
+
+            if (snapMoved || !snapThrottle.lastSnapFound) {
+              snapThrottle.lastSnapX = sx;
+              snapThrottle.lastSnapY = sy;
+              setSnapResults([{
+                point: snap.snappedPoint,
+                type: snap.activeMode || 'default',
+                entityId: snap.snapPoint?.entityId || null,
+                distance: snap.snapPoint?.distance || 0,
+                priority: 0
+              }]);
+              setCurrentSnapResult(snap);
+              // 🚀 PERF (2026-02-20): Write to imperative store — CanvasSection reads
+              // from here instead of SnapContext to avoid expensive re-renders.
+              setImmediateSnap({
+                found: true,
+                point: snap.snappedPoint,
+                mode: snap.activeMode || 'endpoint',
+              });
+            }
             snapThrottle.lastSnapFound = true;
           } else {
             // 🚀 PERFORMANCE (2026-01-27): Only clear state if we previously had a snap
-            // This avoids unnecessary re-renders when continuously moving without snap
             if (snapThrottle.lastSnapFound) {
               setSnapResults([]);
               setCurrentSnapResult(null);
+              clearImmediateSnap();
               snapThrottle.lastSnapFound = false;
+              snapThrottle.lastSnapX = NaN;
+              snapThrottle.lastSnapY = NaN;
             }
           }
         } catch {
           if (snapThrottle.lastSnapFound) {
             setSnapResults([]);
             setCurrentSnapResult(null);
+            clearImmediateSnap();
             snapThrottle.lastSnapFound = false;
+            snapThrottle.lastSnapX = NaN;
+            snapThrottle.lastSnapY = NaN;
           }
         }
       }
@@ -480,7 +510,10 @@ export function useCentralizedMouseHandlers({
       if (snapThrottle.lastSnapFound) {
         setSnapResults([]);
         setCurrentSnapResult(null);
+        clearImmediateSnap();
         snapThrottle.lastSnapFound = false;
+        snapThrottle.lastSnapX = NaN;
+        snapThrottle.lastSnapY = NaN;
       }
     }
 

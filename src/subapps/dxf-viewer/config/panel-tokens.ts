@@ -935,7 +935,7 @@ export const PANEL_LAYOUT = {
     DOUBLE_CLICK_MS: 300,                // Double-click detection window (enterprise standard: 200-400ms range)
     DRAG_THRESHOLD_PX: 5,                // Pixels to move before drag starts
     CURSOR_UPDATE_THROTTLE: 50,          // Cursor context update throttle (20fps - sufficient for UI)
-    SNAP_DETECTION_THROTTLE: 16,         // Snap detection throttle (60fps - high precision needed)
+    SNAP_DETECTION_THROTTLE: 32,         // Snap detection throttle (30fps — balanced: smooth feel + low CPU)
 
     // ─────────────────────────────────────────────────────────────────────────
     // MICRO DELAYS (10-50ms) - Focus/DOM updates

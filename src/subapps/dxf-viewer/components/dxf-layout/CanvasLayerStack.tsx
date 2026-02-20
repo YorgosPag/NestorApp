@@ -38,7 +38,7 @@ import type { CursorSettings } from '../../systems/cursor/config';
 import type { GridSettings, RulerSettings, SnapSettings, SelectionSettings } from '../../canvas-v2';
 import type { GripSettings } from '../../types/gripSettings';
 import type { RulerSettings as GlobalRulerSettings } from '../../systems/rulers-grid/config';
-import type { SnapResult } from '../../snapping/extended-types';
+import { useSnapContext } from '../../snapping/context/SnapContext';
 // ToolType import removed — context menus moved to CanvasSection (PERF 2026-02-19)
 import type {
   VertexHoverInfo,
@@ -144,7 +144,6 @@ export interface CanvasLayerStackProps {
   zoomSystem: ZoomSystemForStack;
   dxfGripInteraction: UseDxfGripInteractionReturn;
   universalSelection: UniversalSelectionForStack;
-  currentSnapResult: SnapResult | null;
   setTransform: (t: ViewTransform) => void;
 
   // === Mouse state ===
@@ -221,7 +220,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   containerRef, dxfCanvasRef, overlayCanvasRef, previewCanvasRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
   dxfScene, colorLayers, colorLayersWithDraft,
   settings, gripState, entityState,
-  zoomSystem, dxfGripInteraction, universalSelection, currentSnapResult, setTransform,
+  zoomSystem, dxfGripInteraction, universalSelection, setTransform,
   mouseCss, updateMouseCss, updateMouseWorld,
   containerHandlers,
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
@@ -231,6 +230,11 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   // ADR-189: Construction guides
   guides, guidesVisible, ghostGuide, ghostDiagonalGuide, highlightedGuideId,
 }) => {
+  // 🚀 PERF (2026-02-20): Read snap result from SnapContext directly instead of
+  // receiving as prop from CanvasSection. This isolates snap-triggered re-renders
+  // to CanvasLayerStack (lightweight) instead of propagating through CanvasSection (heavy).
+  const { currentSnapResult } = useSnapContext();
+
   // --- Destructure grouped props ---
   const { crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings } = settings;
   const { draggingVertex, draggingEdgeMidpoint, hoveredVertexInfo, hoveredEdgeInfo, draggingOverlayBody, dragPreviewPosition } = gripState;

@@ -15,7 +15,6 @@ interface Viewport {
 export class SnapContextManager {
   private viewport: Viewport | null = null;
   private lastCalibWpp = 1;
-  private debugCounter = 0; // 🔍 DIAGNOSTIC: Remove after confirming snap tolerance
 
   constructor(private settings: ProSnapSettings) {}
 
@@ -63,22 +62,7 @@ export class SnapContextManager {
     if (this.viewport) {
       const wpp = this.viewport.worldPerPixelAt(point);
       this.lastCalibWpp = wpp; // Cache latest known value
-
-      // 🔍 DIAGNOSTIC: Log every 200 calls to verify pixel→world conversion
-      // Shows actual tolerance values — REMOVE after confirming snap works correctly
-      this.debugCounter++;
-      if (this.debugCounter % 200 === 1) {
-        const endpointTol = (this.settings.perModePxTolerance as Record<string, number> | undefined)?.['ENDPOINT'] ?? this.settings.snapDistance;
-        console.log(`🎯 SNAP DIAG: wpp=${wpp.toFixed(6)}, hasViewport=true, ENDPOINT=${endpointTol}px → ${(endpointTol * wpp).toFixed(3)} world units`);
-      }
-
       return wpp;
-    }
-
-    // 🔍 DIAGNOSTIC: Log fallback usage
-    this.debugCounter++;
-    if (this.debugCounter % 200 === 1) {
-      console.warn(`⚠️ SNAP DIAG: NO VIEWPORT! Using fallback wpp=${this.lastCalibWpp}`);
     }
 
     return this.lastCalibWpp || 1;

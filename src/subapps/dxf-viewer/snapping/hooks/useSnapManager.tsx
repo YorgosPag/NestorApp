@@ -52,17 +52,19 @@ export const useSnapManager = (
   // 🏢 ENTERPRISE (2026-02-20): Ref-based viewport synchronization.
   // The current zoom scale is stored in a ref so that findSnapPoint() always
   // reads the latest value WITHOUT causing re-renders or callback instability.
-  // This is the same pattern used by AutoCAD's Viewport Dependency Injection
-  // (scale context passed alongside every coordinate operation).
   const scaleRef = useRef(scale ?? 1);
+  // 🚀 PERF (2026-02-20): Track last synced scale to avoid redundant setViewport calls.
+  // setViewport creates objects + propagates through the full chain — only do it on CHANGE.
+  const lastSyncedScaleRef = useRef(0);
 
   // Update scaleRef whenever the external scale changes
   useEffect(() => {
     if (scale !== undefined && scale > 0) {
       scaleRef.current = scale;
 
-      // 🏢 Synchronize snap engine viewport immediately on zoom change
-      if (snapManagerRef.current) {
+      // 🏢 Synchronize snap engine viewport on zoom change
+      if (snapManagerRef.current && scale !== lastSyncedScaleRef.current) {
+        lastSyncedScaleRef.current = scale;
         const s = scale;
         snapManagerRef.current.setViewport({
           scale: s,
@@ -150,17 +152,19 @@ export const useSnapManager = (
       }
 
       // 🏢 FIX (2026-02-20): Set viewport from scaleRef (always current zoom).
-      // Previously used canvas.getContext('2d').getTransform().a which returns DPR,
-      // NOT the zoom scale — causing wpp to always be ~1.0 regardless of zoom.
+      // 🚀 PERF (2026-02-20): Only sync if scale changed since last sync.
       const currentScale = scaleRef.current;
-      snapManagerRef.current.setViewport({
-        scale: currentScale,
-        worldPerPixelAt: () => 1 / currentScale,
-        worldToScreen: (p: Point2D) => ({
-          x: p.x * currentScale,
-          y: p.y * currentScale,
-        }),
-      });
+      if (currentScale !== lastSyncedScaleRef.current) {
+        lastSyncedScaleRef.current = currentScale;
+        snapManagerRef.current.setViewport({
+          scale: currentScale,
+          worldPerPixelAt: () => 1 / currentScale,
+          worldToScreen: (p: Point2D) => ({
+            x: p.x * currentScale,
+            y: p.y * currentScale,
+          }),
+        });
+      }
 
       if (DEBUG_SNAP_MANAGER) {
         dlog('Snap', '[useSnapManager] Calling initialize with', allEntities.length, 'entities');
@@ -194,11 +198,12 @@ export const useSnapManager = (
 
     if (!snapManagerRef.current) return null;
 
-    // 🏢 FIX (2026-02-20): Ensure viewport is synchronized with latest zoom scale
-    // before every snap calculation. Using ref-based read means zero re-renders
-    // and the value is always current (even between React render cycles).
+    // 🚀 PERF (2026-02-20): Only sync viewport when scale actually changed.
+    // During normal mouse movement scale is constant — skip the full setViewport chain.
+    // On zoom change, the useEffect already syncs; this catches the brief render-to-effect gap.
     const currentScale = scaleRef.current;
-    if (currentScale > 0) {
+    if (currentScale > 0 && currentScale !== lastSyncedScaleRef.current) {
+      lastSyncedScaleRef.current = currentScale;
       snapManagerRef.current.setViewport({
         scale: currentScale,
         worldPerPixelAt: () => 1 / currentScale,
