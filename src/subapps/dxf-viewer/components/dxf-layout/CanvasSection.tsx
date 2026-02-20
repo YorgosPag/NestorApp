@@ -434,39 +434,48 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
-  // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes)
+  // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes + snap highlight)
   const highlightedGuideId = useMemo<string | null>(() => {
     if (!mouseWorld || !guideState.guides.length) return null;
 
-    // Highlight only in guide-delete, guide-perpendicular, guide-parallel (step 1: selecting ref)
-    const needsHighlight =
+    // 1. Guide tool modes: highlight nearest guide for delete/perpendicular/parallel
+    const needsToolHighlight =
       activeTool === 'guide-delete' ||
       activeTool === 'guide-perpendicular' ||
       (activeTool === 'guide-parallel' && !parallelRefGuideId);
-    if (!needsHighlight) {
-      // If ref is selected, highlight the reference guide
-      return parallelRefGuideId;
+
+    if (needsToolHighlight) {
+      const hitToleranceWorld = 30 / transform.scale;
+      let nearestId: string | null = null;
+      let nearestDist = hitToleranceWorld;
+      for (const guide of guideState.guides) {
+        if (!guide.visible) continue;
+        let dist: number;
+        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+          dist = pointToSegmentDistance(mouseWorld, guide.startPoint, guide.endPoint);
+        } else {
+          dist = guide.axis === 'X'
+            ? Math.abs(mouseWorld.x - guide.offset)
+            : Math.abs(mouseWorld.y - guide.offset);
+        }
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestId = guide.id;
+        }
+      }
+      return nearestId;
     }
 
-    const hitToleranceWorld = 30 / transform.scale;
-    let nearestId: string | null = null;
-    let nearestDist = hitToleranceWorld;
-    for (const guide of guideState.guides) {
-      if (!guide.visible) continue;
-      let dist: number;
-      if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-        dist = pointToSegmentDistance(mouseWorld, guide.startPoint, guide.endPoint);
-      } else {
-        dist = guide.axis === 'X'
-          ? Math.abs(mouseWorld.x - guide.offset)
-          : Math.abs(mouseWorld.y - guide.offset);
-      }
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestId = guide.id;
-      }
+    // 2. Parallel ref selected → highlight the reference guide
+    if (parallelRefGuideId) return parallelRefGuideId;
+
+    // 3. Snap-based highlight: when snap engine locks onto a guide, highlight it
+    const snap = getImmediateSnap();
+    if (snap?.found && snap.mode === 'guide' && snap.entityId) {
+      return snap.entityId;
     }
-    return nearestId;
+
+    return null;
   }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, transform.scale]);
 
   // ADR-189 §4.13: Panel highlight — hover over guide row in GuidePanel → highlight on canvas

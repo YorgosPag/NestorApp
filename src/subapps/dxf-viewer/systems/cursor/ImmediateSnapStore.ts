@@ -24,6 +24,8 @@ export interface ImmediateSnapResult {
   found: boolean;
   point: Point2D;
   mode: string;
+  /** Entity/guide ID for highlight (e.g., guide.id when mode='guide') */
+  entityId?: string;
 }
 
 // ─── Mutable singleton ────────────────────────────────────────────────────

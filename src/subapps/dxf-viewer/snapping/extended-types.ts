@@ -151,8 +151,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.NEAREST]: 5,        // tight — avoid grabbing everything
     [ExtendedSnapType.QUADRANT]: 6,       // slightly wider for quadrants
     [ExtendedSnapType.PARALLEL]: 8,       // wider for parallel detection
-    [ExtendedSnapType.GUIDE]: 7,           // ADR-189: guide snap tolerance
-    [ExtendedSnapType.CONSTRUCTION_POINT]: 6  // ADR-189: construction point snap tolerance
+    [ExtendedSnapType.GUIDE]: 12,          // ADR-189: guide snap tolerance (wide for easy grab)
+    [ExtendedSnapType.CONSTRUCTION_POINT]: 8  // ADR-189: construction point snap tolerance
   }
 };
 

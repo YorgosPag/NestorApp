@@ -203,6 +203,34 @@ function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
+    // ═ GUIDE: Horizontal double-line with center tick — ADR-189
+    case 'guide':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {/* Two horizontal parallel lines (guide symbol) */}
+          <line x1={strokeWidth} y1={half - 3} x2={size - strokeWidth} y2={half - 3} stroke={color} strokeWidth={strokeWidth} />
+          <line x1={strokeWidth} y1={half + 3} x2={size - strokeWidth} y2={half + 3} stroke={color} strokeWidth={strokeWidth} />
+          {/* Center vertical tick mark */}
+          <line x1={half} y1={strokeWidth} x2={half} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
+        </svg>
+      );
+
+    // ✦ CONSTRUCTION_POINT: Diamond with center dot — ADR-189
+    case 'construction_point':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {/* Diamond outline */}
+          <polygon
+            points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+          {/* Center dot */}
+          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
+        </svg>
+      );
+
     // Default: X shape (intersection style) - fallback
     default:
       return (

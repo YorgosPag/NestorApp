@@ -480,6 +480,7 @@ export function useCentralizedMouseHandlers({
                 found: true,
                 point: snap.snappedPoint,
                 mode: snap.activeMode || 'endpoint',
+                entityId: snap.snapPoint?.entityId,
               });
             }
             snapThrottle.lastSnapFound = true;
