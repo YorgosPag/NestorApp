@@ -102,17 +102,13 @@ export const useSnapManager = (
 
   // Update snap modes when snap settings change
   useEffect(() => {
-    // 🏢 ENTERPRISE: Safe null check for entities array
-    const entityCount = scene?.entities?.length ?? 0;
-    if (snapManagerRef.current && entityCount > 0) {
+    if (!snapManagerRef.current) return;
 
-      // 1) Enable/disable snapping
-      snapManagerRef.current.setEnabled(snapEnabled);
-
-      // 2) ΠΕΡΑΣΕ ΑΚΡΙΒΩΣ τα ενεργά modes (χωρίς leftovers)
-      snapManagerRef.current.updateSettings({ enabledTypes });
-    }
-  }, [snapEnabled, enabledTypes, scene?.entities?.length]);
+    // 🏢 FIX (2026-02-21): Always sync enabled/settings, even with 0 entities.
+    // Guide, Grid, ConstructionPoint engines don't depend on scene entities.
+    snapManagerRef.current.setEnabled(snapEnabled);
+    snapManagerRef.current.updateSettings({ enabledTypes });
+  }, [snapEnabled, enabledTypes]);
 
   // 🔲 GRID SNAP: Update gridStep when it changes
   useEffect(() => {
@@ -143,13 +139,8 @@ export const useSnapManager = (
         dlog('Snap', '[useSnapManager] Combined entities:', allEntities.length);
       }
 
-      // Only initialize if we have entities - avoid spam with empty scenes
-      if (allEntities.length === 0) {
-        if (DEBUG_SNAP_MANAGER) {
-          dlog('Snap', '[useSnapManager] No entities to initialize - skipping');
-        }
-        return;
-      }
+      // 🏢 FIX (2026-02-21): Always set viewport even with 0 entities.
+      // Guide/Grid/ConstructionPoint engines need viewport for pixel→world conversion.
 
       // 🏢 FIX (2026-02-20): Set viewport from scaleRef (always current zoom).
       // 🚀 PERF (2026-02-20): Only sync if scale changed since last sync.

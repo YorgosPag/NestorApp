@@ -99,7 +99,7 @@ export interface ProSnapSettings {
 
 // Default settings για Pro Snap Engine
 export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
-  enabled: false,
+  enabled: true,  // 🏢 FIX (2026-02-21): Default to true — SnapContext.snapEnabled is the real gate
   snapDistance: 7,
   enabledTypes: new Set([
     ExtendedSnapType.AUTO,
