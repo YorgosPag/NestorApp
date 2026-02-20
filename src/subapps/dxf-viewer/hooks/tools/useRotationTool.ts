@@ -25,6 +25,8 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
+import type { Overlay, UpdateOverlayData } from '../../overlays/types';
+import { rotatePoint } from '../../utils/rotation-math';
 
 // ============================================================================
 // TYPES
@@ -46,6 +48,10 @@ export interface UseRotationToolProps {
   previewCanvasRef: React.RefObject<PreviewCanvasHandle | null>;
   /** Callback to switch tool back to select */
   onToolChange?: (tool: string) => void;
+  /** Current overlays for overlay rotation support */
+  currentOverlays?: Overlay[];
+  /** Overlay update handler for persisting rotated polygons */
+  overlayUpdate?: (id: string, patch: UpdateOverlayData) => void;
 }
 
 export interface UseRotationToolReturn {
@@ -85,6 +91,8 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     executeCommand,
     previewCanvasRef,
     onToolChange,
+    currentOverlays = [],
+    overlayUpdate,
   } = props;
 
   const [phase, setPhase] = useState<RotationPhase>('idle');
@@ -195,21 +203,39 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
     if (phase === 'awaiting-angle' && basePoint) {
       // Calculate final angle and execute rotation
-      const sm = getSceneManager();
-      if (!sm) return;
-
       const finalAngle = currentAngle; // Use the angle that was being previewed
 
       if (Math.abs(finalAngle) < 0.001) return; // Skip zero rotation
 
-      const cmd = new RotateEntityCommand(
-        selectedEntityIds,
-        basePoint,
-        finalAngle,
-        sm,
-        false
+      // Check if we're rotating an overlay or a DXF entity
+      const overlayId = selectedEntityIds.find(id =>
+        currentOverlays.some(o => o.id === id)
       );
-      executeCommand(cmd);
+
+      if (overlayId && overlayUpdate) {
+        // ── Overlay rotation: rotate all polygon vertices around pivot ──
+        const overlay = currentOverlays.find(o => o.id === overlayId);
+        if (overlay?.polygon) {
+          const rotatedPolygon: Array<[number, number]> = overlay.polygon.map(([x, y]) => {
+            const rotated = rotatePoint({ x, y }, basePoint, finalAngle);
+            return [rotated.x, rotated.y];
+          });
+          overlayUpdate(overlayId, { polygon: rotatedPolygon });
+        }
+      } else {
+        // ── DXF entity rotation: use RotateEntityCommand ──
+        const sm = getSceneManager();
+        if (!sm) return;
+
+        const cmd = new RotateEntityCommand(
+          selectedEntityIds,
+          basePoint,
+          finalAngle,
+          sm,
+          false
+        );
+        executeCommand(cmd);
+      }
 
       previewCanvasRef.current?.clear();
 
@@ -220,7 +246,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
       setCurrentAngle(0);
       return;
     }
-  }, [isCollectingInput, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
+  }, [isCollectingInput, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef, currentOverlays, overlayUpdate]);
 
   /**
    * Handle mouse move — update angle for preview
@@ -252,19 +278,35 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   const handleAngleInput = useCallback((angleDeg: number) => {
     if (phase !== 'awaiting-angle' || !basePoint) return;
 
-    const sm = getSceneManager();
-    if (!sm) return;
-
     if (Math.abs(angleDeg) < 0.001) return;
 
-    const cmd = new RotateEntityCommand(
-      selectedEntityIds,
-      basePoint,
-      angleDeg,
-      sm,
-      false
+    // Check if we're rotating an overlay or a DXF entity
+    const overlayId = selectedEntityIds.find(id =>
+      currentOverlays.some(o => o.id === id)
     );
-    executeCommand(cmd);
+
+    if (overlayId && overlayUpdate) {
+      const overlay = currentOverlays.find(o => o.id === overlayId);
+      if (overlay?.polygon) {
+        const rotatedPolygon: Array<[number, number]> = overlay.polygon.map(([x, y]) => {
+          const rotated = rotatePoint({ x, y }, basePoint, angleDeg);
+          return [rotated.x, rotated.y];
+        });
+        overlayUpdate(overlayId, { polygon: rotatedPolygon });
+      }
+    } else {
+      const sm = getSceneManager();
+      if (!sm) return;
+
+      const cmd = new RotateEntityCommand(
+        selectedEntityIds,
+        basePoint,
+        angleDeg,
+        sm,
+        false
+      );
+      executeCommand(cmd);
+    }
 
     previewCanvasRef.current?.clear();
 
@@ -273,7 +315,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     setBasePoint(null);
     setReferencePoint(null);
     setCurrentAngle(0);
-  }, [phase, basePoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
+  }, [phase, basePoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef, currentOverlays, overlayUpdate]);
 
   // Prompt text based on phase
   let prompt = '';

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useCanvasOperations } from './interfaces/useCanvasOperations';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DrawingTool } from './drawing/useUnifiedDrawing';
@@ -25,6 +25,8 @@ import { useCanvasContext } from '../contexts/CanvasContext';
 import { getGlobalGuideStore } from '../systems/guides';
 // 🏢 FIX: Grid visibility toggle — use RulersGridContext (single source of truth)
 import { useRulersGridContext } from '../systems/rulers-grid/RulersGridSystem';
+// 📐 ADR-189: EventBus for guide→snap auto-enable
+import { EventBus } from '../systems/events/EventBus';
 
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
@@ -50,6 +52,24 @@ export function useDxfViewerState() {
 
   // 🎯 CENTRALIZED SNAP SYSTEM
   const { snapEnabled, setSnapEnabled } = useSnapContext();
+
+  // 📐 ADR-189: Auto-enable snap when first guide is created + sync GuidePanel toggle
+  useEffect(() => {
+    const unsubGuideAdded = EventBus.on('grid:guide-added', () => {
+      // Auto-enable snap when a guide is created — user expects immediate snapping
+      if (!snapEnabled) {
+        setSnapEnabled(true);
+      }
+    });
+    const unsubSnapToggled = EventBus.on('grid:snap-toggled', ({ enabled }) => {
+      // Sync GuidePanel's snap toggle with SnapContext (the pipeline master switch)
+      setSnapEnabled(enabled);
+    });
+    return () => {
+      unsubGuideAdded();
+      unsubSnapToggled();
+    };
+  }, [snapEnabled, setSnapEnabled]);
 
   // 🏢 FIX: Grid visibility from RulersGridContext (single source of truth)
   // Previously, toolbar used a disconnected local state (useToolbarState.showGrid)

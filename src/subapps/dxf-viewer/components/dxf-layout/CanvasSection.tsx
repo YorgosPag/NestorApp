@@ -650,6 +650,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     executeCommand,
     previewCanvasRef,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+    currentOverlays,
+    overlayUpdate: overlayStore.update,
   });
 
   // ADR-188: Right-click during awaiting-angle → PromptDialog for typed angle input
