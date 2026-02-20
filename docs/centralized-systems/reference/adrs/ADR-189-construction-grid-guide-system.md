@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | PHASE 1A COMPLETE ✅ — Foundation guides (X/Z/parallel/delete), hover highlight, intersection markers, snap engine, undo/redo, prompt dialog. Έτοιμο για Phase 1B (diagonal, labels, panel). |
+| **Status** | PHASE 1C + GUIDE PANEL ✅ — All Phase 1A/B/C complete + Guide Panel UI (§4.13). 11/14 commands implemented. |
 | **Date** | 2026-02-19 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -1825,6 +1825,10 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-20 | **Phase 1C Construction Snap Points**: ConstructionPointStore (singleton+observer), 4 tools: Segment Points (G→S), Distance Points (G→A), Add Point (G→Q), Delete Point (G→W) |
 | 2026-02-20 | **ConstructionPointSnapEngine**: Reads directly from singleton store (no manual sync), X marker rendering with highlight/snap feedback |
 | 2026-02-20 | **Batch undo/redo**: AddConstructionPointBatchCommand uses groupId — entire Segments/Distance batch undone atomically |
+| 2026-02-21 | **Guide Panel UI (§4.13)**: Floating panel (ADR-084 pattern) — guides grouped by axis (X/Y/XZ), construction points grouped by batch. Per-item: visibility, lock, delete, label edit. Keyboard chord G→L |
+| 2026-02-21 | **GuideStore.setGuideVisible()**: Individual guide visibility toggle (separate from global visibility) |
+| 2026-02-21 | **EventBus: 'grid:guide-panel-highlight'**: Panel hover → canvas gold highlight communication |
+| 2026-02-21 | **CanvasSection merge highlight**: Tool-based highlight takes priority, panel highlight fills gap when no tool active |
 
 ---
 
@@ -2101,3 +2105,104 @@ while (d < totalLen - MIN_DISTANCE) {
 - [x] Keyboard chord shortcuts (G→S/A/Q/W)
 - [x] i18n translations (EN + EL)
 - [x] ProSnapToolbar integration (CONSTRUCTION_POINT mode toggle)
+
+---
+
+## 16. Guide Panel UI — §4.13 (2026-02-21)
+
+### 16.1 Overview
+
+Floating panel showing all guides and construction points with per-item actions.
+Pattern: CursorSettingsPanel (FloatingPanel ADR-084 compound component).
+
+- **Position**: Top-right, 320×480px, draggable
+- **Toggle**: Keyboard chord G→L or toolbar action
+- **Architecture**: `GuidePanel` → `GuideListSection` + `ConstructionPointSection`
+
+### 16.2 Files Created (4)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `ui/panels/guide-panel/GuidePanel.tsx` | ~180 | Main FloatingPanel wrapper — global actions bar, empty state, stats footer |
+| `ui/panels/guide-panel/GuideListSection.tsx` | ~170 | Guides grouped by axis (X/Y/XZ) with Radix Collapsible, per-item actions |
+| `ui/panels/guide-panel/ConstructionPointSection.tsx` | ~120 | Points grouped by groupId, batch delete support |
+| `ui/panels/guide-panel/index.ts` | 1 | Barrel export |
+
+### 16.3 Files Modified (12)
+
+| File | Change |
+|------|--------|
+| `systems/guides/guide-store.ts` | +`setGuideVisible(id, visible)` method — individual guide visibility |
+| `systems/events/EventBus.ts` | +`'grid:guide-panel-highlight'` event type |
+| `hooks/common/useToolbarState.ts` | +`showGuidePanel` state + `toggleGuidePanel` callback |
+| `hooks/useDxfViewerState.ts` | +`toggle-guide-panel` action case |
+| `layout/FloatingPanelsSection.tsx` | +`showGuidePanel` prop, conditional GuidePanel render |
+| `app/DxfViewerContent.tsx` | Destructure + pass `showGuidePanel` prop |
+| `config/keyboard-shortcuts.ts` | +`L` key in `DXF_GUIDE_CHORD_MAP` → `action:toggle-guide-panel` |
+| `components/dxf-layout/CanvasSection.tsx` | +`panelHighlightGuideId` state, EventBus subscription, merged highlight |
+| `i18n/locales/en/dxf-viewer.json` | +22 keys in `guidePanel` section |
+| `i18n/locales/el/dxf-viewer.json` | +22 keys in `guidePanel` section (Greek) |
+
+### 16.4 Component Architecture
+
+```
+GuidePanel (FloatingPanel ADR-084)
+  ├─ FloatingPanel.Header (title: "Guides & Points", icon: Ruler)
+  └─ FloatingPanel.Content
+       ├─ <nav> Global Actions Bar
+       │    ├─ Toggle All Visibility (Eye/EyeOff)
+       │    ├─ Snap Toggle (Magnet)
+       │    ├─ Delete All Guides (Trash2)
+       │    └─ Delete All Points (Trash2)
+       ├─ Empty state ("No guides or points yet")
+       ├─ GuideListSection
+       │    ├─ Collapsible "Vertical (X)" — cyan dot
+       │    │    └─ GuideItem × N (color dot, label/offset, Eye, Lock, Pencil, Trash2)
+       │    ├─ Collapsible "Horizontal (Y)" — tomato dot
+       │    │    └─ GuideItem × N
+       │    └─ Collapsible "Diagonal (XZ)" — indigo dot
+       │         └─ GuideItem × N
+       ├─ ConstructionPointSection
+       │    ├─ Collapsible "grp_xxx" — amber dot
+       │    │    ├─ PointItem × N (coordinates, delete)
+       │    │    └─ "Delete Group" button
+       │    └─ Collapsible "Individual Points" — amber dot
+       │         └─ PointItem × N
+       └─ <footer> "5 guides, 12 points"
+```
+
+### 16.5 Per-Item Actions
+
+| Action | Guide | Point | Method |
+|--------|-------|-------|--------|
+| Visibility toggle | ✅ Eye/EyeOff | — | `GuideStore.setGuideVisible()` |
+| Lock/Unlock | ✅ Lock/Unlock | — | `GuideStore.setGuideLocked()` |
+| Delete | ✅ Trash2 (disabled when locked) | ✅ Trash2 | `useGuideState.removeGuide()` / `useConstructionPointState.deletePoint()` |
+| Edit label | ✅ Pencil → PromptDialog | — | `GuideStore.setGuideLabel()` |
+| Hover highlight | ✅ gold on canvas | — | EventBus `'grid:guide-panel-highlight'` |
+| Delete group | — | ✅ (batch by groupId) | `ConstructionPointStore.removePointsByGroupId()` |
+
+### 16.6 Canvas Highlight Merge
+
+```typescript
+// Tool-based highlight takes priority (delete/parallel/perpendicular tools)
+// Panel highlight fills gap when no tool is active
+const effectiveHighlightedGuideId = highlightedGuideId ?? panelHighlightGuideId;
+```
+
+### 16.7 Keyboard Chord
+
+| Leader | Second Key | Action |
+|--------|------------|--------|
+| G | L | `action:toggle-guide-panel` → `handleAction('toggle-guide-panel')` |
+
+### 16.8 Reused Centralized Systems
+
+- FloatingPanel (ADR-084) — compound component
+- Radix Collapsible — group collapse
+- Shadcn Button/Tooltip — action buttons
+- EventBus — panel → canvas communication
+- PromptDialog — label editing
+- PANEL_LAYOUT tokens — spacing
+- GUIDE_COLORS — color dots per axis
+- useSyncExternalStore — tear-free subscriptions
