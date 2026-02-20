@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | PHASE 1C + GUIDE PANEL ✅ — All Phase 1A/B/C complete + Guide Panel UI (§4.13). 11/14 commands implemented. |
+| **Status** | PHASE 1C + GUIDE PANEL + SNAP FIX ✅ — All Phase 1A/B/C complete + Guide Panel UI (§4.13) + Snap-to-guide fully operational. 11/14 commands implemented. |
 | **Date** | 2026-02-19 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -1829,6 +1829,11 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-21 | **GuideStore.setGuideVisible()**: Individual guide visibility toggle (separate from global visibility) |
 | 2026-02-21 | **EventBus: 'grid:guide-panel-highlight'**: Panel hover → canvas gold highlight communication |
 | 2026-02-21 | **CanvasSection merge highlight**: Tool-based highlight takes priority, panel highlight fills gap when no tool active |
+| 2026-02-21 | **Snap-to-guide visual indicators**: SnapIndicatorOverlay — `case 'guide':` (═ double-line + tick), `case 'construction_point':` (◇ diamond + dot) |
+| 2026-02-21 | **Snap tolerance increase**: Guide 7→12px, ConstructionPoint 6→8px — πιο εύκολο grab |
+| 2026-02-21 | **ImmediateSnapStore entityId**: Snap-based guide highlight κατά τη σχεδίαση (guide φωτίζεται χρυσό) |
+| 2026-02-21 | **Auto-enable snap on guide creation**: EventBus `grid:guide-added` → `setSnapEnabled(true)`. Sync `grid:snap-toggled` → SnapContext |
+| 2026-02-21 | **CRITICAL FIX — 5 barriers removed for snap-to-guide**: (1) SnapOrchestrator early-exit on 0 entities, (2) useSnapManager setEnabled guard on entityCount>0, (3) useSnapManager initialize skip on 0 entities, (4) DEFAULT_PRO_SNAP_SETTINGS.enabled=false, (5) **ROOT CAUSE**: SnapContext.ALL_MODES missing GUIDE+CONSTRUCTION_POINT → enabledModes never included them → orchestrator always skipped GuideSnapEngine |
 
 ---
 
