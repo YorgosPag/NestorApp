@@ -244,6 +244,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
 
       if (scene?.entities) {
         const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+        dlog('useCanvasClickHandler', 'Rotation entity search:', {
+          entityCount: scene.entities.length,
+          types: scene.entities.map(e => e.type),
+          hitTolerance,
+          worldPoint,
+        });
 
         for (const entity of scene.entities) {
           let isHit = false;
@@ -325,14 +331,17 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
                     worldPoint.y <= entity.position.y + hitTolerance;
           }
 
+          dlog('useCanvasClickHandler', `Rotation hit-test: ${entity.id} (${entity.type})`, { isHit });
+
           if (isHit) {
             setSelectedEntityIds([entity.id]);
             universalSelection.clearByType('dxf-entity');
             universalSelection.select(entity.id, 'dxf-entity');
-            dlog('useCanvasClickHandler', 'Rotation entity selected:', entity.id);
+            dlog('useCanvasClickHandler', 'Rotation entity SELECTED:', entity.id, entity.type);
             return;
           }
         }
+        dlog('useCanvasClickHandler', 'Rotation: no entity hit at', worldPoint);
       }
       // Click on empty space during awaiting-entity → do nothing (stay in phase)
       return;
