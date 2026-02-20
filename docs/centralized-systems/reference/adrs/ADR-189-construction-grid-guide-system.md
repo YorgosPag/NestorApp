@@ -1812,6 +1812,16 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-20 | **GuideStore expanded**: `setGuideLocked()`, `setGuideLabel()` methods for context menu operations |
 | 2026-02-20 | **Guide visibility toggle button**: Eye/EyeOff action button in toolbar, connected to GuideStore singleton via useSyncExternalStore |
 | 2026-02-20 | **Hotkey labels in dropdown**: Guide tools show G→X, G→Z, G→P, G→D in toolbar dropdown menu |
+| 2026-02-20 | **Phase 1B COMPLETE** — Keyboard chords, context menu, visibility toggle, locking, label editing |
+| 2026-02-20 | **Phase 1C START**: Diagonal (XZ) guides — `GridAxis` extended with `'XZ'`, `Guide` interface with optional `startPoint`/`endPoint`, indigo color `#6366F1` |
+| 2026-02-20 | **CreateDiagonalGuideCommand**: Full undo/redo support, `addDiagonalGuideRaw()` in GuideStore |
+| 2026-02-20 | **3-click diagonal workflow**: Click 1→start, Click 2→direction, Click 3→projected endpoint. Ghost preview: step 1 free direction, step 2 constrained |
+| 2026-02-20 | **Diagonal rendering**: `drawDiagonalGuideLine()`, `renderGhostDiagonalGuide()`, indigo dashed line, intersection markers XZ∩X/Y |
+| 2026-02-20 | **Snap to diagonal segments**: `projectPointOnSegment()` + `pointToSegmentDistance()` utilities in GuideSnapEngine |
+| 2026-02-20 | **Diagonal guide keyboard chord**: G→K, toolbar dropdown entry with Slash icon |
+| 2026-02-20 | **Fix parallel-from-diagonal**: CreateParallelGuideCommand handles XZ references (shifts start/end perpendicularly), cross product sign detection, ghost diagonal preview for XZ parallel |
+| 2026-02-20 | **Fix guide-delete for XZ**: Hit detection uses `pointToSegmentDistance` for diagonal guides |
+| 2026-02-20 | **Perpendicular guide tool (G→N)**: 1-click — X→Y swap, Y→X swap, XZ→perpendicular diagonal through projection point. Hover highlight in perpendicular mode |
 
 ---
 
@@ -1915,3 +1925,81 @@ User selects target market → auto-validate + suggest corrections.
 - [x] Hotkey labels displayed in guide dropdown menu
 - [x] Guide locking (prevents delete/move)
 - [x] Guide label editing via PromptDialog
+
+---
+
+## 14. Phase 1C Implementation Details (2026-02-20)
+
+### 14.1 Data Model Extension
+
+Extended `Guide` interface (backward compatible — optional fields):
+```typescript
+// guide-types.ts
+interface Guide {
+  // ... existing fields ...
+  readonly startPoint?: Point2D;  // Only for XZ diagonal guides
+  readonly endPoint?: Point2D;    // Only for XZ diagonal guides
+}
+```
+
+Extended `GridAxis`:
+```typescript
+type GridAxis = 'X' | 'Y' | 'XZ';
+```
+
+New type guard and math utilities:
+- `isDiagonalGuide(guide)` — type narrowing for XZ guides
+- `pointToSegmentDistance(point, segStart, segEnd)` — clamped perpendicular distance
+- `projectPointOnSegment(point, segStart, segEnd)` — returns `{ snapPoint, distance, t }`
+
+### 14.2 Files Modified (21 — Phase 1C diagonal commit)
+
+| File | Changes |
+|------|---------|
+| `ai-assistant/grid-types.ts` | `GridAxis = 'X' \| 'Y'` → `'X' \| 'Y' \| 'XZ'` |
+| `systems/guides/guide-types.ts` | `startPoint?`, `endPoint?` on Guide, `XZ: '#6366F1'` color, `isDiagonalGuide()`, `pointToSegmentDistance()`, `projectPointOnSegment()` |
+| `config/color-config.ts` | `GUIDE_XZ: '#6366F1'` (indigo) |
+| `systems/guides/guide-store.ts` | `addDiagonalGuideRaw()`, `findNearestGuide()` XZ branch |
+| `systems/guides/guide-commands.ts` | `CreateDiagonalGuideCommand` class, `CreateParallelGuideCommand` XZ support |
+| `systems/guides/guide-renderer.ts` | `drawDiagonalGuideLine()`, `renderGhostDiagonalGuide()`, `resolveDiagonalStyle()`, `drawDiagonalIntersectionMarkers()` |
+| `systems/guides/index.ts` | Barrel exports for new commands and utilities |
+| `snapping/engines/GuideSnapEngine.ts` | XZ snap via `projectPointOnSegment()` |
+| `hooks/state/useGuideState.ts` | `addDiagonalGuide()` method |
+| `hooks/canvas/useCanvasClickHandler.ts` | Priority 1.6 guide-xz 3-click routing, guide-perpendicular handler, XZ hit detection in delete/parallel |
+| `components/dxf-layout/CanvasSection.tsx` | Diagonal 3-click state, ghost diagonal preview, XZ parallel ghost, perpendicular highlight |
+| `components/dxf-layout/CanvasLayerStack.tsx` | `ghostDiagonalGuide` prop pass-through |
+| `canvas-v2/dxf-canvas/DxfCanvas.tsx` | `ghostDiagonalGuide` prop, ref, render in RAF loop |
+| `ui/toolbar/types.ts` | `'guide-xz'`, `'guide-perpendicular'` in ToolType |
+| `ui/toolbar/toolDefinitions.tsx` | Slash + CornerDownRight icons, dropdown entries G→K, G→N |
+| `config/keyboard-shortcuts.ts` | `K` (diagonal), `N` (perpendicular) in chord map |
+| `systems/tools/ToolStateManager.ts` | `guide-xz`, `guide-perpendicular` registry entries |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_XZ`, `GUIDE_PERPENDICULAR` labels |
+| `i18n/locales/en/dxf-viewer.json` | "Diagonal Guide", "Perpendicular Guide" |
+| `i18n/locales/el/dxf-viewer.json` | "Λοξή Περασιά", "Κάθετος Οδηγός" |
+| `systems/phase-manager/PhaseManager.ts` | Guide tool awareness |
+
+### 14.3 Architecture Decisions
+
+1. **Extended Interface (Option B)** — Optional `startPoint?`/`endPoint?` on Guide, not discriminated union. Backward compatible with 15+ existing files
+2. **XZ guides are finite segments** — Unlike infinite X/Y offset lines, diagonals have start and end points
+3. **3-click state machine** — Step 0→start, Step 1→direction (free ghost), Step 2→end (constrained projection onto direction). Follows AutoCAD construction line pattern
+4. **Projection math for Step 2** — `t = dot(AP, AB) / dot(AB, AB)` gives unclamped parameter; endpoint placed along direction line
+5. **Perpendicular to XZ** — Projects click onto reference, creates perpendicular diagonal centered on projection point with half-reference-length in each direction
+6. **Parallel-from-XZ** — Shifts start/end perpendicularly using normal vector `(-dy/len, dx/len) * distance * sign`; sign via cross product
+7. **Indigo (#6366F1) for XZ** — Visually distinct from cyan (X) and tomato (Y)
+
+### 14.4 Features Implemented
+
+- [x] Diagonal (XZ) guide — 3-click placement (start → direction → projected end)
+- [x] Ghost diagonal preview (free direction + constrained to direction)
+- [x] Diagonal rendering (indigo dashed, finite segment)
+- [x] Diagonal intersection markers (XZ ∩ X/Y crossings)
+- [x] Snap to diagonal segments (perpendicular projection, clamped)
+- [x] Diagonal undo/redo (CreateDiagonalGuideCommand)
+- [x] Keyboard chord G→K
+- [x] Parallel from diagonal (perpendicular shift of start/end)
+- [x] Ghost preview for XZ parallel (shifted diagonal follows cursor)
+- [x] Delete diagonal guides (pointToSegmentDistance hit detection)
+- [x] Perpendicular guide tool — 1-click (G→N): X→Y, Y→X, XZ→perpendicular diagonal
+- [x] Hover highlight in perpendicular mode
+- [x] i18n translations (EN + EL)
