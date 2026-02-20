@@ -30,7 +30,7 @@ import type { OverlayEditorMode, Overlay } from '../../overlays/types';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
 import type { SelectedGrip } from '../grips/useGripSystem';
-import { isLineEntity, isPolylineEntity, isArcEntity, isCircleEntity, isRectangleEntity, isRectEntity } from '../../types/entities';
+import { isLineEntity, isPolylineEntity, isLWPolylineEntity, isArcEntity, isCircleEntity, isRectangleEntity, isRectEntity, isTextEntity, isMTextEntity, isEllipseEntity } from '../../types/entities';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
@@ -270,6 +270,19 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
                 isHit = pointToLineDistance(worldPoint, entity.vertices[entity.vertices.length - 1], entity.vertices[0]) <= hitTolerance;
               }
             }
+          } else if (isLWPolylineEntity(entity)) {
+            // LWPolyline hit-test: same as polyline (vertices + closed)
+            if (entity.vertices && entity.vertices.length >= 2) {
+              for (let i = 0; i < entity.vertices.length - 1; i++) {
+                if (pointToLineDistance(worldPoint, entity.vertices[i], entity.vertices[i + 1]) <= hitTolerance) {
+                  isHit = true;
+                  break;
+                }
+              }
+              if (!isHit && entity.closed && entity.vertices.length > 2) {
+                isHit = pointToLineDistance(worldPoint, entity.vertices[entity.vertices.length - 1], entity.vertices[0]) <= hitTolerance;
+              }
+            }
           } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
             // Rectangle hit-test: check all 4 edges
             const x = entity.x;
@@ -285,6 +298,31 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
                 break;
               }
             }
+          } else if (isEllipseEntity(entity)) {
+            // Ellipse hit-test: approximate distance from circumference
+            const dx = worldPoint.x - entity.center.x;
+            const dy = worldPoint.y - entity.center.y;
+            const rx = entity.majorAxis;
+            const ry = entity.minorAxis;
+            // Normalized distance: (dx/rx)^2 + (dy/ry)^2 ≈ 1 means on ellipse
+            const normalizedDist = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
+            isHit = Math.abs(normalizedDist - 1) <= hitTolerance / Math.min(rx, ry);
+          } else if (isTextEntity(entity)) {
+            // Text hit-test: bounding box around position
+            const height = entity.height ?? entity.fontSize ?? 2.5;
+            const width = entity.text.length * height * 0.6;
+            isHit = worldPoint.x >= entity.position.x - hitTolerance &&
+                    worldPoint.x <= entity.position.x + width + hitTolerance &&
+                    worldPoint.y >= entity.position.y - height - hitTolerance &&
+                    worldPoint.y <= entity.position.y + hitTolerance;
+          } else if (isMTextEntity(entity)) {
+            // MText hit-test: bounding box around position
+            const height = entity.height ?? entity.fontSize ?? 2.5;
+            const width = entity.width || (entity.text.length * height * 0.6);
+            isHit = worldPoint.x >= entity.position.x - hitTolerance &&
+                    worldPoint.x <= entity.position.x + width + hitTolerance &&
+                    worldPoint.y >= entity.position.y - height - hitTolerance &&
+                    worldPoint.y <= entity.position.y + hitTolerance;
           }
 
           if (isHit) {

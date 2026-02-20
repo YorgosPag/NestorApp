@@ -16,6 +16,8 @@ import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-109: Centralized Distance Calculation
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
+// 🏢 Arc hit-testing: reuse centralized arc distance utility
+import { pointToArcDistance } from '../../utils/angle-entity-math';
 // 🏢 ADR-095: Centralized Snap Tolerance
 import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 // ADR-130: Centralized Default Layer Name
@@ -590,6 +592,27 @@ export class HitTester {
     const distanceFromCircumference = Math.abs(distanceFromCenter - radius);
 
     if (distanceFromCircumference <= tolerance) {
+      return {
+        hitType: 'entity',
+        hitPoint: point
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * 🏢 ENTERPRISE (2026-02-21): Arc hit testing
+   * Uses centralized pointToArcDistance — handles angular range + distance from circumference.
+   */
+  private hitTestArc(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+    if (!('center' in entity) || !('radius' in entity) || !('startAngle' in entity) || !('endAngle' in entity)) {
+      return null;
+    }
+    const arcEntity = entity as { center: Point2D; radius: number; startAngle: number; endAngle: number };
+
+    const distance = pointToArcDistance(point, arcEntity);
+    if (distance <= tolerance) {
       return {
         hitType: 'entity',
         hitPoint: point
