@@ -315,11 +315,15 @@ service cloud.firestore {
 
       // ✍️ CREATE: Users can create pending FileRecord for their company
       // 🔐 SECURITY: createdBy must match request.auth.uid
-      // 🔐 SECURITY: companyId must match user's company claim
+      // 🔐 SECURITY: companyId must match user's company claim (OR super_admin)
       // 🔐 SECURITY: status must be 'pending' (no direct 'ready' creation)
       allow create: if isAuthenticated()
                     && request.resource.data.createdBy == request.auth.uid
-                    && request.resource.data.companyId == getUserCompanyId()
+                    && (
+                         request.resource.data.companyId == getUserCompanyId()
+                         // super_admin can create files for any company (cross-tenant admin)
+                         || isSuperAdminOnly()
+                       )
                     && request.resource.data.status == 'pending'
                     && resource == null; // Ensure document doesn't exist
 
@@ -327,12 +331,18 @@ service cloud.firestore {
       // 🔐 SECURITY: Limited to specific fields for finalization
       // 🔐 SECURITY: Can only transition pending → ready (or → failed)
       allow update: if isAuthenticated()
-                    && resource.data.companyId == getUserCompanyId()
+                    && (
+                         resource.data.companyId == getUserCompanyId()
+                         // super_admin can finalize files for any company
+                         || isSuperAdminOnly()
+                       )
                     && (
                          // Creator can finalize
                          resource.data.createdBy == request.auth.uid
                          // OR company admin can finalize
                          || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super_admin can finalize
+                         || isSuperAdminOnly()
                        )
                     // Status transitions: pending → ready OR pending → failed
                     && (
