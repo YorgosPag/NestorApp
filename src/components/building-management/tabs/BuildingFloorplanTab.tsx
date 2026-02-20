@@ -74,9 +74,11 @@ export function BuildingFloorplanTab({
   // Resolve building from props
   const resolvedBuilding = building || data;
 
-  // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  // Get userId from auth context
   const currentUserId = user?.uid;
+  // Use building's companyId (supports super_admin cross-tenant access)
+  // Fallback to auth user's companyId for legacy buildings without companyId field
+  const companyId = (resolvedBuilding?.companyId as string | undefined) || user?.companyId;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
   const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
