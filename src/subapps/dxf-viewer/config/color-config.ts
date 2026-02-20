@@ -722,12 +722,12 @@ export const HOVER_HIGHLIGHT = {
     shadowBlur: 8,
     opacity: OPACITY.OPAQUE,
   },
-  /** Guide hover — consistent glow effect (was harsh solid gold) */
+  /** Guide hover — soft glow effect, keeps original guide color (AutoCAD-style) */
   GUIDE: {
-    glowColor: '#FFD700',   // Gold — distinct from entity yellow
-    shadowBlur: 6,          // Softer glow, consistent with entity hover
-    lineWidth: 1.5,         // Was 2 → slightly thinner for softer feel
-    opacity: 0.85,          // Was 0.9 → slightly softer
+    glowColor: '#FFD700',   // Gold glow halo — distinct from entity yellow
+    shadowBlur: 12,         // Prominent glow — must be clearly visible
+    lineWidth: 1.5,         // Slightly thicker than normal (0.5) but not harsh
+    opacity: 0.9,           // Near-opaque during hover for clarity
     dashPattern: [] as readonly number[],
   },
 } as const;

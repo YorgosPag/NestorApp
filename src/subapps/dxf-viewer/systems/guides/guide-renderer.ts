@@ -17,7 +17,7 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Guide, GuideRenderStyle } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, HIGHLIGHT_GUIDE_STYLE } from './guide-types';
+import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE } from './guide-types';
 // 🏢 Centralized hover highlight config — shadowBlur glow for highlighted guides
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-088: Pixel-perfect alignment for crisp 1px rendering
@@ -72,7 +72,8 @@ export class GuideRenderer {
 
       // ADR-189 §3.3: Diagonal (XZ) guides — finite line segment
       if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-        const style = isHighlighted ? HIGHLIGHT_GUIDE_STYLE : this.resolveDiagonalStyle();
+        // 🏢 Centralized: Keep original style, glow is applied by drawDiagonalGuideLine
+        const style = this.resolveDiagonalStyle();
         const { screenStart, screenEnd } = this.drawDiagonalGuideLine(
           ctx, guide.startPoint, guide.endPoint, transform, viewport, style, isHighlighted,
         );
@@ -81,7 +82,8 @@ export class GuideRenderer {
       }
 
       // Axis-aligned guides (X / Y)
-      const style = isHighlighted ? HIGHLIGHT_GUIDE_STYLE : this.resolveStyle(guide);
+      // 🏢 Centralized: Keep original style — glow is applied inside drawGuideLine when highlighted
+      const style = this.resolveStyle(guide);
       const screenPos = this.guideOffsetToScreen(guide.axis, guide.offset, transform, viewport);
 
       // Skip if entirely off-screen
@@ -175,14 +177,18 @@ export class GuideRenderer {
     const pos = pixelPerfect(screenPos);
 
     ctx.strokeStyle = style.color;
-    ctx.lineWidth = style.lineWidth;
-    ctx.globalAlpha = style.opacity;
     ctx.setLineDash(style.dashPattern);
 
-    // 🏢 Centralized glow effect — consistent with entity hover (PhaseManager)
     if (highlighted) {
+      // 🏢 Centralized glow — keep original color, add soft glow (consistent with entity hover)
+      ctx.lineWidth = HOVER_HIGHLIGHT.GUIDE.lineWidth;
+      ctx.globalAlpha = HOVER_HIGHLIGHT.GUIDE.opacity;
+      ctx.setLineDash([]); // Solid line during hover for clarity
       ctx.shadowColor = HOVER_HIGHLIGHT.GUIDE.glowColor;
       ctx.shadowBlur = HOVER_HIGHLIGHT.GUIDE.shadowBlur;
+    } else {
+      ctx.lineWidth = style.lineWidth;
+      ctx.globalAlpha = style.opacity;
     }
 
     ctx.beginPath();
@@ -228,14 +234,18 @@ export class GuideRenderer {
     const screenEnd: Point2D = CT.worldToScreen(worldEnd, transform, viewport);
 
     ctx.strokeStyle = style.color;
-    ctx.lineWidth = style.lineWidth;
-    ctx.globalAlpha = style.opacity;
     ctx.setLineDash(style.dashPattern);
 
-    // 🏢 Centralized glow effect — consistent with entity hover (PhaseManager)
     if (highlighted) {
+      // 🏢 Centralized glow — keep original color, add soft glow (consistent with entity hover)
+      ctx.lineWidth = HOVER_HIGHLIGHT.GUIDE.lineWidth;
+      ctx.globalAlpha = HOVER_HIGHLIGHT.GUIDE.opacity;
+      ctx.setLineDash([]);
       ctx.shadowColor = HOVER_HIGHLIGHT.GUIDE.glowColor;
       ctx.shadowBlur = HOVER_HIGHLIGHT.GUIDE.shadowBlur;
+    } else {
+      ctx.lineWidth = style.lineWidth;
+      ctx.globalAlpha = style.opacity;
     }
 
     ctx.beginPath();
