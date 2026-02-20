@@ -1354,7 +1354,8 @@
       "insertion": "Insertion",
       "near": "Near",
       "ortho": "Ortho",
-      "guide": "Guide"
+      "guide": "Guide",
+      "constructionPoint": "Point"
     },
     "tooltips": {
       "auto": "Auto Snap - Automatically detects the best snap points (F11)",
@@ -1373,7 +1374,8 @@
       "insertion": "Insertion - Snap to insertion points (INS)",
       "near": "Near - Snap near objects (R)",
       "ortho": "Ortho - Constrain to horizontal/vertical lines (F8)",
-      "guide": "Guide - Snap to construction guide lines (G)"
+      "guide": "Guide - Snap to construction guide lines (G)",
+      "constructionPoint": "Point - Snap to construction snap points"
     },
     "ui": {
       "showAdvanced": "Show advanced features",

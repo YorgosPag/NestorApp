@@ -36,6 +36,7 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.NEAR]: 'near',
   [ExtendedSnapType.ORTHO]: 'ortho',
   [ExtendedSnapType.GUIDE]: 'guide',  // ADR-189: Construction guide snap
+  [ExtendedSnapType.CONSTRUCTION_POINT]: 'constructionPoint',  // ADR-189 §3.7-3.16: Construction snap points
 };
 
 // 🏢 ENTERPRISE: Get translated snap label
