@@ -38,6 +38,7 @@ export enum ExtendedSnapType {
   ORTHO = 'ortho',
   GRID = 'grid',
   GUIDE = 'guide',  // ADR-189: Construction guide snap
+  CONSTRUCTION_POINT = 'construction_point',  // ADR-189 §3.7-3.16: Construction snap points
   AUTO = 'auto'
 }
 
@@ -107,7 +108,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.CENTER,
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.GRID,
-    ExtendedSnapType.GUIDE  // ADR-189: Guide snap enabled by default
+    ExtendedSnapType.GUIDE,  // ADR-189: Guide snap enabled by default
+    ExtendedSnapType.CONSTRUCTION_POINT  // ADR-189: Construction point snap
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
@@ -126,6 +128,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.NEAREST,
     ExtendedSnapType.NEAR,
     ExtendedSnapType.GUIDE,  // ADR-189: Construction guide snap
+    ExtendedSnapType.CONSTRUCTION_POINT,  // ADR-189: Construction snap points
     ExtendedSnapType.GRID,
     ExtendedSnapType.AUTO
   ],
@@ -148,7 +151,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.NEAREST]: 5,        // tight — avoid grabbing everything
     [ExtendedSnapType.QUADRANT]: 6,       // slightly wider for quadrants
     [ExtendedSnapType.PARALLEL]: 8,       // wider for parallel detection
-    [ExtendedSnapType.GUIDE]: 7           // ADR-189: guide snap tolerance
+    [ExtendedSnapType.GUIDE]: 7,           // ADR-189: guide snap tolerance
+    [ExtendedSnapType.CONSTRUCTION_POINT]: 6  // ADR-189: construction point snap tolerance
   }
 };
 

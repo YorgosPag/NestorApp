@@ -38,6 +38,7 @@ import { PerpendicularSnapEngine } from '../engines/PerpendicularSnapEngine';
 import { OrthoSnapEngine } from '../engines/OrthoSnapEngine';
 import { GridSnapEngine } from '../engines/GridSnapEngine';
 import { GuideSnapEngine } from '../engines/GuideSnapEngine';
+import { ConstructionPointSnapEngine } from '../engines/ConstructionPointSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -75,6 +76,8 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.GRID, new GridSnapEngine());
     // ADR-189: Construction guide snap
     this.engines.set(ExtendedSnapType.GUIDE, new GuideSnapEngine());
+    // ADR-189 §3.7-3.16: Construction snap points
+    this.engines.set(ExtendedSnapType.CONSTRUCTION_POINT, new ConstructionPointSnapEngine());
 
   }
 
@@ -152,6 +155,9 @@ export class SnapEngineRegistry {
       guideEngine.setGuides(guides);
     }
   }
+
+  // ADR-189 §3.7-3.16: ConstructionPointSnapEngine reads directly from the singleton
+  // ConstructionPointStore — no manual sync needed (removed updateConstructionPointData).
 
   getEngineStats(enabledTypes: Set<ExtendedSnapType>): SnapEngineRegistryStats {
     const stats: SnapEngineRegistryStats = {

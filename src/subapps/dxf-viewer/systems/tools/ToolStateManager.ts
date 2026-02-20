@@ -98,6 +98,11 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-delete': { id: 'guide-delete', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'guide-xz': { id: 'guide-xz', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'guide-perpendicular': { id: 'guide-perpendicular', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 §3.7-3.16: Construction snap point tools
+  'guide-segments': { id: 'guide-segments', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'guide-distance': { id: 'guide-distance', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'guide-add-point': { id: 'guide-add-point', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'guide-delete-point': { id: 'guide-delete-point', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 // ============================================================================

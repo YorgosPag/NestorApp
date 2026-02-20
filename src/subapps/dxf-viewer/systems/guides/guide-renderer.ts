@@ -15,7 +15,7 @@
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
-import type { Guide, GuideRenderStyle } from './guide-types';
+import type { Guide, GuideRenderStyle, ConstructionPoint } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE } from './guide-types';
 // 🏢 Centralized hover highlight config — shadowBlur glow for highlighted guides
@@ -358,6 +358,111 @@ export class GuideRenderer {
     // Standard axis coloring
     const color = guide.axis === 'X' ? GUIDE_COLORS.X : GUIDE_COLORS.Y;
     return { ...DEFAULT_GUIDE_STYLE, color };
+  }
+
+  // ── Construction Point Rendering (ADR-189 §3.7-3.16) ──
+
+  /** Size of construction point markers in pixels */
+  private static readonly CONSTRUCTION_POINT_SIZE = 5;
+
+  /**
+   * Render construction snap points (X markers) onto the canvas.
+   * Called after guide lines — points render on top of guides.
+   *
+   * @param highlightedPointId - Point to highlight in gold (for delete tool hover)
+   * @param snappedPointId - Point currently snapped to (renders as + instead of ✕)
+   */
+  renderConstructionPoints(
+    ctx: CanvasRenderingContext2D,
+    points: readonly ConstructionPoint[],
+    transform: ViewTransform,
+    viewport: Viewport,
+    highlightedPointId?: string | null,
+    snappedPointId?: string | null,
+  ): void {
+    if (points.length === 0) return;
+
+    const { CoordinateTransforms: CT } = require('../../rendering/core/CoordinateTransforms');
+    const size = GuideRenderer.CONSTRUCTION_POINT_SIZE;
+
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+
+    for (const cpt of points) {
+      if (!cpt.visible) continue;
+
+      const screen: Point2D = CT.worldToScreen(cpt.point, transform, viewport);
+      const sx = screen.x;
+      const sy = screen.y;
+
+      // Skip if off-screen
+      if (sx < -size || sx > viewport.width + size) continue;
+      if (sy < -size || sy > viewport.height + size) continue;
+
+      const px = pixelPerfect(sx);
+      const py = pixelPerfect(sy);
+      const isHighlighted = cpt.id === highlightedPointId;
+      const isSnapped = cpt.id === snappedPointId;
+
+      this.drawConstructionPointMarker(ctx, px, py, size, isHighlighted, isSnapped);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw a single construction point marker.
+   * - Default: ✕ (X shape) in white
+   * - Highlighted: ✕ in gold with glow (delete hover)
+   * - Snapped: + (plus shape) in white — §3.5 UX feedback
+   */
+  private drawConstructionPointMarker(
+    ctx: CanvasRenderingContext2D,
+    px: number,
+    py: number,
+    size: number,
+    highlighted: boolean,
+    snapped: boolean,
+  ): void {
+    if (highlighted) {
+      // Gold glow for delete hover
+      ctx.strokeStyle = HOVER_HIGHLIGHT.GUIDE.glowColor;
+      ctx.globalAlpha = HOVER_HIGHLIGHT.GUIDE.opacity;
+      ctx.shadowColor = HOVER_HIGHLIGHT.GUIDE.glowColor;
+      ctx.shadowBlur = HOVER_HIGHLIGHT.GUIDE.shadowBlur;
+      ctx.lineWidth = 1.5;
+    } else {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1;
+    }
+
+    ctx.beginPath();
+
+    if (snapped) {
+      // + shape (horizontal + vertical lines) — snap feedback
+      ctx.moveTo(px - size, py);
+      ctx.lineTo(px + size, py);
+      ctx.moveTo(px, py - size);
+      ctx.lineTo(px, py + size);
+    } else {
+      // ✕ shape (diagonal cross) — default
+      ctx.moveTo(px - size, py - size);
+      ctx.lineTo(px + size, py + size);
+      ctx.moveTo(px + size, py - size);
+      ctx.lineTo(px - size, py + size);
+    }
+
+    ctx.stroke();
+
+    // Reset shadow
+    if (highlighted) {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+    }
   }
 
   // ── Intersection Markers ──

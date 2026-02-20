@@ -121,6 +121,38 @@ export const GUIDE_LIMITS = {
 } as const;
 
 // ============================================================================
+// CONSTRUCTION POINT ENTITY
+// ============================================================================
+
+/** A construction snap point (X marker) — discrete point, not a line */
+export interface ConstructionPoint {
+  /** Unique identifier (e.g. "cpt_abc123") */
+  readonly id: string;
+  /** World-space position */
+  readonly point: Point2D;
+  /** Optional user-visible label */
+  readonly label: string | null;
+  /** Whether this point is visible on canvas */
+  visible: boolean;
+  /** Whether this point is locked (prevents deletion) */
+  locked: boolean;
+  /** ISO timestamp of creation */
+  readonly createdAt: string;
+  /** Group ID when created via Segments/Distance tools (null for individual points) */
+  readonly groupId: string | null;
+}
+
+/** Performance budgets for the construction point system */
+export const CONSTRUCTION_POINT_LIMITS = {
+  /** Maximum number of snap points — ADR-189 §8.9 */
+  MAX_POINTS: 5000,
+  /** Minimum distance between points (world units) */
+  MIN_DISTANCE: 0.001,
+  /** Screen-space hit detection radius (px) for delete tool */
+  HIT_RADIUS_PX: 6,
+} as const;
+
+// ============================================================================
 // TYPE GUARDS & UTILITIES
 // ============================================================================
 

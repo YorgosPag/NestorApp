@@ -420,6 +420,8 @@ export const SNAP_ENGINE_PRIORITIES = {
   GRID_MINOR: 13,
   /** ADR-189: Construction guide line snap */
   GUIDE: 6,
+  /** ADR-189 §3.7-3.16: Construction snap points (X markers) */
+  CONSTRUCTION_POINT: 1,
 } as const;
 
 // ===== SNAP UI OFFSETS =====

@@ -38,10 +38,11 @@ import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { dlog, dwarn } from '../../debug';
 // ADR-189: Guide system imports
-import type { Guide } from '../../systems/guides/guide-types';
+import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
 import { pointToSegmentDistance } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/guide-commands';
+import type { AddConstructionPointCommand, AddConstructionPointBatchCommand, DeleteConstructionPointCommand } from '../../systems/guides/construction-point-commands';
 
 // ============================================================================
 // TYPES
@@ -158,6 +159,30 @@ export interface UseCanvasClickHandlerParams {
   onDiagonalDirectionSet?: (point: Point2D) => void;
   /** Step 2 callback: set the end point + create guide + reset */
   onDiagonalComplete?: () => void;
+
+  // ── ADR-189 §3.7-3.16: Construction snap point tools ──────────────────
+  /** Add a single construction point */
+  cpAddPoint?: (point: Point2D, label?: string | null) => AddConstructionPointCommand;
+  /** Delete a construction point by ID */
+  cpDeletePoint?: (pointId: string) => DeleteConstructionPointCommand;
+  /** Find nearest construction point to a world position */
+  cpFindNearest?: (worldPoint: Point2D, maxDistance: number) => ConstructionPoint | null;
+  /** Current step for segments tool (0=start, 1=end) */
+  segmentsStep?: 0 | 1;
+  /** Start point for segments tool (set after step 0) */
+  segmentsStartPoint?: Point2D | null;
+  /** Step 0 callback: set segments start point */
+  onSegmentsStartSet?: (point: Point2D) => void;
+  /** Step 1 callback: end point set → triggers dialog */
+  onSegmentsComplete?: (start: Point2D, end: Point2D) => void;
+  /** Current step for distance tool (0=start, 1=end) */
+  distanceStep?: 0 | 1;
+  /** Start point for distance tool (set after step 0) */
+  distanceStartPoint?: Point2D | null;
+  /** Step 0 callback: set distance start point */
+  onDistanceStartSet?: (point: Point2D) => void;
+  /** Step 1 callback: end point set → triggers dialog */
+  onDistanceComplete?: (start: Point2D, end: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -190,6 +215,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     guideAddDiagonalGuide,
     diagonalStep = 0, diagonalStartPoint, diagonalDirectionPoint,
     onDiagonalStartSet, onDiagonalDirectionSet, onDiagonalComplete,
+    // ADR-189 §3.7-3.16: Construction snap point handlers
+    cpAddPoint, cpDeletePoint, cpFindNearest,
+    segmentsStep = 0, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
+    distanceStep = 0, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -444,7 +473,55 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
-    // PRIORITY 1.8: Angle entity measurement picking (constraint, line-arc, two-arcs)
+    // PRIORITY 1.8: ADR-189 §3.15 — Add single construction point
+    if (activeTool === 'guide-add-point' && cpAddPoint) {
+      cpAddPoint(worldPoint);
+      dlog('useCanvasClickHandler', 'Construction point added at', worldPoint);
+      return;
+    }
+
+    // PRIORITY 1.82: ADR-189 §3.16 — Delete construction point
+    if (activeTool === 'guide-delete-point' && cpDeletePoint && cpFindNearest) {
+      const hitToleranceWorld = 30 / transform.scale;
+      const nearest = cpFindNearest(worldPoint, hitToleranceWorld);
+      if (nearest) {
+        cpDeletePoint(nearest.id);
+        dlog('useCanvasClickHandler', 'Construction point deleted:', nearest.id);
+      }
+      return;
+    }
+
+    // PRIORITY 1.84: ADR-189 §3.7 — Segment points (2-click + dialog)
+    if (activeTool === 'guide-segments') {
+      if (segmentsStep === 0 && onSegmentsStartSet) {
+        onSegmentsStartSet(worldPoint);
+        dlog('useCanvasClickHandler', 'Segments step 0: start set', worldPoint);
+        return;
+      }
+      if (segmentsStep === 1 && segmentsStartPoint && onSegmentsComplete) {
+        onSegmentsComplete(segmentsStartPoint, worldPoint);
+        dlog('useCanvasClickHandler', 'Segments step 1: end set, opening dialog', worldPoint);
+        return;
+      }
+      return;
+    }
+
+    // PRIORITY 1.86: ADR-189 §3.8 — Distance points (2-click + dialog)
+    if (activeTool === 'guide-distance') {
+      if (distanceStep === 0 && onDistanceStartSet) {
+        onDistanceStartSet(worldPoint);
+        dlog('useCanvasClickHandler', 'Distance step 0: start set', worldPoint);
+        return;
+      }
+      if (distanceStep === 1 && distanceStartPoint && onDistanceComplete) {
+        onDistanceComplete(distanceStartPoint, worldPoint);
+        dlog('useCanvasClickHandler', 'Distance step 1: end set, opening dialog', worldPoint);
+        return;
+      }
+      return;
+    }
+
+    // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
         ? levelManager.getLevelScene(levelManager.currentLevelId)
@@ -669,6 +746,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // ADR-189
     guideAddGuide, guideRemoveGuide, guides,
     parallelRefGuideId, onParallelRefSelected, onParallelSideChosen,
+    // ADR-189 construction points
+    cpAddPoint, cpDeletePoint, cpFindNearest,
+    segmentsStep, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
+    distanceStep, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
   ]);
 
   return { handleCanvasClick };

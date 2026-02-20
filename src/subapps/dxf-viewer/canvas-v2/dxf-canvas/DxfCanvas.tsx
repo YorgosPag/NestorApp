@@ -28,7 +28,7 @@ import { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
 import { createUIRenderContext } from '../../rendering/ui/core/UIRenderContext';
 // ADR-189: Construction Guide Renderer
 import { GuideRenderer } from '../../systems/guides/guide-renderer';
-import type { Guide } from '../../systems/guides/guide-types';
+import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -71,6 +71,10 @@ interface DxfCanvasProps {
   ghostGuide?: { axis: GridAxis; offset: number } | null;
   ghostDiagonalGuide?: { start: Point2D; end: Point2D } | null;
   highlightedGuideId?: string | null;
+  // ADR-189 §3.7-3.16: Construction snap points
+  constructionPoints?: readonly ConstructionPoint[];
+  highlightedPointId?: string | null;
+  ghostSegmentLine?: { start: Point2D; end: Point2D } | null;
   onTransformChange?: (transform: ViewTransform) => void;
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
@@ -121,6 +125,10 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   ghostGuide,
   ghostDiagonalGuide,
   highlightedGuideId,
+  // ADR-189 §3.7-3.16: Construction snap points
+  constructionPoints,
+  highlightedPointId,
+  ghostSegmentLine,
   onTransformChange,
   onEntitySelect,
   onMouseMove,
@@ -204,6 +212,13 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   ghostGuideRef.current = ghostGuide;
   const ghostDiagonalGuideRef = useRef(ghostDiagonalGuide);
   ghostDiagonalGuideRef.current = ghostDiagonalGuide;
+  // ADR-189 §3.7-3.16: Construction snap points refs for RAF callback
+  const constructionPointsRef = useRef(constructionPoints);
+  constructionPointsRef.current = constructionPoints;
+  const highlightedPointIdRef = useRef(highlightedPointId);
+  highlightedPointIdRef.current = highlightedPointId;
+  const ghostSegmentLineRef = useRef(ghostSegmentLine);
+  ghostSegmentLineRef.current = ghostSegmentLine;
 
   // ✅ IMPERATIVE HANDLE: Expose methods για external controls
   useImperativeHandle(ref, () => ({
@@ -490,6 +505,32 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
             );
           }
         }
+        // Ghost segment line preview (2-click placement — ADR-189 §3.7/§3.8)
+        const currentGhostSegment = ghostSegmentLineRef.current;
+        if (currentGhostSegment) {
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            guideRendererRef.current.renderGhostDiagonalGuide(
+              ctx, currentGhostSegment.start, currentGhostSegment.end, currentTransform, currentViewport,
+            );
+          }
+        }
+      }
+
+      // 2.6️⃣ RENDER CONSTRUCTION POINTS (ADR-189 §3.7-3.16: X markers on canvas)
+      if (guideRendererRef.current) {
+        const currentCPs = constructionPointsRef.current;
+        if (currentCPs && currentCPs.length > 0) {
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            guideRendererRef.current.renderConstructionPoints(
+              ctx, currentCPs, currentTransform, currentViewport,
+              highlightedPointIdRef.current ?? undefined,
+            );
+          }
+        }
       }
 
       // 3️⃣ RENDER RULERS (after grid, so it's on top of grid)
@@ -558,7 +599,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // 🏢 ADR-119: Mark dirty when dependencies change
   useEffect(() => {
     isDirtyRef.current = true;
-  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide, ghostDiagonalGuide, highlightedGuideId]);
+  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
 
   // 🏢 FIX (2026-02-13): Mark dirty when selection state changes so RAF loop re-renders
   // The actual selection box rendering now happens inside renderScene (step 4️⃣)

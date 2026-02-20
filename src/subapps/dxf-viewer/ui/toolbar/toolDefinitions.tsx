@@ -13,6 +13,9 @@ import {
   Slash, // ADR-189 §3.3: Diagonal guide icon
   CopyPlus, // ADR-189: Parallel guide icon
   CornerDownRight, // ADR-189 §3.4: Perpendicular guide icon
+  ScissorsLineDashed, // ADR-189 §3.7: Segment points icon
+  Plus, // ADR-189 §3.15: Add point icon
+  Minus, // ADR-189 §3.16: Delete point icon
   Eye, EyeOff, // ADR-189: Guide visibility toggle
 } from "lucide-react";
 
@@ -250,6 +253,10 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-xz' as ToolType, icon: Slash, label: DXF_DRAWING_TOOL_LABELS.GUIDE_XZ, hotkey: 'G→K' },
           { id: 'guide-parallel' as ToolType, icon: CopyPlus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PARALLEL, hotkey: 'G→P' },
           { id: 'guide-perpendicular' as ToolType, icon: CornerDownRight, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PERPENDICULAR, hotkey: 'G→N' },
+          { id: 'guide-segments' as ToolType, icon: ScissorsLineDashed, label: DXF_DRAWING_TOOL_LABELS.GUIDE_SEGMENTS, hotkey: 'G→S' },
+          { id: 'guide-distance' as ToolType, icon: Ruler, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DISTANCE, hotkey: 'G→A' },
+          { id: 'guide-add-point' as ToolType, icon: Plus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ADD_POINT, hotkey: 'G→Q' },
+          { id: 'guide-delete-point' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE_POINT, hotkey: 'G→W' },
           { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
         ],
       },

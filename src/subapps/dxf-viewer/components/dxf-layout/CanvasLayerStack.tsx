@@ -202,6 +202,10 @@ export interface CanvasLayerStackProps {
   ghostGuide?: { axis: import('../../ai-assistant/grid-types').GridAxis; offset: number } | null;
   ghostDiagonalGuide?: { start: import('../../rendering/types/Types').Point2D; end: import('../../rendering/types/Types').Point2D } | null;
   highlightedGuideId?: string | null;
+  // ADR-189 §3.7-3.16: Construction snap points
+  constructionPoints?: readonly import('../../systems/guides/guide-types').ConstructionPoint[];
+  highlightedPointId?: string | null;
+  ghostSegmentLine?: { start: import('../../rendering/types/Types').Point2D; end: import('../../rendering/types/Types').Point2D } | null;
 
   // === Entity-picking mode (angle measurement tools) ===
   entityPickingActive?: boolean;
@@ -228,7 +232,8 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   drawingState, entityJoin, pdf, onMouseMove,
   entityPickingActive,
   // ADR-189: Construction guides
-  guides, guidesVisible, ghostGuide, ghostDiagonalGuide, highlightedGuideId,
+  guides, guidesVisible, ghostGuide, ghostDiagonalGuide, ghostSegmentLine, highlightedGuideId,
+  constructionPoints, highlightedPointId,
 }) => {
   // 🚀 PERF (2026-02-20): Read snap result from SnapContext directly instead of
   // receiving as prop from CanvasSection. This isolates snap-triggered re-renders
@@ -485,7 +490,10 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               guidesVisible={guidesVisible}
               ghostGuide={ghostGuide}
               ghostDiagonalGuide={ghostDiagonalGuide}
+              ghostSegmentLine={ghostSegmentLine}
               highlightedGuideId={highlightedGuideId}
+              constructionPoints={constructionPoints}
+              highlightedPointId={highlightedPointId}
               onLayerSelected={handleOverlayClickWithEntityClear}
               onMultiLayerSelected={handleMultiOverlayClickWithEntityClear}
               onEntitiesSelected={handleDxfEntitiesSelected}

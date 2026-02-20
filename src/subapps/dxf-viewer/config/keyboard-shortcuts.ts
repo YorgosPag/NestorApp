@@ -672,6 +672,10 @@ export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: To
   K: { action: 'tool:guide-xz', toolType: 'guide-xz' as ToolType, descriptionKey: 'shortcuts.guides.guideXZ' },
   P: { action: 'tool:guide-parallel', toolType: 'guide-parallel' as ToolType, descriptionKey: 'shortcuts.guides.guideParallel' },
   N: { action: 'tool:guide-perpendicular', toolType: 'guide-perpendicular' as ToolType, descriptionKey: 'shortcuts.guides.guidePerpendicular' },
+  S: { action: 'tool:guide-segments', toolType: 'guide-segments' as ToolType, descriptionKey: 'shortcuts.guides.guideSegments' },
+  A: { action: 'tool:guide-distance', toolType: 'guide-distance' as ToolType, descriptionKey: 'shortcuts.guides.guideDistance' },
+  Q: { action: 'tool:guide-add-point', toolType: 'guide-add-point' as ToolType, descriptionKey: 'shortcuts.guides.guideAddPoint' },
+  W: { action: 'tool:guide-delete-point', toolType: 'guide-delete-point' as ToolType, descriptionKey: 'shortcuts.guides.guideDeletePoint' },
   D: { action: 'tool:guide-delete', toolType: 'guide-delete' as ToolType, descriptionKey: 'shortcuts.guides.guideDelete' },
   V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },
 } as const;

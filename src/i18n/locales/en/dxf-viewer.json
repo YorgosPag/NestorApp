@@ -1443,6 +1443,10 @@
     "guideXZ": "Diagonal Guide",
     "guideParallel": "Parallel Guide",
     "guidePerpendicular": "Perpendicular Guide",
+    "guideSegments": "Segment Points",
+    "guideDistance": "Distance Points",
+    "guideAddPoint": "Add Point",
+    "guideDeletePoint": "Delete Point",
     "guideDelete": "Delete Guide"
   },
   "promptDialog": {
@@ -1452,6 +1456,12 @@
     "parallelDistance": "Parallel Guide Distance",
     "enterDistance": "Distance from reference guide",
     "distancePlaceholder": "e.g. 100",
+    "segmentCount": "Number of Segments",
+    "enterSegmentCount": "Divide into equal segments",
+    "segmentCountPlaceholder": "e.g. 4",
+    "pointDistance": "Point Distance",
+    "enterPointDistance": "Distance between points",
+    "pointDistancePlaceholder": "e.g. 100",
     "selectReference": "Click near a guide to select as reference",
     "rotationAngle": "Rotation Angle",
     "enterAngle": "Enter angle in degrees",

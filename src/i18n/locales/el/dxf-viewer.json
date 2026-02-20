@@ -1437,6 +1437,10 @@
     "guideXZ": "Λοξή Περασιά",
     "guideParallel": "Παράλληλος Οδηγός",
     "guidePerpendicular": "Κάθετος Οδηγός",
+    "guideSegments": "Σε Τμήματα",
+    "guideDistance": "Ανά Απόσταση",
+    "guideAddPoint": "Προσθήκη Σημείου",
+    "guideDeletePoint": "Διαγραφή Σημείου",
     "guideDelete": "Διαγραφή Οδηγού"
   },
   "promptDialog": {
@@ -1446,6 +1450,12 @@
     "parallelDistance": "Απόσταση Παράλληλου Οδηγού",
     "enterDistance": "Απόσταση από τον οδηγό αναφοράς",
     "distancePlaceholder": "π.χ. 100",
+    "segmentCount": "Αριθμός Τμημάτων",
+    "enterSegmentCount": "Διαίρεση σε ίσα τμήματα",
+    "segmentCountPlaceholder": "π.χ. 4",
+    "pointDistance": "Απόσταση Σημείων",
+    "enterPointDistance": "Απόσταση μεταξύ σημείων",
+    "pointDistancePlaceholder": "π.χ. 100",
     "selectReference": "Κάντε κλικ κοντά σε οδηγό για επιλογή αναφοράς",
     "rotationAngle": "Γωνία Περιστροφής",
     "enterAngle": "Εισαγάγετε γωνία σε μοίρες",

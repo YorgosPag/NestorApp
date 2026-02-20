@@ -52,6 +52,10 @@ export type ToolType =
   | 'guide-xz'         // ADR-189 §3.3: Diagonal guide (3-click)
   | 'guide-parallel'
   | 'guide-perpendicular'  // ADR-189 §3.4: Perpendicular guide (1-click)
+  | 'guide-segments'       // ADR-189 §3.7: Snap points at equal segments
+  | 'guide-distance'       // ADR-189 §3.8: Snap points at fixed distance
+  | 'guide-add-point'      // ADR-189 §3.15: Add single snap point
+  | 'guide-delete-point'   // ADR-189 §3.16: Delete snap point
   | 'guide-delete';
 
 

@@ -34,6 +34,8 @@ import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInter
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 // ADR-189: Construction Guide System
 import { useGuideState } from '../../hooks/state/useGuideState';
+// ADR-189 §3.7-3.16: Construction Snap Points
+import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
 import { pointToSegmentDistance } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-189: Centralized prompt dialog for distance input (parallel guides, future tools)
@@ -172,6 +174,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === ADR-189: Construction Guide state ===
   const guideState = useGuideState();
+  const cpState = useConstructionPointState();
   const { prompt: showPromptDialog } = usePromptDialog();
 
   // === DXF scene (must be before unified grip system) ===
@@ -321,6 +324,88 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDiagonalDirectionPoint(null);
   }, []);
 
+  // ADR-189 §3.7: Segments tool — 2-click + dialog workflow state
+  const [segmentsStep, setSegmentsStep] = useState<0 | 1>(0);
+  const [segmentsStartPoint, setSegmentsStartPoint] = useState<Point2D | null>(null);
+
+  // ADR-189 §3.8: Distance tool — 2-click + dialog workflow state
+  const [distanceStep, setDistanceStep] = useState<0 | 1>(0);
+  const [distanceStartPoint, setDistanceStartPoint] = useState<Point2D | null>(null);
+
+  // ADR-189: Reset segments/distance state when switching away
+  useEffect(() => {
+    if (activeTool !== 'guide-segments') {
+      setSegmentsStep(0);
+      setSegmentsStartPoint(null);
+    }
+  }, [activeTool]);
+
+  useEffect(() => {
+    if (activeTool !== 'guide-distance') {
+      setDistanceStep(0);
+      setDistanceStartPoint(null);
+    }
+  }, [activeTool]);
+
+  // ADR-189 §3.7: Segments callbacks
+  const handleSegmentsStartSet = useCallback((point: Point2D) => {
+    setSegmentsStartPoint(point);
+    setSegmentsStep(1);
+  }, []);
+
+  const handleSegmentsComplete = useCallback((start: Point2D, end: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.segmentCount'),
+      label: t('promptDialog.enterSegmentCount'),
+      placeholder: t('promptDialog.segmentCountPlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseInt(val, 10);
+        if (isNaN(n) || n < 2) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const count = parseInt(result, 10);
+        if (!isNaN(count) && count >= 2) {
+          cpState.addSegmentPoints(start, end, count);
+        }
+      }
+      setSegmentsStep(0);
+      setSegmentsStartPoint(null);
+    });
+  }, [showPromptDialog, t, cpState]);
+
+  // ADR-189 §3.8: Distance callbacks
+  const handleDistanceStartSet = useCallback((point: Point2D) => {
+    setDistanceStartPoint(point);
+    setDistanceStep(1);
+  }, []);
+
+  const handleDistanceComplete = useCallback((start: Point2D, end: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.pointDistance'),
+      label: t('promptDialog.enterPointDistance'),
+      placeholder: t('promptDialog.pointDistancePlaceholder'),
+      inputType: 'number',
+      unit: 'mm',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n) || n <= 0) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const distance = parseFloat(result);
+        if (!isNaN(distance) && distance > 0) {
+          cpState.addDistancePoints(start, end, distance);
+        }
+      }
+      setDistanceStep(0);
+      setDistanceStartPoint(null);
+    });
+  }, [showPromptDialog, t, cpState]);
+
   // ADR-189: Guide context menu handlers
   const handleGuideContextDelete = useCallback((guideId: string) => {
     guideState.removeGuide(guideId);
@@ -444,6 +529,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
     return null;
   }, [activeTool, mouseWorld, diagonalStep, diagonalStartPoint, diagonalDirectionPoint, parallelRefGuideId, guideState.guides]);
+
+  // ADR-189 §3.16: Highlight nearest construction point for delete-point hover
+  const highlightedPointId = useMemo<string | null>(() => {
+    if (!mouseWorld || activeTool !== 'guide-delete-point') return null;
+    const hitToleranceWorld = 30 / transform.scale;
+    const nearest = cpState.findNearest(mouseWorld, hitToleranceWorld);
+    return nearest?.id ?? null;
+  }, [mouseWorld, activeTool, cpState, transform.scale]);
+
+  // ADR-189 §3.7/3.8: Ghost line preview during segments/distance step 1 (start→cursor)
+  const ghostSegmentLine = useMemo(() => {
+    if (!mouseWorld) return null;
+    if (activeTool === 'guide-segments' && segmentsStep === 1 && segmentsStartPoint) {
+      return { start: segmentsStartPoint, end: mouseWorld };
+    }
+    if (activeTool === 'guide-distance' && distanceStep === 1 && distanceStartPoint) {
+      return { start: distanceStartPoint, end: mouseWorld };
+    }
+    return null;
+  }, [activeTool, mouseWorld, segmentsStep, segmentsStartPoint, distanceStep, distanceStartPoint]);
 
   // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -609,6 +714,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onDiagonalStartSet: handleDiagonalStartSet,
     onDiagonalDirectionSet: handleDiagonalDirectionSet,
     onDiagonalComplete: handleDiagonalComplete,
+    // ADR-189 §3.7-3.16: Construction snap point tools
+    cpAddPoint: cpState.addPoint,
+    cpDeletePoint: cpState.deletePoint,
+    cpFindNearest: cpState.findNearest,
+    segmentsStep,
+    segmentsStartPoint,
+    onSegmentsStartSet: handleSegmentsStartSet,
+    onSegmentsComplete: handleSegmentsComplete,
+    distanceStep,
+    distanceStartPoint,
+    onDistanceStartSet: handleDistanceStartSet,
+    onDistanceComplete: handleDistanceComplete,
   });
 
   const { handleSmartDelete } = useSmartDelete({
@@ -772,7 +889,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         guidesVisible={guideState.guidesVisible}
         ghostGuide={ghostGuide}
         ghostDiagonalGuide={ghostDiagonalGuide}
+        ghostSegmentLine={ghostSegmentLine}
         highlightedGuideId={highlightedGuideId}
+        constructionPoints={cpState.points}
+        highlightedPointId={highlightedPointId}
       />
 
       {/* 🏢 PERF (2026-02-19): Context menus rendered OUTSIDE CanvasLayerStack.
