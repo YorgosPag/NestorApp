@@ -1429,6 +1429,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_Z: 'tools.guideZ',
   GUIDE_XZ: 'tools.guideXZ',
   GUIDE_PARALLEL: 'tools.guideParallel',
+  GUIDE_PERPENDICULAR: 'tools.guidePerpendicular',
   GUIDE_DELETE: 'tools.guideDelete',
 } as const;
 

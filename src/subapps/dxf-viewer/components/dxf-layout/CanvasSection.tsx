@@ -349,9 +349,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const highlightedGuideId = useMemo<string | null>(() => {
     if (!mouseWorld || !guideState.guides.length) return null;
 
-    // Highlight only in guide-delete, guide-parallel (step 1: selecting ref), or guide-parallel (step 2: show ref)
+    // Highlight only in guide-delete, guide-perpendicular, guide-parallel (step 1: selecting ref)
     const needsHighlight =
       activeTool === 'guide-delete' ||
+      activeTool === 'guide-perpendicular' ||
       (activeTool === 'guide-parallel' && !parallelRefGuideId);
     if (!needsHighlight) {
       // If ref is selected, highlight the reference guide
@@ -384,19 +385,40 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (!mouseWorld) return null;
     if (activeTool === 'guide-x') return { axis: 'X' as const, offset: mouseWorld.x };
     if (activeTool === 'guide-z') return { axis: 'Y' as const, offset: mouseWorld.y };
-    // Step 2 preview: ghost follows cursor along reference guide's axis
+    // Step 2 preview: ghost follows cursor along reference guide's axis (X/Y only — XZ handled by ghostDiagonalGuide)
     if (activeTool === 'guide-parallel' && parallelRefGuideId) {
       const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
-      if (refGuide) {
+      if (refGuide && refGuide.axis !== 'XZ') {
         return { axis: refGuide.axis, offset: refGuide.axis === 'X' ? mouseWorld.x : mouseWorld.y };
       }
     }
     return null;
   }, [activeTool, mouseWorld, parallelRefGuideId, guideState.guides]);
 
-  // ADR-189 §3.3: Ghost diagonal guide preview (3-click workflow)
+  // ADR-189 §3.3: Ghost diagonal guide preview (3-click workflow + XZ parallel)
   const ghostDiagonalGuide = useMemo(() => {
-    if (activeTool !== 'guide-xz' || !mouseWorld) return null;
+    if (!mouseWorld) return null;
+
+    // XZ parallel preview: shifted diagonal following cursor perpendicular distance
+    if (activeTool === 'guide-parallel' && parallelRefGuideId) {
+      const refGuide = guideState.guides.find(g => g.id === parallelRefGuideId);
+      if (refGuide?.axis === 'XZ' && refGuide.startPoint && refGuide.endPoint) {
+        const dx = refGuide.endPoint.x - refGuide.startPoint.x;
+        const dy = refGuide.endPoint.y - refGuide.startPoint.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+          const nx = -dy / len;
+          const ny = dx / len;
+          const perpDist = (mouseWorld.x - refGuide.startPoint.x) * nx + (mouseWorld.y - refGuide.startPoint.y) * ny;
+          return {
+            start: { x: refGuide.startPoint.x + nx * perpDist, y: refGuide.startPoint.y + ny * perpDist },
+            end: { x: refGuide.endPoint.x + nx * perpDist, y: refGuide.endPoint.y + ny * perpDist },
+          };
+        }
+      }
+    }
+
+    if (activeTool !== 'guide-xz') return null;
 
     if (diagonalStep === 1 && diagonalStartPoint) {
       // Step 1: Free direction — line from start to cursor
@@ -417,7 +439,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
 
     return null;
-  }, [activeTool, mouseWorld, diagonalStep, diagonalStartPoint, diagonalDirectionPoint]);
+  }, [activeTool, mouseWorld, diagonalStep, diagonalStartPoint, diagonalDirectionPoint, parallelRefGuideId, guideState.guides]);
 
   // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {

@@ -203,13 +203,28 @@ export class CreateParallelGuideCommand implements ICommand {
     const reference = this.store.getGuideById(this.referenceGuideId);
     if (!reference) return;
 
-    const newOffset = reference.offset + this.offsetDistance;
-    this.createdGuide = this.store.addGuideRaw(
-      reference.axis,
-      newOffset,
-      null,
-      this.referenceGuideId,
-    ) ?? null;
+    if (reference.axis === 'XZ' && reference.startPoint && reference.endPoint) {
+      // Parallel to diagonal: shift start/end perpendicularly
+      const dx = reference.endPoint.x - reference.startPoint.x;
+      const dy = reference.endPoint.y - reference.startPoint.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len === 0) return;
+      // Normal vector (perpendicular, unit length)
+      const nx = -dy / len;
+      const ny = dx / len;
+      const shift = this.offsetDistance; // Already signed from step 2
+      const newStart = { x: reference.startPoint.x + nx * shift, y: reference.startPoint.y + ny * shift };
+      const newEnd = { x: reference.endPoint.x + nx * shift, y: reference.endPoint.y + ny * shift };
+      this.createdGuide = this.store.addDiagonalGuideRaw(newStart, newEnd) ?? null;
+    } else {
+      const newOffset = reference.offset + this.offsetDistance;
+      this.createdGuide = this.store.addGuideRaw(
+        reference.axis,
+        newOffset,
+        null,
+        this.referenceGuideId,
+      ) ?? null;
+    }
   }
 
   undo(): void {

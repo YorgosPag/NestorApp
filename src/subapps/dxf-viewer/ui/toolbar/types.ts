@@ -51,6 +51,7 @@ export type ToolType =
   | 'guide-z'
   | 'guide-xz'         // ADR-189 §3.3: Diagonal guide (3-click)
   | 'guide-parallel'
+  | 'guide-perpendicular'  // ADR-189 §3.4: Perpendicular guide (1-click)
   | 'guide-delete';
 
 

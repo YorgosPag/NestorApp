@@ -1442,6 +1442,7 @@
     "guideZ": "Horizontal Guide",
     "guideXZ": "Diagonal Guide",
     "guideParallel": "Parallel Guide",
+    "guidePerpendicular": "Perpendicular Guide",
     "guideDelete": "Delete Guide"
   },
   "promptDialog": {

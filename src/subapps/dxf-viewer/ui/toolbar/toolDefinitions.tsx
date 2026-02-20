@@ -12,6 +12,7 @@ import {
   ArrowLeftRight, // ADR-189: Guide horizontal icon
   Slash, // ADR-189 §3.3: Diagonal guide icon
   CopyPlus, // ADR-189: Parallel guide icon
+  CornerDownRight, // ADR-189 §3.4: Perpendicular guide icon
   Eye, EyeOff, // ADR-189: Guide visibility toggle
 } from "lucide-react";
 
@@ -248,6 +249,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-z' as ToolType, icon: ArrowLeftRight, label: DXF_DRAWING_TOOL_LABELS.GUIDE_Z, hotkey: 'G→Z' },
           { id: 'guide-xz' as ToolType, icon: Slash, label: DXF_DRAWING_TOOL_LABELS.GUIDE_XZ, hotkey: 'G→K' },
           { id: 'guide-parallel' as ToolType, icon: CopyPlus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PARALLEL, hotkey: 'G→P' },
+          { id: 'guide-perpendicular' as ToolType, icon: CornerDownRight, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PERPENDICULAR, hotkey: 'G→N' },
           { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
         ],
       },

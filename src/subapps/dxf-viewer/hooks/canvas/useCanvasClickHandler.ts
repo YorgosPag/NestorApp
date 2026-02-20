@@ -39,6 +39,7 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { dlog, dwarn } from '../../debug';
 // ADR-189: Guide system imports
 import type { Guide } from '../../systems/guides/guide-types';
+import { pointToSegmentDistance } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/guide-commands';
 
@@ -304,9 +305,14 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       let nearestDist = hitToleranceWorld;
       for (const guide of guides) {
         if (!guide.visible) continue;
-        const dist = guide.axis === 'X'
-          ? Math.abs(worldPoint.x - guide.offset)
-          : Math.abs(worldPoint.y - guide.offset);
+        let dist: number;
+        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+          dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
+        } else {
+          dist = guide.axis === 'X'
+            ? Math.abs(worldPoint.x - guide.offset)
+            : Math.abs(worldPoint.y - guide.offset);
+        }
         if (dist < nearestDist) {
           nearestDist = dist;
           nearestGuide = guide;
@@ -335,9 +341,14 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         let nearestDist = hitToleranceWorld;
         for (const guide of guides) {
           if (!guide.visible) continue;
-          const dist = guide.axis === 'X'
-            ? Math.abs(worldPoint.x - guide.offset)
-            : Math.abs(worldPoint.y - guide.offset);
+          let dist: number;
+          if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+            dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
+          } else {
+            dist = guide.axis === 'X'
+              ? Math.abs(worldPoint.x - guide.offset)
+              : Math.abs(worldPoint.y - guide.offset);
+          }
           if (dist < nearestDist) {
             nearestDist = dist;
             nearestGuide = guide;
@@ -354,13 +365,81 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         // Step 2: Determine which side of the reference guide the user clicked
         const refGuide = guides.find(g => g.id === parallelRefGuideId);
         if (refGuide) {
-          const sign: 1 | -1 = refGuide.axis === 'X'
-            ? (worldPoint.x >= refGuide.offset ? 1 : -1)
-            : (worldPoint.y >= refGuide.offset ? 1 : -1);
+          let sign: 1 | -1;
+          if (refGuide.axis === 'XZ' && refGuide.startPoint && refGuide.endPoint) {
+            // Cross product: (click - start) × direction → sign indicates which side
+            const dx = refGuide.endPoint.x - refGuide.startPoint.x;
+            const dy = refGuide.endPoint.y - refGuide.startPoint.y;
+            const cx = worldPoint.x - refGuide.startPoint.x;
+            const cy = worldPoint.y - refGuide.startPoint.y;
+            sign = (cx * dy - cy * dx) >= 0 ? 1 : -1;
+          } else {
+            sign = refGuide.axis === 'X'
+              ? (worldPoint.x >= refGuide.offset ? 1 : -1)
+              : (worldPoint.y >= refGuide.offset ? 1 : -1);
+          }
           onParallelSideChosen(refGuide.id, sign);
           dlog('useCanvasClickHandler', 'Parallel step 2: side chosen', sign > 0 ? '+' : '-', refGuide.axis);
         }
         return;
+      }
+      return;
+    }
+
+    // PRIORITY 1.75: Perpendicular guide — click near guide → create perpendicular through click point
+    if (activeTool === 'guide-perpendicular' && guides && guides.length > 0) {
+      const hitToleranceWorld = 30 / transform.scale;
+      let nearestGuide: Guide | null = null;
+      let nearestDist = hitToleranceWorld;
+      for (const guide of guides) {
+        if (!guide.visible) continue;
+        let dist: number;
+        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+          dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
+        } else {
+          dist = guide.axis === 'X'
+            ? Math.abs(worldPoint.x - guide.offset)
+            : Math.abs(worldPoint.y - guide.offset);
+        }
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestGuide = guide;
+        }
+      }
+      if (nearestGuide) {
+        if (nearestGuide.axis === 'X' && guideAddGuide) {
+          // Perpendicular to vertical → horizontal guide at click Y
+          guideAddGuide('Y', worldPoint.y);
+          dlog('useCanvasClickHandler', 'Perpendicular: X→Y at offset', worldPoint.y);
+        } else if (nearestGuide.axis === 'Y' && guideAddGuide) {
+          // Perpendicular to horizontal → vertical guide at click X
+          guideAddGuide('X', worldPoint.x);
+          dlog('useCanvasClickHandler', 'Perpendicular: Y→X at offset', worldPoint.x);
+        } else if (nearestGuide.axis === 'XZ' && nearestGuide.startPoint && nearestGuide.endPoint && guideAddDiagonalGuide) {
+          // Perpendicular to diagonal → diagonal perpendicular through projection point
+          const dx = nearestGuide.endPoint.x - nearestGuide.startPoint.x;
+          const dy = nearestGuide.endPoint.y - nearestGuide.startPoint.y;
+          const lenSq = dx * dx + dy * dy;
+          if (lenSq > 0) {
+            const len = Math.sqrt(lenSq);
+            // Project click onto reference to find base point
+            const t = Math.max(0, Math.min(1,
+              ((worldPoint.x - nearestGuide.startPoint.x) * dx + (worldPoint.y - nearestGuide.startPoint.y) * dy) / lenSq
+            ));
+            const base = {
+              x: nearestGuide.startPoint.x + t * dx,
+              y: nearestGuide.startPoint.y + t * dy,
+            };
+            // Perpendicular direction (normalized) × same length as reference
+            const nx = -dy / len;
+            const ny = dx / len;
+            const halfLen = len / 2;
+            const perpStart = { x: base.x - nx * halfLen, y: base.y - ny * halfLen };
+            const perpEnd = { x: base.x + nx * halfLen, y: base.y + ny * halfLen };
+            guideAddDiagonalGuide(perpStart, perpEnd);
+            dlog('useCanvasClickHandler', 'Perpendicular: XZ diagonal through base', base);
+          }
+        }
       }
       return;
     }
