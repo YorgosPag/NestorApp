@@ -5,11 +5,12 @@
  * Produces snap candidates along guide lines:
  * - X guide at offset=N → snap point (N, cursor.y), distance = |cursor.x - N|
  * - Y guide at offset=N → snap point (cursor.x, N), distance = |cursor.y - N|
+ * - XZ diagonal → perpendicular projection onto segment
  *
- * Pattern: identical to GridSnapEngine — lightweight, no spatial index needed.
+ * Reads directly from GuideStore singleton — no manual sync needed.
  *
  * @see ADR-189 (Construction Grid & Guide System)
- * @see GridSnapEngine.ts (template)
+ * @see ConstructionPointSnapEngine.ts (same singleton-read pattern)
  * @since 2026-02-19
  */
 
@@ -17,49 +18,53 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, type SnapEngineContext, type SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
-import type { Guide } from '../../systems/guides/guide-types';
 import { projectPointOnSegment } from '../../systems/guides/guide-types';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 
 /**
  * Snap engine for construction guide lines.
- * Guides are NOT scene entities — they live in GuideStore.
- * This engine receives guides via `setGuides()` instead of `initialize(entities)`.
+ * Reads directly from GuideStore singleton on every findSnapCandidates() call,
+ * ensuring data is always current without manual sync.
  */
 export class GuideSnapEngine extends BaseSnapEngine {
-  private guides: readonly Guide[] = [];
-
   constructor() {
     super(ExtendedSnapType.GUIDE);
-  }
-
-  /** Update the guides to snap against. Called when GuideStore changes. */
-  setGuides(guides: readonly Guide[]): void {
-    this.guides = guides;
   }
 
   /** Guides don't use scene entities — this is a no-op. */
   initialize(_entities: EntityModel[]): void {
     // Guide snap does not depend on scene entities.
-    // Guides are set via setGuides().
+    // Guides are read directly from the singleton GuideStore.
+  }
+
+  /**
+   * @deprecated Use singleton read pattern instead. Kept for backward compat with SnapEngineRegistry.
+   */
+  setGuides(_guides: readonly import('../../systems/guides/guide-types').Guide[]): void {
+    // No-op: engine now reads directly from GuideStore singleton
   }
 
   /**
    * Find snap candidates on guide lines near the cursor.
    *
+   * Reads directly from GuideStore singleton — no manual sync needed.
    * For each visible guide within snap radius:
    * - X guide → candidate at (guide.offset, cursor.y)
    * - Y guide → candidate at (cursor.x, guide.offset)
+   * - XZ guide → perpendicular projection onto segment
    */
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     const candidates: SnapCandidate[] = [];
+    const store = getGlobalGuideStore();
+    const guides = store.getGuides();
 
-    if (this.guides.length === 0) {
+    if (guides.length === 0 || !store.isVisible()) {
       return { candidates };
     }
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.GUIDE);
 
-    for (const guide of this.guides) {
+    for (const guide of guides) {
       if (!guide.visible) continue;
 
       let distance: number;
@@ -99,6 +104,6 @@ export class GuideSnapEngine extends BaseSnapEngine {
 
   /** No resources to clean up. */
   dispose(): void {
-    this.guides = [];
+    // No local state — reads from singleton store
   }
 }
