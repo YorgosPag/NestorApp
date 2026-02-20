@@ -23,6 +23,8 @@ import { useToolState, toolStateStore } from '../stores/ToolStateStore';
 import { useCanvasContext } from '../contexts/CanvasContext';
 // 📐 ADR-189: Guide visibility toggle via keyboard chord (G → V)
 import { getGlobalGuideStore } from '../systems/guides';
+// 🏢 FIX: Grid visibility toggle — use RulersGridContext (single source of truth)
+import { useRulersGridContext } from '../systems/rulers-grid/RulersGridSystem';
 
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
@@ -48,6 +50,12 @@ export function useDxfViewerState() {
 
   // 🎯 CENTRALIZED SNAP SYSTEM
   const { snapEnabled, setSnapEnabled } = useSnapContext();
+
+  // 🏢 FIX: Grid visibility from RulersGridContext (single source of truth)
+  // Previously, toolbar used a disconnected local state (useToolbarState.showGrid)
+  // while the settings panel used RulersGridContext — they were never synchronized.
+  const rulersGridContext = useRulersGridContext();
+  const gridVisible = rulersGridContext.state.grid?.visual?.enabled ?? true;
 
   // 🎯 CENTRALIZED DRAWING SYSTEM
   const drawingHandlers = useDrawingHandlers(
@@ -132,7 +140,8 @@ export function useDxfViewerState() {
   const handleAction = useCallback((action: string, data?: number | string | Record<string, unknown>) => {
     switch (action) {
       case 'grid':
-        toolbarState.toggleGrid();
+        // 🏢 FIX: Toggle via RulersGridContext (same source as settings panel)
+        rulersGridContext.setGridVisibility(!gridVisible);
         break;
       case 'toggle-layers':
       case 'layering':
@@ -194,11 +203,14 @@ export function useDxfViewerState() {
       default:
         console.warn('Unknown action:', action);
     }
-  }, [toolbarState, canvasActions, snapEnabled, setSnapEnabled, handleToolChange]);
+  }, [toolbarState, canvasActions, snapEnabled, setSnapEnabled, handleToolChange, rulersGridContext, gridVisible]);
 
   return {
     ...sceneState,
     ...toolbarState,
+    // 🏢 FIX: Override showGrid with actual source of truth (RulersGridContext)
+    // This ensures the toolbar button label/icon reflects the real grid state
+    showGrid: gridVisible,
     gripSettings,
     activeTool,
     setActiveTool,
