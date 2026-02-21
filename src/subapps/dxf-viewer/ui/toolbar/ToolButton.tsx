@@ -149,7 +149,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
 
         {/* 🏢 ENTERPRISE: Dropdown menu */}
         {showDropdown && (
-          <nav className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground rounded-md shadow-lg z-50 min-w-[160px] border border-border py-1">
+          <nav className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground rounded-md shadow-lg z-50 min-w-max border border-border py-1">
             {tool.dropdownOptions!.map((option) => {
               const OptionIcon = option.icon;
               return (
@@ -157,11 +157,11 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                   key={option.id}
                   type="button"
                   onClick={() => handleDropdownItemClick(option.id)}
-                  className={`flex items-center w-full px-3 py-1.5 ${PANEL_LAYOUT.TYPOGRAPHY.SM} transition-colors hover:bg-accent hover:text-accent-foreground`}
+                  className={`flex items-center w-full px-3 py-1.5 ${PANEL_LAYOUT.TYPOGRAPHY.SM} whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground`}
                 >
-                  {OptionIcon && <OptionIcon className={`${iconSizes.sm} mr-2 ${iconColorClass}`} />}
+                  {OptionIcon && <OptionIcon className={`${iconSizes.sm} mr-2 shrink-0 ${iconColorClass}`} />}
                   <span className="flex-1 text-left">{t(option.label)}</span>
-                  {option.hotkey && <span className={`ml-2 text-[10px] ${colors.text.muted}`}>{option.hotkey}</span>}
+                  {option.hotkey && <span className={`ml-2 text-[10px] shrink-0 ${colors.text.muted}`}>{option.hotkey}</span>}
                 </button>
               );
             })}
