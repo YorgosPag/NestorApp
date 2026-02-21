@@ -369,14 +369,17 @@ export function applyPreviewStyling(
     const extCircle = entity as ExtendedCircleEntity;
     extCircle.preview = true;
     extCircle.showPreviewGrips = true;
+    extCircle.showPreviewMeasurements = true;
     applySettings(extCircle as unknown as Record<string, unknown>);
   } else if (entity.type === 'rectangle') {
     const extRect = entity as unknown as {
       preview?: boolean;
       showPreviewGrips?: boolean;
+      showPreviewMeasurements?: boolean;
     } & typeof entity;
     extRect.preview = true;
     extRect.showPreviewGrips = true;
+    extRect.showPreviewMeasurements = true;
     applySettings(extRect as unknown as Record<string, unknown>);
   } else if (entity.type === 'angle-measurement') {
     const extAngle = entity as unknown as {

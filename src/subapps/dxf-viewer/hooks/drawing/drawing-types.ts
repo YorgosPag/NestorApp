@@ -31,6 +31,8 @@ export interface ExtendedPolylineEntity extends PolylineEntity {
 export interface ExtendedCircleEntity extends CircleEntity {
   diameterMode?: boolean;
   twoPointDiameter?: boolean;
+  /** Show radius/circumference/area labels during drawing preview */
+  showPreviewMeasurements?: boolean;
 }
 
 export interface ExtendedLineEntity extends LineEntity {

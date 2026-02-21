@@ -59,7 +59,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-040: Centralized coordinate transforms - worldToScreen() Single Source of Truth
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-041: Centralized Distance Label Rendering
-import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
+import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS, formatDistance, calculateWorldDistance } from '../../rendering/entities/shared/distance-label-utils';
+import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-090: Centralized UI Fonts
 // 🏢 ADR-097: Centralized Line Dash Patterns
@@ -416,7 +417,7 @@ export class PreviewRenderer {
   }
 
   /**
-   * 🏢 ENTERPRISE: Render circle preview
+   * 🏢 ENTERPRISE: Render circle preview with real-time measurements
    */
   private renderCircle(
     ctx: CanvasRenderingContext2D,
@@ -437,6 +438,25 @@ export class PreviewRenderer {
     // Draw center grip
     if (opts.showGrips) {
       this.renderGrip(ctx, center, opts);
+    }
+
+    // Real-time measurement labels
+    if (entity.showPreviewMeasurements && entity.radius > 0) {
+      const radius = entity.radius;
+
+      // Radius line: center → right point on circumference
+      const radiusEndWorld: Point2D = { x: entity.center.x + radius, y: entity.center.y };
+      const radiusEndScreen = CoordinateTransforms.worldToScreen(radiusEndWorld, transform, this.currentViewport!);
+      this.renderDistanceLabelFromWorld(ctx, entity.center, radiusEndWorld, center, radiusEndScreen);
+
+      // Center info: circumference + area
+      const circumference = TAU * radius;
+      const area = Math.PI * radius * radius;
+
+      this.renderInfoLabel(ctx, center, [
+        `Περ: ${formatDistance(circumference)}`,
+        `Ε: ${formatDistance(area)}`,
+      ]);
     }
   }
 
@@ -488,11 +508,11 @@ export class PreviewRenderer {
   }
 
   /**
-   * 🏢 ENTERPRISE: Render rectangle preview
+   * 🏢 ENTERPRISE: Render rectangle preview with real-time measurements
    */
   private renderRectangle(
     ctx: CanvasRenderingContext2D,
-    entity: { corner1?: Point2D; corner2?: Point2D },
+    entity: { corner1?: Point2D; corner2?: Point2D; showPreviewMeasurements?: boolean },
     transform: ViewTransform,
     opts: Required<PreviewRenderOptions>
   ): void {
@@ -514,6 +534,36 @@ export class PreviewRenderer {
       this.renderGrip(ctx, { x: x + width, y }, opts);
       this.renderGrip(ctx, { x, y: y + height }, opts);
       this.renderGrip(ctx, { x: x + width, y: y + height }, opts);
+    }
+
+    // Real-time measurement labels
+    if (entity.showPreviewMeasurements) {
+      const wc1 = entity.corner1;
+      const wc2 = entity.corner2;
+
+      // World-space corners for correct distance
+      const topRight: Point2D = { x: wc2.x, y: wc1.y };
+      const bottomLeft: Point2D = { x: wc1.x, y: wc2.y };
+
+      // Screen-space corners for label positioning
+      const screenTopRight = CoordinateTransforms.worldToScreen(topRight, transform, this.currentViewport!);
+      const screenBottomLeft = CoordinateTransforms.worldToScreen(bottomLeft, transform, this.currentViewport!);
+
+      // Edge labels: width (top) + height (left)
+      this.renderDistanceLabelFromWorld(ctx, wc1, topRight, c1, screenTopRight);
+      this.renderDistanceLabelFromWorld(ctx, wc1, bottomLeft, c1, screenBottomLeft);
+
+      // Center info: perimeter + area
+      const worldWidth = calculateWorldDistance(wc1, topRight);
+      const worldHeight = calculateWorldDistance(wc1, bottomLeft);
+      const perimeter = 2 * (worldWidth + worldHeight);
+      const area = worldWidth * worldHeight;
+
+      const centerScreen: Point2D = { x: x + width / 2, y: y + height / 2 };
+      this.renderInfoLabel(ctx, centerScreen, [
+        `Περ: ${formatDistance(perimeter)}`,
+        `Ε: ${formatDistance(area)}`,
+      ]);
     }
   }
 
@@ -787,6 +837,63 @@ export class PreviewRenderer {
   ): void {
     // 🏢 ADR-041: Use centralized distance label rendering
     renderDistanceLabel(ctx, worldP1, worldP2, screenP1, screenP2, PREVIEW_LABEL_DEFAULTS);
+  }
+
+  /**
+   * Render a multi-line info label at a screen position with background box.
+   * Used for area/perimeter/circumference during drawing preview.
+   */
+  private renderInfoLabel(
+    ctx: CanvasRenderingContext2D,
+    screenPos: Point2D,
+    lines: string[]
+  ): void {
+    if (lines.length === 0) return;
+
+    const style = getTextPreviewStyleWithOverride();
+    if (!style.enabled) return;
+
+    const fontSize = parseInt(style.fontSize);
+    const lineHeight = fontSize + 4;
+    const font = `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+    const padding = PREVIEW_LABEL_DEFAULTS.padding;
+    const totalHeight = lines.length * lineHeight + padding;
+
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Measure widest line
+    let maxWidth = 0;
+    for (const line of lines) {
+      const w = ctx.measureText(line).width;
+      if (w > maxWidth) maxWidth = w;
+    }
+    const bgWidth = maxWidth + padding * 2;
+    const bgHeight = totalHeight;
+
+    // Position: below the center point
+    const boxX = screenPos.x;
+    const boxY = screenPos.y + fontSize + 6;
+
+    // Background box
+    ctx.fillStyle = PREVIEW_LABEL_DEFAULTS.backgroundColor;
+    ctx.fillRect(
+      boxX - bgWidth / 2,
+      boxY - padding / 2,
+      bgWidth,
+      bgHeight
+    );
+
+    // Text lines
+    ctx.fillStyle = style.color;
+    ctx.globalAlpha = style.opacity;
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], boxX, boxY + i * lineHeight + lineHeight / 2);
+    }
+
+    ctx.restore();
   }
 
   // ============================================================================
