@@ -301,19 +301,15 @@ export class BuildingFloorplanService {
       // Step 2: Upload file to Storage
       const storageRef = ref(storage, createResult.storagePath);
       let uploadSize: number;
+      let downloadUrl: string;
 
       if (hasOriginalFile) {
-        // Upload original DXF binary — FloorplanGallery can render this
+        // Upload original DXF/PDF binary — FloorplanGallery can render this
         const uploadResult = await uploadBytes(storageRef, options.originalFile!, {
           contentType,
         });
         uploadSize = options.originalFile!.size;
-        const downloadUrl = await getDownloadURL(uploadResult.ref);
-        await FileRecordService.finalizeFileRecord({
-          fileId: createResult.fileId,
-          sizeBytes: uploadSize,
-          downloadUrl,
-        });
+        downloadUrl = await getDownloadURL(uploadResult.ref);
       } else {
         // Fallback: upload scene JSON (for backward compatibility)
         const sceneJson = JSON.stringify(data.scene);
@@ -322,16 +318,46 @@ export class BuildingFloorplanService {
           contentType: 'application/json',
         });
         uploadSize = sceneBytes.length;
-        const downloadUrl = await getDownloadURL(uploadResult.ref);
-        await FileRecordService.finalizeFileRecord({
-          fileId: createResult.fileId,
-          sizeBytes: uploadSize,
-          downloadUrl,
-        });
+        downloadUrl = await getDownloadURL(uploadResult.ref);
       }
 
+      // Step 3: Generate thumbnail (non-blocking — failure doesn't break upload)
+      let thumbnailUrl: string | undefined;
+      try {
+        const { generateDxfThumbnail, generatePdfThumbnail } = await import('@/services/thumbnail-generator');
+        let thumbnailBlob: Blob | null = null;
+
+        if (data.scene && ext !== 'pdf') {
+          // DXF thumbnail from scene data
+          thumbnailBlob = await generateDxfThumbnail(data.scene, 300, 200);
+        } else if (hasOriginalFile && ext === 'pdf') {
+          // PDF thumbnail from page 1
+          thumbnailBlob = await generatePdfThumbnail(options.originalFile!, 300, 200);
+        }
+
+        if (thumbnailBlob) {
+          const thumbPath = `${createResult.storagePath}_thumb.png`;
+          const thumbRef = ref(storage, thumbPath);
+          await uploadBytes(thumbRef, thumbnailBlob, { contentType: 'image/png' });
+          thumbnailUrl = await getDownloadURL(thumbRef);
+        }
+      } catch (thumbError) {
+        // Thumbnail failure is non-blocking — file works fine without it
+        // eslint-disable-next-line no-console
+        console.warn('[BuildingFloorplan] Thumbnail generation skipped:',
+          thumbError instanceof Error ? thumbError.message : String(thumbError));
+      }
+
+      // Step 4: Finalize FileRecord with downloadUrl + thumbnailUrl
+      await FileRecordService.finalizeFileRecord({
+        fileId: createResult.fileId,
+        sizeBytes: uploadSize,
+        downloadUrl,
+        thumbnailUrl,
+      });
+
       // eslint-disable-next-line no-console
-      console.log(`[BuildingFloorplan] FileRecord created: ${createResult.fileId} (${ext}, ${uploadSize} bytes)`);
+      console.log(`[BuildingFloorplan] FileRecord created: ${createResult.fileId} (${ext}, ${uploadSize} bytes, thumb: ${!!thumbnailUrl})`);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(`[BuildingFloorplan] FileRecord creation FAILED for building ${buildingId}:`,

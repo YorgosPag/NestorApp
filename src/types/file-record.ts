@@ -343,6 +343,13 @@ export interface FileRecord {
    */
   purpose?: string;
 
+  /**
+   * 🏢 ENTERPRISE: Thumbnail preview URL (generated at upload time)
+   * Small PNG image (~300x200px) stored in Firebase Storage.
+   * Used for file card previews in FilesList and galleries.
+   */
+  thumbnailUrl?: string;
+
   // =========================================================================
   // 🏢 ENTERPRISE: INGESTION SOURCE TRACKING (ADR-055)
   // =========================================================================
@@ -651,6 +658,8 @@ export interface FinalizeFileRecordInput {
   downloadUrl: string;
   /** Content hash (optional) */
   hash?: string;
+  /** Thumbnail preview URL (optional — generated at upload time for DXF/PDF) */
+  thumbnailUrl?: string;
 }
 
 // ============================================================================

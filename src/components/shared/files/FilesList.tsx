@@ -228,13 +228,22 @@ export function FilesList({
           >
             {/* File info */}
             <div className="flex items-center space-x-3 flex-1 min-w-0">
-              {/* Icon */}
-              <div
-                className={`flex-shrink-0 w-10 h-10 bg-primary/10 ${quick.card} flex items-center justify-center`}
-                aria-hidden="true"
-              >
-                <IconComponent className={`${iconSizes.md} text-primary`} />
-              </div>
+              {/* Thumbnail preview or fallback icon */}
+              {file.thumbnailUrl ? (
+                <img
+                  src={file.thumbnailUrl}
+                  alt={translateDisplayName(file)}
+                  className={`flex-shrink-0 w-10 h-10 ${quick.card} object-cover`}
+                  loading="lazy"
+                />
+              ) : (
+                <div
+                  className={`flex-shrink-0 w-10 h-10 bg-primary/10 ${quick.card} flex items-center justify-center`}
+                  aria-hidden="true"
+                >
+                  <IconComponent className={`${iconSizes.md} text-primary`} />
+                </div>
+              )}
 
               {/* Details */}
               <div className="flex-1 min-w-0">

@@ -190,6 +190,8 @@ export interface BuildFinalizeUpdateInput {
   downloadUrl: string;
   /** Content hash (optional) */
   hash?: string;
+  /** Thumbnail preview URL (optional — generated at upload time for DXF/PDF) */
+  thumbnailUrl?: string;
   /**
    * Next status after finalize
    * - READY: Normal uploads (default)
@@ -206,6 +208,7 @@ export interface FinalizeUpdateData {
   sizeBytes: number;
   downloadUrl: string;
   hash?: string;
+  thumbnailUrl?: string;
 }
 
 // ============================================================================
@@ -353,6 +356,11 @@ export function buildFinalizeFileRecordUpdate(
   // Only include hash if provided
   if (input.hash !== undefined) {
     updateData.hash = input.hash;
+  }
+
+  // Include thumbnail URL if generated
+  if (input.thumbnailUrl) {
+    updateData.thumbnailUrl = input.thumbnailUrl;
   }
 
   return updateData;

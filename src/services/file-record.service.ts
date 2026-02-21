@@ -263,6 +263,7 @@ export class FileRecordService {
       sizeBytes: input.sizeBytes,
       downloadUrl: input.downloadUrl,
       hash: input.hash,
+      thumbnailUrl: input.thumbnailUrl,
       nextStatus: FILE_STATUS.READY, // Default for client uploads
     });
 
