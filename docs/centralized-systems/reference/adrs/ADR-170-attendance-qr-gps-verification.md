@@ -69,7 +69,7 @@ Worker scans QR → Browser opens /attendance/check-in/[token]
 | `usePhotoCapture` | `src/hooks/` | Camera capture + compression hook |
 | `CheckInClient` | `src/app/attendance/check-in/[token]/` | Worker check-in page (mobile-first) |
 | `QrCodePanel` | `src/components/projects/ika/components/` | Admin QR generation/display |
-| `GeofenceConfigMap` | `src/components/projects/ika/components/` | Admin geofence configuration |
+| `GeofenceConfigMap` | `src/components/projects/ika/components/` | Admin geofence configuration (interactive map with react-map-gl/maplibre) |
 
 ### New Firestore Collection
 
@@ -132,8 +132,24 @@ ATTENDANCE_QR_SECRET=<random-64-char-hex>  # HMAC signing key
 - NFC badge integration
 - Facial recognition (SmartBarrel-style)
 
+## GeofenceConfigMap — Interactive Map Upgrade (2026-02-22)
+
+The `GeofenceConfigMap` was upgraded from a static OpenStreetMap iframe to a fully interactive map:
+
+| Feature | Before | After |
+|---------|--------|-------|
+| Map library | OpenStreetMap iframe (static) | react-map-gl/maplibre (interactive) |
+| Set center | Manual lat/lng input only | Click on map or drag marker |
+| Radius visualization | None | GeoJSON circle polygon (scales with zoom) |
+| Radius slider | Native `input[type="range"]` | Radix UI Slider |
+| Default center | Hardcoded Thessaloniki | `GEOGRAPHIC_CONFIG` (centralized) |
+| Dependencies | None (iframe) | react-map-gl + maplibre-gl (already installed) |
+
+**No new dependencies added** — uses existing react-map-gl/maplibre infrastructure from geo-canvas subapp.
+
 ## Changelog
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-02-22 | GeofenceConfigMap: interactive map (react-map-gl), draggable marker, GeoJSON circle, Radix Slider | Claude |
 | 2026-02-09 | Initial implementation — 14 new files, 5 modified | Claude |
