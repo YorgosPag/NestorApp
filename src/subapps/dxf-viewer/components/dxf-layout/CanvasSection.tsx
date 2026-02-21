@@ -372,16 +372,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDiagonalDirectionPoint(null);
   }, []);
 
-  // Two-step guide placement (guide-x / guide-z): step 0 = select, step 1 = place
-  const [guideXZConfirmed, setGuideXZConfirmed] = useState(false);
+  // Two-step perpendicular guide: step 0 = select reference guide, step 1 = place perpendicular
+  const [perpRefGuideId, setPerpRefGuideId] = useState<string | null>(null);
 
-  const handleGuideXZConfirm = useCallback(() => setGuideXZConfirmed(true), []);
-  const handleGuideXZReset = useCallback(() => setGuideXZConfirmed(false), []);
+  const handlePerpRefSelected = useCallback((guideId: string) => {
+    setPerpRefGuideId(guideId);
+  }, []);
 
-  // Reset when switching away from guide-x/guide-z
+  const handlePerpPlaced = useCallback(() => {
+    setPerpRefGuideId(null);
+  }, []);
+
+  // Reset when switching away from guide-perpendicular
   useEffect(() => {
-    if (activeTool !== 'guide-x' && activeTool !== 'guide-z') {
-      setGuideXZConfirmed(false);
+    if (activeTool !== 'guide-perpendicular') {
+      setPerpRefGuideId(null);
     }
   }, [activeTool]);
 
@@ -490,8 +495,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-189: Sync guide tool step state → toolHintOverrideStore for ToolbarStatusBar hint progression
   // Guide tools manage their own step state (not DrawingStateMachine), so we push it to the shared store.
   useEffect(() => {
-    if (activeTool === 'guide-x' || activeTool === 'guide-z') {
-      toolHintOverrideStore.setStepOverride(guideXZConfirmed ? 1 : 0);
+    if (activeTool === 'guide-perpendicular') {
+      toolHintOverrideStore.setStepOverride(perpRefGuideId ? 1 : 0);
     } else if (activeTool === 'guide-xz') {
       toolHintOverrideStore.setStepOverride(diagonalStep);
     } else if (activeTool === 'guide-parallel') {
@@ -507,7 +512,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     } else {
       toolHintOverrideStore.setStepOverride(null);
     }
-  }, [activeTool, guideXZConfirmed, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep]);
+  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep]);
 
   // ADR-189 §3.9: Arc segments picked → prompt for segment count
   const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
@@ -654,10 +659,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const highlightedGuideId = useMemo<string | null>(() => {
     if (!mouseWorld || !guideState.guides.length) return null;
 
-    // 1. Guide tool modes: highlight nearest guide for delete/perpendicular/parallel/move
+    // 1. Guide tool modes: highlight nearest guide for delete/perpendicular(step 0)/parallel/move
     const needsToolHighlight =
       activeTool === 'guide-delete' ||
-      activeTool === 'guide-perpendicular' ||
+      (activeTool === 'guide-perpendicular' && !perpRefGuideId) ||
       activeTool === 'guide-move' ||
       (activeTool === 'guide-parallel' && !parallelRefGuideId);
 
@@ -683,8 +688,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       return nearestId;
     }
 
-    // 2. Parallel ref selected → highlight the reference guide
+    // 2. Parallel/Perpendicular ref selected → highlight the reference guide
     if (parallelRefGuideId) return parallelRefGuideId;
+    if (perpRefGuideId) return perpRefGuideId;
 
     // 3. Snap-based highlight: when snap engine locks onto a guide, highlight it
     const snap = getImmediateSnap();
@@ -693,7 +699,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
 
     return null;
-  }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, transform.scale]);
+  }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, perpRefGuideId, transform.scale]);
 
   // ADR-189 §4.13: Panel highlight — hover over guide row in GuidePanel → highlight on canvas
   const [panelHighlightGuideId, setPanelHighlightGuideId] = useState<string | null>(null);
@@ -726,8 +732,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         return { axis: refGuide.axis, offset: refGuide.axis === 'X' ? mouseWorld.x : mouseWorld.y };
       }
     }
+    // Perpendicular step 1 preview: ghost shows perpendicular direction following cursor
+    if (activeTool === 'guide-perpendicular' && perpRefGuideId) {
+      const refGuide = guideState.guides.find(g => g.id === perpRefGuideId);
+      if (refGuide && refGuide.axis !== 'XZ') {
+        // Perpendicular to X → ghost Y, perpendicular to Y → ghost X
+        const perpAxis = refGuide.axis === 'X' ? 'Y' as const : 'X' as const;
+        return { axis: perpAxis, offset: perpAxis === 'X' ? mouseWorld.x : mouseWorld.y };
+      }
+    }
     return null;
-  }, [activeTool, mouseWorld, parallelRefGuideId, guideState.guides]);
+  }, [activeTool, mouseWorld, parallelRefGuideId, perpRefGuideId, guideState.guides]);
 
   // ADR-189 §3.3: Ghost diagonal guide preview (3-click workflow + XZ parallel)
   const ghostDiagonalGuide = useMemo(() => {
@@ -1052,10 +1067,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     circleIntersectStep,
     onCircleIntersectFirstPicked: handleCircleIntersectFirstPicked,
     onCircleIntersectSecondPicked: handleCircleIntersectSecondPicked,
-    // Two-step guide placement
-    guideXZConfirmed,
-    onGuideXZConfirm: handleGuideXZConfirm,
-    onGuideXZReset: handleGuideXZReset,
+    // Two-step perpendicular guide
+    perpRefGuideId,
+    onPerpRefSelected: handlePerpRefSelected,
+    onPerpPlaced: handlePerpPlaced,
     // Guide rect-center
     onRectCenterPlace: handleRectCenterPlace,
   });

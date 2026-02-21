@@ -346,13 +346,13 @@
     "guide-x": {
       "name": "Vertical Guide",
       "description": "Create vertical guide line",
-      "steps": ["Click to select position", "Click to place vertical guide"],
+      "steps": ["Click on canvas to place vertical guide"],
       "shortcuts": "G→X | ESC=Cancel"
     },
     "guide-z": {
       "name": "Horizontal Guide",
       "description": "Create horizontal guide line",
-      "steps": ["Click to select position", "Click to place horizontal guide"],
+      "steps": ["Click on canvas to place horizontal guide"],
       "shortcuts": "G→Z | ESC=Cancel"
     },
     "guide-xz": {
