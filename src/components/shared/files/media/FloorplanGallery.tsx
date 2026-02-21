@@ -47,6 +47,8 @@ import {
   Map,
   FileText,
   Image as ImageIcon,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -98,6 +100,27 @@ const ZOOM_CONFIG = {
   defaultZoom: 1,
 } as const;
 
+/**
+ * Drawing mode for DXF rendering in floorplan tabs.
+ * - dark: Dark background + colored lines (layer colors)
+ * - light: White background + black lines (technical drawing)
+ */
+type DxfDrawingMode = 'dark' | 'light';
+
+/** Visual config per drawing mode */
+const DRAWING_MODE_CONFIG = {
+  dark: {
+    background: '#111827',
+    entityColor: null, // Use layer colors
+    textColor: null,   // Use layer colors
+  },
+  light: {
+    background: '#ffffff',
+    entityColor: '#1a1a1a', // Force black
+    textColor: '#1a1a1a',   // Force black
+  },
+} as const;
+
 // ============================================================================
 // UTILITIES
 // ============================================================================
@@ -129,13 +152,14 @@ function getFileIcon(ext: string): React.ReactNode {
 
 /**
  * Render DXF scene data to a canvas element.
- * Accepts zoom and panOffset for interactive viewing.
+ * Accepts zoom, panOffset, and drawing mode for interactive viewing.
  */
 function renderDxfToCanvas(
   canvas: HTMLCanvasElement,
   scene: DxfSceneData,
   zoom: number,
   panOffset: PanOffset,
+  drawingMode: DxfDrawingMode = 'dark',
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -149,12 +173,12 @@ function renderDxfToCanvas(
     canvas.height = rect.height;
   }
 
-  // Dark mode detection
-  const isDarkMode = document.documentElement.classList.contains('dark');
+  // Drawing mode config
+  const modeConfig = DRAWING_MODE_CONFIG[drawingMode];
 
   // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = isDarkMode ? '#111827' : '#f8f9fa';
+  ctx.fillStyle = modeConfig.background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Calculate bounds, scale, and offset (including pan)
@@ -166,9 +190,9 @@ function renderDxfToCanvas(
   const offsetX = (canvas.width - drawingWidth * scale) / 2 + panOffset.x;
   const offsetY = (canvas.height - drawingHeight * scale) / 2 + panOffset.y;
 
-  // Layer color helper
+  // Layer color helper — respects drawing mode
   const getLayerColor = (layerName: string): string =>
-    scene.layers?.[layerName]?.color || '#e2e8f0';
+    modeConfig.entityColor || scene.layers?.[layerName]?.color || '#e2e8f0';
 
   ctx.lineWidth = 1;
 
@@ -328,6 +352,9 @@ export function FloorplanGallery({
 
   // Fullscreen modal state
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // DXF drawing mode — dark (colored) or light (black & white)
+  const [drawingMode, setDrawingMode] = useState<DxfDrawingMode>('dark');
 
   // Zoom + Pan — inline view
   const inlineZP = useZoomPan(ZOOM_CONFIG);
@@ -519,8 +546,8 @@ export function FloorplanGallery({
 
   useEffect(() => {
     if (!loadedScene || !inlineCanvasRef.current || !isDxf) return;
-    renderDxfToCanvas(inlineCanvasRef.current, loadedScene, inlineZP.zoom, inlineZP.panOffset);
-  }, [loadedScene, isDxf, inlineZP.zoom, inlineZP.panOffset]);
+    renderDxfToCanvas(inlineCanvasRef.current, loadedScene, inlineZP.zoom, inlineZP.panOffset, drawingMode);
+  }, [loadedScene, isDxf, inlineZP.zoom, inlineZP.panOffset, drawingMode]);
 
   // =========================================================================
   // DXF CANVAS RENDERING — FULLSCREEN MODAL
@@ -536,7 +563,7 @@ export function FloorplanGallery({
 
     const doRender = () => {
       if (!modalCanvasRef.current) return;
-      renderDxfToCanvas(modalCanvasRef.current, loadedScene, modalZP.zoom, modalZP.panOffset);
+      renderDxfToCanvas(modalCanvasRef.current, loadedScene, modalZP.zoom, modalZP.panOffset, drawingMode);
       modalCanvasReadyRef.current = true;
     };
 
@@ -548,7 +575,7 @@ export function FloorplanGallery({
 
     // Subsequent renders (zoom/pan changes): immediate
     doRender();
-  }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset]);
+  }, [isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode]);
 
   // =========================================================================
   // ACTIONS
@@ -830,6 +857,33 @@ export function FloorplanGallery({
 
           {/* Action Buttons */}
           <nav className="flex items-center gap-1" aria-label={t('floorplan.actions')}>
+            {/* Drawing Mode Toggle (DXF only) */}
+            {isDxf && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDrawingMode(prev => prev === 'dark' ? 'light' : 'dark')}
+                      aria-label={drawingMode === 'dark' ? t('floorplan.lightMode') : t('floorplan.darkMode')}
+                      aria-pressed={drawingMode === 'light'}
+                    >
+                      {drawingMode === 'dark' ? (
+                        <Sun className={iconSizes.sm} aria-hidden="true" />
+                      ) : (
+                        <Moon className={iconSizes.sm} aria-hidden="true" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {drawingMode === 'dark' ? t('floorplan.lightMode') : t('floorplan.darkMode')}
+                  </TooltipContent>
+                </Tooltip>
+                <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
+              </>
+            )}
+
             {/* Zoom Controls + Fullscreen */}
             {renderZoomControls(inlineZP, { showFullscreen: true })}
 

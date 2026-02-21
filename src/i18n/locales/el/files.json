@@ -355,7 +355,9 @@
     "actions": "Ενέργειες κάτοψης",
     "untitled": "Χωρίς τίτλο",
     "processing": "Επεξεργασία κάτοψης...",
-    "canvasAlt": "Κάτοψη: {fileName}"
+    "canvasAlt": "Κάτοψη: {fileName}",
+    "lightMode": "Λευκό φόντο",
+    "darkMode": "Σκούρο φόντο"
   },
   "errorReporting": {
     "sending": "Αποστολή...",

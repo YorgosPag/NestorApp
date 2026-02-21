@@ -355,7 +355,9 @@
     "actions": "Floorplan actions",
     "untitled": "Untitled",
     "processing": "Processing floorplan...",
-    "canvasAlt": "Floorplan: {fileName}"
+    "canvasAlt": "Floorplan: {fileName}",
+    "lightMode": "Light background",
+    "darkMode": "Dark background"
   },
   "errorReporting": {
     "sending": "Sending...",
