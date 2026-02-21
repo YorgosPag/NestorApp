@@ -207,7 +207,7 @@
 | **Αποτέλεσμα** | Πάντα ισαπέχοντα | Σταθερή απόσταση, τελευταίο τμήμα μπορεί να μικρότερο |
 | **Παράδειγμα** | "3 τμήματα" → 2 ενδιάμεσα σημεία | "ανά 10μ" → σημεία κάθε 10μ |
 
-### 3.9 Σε Τμήματα Τόξου (7ο πλήκτρο)
+### 3.9 Σε Τμήματα Τόξου (7ο πλήκτρο) ✅ IMPLEMENTED
 
 Υποδιαιρεί ένα υφιστάμενο τόξο/κύκλο σε ισαπέχοντα snap points.
 
@@ -216,7 +216,14 @@
 2. Popup: "Δώστε αριθμό τμημάτων" → αριθμός + OK
 3. X markers εμφανίζονται **πάνω στο τόξο** σε ισαπέχουσες θέσεις
 
-### 3.10 Ανά Απόσταση Τόξου (8ο πλήκτρο)
+**Implementation (2026-02-21):**
+- Keyboard chord: **G→T**
+- Entity picking: `pointToArcDistance()` for arcs, circumference distance for circles
+- Geometry: `computeArcSegmentPoints()` — Circle: N points (no duplicate start=end), Arc: N+1 points (includes endpoints)
+- DXF convention: counterclockwise sweep from startAngle to endAngle
+- Files: `useConstructionPointState.ts`, `useCanvasClickHandler.ts`, `CanvasSection.tsx`
+
+### 3.10 Ανά Απόσταση Τόξου (8ο πλήκτρο) ✅ IMPLEMENTED
 
 Ίδια λογική με "Ανά Απόσταση" αλλά πάνω σε τόξο/κύκλο.
 
@@ -225,6 +232,11 @@
 2. Εμφανίζεται δυναμική γραμμή από το άκρο του τόξου μέχρι το σταυρόνημα
 3. Prompt: "Δώστε μήκος" → αριθμός σε μέτρα
 4. X markers ανά σταθερή απόσταση πάνω στο τόξο
+
+**Implementation (2026-02-21):**
+- Keyboard chord: **G→U**
+- Geometry: `computeArcDistancePoints()` — angleStep = distance/radius, wraps around for circles, includes endpoint for arcs
+- Files: `useConstructionPointState.ts`, `useCanvasClickHandler.ts`, `CanvasSection.tsx`
 
 ### 3.11 Τομή Κύκλων (9ο πλήκτρο)
 
@@ -235,7 +247,7 @@
 2. "Επιλέξτε τον δεύτερο κύκλο" → κλικ
 3. X markers εμφανίζονται στα **σημεία τομής** των δύο κύκλων (0, 1 ή 2 σημεία)
 
-### 3.12 Τομή Τόξου & Ευθείας (10ο πλήκτρο)
+### 3.12 Τομή Τόξου & Ευθείας (10ο πλήκτρο) ✅ IMPLEMENTED
 
 Βρίσκει τα σημεία τομής γραμμής με τόξο ή κύκλο.
 
@@ -243,6 +255,13 @@
 1. "Επιλέξτε γραμμή" → κλικ σε ευθεία
 2. "Επιλέξτε τόξο" → κλικ σε τόξο **ή** κύκλο (λειτουργεί και στα δύο)
 3. X markers στα σημεία τομής
+
+**Implementation (2026-02-21):**
+- Keyboard chord: **G→I**
+- 2-step state machine: `arcLineStep` (0=pick line, 1=pick arc/circle)
+- Geometry: `computeLineArcIntersection()` — Parametric line-circle quadratic (at²+bt+c=0), filter t∈[0,1] + angular range
+- Returns 0, 1, or 2 points; warning notification on 0 results
+- Files: `useConstructionPointState.ts`, `useCanvasClickHandler.ts`, `CanvasSection.tsx`
 
 ### 3.13 Παράλληλοι (11ο πλήκτρο) ⭐ ΠΟΛΥ ΣΥΧΝΗ ΧΡΗΣΗ
 
@@ -1806,7 +1825,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-20 | **Centralized PromptDialog system** (systems/prompt-dialog/): store + hook + component. Reusable across all DXF viewer tools for numeric/text input |
 | 2026-02-20 | **Three-step parallel workflow**: Step 1 click → select reference (highlight), Step 2 click → choose side (left/right or above/below), Step 3 → prompt dialog for distance. Replaces two-step workflow |
 | 2026-02-20 | **Smoother PromptDialog animation**: 350ms `cubic-bezier(0.16, 1, 0.3, 1)` entrance, soft scale (0.97→1), minimal translateY (-4px→0) |
-| 2026-02-20 | **Phase 1A COMPLETE** — All 14 commands from §3.1 status: X ✅, Z ✅, Parallel ✅, Delete ✅ (remaining: XZ diagonal, Perpendicular, Segments, Distance, Arc segments, Arc distance, Circle intersection, Arc-line intersection, Add point, Delete point) |
+| 2026-02-20 | **Phase 1A PARTIAL** — 4/14 commands: X ✅, Z ✅, Parallel ✅, Delete ✅ |
 | 2026-02-20 | **Phase 1B START**: Keyboard chord shortcuts (G→X/Z/P/D/V) via chord leader pattern in EnhancedDXFToolbar |
 | 2026-02-20 | **GuideContextMenu**: Right-click on guide → Delete, Lock/Unlock, Edit Label, Toggle Visibility. Imperative handle pattern (no parent re-render) |
 | 2026-02-20 | **GuideStore expanded**: `setGuideLocked()`, `setGuideLabel()` methods for context menu operations |
