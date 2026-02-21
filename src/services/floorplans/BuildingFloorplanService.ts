@@ -197,6 +197,11 @@ export class BuildingFloorplanService {
           timestamp: Date.now(),
         });
 
+        // 🏢 ENTERPRISE: Create FileRecord so PDF appears in BuildingFloorplanTab
+        if (options?.companyId && options?.createdBy) {
+          await this.createFileRecord(buildingId, type, data, options);
+        }
+
         return true;
       }
 
@@ -262,10 +267,16 @@ export class BuildingFloorplanService {
     try {
       const fileName = data.fileName || `${buildingId}_${type}_floorplan.dxf`;
 
-      // Determine what to upload: original DXF file (preferred) or fallback to scene JSON
+      // Determine what to upload: original file (DXF/PDF) or fallback to scene JSON
       const hasOriginalFile = !!options.originalFile;
-      const contentType = hasOriginalFile ? (options.originalFile!.type || 'application/dxf') : 'application/json';
-      const ext = hasOriginalFile ? 'dxf' : 'json';
+      // Extract extension from original filename (e.g. "plan.pdf" → "pdf", "plan.dxf" → "dxf")
+      const fileExtension = hasOriginalFile
+        ? (options.originalFile!.name.split('.').pop()?.toLowerCase() || 'dxf')
+        : 'json';
+      const contentType = hasOriginalFile
+        ? (options.originalFile!.type || (fileExtension === 'pdf' ? 'application/pdf' : 'application/dxf'))
+        : 'application/json';
+      const ext = fileExtension;
 
       // Step 1: Create pending FileRecord
       const purpose = type === 'building' ? 'building-floorplan' : 'storage-floorplan';

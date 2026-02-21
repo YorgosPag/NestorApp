@@ -818,7 +818,12 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
-      saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData);
+      // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
+      const createdBy = user?.uid;
+      const pdfFileRecordOptions = selectedCompanyId && createdBy
+        ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
+        : undefined;
+      saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData, pdfFileRecordOptions);
     } else {
       saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', floorplanData);
     }
