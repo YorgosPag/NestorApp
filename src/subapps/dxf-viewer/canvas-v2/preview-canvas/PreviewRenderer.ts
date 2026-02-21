@@ -461,7 +461,7 @@ export class PreviewRenderer {
   }
 
   /**
-   * 🏢 ENTERPRISE: Render polyline preview
+   * 🏢 ENTERPRISE: Render polyline preview with real-time measurements
    */
   private renderPolyline(
     ctx: CanvasRenderingContext2D,
@@ -503,6 +503,37 @@ export class PreviewRenderer {
           screenPoints[i - 1],
           screenPoints[i]
         );
+      }
+
+      // Perimeter + area for polygons (3+ vertices)
+      if (entity.vertices.length >= 3) {
+        const verts = entity.vertices;
+        // Total perimeter (all edges including closing edge)
+        let perimeter = 0;
+        for (let i = 1; i < verts.length; i++) {
+          perimeter += calculateWorldDistance(verts[i - 1], verts[i]);
+        }
+        // Add closing edge distance
+        perimeter += calculateWorldDistance(verts[verts.length - 1], verts[0]);
+
+        // Shoelace formula for polygon area
+        let area = 0;
+        for (let i = 0; i < verts.length; i++) {
+          const j = (i + 1) % verts.length;
+          area += verts[i].x * verts[j].y;
+          area -= verts[j].x * verts[i].y;
+        }
+        area = Math.abs(area) / 2;
+
+        // Centroid for label positioning
+        const cx = verts.reduce((s, v) => s + v.x, 0) / verts.length;
+        const cy = verts.reduce((s, v) => s + v.y, 0) / verts.length;
+        const centroidScreen = CoordinateTransforms.worldToScreen({ x: cx, y: cy }, transform, this.currentViewport!);
+
+        this.renderInfoLabel(ctx, centroidScreen, [
+          `Περ: ${formatDistance(perimeter)}`,
+          `Ε: ${formatDistance(area)}`,
+        ]);
       }
     }
   }
@@ -786,6 +817,28 @@ export class PreviewRenderer {
     if (opts.showGrips) {
       this.renderGrip(ctx, center, opts);
     }
+
+    // Arc measurements: arc length + sector area
+    if (entity.radius > 0) {
+      // Calculate sweep angle in radians
+      let sweepRad = endRad - startRad;
+      if (entity.counterclockwise) {
+        if (sweepRad <= 0) sweepRad += TAU;
+      } else {
+        if (sweepRad >= 0) sweepRad -= TAU;
+      }
+      const absSweep = Math.abs(sweepRad);
+
+      if (absSweep > 0.001) {
+        const arcLength = entity.radius * absSweep;
+        const sectorArea = 0.5 * entity.radius * entity.radius * absSweep;
+
+        this.renderInfoLabel(ctx, center, [
+          `L: ${formatDistance(arcLength)}`,
+          `Ε: ${formatDistance(sectorArea)}`,
+        ]);
+      }
+    }
   }
 
   // ============================================================================
@@ -840,7 +893,7 @@ export class PreviewRenderer {
   }
 
   /**
-   * Render a multi-line info label at a screen position with background box.
+   * Render a multi-line info label at a screen position (text only, no background).
    * Used for area/perimeter/circumference during drawing preview.
    */
   private renderInfoLabel(
@@ -856,41 +909,20 @@ export class PreviewRenderer {
     const fontSize = parseInt(style.fontSize);
     const lineHeight = fontSize + 4;
     const font = `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
-    const padding = PREVIEW_LABEL_DEFAULTS.padding;
-    const totalHeight = lines.length * lineHeight + padding;
 
     ctx.save();
     ctx.font = font;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Measure widest line
-    let maxWidth = 0;
-    for (const line of lines) {
-      const w = ctx.measureText(line).width;
-      if (w > maxWidth) maxWidth = w;
-    }
-    const bgWidth = maxWidth + padding * 2;
-    const bgHeight = totalHeight;
-
     // Position: below the center point
-    const boxX = screenPos.x;
     const boxY = screenPos.y + fontSize + 6;
 
-    // Background box
-    ctx.fillStyle = PREVIEW_LABEL_DEFAULTS.backgroundColor;
-    ctx.fillRect(
-      boxX - bgWidth / 2,
-      boxY - padding / 2,
-      bgWidth,
-      bgHeight
-    );
-
-    // Text lines
+    // Text lines (no background)
     ctx.fillStyle = style.color;
     ctx.globalAlpha = style.opacity;
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], boxX, boxY + i * lineHeight + lineHeight / 2);
+      ctx.fillText(lines[i], screenPos.x, boxY + i * lineHeight + lineHeight / 2);
     }
 
     ctx.restore();

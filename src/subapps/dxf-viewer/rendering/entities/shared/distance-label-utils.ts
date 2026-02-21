@@ -69,7 +69,7 @@ export interface DistanceLabelOptions {
  * 🏢 ENTERPRISE: Default options for preview rendering (PreviewCanvas)
  */
 export const PREVIEW_LABEL_DEFAULTS: Required<DistanceLabelOptions> = {
-  showBackground: true,
+  showBackground: false,
   backgroundColor: UI_COLORS.MODAL_OVERLAY_MEDIUM,
   padding: 4,
   verticalOffset: -10,
