@@ -1449,7 +1449,8 @@
     "guideArcLineIntersect": "Τομή Τόξου & Ευθείας",
     "guideCircleIntersect": "Τομή Κύκλων",
     "guideMove": "Μετακίνηση Οδηγού",
-    "guideDelete": "Διαγραφή Οδηγού"
+    "guideDelete": "Διαγραφή Οδηγού",
+    "guideRectCenter": "Κέντρο Ορθογωνίου"
   },
   "promptDialog": {
     "confirm": "OK",

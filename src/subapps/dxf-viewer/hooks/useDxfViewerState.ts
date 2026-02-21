@@ -28,10 +28,12 @@ import { useRulersGridContext } from '../systems/rulers-grid/RulersGridSystem';
 // 📐 ADR-189: EventBus for guide→snap auto-enable
 import { EventBus } from '../systems/events/EventBus';
 
-// ADR-189: Guide tools that create/manage construction points → auto-open GL panel
+// ADR-189: ALL guide tools auto-open GL panel when selected
 const GUIDE_TOOLS_NEEDING_PANEL: ReadonlySet<ToolType> = new Set<ToolType>([
+  'guide-x', 'guide-z', 'guide-xz', 'guide-parallel', 'guide-perpendicular',
   'guide-segments', 'guide-distance', 'guide-add-point', 'guide-delete-point',
   'guide-arc-segments', 'guide-arc-distance', 'guide-arc-line-intersect', 'guide-circle-intersect',
+  'guide-move', 'guide-delete', 'guide-rect-center',
 ]);
 
 export function useDxfViewerState() {

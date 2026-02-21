@@ -346,13 +346,13 @@
     "guide-x": {
       "name": "Vertical Guide",
       "description": "Create vertical guide line",
-      "steps": ["Click on canvas to place vertical guide"],
+      "steps": ["Click to select position", "Click to place vertical guide"],
       "shortcuts": "G→X | ESC=Cancel"
     },
     "guide-z": {
       "name": "Horizontal Guide",
       "description": "Create horizontal guide line",
-      "steps": ["Click on canvas to place horizontal guide"],
+      "steps": ["Click to select position", "Click to place horizontal guide"],
       "shortcuts": "G→Z | ESC=Cancel"
     },
     "guide-xz": {
@@ -463,6 +463,12 @@
       "description": "Delete construction guide",
       "steps": ["Click on guide to delete"],
       "shortcuts": "G→D | ESC=Cancel"
+    },
+    "guide-rect-center": {
+      "name": "Rectangle Center",
+      "description": "Place point at center of rectangle formed by 4 guides",
+      "steps": ["Click inside rectangle formed by guides"],
+      "shortcuts": "G→R | ESC=Cancel"
     }
   },
   "common": {

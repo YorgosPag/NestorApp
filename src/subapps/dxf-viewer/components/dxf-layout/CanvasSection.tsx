@@ -372,6 +372,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDiagonalDirectionPoint(null);
   }, []);
 
+  // Two-step guide placement (guide-x / guide-z): step 0 = select, step 1 = place
+  const [guideXZConfirmed, setGuideXZConfirmed] = useState(false);
+
+  const handleGuideXZConfirm = useCallback(() => setGuideXZConfirmed(true), []);
+  const handleGuideXZReset = useCallback(() => setGuideXZConfirmed(false), []);
+
+  // Reset when switching away from guide-x/guide-z
+  useEffect(() => {
+    if (activeTool !== 'guide-x' && activeTool !== 'guide-z') {
+      setGuideXZConfirmed(false);
+    }
+  }, [activeTool]);
+
   // ADR-189 §3.7: Segments tool — 2-click + dialog workflow state
   const [segmentsStep, setSegmentsStep] = useState<0 | 1>(0);
   const [segmentsStartPoint, setSegmentsStartPoint] = useState<Point2D | null>(null);
@@ -477,7 +490,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-189: Sync guide tool step state → toolHintOverrideStore for ToolbarStatusBar hint progression
   // Guide tools manage their own step state (not DrawingStateMachine), so we push it to the shared store.
   useEffect(() => {
-    if (activeTool === 'guide-xz') {
+    if (activeTool === 'guide-x' || activeTool === 'guide-z') {
+      toolHintOverrideStore.setStepOverride(guideXZConfirmed ? 1 : 0);
+    } else if (activeTool === 'guide-xz') {
       toolHintOverrideStore.setStepOverride(diagonalStep);
     } else if (activeTool === 'guide-parallel') {
       toolHintOverrideStore.setStepOverride(parallelRefGuideId ? 1 : 0);
@@ -492,7 +507,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     } else {
       toolHintOverrideStore.setStepOverride(null);
     }
-  }, [activeTool, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep]);
+  }, [activeTool, guideXZConfirmed, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep]);
 
   // ADR-189 §3.9: Arc segments picked → prompt for segment count
   const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
@@ -601,6 +616,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setCircleIntersectStep(0);
     setCircleIntersectFirst(null);
   }, [circleIntersectFirst, cpState, notifyWarning, t]);
+
+  // Guide rect-center: place construction point at center of enclosing guide rectangle
+  const handleRectCenterPlace = useCallback((center: Point2D) => {
+    cpState.addPoint(center, 'RC');
+  }, [cpState]);
 
   // ADR-189: Guide context menu handlers
   const handleGuideContextDelete = useCallback((guideId: string) => {
@@ -1032,6 +1052,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     circleIntersectStep,
     onCircleIntersectFirstPicked: handleCircleIntersectFirstPicked,
     onCircleIntersectSecondPicked: handleCircleIntersectSecondPicked,
+    // Two-step guide placement
+    guideXZConfirmed,
+    onGuideXZConfirm: handleGuideXZConfirm,
+    onGuideXZReset: handleGuideXZReset,
+    // Guide rect-center
+    onRectCenterPlace: handleRectCenterPlace,
   });
 
   const { handleSmartDelete } = useSmartDelete({

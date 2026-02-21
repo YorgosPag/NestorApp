@@ -218,6 +218,18 @@ export interface UseCanvasClickHandlerParams {
   onCircleIntersectFirstPicked?: (entity: ArcPickableEntity) => void;
   /** §3.11 callback: user picked the second arc/circle entity (step 1) */
   onCircleIntersectSecondPicked?: (entity: ArcPickableEntity) => void;
+
+  // ── Two-step guide placement (guide-x / guide-z) ──────────────────
+  /** Whether step 0 (position selection) has been confirmed */
+  guideXZConfirmed?: boolean;
+  /** Step 0 callback: first click confirms position selection */
+  onGuideXZConfirm?: () => void;
+  /** Step 1 callback: second click places guide → reset */
+  onGuideXZReset?: () => void;
+
+  // ── Guide rect-center tool ─────────────────────────────────────────
+  /** Callback: place construction point at center of enclosing guide rectangle */
+  onRectCenterPlace?: (center: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -258,6 +270,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onArcSegmentsPicked, onArcDistancePicked,
     arcLineStep = 0, onArcLineLinePicked, onArcLineArcPicked,
     circleIntersectStep = 0, onCircleIntersectFirstPicked, onCircleIntersectSecondPicked,
+    // Two-step guide placement
+    guideXZConfirmed = false, onGuideXZConfirm, onGuideXZReset,
+    // Guide rect-center
+    onRectCenterPlace,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -430,14 +446,27 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // Two-step guide placement: click 1 = confirm position, click 2 = place guide
     if (activeTool === 'guide-x' && guideAddGuide) {
+      if (!guideXZConfirmed) {
+        onGuideXZConfirm?.();
+        dlog('useCanvasClickHandler', 'Guide X step 0: position confirmed');
+        return;
+      }
       guideAddGuide('X', worldPoint.x);
-      dlog('useCanvasClickHandler', 'Guide X added at offset', worldPoint.x);
+      onGuideXZReset?.();
+      dlog('useCanvasClickHandler', 'Guide X step 1: placed at offset', worldPoint.x);
       return;
     }
     if (activeTool === 'guide-z' && guideAddGuide) {
+      if (!guideXZConfirmed) {
+        onGuideXZConfirm?.();
+        dlog('useCanvasClickHandler', 'Guide Z step 0: position confirmed');
+        return;
+      }
       guideAddGuide('Y', worldPoint.y);
-      dlog('useCanvasClickHandler', 'Guide Z added at offset', worldPoint.y);
+      onGuideXZReset?.();
+      dlog('useCanvasClickHandler', 'Guide Z step 1: placed at offset', worldPoint.y);
       return;
     }
     if (activeTool === 'guide-delete' && guideRemoveGuide && guides && guides.length > 0) {
@@ -797,6 +826,46 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.897: Guide rect-center — click inside rectangle of 4 guides → center point
+    if (activeTool === 'guide-rect-center' && guides && guides.length >= 4 && onRectCenterPlace) {
+      // Find the 2 nearest X-guides (left/right of click) and 2 nearest Y-guides (above/below)
+      const xGuides = guides.filter(g => g.visible && g.axis === 'X').map(g => g.offset).sort((a, b) => a - b);
+      const yGuides = guides.filter(g => g.visible && g.axis === 'Y').map(g => g.offset).sort((a, b) => a - b);
+
+      // Find enclosing X pair: largest offset < click.x (left) and smallest offset > click.x (right)
+      let leftX: number | null = null;
+      let rightX: number | null = null;
+      for (const x of xGuides) {
+        if (x <= worldPoint.x) leftX = x;
+      }
+      for (const x of xGuides) {
+        if (x >= worldPoint.x) { rightX = x; break; }
+      }
+
+      // Find enclosing Y pair
+      let bottomY: number | null = null;
+      let topY: number | null = null;
+      for (const y of yGuides) {
+        if (y <= worldPoint.y) bottomY = y;
+      }
+      for (const y of yGuides) {
+        if (y >= worldPoint.y) { topY = y; break; }
+      }
+
+      if (leftX !== null && rightX !== null && bottomY !== null && topY !== null
+        && leftX !== rightX && bottomY !== topY) {
+        const center: Point2D = {
+          x: (leftX + rightX) / 2,
+          y: (bottomY + topY) / 2,
+        };
+        onRectCenterPlace(center);
+        dlog('useCanvasClickHandler', 'Rect center placed', { center, rect: { leftX, rightX, bottomY, topY } });
+      } else {
+        dlog('useCanvasClickHandler', 'Rect center: no enclosing rectangle found', { xGuides, yGuides, worldPoint });
+      }
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -1030,6 +1099,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onArcSegmentsPicked, onArcDistancePicked,
     arcLineStep, onArcLineLinePicked, onArcLineArcPicked,
     circleIntersectStep, onCircleIntersectFirstPicked, onCircleIntersectSecondPicked,
+    // Two-step guide placement
+    guideXZConfirmed, onGuideXZConfirm, onGuideXZReset,
+    // Guide rect-center
+    onRectCenterPlace,
   ]);
 
   return { handleCanvasClick };

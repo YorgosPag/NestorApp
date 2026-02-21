@@ -110,6 +110,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-circle-intersect': { id: 'guide-circle-intersect', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-189 B5: Guide drag move tool
   'guide-move': { id: 'guide-move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // Center of rectangle formed by 4 guides
+  'guide-rect-center': { id: 'guide-rect-center', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 // ============================================================================

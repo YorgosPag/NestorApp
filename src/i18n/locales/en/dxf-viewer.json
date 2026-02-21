@@ -1455,7 +1455,8 @@
     "guideArcLineIntersect": "Arc-Line Intersection",
     "guideCircleIntersect": "Circle-Circle Intersection",
     "guideMove": "Move Guide",
-    "guideDelete": "Delete Guide"
+    "guideDelete": "Delete Guide",
+    "guideRectCenter": "Rectangle Center"
   },
   "promptDialog": {
     "confirm": "OK",

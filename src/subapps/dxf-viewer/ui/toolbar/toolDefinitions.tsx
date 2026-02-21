@@ -266,6 +266,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-circle-intersect' as ToolType, icon: CircleDashed, label: DXF_DRAWING_TOOL_LABELS.GUIDE_CIRCLE_INTERSECT, hotkey: 'G→O' },
           { id: 'guide-move' as ToolType, icon: Move, label: DXF_DRAWING_TOOL_LABELS.GUIDE_MOVE, hotkey: 'G→M' },
           { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
+          { id: 'guide-rect-center' as ToolType, icon: Crosshair, label: DXF_DRAWING_TOOL_LABELS.GUIDE_RECT_CENTER, hotkey: 'G→R' },
         ],
       },
     ],

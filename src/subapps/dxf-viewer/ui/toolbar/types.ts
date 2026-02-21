@@ -61,7 +61,8 @@ export type ToolType =
   | 'guide-arc-line-intersect' // ADR-189 §3.12: Arc-Line intersection points
   | 'guide-circle-intersect'   // ADR-189 §3.11: Circle-Circle intersection points
   | 'guide-move'               // ADR-189 B5: Drag move guide
-  | 'guide-delete';
+  | 'guide-delete'
+  | 'guide-rect-center';      // Center of rectangle formed by 4 guides
 
 
 export interface ToolDefinition {
