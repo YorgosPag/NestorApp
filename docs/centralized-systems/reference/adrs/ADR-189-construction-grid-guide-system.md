@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | PHASE 1C + GUIDE PANEL + SNAP FIX ✅ — All Phase 1A/B/C complete + Guide Panel UI (§4.13) + Snap-to-guide fully operational. 11/14 commands implemented. |
+| **Status** | ALL COMMANDS COMPLETE ✅ — 14/14 guide commands implemented. Phase 1A/B/C + Guide Panel (§4.13) + Snap fix + Arc commands (§3.9/3.10/3.12). |
 | **Date** | 2026-02-19 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -1834,6 +1834,12 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-21 | **ImmediateSnapStore entityId**: Snap-based guide highlight κατά τη σχεδίαση (guide φωτίζεται χρυσό) |
 | 2026-02-21 | **Auto-enable snap on guide creation**: EventBus `grid:guide-added` → `setSnapEnabled(true)`. Sync `grid:snap-toggled` → SnapContext |
 | 2026-02-21 | **CRITICAL FIX — 5 barriers removed for snap-to-guide**: (1) SnapOrchestrator early-exit on 0 entities, (2) useSnapManager setEnabled guard on entityCount>0, (3) useSnapManager initialize skip on 0 entities, (4) DEFAULT_PRO_SNAP_SETTINGS.enabled=false, (5) **ROOT CAUSE**: SnapContext.ALL_MODES missing GUIDE+CONSTRUCTION_POINT → enabledModes never included them → orchestrator always skipped GuideSnapEngine |
+| 2026-02-21 | **§3.9 Arc Segments (G→T)**: Click arc/circle → prompt for segment count → equally-spaced X markers along arc. Circle: N points no duplicate. Arc: N+1 points (includes endpoints) |
+| 2026-02-21 | **§3.10 Arc Distance (G→U)**: Click arc/circle → prompt for distance → X markers at fixed arc-length intervals. Circle: wraps around. Arc: includes endpoint |
+| 2026-02-21 | **§3.12 Arc-Line Intersection (G→I)**: 2-click (line → arc/circle) → 0-2 X markers at intersection points. Parametric line-circle quadratic + angular range filter. Warning notification on 0 results |
+| 2026-02-21 | **Arc geometry engine**: `computeArcSegmentPoints()`, `computeArcDistancePoints()`, `computeLineArcIntersection()` — pure math, DXF counterclockwise convention |
+| 2026-02-21 | **Entity picking**: ArcPickableEntity/LinePickableEntity interfaces, hit-test via `pointToArcDistance()` for arcs, circumference distance for circles, `pointToLineDistance()` for lines |
+| 2026-02-21 | **14/14 guide commands COMPLETE** — All §3.1-§3.16 commands implemented |
 
 ---
 
