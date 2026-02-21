@@ -5,7 +5,7 @@
  * Uses `useSyncExternalStore` for tear-free subscription to the store singleton.
  * Mutations are wrapped in Commands (undo/redo).
  *
- * @see ADR-189 §3.7, §3.8, §3.9, §3.10, §3.12, §3.15, §3.16
+ * @see ADR-189 §3.7, §3.8, §3.9, §3.10, §3.11, §3.12, §3.15, §3.16
  * @see useGuideState.ts (template pattern)
  * @since 2026-02-20
  */
@@ -273,6 +273,91 @@ function computeLineArcIntersection(
   return results;
 }
 
+/**
+ * §3.11: Intersection of two arcs/circles.
+ * Returns 0, 1, or 2 intersection points.
+ *
+ * Algorithm:
+ * 1. d = distance between centers
+ * 2. No intersection if d > r1+r2 (too far) or d < |r1-r2| (one inside other) or d ≈ 0 and r1 ≈ r2 (coincident)
+ * 3. a = (r1² - r2² + d²) / (2d)   — distance from center1 to the radical line
+ * 4. h = sqrt(r1² - a²)             — half-distance between intersection points
+ * 5. P = center1 + a*(center2-center1)/d  — midpoint on the radical line
+ * 6. Offsets perpendicular to the line between centers give the two points
+ * 7. Filter: each point must be within the angular range of its respective arc (or full circle)
+ */
+function computeCircleCircleIntersection(
+  center1: Point2D, radius1: number, startAngle1Deg: number, endAngle1Deg: number, isFullCircle1: boolean,
+  center2: Point2D, radius2: number, startAngle2Deg: number, endAngle2Deg: number, isFullCircle2: boolean,
+): Array<{ point: Point2D }> {
+  const dxC = center2.x - center1.x;
+  const dyC = center2.y - center1.y;
+  const d = Math.sqrt(dxC * dxC + dyC * dyC);
+
+  // Degenerate: coincident centers with same radius → infinite intersections (skip)
+  if (d < 1e-9) return [];
+
+  // No intersection: too far apart or one inside the other
+  if (d > radius1 + radius2 + 1e-9) return [];
+  if (d < Math.abs(radius1 - radius2) - 1e-9) return [];
+
+  const a = (radius1 * radius1 - radius2 * radius2 + d * d) / (2 * d);
+  const hSq = radius1 * radius1 - a * a;
+  // Tangent case: h ≈ 0 → single intersection point
+  const h = hSq > 0 ? Math.sqrt(hSq) : 0;
+
+  // Unit vector from center1 to center2
+  const ux = dxC / d;
+  const uy = dyC / d;
+
+  // Point on the radical line
+  const px = center1.x + a * ux;
+  const py = center1.y + a * uy;
+
+  const candidates: Point2D[] = [];
+
+  if (h < 1e-9) {
+    // Single tangent point
+    candidates.push({ x: px, y: py });
+  } else {
+    // Two intersection points (perpendicular offset)
+    candidates.push({ x: px + h * uy, y: py - h * ux });
+    candidates.push({ x: px - h * uy, y: py + h * ux });
+  }
+
+  // Filter: check each candidate against angular range of BOTH arcs
+  const results: Array<{ point: Point2D }> = [];
+  for (const pt of candidates) {
+    const inArc1 = isPointInArcRange(pt, center1, startAngle1Deg, endAngle1Deg, isFullCircle1);
+    const inArc2 = isPointInArcRange(pt, center2, startAngle2Deg, endAngle2Deg, isFullCircle2);
+    if (inArc1 && inArc2) {
+      results.push({ point: pt });
+    }
+  }
+  return results;
+}
+
+/** Check if a point on a circle is within the arc's angular range */
+function isPointInArcRange(
+  pt: Point2D, center: Point2D,
+  startAngleDeg: number, endAngleDeg: number,
+  isFullCircle: boolean,
+): boolean {
+  if (isFullCircle) return true;
+
+  let angleDeg = Math.atan2(pt.y - center.y, pt.x - center.x) * (180 / Math.PI);
+  if (angleDeg < 0) angleDeg += 360;
+
+  const s = normalizeAngleDeg(startAngleDeg);
+  const e = normalizeAngleDeg(endAngleDeg);
+
+  if (s <= e) {
+    return angleDeg >= s - 0.01 && angleDeg <= e + 0.01;
+  }
+  // Arc wraps around 0°
+  return angleDeg >= s - 0.01 || angleDeg <= e + 0.01;
+}
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -304,6 +389,11 @@ export interface UseConstructionPointStateReturn {
     lineStart: Point2D, lineEnd: Point2D,
     center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number,
     isFullCircle: boolean,
+  ) => AddConstructionPointBatchCommand;
+  /** §3.11: Add intersection points of two arcs/circles. Returns the command. */
+  addCircleCircleIntersectionPoints: (
+    center1: Point2D, radius1: number, startAngle1Deg: number, endAngle1Deg: number, isFullCircle1: boolean,
+    center2: Point2D, radius2: number, startAngle2Deg: number, endAngle2Deg: number, isFullCircle2: boolean,
   ) => AddConstructionPointBatchCommand;
   /** Delete a point by ID. Returns the command. */
   deletePoint: (pointId: string) => DeleteConstructionPointCommand;
@@ -395,6 +485,20 @@ export function useConstructionPointState(): UseConstructionPointStateReturn {
     return cmd;
   }, [store]);
 
+  // §3.11: Circle-circle intersection points
+  const addCircleCircleIntersectionPoints = useCallback((
+    center1: Point2D, radius1: number, startAngle1Deg: number, endAngle1Deg: number, isFullCircle1: boolean,
+    center2: Point2D, radius2: number, startAngle2Deg: number, endAngle2Deg: number, isFullCircle2: boolean,
+  ): AddConstructionPointBatchCommand => {
+    const pointDefs = computeCircleCircleIntersection(
+      center1, radius1, startAngle1Deg, endAngle1Deg, isFullCircle1,
+      center2, radius2, startAngle2Deg, endAngle2Deg, isFullCircle2,
+    );
+    const cmd = new AddConstructionPointBatchCommand(store, pointDefs);
+    cmd.execute();
+    return cmd;
+  }, [store]);
+
   const deletePoint = useCallback((pointId: string): DeleteConstructionPointCommand => {
     const cmd = new DeleteConstructionPointCommand(store, pointId);
     cmd.execute();
@@ -420,6 +524,7 @@ export function useConstructionPointState(): UseConstructionPointStateReturn {
     addArcSegmentPoints,
     addArcDistancePoints,
     addLineArcIntersectionPoints,
+    addCircleCircleIntersectionPoints,
     deletePoint,
     findNearest,
     clearAll,

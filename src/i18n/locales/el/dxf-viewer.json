@@ -1447,6 +1447,7 @@
     "guideArcSegments": "Σε Τμήματα Τόξου",
     "guideArcDistance": "Ανά Απόσταση Τόξου",
     "guideArcLineIntersect": "Τομή Τόξου & Ευθείας",
+    "guideCircleIntersect": "Τομή Κύκλων",
     "guideDelete": "Διαγραφή Οδηγού"
   },
   "promptDialog": {
@@ -1472,7 +1473,8 @@
     "enterArcSegmentCount": "Αριθμός τμημάτων κατά μήκος τόξου",
     "arcPointDistance": "Απόσταση Σημείων Τόξου",
     "enterArcPointDistance": "Απόσταση κατά μήκος τόξου μεταξύ σημείων",
-    "noIntersectionFound": "Δεν βρέθηκε τομή μεταξύ γραμμής και τόξου"
+    "noIntersectionFound": "Δεν βρέθηκε τομή μεταξύ γραμμής και τόξου",
+    "noCircleIntersectionFound": "Δεν βρέθηκε τομή μεταξύ των δύο κύκλων/τόξων"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",

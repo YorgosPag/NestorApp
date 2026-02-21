@@ -1453,6 +1453,7 @@
     "guideArcSegments": "Arc Segments",
     "guideArcDistance": "Arc Distance",
     "guideArcLineIntersect": "Arc-Line Intersection",
+    "guideCircleIntersect": "Circle-Circle Intersection",
     "guideDelete": "Delete Guide"
   },
   "promptDialog": {
@@ -1478,7 +1479,8 @@
     "enterArcSegmentCount": "Number of segments along arc",
     "arcPointDistance": "Arc Point Distance",
     "enterArcPointDistance": "Distance along arc between points",
-    "noIntersectionFound": "No intersection found between line and arc"
+    "noIntersectionFound": "No intersection found between line and arc",
+    "noCircleIntersectionFound": "No intersection found between the two circles/arcs"
   },
   "entityJoin": {
     "menuTitle": "Join",

@@ -680,6 +680,7 @@ export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: To
   T: { action: 'tool:guide-arc-segments', toolType: 'guide-arc-segments' as ToolType, descriptionKey: 'shortcuts.guides.guideArcSegments' },
   U: { action: 'tool:guide-arc-distance', toolType: 'guide-arc-distance' as ToolType, descriptionKey: 'shortcuts.guides.guideArcDistance' },
   I: { action: 'tool:guide-arc-line-intersect', toolType: 'guide-arc-line-intersect' as ToolType, descriptionKey: 'shortcuts.guides.guideArcLineIntersect' },
+  O: { action: 'tool:guide-circle-intersect', toolType: 'guide-circle-intersect' as ToolType, descriptionKey: 'shortcuts.guides.guideCircleIntersect' },
   V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },
   L: { action: 'action:toggle-guide-panel', descriptionKey: 'shortcuts.guides.guidePanel' },
 } as const;

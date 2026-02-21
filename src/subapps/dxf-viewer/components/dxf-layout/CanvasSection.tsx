@@ -411,11 +411,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
   const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
 
-  // ADR-189: Reset arc tool state when switching away
+  // ADR-189 §3.11: Circle-Circle intersection — 2-step state (step 0: pick first, step 1: pick second)
+  const [circleIntersectStep, setCircleIntersectStep] = useState<0 | 1>(0);
+  const [circleIntersectFirst, setCircleIntersectFirst] = useState<ArcPickableEntity | null>(null);
+
+  // ADR-189: Reset arc/circle tool state when switching away
   useEffect(() => {
     if (activeTool !== 'guide-arc-line-intersect') {
       setArcLineStep(0);
       setArcLineLine(null);
+    }
+    if (activeTool !== 'guide-circle-intersect') {
+      setCircleIntersectStep(0);
+      setCircleIntersectFirst(null);
     }
   }, [activeTool]);
 
@@ -499,6 +507,33 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setArcLineStep(0);
     setArcLineLine(null);
   }, [arcLineLine, cpState, notifyWarning, t]);
+
+  // ADR-189 §3.11: Circle-Circle intersection — step 0 → store first arc, advance to step 1
+  const handleCircleIntersectFirstPicked = useCallback((entity: ArcPickableEntity) => {
+    setCircleIntersectFirst(entity);
+    setCircleIntersectStep(1);
+  }, []);
+
+  // ADR-189 §3.11: Circle-Circle intersection — step 1 → compute + create points
+  const handleCircleIntersectSecondPicked = useCallback((entity: ArcPickableEntity) => {
+    if (!circleIntersectFirst) return;
+    const prevCount = cpState.pointCount;
+    cpState.addCircleCircleIntersectionPoints(
+      circleIntersectFirst.center, circleIntersectFirst.radius,
+      circleIntersectFirst.startAngle, circleIntersectFirst.endAngle, circleIntersectFirst.isFullCircle,
+      entity.center, entity.radius,
+      entity.startAngle, entity.endAngle, entity.isFullCircle,
+    );
+    // Notify user if no intersections found
+    setTimeout(() => {
+      if (cpState.getStore().count === prevCount) {
+        notifyWarning(t('promptDialog.noCircleIntersectionFound'));
+      }
+    }, 0);
+    // Reset state
+    setCircleIntersectStep(0);
+    setCircleIntersectFirst(null);
+  }, [circleIntersectFirst, cpState, notifyWarning, t]);
 
   // ADR-189: Guide context menu handlers
   const handleGuideContextDelete = useCallback((guideId: string) => {
@@ -842,12 +877,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     distanceStartPoint,
     onDistanceStartSet: handleDistanceStartSet,
     onDistanceComplete: handleDistanceComplete,
-    // ADR-189 §3.9/3.10/3.12: Arc guide entity picking
+    // ADR-189 §3.9/3.10/3.11/3.12: Arc guide entity picking
     onArcSegmentsPicked: handleArcSegmentsPicked,
     onArcDistancePicked: handleArcDistancePicked,
     arcLineStep,
     onArcLineLinePicked: handleArcLineLinePicked,
     onArcLineArcPicked: handleArcLineArcPicked,
+    circleIntersectStep,
+    onCircleIntersectFirstPicked: handleCircleIntersectFirstPicked,
+    onCircleIntersectSecondPicked: handleCircleIntersectSecondPicked,
   });
 
   const { handleSmartDelete } = useSmartDelete({

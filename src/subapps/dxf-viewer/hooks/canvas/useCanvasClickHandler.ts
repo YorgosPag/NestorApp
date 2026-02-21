@@ -210,6 +210,14 @@ export interface UseCanvasClickHandlerParams {
   onArcLineLinePicked?: (entity: LinePickableEntity) => void;
   /** §3.12 callback: user picked an arc/circle entity (step 1) */
   onArcLineArcPicked?: (entity: ArcPickableEntity) => void;
+
+  // ── ADR-189 §3.11: Circle-Circle intersection entity picking ──────────
+  /** §3.11 circle-circle intersect: current step (0=pick first, 1=pick second) */
+  circleIntersectStep?: 0 | 1;
+  /** §3.11 callback: user picked the first arc/circle entity (step 0) */
+  onCircleIntersectFirstPicked?: (entity: ArcPickableEntity) => void;
+  /** §3.11 callback: user picked the second arc/circle entity (step 1) */
+  onCircleIntersectSecondPicked?: (entity: ArcPickableEntity) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -246,9 +254,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     cpAddPoint, cpDeletePoint, cpFindNearest,
     segmentsStep = 0, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
     distanceStep = 0, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
-    // ADR-189 §3.9/3.10/3.12: Arc guide entity picking
+    // ADR-189 §3.9/3.10/3.11/3.12: Arc guide entity picking
     onArcSegmentsPicked, onArcDistancePicked,
     arcLineStep = 0, onArcLineLinePicked, onArcLineArcPicked,
+    circleIntersectStep = 0, onCircleIntersectFirstPicked, onCircleIntersectSecondPicked,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -744,6 +753,50 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.896: ADR-189 §3.11 — Circle-Circle intersection (2-click: arc/circle → arc/circle)
+    if (activeTool === 'guide-circle-intersect') {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+
+        const pickArc = (step: 0 | 1): boolean => {
+          const callback = step === 0 ? onCircleIntersectFirstPicked : onCircleIntersectSecondPicked;
+          if (!callback) return false;
+
+          for (const entity of scene.entities) {
+            if (isArcEntity(entity)) {
+              if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
+                callback({
+                  center: entity.center, radius: entity.radius,
+                  startAngle: entity.startAngle, endAngle: entity.endAngle,
+                  isFullCircle: false,
+                });
+                return true;
+              }
+            } else if (isCircleEntity(entity)) {
+              const dx = worldPoint.x - entity.center.x;
+              const dy = worldPoint.y - entity.center.y;
+              if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
+                callback({
+                  center: entity.center, radius: entity.radius,
+                  startAngle: 0, endAngle: 360,
+                  isFullCircle: true,
+                });
+                return true;
+              }
+            }
+          }
+          return false;
+        };
+
+        pickArc(circleIntersectStep as 0 | 1);
+      }
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -973,9 +1026,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     cpAddPoint, cpDeletePoint, cpFindNearest,
     segmentsStep, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
     distanceStep, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
-    // ADR-189 §3.9/3.10/3.12
+    // ADR-189 §3.9/3.10/3.11/3.12
     onArcSegmentsPicked, onArcDistancePicked,
     arcLineStep, onArcLineLinePicked, onArcLineArcPicked,
+    circleIntersectStep, onCircleIntersectFirstPicked, onCircleIntersectSecondPicked,
   ]);
 
   return { handleCanvasClick };

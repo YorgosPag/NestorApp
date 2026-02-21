@@ -59,6 +59,7 @@ export type ToolType =
   | 'guide-arc-segments'   // ADR-189 §3.9: Arc segment construction points
   | 'guide-arc-distance'   // ADR-189 §3.10: Arc distance construction points
   | 'guide-arc-line-intersect' // ADR-189 §3.12: Arc-Line intersection points
+  | 'guide-circle-intersect'   // ADR-189 §3.11: Circle-Circle intersection points
   | 'guide-delete';
 
 
