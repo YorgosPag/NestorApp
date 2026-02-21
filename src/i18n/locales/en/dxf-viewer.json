@@ -1454,6 +1454,7 @@
     "guideArcDistance": "Arc Distance",
     "guideArcLineIntersect": "Arc-Line Intersection",
     "guideCircleIntersect": "Circle-Circle Intersection",
+    "guideMove": "Move Guide",
     "guideDelete": "Delete Guide"
   },
   "promptDialog": {

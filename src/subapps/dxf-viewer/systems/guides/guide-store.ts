@@ -242,6 +242,19 @@ export class GuideStore implements IGridHeadlessAPI {
     return true;
   }
 
+  /** Move a diagonal (XZ) guide to new start/end points. Returns true if successful. */
+  moveDiagonalGuideById(id: string, newStart: Point2D, newEnd: Point2D): boolean {
+    const guide = this.guides.find(g => g.id === id);
+    if (!guide || guide.locked || guide.axis !== 'XZ') return false;
+
+    // CRITICAL: New array with updated guide — useSyncExternalStore needs new reference
+    this.guides = this.guides.map(g =>
+      g.id === id ? { ...g, startPoint: { x: newStart.x, y: newStart.y }, endPoint: { x: newEnd.x, y: newEnd.y } } : g
+    );
+    this.notify();
+    return true;
+  }
+
   /** Set individual guide visibility (separate from global visibility) */
   setGuideVisible(id: string, visible: boolean): boolean {
     const guide = this.guides.find(g => g.id === id);

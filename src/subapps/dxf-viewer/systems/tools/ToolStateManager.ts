@@ -108,6 +108,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-arc-distance': { id: 'guide-arc-distance', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'guide-arc-line-intersect': { id: 'guide-arc-line-intersect', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'guide-circle-intersect': { id: 'guide-circle-intersect', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-189 B5: Guide drag move tool
+  'guide-move': { id: 'guide-move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 // ============================================================================

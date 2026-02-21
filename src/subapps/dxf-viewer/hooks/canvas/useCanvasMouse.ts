@@ -28,6 +28,8 @@ import type { ICommand } from '../../core/commands/interfaces';
 import type { VertexMovement } from '../../core/commands';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection';
+import type { GridAxis } from '../../ai-assistant/grid-types';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -86,6 +88,20 @@ export interface DraggingOverlayBodyState {
   overlayId: string;
   startPoint: Point2D;    // Mouse start position in world coordinates
   startPolygon: Array<[number, number]>; // Original polygon for delta calculation
+}
+
+/**
+ * Dragging guide state (for guide-move tool) — ADR-189 B5
+ */
+export interface DraggingGuideState {
+  guideId: string;
+  axis: GridAxis;
+  startMouseWorld: Point2D;    // Mouse world pos at drag start
+  // X/Y: original offset
+  originalOffset: number;
+  // XZ: original endpoints
+  originalStartPoint?: Point2D;
+  originalEndPoint?: Point2D;
 }
 
 /**
@@ -152,6 +168,16 @@ export interface UseCanvasMouseProps {
   executeCommand: (command: ICommand) => void;
   /** Movement detection threshold */
   movementDetectionThreshold: number;
+
+  // ============================================================================
+  // ADR-189 B5: Guide drag & drop
+  // ============================================================================
+  /** Dragging guide state (for guide-move tool) */
+  draggingGuide: DraggingGuideState | null;
+  /** Callback to set dragging guide state */
+  setDraggingGuide: (state: DraggingGuideState | null) => void;
+  /** Callback when guide drag completes (CanvasSection creates MoveGuideCommand) */
+  onGuideDragComplete: (guideId: string, axis: GridAxis, oldOffset: number, newOffset: number, oldStart?: Point2D, oldEnd?: Point2D, newStart?: Point2D, newEnd?: Point2D) => void;
 
   // ============================================================================
   // 🏢 ENTERPRISE: Refs από useGripSystem (INJECTED - NOT created here)
@@ -240,6 +266,10 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     overlayStoreRef,
     executeCommand,
     movementDetectionThreshold,
+    // ADR-189 B5: Guide drag & drop
+    draggingGuide,
+    setDraggingGuide,
+    onGuideDragComplete,
     // 🏢 ENTERPRISE: Refs INJECTED from useGripSystem (Single Source of Truth)
     gripHoverThrottleRef,
     justFinishedDragRef,
@@ -338,7 +368,30 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
         setDragPreviewPosition(worldPoint);
       }
     }
-  }, [containerRef, updatePosition, updateMouseCss, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, transform, setDragPreviewPosition]);
+
+    // ADR-189 B5: Live guide drag — move guide directly (no ghost, real-time feedback)
+    if (draggingGuide) {
+      const snap = getPointerSnapshotFromElement(container);
+      if (snap) {
+        const worldPoint = screenToWorldWithSnapshot(screenPos, transform, snap);
+        const store = getGlobalGuideStore();
+        const deltaX = worldPoint.x - draggingGuide.startMouseWorld.x;
+        const deltaY = worldPoint.y - draggingGuide.startMouseWorld.y;
+
+        if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
+          // Translate entire diagonal segment
+          const newStart = { x: draggingGuide.originalStartPoint.x + deltaX, y: draggingGuide.originalStartPoint.y + deltaY };
+          const newEnd = { x: draggingGuide.originalEndPoint.x + deltaX, y: draggingGuide.originalEndPoint.y + deltaY };
+          store.moveDiagonalGuideById(draggingGuide.guideId, newStart, newEnd);
+        } else if (draggingGuide.axis === 'X') {
+          store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset + deltaX);
+        } else {
+          // Y axis
+          store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset + deltaY);
+        }
+      }
+    }
+  }, [containerRef, updatePosition, updateMouseCss, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, draggingGuide, transform, setDragPreviewPosition]);
 
   /**
    * 🏢 ENTERPRISE: Container mouse enter handler
@@ -369,6 +422,34 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     // Only handle left click
     if (e.button !== 0) return;
+
+    // ADR-189 B5: Guide drag initiation — before other tool checks
+    if (activeTool === 'guide-move') {
+      const container = containerRef.current;
+      if (!container) return;
+      const snap = getPointerSnapshotFromElement(container);
+      if (!snap) return;
+      const screenPos = getScreenPosFromEvent(e, snap);
+      const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+
+      const store = getGlobalGuideStore();
+      const hitTolerance = 30 / transform.scale;
+      const nearest = store.findNearestGuide(worldPos.x, worldPos.y, hitTolerance);
+
+      if (nearest && !nearest.locked) {
+        e.preventDefault();
+        e.stopPropagation();
+        setDraggingGuide({
+          guideId: nearest.id,
+          axis: nearest.axis,
+          startMouseWorld: worldPos,
+          originalOffset: nearest.offset,
+          originalStartPoint: nearest.startPoint ? { x: nearest.startPoint.x, y: nearest.startPoint.y } : undefined,
+          originalEndPoint: nearest.endPoint ? { x: nearest.endPoint.x, y: nearest.endPoint.y } : undefined,
+        });
+      }
+      return;
+    }
 
     // Only in select/layering/move mode
     if (activeTool !== 'select' && activeTool !== 'layering' && activeTool !== 'move') return;
@@ -508,6 +589,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     setDragPreviewPosition,
     universalSelectionRef,
     overlayStoreRef,
+    setDraggingGuide,
   ]);
 
   /**
@@ -624,10 +706,56 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
       // 🏢 ENTERPRISE: Use injected markDragFinished from useGripSystem
       markDragFinished();
     }
+
+    // ADR-189 B5: Handle guide drag end
+    if (draggingGuide) {
+      const container = containerRef.current;
+      if (container) {
+        const snap = getPointerSnapshotFromElement(container);
+        if (snap) {
+          const screenPos = getScreenPosFromEvent(e, snap);
+          const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+          const deltaX = worldPos.x - draggingGuide.startMouseWorld.x;
+          const deltaY = worldPos.y - draggingGuide.startMouseWorld.y;
+          const hasMovement = Math.abs(deltaX) > movementDetectionThreshold ||
+                              Math.abs(deltaY) > movementDetectionThreshold;
+
+          if (hasMovement) {
+            if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
+              const newStart = { x: draggingGuide.originalStartPoint.x + deltaX, y: draggingGuide.originalStartPoint.y + deltaY };
+              const newEnd = { x: draggingGuide.originalEndPoint.x + deltaX, y: draggingGuide.originalEndPoint.y + deltaY };
+              onGuideDragComplete(
+                draggingGuide.guideId, draggingGuide.axis,
+                draggingGuide.originalOffset, draggingGuide.originalOffset,
+                draggingGuide.originalStartPoint, draggingGuide.originalEndPoint,
+                newStart, newEnd,
+              );
+            } else {
+              const delta1D = draggingGuide.axis === 'X' ? deltaX : deltaY;
+              const newOffset = draggingGuide.originalOffset + delta1D;
+              onGuideDragComplete(
+                draggingGuide.guideId, draggingGuide.axis,
+                draggingGuide.originalOffset, newOffset,
+              );
+            }
+          } else {
+            // No movement — revert the live store mutation
+            const store = getGlobalGuideStore();
+            if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
+              store.moveDiagonalGuideById(draggingGuide.guideId, draggingGuide.originalStartPoint, draggingGuide.originalEndPoint);
+            } else {
+              store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset);
+            }
+          }
+        }
+      }
+      setDraggingGuide(null);
+    }
   }, [
     draggingVertices,
     draggingEdgeMidpoint,
     draggingOverlayBody,
+    draggingGuide,
     transform,
     containerRef,
     executeCommand,
@@ -638,6 +766,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     overlayStoreRef,
     movementDetectionThreshold,
     markDragFinished, // 🏢 ENTERPRISE: Injected from useGripSystem
+    setDraggingGuide,
+    onGuideDragComplete,
   ]);
 
   // ============================================================================

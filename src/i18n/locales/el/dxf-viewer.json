@@ -1448,6 +1448,7 @@
     "guideArcDistance": "Ανά Απόσταση Τόξου",
     "guideArcLineIntersect": "Τομή Τόξου & Ευθείας",
     "guideCircleIntersect": "Τομή Κύκλων",
+    "guideMove": "Μετακίνηση Περασιάς",
     "guideDelete": "Διαγραφή Οδηγού"
   },
   "promptDialog": {

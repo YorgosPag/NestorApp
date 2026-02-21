@@ -26,6 +26,7 @@ import {
   useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction,
   type ArcPickableEntity, type LinePickableEntity,
+  type DraggingGuideState,
 } from '../../hooks/canvas';
 import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
@@ -38,6 +39,9 @@ import { useGuideState } from '../../hooks/state/useGuideState';
 // ADR-189 §3.7-3.16: Construction Snap Points
 import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
 import { pointToSegmentDistance } from '../../systems/guides/guide-types';
+import type { GridAxis } from '../../systems/guides/guide-types';
+import { MoveGuideCommand } from '../../systems/guides/guide-commands';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-189: Centralized prompt dialog for distance input (parallel guides, future tools)
 import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
@@ -223,6 +227,38 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setTransform: contextSetTransform,
   });
 
+  // ADR-189 B5: Guide drag & drop state (declared before useCanvasMouse which needs it)
+  const [draggingGuide, setDraggingGuide] = useState<DraggingGuideState | null>(null);
+
+  // ADR-189 B5: Guide drag completion callback — creates MoveGuideCommand for undo/redo
+  // Defined before useCanvasMouse because it's passed as a prop
+  const handleGuideDragComplete = useCallback((
+    guideId: string,
+    axis: GridAxis,
+    oldOffset: number,
+    newOffset: number,
+    oldStart?: Point2D,
+    oldEnd?: Point2D,
+    newStart?: Point2D,
+    newEnd?: Point2D,
+  ) => {
+    const store = getGlobalGuideStore();
+    const cmd = new MoveGuideCommand(
+      store, guideId, axis,
+      oldOffset, newOffset,
+      oldStart, oldEnd,
+      newStart, newEnd,
+    );
+    // The guide was already moved live during drag (direct store mutation).
+    // Revert to original, then execute through command history for proper undo/redo.
+    if (axis === 'XZ' && oldStart && oldEnd) {
+      store.moveDiagonalGuideById(guideId, oldStart, oldEnd);
+    } else {
+      store.moveGuideById(guideId, oldOffset);
+    }
+    executeCommand(cmd);
+  }, [executeCommand]);
+
   // === Mouse event handling (STRIPPED — grip logic now in unified hook) ===
   const {
     mouseCss, mouseWorld,
@@ -251,6 +287,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     universalSelectionRef, overlayStoreRef,
     executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
+    // ADR-189 B5: Guide drag & drop
+    draggingGuide,
+    setDraggingGuide,
+    onGuideDragComplete: handleGuideDragComplete,
   });
 
   // ADR-189: Parallel guide workflow — highlighted reference + prompt dialog
@@ -567,10 +607,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const highlightedGuideId = useMemo<string | null>(() => {
     if (!mouseWorld || !guideState.guides.length) return null;
 
-    // 1. Guide tool modes: highlight nearest guide for delete/perpendicular/parallel
+    // 1. Guide tool modes: highlight nearest guide for delete/perpendicular/parallel/move
     const needsToolHighlight =
       activeTool === 'guide-delete' ||
       activeTool === 'guide-perpendicular' ||
+      activeTool === 'guide-move' ||
       (activeTool === 'guide-parallel' && !parallelRefGuideId);
 
     if (needsToolHighlight) {

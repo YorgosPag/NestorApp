@@ -16,6 +16,7 @@ export type {
   DraggingVertexState,
   DraggingEdgeMidpointState,
   DraggingOverlayBodyState,
+  DraggingGuideState,
   GripHoverThrottle, // 🏢 ENTERPRISE: Shared type with useGripSystem
 } from './useCanvasMouse';
 
