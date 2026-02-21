@@ -342,6 +342,127 @@
       "description": "Layer management",
       "steps": ["Open Layers panel"],
       "shortcuts": "F7"
+    },
+    "guide-x": {
+      "name": "Vertical Guide",
+      "description": "Create vertical guide line",
+      "steps": ["Click on canvas to place vertical guide"],
+      "shortcuts": "G→X | ESC=Cancel"
+    },
+    "guide-z": {
+      "name": "Horizontal Guide",
+      "description": "Create horizontal guide line",
+      "steps": ["Click on canvas to place horizontal guide"],
+      "shortcuts": "G→Z | ESC=Cancel"
+    },
+    "guide-xz": {
+      "name": "Diagonal Guide",
+      "description": "Create diagonal guide line",
+      "steps": [
+        "Click for start point",
+        "Click for end point"
+      ],
+      "shortcuts": "G→K | ESC=Cancel"
+    },
+    "guide-parallel": {
+      "name": "Parallel Guide",
+      "description": "Create guide parallel to existing",
+      "steps": [
+        "Click on reference guide",
+        "Enter distance in dialog"
+      ],
+      "shortcuts": "G→P | ESC=Cancel"
+    },
+    "guide-perpendicular": {
+      "name": "Perpendicular Guide",
+      "description": "Create guide perpendicular to existing",
+      "steps": [
+        "Click on reference guide",
+        "Click for through point"
+      ],
+      "shortcuts": "G→N | ESC=Cancel"
+    },
+    "guide-segments": {
+      "name": "Segment Points",
+      "description": "Place construction points at equal segments on guide",
+      "steps": [
+        "Click on guide to divide",
+        "Enter number of segments in dialog"
+      ],
+      "shortcuts": "G→S | G→L=Open Panel | ESC=Cancel"
+    },
+    "guide-distance": {
+      "name": "Distance Points",
+      "description": "Place construction points at fixed distance on guide",
+      "steps": [
+        "Click on guide",
+        "Enter distance in dialog"
+      ],
+      "shortcuts": "G→A | G→L=Open Panel | ESC=Cancel"
+    },
+    "guide-add-point": {
+      "name": "Add Point",
+      "description": "Add single construction point",
+      "steps": ["Click on canvas to place point"],
+      "shortcuts": "G→Q | G→L=Open Panel | ESC=Cancel"
+    },
+    "guide-delete-point": {
+      "name": "Delete Point",
+      "description": "Delete construction point",
+      "steps": ["Click on point to delete"],
+      "shortcuts": "G→W | ESC=Cancel"
+    },
+    "guide-arc-segments": {
+      "name": "Arc Segments",
+      "description": "Place points at equal segments along arc",
+      "steps": [
+        "Click on arc entity",
+        "Enter number of segments in dialog"
+      ],
+      "shortcuts": "G→T | G→L=Open Panel | ESC=Cancel"
+    },
+    "guide-arc-distance": {
+      "name": "Arc Distance",
+      "description": "Place points at fixed distance along arc",
+      "steps": [
+        "Click on arc entity",
+        "Enter distance in dialog"
+      ],
+      "shortcuts": "G→U | G→L=Open Panel | ESC=Cancel"
+    },
+    "guide-arc-line-intersect": {
+      "name": "Arc-Line Intersection",
+      "description": "Place points at arc-line intersection",
+      "steps": [
+        "Click on arc entity",
+        "Click on line entity"
+      ],
+      "shortcuts": "G→I | G→L=Open Panel | ESC=Cancel"
+    },
+    "guide-circle-intersect": {
+      "name": "Circle-Circle Intersection",
+      "description": "Place points at circle-circle intersection",
+      "steps": [
+        "Click on 1st circle/arc",
+        "Click on 2nd circle/arc"
+      ],
+      "shortcuts": "G→O | G→L=Open Panel | ESC=Cancel"
+    },
+    "guide-move": {
+      "name": "Move Guide",
+      "description": "Drag guide to new position",
+      "steps": [
+        "Click and hold on guide",
+        "Drag to new position",
+        "Release to place"
+      ],
+      "shortcuts": "G→M | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-delete": {
+      "name": "Delete Guide",
+      "description": "Delete construction guide",
+      "steps": ["Click on guide to delete"],
+      "shortcuts": "G→D | ESC=Cancel"
     }
   },
   "common": {

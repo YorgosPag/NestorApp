@@ -17,6 +17,9 @@ import {
   Plus, // ADR-189 §3.15: Add point icon
   Minus, // ADR-189 §3.16: Delete point icon
   Eye, EyeOff, // ADR-189: Guide visibility toggle
+  CircleDot, // ADR-189 §3.9/§3.10: Arc guide points icon
+  Waypoints, // ADR-189 §3.12: Arc-Line intersection icon
+  CircleDashed, // ADR-189 §3.11: Circle-Circle intersection icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -257,6 +260,10 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-distance' as ToolType, icon: Ruler, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DISTANCE, hotkey: 'G→A' },
           { id: 'guide-add-point' as ToolType, icon: Plus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ADD_POINT, hotkey: 'G→Q' },
           { id: 'guide-delete-point' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE_POINT, hotkey: 'G→W' },
+          { id: 'guide-arc-segments' as ToolType, icon: CircleDot, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ARC_SEGMENTS, hotkey: 'G→T' },
+          { id: 'guide-arc-distance' as ToolType, icon: CircleDot, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ARC_DISTANCE, hotkey: 'G→U' },
+          { id: 'guide-arc-line-intersect' as ToolType, icon: Waypoints, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ARC_LINE_INTERSECT, hotkey: 'G→I' },
+          { id: 'guide-circle-intersect' as ToolType, icon: CircleDashed, label: DXF_DRAWING_TOOL_LABELS.GUIDE_CIRCLE_INTERSECT, hotkey: 'G→O' },
           { id: 'guide-move' as ToolType, icon: Move, label: DXF_DRAWING_TOOL_LABELS.GUIDE_MOVE, hotkey: 'G→M' },
           { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
         ],

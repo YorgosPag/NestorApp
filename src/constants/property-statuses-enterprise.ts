@@ -1436,6 +1436,11 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_DELETE_POINT: 'tools.guideDeletePoint',
   GUIDE_MOVE: 'tools.guideMove',
   GUIDE_DELETE: 'tools.guideDelete',
+  // ADR-189 §3.9-§3.12: Arc/Circle guide tools
+  GUIDE_ARC_SEGMENTS: 'tools.guideArcSegments',
+  GUIDE_ARC_DISTANCE: 'tools.guideArcDistance',
+  GUIDE_ARC_LINE_INTERSECT: 'tools.guideArcLineIntersect',
+  GUIDE_CIRCLE_INTERSECT: 'tools.guideCircleIntersect',
 } as const;
 
 /**

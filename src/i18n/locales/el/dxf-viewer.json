@@ -1437,7 +1437,7 @@
     "aiAssistant": "AI Σχεδίαση",
     "guideX": "Κάθετος Οδηγός",
     "guideZ": "Οριζόντιος Οδηγός",
-    "guideXZ": "Λοξή Περασιά",
+    "guideXZ": "Λοξός Οδηγός",
     "guideParallel": "Παράλληλος Οδηγός",
     "guidePerpendicular": "Κάθετος Οδηγός",
     "guideSegments": "Σε Τμήματα",
@@ -1448,7 +1448,7 @@
     "guideArcDistance": "Ανά Απόσταση Τόξου",
     "guideArcLineIntersect": "Τομή Τόξου & Ευθείας",
     "guideCircleIntersect": "Τομή Κύκλων",
-    "guideMove": "Μετακίνηση Περασιάς",
+    "guideMove": "Μετακίνηση Οδηγού",
     "guideDelete": "Διαγραφή Οδηγού"
   },
   "promptDialog": {

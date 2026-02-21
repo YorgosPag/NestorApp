@@ -334,7 +334,9 @@ export function useCentralizedMouseHandlers({
     // direct clicks (Path A) not marquee fallback (Path B), to ensure snap is applied and
     // to avoid entity re-selection interference that can cause pivot point offset
     const isRotationActive = activeTool === 'rotate';
-    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive) {
+    // ADR-189: Guide tools handle their own click logic — skip marquee for all guide-* tools
+    const isGuideToolActive = activeTool?.startsWith('guide-') ?? false;
+    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive && !isGuideToolActive) {
       cursor.startSelection(screenPos);
     }
   }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);

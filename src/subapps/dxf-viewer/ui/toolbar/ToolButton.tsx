@@ -158,7 +158,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDropdownItemClick(option.id)}
-                  className="w-full justify-start rounded-none first:rounded-t-md last:rounded-b-md"
+                  className="w-full justify-start rounded-none first:rounded-t-md last:rounded-b-md hover:bg-accent hover:text-accent-foreground"
                 >
                   {OptionIcon && <OptionIcon className={`${iconSizes.sm} mr-2 ${iconColorClass}`} />}
                   <span className="flex-1 text-left">{t(option.label)}</span>

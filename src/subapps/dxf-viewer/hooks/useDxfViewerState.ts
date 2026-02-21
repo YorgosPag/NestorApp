@@ -28,6 +28,12 @@ import { useRulersGridContext } from '../systems/rulers-grid/RulersGridSystem';
 // 📐 ADR-189: EventBus for guide→snap auto-enable
 import { EventBus } from '../systems/events/EventBus';
 
+// ADR-189: Guide tools that create/manage construction points → auto-open GL panel
+const GUIDE_TOOLS_NEEDING_PANEL: ReadonlySet<ToolType> = new Set<ToolType>([
+  'guide-segments', 'guide-distance', 'guide-add-point', 'guide-delete-point',
+  'guide-arc-segments', 'guide-arc-distance', 'guide-arc-line-intersect', 'guide-circle-intersect',
+]);
+
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
   const canvasOps = useCanvasOperations();
@@ -120,6 +126,11 @@ export function useDxfViewerState() {
   const handleToolChange = useCallback((tool: ToolType) => {
 
     setActiveTool(tool);
+
+    // 📐 ADR-189: Auto-open Guide Panel for tools that create/manage construction points
+    if (GUIDE_TOOLS_NEEDING_PANEL.has(tool) && !toolbarState.showGuidePanel) {
+      toolbarState.toggleGuidePanel();
+    }
 
     const onZoomAction = (action: string) => {
       if (action === 'zoom-in') canvasActions.zoomIn();
