@@ -257,6 +257,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-distance' as ToolType, icon: Ruler, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DISTANCE, hotkey: 'G→A' },
           { id: 'guide-add-point' as ToolType, icon: Plus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ADD_POINT, hotkey: 'G→Q' },
           { id: 'guide-delete-point' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE_POINT, hotkey: 'G→W' },
+          { id: 'guide-move' as ToolType, icon: Move, label: DXF_DRAWING_TOOL_LABELS.GUIDE_MOVE, hotkey: 'G→M' },
           { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
         ],
       },

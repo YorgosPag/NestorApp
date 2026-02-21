@@ -1434,6 +1434,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_DISTANCE: 'tools.guideDistance',
   GUIDE_ADD_POINT: 'tools.guideAddPoint',
   GUIDE_DELETE_POINT: 'tools.guideDeletePoint',
+  GUIDE_MOVE: 'tools.guideMove',
   GUIDE_DELETE: 'tools.guideDelete',
 } as const;
 

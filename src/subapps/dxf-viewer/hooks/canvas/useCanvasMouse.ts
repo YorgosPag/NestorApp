@@ -423,33 +423,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     // Only handle left click
     if (e.button !== 0) return;
 
-    // ADR-189 B5: Guide drag initiation — before other tool checks
-    if (activeTool === 'guide-move') {
-      const container = containerRef.current;
-      if (!container) return;
-      const snap = getPointerSnapshotFromElement(container);
-      if (!snap) return;
-      const screenPos = getScreenPosFromEvent(e, snap);
-      const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-      const store = getGlobalGuideStore();
-      const hitTolerance = 30 / transform.scale;
-      const nearest = store.findNearestGuide(worldPos.x, worldPos.y, hitTolerance);
-
-      if (nearest && !nearest.locked) {
-        e.preventDefault();
-        e.stopPropagation();
-        setDraggingGuide({
-          guideId: nearest.id,
-          axis: nearest.axis,
-          startMouseWorld: worldPos,
-          originalOffset: nearest.offset,
-          originalStartPoint: nearest.startPoint ? { x: nearest.startPoint.x, y: nearest.startPoint.y } : undefined,
-          originalEndPoint: nearest.endPoint ? { x: nearest.endPoint.x, y: nearest.endPoint.y } : undefined,
-        });
-      }
-      return;
-    }
+    // ADR-189 B5: Guide drag is initiated in CanvasSection.handleContainerMouseDown
+    // (useCanvasMouse.handleContainerMouseDown is NOT used for guide-move)
 
     // Only in select/layering/move mode
     if (activeTool !== 'select' && activeTool !== 'layering' && activeTool !== 'move') return;
@@ -589,7 +564,6 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     setDragPreviewPosition,
     universalSelectionRef,
     overlayStoreRef,
-    setDraggingGuide,
   ]);
 
   /**
@@ -707,55 +681,12 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
       markDragFinished();
     }
 
-    // ADR-189 B5: Handle guide drag end
-    if (draggingGuide) {
-      const container = containerRef.current;
-      if (container) {
-        const snap = getPointerSnapshotFromElement(container);
-        if (snap) {
-          const screenPos = getScreenPosFromEvent(e, snap);
-          const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-          const deltaX = worldPos.x - draggingGuide.startMouseWorld.x;
-          const deltaY = worldPos.y - draggingGuide.startMouseWorld.y;
-          const hasMovement = Math.abs(deltaX) > movementDetectionThreshold ||
-                              Math.abs(deltaY) > movementDetectionThreshold;
-
-          if (hasMovement) {
-            if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
-              const newStart = { x: draggingGuide.originalStartPoint.x + deltaX, y: draggingGuide.originalStartPoint.y + deltaY };
-              const newEnd = { x: draggingGuide.originalEndPoint.x + deltaX, y: draggingGuide.originalEndPoint.y + deltaY };
-              onGuideDragComplete(
-                draggingGuide.guideId, draggingGuide.axis,
-                draggingGuide.originalOffset, draggingGuide.originalOffset,
-                draggingGuide.originalStartPoint, draggingGuide.originalEndPoint,
-                newStart, newEnd,
-              );
-            } else {
-              const delta1D = draggingGuide.axis === 'X' ? deltaX : deltaY;
-              const newOffset = draggingGuide.originalOffset + delta1D;
-              onGuideDragComplete(
-                draggingGuide.guideId, draggingGuide.axis,
-                draggingGuide.originalOffset, newOffset,
-              );
-            }
-          } else {
-            // No movement — revert the live store mutation
-            const store = getGlobalGuideStore();
-            if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
-              store.moveDiagonalGuideById(draggingGuide.guideId, draggingGuide.originalStartPoint, draggingGuide.originalEndPoint);
-            } else {
-              store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset);
-            }
-          }
-        }
-      }
-      setDraggingGuide(null);
-    }
+    // ADR-189 B5: Guide drag end is handled in CanvasSection.handleContainerMouseUp
+    // (useCanvasMouse.handleContainerMouseUp is NOT used for guide-move)
   }, [
     draggingVertices,
     draggingEdgeMidpoint,
     draggingOverlayBody,
-    draggingGuide,
     transform,
     containerRef,
     executeCommand,
@@ -766,8 +697,6 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     overlayStoreRef,
     movementDetectionThreshold,
     markDragFinished, // 🏢 ENTERPRISE: Injected from useGripSystem
-    setDraggingGuide,
-    onGuideDragComplete,
   ]);
 
   // ============================================================================

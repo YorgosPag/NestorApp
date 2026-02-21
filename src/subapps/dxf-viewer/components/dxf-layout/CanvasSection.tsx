@@ -43,6 +43,11 @@ import type { GridAxis } from '../../systems/guides/guide-types';
 import { MoveGuideCommand } from '../../systems/guides/guide-commands';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { Point2D } from '../../rendering/types/Types';
+import {
+  getPointerSnapshotFromElement,
+  getScreenPosFromEvent,
+  screenToWorldWithSnapshot,
+} from '../../rendering/core/CoordinateTransforms';
 // ADR-189: Centralized prompt dialog for distance input (parallel guides, future tools)
 import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -742,21 +747,91 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // ADR-183: Wrapper container handlers — unified hook handles grip mouseDown/mouseUp
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button === 0) {
-      const consumed = unified.handleMouseDown(
-        mouseWorld ?? { x: 0, y: 0 },
-        e.shiftKey,
-      );
-      if (consumed) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
+    if (e.button !== 0) return;
+
+    // ADR-189 B5: Guide drag initiation — highest priority for guide-move tool
+    if (activeTool === 'guide-move' && containerRef.current) {
+      const snap = getPointerSnapshotFromElement(containerRef.current);
+      if (snap) {
+        const screenPos = getScreenPosFromEvent(e, snap);
+        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+        const store = getGlobalGuideStore();
+        const hitTolerance = 30 / transform.scale;
+        const nearest = store.findNearestGuide(worldPos.x, worldPos.y, hitTolerance);
+
+        if (nearest && !nearest.locked) {
+          e.preventDefault();
+          e.stopPropagation();
+          setDraggingGuide({
+            guideId: nearest.id,
+            axis: nearest.axis,
+            startMouseWorld: worldPos,
+            originalOffset: nearest.offset,
+            originalStartPoint: nearest.startPoint ? { x: nearest.startPoint.x, y: nearest.startPoint.y } : undefined,
+            originalEndPoint: nearest.endPoint ? { x: nearest.endPoint.x, y: nearest.endPoint.y } : undefined,
+          });
+          return;
+        }
       }
+      return;
+    }
+
+    const consumed = unified.handleMouseDown(
+      mouseWorld ?? { x: 0, y: 0 },
+      e.shiftKey,
+    );
+    if (consumed) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
     }
     // Fall through to useCanvasMouse for non-grip behavior (not needed — grip handling is complete)
-  }, [unified, mouseWorld]);
+  }, [unified, mouseWorld, activeTool, containerRef, transform, setDraggingGuide]);
 
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    // ADR-189 B5: Guide drag end — create MoveGuideCommand
+    if (draggingGuide && containerRef.current) {
+      const snap = getPointerSnapshotFromElement(containerRef.current);
+      if (snap) {
+        const screenPos = getScreenPosFromEvent(e, snap);
+        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+        const deltaX = worldPos.x - draggingGuide.startMouseWorld.x;
+        const deltaY = worldPos.y - draggingGuide.startMouseWorld.y;
+        const hasMovement = Math.abs(deltaX) > MOVEMENT_DETECTION.MIN_MOVEMENT ||
+                            Math.abs(deltaY) > MOVEMENT_DETECTION.MIN_MOVEMENT;
+
+        if (hasMovement) {
+          if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
+            const newStart = { x: draggingGuide.originalStartPoint.x + deltaX, y: draggingGuide.originalStartPoint.y + deltaY };
+            const newEnd = { x: draggingGuide.originalEndPoint.x + deltaX, y: draggingGuide.originalEndPoint.y + deltaY };
+            handleGuideDragComplete(
+              draggingGuide.guideId, draggingGuide.axis,
+              draggingGuide.originalOffset, draggingGuide.originalOffset,
+              draggingGuide.originalStartPoint, draggingGuide.originalEndPoint,
+              newStart, newEnd,
+            );
+          } else {
+            const delta1D = draggingGuide.axis === 'X' ? deltaX : deltaY;
+            const newOffset = draggingGuide.originalOffset + delta1D;
+            handleGuideDragComplete(
+              draggingGuide.guideId, draggingGuide.axis,
+              draggingGuide.originalOffset, newOffset,
+            );
+          }
+        } else {
+          // No movement — revert the live store mutation
+          const store = getGlobalGuideStore();
+          if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
+            store.moveDiagonalGuideById(draggingGuide.guideId, draggingGuide.originalStartPoint, draggingGuide.originalEndPoint);
+          } else {
+            store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset);
+          }
+        }
+      }
+      setDraggingGuide(null);
+      return;
+    }
+
     // 🏢 ENTERPRISE (2026-02-19): Apply snap to container mouseUp for overlay grip alignment
     // 🚀 PERF (2026-02-20): Read from imperative store — no SnapContext re-render needed
     let worldPos = mouseWorld ?? { x: 0, y: 0 };
@@ -767,7 +842,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     const consumed = await unified.handleMouseUp(worldPos);
     if (consumed) return;
     // No fallback needed — unified handles all grip commits
-  }, [unified, mouseWorld]);
+  }, [unified, mouseWorld, draggingGuide, containerRef, transform, setDraggingGuide, handleGuideDragComplete]);
 
   // === Layer visibility: always show when drawing/editing ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
