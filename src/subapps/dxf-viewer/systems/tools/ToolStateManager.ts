@@ -103,6 +103,10 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-distance': { id: 'guide-distance', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'guide-add-point': { id: 'guide-add-point', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'guide-delete-point': { id: 'guide-delete-point', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 §3.9/3.10/3.12: Arc guide tools
+  'guide-arc-segments': { id: 'guide-arc-segments', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'guide-arc-distance': { id: 'guide-arc-distance', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'guide-arc-line-intersect': { id: 'guide-arc-line-intersect', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 // ============================================================================
