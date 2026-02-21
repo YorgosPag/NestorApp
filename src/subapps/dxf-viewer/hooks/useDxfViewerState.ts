@@ -128,8 +128,9 @@ export function useDxfViewerState() {
     setActiveTool(tool);
 
     // 📐 ADR-189: Auto-open Guide Panel for tools that create/manage construction points
-    if (GUIDE_TOOLS_NEEDING_PANEL.has(tool) && !toolbarState.showGuidePanel) {
-      toolbarState.toggleGuidePanel();
+    // Uses openGuidePanel (idempotent) instead of toggleGuidePanel to avoid stale closure issues
+    if (GUIDE_TOOLS_NEEDING_PANEL.has(tool)) {
+      toolbarState.openGuidePanel();
     }
 
     const onZoomAction = (action: string) => {

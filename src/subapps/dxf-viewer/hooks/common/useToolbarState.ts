@@ -74,6 +74,8 @@ export function useToolbarState() {
   const toggleCalibration = useCallback(() => setShowCalibration(p => !p), []);
   const toggleCursorSettings = useCallback(() => setShowCursorSettings(p => !p), []);
   const toggleGuidePanel = useCallback(() => setShowGuidePanel(p => !p), []);
+  // ADR-189: Open only (idempotent — won't close if already open)
+  const openGuidePanel = useCallback(() => setShowGuidePanel(true), []);
 
   return {
     // State - activeTool removed, now managed by parent
@@ -89,6 +91,7 @@ export function useToolbarState() {
     toggleLayers,
     toggleCalibration,
     toggleCursorSettings,
-    toggleGuidePanel
+    toggleGuidePanel,
+    openGuidePanel
   };
 }

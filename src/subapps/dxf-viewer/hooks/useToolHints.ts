@@ -46,6 +46,12 @@ export function useToolHints(activeTool: ToolType): ToolHintsResult {
     toolHintOverrideStore.getSnapshot,
   );
 
+  // Guide tools (and others) that manage their own step state write step index here
+  const stepOverride = useSyncExternalStore(
+    toolHintOverrideStore.subscribe,
+    toolHintOverrideStore.getStepSnapshot,
+  );
+
   return useMemo(() => {
     // Default result for tools without hints or loading state
     const defaultResult: ToolHintsResult = {
@@ -107,12 +113,12 @@ export function useToolHints(activeTool: ToolType): ToolHintsResult {
 
     const totalSteps = steps.length;
 
-    // Current step based on pointCount
+    // Current step based on pointCount or stepOverride
+    // stepOverride is used by guide tools that manage their own step state
+    // (they don't use DrawingStateMachine so pointCount stays 0)
+    const effectivePointCount = stepOverride !== null ? stepOverride : pointCount;
     // Capped at last step (0-indexed, so max is totalSteps - 1)
-    // pointCount 0 → step 0 (first instruction)
-    // pointCount 1 → step 1 (second instruction, if exists)
-    // etc.
-    const currentStep = Math.min(pointCount, totalSteps - 1);
+    const currentStep = Math.min(effectivePointCount, totalSteps - 1);
     const currentStepText = steps[currentStep] || '';
 
     return {
@@ -123,7 +129,7 @@ export function useToolHints(activeTool: ToolType): ToolHintsResult {
       hasHints: true,
       isReady: true,
     };
-  }, [activeTool, pointCount, t, isNamespaceReady, hintOverride]);
+  }, [activeTool, pointCount, stepOverride, t, isNamespaceReady, hintOverride]);
 }
 
 /**

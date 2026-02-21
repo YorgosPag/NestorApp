@@ -58,6 +58,8 @@ import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/compon
 // ADR-189: Guide context menu
 import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
+// Tool hint step override for guide tools (they don't use DrawingStateMachine)
+import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 
@@ -471,6 +473,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setCircleIntersectFirst(null);
     }
   }, [activeTool]);
+
+  // ADR-189: Sync guide tool step state → toolHintOverrideStore for ToolbarStatusBar hint progression
+  // Guide tools manage their own step state (not DrawingStateMachine), so we push it to the shared store.
+  useEffect(() => {
+    if (activeTool === 'guide-xz') {
+      toolHintOverrideStore.setStepOverride(diagonalStep);
+    } else if (activeTool === 'guide-parallel') {
+      toolHintOverrideStore.setStepOverride(parallelRefGuideId ? 1 : 0);
+    } else if (activeTool === 'guide-segments') {
+      toolHintOverrideStore.setStepOverride(segmentsStep);
+    } else if (activeTool === 'guide-distance') {
+      toolHintOverrideStore.setStepOverride(distanceStep);
+    } else if (activeTool === 'guide-arc-line-intersect') {
+      toolHintOverrideStore.setStepOverride(arcLineStep);
+    } else if (activeTool === 'guide-circle-intersect') {
+      toolHintOverrideStore.setStepOverride(circleIntersectStep);
+    } else {
+      toolHintOverrideStore.setStepOverride(null);
+    }
+  }, [activeTool, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep]);
 
   // ADR-189 §3.9: Arc segments picked → prompt for segment count
   const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
@@ -1167,7 +1189,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           opacity: pdfOpacity,
         }}
         onMouseMove={props.onMouseMove}
-        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity'}
+        entityPickingActive={
+          angleEntityMeasurement.isActive ||
+          rotationTool.phase === 'awaiting-entity' ||
+          activeTool === 'guide-arc-segments' ||
+          activeTool === 'guide-arc-distance' ||
+          activeTool === 'guide-arc-line-intersect' ||
+          activeTool === 'guide-circle-intersect'
+        }
         // ADR-189: Construction guides
         guides={guideState.guides}
         guidesVisible={guideState.guidesVisible}
