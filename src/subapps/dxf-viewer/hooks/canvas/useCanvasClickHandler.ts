@@ -230,6 +230,12 @@ export interface UseCanvasClickHandlerParams {
   // ── Guide rect-center tool ─────────────────────────────────────────
   /** Callback: place construction point at center of enclosing guide rectangle */
   onRectCenterPlace?: (center: Point2D) => void;
+
+  // ── Guide line-midpoint + circle-center tools ─────────────────────
+  /** Callback: place construction point at midpoint of a line entity */
+  onLineMidpointPlace?: (midpoint: Point2D) => void;
+  /** Callback: place construction point at center of a circle/arc entity */
+  onCircleCenterPlace?: (center: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -274,6 +280,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     perpRefGuideId, onPerpRefSelected, onPerpPlaced,
     // Guide rect-center
     onRectCenterPlace,
+    // Guide line-midpoint + circle-center
+    onLineMidpointPlace, onCircleCenterPlace,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -862,6 +870,76 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.898: Guide line-midpoint — click on LINE entity → place point at midpoint
+    if (activeTool === 'guide-line-midpoint' && onLineMidpointPlace) {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+        let closestEntity: { start: Point2D; end: Point2D } | null = null;
+        let closestDist = hitTolerance;
+
+        for (const entity of scene.entities) {
+          if (isLineEntity(entity)) {
+            const dist = pointToLineDistance(worldPoint, entity.start, entity.end);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestEntity = { start: entity.start, end: entity.end };
+            }
+          }
+        }
+
+        if (closestEntity) {
+          const midpoint: Point2D = {
+            x: (closestEntity.start.x + closestEntity.end.x) / 2,
+            y: (closestEntity.start.y + closestEntity.end.y) / 2,
+          };
+          onLineMidpointPlace(midpoint);
+          dlog('useCanvasClickHandler', 'Line midpoint placed', midpoint);
+        }
+      }
+      return;
+    }
+
+    // PRIORITY 1.899: Guide circle-center — click on CIRCLE/ARC entity → place point at center
+    if (activeTool === 'guide-circle-center' && onCircleCenterPlace) {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+        let closestCenter: Point2D | null = null;
+        let closestDist = hitTolerance;
+
+        for (const entity of scene.entities) {
+          if (isCircleEntity(entity)) {
+            const dx = worldPoint.x - entity.center.x;
+            const dy = worldPoint.y - entity.center.y;
+            const distFromCircumference = Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius);
+            if (distFromCircumference < closestDist) {
+              closestDist = distFromCircumference;
+              closestCenter = entity.center;
+            }
+          } else if (isArcEntity(entity)) {
+            const dist = pointToArcDistance(worldPoint, entity);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestCenter = entity.center;
+            }
+          }
+        }
+
+        if (closestCenter) {
+          onCircleCenterPlace(closestCenter);
+          dlog('useCanvasClickHandler', 'Circle/arc center placed', closestCenter);
+        }
+      }
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -1099,6 +1177,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     perpRefGuideId, onPerpRefSelected, onPerpPlaced,
     // Guide rect-center
     onRectCenterPlace,
+    // Guide line-midpoint + circle-center
+    onLineMidpointPlace, onCircleCenterPlace,
   ]);
 
   return { handleCanvasClick };

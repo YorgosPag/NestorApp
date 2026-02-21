@@ -237,6 +237,10 @@ export class CreateParallelGuideCommand implements ICommand {
     this.execute();
   }
 
+  getCreatedGuide(): Guide | null {
+    return this.createdGuide;
+  }
+
   getDescription(): string {
     return `Create parallel guide (offset ${this.offsetDistance} from ${this.referenceGuideId})`;
   }

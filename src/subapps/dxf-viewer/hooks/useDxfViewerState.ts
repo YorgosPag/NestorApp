@@ -34,6 +34,7 @@ const GUIDE_TOOLS_NEEDING_PANEL: ReadonlySet<ToolType> = new Set<ToolType>([
   'guide-segments', 'guide-distance', 'guide-add-point', 'guide-delete-point',
   'guide-arc-segments', 'guide-arc-distance', 'guide-arc-line-intersect', 'guide-circle-intersect',
   'guide-move', 'guide-delete', 'guide-rect-center',
+  'guide-line-midpoint', 'guide-circle-center',
 ]);
 
 export function useDxfViewerState() {

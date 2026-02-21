@@ -1456,7 +1456,9 @@
     "guideCircleIntersect": "Circle-Circle Intersection",
     "guideMove": "Move Guide",
     "guideDelete": "Delete Guide",
-    "guideRectCenter": "Rectangle Center"
+    "guideRectCenter": "Rectangle Center",
+    "guideLineMidpoint": "Line Midpoint",
+    "guideCircleCenter": "Circle Center"
   },
   "promptDialog": {
     "confirm": "OK",

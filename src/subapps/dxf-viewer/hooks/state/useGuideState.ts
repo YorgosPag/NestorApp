@@ -121,6 +121,11 @@ export function useGuideState(): UseGuideStateReturn {
     const cmd = new CreateParallelGuideCommand(store, referenceGuideId, offsetDistance);
     cmd.execute();
 
+    const createdGuide = cmd.getCreatedGuide();
+    if (createdGuide) {
+      EventBus.emit('grid:guide-added', { guide: createdGuide });
+    }
+
     return cmd;
   }, [store]);
 

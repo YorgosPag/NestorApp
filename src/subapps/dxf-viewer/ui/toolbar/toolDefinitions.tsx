@@ -20,6 +20,8 @@ import {
   CircleDot, // ADR-189 §3.9/§3.10: Arc guide points icon
   Waypoints, // ADR-189 §3.12: Arc-Line intersection icon
   CircleDashed, // ADR-189 §3.11: Circle-Circle intersection icon
+  LocateFixed, // Midpoint on line
+  Target, // Circle center
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -267,6 +269,8 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-move' as ToolType, icon: Move, label: DXF_DRAWING_TOOL_LABELS.GUIDE_MOVE, hotkey: 'G→M' },
           { id: 'guide-delete' as ToolType, icon: Trash2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_DELETE, hotkey: 'G→D' },
           { id: 'guide-rect-center' as ToolType, icon: Crosshair, label: DXF_DRAWING_TOOL_LABELS.GUIDE_RECT_CENTER, hotkey: 'G→R' },
+          { id: 'guide-line-midpoint' as ToolType, icon: LocateFixed, label: DXF_DRAWING_TOOL_LABELS.GUIDE_LINE_MIDPOINT, hotkey: 'G→E' },
+          { id: 'guide-circle-center' as ToolType, icon: Target, label: DXF_DRAWING_TOOL_LABELS.GUIDE_CIRCLE_CENTER, hotkey: 'G→C' },
         ],
       },
     ],

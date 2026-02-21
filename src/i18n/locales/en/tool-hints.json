@@ -369,7 +369,7 @@
       "description": "Create guide parallel to existing",
       "steps": [
         "Click on reference guide",
-        "Enter distance in dialog"
+        "Click on desired side"
       ],
       "shortcuts": "G→P | ESC=Cancel"
     },
@@ -469,6 +469,18 @@
       "description": "Place point at center of rectangle formed by 4 guides",
       "steps": ["Click inside rectangle formed by guides"],
       "shortcuts": "G→R | ESC=Cancel"
+    },
+    "guide-line-midpoint": {
+      "name": "Line Midpoint",
+      "description": "Place construction point at midpoint of a line",
+      "steps": ["Click on a line to place point at its midpoint"],
+      "shortcuts": "G→E | ESC=Cancel"
+    },
+    "guide-circle-center": {
+      "name": "Circle Center",
+      "description": "Place construction point at center of circle or arc",
+      "steps": ["Click on a circle or arc to place point at its center"],
+      "shortcuts": "G→C | ESC=Cancel"
     }
   },
   "common": {

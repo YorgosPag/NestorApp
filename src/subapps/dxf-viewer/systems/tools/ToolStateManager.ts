@@ -112,6 +112,10 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-move': { id: 'guide-move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // Center of rectangle formed by 4 guides
   'guide-rect-center': { id: 'guide-rect-center', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // Construction point at midpoint of line entity
+  'guide-line-midpoint': { id: 'guide-line-midpoint', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // Construction point at center of circle/arc entity
+  'guide-circle-center': { id: 'guide-circle-center', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 // ============================================================================

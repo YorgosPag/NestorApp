@@ -1442,6 +1442,8 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_ARC_LINE_INTERSECT: 'tools.guideArcLineIntersect',
   GUIDE_CIRCLE_INTERSECT: 'tools.guideCircleIntersect',
   GUIDE_RECT_CENTER: 'tools.guideRectCenter',
+  GUIDE_LINE_MIDPOINT: 'tools.guideLineMidpoint',
+  GUIDE_CIRCLE_CENTER: 'tools.guideCircleCenter',
 } as const;
 
 /**

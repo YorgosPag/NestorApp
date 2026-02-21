@@ -339,7 +339,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       unit: 'mm',
       validate: (val) => {
         const n = parseFloat(val);
-        if (n === 0) return t('promptDialog.invalidNumber');
+        if (isNaN(n) || n === 0) return t('promptDialog.invalidNumber');
         return null;
       },
     }).then((result) => {
@@ -625,6 +625,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // Guide rect-center: place construction point at center of enclosing guide rectangle
   const handleRectCenterPlace = useCallback((center: Point2D) => {
     cpState.addPoint(center, 'RC');
+  }, [cpState]);
+
+  // Guide line-midpoint: place construction point at midpoint of line entity
+  const handleLineMidpointPlace = useCallback((midpoint: Point2D) => {
+    cpState.addPoint(midpoint, 'MP');
+  }, [cpState]);
+
+  // Guide circle-center: place construction point at center of circle/arc entity
+  const handleCircleCenterPlace = useCallback((center: Point2D) => {
+    cpState.addPoint(center, 'CC');
   }, [cpState]);
 
   // ADR-189: Guide context menu handlers
@@ -1073,6 +1083,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onPerpPlaced: handlePerpPlaced,
     // Guide rect-center
     onRectCenterPlace: handleRectCenterPlace,
+    // Guide line-midpoint + circle-center
+    onLineMidpointPlace: handleLineMidpointPlace,
+    onCircleCenterPlace: handleCircleCenterPlace,
   });
 
   const { handleSmartDelete } = useSmartDelete({
@@ -1236,7 +1249,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           activeTool === 'guide-arc-segments' ||
           activeTool === 'guide-arc-distance' ||
           activeTool === 'guide-arc-line-intersect' ||
-          activeTool === 'guide-circle-intersect'
+          activeTool === 'guide-circle-intersect' ||
+          activeTool === 'guide-line-midpoint' ||
+          activeTool === 'guide-circle-center'
         }
         // ADR-189: Construction guides
         guides={guideState.guides}

@@ -1450,7 +1450,9 @@
     "guideCircleIntersect": "Τομή Κύκλων",
     "guideMove": "Μετακίνηση Οδηγού",
     "guideDelete": "Διαγραφή Οδηγού",
-    "guideRectCenter": "Κέντρο Ορθογωνίου"
+    "guideRectCenter": "Κέντρο Ορθογωνίου",
+    "guideLineMidpoint": "Μέσο Ευθυγράμμου",
+    "guideCircleCenter": "Κέντρο Κύκλου"
   },
   "promptDialog": {
     "confirm": "OK",

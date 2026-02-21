@@ -173,8 +173,8 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
         title={t('guidePanel.title')}
         icon={<Ruler />}
       />
-      <FloatingPanel.Content>
-        <section className="space-y-3">
+      <FloatingPanel.Content className="flex flex-col overflow-hidden flex-1">
+        <section className="space-y-3 overflow-y-auto overflow-x-hidden flex-1">
           {/* Global Actions Bar */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} flex-wrap`}>
             {/* Toggle all visibility */}

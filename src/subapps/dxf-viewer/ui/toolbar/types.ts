@@ -62,7 +62,9 @@ export type ToolType =
   | 'guide-circle-intersect'   // ADR-189 §3.11: Circle-Circle intersection points
   | 'guide-move'               // ADR-189 B5: Drag move guide
   | 'guide-delete'
-  | 'guide-rect-center';      // Center of rectangle formed by 4 guides
+  | 'guide-rect-center'        // Center of rectangle formed by 4 guides
+  | 'guide-line-midpoint'      // Construction point at midpoint of line entity
+  | 'guide-circle-center';    // Construction point at center of circle/arc entity
 
 
 export interface ToolDefinition {
