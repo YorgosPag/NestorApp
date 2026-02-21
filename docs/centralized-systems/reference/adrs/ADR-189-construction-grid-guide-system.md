@@ -238,7 +238,7 @@
 - Geometry: `computeArcDistancePoints()` — angleStep = distance/radius, wraps around for circles, includes endpoint for arcs
 - Files: `useConstructionPointState.ts`, `useCanvasClickHandler.ts`, `CanvasSection.tsx`
 
-### 3.11 Τομή Κύκλων (9ο πλήκτρο)
+### 3.11 Τομή Κύκλων (9ο πλήκτρο) ✅ IMPLEMENTED
 
 Βρίσκει αυτόματα τα σημεία τομής δύο κύκλων.
 
@@ -246,6 +246,14 @@
 1. "Επιλέξτε τον πρώτο κύκλο" → κλικ
 2. "Επιλέξτε τον δεύτερο κύκλο" → κλικ
 3. X markers εμφανίζονται στα **σημεία τομής** των δύο κύκλων (0, 1 ή 2 σημεία)
+
+**Implementation (2026-02-21):**
+- Keyboard chord: **G→O**
+- 2-step state machine: `circleIntersectStep` (0=pick first arc/circle, 1=pick second)
+- Geometry: `computeCircleCircleIntersection()` — Radical line algorithm: d between centers, a = (r1²-r2²+d²)/(2d), h = sqrt(r1²-a²), perpendicular offsets
+- Angular range filtering: `isPointInArcRange()` for arcs (not full circles)
+- Returns 0, 1, or 2 points; warning notification on 0 results
+- Files: `useConstructionPointState.ts`, `useCanvasClickHandler.ts`, `CanvasSection.tsx`
 
 ### 3.12 Τομή Τόξου & Ευθείας (10ο πλήκτρο) ✅ IMPLEMENTED
 
@@ -1858,6 +1866,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-21 | **§3.12 Arc-Line Intersection (G→I)**: 2-click (line → arc/circle) → 0-2 X markers at intersection points. Parametric line-circle quadratic + angular range filter. Warning notification on 0 results |
 | 2026-02-21 | **Arc geometry engine**: `computeArcSegmentPoints()`, `computeArcDistancePoints()`, `computeLineArcIntersection()` — pure math, DXF counterclockwise convention |
 | 2026-02-21 | **Entity picking**: ArcPickableEntity/LinePickableEntity interfaces, hit-test via `pointToArcDistance()` for arcs, circumference distance for circles, `pointToLineDistance()` for lines |
+| 2026-02-21 | **§3.11 Circle-Circle Intersection (G→O)**: 2-click (arc/circle → arc/circle) → 0-2 X markers. Radical line algorithm: d, a=(r1²-r2²+d²)/(2d), h=sqrt(r1²-a²), perpendicular offsets. `isPointInArcRange()` for arc angular filtering |
 | 2026-02-21 | **14/14 guide commands COMPLETE** — All §3.1-§3.16 commands implemented |
 
 ---
