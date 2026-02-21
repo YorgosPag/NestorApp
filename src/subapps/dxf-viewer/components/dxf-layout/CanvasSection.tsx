@@ -661,6 +661,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [eventBus]);
 
+  // ADR-189 §4.13: Panel highlight — hover over point row in GuidePanel → highlight on canvas
+  const [panelHighlightPointId, setPanelHighlightPointId] = useState<string | null>(null);
+  useEffect(() => {
+    return eventBus.on('grid:point-panel-highlight', ({ pointId }) => {
+      setPanelHighlightPointId(pointId);
+    });
+  }, [eventBus]);
+
   // Merge: panel highlight takes precedence when no tool-based highlight
   const effectiveHighlightedGuideId = highlightedGuideId ?? panelHighlightGuideId;
 
@@ -1168,7 +1176,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         ghostSegmentLine={ghostSegmentLine}
         highlightedGuideId={effectiveHighlightedGuideId}
         constructionPoints={cpState.points}
-        highlightedPointId={highlightedPointId}
+        highlightedPointId={highlightedPointId ?? panelHighlightPointId}
       />
 
       {/* 🏢 PERF (2026-02-19): Context menus rendered OUTSIDE CanvasLayerStack.

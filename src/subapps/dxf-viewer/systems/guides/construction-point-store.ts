@@ -216,6 +216,36 @@ export class ConstructionPointStore {
     return toRemove;
   }
 
+  /** Set the label of a construction point */
+  setPointLabel(id: string, label: string | null): void {
+    const index = this.points.findIndex(p => p.id === id);
+    if (index === -1) return;
+    this.points = this.points.map(p =>
+      p.id === id ? { ...p, label } : p
+    );
+    this.notify();
+  }
+
+  /** Set the visibility of a construction point */
+  setPointVisible(id: string, visible: boolean): void {
+    const index = this.points.findIndex(p => p.id === id);
+    if (index === -1) return;
+    this.points = this.points.map(p =>
+      p.id === id ? { ...p, visible } : p
+    );
+    this.notify();
+  }
+
+  /** Set the locked state of a construction point */
+  setPointLocked(id: string, locked: boolean): void {
+    const index = this.points.findIndex(p => p.id === id);
+    if (index === -1) return;
+    this.points = this.points.map(p =>
+      p.id === id ? { ...p, locked } : p
+    );
+    this.notify();
+  }
+
   /** Clear all construction points */
   clearAll(): void {
     if (this.points.length === 0) return;

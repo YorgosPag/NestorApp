@@ -118,6 +118,33 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
     getPointStore().removePointsByGroupId(groupId);
   }, [getPointStore]);
 
+  const handleHoverPoint = useCallback((pointId: string | null) => {
+    EventBus.emit('grid:point-panel-highlight', { pointId });
+  }, []);
+
+  const handleTogglePointVisible = useCallback((pointId: string, visible: boolean) => {
+    getPointStore().setPointVisible(pointId, visible);
+  }, [getPointStore]);
+
+  const handleTogglePointLock = useCallback((pointId: string, locked: boolean) => {
+    getPointStore().setPointLocked(pointId, locked);
+  }, [getPointStore]);
+
+  const handleEditPointLabel = useCallback(async (pointId: string) => {
+    const point = getPointStore().getPointById(pointId);
+    if (!point) return;
+
+    const result = await prompt({
+      title: t('guidePanel.editLabel'),
+      label: t('guidePanel.editLabelMessage'),
+      defaultValue: point.label ?? '',
+    });
+
+    if (result !== null) {
+      getPointStore().setPointLabel(pointId, result.trim() || null);
+    }
+  }, [getPointStore, prompt, t]);
+
   // ── Bulk actions ──
 
   const handleDeleteAllGuides = useCallback(() => {
@@ -242,6 +269,10 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
             points={points}
             onDeletePoint={handleDeletePoint}
             onDeleteGroup={handleDeleteGroup}
+            onHoverPoint={handleHoverPoint}
+            onTogglePointVisible={handleTogglePointVisible}
+            onTogglePointLock={handleTogglePointLock}
+            onEditPointLabel={handleEditPointLabel}
             t={t}
           />
 
