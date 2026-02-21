@@ -25,6 +25,7 @@ import {
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
   useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction,
+  type ArcPickableEntity, type LinePickableEntity,
 } from '../../hooks/canvas';
 import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
@@ -406,6 +407,99 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, cpState]);
 
+  // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
+  const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
+  const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
+
+  // ADR-189: Reset arc tool state when switching away
+  useEffect(() => {
+    if (activeTool !== 'guide-arc-line-intersect') {
+      setArcLineStep(0);
+      setArcLineLine(null);
+    }
+  }, [activeTool]);
+
+  // ADR-189 §3.9: Arc segments picked → prompt for segment count
+  const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
+    showPromptDialog({
+      title: t('promptDialog.arcSegmentCount'),
+      label: t('promptDialog.enterArcSegmentCount'),
+      placeholder: t('promptDialog.segmentCountPlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseInt(val, 10);
+        if (isNaN(n) || n < 2) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const count = parseInt(result, 10);
+        if (!isNaN(count) && count >= 2) {
+          cpState.addArcSegmentPoints(
+            entity.center, entity.radius,
+            entity.startAngle, entity.endAngle,
+            count, entity.isFullCircle,
+          );
+        }
+      }
+    });
+  }, [showPromptDialog, t, cpState]);
+
+  // ADR-189 §3.10: Arc distance picked → prompt for distance
+  const handleArcDistancePicked = useCallback((entity: ArcPickableEntity) => {
+    showPromptDialog({
+      title: t('promptDialog.arcPointDistance'),
+      label: t('promptDialog.enterArcPointDistance'),
+      placeholder: t('promptDialog.pointDistancePlaceholder'),
+      inputType: 'number',
+      unit: 'mm',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n) || n <= 0) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const distance = parseFloat(result);
+        if (!isNaN(distance) && distance > 0) {
+          cpState.addArcDistancePoints(
+            entity.center, entity.radius,
+            entity.startAngle, entity.endAngle,
+            distance, entity.isFullCircle,
+          );
+        }
+      }
+    });
+  }, [showPromptDialog, t, cpState]);
+
+  // ADR-189 §3.12: Arc-Line intersection — step 0 → store line, advance to step 1
+  const handleArcLineLinePicked = useCallback((entity: LinePickableEntity) => {
+    setArcLineLine(entity);
+    setArcLineStep(1);
+  }, []);
+
+  // ADR-189 §3.12: Arc-Line intersection — step 1 → compute + create points
+  const handleArcLineArcPicked = useCallback((entity: ArcPickableEntity) => {
+    if (!arcLineLine) return;
+    const prevCount = cpState.pointCount;
+    cpState.addLineArcIntersectionPoints(
+      arcLineLine.start, arcLineLine.end,
+      entity.center, entity.radius,
+      entity.startAngle, entity.endAngle,
+      entity.isFullCircle,
+    );
+    // Notify user if no intersections found (pointCount didn't change)
+    // Use setTimeout to let the store update propagate
+    setTimeout(() => {
+      if (cpState.getStore().count === prevCount) {
+        notifyWarning(t('promptDialog.noIntersectionFound'));
+      }
+    }, 0);
+    // Reset state
+    setArcLineStep(0);
+    setArcLineLine(null);
+  }, [arcLineLine, cpState, notifyWarning, t]);
+
   // ADR-189: Guide context menu handlers
   const handleGuideContextDelete = useCallback((guideId: string) => {
     guideState.removeGuide(guideId);
@@ -748,6 +842,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     distanceStartPoint,
     onDistanceStartSet: handleDistanceStartSet,
     onDistanceComplete: handleDistanceComplete,
+    // ADR-189 §3.9/3.10/3.12: Arc guide entity picking
+    onArcSegmentsPicked: handleArcSegmentsPicked,
+    onArcDistancePicked: handleArcDistancePicked,
+    arcLineStep,
+    onArcLineLinePicked: handleArcLineLinePicked,
+    onArcLineArcPicked: handleArcLineArcPicked,
   });
 
   const { handleSmartDelete } = useSmartDelete({

@@ -1450,6 +1450,9 @@
     "guideDistance": "Distance Points",
     "guideAddPoint": "Add Point",
     "guideDeletePoint": "Delete Point",
+    "guideArcSegments": "Arc Segments",
+    "guideArcDistance": "Arc Distance",
+    "guideArcLineIntersect": "Arc-Line Intersection",
     "guideDelete": "Delete Guide"
   },
   "promptDialog": {
@@ -1470,7 +1473,12 @@
     "enterAngle": "Enter angle in degrees",
     "anglePlaceholder": "e.g. 45",
     "editLabel": "Edit Guide Label",
-    "enterLabel": "Label for this guide"
+    "enterLabel": "Label for this guide",
+    "arcSegmentCount": "Arc Segment Count",
+    "enterArcSegmentCount": "Number of segments along arc",
+    "arcPointDistance": "Arc Point Distance",
+    "enterArcPointDistance": "Distance along arc between points",
+    "noIntersectionFound": "No intersection found between line and arc"
   },
   "entityJoin": {
     "menuTitle": "Join",

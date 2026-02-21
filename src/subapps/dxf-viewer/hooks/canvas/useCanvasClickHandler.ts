@@ -48,6 +48,21 @@ import type { AddConstructionPointCommand, AddConstructionPointBatchCommand, Del
 // TYPES
 // ============================================================================
 
+/** ADR-189 §3.9/3.10: Arc or circle entity for entity-picking callbacks */
+export interface ArcPickableEntity {
+  center: Point2D;
+  radius: number;
+  startAngle: number;
+  endAngle: number;
+  isFullCircle: boolean;
+}
+
+/** ADR-189 §3.12: Line entity for entity-picking callbacks */
+export interface LinePickableEntity {
+  start: Point2D;
+  end: Point2D;
+}
+
 /** Minimal interface for drawing handlers ref */
 interface DrawingHandlersLike {
   onDrawingPoint?: (point: Point2D) => void;
@@ -183,6 +198,18 @@ export interface UseCanvasClickHandlerParams {
   onDistanceStartSet?: (point: Point2D) => void;
   /** Step 1 callback: end point set → triggers dialog */
   onDistanceComplete?: (start: Point2D, end: Point2D) => void;
+
+  // ── ADR-189 §3.9, §3.10, §3.12: Arc guide entity picking ────────────
+  /** §3.9 callback: user picked an arc/circle → triggers segment dialog */
+  onArcSegmentsPicked?: (entity: ArcPickableEntity) => void;
+  /** §3.10 callback: user picked an arc/circle → triggers distance dialog */
+  onArcDistancePicked?: (entity: ArcPickableEntity) => void;
+  /** §3.12 arc-line intersect: current step (0=pick line, 1=pick arc) */
+  arcLineStep?: 0 | 1;
+  /** §3.12 callback: user picked a line entity (step 0) */
+  onArcLineLinePicked?: (entity: LinePickableEntity) => void;
+  /** §3.12 callback: user picked an arc/circle entity (step 1) */
+  onArcLineArcPicked?: (entity: ArcPickableEntity) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -219,6 +246,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     cpAddPoint, cpDeletePoint, cpFindNearest,
     segmentsStep = 0, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
     distanceStep = 0, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
+    // ADR-189 §3.9/3.10/3.12: Arc guide entity picking
+    onArcSegmentsPicked, onArcDistancePicked,
+    arcLineStep = 0, onArcLineLinePicked, onArcLineArcPicked,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -595,6 +625,125 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.88: ADR-189 §3.9 — Arc segment points (1-click entity pick)
+    if (activeTool === 'guide-arc-segments' && onArcSegmentsPicked) {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+        for (const entity of scene.entities) {
+          if (isArcEntity(entity)) {
+            if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
+              onArcSegmentsPicked({
+                center: entity.center, radius: entity.radius,
+                startAngle: entity.startAngle, endAngle: entity.endAngle,
+                isFullCircle: false,
+              });
+              return;
+            }
+          } else if (isCircleEntity(entity)) {
+            const dx = worldPoint.x - entity.center.x;
+            const dy = worldPoint.y - entity.center.y;
+            if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
+              onArcSegmentsPicked({
+                center: entity.center, radius: entity.radius,
+                startAngle: 0, endAngle: 360,
+                isFullCircle: true,
+              });
+              return;
+            }
+          }
+        }
+      }
+      return;
+    }
+
+    // PRIORITY 1.89: ADR-189 §3.10 — Arc distance points (1-click entity pick)
+    if (activeTool === 'guide-arc-distance' && onArcDistancePicked) {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+        for (const entity of scene.entities) {
+          if (isArcEntity(entity)) {
+            if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
+              onArcDistancePicked({
+                center: entity.center, radius: entity.radius,
+                startAngle: entity.startAngle, endAngle: entity.endAngle,
+                isFullCircle: false,
+              });
+              return;
+            }
+          } else if (isCircleEntity(entity)) {
+            const dx = worldPoint.x - entity.center.x;
+            const dy = worldPoint.y - entity.center.y;
+            if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
+              onArcDistancePicked({
+                center: entity.center, radius: entity.radius,
+                startAngle: 0, endAngle: 360,
+                isFullCircle: true,
+              });
+              return;
+            }
+          }
+        }
+      }
+      return;
+    }
+
+    // PRIORITY 1.895: ADR-189 §3.12 — Arc-Line intersection (2-click: line → arc)
+    if (activeTool === 'guide-arc-line-intersect') {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+
+        if (arcLineStep === 0 && onArcLineLinePicked) {
+          // Step 0: Pick a line entity
+          for (const entity of scene.entities) {
+            if (isLineEntity(entity)) {
+              if (pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance) {
+                onArcLineLinePicked({ start: entity.start, end: entity.end });
+                return;
+              }
+            }
+          }
+        } else if (arcLineStep === 1 && onArcLineArcPicked) {
+          // Step 1: Pick an arc/circle entity
+          for (const entity of scene.entities) {
+            if (isArcEntity(entity)) {
+              if (pointToArcDistance(worldPoint, entity) <= hitTolerance) {
+                onArcLineArcPicked({
+                  center: entity.center, radius: entity.radius,
+                  startAngle: entity.startAngle, endAngle: entity.endAngle,
+                  isFullCircle: false,
+                });
+                return;
+              }
+            } else if (isCircleEntity(entity)) {
+              const dx = worldPoint.x - entity.center.x;
+              const dy = worldPoint.y - entity.center.y;
+              if (Math.abs(Math.sqrt(dx * dx + dy * dy) - entity.radius) <= hitTolerance) {
+                onArcLineArcPicked({
+                  center: entity.center, radius: entity.radius,
+                  startAngle: 0, endAngle: 360,
+                  isFullCircle: true,
+                });
+                return;
+              }
+            }
+          }
+        }
+      }
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -824,6 +973,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     cpAddPoint, cpDeletePoint, cpFindNearest,
     segmentsStep, segmentsStartPoint, onSegmentsStartSet, onSegmentsComplete,
     distanceStep, distanceStartPoint, onDistanceStartSet, onDistanceComplete,
+    // ADR-189 §3.9/3.10/3.12
+    onArcSegmentsPicked, onArcDistancePicked,
+    arcLineStep, onArcLineLinePicked, onArcLineArcPicked,
   ]);
 
   return { handleCanvasClick };

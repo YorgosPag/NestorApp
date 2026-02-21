@@ -56,6 +56,9 @@ export type ToolType =
   | 'guide-distance'       // ADR-189 §3.8: Snap points at fixed distance
   | 'guide-add-point'      // ADR-189 §3.15: Add single snap point
   | 'guide-delete-point'   // ADR-189 §3.16: Delete snap point
+  | 'guide-arc-segments'   // ADR-189 §3.9: Arc segment construction points
+  | 'guide-arc-distance'   // ADR-189 §3.10: Arc distance construction points
+  | 'guide-arc-line-intersect' // ADR-189 §3.12: Arc-Line intersection points
   | 'guide-delete';
 
 

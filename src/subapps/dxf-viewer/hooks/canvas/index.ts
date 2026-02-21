@@ -79,6 +79,8 @@ export { useCanvasClickHandler } from './useCanvasClickHandler';
 export type {
   UseCanvasClickHandlerParams,
   UseCanvasClickHandlerReturn,
+  ArcPickableEntity,
+  LinePickableEntity,
 } from './useCanvasClickHandler';
 
 // === useLayerCanvasMouseMove === (CanvasSection decomposition — LayerCanvas grip hover + mouse move)

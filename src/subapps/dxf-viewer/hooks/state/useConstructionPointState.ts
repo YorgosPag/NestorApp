@@ -5,7 +5,7 @@
  * Uses `useSyncExternalStore` for tear-free subscription to the store singleton.
  * Mutations are wrapped in Commands (undo/redo).
  *
- * @see ADR-189 §3.7, §3.8, §3.15, §3.16
+ * @see ADR-189 §3.7, §3.8, §3.9, §3.10, §3.12, §3.15, §3.16
  * @see useGuideState.ts (template pattern)
  * @since 2026-02-20
  */
@@ -80,6 +80,200 @@ function computeDistancePoints(
 }
 
 // ============================================================================
+// ARC GEOMETRY UTILITIES (§3.9, §3.10, §3.12)
+// ============================================================================
+
+/** Degrees → radians */
+function degToRad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
+
+/** Point on circle at given angle (radians) */
+function pointOnCircle(center: Point2D, radius: number, angleRad: number): Point2D {
+  return { x: center.x + radius * Math.cos(angleRad), y: center.y + radius * Math.sin(angleRad) };
+}
+
+/**
+ * Normalize angle to [0, 360) range.
+ */
+function normalizeAngleDeg(deg: number): number {
+  let a = deg % 360;
+  if (a < 0) a += 360;
+  return a;
+}
+
+/**
+ * Compute the sweep angle from startAngle to endAngle (counterclockwise).
+ * DXF convention: arcs go counterclockwise from start to end.
+ * Returns value in (0, 360].
+ */
+function arcSweepDeg(startDeg: number, endDeg: number): number {
+  const s = normalizeAngleDeg(startDeg);
+  const e = normalizeAngleDeg(endDeg);
+  let sweep = e - s;
+  if (sweep <= 0) sweep += 360;
+  return sweep;
+}
+
+/**
+ * §3.9: Equally-spaced points along an arc/circle.
+ * - Circle (isFullCircle): N points, evenly distributed (no duplicate start/end).
+ * - Arc: N+1 points from startAngle to endAngle (includes both endpoints).
+ */
+function computeArcSegmentPoints(
+  center: Point2D,
+  radius: number,
+  startAngleDeg: number,
+  endAngleDeg: number,
+  count: number,
+  isFullCircle: boolean,
+): Array<{ point: Point2D }> {
+  if (count < 2) return [];
+
+  if (isFullCircle) {
+    // Full circle: N equally-spaced points (no duplicate start=end)
+    const results: Array<{ point: Point2D }> = [];
+    const step = (2 * Math.PI) / count;
+    const startRad = degToRad(startAngleDeg);
+    for (let i = 0; i < count; i++) {
+      results.push({ point: pointOnCircle(center, radius, startRad + i * step) });
+    }
+    return results;
+  }
+
+  // Arc: N+1 points (count segments → count+1 points including endpoints)
+  const sweepDeg = arcSweepDeg(startAngleDeg, endAngleDeg);
+  const sweepRad = degToRad(sweepDeg);
+  const startRad = degToRad(startAngleDeg);
+  const results: Array<{ point: Point2D }> = [];
+  for (let i = 0; i <= count; i++) {
+    const t = i / count;
+    results.push({ point: pointOnCircle(center, radius, startRad + t * sweepRad) });
+  }
+  return results;
+}
+
+/**
+ * §3.10: Points at fixed arc-length distance along an arc/circle.
+ * - Angle increment per step = distance / radius (radians).
+ * - Circle: wraps around until exceeding circumference.
+ * - Arc: stops at end angle; always includes end point for arcs.
+ */
+function computeArcDistancePoints(
+  center: Point2D,
+  radius: number,
+  startAngleDeg: number,
+  endAngleDeg: number,
+  distance: number,
+  isFullCircle: boolean,
+): Array<{ point: Point2D }> {
+  if (distance <= 0 || radius <= 0) return [];
+
+  const angleStepRad = distance / radius;
+  const startRad = degToRad(startAngleDeg);
+
+  if (isFullCircle) {
+    const totalRad = 2 * Math.PI;
+    const results: Array<{ point: Point2D }> = [];
+    let angle = 0;
+    while (angle < totalRad - angleStepRad * 0.01) {
+      results.push({ point: pointOnCircle(center, radius, startRad + angle) });
+      angle += angleStepRad;
+    }
+    return results;
+  }
+
+  // Arc path
+  const sweepRad = degToRad(arcSweepDeg(startAngleDeg, endAngleDeg));
+  const results: Array<{ point: Point2D }> = [];
+  let angle = 0;
+  while (angle < sweepRad - angleStepRad * 0.01) {
+    results.push({ point: pointOnCircle(center, radius, startRad + angle) });
+    angle += angleStepRad;
+  }
+  // Always include arc endpoint
+  results.push({ point: pointOnCircle(center, radius, startRad + sweepRad) });
+  return results;
+}
+
+/**
+ * §3.12: Intersection of a line segment with an arc/circle.
+ * Returns 0, 1, or 2 intersection points.
+ *
+ * Algorithm:
+ * 1. Parametric line: P(t) = lineStart + t*(lineEnd - lineStart), t ∈ [0,1]
+ * 2. Substitute into circle equation: |P(t) - center|² = r²
+ * 3. Solve quadratic: at² + bt + c = 0
+ * 4. Filter solutions: t ∈ [0,1] AND angle within arc range (or full circle)
+ */
+function computeLineArcIntersection(
+  lineStart: Point2D,
+  lineEnd: Point2D,
+  center: Point2D,
+  radius: number,
+  startAngleDeg: number,
+  endAngleDeg: number,
+  isFullCircle: boolean,
+): Array<{ point: Point2D }> {
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+  const fx = lineStart.x - center.x;
+  const fy = lineStart.y - center.y;
+
+  const a = dx * dx + dy * dy;
+  const b = 2 * (fx * dx + fy * dy);
+  const c = fx * fx + fy * fy - radius * radius;
+
+  const discriminant = b * b - 4 * a * c;
+  if (discriminant < 0 || a === 0) return [];
+
+  const sqrtD = Math.sqrt(discriminant);
+  const tValues: number[] = [];
+
+  const t1 = (-b - sqrtD) / (2 * a);
+  const t2 = (-b + sqrtD) / (2 * a);
+
+  // Allow small tolerance for endpoints
+  const EPS = 1e-9;
+  if (t1 >= -EPS && t1 <= 1 + EPS) tValues.push(Math.max(0, Math.min(1, t1)));
+  if (t2 >= -EPS && t2 <= 1 + EPS && Math.abs(t2 - t1) > EPS) {
+    tValues.push(Math.max(0, Math.min(1, t2)));
+  }
+
+  const results: Array<{ point: Point2D }> = [];
+  for (const t of tValues) {
+    const px = lineStart.x + t * dx;
+    const py = lineStart.y + t * dy;
+
+    if (isFullCircle) {
+      results.push({ point: { x: px, y: py } });
+      continue;
+    }
+
+    // Check if point is within arc angular range
+    let angleDeg = Math.atan2(py - center.y, px - center.x) * (180 / Math.PI);
+    if (angleDeg < 0) angleDeg += 360;
+
+    const s = normalizeAngleDeg(startAngleDeg);
+    const e = normalizeAngleDeg(endAngleDeg);
+
+    let inRange: boolean;
+    if (s <= e) {
+      inRange = angleDeg >= s - 0.01 && angleDeg <= e + 0.01;
+    } else {
+      // Arc wraps around 0°
+      inRange = angleDeg >= s - 0.01 || angleDeg <= e + 0.01;
+    }
+
+    if (inRange) {
+      results.push({ point: { x: px, y: py } });
+    }
+  }
+
+  return results;
+}
+
+// ============================================================================
 // HOOK
 // ============================================================================
 
@@ -95,6 +289,22 @@ export interface UseConstructionPointStateReturn {
   addSegmentPoints: (start: Point2D, end: Point2D, segmentCount: number) => AddConstructionPointBatchCommand;
   /** Add points at fixed distance intervals between start and end. Returns the command. */
   addDistancePoints: (start: Point2D, end: Point2D, distance: number) => AddConstructionPointBatchCommand;
+  /** §3.9: Add equally-spaced points along an arc/circle. Returns the command. */
+  addArcSegmentPoints: (
+    center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number,
+    count: number, isFullCircle: boolean,
+  ) => AddConstructionPointBatchCommand;
+  /** §3.10: Add points at fixed arc-length distance along an arc/circle. Returns the command. */
+  addArcDistancePoints: (
+    center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number,
+    distance: number, isFullCircle: boolean,
+  ) => AddConstructionPointBatchCommand;
+  /** §3.12: Add intersection points of a line segment with an arc/circle. Returns the command. */
+  addLineArcIntersectionPoints: (
+    lineStart: Point2D, lineEnd: Point2D,
+    center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number,
+    isFullCircle: boolean,
+  ) => AddConstructionPointBatchCommand;
   /** Delete a point by ID. Returns the command. */
   deletePoint: (pointId: string) => DeleteConstructionPointCommand;
   /** Find the nearest visible point to a world position */
@@ -151,6 +361,40 @@ export function useConstructionPointState(): UseConstructionPointStateReturn {
     return cmd;
   }, [store]);
 
+  // §3.9: Arc segment points
+  const addArcSegmentPoints = useCallback((
+    center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number,
+    count: number, isFullCircle: boolean,
+  ): AddConstructionPointBatchCommand => {
+    const pointDefs = computeArcSegmentPoints(center, radius, startAngleDeg, endAngleDeg, count, isFullCircle);
+    const cmd = new AddConstructionPointBatchCommand(store, pointDefs);
+    cmd.execute();
+    return cmd;
+  }, [store]);
+
+  // §3.10: Arc distance points
+  const addArcDistancePoints = useCallback((
+    center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number,
+    distance: number, isFullCircle: boolean,
+  ): AddConstructionPointBatchCommand => {
+    const pointDefs = computeArcDistancePoints(center, radius, startAngleDeg, endAngleDeg, distance, isFullCircle);
+    const cmd = new AddConstructionPointBatchCommand(store, pointDefs);
+    cmd.execute();
+    return cmd;
+  }, [store]);
+
+  // §3.12: Line-arc intersection points
+  const addLineArcIntersectionPoints = useCallback((
+    lineStart: Point2D, lineEnd: Point2D,
+    center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number,
+    isFullCircle: boolean,
+  ): AddConstructionPointBatchCommand => {
+    const pointDefs = computeLineArcIntersection(lineStart, lineEnd, center, radius, startAngleDeg, endAngleDeg, isFullCircle);
+    const cmd = new AddConstructionPointBatchCommand(store, pointDefs);
+    cmd.execute();
+    return cmd;
+  }, [store]);
+
   const deletePoint = useCallback((pointId: string): DeleteConstructionPointCommand => {
     const cmd = new DeleteConstructionPointCommand(store, pointId);
     cmd.execute();
@@ -173,6 +417,9 @@ export function useConstructionPointState(): UseConstructionPointStateReturn {
     addPoint,
     addSegmentPoints,
     addDistancePoints,
+    addArcSegmentPoints,
+    addArcDistancePoints,
+    addLineArcIntersectionPoints,
     deletePoint,
     findNearest,
     clearAll,

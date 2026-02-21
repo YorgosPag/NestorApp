@@ -1444,6 +1444,9 @@
     "guideDistance": "Ανά Απόσταση",
     "guideAddPoint": "Προσθήκη Σημείου",
     "guideDeletePoint": "Διαγραφή Σημείου",
+    "guideArcSegments": "Σε Τμήματα Τόξου",
+    "guideArcDistance": "Ανά Απόσταση Τόξου",
+    "guideArcLineIntersect": "Τομή Τόξου & Ευθείας",
     "guideDelete": "Διαγραφή Οδηγού"
   },
   "promptDialog": {
@@ -1464,7 +1467,12 @@
     "enterAngle": "Εισαγάγετε γωνία σε μοίρες",
     "anglePlaceholder": "π.χ. 45",
     "editLabel": "Επεξεργασία Ετικέτας Οδηγού",
-    "enterLabel": "Ετικέτα για αυτόν τον οδηγό"
+    "enterLabel": "Ετικέτα για αυτόν τον οδηγό",
+    "arcSegmentCount": "Τμήματα Τόξου",
+    "enterArcSegmentCount": "Αριθμός τμημάτων κατά μήκος τόξου",
+    "arcPointDistance": "Απόσταση Σημείων Τόξου",
+    "enterArcPointDistance": "Απόσταση κατά μήκος τόξου μεταξύ σημείων",
+    "noIntersectionFound": "Δεν βρέθηκε τομή μεταξύ γραμμής και τόξου"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",
