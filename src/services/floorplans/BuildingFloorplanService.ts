@@ -19,6 +19,7 @@
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import pako from 'pako';
 import { db, storage } from '@/lib/firebase';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import { FileRecordService } from '@/services/file-record.service';
@@ -304,18 +305,35 @@ export class BuildingFloorplanService {
       let downloadUrl: string;
 
       if (hasOriginalFile) {
-        // Upload original DXF/PDF binary — FloorplanGallery can render this
-        const uploadResult = await uploadBytes(storageRef, options.originalFile!, {
-          contentType,
-        });
-        uploadSize = options.originalFile!.size;
-        downloadUrl = await getDownloadURL(uploadResult.ref);
+        const originalSize = options.originalFile!.size;
+
+        if (ext === 'dxf') {
+          // DXF files: gzip compress before upload (text files compress 80-90%)
+          const arrayBuffer = await options.originalFile!.arrayBuffer();
+          const compressed = pako.gzip(new Uint8Array(arrayBuffer));
+          const uploadResult = await uploadBytes(storageRef, compressed, {
+            contentType,
+            customMetadata: { compressed: 'gzip', originalSize: String(originalSize) },
+          });
+          downloadUrl = await getDownloadURL(uploadResult.ref);
+          // eslint-disable-next-line no-console
+          console.log(`[BuildingFloorplan] DXF compressed: ${originalSize} → ${compressed.length} bytes (${((1 - compressed.length / originalSize) * 100).toFixed(0)}% reduction)`);
+        } else {
+          // PDF/other: upload as-is (already compressed internally)
+          const uploadResult = await uploadBytes(storageRef, options.originalFile!, {
+            contentType,
+          });
+          downloadUrl = await getDownloadURL(uploadResult.ref);
+        }
+        uploadSize = originalSize;
       } else {
-        // Fallback: upload scene JSON (for backward compatibility)
+        // Fallback: scene JSON (also gzip compressed)
         const sceneJson = JSON.stringify(data.scene);
         const sceneBytes = new TextEncoder().encode(sceneJson);
-        const uploadResult = await uploadBytes(storageRef, sceneBytes, {
+        const compressed = pako.gzip(sceneBytes);
+        const uploadResult = await uploadBytes(storageRef, compressed, {
           contentType: 'application/json',
+          customMetadata: { compressed: 'gzip', originalSize: String(sceneBytes.length) },
         });
         uploadSize = sceneBytes.length;
         downloadUrl = await getDownloadURL(uploadResult.ref);

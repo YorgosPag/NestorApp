@@ -21,6 +21,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { gunzipSync } from 'zlib';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -226,13 +227,11 @@ async function handleGetScene(
 
     const [fileBuffer] = await fileRef.download();
 
-    logger.info('[FloorplanScene] Downloaded', { bytes: fileBuffer.length });
-
     // =========================================================================
     // 7. RETURN JSON WITH CACHING HEADERS
     // =========================================================================
 
-    // Get metadata for ETag
+    // Get metadata for ETag + compression flag
     const [metadata] = await fileRef.getMetadata();
     const etag = metadata.etag || metadata.generation || fileId;
 
@@ -242,9 +241,17 @@ async function handleGetScene(
       return new NextResponse(null, { status: 304 });
     }
 
+    // Decompress if gzip compressed (new processing uses compression)
+    const isCompressed = metadata.metadata?.compressed === 'gzip';
+    const rawBuffer = isCompressed ? gunzipSync(fileBuffer) : fileBuffer;
+
+    logger.info('[FloorplanScene] Downloaded', {
+      bytes: fileBuffer.length,
+      ...(isCompressed && { decompressed: rawBuffer.length }),
+    });
+
     // 🏢 ENTERPRISE: Return scene JSON with proper NextResponse
-    // Convert Buffer to string for NextResponse body
-    return new NextResponse(fileBuffer.toString('utf-8'), {
+    return new NextResponse(rawBuffer.toString('utf-8'), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

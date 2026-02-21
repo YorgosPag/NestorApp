@@ -19,6 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { gunzipSync, gzipSync } from 'zlib';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
@@ -307,7 +308,15 @@ async function handleProcessFloorplan(
     const fileRef = bucket.file(fileData.storagePath);
     const [fileBuffer] = await fileRef.download();
 
-    logger.info('[FloorplanProcess] Downloaded', { bytes: fileBuffer.length });
+    // Decompress if gzip compressed (new uploads use compression)
+    const [fileMeta] = await fileRef.getMetadata();
+    const isCompressed = fileMeta.metadata?.compressed === 'gzip';
+    const rawBuffer = isCompressed ? gunzipSync(fileBuffer) : fileBuffer;
+
+    logger.info('[FloorplanProcess] Downloaded', {
+      bytes: fileBuffer.length,
+      ...(isCompressed && { decompressed: rawBuffer.length }),
+    });
 
     // =========================================================================
     // 8. PROCESS BASED ON FILE TYPE
@@ -324,7 +333,7 @@ async function handleProcessFloorplan(
       const { encodingService } = await import(
         '@/subapps/dxf-viewer/io/encoding-service'
       );
-      const { content, encoding } = encodingService.decodeBufferWithAutoDetect(fileBuffer);
+      const { content, encoding } = encodingService.decodeBufferWithAutoDetect(rawBuffer);
 
       logger.info('[FloorplanProcess] Decoded', { encoding });
 
@@ -365,9 +374,15 @@ async function handleProcessFloorplan(
       // =====================================================================
 
       const processedDataPath = `${fileData.storagePath}.processed.json`;
-      const processedJsonBuffer = Buffer.from(JSON.stringify(dxfSceneData), 'utf-8');
+      const processedJsonRaw = Buffer.from(JSON.stringify(dxfSceneData), 'utf-8');
+      const processedJsonBuffer = gzipSync(processedJsonRaw);
 
-      logger.info('[FloorplanProcess] Uploading processed JSON to Storage', { processedDataPath });
+      logger.info('[FloorplanProcess] Uploading compressed scene JSON to Storage', {
+        processedDataPath,
+        original: processedJsonRaw.length,
+        compressed: processedJsonBuffer.length,
+        reduction: `${((1 - processedJsonBuffer.length / processedJsonRaw.length) * 100).toFixed(0)}%`,
+      });
 
       const processedFileRef = bucket.file(processedDataPath);
       await processedFileRef.save(processedJsonBuffer, {
@@ -375,32 +390,23 @@ async function handleProcessFloorplan(
           contentType: 'application/json',
           // 🏢 ENTERPRISE V3: File is NOT public - served via authenticated API
           cacheControl: 'private, max-age=31536000', // 1 year cache (immutable)
+          metadata: { compressed: 'gzip', originalSize: String(processedJsonRaw.length) },
         },
       });
 
       // 🏢 ENTERPRISE V3: NO makePublic() - scene served via /api/floorplans/scene
-      // This is the secure enterprise pattern: all data access through authenticated APIs
-      // Client calls GET /api/floorplans/scene?fileId=... which:
-      // - Validates auth/permissions via withAuth middleware
-      // - Checks tenant isolation (companyId)
-      // - Downloads from Storage using Admin SDK
-      // - Returns JSON with proper caching headers
-
-      logger.info('[FloorplanProcess] Processed JSON saved', { bytes: processedJsonBuffer.length });
+      // Client calls GET /api/floorplans/scene?fileId=... (authenticated API)
 
       // 🏢 ENTERPRISE: Firestore gets METADATA ONLY (not the huge scene)
-      // NOTE: processedDataUrl is NOT stored - client uses /api/floorplans/scene
       processedData = {
         fileType: 'dxf',
         processedDataPath,
         sceneStats: stats,
         bounds: dxfSceneData.bounds,
         processedAt: Date.now(),
-        originalSize: fileBuffer.length,
+        originalSize: rawBuffer.length,
         processedSize: processedJsonBuffer.length,
         encoding,
-        // NOTE: scene is NOT stored in Firestore anymore (V3 architecture)
-        // NOTE: processedDataUrl removed - client uses authenticated API
       };
 
       logger.info('[FloorplanProcess] DXF parsed', { stats });
