@@ -68,6 +68,7 @@ interface DxfCanvasProps {
   // ADR-189: Construction Guide System
   guides?: readonly Guide[];
   guidesVisible?: boolean;
+  showGuideDimensions?: boolean;
   ghostGuide?: { axis: GridAxis; offset: number } | null;
   ghostDiagonalGuide?: { start: Point2D; end: Point2D } | null;
   highlightedGuideId?: string | null;
@@ -122,6 +123,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // ADR-189: Construction guides
   guides,
   guidesVisible = true,
+  showGuideDimensions = true,
   ghostGuide,
   ghostDiagonalGuide,
   highlightedGuideId,
@@ -206,6 +208,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   guidesRef.current = guides;
   const guidesVisibleRef = useRef(guidesVisible);
   guidesVisibleRef.current = guidesVisible;
+  const showGuideDimensionsRef = useRef(showGuideDimensions);
+  showGuideDimensionsRef.current = showGuideDimensions;
   const highlightedGuideIdRef = useRef(highlightedGuideId);
   highlightedGuideIdRef.current = highlightedGuideId;
   const ghostGuideRef = useRef(ghostGuide);
@@ -518,6 +522,20 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         }
       }
 
+      // 2.55️⃣ RENDER GUIDE DIMENSIONS (B3: distance labels between consecutive guides)
+      if (guideRendererRef.current && guidesVisibleRef.current && showGuideDimensionsRef.current) {
+        const currentGuides = guidesRef.current;
+        if (currentGuides && currentGuides.length >= 2) {
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            guideRendererRef.current.renderGuideDimensions(
+              ctx, currentGuides, currentTransform, currentViewport,
+            );
+          }
+        }
+      }
+
       // 2.6️⃣ RENDER CONSTRUCTION POINTS (ADR-189 §3.7-3.16: X markers on canvas)
       if (guideRendererRef.current) {
         const currentCPs = constructionPointsRef.current;
@@ -599,7 +617,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // 🏢 ADR-119: Mark dirty when dependencies change
   useEffect(() => {
     isDirtyRef.current = true;
-  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
+  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, showGuideDimensions, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
 
   // 🏢 FIX (2026-02-13): Mark dirty when selection state changes so RAF loop re-renders
   // The actual selection box rendering now happens inside renderScene (step 4️⃣)

@@ -24,6 +24,8 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-118: Centralized coordinate transforms (require to avoid circular deps — same as GridRenderer)
 import { WORLD_ORIGIN } from '../../config/geometry-constants';
+// B3: Distance formatting for dimension annotations
+import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
 
 // ============================================================================
 // GUIDE RENDERER
@@ -505,5 +507,201 @@ export class GuideRenderer {
         ctx.stroke();
       }
     }
+  }
+
+  // ── Dimension Annotations (B3: Distance labels between guides) ──
+
+  /** Font for dimension labels — screen-space, does NOT scale with zoom */
+  private static readonly DIM_FONT = '11px Inter, sans-serif';
+  /** Background behind dimension text for readability */
+  private static readonly DIM_BG_COLOR = 'rgba(0,0,0,0.5)';
+  /** Padding around text in background box (px) */
+  private static readonly DIM_BG_PADDING = 3;
+  /** Border-radius for background box (px) */
+  private static readonly DIM_BG_RADIUS = 3;
+  /** Tick mark length at each guide position (px) */
+  private static readonly DIM_TICK_SIZE = 4;
+  /** Text + connector opacity */
+  private static readonly DIM_OPACITY = 0.7;
+  /** Minimum screen-space gap (px) between two guides to render a label */
+  private static readonly DIM_MIN_GAP_PX = 30;
+  /** Screen offset for X-guide dim bar (Y position from top) / Y-guide dim bar (X position from left) */
+  private static readonly DIM_EDGE_OFFSET = 16;
+
+  /**
+   * Render dimension annotations showing distances between consecutive guides.
+   *
+   * - X guides (vertical lines): dimension bar along the TOP edge
+   * - Y guides (horizontal lines): dimension bar along the LEFT edge
+   *
+   * Labels are screen-space (fixed pixel size regardless of zoom).
+   * Skips labels when guides are too close on screen (< DIM_MIN_GAP_PX).
+   *
+   * @since B3 (ADR-189 Phase 2)
+   */
+  renderGuideDimensions(
+    ctx: CanvasRenderingContext2D,
+    guides: readonly Guide[],
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    // Separate visible X and Y guides (skip XZ diagonal — no linear offset)
+    const xGuides: Array<{ offset: number }> = [];
+    const yGuides: Array<{ offset: number }> = [];
+
+    for (const g of guides) {
+      if (!g.visible || g.axis === 'XZ') continue;
+      if (g.axis === 'X') xGuides.push({ offset: g.offset });
+      else yGuides.push({ offset: g.offset });
+    }
+
+    // Need at least 2 guides on one axis to show dimensions
+    if (xGuides.length < 2 && yGuides.length < 2) return;
+
+    ctx.save();
+
+    // Sort by offset (ascending)
+    xGuides.sort((a, b) => a.offset - b.offset);
+    yGuides.sort((a, b) => a.offset - b.offset);
+
+    // X guides → dimensions along the TOP
+    if (xGuides.length >= 2) {
+      this.renderAxisDimensions(ctx, xGuides, 'X', transform, viewport);
+    }
+
+    // Y guides → dimensions along the LEFT
+    if (yGuides.length >= 2) {
+      this.renderAxisDimensions(ctx, yGuides, 'Y', transform, viewport);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Render dimension annotations for one axis.
+   * Draws tick marks + connector lines + distance labels between consecutive guides.
+   */
+  private renderAxisDimensions(
+    ctx: CanvasRenderingContext2D,
+    sortedGuides: readonly Array<{ offset: number }>,
+    axis: 'X' | 'Y',
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    const color = axis === 'X' ? GUIDE_COLORS.X : GUIDE_COLORS.Y;
+    const edge = GuideRenderer.DIM_EDGE_OFFSET;
+    const tick = GuideRenderer.DIM_TICK_SIZE;
+    const minGap = GuideRenderer.DIM_MIN_GAP_PX;
+
+    // Convert all offsets to screen positions
+    const screenPositions: number[] = [];
+    for (const g of sortedGuides) {
+      screenPositions.push(this.guideOffsetToScreen(axis, g.offset, transform, viewport));
+    }
+
+    // Set common styles for tick marks + connectors
+    ctx.strokeStyle = color;
+    ctx.setLineDash([]);
+    ctx.globalAlpha = GuideRenderer.DIM_OPACITY;
+    ctx.lineWidth = 0.5;
+
+    // Set text styles
+    ctx.font = GuideRenderer.DIM_FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+
+    for (let i = 0; i < screenPositions.length - 1; i++) {
+      const pos1 = screenPositions[i];
+      const pos2 = screenPositions[i + 1];
+      const gap = Math.abs(pos2 - pos1);
+
+      // Skip if gap too small for readable label
+      if (gap < minGap) continue;
+
+      const worldDistance = Math.abs(sortedGuides[i + 1].offset - sortedGuides[i].offset);
+      const text = formatDistance(worldDistance, 2);
+      const mid = (pos1 + pos2) / 2;
+
+      if (axis === 'X') {
+        // X guides (vertical) → dimension bar along TOP edge
+        const p1 = pixelPerfect(pos1);
+        const p2 = pixelPerfect(pos2);
+        const yLine = edge;
+
+        // Tick marks (vertical)
+        ctx.beginPath();
+        ctx.moveTo(p1, yLine - tick);
+        ctx.lineTo(p1, yLine + tick);
+        ctx.moveTo(p2, yLine - tick);
+        ctx.lineTo(p2, yLine + tick);
+        // Connector line (horizontal)
+        ctx.moveTo(p1, yLine);
+        ctx.lineTo(p2, yLine);
+        ctx.stroke();
+
+        // Label (above connector)
+        this.renderDimensionLabel(ctx, text, mid, yLine - tick - 2, color);
+      } else {
+        // Y guides (horizontal) → dimension bar along LEFT edge
+        const p1 = pixelPerfect(pos1);
+        const p2 = pixelPerfect(pos2);
+        const xLine = edge;
+
+        // Tick marks (horizontal)
+        ctx.beginPath();
+        ctx.moveTo(xLine - tick, p1);
+        ctx.lineTo(xLine + tick, p1);
+        ctx.moveTo(xLine - tick, p2);
+        ctx.lineTo(xLine + tick, p2);
+        // Connector line (vertical)
+        ctx.moveTo(xLine, p1);
+        ctx.lineTo(xLine, p2);
+        ctx.stroke();
+
+        // Label (rotated -90°, to the right of connector)
+        ctx.save();
+        ctx.translate(xLine - tick - 2, mid);
+        ctx.rotate(-Math.PI / 2);
+        this.renderDimensionLabel(ctx, text, 0, 0, color);
+        ctx.restore();
+      }
+    }
+  }
+
+  /**
+   * Render a single dimension label with background box.
+   * Coordinates are in the current transform space (may be rotated for Y-axis dims).
+   */
+  private renderDimensionLabel(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    color: string,
+  ): void {
+    const padding = GuideRenderer.DIM_BG_PADDING;
+    const radius = GuideRenderer.DIM_BG_RADIUS;
+    const metrics = ctx.measureText(text);
+    const textWidth = metrics.width;
+    const textHeight = 11; // matches font size
+    const boxW = textWidth + padding * 2;
+    const boxH = textHeight + padding * 2;
+    const boxX = x - boxW / 2;
+    const boxY = y - boxH / 2;
+
+    // Background rounded rect
+    ctx.globalAlpha = GuideRenderer.DIM_OPACITY;
+    ctx.fillStyle = GuideRenderer.DIM_BG_COLOR;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+    ctx.fill();
+
+    // Text
+    ctx.fillStyle = color;
+    ctx.globalAlpha = GuideRenderer.DIM_OPACITY;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
   }
 }
