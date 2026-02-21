@@ -522,20 +522,6 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         }
       }
 
-      // 2.55️⃣ RENDER GUIDE DIMENSIONS (B3: distance labels between consecutive guides)
-      if (guideRendererRef.current && guidesVisibleRef.current && showGuideDimensionsRef.current) {
-        const currentGuides = guidesRef.current;
-        if (currentGuides && currentGuides.length >= 2) {
-          const canvas = canvasRef.current;
-          const ctx = canvas?.getContext('2d');
-          if (ctx) {
-            guideRendererRef.current.renderGuideDimensions(
-              ctx, currentGuides, currentTransform, currentViewport,
-            );
-          }
-        }
-      }
-
       // 2.6️⃣ RENDER CONSTRUCTION POINTS (ADR-189 §3.7-3.16: X markers on canvas)
       if (guideRendererRef.current) {
         const currentCPs = constructionPointsRef.current;
@@ -566,6 +552,23 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
           const context = createUIRenderContext(ctx, currentViewport, uiTransform);
           // 🏢 ENTERPRISE: Type-safe UIElementSettings cast for RulerRenderer
           rulerRendererRef.current.render(context, currentViewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
+        }
+      }
+
+      // 3.5️⃣ RENDER GUIDE DIMENSIONS (B3: distance labels between consecutive guides)
+      // 🏢 FIX (2026-02-22): Rendered AFTER rulers so dimension annotations appear ON TOP.
+      // Previously at step 2.55 (before rulers), the left ruler (30px wide) painted OVER
+      // the Y-axis dimension bar (at x=16), making horizontal guide dimensions invisible.
+      if (guideRendererRef.current && guidesVisibleRef.current && showGuideDimensionsRef.current) {
+        const currentGuides = guidesRef.current;
+        if (currentGuides && currentGuides.length >= 2) {
+          const canvas = canvasRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            guideRendererRef.current.renderGuideDimensions(
+              ctx, currentGuides, currentTransform, currentViewport,
+            );
+          }
         }
       }
 
