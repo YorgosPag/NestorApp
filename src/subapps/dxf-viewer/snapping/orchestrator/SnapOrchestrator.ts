@@ -79,6 +79,16 @@ export class SnapOrchestrator {
   }
 
   updateSettings(settings: Partial<ProSnapSettings>): void {
+    // 🚀 PERF (2026-02-22): Compare enabledTypes BEFORE updating context manager.
+    // BUG FIX: Previous version compared AFTER update → prev was already the new value → always equal.
+    let enabledTypesChanged = false;
+    if (settings.enabledTypes && this.entities.length > 0) {
+      const prev = this.contextManager.getSettings().enabledTypes;
+      const next = settings.enabledTypes;
+      enabledTypesChanged = next.size !== prev.size
+        || [...next].some(t => !prev.has(t));
+    }
+
     this.contextManager.updateSettings(settings);
 
     // 🏢 ENTERPRISE: Αυτόματη ενημέρωση GridSnapEngine όταν αλλάζει το gridStep
@@ -86,18 +96,9 @@ export class SnapOrchestrator {
       this.registry.updateGridSettings(settings.gridStep);
     }
 
-    // 🚀 PERF (2026-02-21): Only re-initialize engines if enabledTypes ACTUALLY changed.
-    // BEFORE: Always triggered initializeEnginesWithEntities because settings.enabledTypes is truthy (Set).
-    // AFTER: Set equality check prevents redundant spatial index rebuilds.
-    if (settings.enabledTypes && this.entities.length > 0) {
-      const prev = this.contextManager.getSettings().enabledTypes;
-      const next = settings.enabledTypes;
-      const changed = next.size !== prev.size
-        || [...next].some(t => !prev.has(t));
-
-      if (changed) {
-        this.registry.initializeEnginesWithEntities(this.entities, this.contextManager.getSettings());
-      }
+    // Only re-initialize engines if enabledTypes actually changed (prevents redundant spatial index rebuilds)
+    if (enabledTypesChanged) {
+      this.registry.initializeEnginesWithEntities(this.entities, this.contextManager.getSettings());
     }
   }
 

@@ -5,7 +5,7 @@
  * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Βήμα 3: Αποθήκευση στο Context
  * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
  */
-import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { ExtendedSnapType } from '../extended-types';
 
 // ✅ ENTERPRISE FIX: Define SnapState locally since ../types doesn't exist
@@ -85,64 +85,58 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     return modes;
   }, [snapState, snapEnabled]);
 
-  const toggleSnap = (type: ExtendedSnapType) => {
+  // 🚀 PERF: Stable callback references — prevents cascading re-renders in consumers
+  const toggleSnap = useCallback((type: ExtendedSnapType) => {
     setSnapState(prev => {
       const wasActive = !!prev[type];
-      
+
       if (wasActive) {
-        // If already active, turn it off but keep at least one mode active
         const newState = { ...prev, [type]: false };
-        
-        // Ensure at least one mode is active - default to ENDPOINT
         const hasAnyActive = ALL_MODES.some(mode => newState[mode]);
         if (!hasAnyActive) {
           newState[ExtendedSnapType.ENDPOINT] = true;
         }
-        
         return newState;
       } else {
-        // Multi-select mode: Just add this type to active ones
         return { ...prev, [type]: true };
       }
     });
-  };
+  }, []);
 
-  const isSnapActive = (type: ExtendedSnapType) => {
+  const isSnapActive = useCallback((type: ExtendedSnapType) => {
     if (!snapEnabled) return false;
     return snapState[type] || false;
-  };
+  }, [snapEnabled, snapState]);
 
-  const toggleMode = (mode: ExtendedSnapType, enabled: boolean) => {
+  const toggleMode = useCallback((mode: ExtendedSnapType, enabled: boolean) => {
     if (enabled) {
-      // Multi-select mode: Just add this mode to active ones
       setSnapState(prev => ({ ...prev, [mode]: true }));
     } else {
-      // Turn off this mode, ensure at least one mode is active
       setSnapState(prev => {
         const newState = { ...prev, [mode]: false };
-        
-        // Ensure at least one mode is active - default to ENDPOINT
         const hasAnyActive = ALL_MODES.some(m => newState[m]);
         if (!hasAnyActive) {
           newState[ExtendedSnapType.ENDPOINT] = true;
         }
-        
         return newState;
       });
     }
-  };
+  }, []);
 
-  const setExclusiveMode = (mode: ExtendedSnapType) => {
-    setSnapState(prev => {
+  const setExclusiveMode = useCallback((mode: ExtendedSnapType) => {
+    setSnapState(() => {
       const next = {} as SnapState;
       ALL_MODES.forEach(m => {
         next[m] = (m === mode);
       });
       return next;
     });
-  };
+  }, []);
 
-  const contextValue: SnapContextType = {
+  // 🚀 PERF: Stabilized context value — only changes when snap state/enabled actually change.
+  // BEFORE: New object every render → consumers cascade re-render on every SnapProvider render.
+  // AFTER: useMemo with correct deps → consumers only re-render when snap data changes.
+  const contextValue = useMemo<SnapContextType>(() => ({
     snapState,
     toggleSnap,
     setSnapState,
@@ -152,7 +146,7 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     enabledModes,
     toggleMode,
     setExclusiveMode,
-  };
+  }), [snapState, toggleSnap, isSnapActive, snapEnabled, enabledModes, toggleMode, setExclusiveMode]);
 
   return (
     <SnapContext.Provider value={contextValue}>
