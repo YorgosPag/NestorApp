@@ -1868,6 +1868,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-21 | **Entity picking**: ArcPickableEntity/LinePickableEntity interfaces, hit-test via `pointToArcDistance()` for arcs, circumference distance for circles, `pointToLineDistance()` for lines |
 | 2026-02-21 | **§3.11 Circle-Circle Intersection (G→O)**: 2-click (arc/circle → arc/circle) → 0-2 X markers. Radical line algorithm: d, a=(r1²-r2²+d²)/(2d), h=sqrt(r1²-a²), perpendicular offsets. `isPointInArcRange()` for arc angular filtering |
 | 2026-02-21 | **14/14 guide commands COMPLETE** — All §3.1-§3.16 commands implemented |
+| 2026-02-21 | **B5: Guide Drag & Drop (G→M)**: Live drag-move for X/Y/XZ guides. MoveGuideCommand with undo/redo. DraggingGuideState in useCanvasMouse (follows DraggingOverlayBodyState pattern). moveDiagonalGuideById() for XZ. Hover highlight on guide-move. Movement threshold check. Locked guides blocked |
 
 ---
 
