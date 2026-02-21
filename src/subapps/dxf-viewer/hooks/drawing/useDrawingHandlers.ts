@@ -122,7 +122,7 @@ export function useDrawingHandlers(
   } = useUnifiedDrawing();
 
   // Snap functionality
-  const { snapEnabled, enabledModes, setCurrentSnapResult } = useSnapContext();
+  const { snapEnabled, enabledModes } = useSnapContext();
   const canvasElement = canvasOps.getCanvas();
   const canvasRef = { current: canvasElement };
 

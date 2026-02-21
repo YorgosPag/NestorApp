@@ -86,9 +86,18 @@ export class SnapOrchestrator {
       this.registry.updateGridSettings(settings.gridStep);
     }
 
-    // Re-initialize engines αν άλλαξαν τα enabled types και έχουμε entities
+    // 🚀 PERF (2026-02-21): Only re-initialize engines if enabledTypes ACTUALLY changed.
+    // BEFORE: Always triggered initializeEnginesWithEntities because settings.enabledTypes is truthy (Set).
+    // AFTER: Set equality check prevents redundant spatial index rebuilds.
     if (settings.enabledTypes && this.entities.length > 0) {
-      this.registry.initializeEnginesWithEntities(this.entities, this.contextManager.getSettings());
+      const prev = this.contextManager.getSettings().enabledTypes;
+      const next = settings.enabledTypes;
+      const changed = next.size !== prev.size
+        || [...next].some(t => !prev.has(t));
+
+      if (changed) {
+        this.registry.initializeEnginesWithEntities(this.entities, this.contextManager.getSettings());
+      }
     }
   }
 

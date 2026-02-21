@@ -41,6 +41,29 @@ interface UseSnapManagerOptions {
   scale?: number;
 }
 
+/**
+ * 🚀 PERF (2026-02-21): Compute lightweight entity fingerprint to detect real geometry changes.
+ * Avoids costly initialize() when React references change but entities are identical.
+ * Pattern: entityCount + first 5 IDs + last 5 IDs → fast O(1) comparison.
+ */
+function computeEntityFingerprint(entities: Entity[]): string {
+  const len = entities.length;
+  if (len === 0) return '0';
+
+  const sampleSize = Math.min(5, len);
+  const firstIds: string[] = [];
+  const lastIds: string[] = [];
+
+  for (let i = 0; i < sampleSize; i++) {
+    firstIds.push(entities[i].id);
+  }
+  for (let i = Math.max(0, len - sampleSize); i < len; i++) {
+    lastIds.push(entities[i].id);
+  }
+
+  return `${len}|${firstIds.join(',')}|${lastIds.join(',')}`;
+}
+
 export const useSnapManager = (
   canvasRef: React.RefObject<HTMLCanvasElement>,
   options: UseSnapManagerOptions = {}
@@ -56,6 +79,11 @@ export const useSnapManager = (
   // 🚀 PERF (2026-02-20): Track last synced scale to avoid redundant setViewport calls.
   // setViewport creates objects + propagates through the full chain — only do it on CHANGE.
   const lastSyncedScaleRef = useRef(0);
+
+  // 🚀 PERF (2026-02-21): Entity fingerprint to skip redundant initialize() calls.
+  // initialize() rebuilds spatial indices for ALL enabled engines — expensive!
+  // Only run when actual geometry changes, not when React references change.
+  const lastEntityFingerprintRef = useRef('');
 
   // Update scaleRef whenever the external scale changes
   useEffect(() => {
@@ -118,22 +146,41 @@ export const useSnapManager = (
   }, [gridStep]);
 
   // Update scene when it changes (including overlay entities)
+  // 🚀 PERF (2026-02-21): Entity fingerprint guard prevents redundant initialize() calls.
+  // Problem: [scene, overlayEntities] deps trigger on REFERENCE changes even when geometry
+  // is identical (e.g. getLevelScene creates new ref on unrelated state changes).
+  // Solution: Compute lightweight fingerprint; skip initialize() if fingerprint unchanged.
+  const dxfEntities = scene?.entities;
+  const dxfLen = dxfEntities?.length ?? 0;
+  const overlayLen = overlayEntities?.length ?? 0;
+
   useEffect(() => {
     if (DEBUG_SNAP_MANAGER) {
       dlog('Snap', '[useSnapManager] Scene effect triggered:', {
         hasSnapManager: !!snapManagerRef.current,
         hasScene: !!scene,
-        sceneEntities: scene?.entities?.length ?? 0,
-        overlayEntities: overlayEntities?.length ?? 0
+        sceneEntities: dxfLen,
+        overlayEntities: overlayLen
       });
     }
 
     if (snapManagerRef.current) {
-      const dxfEntities = scene?.entities || [];
+      const dxfEnts = scene?.entities || [];
       const overlayEnts = overlayEntities || [];
 
       // 🔺 UNIFIED: Combine DXF and overlay entities for unified snapping
-      const allEntities = [...dxfEntities, ...overlayEnts];
+      const allEntities = [...dxfEnts, ...overlayEnts];
+
+      // 🚀 PERF (2026-02-21): Skip initialize() if entities haven't actually changed.
+      // initialize() rebuilds spatial indices for ALL enabled engines — expensive O(n log n).
+      const fingerprint = computeEntityFingerprint(allEntities);
+      if (fingerprint === lastEntityFingerprintRef.current) {
+        if (DEBUG_SNAP_MANAGER) {
+          dlog('Snap', '[useSnapManager] Entity fingerprint unchanged, skipping initialize()');
+        }
+        return;
+      }
+      lastEntityFingerprintRef.current = fingerprint;
 
       if (DEBUG_SNAP_MANAGER) {
         dlog('Snap', '[useSnapManager] Combined entities:', allEntities.length);
@@ -177,7 +224,8 @@ export const useSnapManager = (
         dlog('Snap', '[useSnapManager] Entity types:', entityTypes);
       }
     }
-  }, [scene, overlayEntities]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dxfLen, overlayLen, scene, overlayEntities]);
 
   // 🏢 ENTERPRISE: Stable findSnapPoint callback.
   // Reads zoom scale from scaleRef (always current) — no extra parameters needed.

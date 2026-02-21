@@ -9,7 +9,7 @@
  * - AutoCAD: F7=Grid, F8=Ortho, F9=Snap, F10=Polar, F11=Object Snap
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ExtendedSnapType } from '../snapping/extended-types';
 import { useSnapContext } from '../snapping/context/SnapContext';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
@@ -28,6 +28,18 @@ export function useProSnapShortcuts({
 }: ProSnapShortcutsProps = {}) {
   const snapContext = useSnapContext();
 
+  // 🚀 PERF (2026-02-21): Use ref to read snapContext inside event handler.
+  // BEFORE: snapContext in useEffect deps → listener removed/re-added on every context change.
+  // AFTER: Listener created ONCE, reads fresh context from ref.
+  const snapContextRef = useRef(snapContext);
+  snapContextRef.current = snapContext;
+
+  const onToggleSnapRef = useRef(onToggleSnap);
+  onToggleSnapRef.current = onToggleSnap;
+
+  const onCycleSnapRef = useRef(onCycleSnap);
+  onCycleSnapRef.current = onCycleSnap;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // ✅ GUARD: Skip if typing in input fields
@@ -37,40 +49,41 @@ export function useProSnapShortcuts({
       }
 
       // ⌨️ ENTERPRISE: Using centralized matchesShortcut()
+      const ctx = snapContextRef.current;
 
       // Tab - Cycle snap modes
       if (matchesShortcut(e, 'cycleSnap')) {
         e.preventDefault();
-        onCycleSnap?.();
+        onCycleSnapRef.current?.();
         return;
       }
 
       // F9 - Toggle Grid snap (AutoCAD standard)
       if (matchesShortcut(e, 'gridSnap')) {
         e.preventDefault();
-        const gridEnabled = snapContext.enabledModes.has(ExtendedSnapType.GRID);
-        snapContext.toggleMode(ExtendedSnapType.GRID, !gridEnabled);
+        const gridEnabled = ctx.enabledModes.has(ExtendedSnapType.GRID);
+        ctx.toggleMode(ExtendedSnapType.GRID, !gridEnabled);
         return;
       }
 
       // F10 - Toggle Polar/Ortho mode (AutoCAD standard)
       if (matchesShortcut(e, 'polarTracking')) {
         e.preventDefault();
-        const orthoEnabled = snapContext.enabledModes.has(ExtendedSnapType.ORTHO);
-        snapContext.toggleMode(ExtendedSnapType.ORTHO, !orthoEnabled);
+        const orthoEnabled = ctx.enabledModes.has(ExtendedSnapType.ORTHO);
+        ctx.toggleMode(ExtendedSnapType.ORTHO, !orthoEnabled);
         return;
       }
 
       // F11 - Toggle Object Snap (OSNAP in AutoCAD)
       if (matchesShortcut(e, 'objectSnap')) {
         e.preventDefault();
-        const autoEnabled = snapContext.enabledModes.has(ExtendedSnapType.AUTO);
-        snapContext.toggleMode(ExtendedSnapType.AUTO, !autoEnabled);
+        const autoEnabled = ctx.enabledModes.has(ExtendedSnapType.AUTO);
+        ctx.toggleMode(ExtendedSnapType.AUTO, !autoEnabled);
         return;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onToggleSnap, onCycleSnap, snapEnabled, snapContext]);
+  }, []); // 🚀 PERF: Empty deps — listener created once, reads refs for fresh values
 }

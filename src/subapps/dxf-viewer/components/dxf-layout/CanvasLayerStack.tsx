@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { type RefObject, type MutableRefObject, type Dispatch, type SetStateAction } from 'react';
+import React, { useSyncExternalStore, type RefObject, type MutableRefObject, type Dispatch, type SetStateAction } from 'react';
 import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import { PreviewCanvas, type PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
@@ -38,7 +38,10 @@ import type { CursorSettings } from '../../systems/cursor/config';
 import type { GridSettings, RulerSettings, SnapSettings, SelectionSettings } from '../../canvas-v2';
 import type { GripSettings } from '../../types/gripSettings';
 import type { RulerSettings as GlobalRulerSettings } from '../../systems/rulers-grid/config';
-import { useSnapContext } from '../../snapping/context/SnapContext';
+// 🚀 PERF (2026-02-21): Replaced useSnapContext with ImmediateSnapStore subscription.
+// SnapContext.currentSnapResult changed ~30fps → all context consumers re-rendered.
+// Now only CanvasLayerStack subscribes to snap result changes via useSyncExternalStore.
+import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
 // ToolType import removed — context menus moved to CanvasSection (PERF 2026-02-19)
 import type {
   VertexHoverInfo,
@@ -235,10 +238,10 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   guides, guidesVisible, ghostGuide, ghostDiagonalGuide, ghostSegmentLine, highlightedGuideId,
   constructionPoints, highlightedPointId,
 }) => {
-  // 🚀 PERF (2026-02-20): Read snap result from SnapContext directly instead of
-  // receiving as prop from CanvasSection. This isolates snap-triggered re-renders
-  // to CanvasLayerStack (lightweight) instead of propagating through CanvasSection (heavy).
-  const { currentSnapResult } = useSnapContext();
+  // 🚀 PERF (2026-02-21): Subscribe to snap result via ImmediateSnapStore (useSyncExternalStore).
+  // BEFORE: useSnapContext().currentSnapResult → re-rendered ALL context consumers at ~30fps.
+  // AFTER: Only CanvasLayerStack re-renders on snap changes — zero impact on CanvasSection/hooks.
+  const currentSnapResult = useSyncExternalStore(subscribeSnapResult, getFullSnapResult);
 
   // --- Destructure grouped props ---
   const { crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings } = settings;

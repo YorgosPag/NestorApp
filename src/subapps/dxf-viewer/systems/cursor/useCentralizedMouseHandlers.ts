@@ -59,7 +59,7 @@ import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
 import { setImmediatePosition } from './ImmediatePositionStore';
 // 🚀 PERF (2026-02-20): ImmediateSnapStore — bypass React re-renders for snap results
-import { setImmediateSnap, clearImmediateSnap } from './ImmediateSnapStore';
+import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 // 🏢 ADR-096: Centralized Interaction Timing Constants
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
@@ -142,7 +142,7 @@ export function useCentralizedMouseHandlers({
   const activeCanvasRef = canvasRef || safeCanvasRef;
 
   // ✅ SNAP DETECTION: Get snap context and manager
-  const { snapEnabled, setCurrentSnapResult } = useSnapContext();
+  const { snapEnabled } = useSnapContext();
 
   // 🏢 ENTERPRISE (2026-02-19): Convert color layer polygons to snap-compatible entities
   // so overlay vertices appear as snap targets (endpoint, midpoint, etc.)
@@ -475,7 +475,7 @@ export function useCentralizedMouseHandlers({
                 distance: snap.snapPoint?.distance || 0,
                 priority: 0
               }]);
-              setCurrentSnapResult(snap);
+              setFullSnapResult(snap);
               // 🚀 PERF (2026-02-20): Write to imperative store — CanvasSection reads
               // from here instead of SnapContext to avoid expensive re-renders.
               setImmediateSnap({
@@ -490,7 +490,7 @@ export function useCentralizedMouseHandlers({
             // 🚀 PERFORMANCE (2026-01-27): Only clear state if we previously had a snap
             if (snapThrottle.lastSnapFound) {
               setSnapResults([]);
-              setCurrentSnapResult(null);
+              setFullSnapResult(null);
               clearImmediateSnap();
               snapThrottle.lastSnapFound = false;
               snapThrottle.lastSnapX = NaN;
@@ -500,7 +500,7 @@ export function useCentralizedMouseHandlers({
         } catch {
           if (snapThrottle.lastSnapFound) {
             setSnapResults([]);
-            setCurrentSnapResult(null);
+            setFullSnapResult(null);
             clearImmediateSnap();
             snapThrottle.lastSnapFound = false;
             snapThrottle.lastSnapX = NaN;
@@ -512,7 +512,7 @@ export function useCentralizedMouseHandlers({
       // 🚀 PERFORMANCE (2026-01-27): Only clear state if we previously had a snap
       if (snapThrottle.lastSnapFound) {
         setSnapResults([]);
-        setCurrentSnapResult(null);
+        setFullSnapResult(null);
         clearImmediateSnap();
         snapThrottle.lastSnapFound = false;
         snapThrottle.lastSnapX = NaN;

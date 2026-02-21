@@ -5,9 +5,8 @@
  * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Βήμα 3: Αποθήκευση στο Context
  * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
  */
-import React, { createContext, useContext, useState, type ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, type ReactNode } from 'react';
 import { ExtendedSnapType } from '../extended-types';
-import type { ProSnapResult } from '../extended-types';
 
 // ✅ ENTERPRISE FIX: Define SnapState locally since ../types doesn't exist
 type SnapState = Record<ExtendedSnapType, boolean>;
@@ -44,9 +43,9 @@ interface SnapContextType {
   enabledModes: Set<ExtendedSnapType>;
   toggleMode: (mode: ExtendedSnapType, enabled: boolean) => void;
   setExclusiveMode: (mode: ExtendedSnapType) => void;
-  // 🎯 ENTERPRISE: Current snap result for visual feedback (SnapIndicatorOverlay)
-  currentSnapResult: ProSnapResult | null;
-  setCurrentSnapResult: (result: ProSnapResult | null) => void;
+  // 🚀 PERF (2026-02-21): currentSnapResult REMOVED from context.
+  // Moved to ImmediateSnapStore (useSyncExternalStore) — only CanvasLayerStack subscribes.
+  // This eliminates ~30fps re-renders for ALL other context consumers.
 }
 
 const SnapContext = createContext<SnapContextType | undefined>(undefined);
@@ -73,14 +72,6 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
   // 🏢 ENTERPRISE (2026-01-27): Snap disabled by default on app start/refresh
   // User requested snap to be OFF initially for better performance during exploration
   const [snapEnabled, setSnapEnabled] = useState<boolean>(false);
-
-  // 🎯 ENTERPRISE: Current snap result for visual feedback
-  const [currentSnapResult, setCurrentSnapResultState] = useState<ProSnapResult | null>(null);
-
-  // 🎯 ENTERPRISE: Memoized setter to avoid unnecessary re-renders
-  const setCurrentSnapResult = useCallback((result: ProSnapResult | null) => {
-    setCurrentSnapResultState(result);
-  }, []);
 
   const enabledModes = React.useMemo(() => {
     const modes = new Set<ExtendedSnapType>();
@@ -161,9 +152,6 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     enabledModes,
     toggleMode,
     setExclusiveMode,
-    // 🎯 ENTERPRISE: Current snap result for visual feedback
-    currentSnapResult,
-    setCurrentSnapResult
   };
 
   return (

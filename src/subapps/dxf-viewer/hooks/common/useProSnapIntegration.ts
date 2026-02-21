@@ -17,13 +17,19 @@ interface ProSnapIntegrationState {
 export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapIntegrationState {
   const { getLevelScene } = useSceneManager();
   const { currentLevelId } = useLevels();
-  
+
   // Χρήση του ενοποιημένου SnapContext
   const snapContext = useSnapContext();
-  
+
+  // 🚀 PERF (2026-02-21): Ref for stable callback access to snapContext.
+  // BEFORE: snapContext as dependency in callbacks → new callback ref on every context change.
+  // AFTER: Callbacks read from ref → stable across renders.
+  const snapContextRef = useRef(snapContext);
+  snapContextRef.current = snapContext;
+
   // Χρήση snap enabled state από SnapContext ή parent prop
   const snapEnabled = parentSnapEnabled ?? snapContext.snapEnabled;
-  
+
   // Χρήση enabled modes από SnapContext
   const enabledModes = snapContext.enabledModes;
 
@@ -53,9 +59,9 @@ export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapInteg
   useEffect(() => {
     const currentEntityCount = entities.length;
     const currentEnabledModesString = Array.from(enabledModes).sort().join(',');
-    
+
     // Only update if something actually changed
-    const hasChanged = 
+    const hasChanged =
       prevValuesRef.current.entityCount !== currentEntityCount ||
       prevValuesRef.current.snapEnabled !== snapEnabled ||
       prevValuesRef.current.enabledModesString !== currentEnabledModesString;
@@ -80,15 +86,14 @@ export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapInteg
   }, [entities.length, snapEnabled, enabledModes]); // Stable dependencies
 
   const toggleMode = useCallback((mode: ExtendedSnapType, enabled: boolean) => {
-
-    snapContext.toggleMode(mode, enabled);
-  }, [snapContext]);
+    snapContextRef.current.toggleMode(mode, enabled);
+  }, []); // 🚀 PERF: Stable — reads from ref
 
   const toggleSnap = useCallback((enabled?: boolean) => {
-    const newEnabled = enabled !== undefined ? enabled : !snapContext.snapEnabled;
-
-    snapContext.setSnapEnabled(newEnabled);
-  }, [snapContext]);
+    const ctx = snapContextRef.current;
+    const newEnabled = enabled !== undefined ? enabled : !ctx.snapEnabled;
+    ctx.setSnapEnabled(newEnabled);
+  }, []); // 🚀 PERF: Stable — reads from ref
 
   const refreshEntities = useCallback(() => {
 
@@ -101,11 +106,11 @@ export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapInteg
 
   // Sync with parent component if snapEnabled prop is provided - with proper check
   useEffect(() => {
-    if (parentSnapEnabled !== undefined && parentSnapEnabled !== snapContext.snapEnabled) {
-
-      snapContext.setSnapEnabled(parentSnapEnabled);
+    const ctx = snapContextRef.current;
+    if (parentSnapEnabled !== undefined && parentSnapEnabled !== ctx.snapEnabled) {
+      ctx.setSnapEnabled(parentSnapEnabled);
     }
-  }, [parentSnapEnabled, snapContext.snapEnabled, snapContext]);
+  }, [parentSnapEnabled, snapContext.snapEnabled]);
 
   return {
     enabledModes,
