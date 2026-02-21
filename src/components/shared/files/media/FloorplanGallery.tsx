@@ -266,17 +266,22 @@ function renderDxfToCanvas(
       case 'arc': {
         const arcCenter = e.center as { x: number; y: number } | undefined;
         const arcRadius = e.radius as number | undefined;
-        const startAngle = e.startAngle as number | undefined;
-        const endAngle = e.endAngle as number | undefined;
-        if (arcCenter && arcRadius && startAngle !== undefined && endAngle !== undefined) {
+        const startAngleDeg = e.startAngle as number | undefined;
+        const endAngleDeg = e.endAngle as number | undefined;
+        if (arcCenter && arcRadius && startAngleDeg !== undefined && endAngleDeg !== undefined) {
+          // DXF arcs: angles in degrees, CCW from East, Y+ up
+          // Canvas arcs: angles in radians, CW from East, Y+ down
+          // Fix: deg→rad, negate angles, flip direction for Y-axis inversion
+          const startRad = startAngleDeg * Math.PI / 180;
+          const endRad = endAngleDeg * Math.PI / 180;
           ctx.beginPath();
           ctx.arc(
             (arcCenter.x - bounds.min.x) * scale + offsetX,
             (bounds.max.y - arcCenter.y) * scale + offsetY,
             arcRadius * scale,
-            endAngle,
-            startAngle,
-            false,
+            -startRad,
+            -endRad,
+            true,
           );
           ctx.stroke();
         }

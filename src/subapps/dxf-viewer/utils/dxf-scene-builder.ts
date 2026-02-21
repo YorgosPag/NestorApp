@@ -74,8 +74,13 @@ export class DxfSceneBuilder {
     let explicitColorCount = 0;
 
     parsedEntities.forEach((entityData, index) => {
-      const entity = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
-      if (entity) {
+      const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
+      if (!result) return;
+
+      // Normalize to array (DIMENSION returns multiple entities: text + lines)
+      const converted = Array.isArray(result) ? result : [result];
+
+      for (const entity of converted) {
         // ADR-130: Centralized default layer
         const layerName = getLayerNameOrDefault(entity.layer as string);
 

@@ -743,14 +743,14 @@ export class DxfEntityParser {
    * @param index - Entity index for unique ID
    * @param header - Optional DXF header data for DIMSCALE normalization
    * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
-   * @returns Converted scene entity or null
+   * @returns Converted scene entity/entities or null (DIMENSION returns array)
    */
   static convertToSceneEntity(
     entityData: EntityData,
     index: number,
     header?: DxfHeaderData,
     dimStyles?: DimStyleMap
-  ): AnySceneEntity | null {
+  ): AnySceneEntity | AnySceneEntity[] | null {
     return convertEntityToScene(entityData, index, header, dimStyles);
   }
 }

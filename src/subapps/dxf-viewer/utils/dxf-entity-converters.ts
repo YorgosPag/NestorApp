@@ -465,7 +465,7 @@ export function convertDimension(
   index: number,
   header?: DxfHeaderData,
   dimStyles?: DimStyleMap
-): AnySceneEntity | null {
+): AnySceneEntity[] {
   // Use provided header or defaults
   const h = header || DEFAULT_HEADER;
 
@@ -483,9 +483,10 @@ export function convertDimension(
   const customText = data['1'] || ''; // Custom text override
   const measurement = parseFloat(data['42']); // Actual measurement value
 
-  // Rotation angles
-  const textRotation = parseFloat(data['50']) || 0; // Text rotation
-  const lineRotation = parseFloat(data['53']) || 0; // Extension line rotation
+  // DXF code 50: Dimension line angle (for linear rotated dimensions)
+  // DXF code 53: Dimension text rotation away from default orientation
+  const dimLineAngle = parseFloat(data['50']) || 0;
+  const dimTextRotation = parseFloat(data['53']) || 0;
 
   // ╔════════════════════════════════════════════════════════════════════════╗
   // ║ 🏢 ENTERPRISE: DIMSTYLE-aware text height calculation (2026-01-03)     ║
@@ -555,65 +556,156 @@ export function convertDimension(
     finalHeight: textHeight
   });
 
-  if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-    // Calculate text content
-    let dimensionText = customText;
-    if (!dimensionText && !isNaN(measurement)) {
-      // Format measurement value with 2 decimal places
-      dimensionText = measurement.toFixed(2);
-    }
-    if (!dimensionText) {
-      // 🏢 ADR-065: Use centralized distance calculation
-      const distance = calculateDistance({ x: x1, y: y1 }, { x: x2, y: y2 });
-      dimensionText = distance.toFixed(2);
-    }
-
-    // ╔════════════════════════════════════════════════════════════════════════╗
-    // ║ 🔧 DIMENSION ROTATION CALCULATION (2026-01-03)                         ║
-    // ║ Υπολογίζει τη γωνία του κειμένου από τη διεύθυνση της γραμμής         ║
-    // ╚════════════════════════════════════════════════════════════════════════╝
-    let rotation = textRotation;
-
-    // If no explicit text rotation, calculate from dimension line direction
-    if (textRotation === 0 && lineRotation === 0) {
-      // Calculate angle from definition points
-      // 🏢 ADR-078: Use centralized calculateAngle
-      // 🏢 ADR-067: Use centralized angle conversion
-      rotation = radToDeg(calculateAngle({ x: x1, y: y1 }, { x: x2, y: y2 }));
-
-      // Normalize to keep text readable (not upside down)
-      // Text should be readable from bottom-left to top-right
-      if (rotation > 90) rotation -= 180;
-      if (rotation < -90) rotation += 180;
-    } else if (lineRotation !== 0) {
-      rotation = lineRotation;
-    }
-
-    // Calculate text position (middle of dimension line or use explicit position)
-    let posX = !isNaN(textX) ? textX : (x1 + x2) / 2;
-    let posY = !isNaN(textY) ? textY : (y1 + y2) / 2;
-
-    // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
-    const color = extractEntityColor(data);
-
-    // Return as TEXT entity with rotation
-    return {
-      id: `dimension_${index}`,
-      type: 'text',
-      layer,
-      visible: true,
-      position: { x: posX, y: posY },
-      text: dimensionText,
-      fontSize: textHeight,
-      height: textHeight,
-      rotation: rotation,
-      alignment: 'center',
-      ...(color && { color })
-    };
+  if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+    dwarn('EntityConverter', `⚠️ Skipping DIMENSION ${index}: insufficient coordinate data`);
+    return [];
   }
 
-  dwarn('EntityConverter', `⚠️ Skipping DIMENSION ${index}: insufficient coordinate data`);
-  return null;
+  const entities: AnySceneEntity[] = [];
+
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
+  // ── TEXT ENTITY ──────────────────────────────────────────────────────────
+  // Calculate text content
+  let dimensionText = customText;
+  if (!dimensionText && !isNaN(measurement)) {
+    dimensionText = measurement.toFixed(2);
+  }
+  if (!dimensionText) {
+    const distance = calculateDistance({ x: x1, y: y1 }, { x: x2, y: y2 });
+    dimensionText = distance.toFixed(2);
+  }
+
+  // Text rotation: use dim line angle, text rotation override, or calculate from direction
+  let rotation = dimLineAngle;
+  if (dimLineAngle === 0 && dimTextRotation === 0) {
+    rotation = radToDeg(calculateAngle({ x: x1, y: y1 }, { x: x2, y: y2 }));
+    if (rotation > 90) rotation -= 180;
+    if (rotation < -90) rotation += 180;
+  } else if (dimTextRotation !== 0) {
+    rotation = dimTextRotation;
+  }
+
+  const posX = !isNaN(textX) ? textX : (x1 + x2) / 2;
+  const posY = !isNaN(textY) ? textY : (y1 + y2) / 2;
+
+  entities.push({
+    id: `dimension_${index}`,
+    type: 'text',
+    layer,
+    visible: true,
+    position: { x: posX, y: posY },
+    text: dimensionText,
+    fontSize: textHeight,
+    height: textHeight,
+    rotation: rotation,
+    alignment: 'center',
+    ...(color && { color })
+  });
+
+  // ── DIMENSION GEOMETRY (lines + extension lines) ────────────────────────
+  // DXF codes: 10,20 = dimension line location; 13,23 / 14,24 = definition points
+  const dimLineX = parseFloat(data['10']);
+  const dimLineY = parseFloat(data['20']);
+  const defPt1X = parseFloat(data['13']);
+  const defPt1Y = parseFloat(data['23']);
+  const defPt2X = parseFloat(data['14']);
+  const defPt2Y = parseFloat(data['24']);
+  const dimType = parseInt(data['70'] || '0', 10) & 0x07; // Lower 3 bits = type
+
+  const hasGeometryData = !isNaN(dimLineX) && !isNaN(dimLineY)
+    && !isNaN(defPt1X) && !isNaN(defPt1Y)
+    && !isNaN(defPt2X) && !isNaN(defPt2Y);
+
+  if (hasGeometryData) {
+    // Calculate projected points on the dimension line
+    let p1: { x: number; y: number };
+    let p2: { x: number; y: number };
+
+    if (dimType === 1) {
+      // Aligned: dimension line parallel to measured feature, offset perpendicular
+      const featureDx = defPt2X - defPt1X;
+      const featureDy = defPt2Y - defPt1Y;
+      const featureLen = Math.sqrt(featureDx * featureDx + featureDy * featureDy);
+      if (featureLen > 0) {
+        const perpX = -featureDy / featureLen;
+        const perpY = featureDx / featureLen;
+        const dist = (dimLineX - defPt1X) * perpX + (dimLineY - defPt1Y) * perpY;
+        p1 = { x: defPt1X + dist * perpX, y: defPt1Y + dist * perpY };
+        p2 = { x: defPt2X + dist * perpX, y: defPt2Y + dist * perpY };
+      } else {
+        p1 = { x: defPt1X, y: defPt1Y };
+        p2 = { x: defPt2X, y: defPt2Y };
+      }
+    } else if (dimType === 0) {
+      // Linear (horizontal/vertical/rotated)
+      const absAngle = Math.abs(dimLineAngle % 360);
+      if (absAngle < 1 || Math.abs(absAngle - 180) < 1 || Math.abs(absAngle - 360) < 1) {
+        // Horizontal dimension
+        p1 = { x: defPt1X, y: dimLineY };
+        p2 = { x: defPt2X, y: dimLineY };
+      } else if (Math.abs(absAngle - 90) < 1 || Math.abs(absAngle - 270) < 1) {
+        // Vertical dimension
+        p1 = { x: dimLineX, y: defPt1Y };
+        p2 = { x: dimLineX, y: defPt2Y };
+      } else {
+        // Rotated — project definition points onto line through dimLine point
+        const rad = dimLineAngle * Math.PI / 180;
+        const dx = Math.cos(rad);
+        const dy = Math.sin(rad);
+        const t1 = (defPt1X - dimLineX) * dx + (defPt1Y - dimLineY) * dy;
+        const t2 = (defPt2X - dimLineX) * dx + (defPt2Y - dimLineY) * dy;
+        p1 = { x: dimLineX + t1 * dx, y: dimLineY + t1 * dy };
+        p2 = { x: dimLineX + t2 * dx, y: dimLineY + t2 * dy };
+      }
+    } else {
+      // Angular, radial, diameter — connect definition points directly
+      p1 = { x: defPt1X, y: defPt1Y };
+      p2 = { x: defPt2X, y: defPt2Y };
+    }
+
+    // Dimension line (between projected points)
+    entities.push({
+      id: `dim_line_${index}`,
+      type: 'line',
+      layer,
+      visible: true,
+      start: p1,
+      end: p2,
+      ...(color && { color })
+    });
+
+    // Extension line 1 (from definition point to dimension line)
+    const ext1Sq = (defPt1X - p1.x) ** 2 + (defPt1Y - p1.y) ** 2;
+    if (ext1Sq > 0.001) {
+      entities.push({
+        id: `dim_ext1_${index}`,
+        type: 'line',
+        layer,
+        visible: true,
+        start: { x: defPt1X, y: defPt1Y },
+        end: p1,
+        ...(color && { color })
+      });
+    }
+
+    // Extension line 2 (from definition point to dimension line)
+    const ext2Sq = (defPt2X - p2.x) ** 2 + (defPt2Y - p2.y) ** 2;
+    if (ext2Sq > 0.001) {
+      entities.push({
+        id: `dim_ext2_${index}`,
+        type: 'line',
+        layer,
+        visible: true,
+        start: { x: defPt2X, y: defPt2Y },
+        end: p2,
+        ...(color && { color })
+      });
+    }
+  }
+
+  return entities;
 }
 
 // ============================================================================
@@ -641,14 +733,14 @@ export function convertDimension(
  * @param index - Entity index for unique ID generation
  * @param header - Optional DXF header data for DIMSCALE normalization
  * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
- * @returns Converted scene entity or null
+ * @returns Converted scene entity/entities or null
  */
 export function convertEntityToScene(
   entityData: EntityData,
   index: number,
   header?: DxfHeaderData,
   dimStyles?: DimStyleMap
-): AnySceneEntity | null {
+): AnySceneEntity | AnySceneEntity[] | null {
   const { type, layer, data } = entityData;
 
   switch (type) {
@@ -670,7 +762,7 @@ export function convertEntityToScene(
     case 'SPLINE':
       return convertSpline(data, layer, index);
     case 'DIMENSION':
-      // 🏢 ENTERPRISE: Pass header AND dimStyles for proper text sizing
+      // 🏢 ENTERPRISE: Returns array (text + dim lines + extension lines)
       return convertDimension(data, layer, index, header, dimStyles);
     default:
       return null;
