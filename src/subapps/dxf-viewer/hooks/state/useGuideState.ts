@@ -12,7 +12,7 @@
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
@@ -46,6 +46,8 @@ export interface UseGuideStateReturn {
   toggleSnap: () => void;
   /** Clear all guides (not undoable) */
   clearAll: () => void;
+  /** Rotate a guide around a pivot point by a typed angle. Returns the command for undo. */
+  rotateGuide: (guideId: string, pivot: Point2D, angleDeg: number) => RotateGuideCommand;
   /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
   getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
@@ -155,6 +157,13 @@ export function useGuideState(): UseGuideStateReturn {
     store.clear();
   }, [store]);
 
+  const rotateGuide = useCallback((guideId: string, pivot: Point2D, angleDeg: number): RotateGuideCommand => {
+    const cmd = new RotateGuideCommand(store, guideId, pivot, angleDeg);
+    cmd.execute();
+    EventBus.emit('grid:guide-rotated', { guideId, angleDeg });
+    return cmd;
+  }, [store]);
+
   const getStore = useCallback(() => store, [store]);
 
   return {
@@ -166,6 +175,7 @@ export function useGuideState(): UseGuideStateReturn {
     removeGuide,
     addParallelGuide,
     addDiagonalGuide,
+    rotateGuide,
     toggleVisibility,
     toggleSnap,
     clearAll,

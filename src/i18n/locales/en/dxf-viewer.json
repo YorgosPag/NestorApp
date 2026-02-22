@@ -1459,7 +1459,8 @@
     "guideRectCenter": "Rectangle Center",
     "guideLineMidpoint": "Line Midpoint",
     "guideCircleCenter": "Circle Center",
-    "guideGrid": "Auto Grid"
+    "guideGrid": "Auto Grid",
+    "guideRotate": "Rotate Guide"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1488,7 +1489,10 @@
     "noCircleIntersectionFound": "No intersection found between the two circles/arcs",
     "gridPattern": "Auto Grid",
     "enterGridPattern": "Spacing pattern (e.g., 5x4 or 5,3,7)",
-    "gridPatternPlaceholder": "e.g., 5x4 or 5,3,7"
+    "gridPatternPlaceholder": "e.g., 5x4 or 5,3,7",
+    "rotateGuideAngle": "Guide Rotation Angle",
+    "enterRotateAngle": "Enter angle in degrees (positive = CCW)",
+    "rotateAnglePlaceholder": "45"
   },
   "entityJoin": {
     "menuTitle": "Join",

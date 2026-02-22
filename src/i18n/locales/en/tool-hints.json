@@ -490,6 +490,15 @@
         "Enter spacing pattern (e.g., 5x4 or 5,3,7)"
       ],
       "shortcuts": "G→B | ESC=Cancel"
+    },
+    "guide-rotate": {
+      "name": "Rotate Guide",
+      "description": "Rotate a guide around a pivot point by a typed angle",
+      "steps": [
+        "Click on guide to select",
+        "Click to set rotation pivot point"
+      ],
+      "shortcuts": "G→H | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {

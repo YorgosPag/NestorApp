@@ -686,6 +686,7 @@ export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: To
   E: { action: 'tool:guide-line-midpoint', toolType: 'guide-line-midpoint' as ToolType, descriptionKey: 'shortcuts.guides.guideLineMidpoint' },
   C: { action: 'tool:guide-circle-center', toolType: 'guide-circle-center' as ToolType, descriptionKey: 'shortcuts.guides.guideCircleCenter' },
   B: { action: 'tool:guide-grid', toolType: 'guide-grid' as ToolType, descriptionKey: 'shortcuts.guides.guideGrid' },
+  H: { action: 'tool:guide-rotate', toolType: 'guide-rotate' as ToolType, descriptionKey: 'shortcuts.guides.guideRotate' },
   V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },
   L: { action: 'action:toggle-guide-panel', descriptionKey: 'shortcuts.guides.guidePanel' },
 } as const;

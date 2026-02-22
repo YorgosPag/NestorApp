@@ -308,10 +308,20 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [diagonalStartPoint, setDiagonalStartPoint] = useState<Point2D | null>(null);
   const [diagonalDirectionPoint, setDiagonalDirectionPoint] = useState<Point2D | null>(null);
 
+  // ADR-189 B28: Guide rotation workflow state
+  const [rotateRefGuideId, setRotateRefGuideId] = useState<string | null>(null);
+
   // ADR-189: Reset parallel reference when switching away from guide-parallel tool
   useEffect(() => {
     if (activeTool !== 'guide-parallel') {
       setParallelRefGuideId(null);
+    }
+  }, [activeTool]);
+
+  // ADR-189 B28: Reset rotation state when switching away from guide-rotate tool
+  useEffect(() => {
+    if (activeTool !== 'guide-rotate') {
+      setRotateRefGuideId(null);
     }
   }, [activeTool]);
 
@@ -352,6 +362,35 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
       // Reset highlight regardless of confirm/cancel
       setParallelRefGuideId(null);
+    });
+  }, [showPromptDialog, t, guideState]);
+
+  // ADR-189 B28: Guide rotation — Step 0: reference guide selected
+  const handleRotateRefSelected = useCallback((guideId: string) => {
+    setRotateRefGuideId(guideId);
+  }, []);
+
+  // ADR-189 B28: Guide rotation — Step 1: pivot set → open angle dialog
+  const handleRotatePivotSet = useCallback((guideId: string, pivot: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.rotateGuideAngle'),
+      label: t('promptDialog.enterRotateAngle'),
+      placeholder: t('promptDialog.rotateAnglePlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n)) return t('promptDialog.invalidNumber');
+        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const angleDeg = parseFloat(result);
+        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
+          guideState.rotateGuide(guideId, pivot, angleDeg);
+        }
+      }
+      setRotateRefGuideId(null);
     });
   }, [showPromptDialog, t, guideState]);
 
@@ -560,10 +599,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       toolHintOverrideStore.setStepOverride(arcLineStep);
     } else if (activeTool === 'guide-circle-intersect') {
       toolHintOverrideStore.setStepOverride(circleIntersectStep);
+    } else if (activeTool === 'guide-rotate') {
+      toolHintOverrideStore.setStepOverride(rotateRefGuideId ? 1 : 0);
     } else {
       toolHintOverrideStore.setStepOverride(null);
     }
-  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep]);
+  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep, rotateRefGuideId]);
 
   // ADR-189 §3.9: Arc segments picked → prompt for segment count
   const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
@@ -753,7 +794,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       activeTool === 'guide-delete' ||
       (activeTool === 'guide-perpendicular' && !perpRefGuideId) ||
       activeTool === 'guide-move' ||
-      (activeTool === 'guide-parallel' && !parallelRefGuideId);
+      (activeTool === 'guide-parallel' && !parallelRefGuideId) ||
+      (activeTool === 'guide-rotate' && !rotateRefGuideId);
 
     if (needsToolHighlight) {
       const hitToleranceWorld = 30 / transform.scale;
@@ -777,9 +819,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       return nearestId;
     }
 
-    // 2. Parallel/Perpendicular ref selected → highlight the reference guide
+    // 2. Parallel/Perpendicular/Rotate ref selected → highlight the reference guide
     if (parallelRefGuideId) return parallelRefGuideId;
     if (perpRefGuideId) return perpRefGuideId;
+    if (rotateRefGuideId) return rotateRefGuideId;
 
     // 3. Snap-based highlight: when snap engine locks onto a guide, highlight it
     const snap = getImmediateSnap();
@@ -788,7 +831,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
 
     return null;
-  }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, perpRefGuideId, transform.scale]);
+  }, [mouseWorld, guideState.guides, activeTool, parallelRefGuideId, perpRefGuideId, rotateRefGuideId, transform.scale]);
 
   // ADR-189 §4.13: Panel highlight — hover over guide row in GuidePanel → highlight on canvas
   const [panelHighlightGuideId, setPanelHighlightGuideId] = useState<string | null>(null);
@@ -1168,6 +1211,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onCircleCenterPlace: handleCircleCenterPlace,
     // ADR-189 B2: Grid generation
     onGridOriginSet: handleGridOriginSet,
+    // ADR-189 B28: Guide rotation
+    rotateRefGuideId,
+    onRotateRefSelected: handleRotateRefSelected,
+    onRotatePivotSet: handleRotatePivotSet,
   });
 
   const { handleSmartDelete } = useSmartDelete({

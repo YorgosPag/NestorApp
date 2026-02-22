@@ -1453,7 +1453,8 @@
     "guideRectCenter": "Κέντρο Ορθογωνίου",
     "guideLineMidpoint": "Μέσο Ευθυγράμμου",
     "guideCircleCenter": "Κέντρο Κύκλου",
-    "guideGrid": "Αυτόματο Πλέγμα"
+    "guideGrid": "Αυτόματο Πλέγμα",
+    "guideRotate": "Περιστροφή Περασιάς"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1482,7 +1483,10 @@
     "noCircleIntersectionFound": "Δεν βρέθηκε τομή μεταξύ των δύο κύκλων/τόξων",
     "gridPattern": "Αυτόματη Κάνναβος",
     "enterGridPattern": "Μοτίβο αποστάσεων (π.χ. 5x4 ή 5,3,7)",
-    "gridPatternPlaceholder": "π.χ. 5x4 ή 5,3,7"
+    "gridPatternPlaceholder": "π.χ. 5x4 ή 5,3,7",
+    "rotateGuideAngle": "Γωνία Περιστροφής Περασιάς",
+    "enterRotateAngle": "Εισαγωγή γωνίας σε μοίρες (θετική = αριστερόστροφα)",
+    "rotateAnglePlaceholder": "45"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",

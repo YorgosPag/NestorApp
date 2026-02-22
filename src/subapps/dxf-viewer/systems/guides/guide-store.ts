@@ -307,6 +307,65 @@ export class GuideStore implements IGridHeadlessAPI {
     return true;
   }
 
+  /**
+   * Replace a guide with a rotated version (always becomes XZ diagonal).
+   * Preserves id, label, style, visible, locked, createdAt, parentId.
+   * Returns the old guide snapshot (for undo) or undefined if not found/locked.
+   *
+   * @see ADR-189 B28 (Guide Rotation)
+   */
+  replaceGuideWithRotated(id: string, newStart: Point2D, newEnd: Point2D): Guide | undefined {
+    const index = this.guides.findIndex(g => g.id === id);
+    if (index === -1) return undefined;
+
+    const oldGuide = this.guides[index];
+    if (oldGuide.locked) return undefined;
+
+    // Deep copy of old guide for undo snapshot
+    const snapshot: Guide = {
+      ...oldGuide,
+      startPoint: oldGuide.startPoint ? { ...oldGuide.startPoint } : undefined,
+      endPoint: oldGuide.endPoint ? { ...oldGuide.endPoint } : undefined,
+      style: oldGuide.style ? { ...oldGuide.style, dashPattern: [...oldGuide.style.dashPattern] } : null,
+    };
+
+    // Replace with rotated XZ guide preserving all metadata
+    const rotated: Guide = {
+      id: oldGuide.id,
+      axis: 'XZ',
+      offset: 0,
+      label: oldGuide.label,
+      style: oldGuide.style,
+      visible: oldGuide.visible,
+      locked: oldGuide.locked,
+      createdAt: oldGuide.createdAt,
+      parentId: oldGuide.parentId,
+      startPoint: { x: newStart.x, y: newStart.y },
+      endPoint: { x: newEnd.x, y: newEnd.y },
+    };
+
+    this.guides = this.guides.map(g => g.id === id ? rotated : g);
+    this.notify();
+    return snapshot;
+  }
+
+  /**
+   * Restore a guide to its exact previous state (for undo).
+   * Replaces the guide with matching ID with the full snapshot.
+   *
+   * @see ADR-189 B28 (Guide Rotation — undo)
+   */
+  restoreGuideSnapshot(snapshot: Guide): boolean {
+    const index = this.guides.findIndex(g => g.id === snapshot.id);
+    if (index === -1) return false;
+
+    this.guides = this.guides.map(g =>
+      g.id === snapshot.id ? { ...snapshot } : g
+    );
+    this.notify();
+    return true;
+  }
+
   /** Toggle global visibility */
   setVisible(visible: boolean): void {
     if (this.visible === visible) return;

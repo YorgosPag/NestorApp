@@ -240,6 +240,14 @@ export interface UseCanvasClickHandlerParams {
   // ── ADR-189 B2: Grid generation tool ──────────────────────────────
   /** Callback: user clicked grid origin → opens spacing dialog */
   onGridOriginSet?: (origin: Point2D) => void;
+
+  // ── ADR-189 B28: Guide rotation tool ───────────────────────────────
+  /** Currently selected reference guide for rotation (null = step 0) */
+  rotateRefGuideId?: string | null;
+  /** Step 0 callback: user clicked near guide → select as rotation reference */
+  onRotateRefSelected?: (guideId: string) => void;
+  /** Step 1 callback: user set pivot → opens angle dialog */
+  onRotatePivotSet?: (guideId: string, pivot: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -288,6 +296,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onLineMidpointPlace, onCircleCenterPlace,
     // ADR-189 B2: Grid generation
     onGridOriginSet,
+    // ADR-189 B28: Guide rotation
+    rotateRefGuideId, onRotateRefSelected, onRotatePivotSet,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -950,6 +960,46 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (activeTool === 'guide-grid' && onGridOriginSet) {
       onGridOriginSet(worldPoint);
       dlog('useCanvasClickHandler', 'Grid origin set', worldPoint);
+      return;
+    }
+
+    // PRIORITY 1.8992: ADR-189 B28 — Guide rotation (2-click + dialog)
+    if (activeTool === 'guide-rotate' && guides && guides.length > 0) {
+      // Step 0: Select reference guide
+      if (!rotateRefGuideId && onRotateRefSelected) {
+        const hitToleranceWorld = 30 / transform.scale;
+        let nearestGuide: Guide | undefined;
+        let nearestDist = hitToleranceWorld;
+
+        for (const guide of guides) {
+          if (!guide.visible || guide.locked) continue;
+          let dist: number;
+          if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+            dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
+          } else {
+            dist = guide.axis === 'X'
+              ? Math.abs(worldPoint.x - guide.offset)
+              : Math.abs(worldPoint.y - guide.offset);
+          }
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestGuide = guide;
+          }
+        }
+
+        if (nearestGuide) {
+          onRotateRefSelected(nearestGuide.id);
+          dlog('useCanvasClickHandler', 'Rotate step 0: guide selected', nearestGuide.id);
+        }
+        return;
+      }
+
+      // Step 1: Set pivot point → trigger angle dialog
+      if (rotateRefGuideId && onRotatePivotSet) {
+        onRotatePivotSet(rotateRefGuideId, worldPoint);
+        dlog('useCanvasClickHandler', 'Rotate step 1: pivot set', worldPoint);
+        return;
+      }
       return;
     }
 

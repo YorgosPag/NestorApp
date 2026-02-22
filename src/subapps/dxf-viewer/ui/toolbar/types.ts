@@ -65,7 +65,8 @@ export type ToolType =
   | 'guide-rect-center'        // Center of rectangle formed by 4 guides
   | 'guide-line-midpoint'      // Construction point at midpoint of line entity
   | 'guide-circle-center'     // Construction point at center of circle/arc entity
-  | 'guide-grid';             // ADR-189 B2: Automatic grid generation
+  | 'guide-grid'              // ADR-189 B2: Automatic grid generation
+  | 'guide-rotate';           // ADR-189 B28: Rotate guide by typed angle
 
 
 export interface ToolDefinition {
