@@ -248,6 +248,10 @@ export interface UseCanvasClickHandlerParams {
   onRotateRefSelected?: (guideId: string) => void;
   /** Step 1 callback: user set pivot → opens angle dialog */
   onRotatePivotSet?: (guideId: string, pivot: Point2D) => void;
+
+  // ── ADR-189 B30: Rotate all guides tool ──────────────────────────
+  /** Step 0 callback: user clicked pivot → opens angle dialog for all guides */
+  onRotateAllPivotSet?: (pivot: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -298,6 +302,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onGridOriginSet,
     // ADR-189 B28: Guide rotation
     rotateRefGuideId, onRotateRefSelected, onRotatePivotSet,
+    // ADR-189 B30: Rotate all guides
+    onRotateAllPivotSet,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -1000,6 +1006,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         dlog('useCanvasClickHandler', 'Rotate step 1: pivot set', worldPoint);
         return;
       }
+      return;
+    }
+
+    // PRIORITY 1.8993: ADR-189 B30 — Rotate ALL guides (1-click pivot + dialog)
+    if (activeTool === 'guide-rotate-all' && onRotateAllPivotSet && guides && guides.length > 0) {
+      onRotateAllPivotSet(worldPoint);
+      dlog('useCanvasClickHandler', 'Rotate-all: pivot set', worldPoint);
       return;
     }
 

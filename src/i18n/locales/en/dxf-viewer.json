@@ -1460,7 +1460,8 @@
     "guideLineMidpoint": "Line Midpoint",
     "guideCircleCenter": "Circle Center",
     "guideGrid": "Auto Grid",
-    "guideRotate": "Rotate Guide"
+    "guideRotate": "Rotate Guide",
+    "guideRotateAll": "Rotate All Guides"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1491,6 +1492,7 @@
     "enterGridPattern": "Spacing pattern (e.g., 5x4 or 5,3,7)",
     "gridPatternPlaceholder": "e.g., 5x4 or 5,3,7",
     "rotateGuideAngle": "Guide Rotation Angle",
+    "rotateAllGuidesAngle": "Rotate All Guides — Angle",
     "enterRotateAngle": "Enter angle in degrees (positive = CCW)",
     "rotateAnglePlaceholder": "45"
   },

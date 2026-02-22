@@ -273,6 +273,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-circle-center' as ToolType, icon: Target, label: DXF_DRAWING_TOOL_LABELS.GUIDE_CIRCLE_CENTER, hotkey: 'G→C' },
           { id: 'guide-grid' as ToolType, icon: Grid, label: DXF_DRAWING_TOOL_LABELS.GUIDE_GRID, hotkey: 'G→B' },
           { id: 'guide-rotate' as ToolType, icon: RotateCw, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ROTATE, hotkey: 'G→H' },
+          { id: 'guide-rotate-all' as ToolType, icon: RotateCw, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ROTATE_ALL, hotkey: 'G→J' },
         ],
       },
     ],

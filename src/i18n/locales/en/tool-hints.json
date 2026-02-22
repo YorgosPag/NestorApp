@@ -499,6 +499,14 @@
         "Click to set rotation pivot point"
       ],
       "shortcuts": "G→H | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-rotate-all": {
+      "name": "Rotate All Guides",
+      "description": "Rotate all guides around a pivot point",
+      "steps": [
+        "Click to set rotation pivot point"
+      ],
+      "shortcuts": "G→J | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {

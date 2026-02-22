@@ -582,3 +582,119 @@ export class RotateGuideCommand implements ICommand {
     return [this.guideId];
   }
 }
+
+// ============================================================================
+// ROTATE ALL GUIDES COMMAND (B30)
+// ============================================================================
+
+/**
+ * Command for rotating ALL visible, unlocked guides around a pivot point.
+ *
+ * Applies RotateGuideCommand logic to every eligible guide atomically.
+ * Stores full snapshots of all affected guides for perfect undo — each
+ * guide is restored to its original axis, offset, and endpoint state.
+ *
+ * @see ADR-189 B30 (Περιστροφή ολόκληρου κάνναβου)
+ * @see RotateGuideCommand (B28) — same geometry reused per guide
+ */
+export class RotateAllGuidesCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'RotateAllGuides';
+  readonly type = 'rotate-all-guides';
+  readonly timestamp: number;
+
+  /** Original snapshots for undo (keyed by guide.id) */
+  private originalSnapshots: Guide[] = [];
+  /** Pre-computed new endpoints per guide id */
+  private rotatedEndpoints: Map<string, { start: Point2D; end: Point2D }> = new Map();
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly pivot: Point2D,
+    private readonly angleDeg: number,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+
+    // Pre-compute rotated endpoints for every eligible guide
+    const guides = store.getGuides();
+    for (const guide of guides) {
+      if (!guide.visible || guide.locked) continue;
+
+      let originalStart: Point2D;
+      let originalEnd: Point2D;
+
+      if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+        originalStart = guide.startPoint;
+        originalEnd = guide.endPoint;
+      } else if (guide.axis === 'X') {
+        originalStart = { x: guide.offset, y: pivot.y - ROTATION_EXTENT };
+        originalEnd = { x: guide.offset, y: pivot.y + ROTATION_EXTENT };
+      } else {
+        originalStart = { x: pivot.x - ROTATION_EXTENT, y: guide.offset };
+        originalEnd = { x: pivot.x + ROTATION_EXTENT, y: guide.offset };
+      }
+
+      this.rotatedEndpoints.set(guide.id, {
+        start: rotatePoint(originalStart, pivot, angleDeg),
+        end: rotatePoint(originalEnd, pivot, angleDeg),
+      });
+    }
+  }
+
+  execute(): void {
+    // Collect snapshots on first execution only
+    const isFirstExecution = this.originalSnapshots.length === 0;
+
+    for (const [guideId, endpoints] of this.rotatedEndpoints) {
+      const snapshot = this.store.replaceGuideWithRotated(
+        guideId,
+        endpoints.start,
+        endpoints.end,
+      );
+      if (snapshot && isFirstExecution) {
+        this.originalSnapshots.push(snapshot);
+      }
+    }
+  }
+
+  undo(): void {
+    // Restore in reverse order to maintain consistency
+    for (let i = this.originalSnapshots.length - 1; i >= 0; i--) {
+      this.store.restoreGuideSnapshot(this.originalSnapshots[i]);
+    }
+  }
+
+  redo(): void {
+    for (const [guideId, endpoints] of this.rotatedEndpoints) {
+      this.store.replaceGuideWithRotated(guideId, endpoints.start, endpoints.end);
+    }
+  }
+
+  getDescription(): string {
+    return `Rotate all guides (${this.rotatedEndpoints.size}) by ${this.angleDeg}° around (${this.pivot.x.toFixed(1)}, ${this.pivot.y.toFixed(1)})`;
+  }
+
+  canMergeWith(): boolean {
+    return false;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: {
+        pivot: this.pivot,
+        angleDeg: this.angleDeg,
+        guideCount: this.rotatedEndpoints.size,
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return Array.from(this.rotatedEndpoints.keys());
+  }
+}

@@ -394,6 +394,29 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
+  // ADR-189 B30: Rotate ALL guides — Step 0: pivot set → open angle dialog
+  const handleRotateAllPivotSet = useCallback((pivot: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.rotateAllGuidesAngle'),
+      label: t('promptDialog.enterRotateAngle'),
+      placeholder: t('promptDialog.rotateAnglePlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n)) return t('promptDialog.invalidNumber');
+        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const angleDeg = parseFloat(result);
+        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
+          guideState.rotateAllGuides(pivot, angleDeg);
+        }
+      }
+    });
+  }, [showPromptDialog, t, guideState]);
+
   // ADR-189 §3.3: Diagonal guide 3-click callbacks
   const handleDiagonalStartSet = useCallback((point: Point2D) => {
     setDiagonalStartPoint(point);
@@ -1215,6 +1238,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     rotateRefGuideId,
     onRotateRefSelected: handleRotateRefSelected,
     onRotatePivotSet: handleRotatePivotSet,
+    // ADR-189 B30: Rotate all guides
+    onRotateAllPivotSet: handleRotateAllPivotSet,
   });
 
   const { handleSmartDelete } = useSmartDelete({

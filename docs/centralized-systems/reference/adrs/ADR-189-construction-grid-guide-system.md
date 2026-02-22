@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B36 Measure→Guide ✅. 14/14 commands + 7 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B30 Rotate All ✅, B36 Measure→Guide ✅. 14/14 commands + 8 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -481,7 +481,7 @@
 |---|----------|-----------|---------------|
 | B28 | **Περιστροφή μεμονωμένης περασιάς** ✅ | Επιλογή περασιάς → ορισμός κέντρου περιστροφής → γωνία (PromptDialog keyboard) → X/Y→XZ μετατροπή | ✅ Υλοποιήθηκε |
 | B29 | **Περιστροφή ομάδας περασιών** | Multi-select πολλαπλών περασιών → κοινή περιστροφή γύρω από σημείο | ⭐ Υψηλή |
-| B30 | **Περιστροφή ολόκληρου κάνναβου** | ΟΛΕΣ οι περασιές + snap points περιστρέφονται μαζί — "global grid rotation" | ⭐ Υψηλή |
+| B30 | **Περιστροφή ολόκληρου κάνναβου** ✅ | 1-click pivot → PromptDialog γωνία → RotateAllGuidesCommand σε ΟΛΕΣ τις visible/unlocked περασιές | ✅ Υλοποιήθηκε |
 
 **Workflow περιστροφής μεμονωμένης (B28):**
 1. Επιλογή περασιάς (κλικ)
@@ -1877,6 +1877,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **FIX: B6 Color palette**: Changed `onClick` to `onSelect` with `preventDefault()` — prevents Radix DropdownMenu auto-close |
 | 2026-02-22 | **FIX: Y-axis rendering**: Dimensions AND bubbles moved from LEFT to RIGHT edge — away from vertical ruler |
 | 2026-02-22 | **B28: Guide Rotation (G→H)**: 2-step workflow (click guide → click pivot) + PromptDialog for angle. `RotateGuideCommand` with full undo/redo. X/Y→XZ axis conversion (±10000 extent). `replaceGuideWithRotated()` + `restoreGuideSnapshot()` in GuideStore. 13 files modified, 344 lines added |
+| 2026-02-22 | **B30: Rotate All Guides (G→J)**: 1-click pivot → PromptDialog for angle → `RotateAllGuidesCommand` applies rotation to ALL visible/unlocked guides atomically. Batch undo restores all original snapshots. Reuses B28 geometry (±10000 extent, `rotatePoint()`). 10 files modified |
 
 ---
 
@@ -2378,4 +2379,47 @@ XZ (diagonal) → existing startPoint/endPoint → rotatePoint() → XZ (same ty
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with RotateCw icon |
 | `constants/property-statuses-enterprise.ts` | `GUIDE_ROTATE` label |
 | i18n (el/en dxf-viewer.json) | Tool labels, PromptDialog titles |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, steps, shortcuts |
+
+## 19. B30: Rotate All Guides — Implementation Details (2026-02-22)
+
+### 19.1 Architecture
+
+1-step workflow: Click pivot → PromptDialog for angle (degrees).
+Applies rotation to ALL visible, unlocked guides atomically via `RotateAllGuidesCommand`.
+Reuses B28 geometry engine: X/Y→XZ conversion (±10000 extent), `rotatePoint()`.
+Full batch undo restores all original Guide snapshots in reverse order.
+
+### 19.2 Core Components
+
+| Component | Purpose |
+|-----------|---------|
+| `RotateAllGuidesCommand` | ICommand — iterates all eligible guides, pre-computes rotated endpoints, stores snapshots for batch undo |
+| `useGuideState.rotateAllGuides()` | Creates + executes command, emits `grid:all-guides-rotated` |
+| `useCanvasClickHandler` | 1-click handler: sets pivot directly (no guide selection step) |
+| `CanvasSection.handleRotateAllPivotSet` | Opens PromptDialog, validates angle, calls `rotateAllGuides()` |
+
+### 19.3 Key Differences from B28
+
+| Aspect | B28 (Single) | B30 (All) |
+|--------|-------------|-----------|
+| Steps | 2 (guide + pivot) | 1 (pivot only) |
+| Scope | Single guide | All visible, unlocked |
+| Command | `RotateGuideCommand` | `RotateAllGuidesCommand` |
+| Undo | 1 snapshot | N snapshots (reverse order) |
+| Keyboard | G→H | G→J |
+
+### 19.4 Files Modified (Session 2026-02-22 — B30)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-rotate-all'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `RotateAllGuidesCommand` class (~100 lines) |
+| `hooks/state/useGuideState.ts` | `rotateAllGuides()` method, EventBus emit |
+| `hooks/canvas/useCanvasClickHandler.ts` | 1-click handler (PRIORITY 1.8993) |
+| `components/dxf-layout/CanvasSection.tsx` | `handleRotateAllPivotSet` callback with PromptDialog |
+| `config/keyboard-shortcuts.ts` | G→J chord for guide-rotate-all |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with RotateCw icon |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_ROTATE_ALL` label |
+| i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, steps, shortcuts |
