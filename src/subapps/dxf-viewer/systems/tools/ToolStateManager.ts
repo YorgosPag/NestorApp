@@ -116,6 +116,14 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-line-midpoint': { id: 'guide-line-midpoint', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // Construction point at center of circle/arc entity
   'guide-circle-center': { id: 'guide-circle-center', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B2: Automatic grid generation
+  'guide-grid': { id: 'guide-grid', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B28: Rotate single guide
+  'guide-rotate': { id: 'guide-rotate', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B30: Rotate all guides
+  'guide-rotate-all': { id: 'guide-rotate-all', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B29: Rotate guide group
+  'guide-rotate-group': { id: 'guide-rotate-group', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 // ============================================================================
