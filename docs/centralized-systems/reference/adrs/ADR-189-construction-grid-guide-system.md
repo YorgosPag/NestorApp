@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 11 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 12 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -500,7 +500,7 @@
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
 | B31 | **Polar array οδηγών** ✅ | 1-click center → PromptDialog count → `PolarArrayGuidesCommand` → N XZ guides at 360°/N intervals (±10000 extent) | ✅ Υλοποιήθηκε |
-| B32 | **Κλιμάκωση κάνναβου (Scale)** | Αλλαγή κλίμακας ολόκληρου grid — μεγέθυνση/σμίκρυνση | Μεσαία |
+| B32 | ✅ **Κλιμάκωση κάνναβου (Scale)** | Αλλαγή κλίμακας ολόκληρου grid — μεγέθυνση/σμίκρυνση | Μεσαία |
 | B33 | **Smart equalize** ✅ | 3+ same-axis guides → `EqualizeGuidesCommand` → ισαπόσταση (κρατάει first/last, redistributes intermediates) | ✅ Υλοποιήθηκε |
 | B34 | **Guide constraints** | Παραμετρική σχέση: "πάντα 5μ μεταξύ τους" | Χαμηλή |
 | B35 | **Construction line (XLINE)** | Προσωρινή γραμμή — αυτο-διαγράφεται μετά σχεδίαση entity | Μεσαία |
@@ -1882,6 +1882,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **B33: Smart Equalize (G→Y)**: Select 3+ same-axis guides (click toggle) → click empty space → auto-equalize spacing. `EqualizeGuidesCommand` — keeps first/last, redistributes intermediates. No PromptDialog. Validation: same axis + ≥3. 12 files modified |
 | 2026-02-22 | **FIX: Terminology**: Αντικατάσταση «περασιά» → «οδηγός» σε ΟΛΟΥΣ τους i18n, JSDoc, και ADR-189 docs (55 replacements) |
 | 2026-02-22 | **B31: Polar Array (G→2)**: 1-click center → PromptDialog count → `PolarArrayGuidesCommand` creates N XZ diagonal guides at equal angles (360°/N). Full undo/redo. Radar icon. 14 files modified, 200 lines added |
+| 2026-02-22 | **B32: Scale Grid (G→3)**: 1-click origin → PromptDialog scale factor → `ScaleAllGuidesCommand` scales all visible/unlocked guides. X/Y keep axis type (linear offset scaling), XZ scales both endpoints. Preserves axis type unlike rotation. Scaling icon. 14 files, 223 lines added |
 
 ---
 
@@ -2562,3 +2563,49 @@ click at worldPoint:
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Radar icon |
 | i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts |
+
+## 23. B32: Scale Grid — Implementation Details (2026-02-22)
+
+### 23.1 Architecture
+
+Κλιμακώνει όλους τους ορατούς/μη-κλειδωμένους οδηγούς σε σχέση με σημείο αρχής (origin). Σε αντίθεση με τη rotation (B28-B30) που μετατρέπει X/Y σε XZ, η κλιμάκωση **διατηρεί τον τύπο άξονα**.
+
+- **Workflow**: 1-click origin → PromptDialog (scale factor) → `ScaleAllGuidesCommand`
+- **X guide**: `newOffset = origin.x + (offset − origin.x) × factor`
+- **Y guide**: `newOffset = origin.y + (offset − origin.y) × factor`
+- **XZ guide**: Scale both startPoint and endPoint relative to origin
+- **Validation**: factor ≠ 0, factor ≠ 1, scaledValues.size > 0
+
+### 23.2 Command Pattern
+
+| Component | Implementation |
+|-----------|---------------|
+| `ScaleAllGuidesCommand` | ICommand — scales all visible/unlocked guides, stores snapshots for undo |
+| `execute()` | Uses `moveGuideById` for X/Y, `moveDiagonalGuideById` for XZ |
+| `undo()` | Restores original snapshots (offset or start/end points) |
+| Undo | Per-guide snapshot restoration via `moveGuideById`/`moveDiagonalGuideById` |
+
+### 23.3 Key Differences from Rotation
+
+| Aspect | Rotation (B28-B30) | Scale (B32) |
+|--------|-------------------|-------------|
+| Axis preservation | X/Y → XZ conversion | X stays X, Y stays Y |
+| Store method | `replaceGuideWithRotated` | `moveGuideById` / `moveDiagonalGuideById` |
+| Math | `rotatePoint()` trigonometry | Linear scaling relative to origin |
+
+### 23.4 Files Modified (Session 2026-02-22 — B32)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-scale'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `ScaleAllGuidesCommand` class (~115 lines) |
+| `hooks/state/useGuideState.ts` | `scaleAllGuides()` method |
+| `systems/events/EventBus.ts` | `grid:all-guides-scaled` event type |
+| `hooks/canvas/useCanvasClickHandler.ts` | 1-click origin handler (PRIORITY 1.8997) |
+| `components/dxf-layout/CanvasSection.tsx` | `handleScaleOriginSet` callback with PromptDialog |
+| `config/keyboard-shortcuts.ts` | G→3 chord (numeric key) |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_SCALE` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Scaling icon |
+| i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles (scale factor) |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts (G→3) |
