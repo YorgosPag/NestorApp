@@ -684,6 +684,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
+  // ADR-189 B32: Set origin for scale → open scale factor dialog
+  const handleScaleOriginSet = useCallback((origin: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.scaleAllGuides'),
+      label: t('promptDialog.enterScaleFactor'),
+      placeholder: t('promptDialog.scaleFactorPlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n) || n === 0 || n === 1) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const factor = parseFloat(result);
+        guideState.scaleAllGuides(origin, factor);
+      }
+    });
+  }, [showPromptDialog, t, guideState]);
+
   // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
   const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
   const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
@@ -1355,6 +1375,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onEqualizeApply: handleEqualizeApply,
     // ADR-189 B31: Polar array
     onPolarArrayCenterSet: handlePolarArrayCenterSet,
+    // ADR-189 B32: Scale grid
+    onScaleOriginSet: handleScaleOriginSet,
   });
 
   const { handleSmartDelete } = useSmartDelete({

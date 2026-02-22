@@ -1450,6 +1450,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_ROTATE_GROUP: 'tools.guideRotateGroup',
   GUIDE_EQUALIZE: 'tools.guideEqualize',
   GUIDE_POLAR_ARRAY: 'tools.guidePolarArray',
+  GUIDE_SCALE: 'tools.guideScale',
 } as const;
 
 /**

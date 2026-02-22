@@ -128,6 +128,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-equalize': { id: 'guide-equalize', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-189 B31: Polar array of guides
   'guide-polar-array': { id: 'guide-polar-array', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-189 B32: Scale all guides
+  'guide-scale': { id: 'guide-scale', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 // ============================================================================

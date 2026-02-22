@@ -23,6 +23,7 @@ import {
   LocateFixed, // Midpoint on line
   Target, // Circle center
   Radar, // ADR-189 B31: Polar array icon
+  Scaling, // ADR-189 B32: Scale grid icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -278,6 +279,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-rotate-group' as ToolType, icon: RotateCw, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ROTATE_GROUP, hotkey: 'G→F' },
           { id: 'guide-equalize' as ToolType, icon: ArrowDownUp, label: DXF_DRAWING_TOOL_LABELS.GUIDE_EQUALIZE, hotkey: 'G→Y' },
           { id: 'guide-polar-array' as ToolType, icon: Radar, label: DXF_DRAWING_TOOL_LABELS.GUIDE_POLAR_ARRAY, hotkey: 'G→2' },
+          { id: 'guide-scale' as ToolType, icon: Scaling, label: DXF_DRAWING_TOOL_LABELS.GUIDE_SCALE, hotkey: 'G→3' },
         ],
       },
     ],

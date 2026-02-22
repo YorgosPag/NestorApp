@@ -1035,3 +1035,137 @@ export class PolarArrayGuidesCommand implements ICommand {
     return this.createdGuides.map(g => g.id);
   }
 }
+
+// ============================================================================
+// SCALE ALL GUIDES COMMAND (B32)
+// ============================================================================
+
+/**
+ * Command for scaling ALL visible, unlocked guides from an origin point.
+ *
+ * X/Y guides: newOffset = origin + (offset - origin) * scaleFactor
+ * XZ guides: newStart/End = origin + (point - origin) * scaleFactor
+ *
+ * Unlike rotation (B28-B30), scaling preserves axis type — X stays X, Y stays Y.
+ * Only offsets/positions change, not the axis direction.
+ *
+ * @see ADR-189 B32 (Κλιμάκωση κάνναβου — Scale)
+ */
+export class ScaleAllGuidesCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'ScaleAllGuides';
+  readonly type = 'scale-all-guides';
+  readonly timestamp: number;
+
+  /** Original guide snapshots for undo */
+  private readonly originalSnapshots: Guide[] = [];
+  /** Pre-computed scaled values per guide: X/Y = new offset, XZ = new endpoints */
+  private readonly scaledValues: Map<string, { offset?: number; start?: Point2D; end?: Point2D }> = new Map();
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly origin: Point2D,
+    private readonly scaleFactor: number,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+
+    const guides = store.getGuides();
+    for (const guide of guides) {
+      if (!guide.visible || guide.locked) continue;
+
+      if (guide.axis === 'X') {
+        this.scaledValues.set(guide.id, {
+          offset: this.origin.x + (guide.offset - this.origin.x) * scaleFactor,
+        });
+      } else if (guide.axis === 'Y') {
+        this.scaledValues.set(guide.id, {
+          offset: this.origin.y + (guide.offset - this.origin.y) * scaleFactor,
+        });
+      } else if (guide.startPoint && guide.endPoint) {
+        this.scaledValues.set(guide.id, {
+          start: {
+            x: this.origin.x + (guide.startPoint.x - this.origin.x) * scaleFactor,
+            y: this.origin.y + (guide.startPoint.y - this.origin.y) * scaleFactor,
+          },
+          end: {
+            x: this.origin.x + (guide.endPoint.x - this.origin.x) * scaleFactor,
+            y: this.origin.y + (guide.endPoint.y - this.origin.y) * scaleFactor,
+          },
+        });
+      }
+    }
+  }
+
+  /** Whether the command has valid work to do */
+  get isValid(): boolean {
+    return this.scaledValues.size > 0 && this.scaleFactor !== 1;
+  }
+
+  execute(): void {
+    const isFirstExecution = this.originalSnapshots.length === 0;
+
+    for (const [guideId, values] of this.scaledValues) {
+      const guide = this.store.getGuideById(guideId);
+      if (!guide) continue;
+
+      if (isFirstExecution) {
+        this.originalSnapshots.push({ ...guide });
+      }
+
+      if (values.offset !== undefined) {
+        this.store.moveGuideById(guideId, values.offset);
+      } else if (values.start && values.end) {
+        this.store.moveDiagonalGuideById(guideId, values.start, values.end);
+      }
+    }
+  }
+
+  undo(): void {
+    for (let i = this.originalSnapshots.length - 1; i >= 0; i--) {
+      const snap = this.originalSnapshots[i];
+      if (snap.axis === 'XZ' && snap.startPoint && snap.endPoint) {
+        this.store.moveDiagonalGuideById(snap.id, snap.startPoint, snap.endPoint);
+      } else {
+        this.store.moveGuideById(snap.id, snap.offset);
+      }
+    }
+  }
+
+  redo(): void {
+    for (const [guideId, values] of this.scaledValues) {
+      if (values.offset !== undefined) {
+        this.store.moveGuideById(guideId, values.offset);
+      } else if (values.start && values.end) {
+        this.store.moveDiagonalGuideById(guideId, values.start, values.end);
+      }
+    }
+  }
+
+  getDescription(): string {
+    return `Scale all guides (${this.scaledValues.size}) by ${this.scaleFactor}× from (${this.origin.x.toFixed(1)}, ${this.origin.y.toFixed(1)})`;
+  }
+
+  canMergeWith(): boolean {
+    return false;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: {
+        origin: this.origin,
+        scaleFactor: this.scaleFactor,
+        guideCount: this.scaledValues.size,
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return Array.from(this.scaledValues.keys());
+  }
+}

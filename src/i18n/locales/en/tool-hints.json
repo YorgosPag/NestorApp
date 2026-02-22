@@ -534,6 +534,15 @@
         "Enter number of guides in dialog"
       ],
       "shortcuts": "G→2 | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-scale": {
+      "name": "Scale Grid",
+      "description": "Scale all guides relative to an origin point",
+      "steps": [
+        "Click to set scale origin point",
+        "Enter scale factor in dialog"
+      ],
+      "shortcuts": "G→3 | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {
