@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ — 14/14 guide commands implemented. Phase 1A/B/C + Guide Panel (§4.13) + Snap fix + Arc commands (§3.9/3.10/3.12). |
-| **Date** | 2026-02-19 |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B36 Measure→Guide ✅. 14/14 commands + 6 enhancements. |
+| **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
 | **Priority** | TBD |
@@ -360,12 +360,12 @@
 
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
-| B1 | **Axis Labels με Bubbles** | Κυκλάκια στις άκρες περασιών (Α, Β, Γ / 1, 2, 3) — πρότυπο Revit/AutoCAD | ⭐ Υψηλή |
-| B2 | **Αυτόματη δημιουργία πλέγματος** | Εντολή "Κάνναβος": (α) ισαπέχουσες αποστάσεις ή (β) ανισαπέχουσες (π.χ. 5μ, 3μ, 7μ). Λειτουργεί ως **προσωρινός κάνναβος** δίπλα στον κεντρικό grid | ⭐ Υψηλή |
-| B3 | **Διαστάσεις μεταξύ περασιών** | Annotations απόστασης (π.χ. "5.00μ") με **toggle** εμφάνισης/απόκρυψης | Μεσαία |
+| B1 | **Axis Labels με Bubbles** ✅ | Κυκλάκια στις άκρες περασιών (Α, Β, Γ / 1, 2, 3) — πρότυπο Revit/AutoCAD. X→κορυφή, Y→δεξιά πλευρά | ⭐ Υψηλή |
+| B2 | **Αυτόματη δημιουργία πλέγματος** ✅ | Εντολή "Κάνναβος" (G→B): ισαπέχουσες ή ανισαπέχουσες αποστάσεις. Toolbar dropdown + shortcut | ⭐ Υψηλή |
+| B3 | **Διαστάσεις μεταξύ περασιών** ✅ | Annotations απόστασης (π.χ. "5.00μ") — X→κορυφή, Y→δεξιά πλευρά (μακριά από χάρακα) | Μεσαία |
 | B4 | **Κλείδωμα οδηγών (Lock)** | Lock/unlock ανά περασιά για αποφυγή κατά λάθος διαγραφής | Μεσαία |
 | B5 | **Drag μετακίνηση** | Drag & drop για μετακίνηση τοποθετημένης περασιάς με real-time preview | ⭐ Υψηλή |
-| B6 | **Χρώματα / Στυλ ανά ομάδα** | Χρήση υφιστάμενων color pickers στις ρυθμίσεις DXF. Νέα ενότητα για guide colors | ⭐ Υψηλή |
+| B6 | **Χρώματα / Στυλ ανά ομάδα** ✅ | Per-guide color via context menu (8-χρωμη παλέτα + reset). resolveStyle() respects guide.style overrides | ⭐ Υψηλή |
 | B8 | **Οδηγός από υφιστάμενη οντότητα** | Κλικ σε DXF entity (τοίχος, γραμμή) → αυτόματη περασιά πάνω του | Μεσαία |
 | B9 | **Ακτινικοί οδηγοί** | Ακτίνες από κεντρικό σημείο ανά γωνία (30°/45°/60°) — κυκλικές κατασκευές | Μεσαία |
 | B12 | **Snap μεσαίου** | Αυτόματο snap στο μέσον μεταξύ δύο παράλληλων περασιών | Μεσαία |
@@ -504,7 +504,7 @@
 | B33 | **Smart equalize** | 3+ παράλληλες → αυτόματη ισαπόσταση | Μεσαία |
 | B34 | **Guide constraints** | Παραμετρική σχέση: "πάντα 5μ μεταξύ τους" | Χαμηλή |
 | B35 | **Construction line (XLINE)** | Προσωρινή γραμμή — αυτο-διαγράφεται μετά σχεδίαση entity | Μεσαία |
-| B36 | **Measure → Guide** | Κατά μέτρηση: "Δημιουργία οδηγού εδώ;" | ⭐ Υψηλή |
+| B36 | **Measure → Guide** ✅ | Μετά μέτρηση: notification με "Create Guides" button → αυτόματη δημιουργία X/Y οδηγών στα σημεία μέτρησης | ⭐ Υψηλή |
 | B37 | **Guide from selection** | Πολλά entities → αυτόματοι οδηγοί στις ακμές/κέντρα | Μεσαία |
 | B38 | **Custom labels** | Ελεύθερο κείμενο σε οδηγό: "Φέρων τοίχος" | Μεσαία |
 
@@ -1869,6 +1869,13 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-21 | **§3.11 Circle-Circle Intersection (G→O)**: 2-click (arc/circle → arc/circle) → 0-2 X markers. Radical line algorithm: d, a=(r1²-r2²+d²)/(2d), h=sqrt(r1²-a²), perpendicular offsets. `isPointInArcRange()` for arc angular filtering |
 | 2026-02-21 | **14/14 guide commands COMPLETE** — All §3.1-§3.16 commands implemented |
 | 2026-02-21 | **B5: Guide Drag & Drop (G→M)**: Live drag-move for X/Y/XZ guides. MoveGuideCommand with undo/redo. DraggingGuideState in useCanvasMouse (follows DraggingOverlayBodyState pattern). moveDiagonalGuideById() for XZ. Hover highlight on guide-move. Movement threshold check. Locked guides blocked |
+| 2026-02-22 | **B1: Axis Label Bubbles**: Κυκλάκια A,B,C (X-guides, κορυφή) και 1,2,3 (Y-guides, δεξιά πλευρά). AutoCAD/Revit style. Screen-space rendering. Per-guide colors στα bubbles |
+| 2026-02-22 | **B2: Auto Grid Generation (G→B)**: Toolbar dropdown entry + keyboard chord. PromptDialog for spacing pattern (equal/custom). Toolbar integration via toolDefinitions.tsx |
+| 2026-02-22 | **B3: Dimension Annotations**: Αποστάσεις μεταξύ διαδοχικών οδηγών. X-axis→κορυφή, Y-axis→δεξιά πλευρά (μακριά από χάρακα). Screen-space text rendering |
+| 2026-02-22 | **B6: Per-Guide Color Customization**: 8-χρωμη παλέτα (Cyan, Tomato, Indigo, Purple, Green, Orange, Red, Yellow) + reset. Context menu inline swatches. `resolveStyle()` respects `guide.style` overrides. `GuideStore.setGuideColor()` method |
+| 2026-02-22 | **B36: Measure → Guide Integration**: `onMeasurementComplete` callback chain (useDrawingHandlers → useCanvasEffects → CanvasSection). Toast notification with "Create Guides" action button. Auto-creates X/Y guides at measurement points |
+| 2026-02-22 | **FIX: B6 Color palette**: Changed `onClick` to `onSelect` with `preventDefault()` — prevents Radix DropdownMenu auto-close |
+| 2026-02-22 | **FIX: Y-axis rendering**: Dimensions AND bubbles moved from LEFT to RIGHT edge — away from vertical ruler |
 
 ---
 
@@ -2246,3 +2253,67 @@ const effectiveHighlightedGuideId = highlightedGuideId ?? panelHighlightGuideId;
 - PANEL_LAYOUT tokens — spacing
 - GUIDE_COLORS — color dots per axis
 - useSyncExternalStore — tear-free subscriptions
+
+## 17. Phase 2 Enhancements — B1/B2/B3/B6/B36 (2026-02-22)
+
+### 17.1 B1: Axis Label Bubbles
+
+Screen-space circular labels at guide edges:
+- **X guides** (vertical): bubbles at **top** (y=14px), labels A, B, C...
+- **Y guides** (horizontal): bubbles at **right edge** (x=viewport.width-14px), labels 1, 2, 3...
+- Per-guide color support via `guide.style.color`
+- `autoLabel(index, axis)` generates labels automatically
+- `drawBubble(ctx, x, y, label, color)` renders filled circle with centered text
+
+### 17.2 B2: Auto Grid Generation (G→B)
+
+- **Toolbar**: guide-grid entry in dropdown, `Grid` icon
+- **Keyboard chord**: G→B
+- **ToolType**: `'guide-grid'` added to union
+- **i18n**: EN "Auto Grid", EL "Αυτόματο Πλέγμα"
+- **Workflow**: Click origin → PromptDialog for spacing pattern → generate guides
+
+### 17.3 B3: Dimension Annotations Between Guides
+
+Screen-space distance labels between consecutive guides:
+- **X guides**: dimensions rendered at **top** of viewport
+- **Y guides**: dimensions rendered at **right edge** (away from ruler)
+- `renderAxisDimensions()` in GuideRenderer
+- Measurements formatted as "5.00μ" with proper scaling
+
+### 17.4 B6: Per-Guide Color Customization
+
+- **GUIDE_COLOR_PALETTE**: 8 colors (Cyan, Tomato, Indigo, Purple, Green, Orange, Red, Yellow)
+- **GuideStore.setGuideColor(id, color)**: Sets or resets (`null`) per-guide style
+- **resolveStyle()**: Checks `guide.style` first, then falls back to axis defaults
+- **Context menu**: "Color" item with `onSelect+preventDefault` to keep menu open
+- **Palette UI**: Inline swatch row with reset button (`RotateCcw` icon)
+- **CSS**: `GuideColorPalette.module.css` — `.paletteRow`, `.swatch`, `.swatchActive`, `.currentSwatch`, `.resetButton`
+
+### 17.5 B36: Measure → Guide Integration
+
+- **Callback chain**: `useDrawingHandlers` → `useCanvasEffects` → `CanvasSection`
+- **MEASURE_TOOLS_FOR_GUIDES**: `measure-distance`, `measure-distance-continuous`, `measure-angle`
+- **onMeasurementComplete**: Fires after measurement tool completes with all points
+- **Notification**: Toast with "Create Guides" action button (5s duration)
+- **Guide creation**: Extracts unique X/Y offsets from measurement points → `guideState.addGuide()`
+
+### 17.6 Files Modified (Session 2026-02-22)
+
+| File | Changes |
+|------|---------|
+| `systems/guides/guide-renderer.ts` | B1 bubbles, B3 dimensions, B6 resolveStyle, Y-axis right-edge rendering |
+| `systems/guides/guide-store.ts` | B6 setGuideColor() method |
+| `systems/guides/guide-types.ts` | B6 GUIDE_COLOR_PALETTE constant |
+| `systems/guides/index.ts` | B6 barrel export |
+| `ui/components/GuideContextMenu.tsx` | B6 color palette UI, onSelect fix |
+| `ui/components/GuideColorPalette.module.css` | B6 swatch styles (NEW) |
+| `ui/toolbar/toolDefinitions.tsx` | B2 guide-grid dropdown entry |
+| `ui/toolbar/types.ts` | B2 guide-grid ToolType |
+| `config/keyboard-shortcuts.ts` | B2 G→B shortcut |
+| `components/dxf-layout/CanvasSection.tsx` | B2 handleGridOriginSet, B6 handleGuideContextChangeColor, B36 handleMeasurementComplete |
+| `hooks/canvas/useCanvasClickHandler.ts` | B2 grid origin click handler |
+| `hooks/canvas/useCanvasEffects.ts` | B36 onMeasurementComplete passthrough |
+| `hooks/drawing/useDrawingHandlers.ts` | B36 MEASURE_TOOLS_FOR_GUIDES, onMeasurementComplete callback |
+| `constants/property-statuses-enterprise.ts` | B2 GUIDE_GRID label |
+| i18n (el/en dxf-viewer.json + tool-hints.json) | B2, B6, B36 translations |

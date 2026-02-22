@@ -1,30 +1,29 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "Integrate full Γενική Συγγραφή Υποχρεώσεων (28 articles) as default template",
-  "problem": "Obligations template had only 6 generic mock sections without articles. User needed the real construction obligations document (ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ, Θέρμη 2026) integrated as default template.",
-  "cause": "Template data was placeholder mock content. The real document has 28 articles across 8 categories covering all construction obligations.",
+  "category": "FIX",
+  "shortDescription": "ADR-189 Guides: B6 Color fix + Y-axis bubbles/dimensions moved to right edge",
+  "problem": "B6 Color palette did not work (menu auto-closed), Y-axis bubbles and dimensions rendered on left side overlapping with ruler",
+  "cause": "Radix DropdownMenuItem auto-closes on click (needed onSelect+preventDefault). Y-axis rendering used left edge constants instead of right edge.",
   "filesChanged": [
-    "src/types/obligations/default-template.ts (NEW — 28 articles in 8 sections)",
-    "src/types/mock-obligations.ts (import from default-template)",
-    "src/types/obligation-services.ts (import from default-template)",
-    "src/types/obligations/index.ts (barrel export)",
-    "src/app/obligations/new/page.tsx (preserve articles, show count)",
-    "src/i18n/locales/el/obligations.json (template.articles key)",
-    "src/i18n/locales/en/obligations.json (template.articles key)"
+    "src/subapps/dxf-viewer/systems/guides/guide-renderer.ts",
+    "src/subapps/dxf-viewer/ui/components/GuideContextMenu.tsx"
   ],
-  "solution": "Created default-template.ts with complete Γενική Συγγραφή Υποχρεώσεων organized as: 1) ΓΕΝΙΚΑ (arts 1-7), 2) ΦΕΡΩΝ ΟΡΓΑΝΙΣΜΟΣ & ΚΑΤΑΣΚΕΥΗ (arts 8-10), 3) ΘΕΡΜΟΠΡΟΣΟΨΕΙΣ, ΕΠΙΧΡΙΣΜΑΤΑ & ΚΟΥΦΩΜΑΤΑ (arts 11-13), 4) ΔΑΠΕΔΑ, ΧΡΩΜΑΤΙΣΜΟΙ & ΓΥΨΟΣΑΝΙΔΕΣ (arts 14-16), 5) ΜΟΝΩΣΕΙΣ & ΣΤΕΓΗ (arts 17-18), 6) ΕΙΔΗ ΥΓΙΕΙΝΗΣ & ΕΞΟΠΛΙΣΜΟΣ (arts 19-21), 7) ΗΜ ΕΓΚΑΤΑΣΤΑΣΕΙΣ (arts 22-26), 8) ΕΞΩΤΕΡΙΚΕΣ ΕΡΓΑΣΙΕΣ (arts 27-28). Fixed new/page.tsx useEffect that was stripping articles from template.",
-  "testing": "TypeScript compilation check: 0 errors. Pre-commit hooks passed.",
-  "notes": "Template preserves exact document text and layout. Each article maps to ObligationArticle interface with proper sectionId references. SectionCategory values used: general, construction, materials, finishes, installations, environment.",
+  "solution": "3 fixes: (1) B6 Color palette — changed onClick to onSelect with preventDefault to keep menu open, (2) Y-axis dimension annotations moved from left to right edge (viewport.width - edge), (3) Y-axis bubbles (number circles 1,2,3) moved from left to right edge (viewport.width - BUBBLE_LEFT_X)",
+  "testing": "Pre-commit checks passed. Vercel auto-deployment triggered.",
+  "notes": "Y-axis bubbles and dimensions now render on the RIGHT side of the viewport, away from the vertical ruler on the left. X-axis elements remain at top (unchanged). Color palette now stays open when clicking the Color menu item.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-02-16"
+    "sessionDate": "2026-02-22"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "69a11852",
-      "message": "feat(obligations): integrate full Γενική Συγγραφή Υποχρεώσεων as default template"
+      "hash": "f69f7813",
+      "message": "fix(guides): B6 color palette onSelect fix + Y-axis dimensions to right edge"
+    },
+    {
+      "hash": "efff6d92",
+      "message": "fix(guides): move Y-axis bubbles to right edge (away from ruler)"
     }
   ]
 }
