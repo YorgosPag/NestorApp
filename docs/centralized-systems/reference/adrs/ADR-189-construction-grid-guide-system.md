@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B36 Measure→Guide ✅. 14/14 commands + 9 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 10 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -501,7 +501,7 @@
 |---|----------|-----------|---------------|
 | B31 | **Polar array οδηγών** | Ν οδηγοί σε ίσες γωνίες γύρω από κέντρο (π.χ. 12 ανά 30°) | Μεσαία |
 | B32 | **Κλιμάκωση κάνναβου (Scale)** | Αλλαγή κλίμακας ολόκληρου grid — μεγέθυνση/σμίκρυνση | Μεσαία |
-| B33 | **Smart equalize** | 3+ παράλληλες → αυτόματη ισαπόσταση | Μεσαία |
+| B33 | **Smart equalize** ✅ | 3+ same-axis guides → `EqualizeGuidesCommand` → ισαπόσταση (κρατάει first/last, redistributes intermediates) | ✅ Υλοποιήθηκε |
 | B34 | **Guide constraints** | Παραμετρική σχέση: "πάντα 5μ μεταξύ τους" | Χαμηλή |
 | B35 | **Construction line (XLINE)** | Προσωρινή γραμμή — αυτο-διαγράφεται μετά σχεδίαση entity | Μεσαία |
 | B36 | **Measure → Guide** ✅ | Μετά μέτρηση: notification με "Create Guides" button → αυτόματη δημιουργία X/Y οδηγών στα σημεία μέτρησης | ⭐ Υψηλή |
@@ -1879,6 +1879,8 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **B28: Guide Rotation (G→H)**: 2-step workflow (click guide → click pivot) + PromptDialog for angle. `RotateGuideCommand` with full undo/redo. X/Y→XZ axis conversion (±10000 extent). `replaceGuideWithRotated()` + `restoreGuideSnapshot()` in GuideStore. 13 files modified, 344 lines added |
 | 2026-02-22 | **B30: Rotate All Guides (G→J)**: 1-click pivot → PromptDialog for angle → `RotateAllGuidesCommand` applies rotation to ALL visible/unlocked guides atomically. Batch undo restores all original snapshots. Reuses B28 geometry (±10000 extent, `rotatePoint()`). 10 files modified |
 | 2026-02-22 | **B29: Rotate Guide Group (G→F)**: Click guides → toggle selection (multi-select) → click empty space → pivot → PromptDialog angle → `RotateGuideGroupCommand`. Smart click: near guide=toggle, far=pivot. Set-based selection state. 12 files modified |
+| 2026-02-22 | **B33: Smart Equalize (G→Y)**: Select 3+ same-axis guides (click toggle) → click empty space → auto-equalize spacing. `EqualizeGuidesCommand` — keeps first/last, redistributes intermediates. No PromptDialog. Validation: same axis + ≥3. 12 files modified |
+| 2026-02-22 | **FIX: Terminology**: Αντικατάσταση «περασιά» → «οδηγός» σε ΟΛΟΥΣ τους i18n, JSDoc, και ADR-189 docs (55 replacements) |
 
 ---
 
@@ -2467,4 +2469,50 @@ click at worldPoint:
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry |
 | `constants/property-statuses-enterprise.ts` | `GUIDE_ROTATE_GROUP` label |
 | i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts |
+
+## 21. B33: Smart Equalize — Implementation Details (2026-02-22)
+
+### 21.1 Architecture
+
+Ισαπόσταση 3+ same-axis (X ή Y) οδηγών. Κρατά first/last fixed, αναδιανέμει τα ενδιάμεσα.
+
+- **Αλγόριθμος**: `spacing = (lastOffset - firstOffset) / (count - 1)`
+- **Validation**: Μόνο X ή Y axis (XZ αποκλείεται), ≥3 οδηγοί, ίδιος axis
+- **No PromptDialog**: Πλήρως αυτόματο — select & click
+
+### 21.2 Core Components
+
+| Component | Role |
+|-----------|------|
+| `EqualizeGuidesCommand` | ICommand — pre-computes offsets, moveGuideById per guide |
+| `isValid` getter | Returns false if <3 guides ή mixed axes |
+| Smart click detection | Near guide (<30px) = toggle select, empty space = apply |
+| Set-based multi-select | `useState<Set<string>>` for O(1) toggle/has |
+
+### 21.3 Edge Cases
+
+| Case | Handling |
+|------|---------|
+| XZ diagonal guide | Excluded — equalize only works on axis-aligned |
+| < 3 guides selected | Warning notification, no-op |
+| Mixed X + Y axes | Warning notification, no-op |
+| Locked/invisible | Not excluded from selection (move still applies) |
+| Undo | Restores original offsets via `originalOffsets` Map |
+
+### 21.4 Files Modified (Session 2026-02-22 — B33)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-equalize'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `EqualizeGuidesCommand` class (~100 lines) |
+| `hooks/state/useGuideState.ts` | `equalizeGuides()` method |
+| `systems/events/EventBus.ts` | `grid:guides-equalized` event type |
+| `hooks/canvas/useCanvasClickHandler.ts` | Smart click handler (PRIORITY 1.8995) |
+| `components/dxf-layout/CanvasSection.tsx` | Set-based selection state, toggle/apply callbacks, hint override, highlight |
+| `config/keyboard-shortcuts.ts` | G→Y chord |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_EQUALIZE` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with ArrowDownUp icon |
+| i18n (el/en dxf-viewer.json) | Tool labels + warning message |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts |
