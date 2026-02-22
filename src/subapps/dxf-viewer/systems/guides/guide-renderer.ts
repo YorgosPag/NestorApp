@@ -769,13 +769,14 @@ export class GuideRenderer {
       this.drawBubble(ctx, screenX, GuideRenderer.BUBBLE_TOP_Y, label, xGuides[i].color);
     }
 
-    // Y guides → bubbles at LEFT
+    // Y guides → bubbles at RIGHT edge (away from left ruler)
+    const bubbleRightX = viewport.width - GuideRenderer.BUBBLE_LEFT_X;
     for (let i = 0; i < yGuides.length; i++) {
       const screenY = this.guideOffsetToScreen('Y', yGuides[i].offset, transform, viewport);
       // Skip if off-screen
       if (screenY < -GuideRenderer.BUBBLE_RADIUS || screenY > viewport.height + GuideRenderer.BUBBLE_RADIUS) continue;
       const label = yGuides[i].label ?? GuideRenderer.autoLabel(i, 'Y');
-      this.drawBubble(ctx, GuideRenderer.BUBBLE_LEFT_X, screenY, label, yGuides[i].color);
+      this.drawBubble(ctx, bubbleRightX, screenY, label, yGuides[i].color);
     }
 
     ctx.restore();
