@@ -6,6 +6,7 @@
  * - Delete guide (G→D)
  * - Lock / Unlock
  * - Edit label (opens PromptDialog)
+ * - Change color (B6: inline color swatches + reset)
  * - Toggle all guides visibility (G→V)
  * - Cancel
  *
@@ -28,9 +29,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import styles from './DrawingContextMenu.module.css';
+import colorStyles from './GuideColorPalette.module.css';
 import { cn } from '@/lib/utils';
-import { Trash2, Lock, Unlock, Tag, Eye, EyeOff, X } from 'lucide-react';
+import { Trash2, Lock, Unlock, Tag, Eye, EyeOff, X, Palette, RotateCcw } from 'lucide-react';
 import type { Guide } from '../../systems/guides/guide-types';
+import { GUIDE_COLOR_PALETTE } from '../../systems/guides/guide-types';
 
 // ===== TYPES =====
 
@@ -47,6 +50,8 @@ interface GuideContextMenuProps {
   onToggleLock: (guideId: string) => void;
   /** Callback for Edit Label action (opens PromptDialog) */
   onEditLabel: (guideId: string, currentLabel: string | null) => void;
+  /** Callback for Change Color (B6) — null resets to default */
+  onChangeColor: (guideId: string, color: string | null) => void;
   /** Callback for Toggle visibility of all guides */
   onToggleVisibility: () => void;
   /** Whether guides are currently visible */
@@ -61,6 +66,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
   onDelete,
   onToggleLock,
   onEditLabel,
+  onChangeColor,
   onToggleVisibility,
   guidesVisible,
   onCancel,
@@ -68,6 +74,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [targetGuide, setTargetGuide] = useState<Guide | null>(null);
+  const [showColors, setShowColors] = useState(false);
 
   // Imperative handle — parent calls open(x, y, guide) directly
   useImperativeHandle(ref, () => ({
@@ -77,17 +84,22 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
         triggerRef.current.style.top = `${y}px`;
       }
       setTargetGuide(guide);
+      setShowColors(false);
       setIsOpen(true);
     },
     close: () => {
       setIsOpen(false);
       setTargetGuide(null);
+      setShowColors(false);
     },
   }), []);
 
   const handleOpenChange = useCallback((open: boolean) => {
     setIsOpen(open);
-    if (!open) setTargetGuide(null);
+    if (!open) {
+      setTargetGuide(null);
+      setShowColors(false);
+    }
   }, []);
 
   const handleDelete = useCallback(() => {
@@ -108,6 +120,24 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
     setTargetGuide(null);
   }, [targetGuide, onEditLabel]);
 
+  const handleToggleColors = useCallback(() => {
+    setShowColors(prev => !prev);
+  }, []);
+
+  const handleSelectColor = useCallback((hex: string) => {
+    if (targetGuide) onChangeColor(targetGuide.id, hex);
+    setIsOpen(false);
+    setTargetGuide(null);
+    setShowColors(false);
+  }, [targetGuide, onChangeColor]);
+
+  const handleResetColor = useCallback(() => {
+    if (targetGuide) onChangeColor(targetGuide.id, null);
+    setIsOpen(false);
+    setTargetGuide(null);
+    setShowColors(false);
+  }, [targetGuide, onChangeColor]);
+
   const handleToggleVisibility = useCallback(() => {
     onToggleVisibility();
     setIsOpen(false);
@@ -122,6 +152,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
 
   const isLocked = targetGuide?.locked ?? false;
   const axisLabel = targetGuide?.axis === 'X' ? 'X' : 'Z';
+  const currentColor = targetGuide?.style?.color ?? null;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
@@ -161,6 +192,48 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
           <span className={styles.menuItemIcon}><Tag size={16} /></span>
           <span className={styles.menuItemLabel}>Edit Label</span>
         </DropdownMenuItem>
+
+        {/* Change Color (B6) */}
+        <DropdownMenuItem
+          className={styles.menuItem}
+          onClick={handleToggleColors}
+        >
+          <span className={styles.menuItemIcon}><Palette size={16} /></span>
+          <span className={styles.menuItemLabel}>Color</span>
+          {currentColor && (
+            <span
+              className={colorStyles.currentSwatch}
+              style={{ backgroundColor: currentColor }}
+            />
+          )}
+        </DropdownMenuItem>
+
+        {/* Color Palette (expandable) */}
+        {showColors && (
+          <li className={colorStyles.paletteRow}>
+            {GUIDE_COLOR_PALETTE.map(c => (
+              <button
+                key={c.hex}
+                className={cn(
+                  colorStyles.swatch,
+                  currentColor === c.hex && colorStyles.swatchActive,
+                )}
+                style={{ backgroundColor: c.hex }}
+                onClick={() => handleSelectColor(c.hex)}
+                title={c.name}
+                type="button"
+              />
+            ))}
+            <button
+              className={colorStyles.resetButton}
+              onClick={handleResetColor}
+              title="Reset to default"
+              type="button"
+            >
+              <RotateCcw size={12} />
+            </button>
+          </li>
+        )}
 
         {/* Lock / Unlock */}
         <DropdownMenuItem

@@ -1,0 +1,71 @@
+/**
+ * B6: Guide Color Palette — inline swatches for right-click context menu
+ * @see ADR-189: Construction Grid & Guide System
+ */
+
+/* Row of color swatches inside the dropdown */
+.paletteRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  flex-wrap: wrap;
+  list-style: none;
+}
+
+/* Individual color swatch */
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+  padding: 0;
+}
+
+.swatch:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: scale(1.15);
+}
+
+.swatch:focus-visible {
+  outline: 2px solid var(--color-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Active (currently selected) swatch */
+.swatchActive {
+  border-color: #ffffff;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+}
+
+/* Small indicator showing current color next to "Color" label */
+.currentSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+/* Reset button */
+.resetButton {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.resetButton:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.8);
+}

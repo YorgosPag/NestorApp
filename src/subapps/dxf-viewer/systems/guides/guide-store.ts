@@ -291,6 +291,22 @@ export class GuideStore implements IGridHeadlessAPI {
     return true;
   }
 
+  /** Set guide color override (B6: per-guide color customization) */
+  setGuideColor(id: string, color: string | null): boolean {
+    const guide = this.guides.find(g => g.id === id);
+    if (!guide) return false;
+
+    const newStyle = color
+      ? { color, lineWidth: guide.style?.lineWidth ?? 0.5, dashPattern: guide.style?.dashPattern ?? [6, 3] }
+      : null;
+
+    this.guides = this.guides.map(g =>
+      g.id === id ? { ...g, style: newStyle } : g
+    );
+    this.notify();
+    return true;
+  }
+
   /** Toggle global visibility */
   setVisible(visible: boolean): void {
     if (this.visible === visible) return;

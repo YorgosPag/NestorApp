@@ -352,6 +352,16 @@ export class GuideRenderer {
    * Resolve the render style for a guide based on its axis and parentId.
    */
   private resolveStyle(guide: Guide): GuideRenderStyle {
+    // B6: Per-guide custom style override takes highest priority
+    if (guide.style) {
+      return {
+        color: guide.style.color,
+        lineWidth: guide.style.lineWidth,
+        dashPattern: [...guide.style.dashPattern],
+        opacity: DEFAULT_GUIDE_STYLE.opacity,
+      };
+    }
+
     // Parallel guides (created from a reference) get the purple style
     if (guide.parentId) {
       return { ...DEFAULT_GUIDE_STYLE, color: GUIDE_COLORS.PARALLEL };
@@ -731,13 +741,15 @@ export class GuideRenderer {
     transform: ViewTransform,
     viewport: Viewport,
   ): void {
-    const xGuides: Array<{ offset: number; label: string | null }> = [];
-    const yGuides: Array<{ offset: number; label: string | null }> = [];
+    const xGuides: Array<{ offset: number; label: string | null; color: string }> = [];
+    const yGuides: Array<{ offset: number; label: string | null; color: string }> = [];
 
     for (const g of guides) {
       if (!g.visible || g.axis === 'XZ') continue;
-      if (g.axis === 'X') xGuides.push({ offset: g.offset, label: g.label });
-      else yGuides.push({ offset: g.offset, label: g.label });
+      // B6: Use per-guide custom color if set, else axis default
+      const color = g.style?.color ?? (g.axis === 'X' ? GUIDE_COLORS.X : GUIDE_COLORS.Y);
+      if (g.axis === 'X') xGuides.push({ offset: g.offset, label: g.label, color });
+      else yGuides.push({ offset: g.offset, label: g.label, color });
     }
 
     if (xGuides.length === 0 && yGuides.length === 0) return;
@@ -754,7 +766,7 @@ export class GuideRenderer {
       // Skip if off-screen
       if (screenX < -GuideRenderer.BUBBLE_RADIUS || screenX > viewport.width + GuideRenderer.BUBBLE_RADIUS) continue;
       const label = xGuides[i].label ?? GuideRenderer.autoLabel(i, 'X');
-      this.drawBubble(ctx, screenX, GuideRenderer.BUBBLE_TOP_Y, label, GUIDE_COLORS.X);
+      this.drawBubble(ctx, screenX, GuideRenderer.BUBBLE_TOP_Y, label, xGuides[i].color);
     }
 
     // Y guides → bubbles at LEFT
@@ -763,7 +775,7 @@ export class GuideRenderer {
       // Skip if off-screen
       if (screenY < -GuideRenderer.BUBBLE_RADIUS || screenY > viewport.height + GuideRenderer.BUBBLE_RADIUS) continue;
       const label = yGuides[i].label ?? GuideRenderer.autoLabel(i, 'Y');
-      this.drawBubble(ctx, GuideRenderer.BUBBLE_LEFT_X, screenY, label, GUIDE_COLORS.Y);
+      this.drawBubble(ctx, GuideRenderer.BUBBLE_LEFT_X, screenY, label, yGuides[i].color);
     }
 
     ctx.restore();

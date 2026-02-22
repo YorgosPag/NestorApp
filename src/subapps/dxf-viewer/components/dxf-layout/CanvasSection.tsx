@@ -716,6 +716,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
+  // B6: Guide color change handler
+  const handleGuideContextChangeColor = useCallback((guideId: string, color: string | null) => {
+    const store = guideState.getStore();
+    store.setGuideColor(guideId, color);
+  }, [guideState]);
+
   // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes + snap highlight)
   const highlightedGuideId = useMemo<string | null>(() => {
     if (!mouseWorld || !guideState.guides.length) return null;
@@ -1348,6 +1354,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onDelete={handleGuideContextDelete}
         onToggleLock={handleGuideContextToggleLock}
         onEditLabel={handleGuideContextEditLabel}
+        onChangeColor={handleGuideContextChangeColor}
         onToggleVisibility={guideState.toggleVisibility}
         guidesVisible={guideState.guidesVisible}
         onCancel={() => guideMenuRef.current?.close()}

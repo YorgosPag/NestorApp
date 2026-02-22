@@ -80,6 +80,18 @@ export const GUIDE_COLORS = {
   GHOST: '#FFFFFF',
 } as const;
 
+/** B6: Preset color palette for guide customization (AutoCAD/Revit-inspired) */
+export const GUIDE_COLOR_PALETTE = [
+  { hex: '#00BCD4', name: 'Cyan' },
+  { hex: '#FF6347', name: 'Tomato' },
+  { hex: '#6366F1', name: 'Indigo' },
+  { hex: '#9370DB', name: 'Purple' },
+  { hex: '#4CAF50', name: 'Green' },
+  { hex: '#FF9800', name: 'Orange' },
+  { hex: '#F44336', name: 'Red' },
+  { hex: '#FFEB3B', name: 'Yellow' },
+] as const;
+
 /** Default rendering style for construction guides */
 export const DEFAULT_GUIDE_STYLE: GuideRenderStyle = {
   color: GUIDE_COLORS.X,
