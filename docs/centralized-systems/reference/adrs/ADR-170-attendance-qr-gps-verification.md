@@ -147,9 +147,29 @@ The `GeofenceConfigMap` was upgraded from a static OpenStreetMap iframe to a ful
 
 **No new dependencies added** — uses existing react-map-gl/maplibre infrastructure from geo-canvas subapp.
 
+## Geofence Audit Trail (2026-02-22)
+
+Every geofence configuration change is now recorded as an **immutable audit log entry** via the enterprise audit system (`logAuditEvent` from `@/lib/auth/audit`).
+
+**What is logged per change:**
+| Field | Value |
+|-------|-------|
+| `actorId` | User ID of the admin who made the change |
+| `timestamp` | Server timestamp (FieldValue.serverTimestamp) |
+| `previousValue` | Old lat, lng, radius, enabled |
+| `newValue` | New lat, lng, radius, enabled |
+| `targetId` | Project ID |
+| `action` | `data_updated` |
+| `reason` | `Geofence configuration update (ADR-170)` |
+
+**Storage**: `/companies/{companyId}/audit_logs/{autoId}` (tenant-isolated, immutable)
+
+**File**: `src/app/api/attendance/geofence/route.ts`
+
 ## Changelog
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-02-22 | Geofence audit trail: immutable log of every config change (who, when, old→new values) | Claude |
 | 2026-02-22 | GeofenceConfigMap: interactive map (react-map-gl), draggable marker, GeoJSON circle, Radix Slider | Claude |
 | 2026-02-09 | Initial implementation — 14 new files, 5 modified | Claude |
