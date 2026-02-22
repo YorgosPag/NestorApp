@@ -86,6 +86,8 @@ export interface UseCanvasEffectsParams {
   zoomSystem: ZoomSystemForAutoFit;
   /** Current level ID — used to reset auto-fit when switching levels */
   currentLevelId: string | null;
+  /** B36 (ADR-189): Called when measurement completes — for "Create Guides" prompt */
+  onMeasurementComplete?: (points: ReadonlyArray<{ x: number; y: number }>, tool: ToolType) => void;
 }
 
 /** Return type of useDrawingHandlers */
@@ -122,6 +124,7 @@ export function useCanvasEffects({
   overlayCanvasRef,
   zoomSystem,
   currentLevelId,
+  onMeasurementComplete,
 }: UseCanvasEffectsParams): UseCanvasEffectsReturn {
 
   // === Global Ruler Settings (reactive state via external store) ===
@@ -180,7 +183,8 @@ export function useCanvasEffects({
       }
     },
     currentScene ?? undefined,
-    previewCanvasRef as React.RefObject<PreviewCanvasHandle>
+    previewCanvasRef as React.RefObject<PreviewCanvasHandle>,
+    onMeasurementComplete,
   );
 
   // === Drawing handlers ref sync (avoids infinite loops) ===

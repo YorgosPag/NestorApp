@@ -1650,5 +1650,9 @@
     "unlock": "Unlock",
     "delete": "Delete",
     "deleteGroup": "Delete Group"
+  },
+  "guides": {
+    "measureToGuide": "Create guides at measurement points?",
+    "createGuides": "Create Guides"
   }
 }

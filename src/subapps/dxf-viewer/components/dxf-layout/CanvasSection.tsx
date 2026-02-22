@@ -722,6 +722,28 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     store.setGuideColor(guideId, color);
   }, [guideState]);
 
+  // B36 (ADR-189): Measurement → Guide — show notification with "Create Guides" after measurement
+  const handleMeasurementComplete = useCallback((points: ReadonlyArray<{ x: number; y: number }>, tool: ToolType) => {
+    if (points.length < 2) return;
+    notifySuccess(t('guides.measureToGuide'), {
+      duration: 5000,
+      actions: [{
+        label: t('guides.createGuides'),
+        onClick: () => {
+          // Create guides at all unique X and Y coordinates from the measurement
+          const xOffsets = new Set<number>();
+          const yOffsets = new Set<number>();
+          for (const p of points) {
+            xOffsets.add(Math.round(p.x * 1000) / 1000); // 3 decimal precision
+            yOffsets.add(Math.round(p.y * 1000) / 1000);
+          }
+          for (const x of xOffsets) guideState.addGuide('X', x);
+          for (const y of yOffsets) guideState.addGuide('Y', y);
+        },
+      }],
+    });
+  }, [notifySuccess, t, guideState]);
+
   // ADR-189: Find nearest guide to cursor (for hover highlight in delete/parallel modes + snap highlight)
   const highlightedGuideId = useMemo<string | null>(() => {
     if (!mouseWorld || !guideState.guides.length) return null;
@@ -1012,6 +1034,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDragPreviewPosition: unified.setDragPreviewPosition,
     universalSelection, dxfScene, dxfCanvasRef, overlayCanvasRef, zoomSystem,
     currentLevelId: levelManager.currentLevelId,
+    onMeasurementComplete: handleMeasurementComplete,
   });
 
   // 🏢 PERF (2026-02-19): Imperative refs for context menus — open() doesn't re-render canvas

@@ -96,12 +96,19 @@ function handleToolCompletion(
 
 // 🏢 ENTERPRISE: Type-safe entity created callback
 // 🏢 ADR-040: Optional previewCanvasRef for direct preview rendering (performance optimization)
+/** B36 (ADR-189): Measurement tools that support "Create Guides" prompt */
+const MEASURE_TOOLS_FOR_GUIDES = new Set<string>([
+  'measure-distance', 'measure-distance-continuous', 'measure-angle',
+]);
+
 export function useDrawingHandlers(
   activeTool: ToolType,
   onEntityCreated: (entity: Entity) => void,
   onToolChange: (tool: ToolType) => void,
   currentScene?: SceneModel,
-  previewCanvasRef?: React.RefObject<PreviewCanvasHandle>
+  previewCanvasRef?: React.RefObject<PreviewCanvasHandle>,
+  /** B36 (ADR-189): Called when a measurement tool completes — parent can offer "Create Guides" */
+  onMeasurementComplete?: (points: ReadonlyArray<Pt>, tool: ToolType) => void,
 ) {
   // Canvas operations hook
   const canvasOps = useCanvasOperations();
@@ -235,7 +242,14 @@ export function useDrawingHandlers(
     if (completed && previewCanvasRef?.current) {
       previewCanvasRef.current.clear();
     }
-  }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef]);
+
+    // B36 (ADR-189): Notify parent when a measurement tool completes
+    // Parent can then offer "Create Guides at measurement points"
+    if (completed && onMeasurementComplete && MEASURE_TOOLS_FOR_GUIDES.has(activeTool)) {
+      const allPoints = [...drawingState.tempPoints, snappedPoint];
+      onMeasurementComplete(allPoints, activeTool as ToolType);
+    }
+  }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef, onMeasurementComplete]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
     // 🔍 STOP 1 DEBUG TRACE (2026-02-01): Comprehensive preview flow tracing
