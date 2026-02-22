@@ -31,6 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 // IKA hooks
 import { useProjectWorkers } from './hooks/useProjectWorkers';
 import { useAttendanceEvents } from './hooks/useAttendanceEvents';
+import { useAttendanceLiveEvents } from './hooks/useAttendanceLiveEvents';
 import { useAttendanceSummary } from './hooks/useAttendanceSummary';
 
 // IKA components
@@ -41,6 +42,7 @@ import { CrewGroupFilter } from './components/CrewGroupFilter';
 import { AttendanceRecordDialog } from './components/AttendanceRecordDialog';
 import { QrCodePanel } from './components/QrCodePanel';
 import { GeofenceConfigMap } from './components/GeofenceConfigMap';
+import { LiveWorkerMap } from './components/LiveWorkerMap';
 
 import type { AttendanceViewMode } from './contracts';
 
@@ -70,7 +72,11 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
 
   // Data hooks
   const { workers, isLoading: workersLoading, error: workersError } = useProjectWorkers(projectId);
-  const { events, isLoading: eventsLoading, error: eventsError, addEvent, refetch } = useAttendanceEvents(projectId, selectedDate);
+  const { events: liveEvents, latestEvent, isLive, isLoading: liveLoading, error: liveError } = useAttendanceLiveEvents(projectId, selectedDate);
+  const { events: polledEvents, isLoading: eventsLoading, error: eventsError, addEvent, refetch } = useAttendanceEvents(projectId, selectedDate);
+
+  // Use live events when available, fallback to polled
+  const events = isLive ? liveEvents : polledEvents;
 
   // Computed summaries
   const { projectSummary, workerSummaries, crewGroups } = useAttendanceSummary(
@@ -101,8 +107,8 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
     setIsDialogOpen(true);
   }, []);
 
-  const isLoading = workersLoading || eventsLoading;
-  const error = workersError || eventsError;
+  const isLoading = workersLoading || eventsLoading || liveLoading;
+  const error = workersError || eventsError || liveError;
 
   // No project ID
   if (!projectId) {
@@ -187,6 +193,15 @@ export function TimesheetTabContent({ projectId }: TimesheetTabContentProps) {
           />
         </CardContent>
       </Card>
+
+      {/* Live Worker Map — ADR-170 real-time tracking */}
+      <LiveWorkerMap
+        projectId={projectId}
+        events={events}
+        latestEvent={latestEvent}
+        isLive={isLive}
+        workers={workers}
+      />
 
       {/* Dashboard summary cards */}
       <AttendanceDashboard summary={projectSummary} />

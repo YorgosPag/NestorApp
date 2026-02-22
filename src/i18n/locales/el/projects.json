@@ -554,6 +554,21 @@
         "takePhoto": "Λήψη Φωτογραφίας",
         "removePhoto": "Αφαίρεση",
         "privacyNotice": "Η τοποθεσία καταγράφεται μόνο κατά την προσέλευση/αποχώρηση."
+      },
+      "liveMap": {
+        "title": "Χάρτης Εργαζομένων",
+        "description": "Τοποθεσία εργαζομένων σε πραγματικό χρόνο",
+        "inside": "εντός ακτίνας",
+        "outside": "εκτός ακτίνας",
+        "checkedOut": "αποχώρησαν",
+        "noEvents": "Δεν υπάρχουν events παρουσίας σήμερα",
+        "outsideAlert": "εκτός ζώνης εργοταξίου",
+        "popupEvent": "Ενέργεια",
+        "popupTime": "Ώρα",
+        "popupDistance": "Απόσταση",
+        "statusInside": "Εντός ακτίνας",
+        "statusOutside": "Εκτός ακτίνας",
+        "statusCheckedOut": "Αποχώρησε"
       }
     },
     "stampsTab": {

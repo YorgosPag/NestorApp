@@ -554,6 +554,21 @@
         "takePhoto": "Take Photo",
         "removePhoto": "Remove",
         "privacyNotice": "Location is recorded only during check-in/check-out."
+      },
+      "liveMap": {
+        "title": "Worker Map",
+        "description": "Real-time worker location tracking",
+        "inside": "inside zone",
+        "outside": "outside zone",
+        "checkedOut": "checked out",
+        "noEvents": "No attendance events today",
+        "outsideAlert": "outside site zone",
+        "popupEvent": "Event",
+        "popupTime": "Time",
+        "popupDistance": "Distance",
+        "statusInside": "Inside zone",
+        "statusOutside": "Outside zone",
+        "statusCheckedOut": "Checked out"
       }
     },
     "stampsTab": {

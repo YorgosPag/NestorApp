@@ -166,10 +166,40 @@ Every geofence configuration change is now recorded as an **immutable audit log 
 
 **File**: `src/app/api/attendance/geofence/route.ts`
 
+## Live Worker Map Dashboard (2026-02-22)
+
+Real-time map dashboard showing worker attendance markers on an interactive map.
+
+| Component | Purpose |
+|-----------|---------|
+| `useAttendanceLiveEvents.ts` | Firestore `onSnapshot` real-time listener (replaces polling) |
+| `LiveWorkerMap.tsx` | Interactive map with worker pins, geofence overlay, summary badges |
+
+**Features:**
+- Worker markers colored by status: green (inside), orange (outside), red (checked out)
+- Geofence circle overlay (read-only, from server config)
+- Click marker → popup with name, time, distance from center
+- Summary badges: "X inside zone", "Y outside zone"
+- Toast alert when new event arrives outside geofence
+- LIVE badge indicator when real-time listener is active
+- `TimesheetTabContent` uses live events with polling fallback
+
+**Data flow:**
+```
+TimesheetTabContent
+├── useAttendanceLiveEvents() → real-time events via onSnapshot
+├── useAttendanceEvents() → polling fallback + addEvent/refetch
+├── LiveWorkerMap → geofence circle + worker markers + badges + alerts
+├── AttendanceDashboard → auto-updates via live events
+└── DailyTimeline → auto-updates via live events
+```
+
 ## Changelog
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-02-22 | Live Worker Map: real-time dashboard with worker pins, geofence overlay, status badges, toast alerts | Claude |
+| 2026-02-22 | useAttendanceLiveEvents: Firestore onSnapshot hook for real-time attendance updates | Claude |
 | 2026-02-22 | Geofence audit trail: immutable log of every config change (who, when, old→new values) | Claude |
 | 2026-02-22 | GeofenceConfigMap: interactive map (react-map-gl), draggable marker, GeoJSON circle, Radix Slider | Claude |
 | 2026-02-09 | Initial implementation — 14 new files, 5 modified | Claude |
