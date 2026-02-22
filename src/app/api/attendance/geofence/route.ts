@@ -21,6 +21,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { validateGeofenceConfig } from '@/services/attendance/geofence-service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { logAuditEvent } from '@/lib/auth/audit';
 import type { GeofenceConfig } from '@/components/projects/ika/contracts';
 
 const logger = createModuleLogger('api/attendance/geofence');
@@ -150,6 +151,9 @@ const basePOST = async (request: NextRequest) => {
           );
         }
 
+        // Capture previous config for audit trail
+        const previousGeofence = (projectDoc.data()?.geofenceConfig as GeofenceConfig | undefined) ?? null;
+
         const geofenceConfig: GeofenceConfig = {
           latitude: body.latitude,
           longitude: body.longitude,
@@ -160,6 +164,38 @@ const basePOST = async (request: NextRequest) => {
         };
 
         await projectRef.update({ geofenceConfig });
+
+        // Immutable audit log — who changed geofence, old → new values
+        logAuditEvent(ctx, 'data_updated', body.projectId, 'project', {
+          previousValue: previousGeofence
+            ? {
+                type: 'status',
+                value: {
+                  latitude: previousGeofence.latitude,
+                  longitude: previousGeofence.longitude,
+                  radiusMeters: previousGeofence.radiusMeters,
+                  enabled: previousGeofence.enabled,
+                },
+              }
+            : null,
+          newValue: {
+            type: 'status',
+            value: {
+              latitude: geofenceConfig.latitude,
+              longitude: geofenceConfig.longitude,
+              radiusMeters: geofenceConfig.radiusMeters,
+              enabled: geofenceConfig.enabled,
+            },
+          },
+          metadata: {
+            reason: 'Geofence configuration update (ADR-170)',
+          },
+        }).catch((auditError) => {
+          // Audit failure must not block the response
+          logger.warn('Geofence audit log failed', {
+            error: auditError instanceof Error ? auditError.message : 'Unknown',
+          });
+        });
 
         logger.info('Geofence config updated', {
           projectId: body.projectId,
