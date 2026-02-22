@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 10 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 11 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -499,7 +499,7 @@
 
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
-| B31 | **Polar array οδηγών** | Ν οδηγοί σε ίσες γωνίες γύρω από κέντρο (π.χ. 12 ανά 30°) | Μεσαία |
+| B31 | **Polar array οδηγών** ✅ | 1-click center → PromptDialog count → `PolarArrayGuidesCommand` → N XZ guides at 360°/N intervals (±10000 extent) | ✅ Υλοποιήθηκε |
 | B32 | **Κλιμάκωση κάνναβου (Scale)** | Αλλαγή κλίμακας ολόκληρου grid — μεγέθυνση/σμίκρυνση | Μεσαία |
 | B33 | **Smart equalize** ✅ | 3+ same-axis guides → `EqualizeGuidesCommand` → ισαπόσταση (κρατάει first/last, redistributes intermediates) | ✅ Υλοποιήθηκε |
 | B34 | **Guide constraints** | Παραμετρική σχέση: "πάντα 5μ μεταξύ τους" | Χαμηλή |
@@ -1881,6 +1881,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **B29: Rotate Guide Group (G→F)**: Click guides → toggle selection (multi-select) → click empty space → pivot → PromptDialog angle → `RotateGuideGroupCommand`. Smart click: near guide=toggle, far=pivot. Set-based selection state. 12 files modified |
 | 2026-02-22 | **B33: Smart Equalize (G→Y)**: Select 3+ same-axis guides (click toggle) → click empty space → auto-equalize spacing. `EqualizeGuidesCommand` — keeps first/last, redistributes intermediates. No PromptDialog. Validation: same axis + ≥3. 12 files modified |
 | 2026-02-22 | **FIX: Terminology**: Αντικατάσταση «περασιά» → «οδηγός» σε ΟΛΟΥΣ τους i18n, JSDoc, και ADR-189 docs (55 replacements) |
+| 2026-02-22 | **B31: Polar Array (G→2)**: 1-click center → PromptDialog count → `PolarArrayGuidesCommand` creates N XZ diagonal guides at equal angles (360°/N). Full undo/redo. Radar icon. 14 files modified, 200 lines added |
 
 ---
 
@@ -2515,4 +2516,49 @@ click at worldPoint:
 | `constants/property-statuses-enterprise.ts` | `GUIDE_EQUALIZE` label |
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with ArrowDownUp icon |
 | i18n (el/en dxf-viewer.json) | Tool labels + warning message |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts |
+
+## 22. B31: Polar Array — Implementation Details (2026-02-22)
+
+### 22.1 Architecture
+
+Δημιουργεί N οδηγούς σε ίσες γωνίες (360°/N) γύρω από κέντρο. Κάθε οδηγός είναι XZ diagonal (±10000 extent) που περνά μέσα από το center point.
+
+- **Workflow**: 1-click center → PromptDialog (count) → create N guides
+- **Αλγόριθμος**: angle_i = i × (360°/N), direction = (cos, sin), extend ±10000
+- **Min count**: 2 (validates in command + dialog)
+
+### 22.2 Core Components
+
+| Component | Role |
+|-----------|------|
+| `PolarArrayGuidesCommand` | ICommand — creates N XZ guides, stores for undo |
+| `isValid` getter | count ≥ 2 && angleIncrement > 0 |
+| `addDiagonalGuideRaw()` | Creates each spoke via GuideStore |
+| PromptDialog | Input for count (integer ≥ 2) |
+
+### 22.3 Key Differences from B2 (Auto Grid)
+
+| Aspect | B2 Auto Grid | B31 Polar Array |
+|--------|-------------|-----------------|
+| Pattern | Rectangular (X+Y) | Radial (XZ spokes) |
+| Input | Spacing pattern | Count |
+| Guides created | X + Y axis | XZ diagonal only |
+| Undo | Individual guides | Single PolarArrayGuidesCommand |
+
+### 22.4 Files Modified (Session 2026-02-22 — B31)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-polar-array'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `PolarArrayGuidesCommand` class (~85 lines) |
+| `hooks/state/useGuideState.ts` | `createPolarArray()` method |
+| `systems/events/EventBus.ts` | `grid:polar-array-created` event type |
+| `hooks/canvas/useCanvasClickHandler.ts` | 1-click center handler (PRIORITY 1.8996) |
+| `components/dxf-layout/CanvasSection.tsx` | `handlePolarArrayCenterSet` callback with PromptDialog |
+| `config/keyboard-shortcuts.ts` | G→2 chord (numeric key) |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_POLAR_ARRAY` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Radar icon |
+| i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts |
