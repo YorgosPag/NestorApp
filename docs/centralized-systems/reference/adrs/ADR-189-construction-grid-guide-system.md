@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 12 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B16 Guide at Angle ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 13 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -395,7 +395,7 @@
 | B13 | **Keyboard Shortcuts** | G+X=Οδηγός X, G+Z=Οδηγός Z, G+P=Παράλληλοι κ.λπ. | ⭐ Υψηλή |
 | B14 | **Multi-select οδηγών** | Batch operations: διαγραφή, lock, αλλαγή χρώματος πολλών | Μεσαία |
 | B15 | **Toggle ορατότητας** | Κουμπί εμφάνισης/απόκρυψης ΟΛΩΝ των οδηγών (χωρίς διαγραφή) | ⭐ Υψηλή |
-| B16 | **Οδηγός σε γωνία** | Κλικ + γωνία (π.χ. 45°) → λοξός οδηγός χωρίς 3 κλικ | Μεσαία |
+| B16 | ✅ **Οδηγός σε γωνία** | 1-click origin → PromptDialog γωνία → XZ guide (±10000 extent). Reuses `addDiagonalGuide`. G→4 | ✅ Υλοποιήθηκε |
 | B17 | **Copy/Offset pattern** | Αντιγραφή ομάδας οδηγών με μετατόπιση | Μεσαία |
 | B18 | **Coordinate labels** | Labels δίπλα στα X markers (x=5.00, z=3.00) — toggle | Χαμηλή |
 
@@ -1883,6 +1883,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **FIX: Terminology**: Αντικατάσταση «περασιά» → «οδηγός» σε ΟΛΟΥΣ τους i18n, JSDoc, και ADR-189 docs (55 replacements) |
 | 2026-02-22 | **B31: Polar Array (G→2)**: 1-click center → PromptDialog count → `PolarArrayGuidesCommand` creates N XZ diagonal guides at equal angles (360°/N). Full undo/redo. Radar icon. 14 files modified, 200 lines added |
 | 2026-02-22 | **B32: Scale Grid (G→3)**: 1-click origin → PromptDialog scale factor → `ScaleAllGuidesCommand` scales all visible/unlocked guides. X/Y keep axis type (linear offset scaling), XZ scales both endpoints. Preserves axis type unlike rotation. Scaling icon. 14 files, 223 lines added |
+| 2026-02-22 | **B16: Guide at Angle (G→4)**: 1-click origin → PromptDialog angle (degrees) → creates XZ guide through origin at typed angle. Reuses `addDiagonalGuide` (no new command). Compass icon. 11 files, 81 lines added |
 
 ---
 
@@ -2609,3 +2610,28 @@ click at worldPoint:
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Scaling icon |
 | i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles (scale factor) |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts (G→3) |
+
+## 24. B16: Guide at Angle — Implementation Details (2026-02-22)
+
+### 24.1 Architecture
+
+Δημιουργεί λοξό (XZ) οδηγό μέσω σημείου σε πληκτρολογημένη γωνία. Αντί για 3 clicks (XZ tool), αρκεί **1 click + γωνία**. Επαναχρησιμοποιεί πλήρως την υπάρχουσα `addDiagonalGuide` — **δεν απαιτεί νέα command class**.
+
+- **Workflow**: 1-click origin → PromptDialog (angle degrees) → `addDiagonalGuide(start, end)`
+- **Math**: `rad = angle × π/180`, `dx = cos(rad) × 10000`, `dy = sin(rad) × 10000`
+- **Start/End**: `origin ± (dx, dy)` — symmetric ±10000 extent through origin
+- **0° = horizontal** (positive X direction), **90° = vertical** (positive Y)
+
+### 24.2 Files Modified (Session 2026-02-22 — B16)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-angle'` added to ToolType union |
+| `hooks/canvas/useCanvasClickHandler.ts` | 1-click origin handler (PRIORITY 1.8998) |
+| `components/dxf-layout/CanvasSection.tsx` | `handleGuideAngleOriginSet` callback with PromptDialog |
+| `config/keyboard-shortcuts.ts` | G→4 chord (numeric key) |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_ANGLE` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Compass icon |
+| i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles (angle) |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts (G→4) |
