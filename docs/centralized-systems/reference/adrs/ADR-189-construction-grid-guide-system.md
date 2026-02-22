@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B36 Measure→Guide ✅. 14/14 commands + 6 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B36 Measure→Guide ✅. 14/14 commands + 7 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -479,7 +479,7 @@
 
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
-| B28 | **Περιστροφή μεμονωμένης περασιάς** | Επιλογή περασιάς → ορισμός κέντρου περιστροφής → γωνία (keyboard ή drag) → real-time preview | ⭐ Υψηλή |
+| B28 | **Περιστροφή μεμονωμένης περασιάς** ✅ | Επιλογή περασιάς → ορισμός κέντρου περιστροφής → γωνία (PromptDialog keyboard) → X/Y→XZ μετατροπή | ✅ Υλοποιήθηκε |
 | B29 | **Περιστροφή ομάδας περασιών** | Multi-select πολλαπλών περασιών → κοινή περιστροφή γύρω από σημείο | ⭐ Υψηλή |
 | B30 | **Περιστροφή ολόκληρου κάνναβου** | ΟΛΕΣ οι περασιές + snap points περιστρέφονται μαζί — "global grid rotation" | ⭐ Υψηλή |
 
@@ -1876,6 +1876,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **B36: Measure → Guide Integration**: `onMeasurementComplete` callback chain (useDrawingHandlers → useCanvasEffects → CanvasSection). Toast notification with "Create Guides" action button. Auto-creates X/Y guides at measurement points |
 | 2026-02-22 | **FIX: B6 Color palette**: Changed `onClick` to `onSelect` with `preventDefault()` — prevents Radix DropdownMenu auto-close |
 | 2026-02-22 | **FIX: Y-axis rendering**: Dimensions AND bubbles moved from LEFT to RIGHT edge — away from vertical ruler |
+| 2026-02-22 | **B28: Guide Rotation (G→H)**: 2-step workflow (click guide → click pivot) + PromptDialog for angle. `RotateGuideCommand` with full undo/redo. X/Y→XZ axis conversion (±10000 extent). `replaceGuideWithRotated()` + `restoreGuideSnapshot()` in GuideStore. 13 files modified, 344 lines added |
 
 ---
 
@@ -2317,3 +2318,64 @@ Screen-space distance labels between consecutive guides:
 | `hooks/drawing/useDrawingHandlers.ts` | B36 MEASURE_TOOLS_FOR_GUIDES, onMeasurementComplete callback |
 | `constants/property-statuses-enterprise.ts` | B2 GUIDE_GRID label |
 | i18n (el/en dxf-viewer.json + tool-hints.json) | B2, B6, B36 translations |
+
+## 18. B28: Guide Rotation — Implementation Details (2026-02-22)
+
+### 18.1 Architecture
+
+3-step workflow: Click guide → Click pivot → PromptDialog for angle (degrees).
+X/Y axis guides convert to XZ (diagonal) after rotation — finite ±10000 unit segments centered on pivot.
+XZ guides rotate their existing startPoint/endPoint. Full undo restores original axis type via snapshot.
+
+### 18.2 Core Components
+
+| Component | Purpose |
+|-----------|---------|
+| `RotateGuideCommand` | ICommand — pre-calculates rotated endpoints, stores Guide snapshot for undo |
+| `GuideStore.replaceGuideWithRotated()` | Replaces guide with new XZ endpoints, preserves id/label/style/locked |
+| `GuideStore.restoreGuideSnapshot()` | Full snapshot restore for undo — reverts axis type + offset |
+| `useGuideState.rotateGuide()` | Creates + executes RotateGuideCommand, emits `grid:guide-rotated` |
+| `useCanvasClickHandler` | Step 0: find nearest guide (30px), Step 1: set pivot point |
+| `CanvasSection` | State management, PromptDialog trigger, highlight integration |
+
+### 18.3 Axis Conversion Logic
+
+```
+X (vertical, offset=100) → segment [(100, pivot.y-10000), (100, pivot.y+10000)] → rotatePoint() → XZ
+Y (horizontal, offset=200) → segment [(pivot.x-10000, 200), (pivot.x+10000, 200)] → rotatePoint() → XZ
+XZ (diagonal) → existing startPoint/endPoint → rotatePoint() → XZ (same type)
+```
+
+### 18.4 Edge Cases
+
+| Case | Handling |
+|------|---------|
+| Locked guide | Skipped in hit-test |
+| Invisible guide | Skipped in hit-test |
+| Angle=0 or 360 | Rejected (no-op) |
+| NaN input | Rejected by PromptDialog validation |
+| Undo X/Y→XZ | `restoreGuideSnapshot()` restores original axis + offset |
+
+### 18.5 Reused Systems
+
+- `rotatePoint()` from `utils/rotation-math.ts` — zero new math code
+- `PromptDialog` (centralized) — same pattern as parallel distance
+- `ICommand` interface — enterprise command pattern
+- Guide highlight — existing `needsToolHighlight` logic
+- Keyboard chord G→H — existing leader key pattern (350ms window)
+
+### 18.6 Files Modified (Session 2026-02-22 — B28)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-rotate'` added to ToolType union |
+| `systems/guides/guide-store.ts` | `replaceGuideWithRotated()`, `restoreGuideSnapshot()` methods |
+| `systems/guides/guide-commands.ts` | `RotateGuideCommand` class (~100 lines) |
+| `hooks/state/useGuideState.ts` | `rotateGuide()` method, EventBus emit |
+| `hooks/canvas/useCanvasClickHandler.ts` | 2-step guide-rotate handler (PRIORITY 1.8992) |
+| `components/dxf-layout/CanvasSection.tsx` | State, callbacks, PromptDialog, highlight, tool hint override |
+| `config/keyboard-shortcuts.ts` | G→H chord for guide-rotate |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with RotateCw icon |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_ROTATE` label |
+| i18n (el/en dxf-viewer.json) | Tool labels, PromptDialog titles |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, steps, shortcuts |
