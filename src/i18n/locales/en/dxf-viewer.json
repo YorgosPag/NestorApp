@@ -1462,7 +1462,8 @@
     "guideGrid": "Auto Grid",
     "guideRotate": "Rotate Guide",
     "guideRotateAll": "Rotate All Guides",
-    "guideRotateGroup": "Rotate Guide Group"
+    "guideRotateGroup": "Rotate Guide Group",
+    "guideEqualize": "Equalize Guide Spacing"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1661,6 +1662,7 @@
   },
   "guides": {
     "measureToGuide": "Create guides at measurement points?",
-    "createGuides": "Create Guides"
+    "createGuides": "Create Guides",
+    "equalizeRequiresSameAxis": "Equalize requires 3+ guides on the same axis (X or Y)"
   }
 }

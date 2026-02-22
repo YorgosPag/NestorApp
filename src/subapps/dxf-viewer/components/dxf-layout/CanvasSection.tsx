@@ -314,6 +314,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-189 B29: Group rotation — selected guide IDs
   const [rotateGroupSelectedIds, setRotateGroupSelectedIds] = useState<Set<string>>(new Set());
 
+  // ADR-189 B33: Equalize — selected guide IDs
+  const [equalizeSelectedIds, setEqualizeSelectedIds] = useState<Set<string>>(new Set());
+
   // ADR-189: Reset parallel reference when switching away from guide-parallel tool
   useEffect(() => {
     if (activeTool !== 'guide-parallel') {
@@ -332,6 +335,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useEffect(() => {
     if (activeTool !== 'guide-rotate-group') {
       setRotateGroupSelectedIds(new Set());
+    }
+  }, [activeTool]);
+
+  // ADR-189 B33: Reset equalize state when switching away
+  useEffect(() => {
+    if (activeTool !== 'guide-equalize') {
+      setEqualizeSelectedIds(new Set());
     }
   }, [activeTool]);
 
@@ -439,6 +449,28 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       return next;
     });
   }, []);
+
+  // ADR-189 B33: Toggle guide selection for equalization
+  const handleEqualizeToggle = useCallback((guideId: string) => {
+    setEqualizeSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(guideId)) {
+        next.delete(guideId);
+      } else {
+        next.add(guideId);
+      }
+      return next;
+    });
+  }, []);
+
+  // ADR-189 B33: Apply equalization — immediate execution (no dialog)
+  const handleEqualizeApply = useCallback((guideIds: readonly string[]) => {
+    const cmd = guideState.equalizeGuides(guideIds);
+    if (!cmd.isValid) {
+      notifyWarning(t('guides.equalizeRequiresSameAxis'));
+    }
+    setEqualizeSelectedIds(new Set());
+  }, [guideState, notifyWarning, t]);
 
   // ADR-189 B29: Pivot set for group rotation → open angle dialog
   const handleRotateGroupPivotSet = useCallback((guideIds: readonly string[], pivot: Point2D) => {
@@ -673,10 +705,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       toolHintOverrideStore.setStepOverride(rotateRefGuideId ? 1 : 0);
     } else if (activeTool === 'guide-rotate-group') {
       toolHintOverrideStore.setStepOverride(rotateGroupSelectedIds.size > 0 ? 1 : 0);
+    } else if (activeTool === 'guide-equalize') {
+      toolHintOverrideStore.setStepOverride(equalizeSelectedIds.size >= 3 ? 1 : 0);
     } else {
       toolHintOverrideStore.setStepOverride(null);
     }
-  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep, rotateRefGuideId, rotateGroupSelectedIds]);
+  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep, rotateRefGuideId, rotateGroupSelectedIds, equalizeSelectedIds]);
 
   // ADR-189 §3.9: Arc segments picked → prompt for segment count
   const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
@@ -868,7 +902,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       activeTool === 'guide-move' ||
       (activeTool === 'guide-parallel' && !parallelRefGuideId) ||
       (activeTool === 'guide-rotate' && !rotateRefGuideId) ||
-      activeTool === 'guide-rotate-group';
+      activeTool === 'guide-rotate-group' ||
+      activeTool === 'guide-equalize';
 
     if (needsToolHighlight) {
       const hitToleranceWorld = 30 / transform.scale;
@@ -1294,6 +1329,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     rotateGroupSelectedIds,
     onRotateGroupToggle: handleRotateGroupToggle,
     onRotateGroupPivotSet: handleRotateGroupPivotSet,
+    // ADR-189 B33: Equalize guide spacing
+    equalizeSelectedIds,
+    onEqualizeToggle: handleEqualizeToggle,
+    onEqualizeApply: handleEqualizeApply,
   });
 
   const { handleSmartDelete } = useSmartDelete({

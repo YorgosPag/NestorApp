@@ -278,7 +278,7 @@ export class CreateParallelGuideCommand implements ICommand {
  * Command for creating a diagonal (XZ) construction guide.
  * Defined by start and end points. Supports undo (remove) and redo (re-add).
  *
- * @see ADR-189 §3.3 (Περασιά XZ — 3-click diagonal guide)
+ * @see ADR-189 §3.3 (Οδηγός XZ — 3-click diagonal guide)
  */
 export class CreateDiagonalGuideCommand implements ICommand {
   readonly id: string;
@@ -462,7 +462,7 @@ const ROTATION_EXTENT = 10_000;
  * Stores full original guide snapshot for perfect undo — restoring
  * the original axis, offset, and endpoint state.
  *
- * @see ADR-189 B28 (Περιστροφή μεμονωμένης περασιάς)
+ * @see ADR-189 B28 (Περιστροφή μεμονωμένου οδηγού)
  * @see rotation-math.ts (rotatePoint — Translate-Rotate-Translate method)
  */
 export class RotateGuideCommand implements ICommand {
@@ -700,6 +700,119 @@ export class RotateAllGuidesCommand implements ICommand {
 }
 
 // ============================================================================
+// EQUALIZE GUIDES COMMAND (B33)
+// ============================================================================
+
+/**
+ * Command for equalizing spacing between 3+ same-axis guides.
+ *
+ * Keeps the first (lowest offset) and last (highest offset) guides in place,
+ * then redistributes all intermediate guides with equal spacing.
+ *
+ * Requirements:
+ * - All selected guides must share the same axis (X or Y)
+ * - XZ (diagonal) guides are excluded — equalization is offset-based
+ * - Minimum 3 guides required
+ *
+ * @see ADR-189 B33 (Smart Equalize — ισαπόσταση παράλληλων οδηγών)
+ */
+export class EqualizeGuidesCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'EqualizeGuides';
+  readonly type = 'equalize-guides';
+  readonly timestamp: number;
+
+  /** Original offsets keyed by guide.id (for undo) */
+  private readonly originalOffsets: Map<string, number> = new Map();
+  /** New equalized offsets keyed by guide.id */
+  private readonly newOffsets: Map<string, number> = new Map();
+  /** Computed spacing (for event emission) */
+  readonly spacing: number;
+
+  constructor(
+    private readonly store: GuideStore,
+    guideIds: readonly string[],
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+    this.spacing = 0;
+
+    // Collect valid guides (exist + same axis + not XZ)
+    const guides: Guide[] = [];
+    for (const gid of guideIds) {
+      const g = store.getGuideById(gid);
+      if (g && g.axis !== 'XZ') guides.push(g);
+    }
+
+    if (guides.length < 3) return;
+
+    // Validate: all must be on the same axis
+    const firstAxis = guides[0].axis;
+    if (!guides.every(g => g.axis === firstAxis)) return;
+
+    // Sort by offset ascending
+    const sorted = [...guides].sort((a, b) => a.offset - b.offset);
+    const firstOffset = sorted[0].offset;
+    const lastOffset = sorted[sorted.length - 1].offset;
+    this.spacing = (lastOffset - firstOffset) / (sorted.length - 1);
+
+    // Pre-compute new offsets
+    for (let i = 0; i < sorted.length; i++) {
+      this.originalOffsets.set(sorted[i].id, sorted[i].offset);
+      this.newOffsets.set(sorted[i].id, firstOffset + i * this.spacing);
+    }
+  }
+
+  /** Whether the command has valid work to do */
+  get isValid(): boolean {
+    return this.newOffsets.size >= 3;
+  }
+
+  execute(): void {
+    for (const [guideId, offset] of this.newOffsets) {
+      this.store.moveGuideById(guideId, offset);
+    }
+  }
+
+  undo(): void {
+    for (const [guideId, offset] of this.originalOffsets) {
+      this.store.moveGuideById(guideId, offset);
+    }
+  }
+
+  redo(): void {
+    this.execute();
+  }
+
+  getDescription(): string {
+    return `Equalize ${this.newOffsets.size} guides (equal spacing)`;
+  }
+
+  canMergeWith(): boolean {
+    return false;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: {
+        guideCount: this.newOffsets.size,
+        originalOffsets: Object.fromEntries(this.originalOffsets),
+        newOffsets: Object.fromEntries(this.newOffsets),
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return Array.from(this.newOffsets.keys());
+  }
+}
+
+// ============================================================================
 // ROTATE GUIDE GROUP COMMAND (B29)
 // ============================================================================
 
@@ -709,7 +822,7 @@ export class RotateAllGuidesCommand implements ICommand {
  * Same geometry as RotateAllGuidesCommand but only operates on explicitly
  * provided guide IDs. Stores full snapshots for batch undo.
  *
- * @see ADR-189 B29 (Περιστροφή ομάδας περασιών)
+ * @see ADR-189 B29 (Περιστροφή ομάδας οδηγών)
  * @see RotateAllGuidesCommand (B30) — same pattern, broader scope
  */
 export class RotateGuideGroupCommand implements ICommand {

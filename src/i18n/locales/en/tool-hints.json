@@ -516,6 +516,15 @@
         "Click empty area to set pivot"
       ],
       "shortcuts": "G→F | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-equalize": {
+      "name": "Equalize Guide Spacing",
+      "description": "Select 3+ same-axis guides then equalize their spacing",
+      "steps": [
+        "🔵 Click on 3+ guides on the same axis to select",
+        "🟢 Click empty area to apply equal spacing"
+      ],
+      "shortcuts": "G→Y | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {

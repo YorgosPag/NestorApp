@@ -1454,9 +1454,10 @@
     "guideLineMidpoint": "Μέσο Ευθυγράμμου",
     "guideCircleCenter": "Κέντρο Κύκλου",
     "guideGrid": "Αυτόματο Πλέγμα",
-    "guideRotate": "Περιστροφή Περασιάς",
+    "guideRotate": "Περιστροφή Οδηγού",
     "guideRotateAll": "Περιστροφή Κάνναβου",
-    "guideRotateGroup": "Περιστροφή Ομάδας"
+    "guideRotateGroup": "Περιστροφή Ομάδας",
+    "guideEqualize": "Ισαπόσταση Οδηγών"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1486,7 +1487,7 @@
     "gridPattern": "Αυτόματη Κάνναβος",
     "enterGridPattern": "Μοτίβο αποστάσεων (π.χ. 5x4 ή 5,3,7)",
     "gridPatternPlaceholder": "π.χ. 5x4 ή 5,3,7",
-    "rotateGuideAngle": "Γωνία Περιστροφής Περασιάς",
+    "rotateGuideAngle": "Γωνία Περιστροφής Οδηγού",
     "rotateAllGuidesAngle": "Περιστροφή Κάνναβου — Γωνία",
     "rotateGuideGroupAngle": "Περιστροφή Ομάδας — Γωνία",
     "enterRotateAngle": "Εισαγωγή γωνίας σε μοίρες (θετική = αριστερόστροφα)",
@@ -1655,6 +1656,7 @@
   },
   "guides": {
     "measureToGuide": "Δημιουργία οδηγών στα σημεία μέτρησης;",
-    "createGuides": "Δημιουργία Οδηγών"
+    "createGuides": "Δημιουργία Οδηγών",
+    "equalizeRequiresSameAxis": "Η ισαπόσταση απαιτεί 3+ οδηγούς στον ίδιο άξονα (X ή Y)"
   }
 }

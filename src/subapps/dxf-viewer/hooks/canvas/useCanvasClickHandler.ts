@@ -260,6 +260,14 @@ export interface UseCanvasClickHandlerParams {
   onRotateGroupToggle?: (guideId: string) => void;
   /** Set pivot for group rotation (fires when clicking empty space with ≥1 selected) */
   onRotateGroupPivotSet?: (guideIds: readonly string[], pivot: Point2D) => void;
+
+  // ── ADR-189 B33: Equalize guide spacing tool ──────────────────────
+  /** Set of currently selected guide IDs for equalization */
+  equalizeSelectedIds?: ReadonlySet<string>;
+  /** Toggle a guide in/out of the equalize selection */
+  onEqualizeToggle?: (guideId: string) => void;
+  /** Apply equalization (fires when clicking empty space with ≥3 same-axis selected) */
+  onEqualizeApply?: (guideIds: readonly string[]) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -314,6 +322,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onRotateAllPivotSet,
     // ADR-189 B29: Rotate guide group
     rotateGroupSelectedIds, onRotateGroupToggle, onRotateGroupPivotSet,
+    // ADR-189 B33: Equalize guide spacing
+    equalizeSelectedIds, onEqualizeToggle, onEqualizeApply,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -1060,6 +1070,40 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       if (!nearestGuide && rotateGroupSelectedIds && rotateGroupSelectedIds.size > 0 && onRotateGroupPivotSet) {
         onRotateGroupPivotSet(Array.from(rotateGroupSelectedIds), worldPoint);
         dlog('useCanvasClickHandler', 'Rotate-group: pivot set', worldPoint);
+        return;
+      }
+      return;
+    }
+
+    // PRIORITY 1.8995: ADR-189 B33 — Equalize guide spacing (click guides → click empty = apply)
+    if (activeTool === 'guide-equalize' && guides && guides.length > 0) {
+      const hitToleranceWorld = 30 / transform.scale;
+
+      // Find nearest guide within tolerance (X/Y only — XZ excluded from equalization)
+      let nearestGuide: Guide | undefined;
+      let nearestDist = hitToleranceWorld;
+      for (const guide of guides) {
+        if (!guide.visible || guide.locked || guide.axis === 'XZ') continue;
+        const dist = guide.axis === 'X'
+          ? Math.abs(worldPoint.x - guide.offset)
+          : Math.abs(worldPoint.y - guide.offset);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestGuide = guide;
+        }
+      }
+
+      if (nearestGuide && onEqualizeToggle) {
+        // Clicked near a guide → toggle its selection
+        onEqualizeToggle(nearestGuide.id);
+        dlog('useCanvasClickHandler', 'Equalize: toggled guide', nearestGuide.id);
+        return;
+      }
+
+      // Clicked empty space → apply equalization (if ≥3 same-axis guides selected)
+      if (!nearestGuide && equalizeSelectedIds && equalizeSelectedIds.size >= 3 && onEqualizeApply) {
+        onEqualizeApply(Array.from(equalizeSelectedIds));
+        dlog('useCanvasClickHandler', 'Equalize: applied', equalizeSelectedIds.size, 'guides');
         return;
       }
       return;

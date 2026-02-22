@@ -86,6 +86,7 @@ export interface DrawingEventMap {
   'grid:guide-rotated': { guideId: string; angleDeg: number };
   'grid:all-guides-rotated': { angleDeg: number; pivot: { x: number; y: number } };
   'grid:guide-group-rotated': { guideIds: readonly string[]; angleDeg: number; pivot: { x: number; y: number } };
+  'grid:guides-equalized': { guideIds: readonly string[]; spacing: number };
   'grid:group-created': { group: GridGroup };
   'grid:snap-toggled': { enabled: boolean };
   // 🏢 ADR-189 §4.13: Guide panel → canvas highlight communication
