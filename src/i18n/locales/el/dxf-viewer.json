@@ -1455,7 +1455,8 @@
     "guideCircleCenter": "Κέντρο Κύκλου",
     "guideGrid": "Αυτόματο Πλέγμα",
     "guideRotate": "Περιστροφή Περασιάς",
-    "guideRotateAll": "Περιστροφή Κάνναβου"
+    "guideRotateAll": "Περιστροφή Κάνναβου",
+    "guideRotateGroup": "Περιστροφή Ομάδας"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1487,6 +1488,7 @@
     "gridPatternPlaceholder": "π.χ. 5x4 ή 5,3,7",
     "rotateGuideAngle": "Γωνία Περιστροφής Περασιάς",
     "rotateAllGuidesAngle": "Περιστροφή Κάνναβου — Γωνία",
+    "rotateGuideGroupAngle": "Περιστροφή Ομάδας — Γωνία",
     "enterRotateAngle": "Εισαγωγή γωνίας σε μοίρες (θετική = αριστερόστροφα)",
     "rotateAnglePlaceholder": "45"
   },

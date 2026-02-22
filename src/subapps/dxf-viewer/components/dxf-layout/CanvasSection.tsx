@@ -311,6 +311,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-189 B28: Guide rotation workflow state
   const [rotateRefGuideId, setRotateRefGuideId] = useState<string | null>(null);
 
+  // ADR-189 B29: Group rotation — selected guide IDs
+  const [rotateGroupSelectedIds, setRotateGroupSelectedIds] = useState<Set<string>>(new Set());
+
   // ADR-189: Reset parallel reference when switching away from guide-parallel tool
   useEffect(() => {
     if (activeTool !== 'guide-parallel') {
@@ -322,6 +325,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useEffect(() => {
     if (activeTool !== 'guide-rotate') {
       setRotateRefGuideId(null);
+    }
+  }, [activeTool]);
+
+  // ADR-189 B29: Reset group rotation state when switching away
+  useEffect(() => {
+    if (activeTool !== 'guide-rotate-group') {
+      setRotateGroupSelectedIds(new Set());
     }
   }, [activeTool]);
 
@@ -414,6 +424,43 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           guideState.rotateAllGuides(pivot, angleDeg);
         }
       }
+    });
+  }, [showPromptDialog, t, guideState]);
+
+  // ADR-189 B29: Toggle guide selection for group rotation
+  const handleRotateGroupToggle = useCallback((guideId: string) => {
+    setRotateGroupSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(guideId)) {
+        next.delete(guideId);
+      } else {
+        next.add(guideId);
+      }
+      return next;
+    });
+  }, []);
+
+  // ADR-189 B29: Pivot set for group rotation → open angle dialog
+  const handleRotateGroupPivotSet = useCallback((guideIds: readonly string[], pivot: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.rotateGuideGroupAngle'),
+      label: t('promptDialog.enterRotateAngle'),
+      placeholder: t('promptDialog.rotateAnglePlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n)) return t('promptDialog.invalidNumber');
+        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const angleDeg = parseFloat(result);
+        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
+          guideState.rotateGuideGroup(guideIds, pivot, angleDeg);
+        }
+      }
+      setRotateGroupSelectedIds(new Set());
     });
   }, [showPromptDialog, t, guideState]);
 
@@ -624,10 +671,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       toolHintOverrideStore.setStepOverride(circleIntersectStep);
     } else if (activeTool === 'guide-rotate') {
       toolHintOverrideStore.setStepOverride(rotateRefGuideId ? 1 : 0);
+    } else if (activeTool === 'guide-rotate-group') {
+      toolHintOverrideStore.setStepOverride(rotateGroupSelectedIds.size > 0 ? 1 : 0);
     } else {
       toolHintOverrideStore.setStepOverride(null);
     }
-  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep, rotateRefGuideId]);
+  }, [activeTool, perpRefGuideId, diagonalStep, parallelRefGuideId, segmentsStep, distanceStep, arcLineStep, circleIntersectStep, rotateRefGuideId, rotateGroupSelectedIds]);
 
   // ADR-189 §3.9: Arc segments picked → prompt for segment count
   const handleArcSegmentsPicked = useCallback((entity: ArcPickableEntity) => {
@@ -818,7 +867,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       (activeTool === 'guide-perpendicular' && !perpRefGuideId) ||
       activeTool === 'guide-move' ||
       (activeTool === 'guide-parallel' && !parallelRefGuideId) ||
-      (activeTool === 'guide-rotate' && !rotateRefGuideId);
+      (activeTool === 'guide-rotate' && !rotateRefGuideId) ||
+      activeTool === 'guide-rotate-group';
 
     if (needsToolHighlight) {
       const hitToleranceWorld = 30 / transform.scale;
@@ -1240,6 +1290,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onRotatePivotSet: handleRotatePivotSet,
     // ADR-189 B30: Rotate all guides
     onRotateAllPivotSet: handleRotateAllPivotSet,
+    // ADR-189 B29: Rotate guide group
+    rotateGroupSelectedIds,
+    onRotateGroupToggle: handleRotateGroupToggle,
+    onRotateGroupPivotSet: handleRotateGroupPivotSet,
   });
 
   const { handleSmartDelete } = useSmartDelete({

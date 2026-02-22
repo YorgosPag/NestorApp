@@ -1447,6 +1447,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_GRID: 'tools.guideGrid',
   GUIDE_ROTATE: 'tools.guideRotate',
   GUIDE_ROTATE_ALL: 'tools.guideRotateAll',
+  GUIDE_ROTATE_GROUP: 'tools.guideRotateGroup',
 } as const;
 
 /**

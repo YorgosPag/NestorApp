@@ -67,7 +67,8 @@ export type ToolType =
   | 'guide-circle-center'     // Construction point at center of circle/arc entity
   | 'guide-grid'              // ADR-189 B2: Automatic grid generation
   | 'guide-rotate'            // ADR-189 B28: Rotate guide by typed angle
-  | 'guide-rotate-all';       // ADR-189 B30: Rotate all guides around pivot
+  | 'guide-rotate-all'        // ADR-189 B30: Rotate all guides around pivot
+  | 'guide-rotate-group';     // ADR-189 B29: Rotate selected group of guides
 
 
 export interface ToolDefinition {

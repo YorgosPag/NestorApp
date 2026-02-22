@@ -252,6 +252,14 @@ export interface UseCanvasClickHandlerParams {
   // ── ADR-189 B30: Rotate all guides tool ──────────────────────────
   /** Step 0 callback: user clicked pivot → opens angle dialog for all guides */
   onRotateAllPivotSet?: (pivot: Point2D) => void;
+
+  // ── ADR-189 B29: Rotate guide group tool ─────────────────────────
+  /** Set of currently selected guide IDs for group rotation */
+  rotateGroupSelectedIds?: ReadonlySet<string>;
+  /** Toggle a guide in/out of the group selection */
+  onRotateGroupToggle?: (guideId: string) => void;
+  /** Set pivot for group rotation (fires when clicking empty space with ≥1 selected) */
+  onRotateGroupPivotSet?: (guideIds: readonly string[], pivot: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -304,6 +312,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     rotateRefGuideId, onRotateRefSelected, onRotatePivotSet,
     // ADR-189 B30: Rotate all guides
     onRotateAllPivotSet,
+    // ADR-189 B29: Rotate guide group
+    rotateGroupSelectedIds, onRotateGroupToggle, onRotateGroupPivotSet,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -1013,6 +1023,45 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (activeTool === 'guide-rotate-all' && onRotateAllPivotSet && guides && guides.length > 0) {
       onRotateAllPivotSet(worldPoint);
       dlog('useCanvasClickHandler', 'Rotate-all: pivot set', worldPoint);
+      return;
+    }
+
+    // PRIORITY 1.8994: ADR-189 B29 — Rotate guide GROUP (click guides → click empty = pivot)
+    if (activeTool === 'guide-rotate-group' && guides && guides.length > 0) {
+      const hitToleranceWorld = 30 / transform.scale;
+
+      // Find nearest guide within tolerance
+      let nearestGuide: Guide | undefined;
+      let nearestDist = hitToleranceWorld;
+      for (const guide of guides) {
+        if (!guide.visible || guide.locked) continue;
+        let dist: number;
+        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+          dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
+        } else {
+          dist = guide.axis === 'X'
+            ? Math.abs(worldPoint.x - guide.offset)
+            : Math.abs(worldPoint.y - guide.offset);
+        }
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestGuide = guide;
+        }
+      }
+
+      if (nearestGuide && onRotateGroupToggle) {
+        // Clicked near a guide → toggle its selection
+        onRotateGroupToggle(nearestGuide.id);
+        dlog('useCanvasClickHandler', 'Rotate-group: toggled guide', nearestGuide.id);
+        return;
+      }
+
+      // Clicked empty space → set pivot (if at least 1 guide selected)
+      if (!nearestGuide && rotateGroupSelectedIds && rotateGroupSelectedIds.size > 0 && onRotateGroupPivotSet) {
+        onRotateGroupPivotSet(Array.from(rotateGroupSelectedIds), worldPoint);
+        dlog('useCanvasClickHandler', 'Rotate-group: pivot set', worldPoint);
+        return;
+      }
       return;
     }
 

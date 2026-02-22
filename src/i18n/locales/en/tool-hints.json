@@ -507,6 +507,15 @@
         "Click to set rotation pivot point"
       ],
       "shortcuts": "G→J | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-rotate-group": {
+      "name": "Rotate Guide Group",
+      "description": "Select guides then rotate as a group",
+      "steps": [
+        "Click guides to select (toggle)",
+        "Click empty area to set pivot"
+      ],
+      "shortcuts": "G→F | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {

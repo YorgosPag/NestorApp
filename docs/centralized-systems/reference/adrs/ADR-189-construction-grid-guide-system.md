@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B30 Rotate All ✅, B36 Measure→Guide ✅. 14/14 commands + 8 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B36 Measure→Guide ✅. 14/14 commands + 9 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -480,7 +480,7 @@
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
 | B28 | **Περιστροφή μεμονωμένης περασιάς** ✅ | Επιλογή περασιάς → ορισμός κέντρου περιστροφής → γωνία (PromptDialog keyboard) → X/Y→XZ μετατροπή | ✅ Υλοποιήθηκε |
-| B29 | **Περιστροφή ομάδας περασιών** | Multi-select πολλαπλών περασιών → κοινή περιστροφή γύρω από σημείο | ⭐ Υψηλή |
+| B29 | **Περιστροφή ομάδας περασιών** ✅ | Click guides → toggle selection → click empty → PromptDialog γωνία → `RotateGuideGroupCommand` | ✅ Υλοποιήθηκε |
 | B30 | **Περιστροφή ολόκληρου κάνναβου** ✅ | 1-click pivot → PromptDialog γωνία → RotateAllGuidesCommand σε ΟΛΕΣ τις visible/unlocked περασιές | ✅ Υλοποιήθηκε |
 
 **Workflow περιστροφής μεμονωμένης (B28):**
@@ -1878,6 +1878,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **FIX: Y-axis rendering**: Dimensions AND bubbles moved from LEFT to RIGHT edge — away from vertical ruler |
 | 2026-02-22 | **B28: Guide Rotation (G→H)**: 2-step workflow (click guide → click pivot) + PromptDialog for angle. `RotateGuideCommand` with full undo/redo. X/Y→XZ axis conversion (±10000 extent). `replaceGuideWithRotated()` + `restoreGuideSnapshot()` in GuideStore. 13 files modified, 344 lines added |
 | 2026-02-22 | **B30: Rotate All Guides (G→J)**: 1-click pivot → PromptDialog for angle → `RotateAllGuidesCommand` applies rotation to ALL visible/unlocked guides atomically. Batch undo restores all original snapshots. Reuses B28 geometry (±10000 extent, `rotatePoint()`). 10 files modified |
+| 2026-02-22 | **B29: Rotate Guide Group (G→F)**: Click guides → toggle selection (multi-select) → click empty space → pivot → PromptDialog angle → `RotateGuideGroupCommand`. Smart click: near guide=toggle, far=pivot. Set-based selection state. 12 files modified |
 
 ---
 
@@ -2423,3 +2424,47 @@ Full batch undo restores all original Guide snapshots in reverse order.
 | `constants/property-statuses-enterprise.ts` | `GUIDE_ROTATE_ALL` label |
 | i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, steps, shortcuts |
+
+## 20. B29: Rotate Guide Group — Implementation Details (2026-02-22)
+
+### 20.1 Architecture
+
+Smart 2-phase workflow without explicit mode switching:
+- **Click near guide** (<30px tolerance) → toggles guide in/out of selection Set
+- **Click empty space** (no guide within tolerance, ≥1 guide selected) → sets pivot → PromptDialog
+
+`RotateGuideGroupCommand` reuses same geometry as B28/B30 but only operates on explicitly provided guide IDs.
+
+### 20.2 Core Components
+
+| Component | Purpose |
+|-----------|---------|
+| `RotateGuideGroupCommand` | ICommand — operates on `guideIds: readonly string[]`, same geometry as B30 |
+| `useGuideState.rotateGuideGroup()` | Creates + executes command, emits `grid:guide-group-rotated` |
+| `useCanvasClickHandler` | Smart click: near guide=toggle selection, far=set pivot |
+| `CanvasSection` | `rotateGroupSelectedIds: Set<string>`, toggle/pivot callbacks |
+
+### 20.3 Smart Click Detection
+
+```
+click at worldPoint:
+  1. Find nearest guide within 30px tolerance
+  2. If found → toggle its membership in rotateGroupSelectedIds
+  3. If NOT found AND selectedIds.size > 0 → worldPoint becomes pivot → PromptDialog
+  4. If NOT found AND selectedIds.size = 0 → no-op
+```
+
+### 20.4 Files Modified (Session 2026-02-22 — B29)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-rotate-group'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `RotateGuideGroupCommand` class |
+| `hooks/state/useGuideState.ts` | `rotateGuideGroup()` method |
+| `hooks/canvas/useCanvasClickHandler.ts` | Smart click handler (PRIORITY 1.8994) |
+| `components/dxf-layout/CanvasSection.tsx` | Set-based selection state, toggle/pivot callbacks, hint override, highlight |
+| `config/keyboard-shortcuts.ts` | G→F chord |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_ROTATE_GROUP` label |
+| i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts |

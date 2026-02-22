@@ -12,7 +12,7 @@
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
@@ -50,6 +50,8 @@ export interface UseGuideStateReturn {
   rotateGuide: (guideId: string, pivot: Point2D, angleDeg: number) => RotateGuideCommand;
   /** Rotate ALL visible, unlocked guides around a pivot point. Returns the command for undo. */
   rotateAllGuides: (pivot: Point2D, angleDeg: number) => RotateAllGuidesCommand;
+  /** Rotate a selected group of guides around a pivot point. Returns the command for undo. */
+  rotateGuideGroup: (guideIds: readonly string[], pivot: Point2D, angleDeg: number) => RotateGuideGroupCommand;
   /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
   getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
@@ -173,6 +175,13 @@ export function useGuideState(): UseGuideStateReturn {
     return cmd;
   }, [store]);
 
+  const rotateGuideGroup = useCallback((guideIds: readonly string[], pivot: Point2D, angleDeg: number): RotateGuideGroupCommand => {
+    const cmd = new RotateGuideGroupCommand(store, guideIds, pivot, angleDeg);
+    cmd.execute();
+    EventBus.emit('grid:guide-group-rotated', { guideIds, angleDeg, pivot });
+    return cmd;
+  }, [store]);
+
   const getStore = useCallback(() => store, [store]);
 
   return {
@@ -186,6 +195,7 @@ export function useGuideState(): UseGuideStateReturn {
     addDiagonalGuide,
     rotateGuide,
     rotateAllGuides,
+    rotateGuideGroup,
     toggleVisibility,
     toggleSnap,
     clearAll,

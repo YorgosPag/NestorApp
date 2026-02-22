@@ -1461,7 +1461,8 @@
     "guideCircleCenter": "Circle Center",
     "guideGrid": "Auto Grid",
     "guideRotate": "Rotate Guide",
-    "guideRotateAll": "Rotate All Guides"
+    "guideRotateAll": "Rotate All Guides",
+    "guideRotateGroup": "Rotate Guide Group"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1493,6 +1494,7 @@
     "gridPatternPlaceholder": "e.g., 5x4 or 5,3,7",
     "rotateGuideAngle": "Guide Rotation Angle",
     "rotateAllGuidesAngle": "Rotate All Guides — Angle",
+    "rotateGuideGroupAngle": "Rotate Guide Group — Angle",
     "enterRotateAngle": "Enter angle in degrees (positive = CCW)",
     "rotateAnglePlaceholder": "45"
   },
