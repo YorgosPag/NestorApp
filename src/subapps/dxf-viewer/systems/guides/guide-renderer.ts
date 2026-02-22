@@ -513,12 +513,6 @@ export class GuideRenderer {
 
   /** Font for dimension labels — screen-space, does NOT scale with zoom */
   private static readonly DIM_FONT = '11px Inter, sans-serif';
-  /** Background behind dimension text for readability */
-  private static readonly DIM_BG_COLOR = 'rgba(0,0,0,0.5)';
-  /** Padding around text in background box (px) */
-  private static readonly DIM_BG_PADDING = 3;
-  /** Border-radius for background box (px) */
-  private static readonly DIM_BG_RADIUS = 3;
   /** Tick mark length at each guide position (px) */
   private static readonly DIM_TICK_SIZE = 4;
   /** Text + connector opacity */
@@ -670,7 +664,7 @@ export class GuideRenderer {
   }
 
   /**
-   * Render a single dimension label with background box.
+   * Render a single dimension label (text only, no background).
    * Coordinates are in the current transform space (may be rotated for Y-axis dims).
    */
   private renderDimensionLabel(
@@ -680,24 +674,6 @@ export class GuideRenderer {
     y: number,
     color: string,
   ): void {
-    const padding = GuideRenderer.DIM_BG_PADDING;
-    const radius = GuideRenderer.DIM_BG_RADIUS;
-    const metrics = ctx.measureText(text);
-    const textWidth = metrics.width;
-    const textHeight = 11; // matches font size
-    const boxW = textWidth + padding * 2;
-    const boxH = textHeight + padding * 2;
-    const boxX = x - boxW / 2;
-    const boxY = y - boxH / 2;
-
-    // Background rounded rect
-    ctx.globalAlpha = GuideRenderer.DIM_OPACITY;
-    ctx.fillStyle = GuideRenderer.DIM_BG_COLOR;
-    ctx.beginPath();
-    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
-    ctx.fill();
-
-    // Text
     ctx.fillStyle = color;
     ctx.globalAlpha = GuideRenderer.DIM_OPACITY;
     ctx.textAlign = 'center';
