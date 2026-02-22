@@ -1459,7 +1459,8 @@
     "guideRotateGroup": "Περιστροφή Ομάδας",
     "guideEqualize": "Ισαπόσταση Οδηγών",
     "guidePolarArray": "Πολικός Πίνακας",
-    "guideScale": "Κλιμάκωση Κάνναβου"
+    "guideScale": "Κλιμάκωση Κάνναβου",
+    "guideAngle": "Οδηγός σε Γωνία"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1499,7 +1500,10 @@
     "polarArrayCountPlaceholder": "12",
     "scaleAllGuides": "Κλιμάκωση Κάνναβου — Συντελεστής",
     "enterScaleFactor": "Συντελεστής κλίμακας (π.χ. 2 = διπλάσιο, 0.5 = μισό)",
-    "scaleFactorPlaceholder": "2"
+    "scaleFactorPlaceholder": "2",
+    "guideAtAngle": "Οδηγός σε Γωνία",
+    "enterGuideAngle": "Εισαγωγή γωνίας σε μοίρες (0° = οριζόντια)",
+    "guideAnglePlaceholder": "45"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",

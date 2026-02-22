@@ -276,6 +276,10 @@ export interface UseCanvasClickHandlerParams {
   // ── ADR-189 B32: Scale grid tool ──────────────────────
   /** Set scale origin point (opens PromptDialog for scale factor) */
   onScaleOriginSet?: (origin: Point2D) => void;
+
+  // ── ADR-189 B16: Guide at angle tool ──────────────────
+  /** Set origin point for guide-at-angle (opens PromptDialog for angle) */
+  onGuideAngleOriginSet?: (origin: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -336,6 +340,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onPolarArrayCenterSet,
     // ADR-189 B32: Scale grid
     onScaleOriginSet,
+    // ADR-189 B16: Guide at angle
+    onGuideAngleOriginSet,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -1135,6 +1141,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.8998: ADR-189 B16 — Guide at angle (1-click origin → PromptDialog for angle)
+    if (activeTool === 'guide-angle' && onGuideAngleOriginSet) {
+      onGuideAngleOriginSet(worldPoint);
+      dlog('useCanvasClickHandler', 'Guide at angle: origin set', worldPoint);
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -1379,6 +1392,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onPolarArrayCenterSet,
     // ADR-189 B32: Scale grid
     onScaleOriginSet,
+    // ADR-189 B16: Guide at angle
+    onGuideAngleOriginSet,
   ]);
 
   return { handleCanvasClick };

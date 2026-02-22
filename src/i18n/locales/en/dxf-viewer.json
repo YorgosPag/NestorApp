@@ -1465,7 +1465,8 @@
     "guideRotateGroup": "Rotate Guide Group",
     "guideEqualize": "Equalize Guide Spacing",
     "guidePolarArray": "Polar Array",
-    "guideScale": "Scale Grid"
+    "guideScale": "Scale Grid",
+    "guideAngle": "Guide at Angle"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1505,7 +1506,10 @@
     "polarArrayCountPlaceholder": "12",
     "scaleAllGuides": "Scale All Guides — Scale Factor",
     "enterScaleFactor": "Scale factor (e.g. 2 = double, 0.5 = half)",
-    "scaleFactorPlaceholder": "2"
+    "scaleFactorPlaceholder": "2",
+    "guideAtAngle": "Guide at Angle",
+    "enterGuideAngle": "Enter angle in degrees (0° = horizontal)",
+    "guideAnglePlaceholder": "45"
   },
   "entityJoin": {
     "menuTitle": "Join",

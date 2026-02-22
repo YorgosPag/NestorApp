@@ -130,6 +130,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-polar-array': { id: 'guide-polar-array', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-189 B32: Scale all guides
   'guide-scale': { id: 'guide-scale', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-189 B16: Guide at typed angle
+  'guide-angle': { id: 'guide-angle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 // ============================================================================

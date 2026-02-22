@@ -704,6 +704,32 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
+  // ADR-189 B16: Set origin for guide at angle → open angle dialog
+  const handleGuideAngleOriginSet = useCallback((origin: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.guideAtAngle'),
+      label: t('promptDialog.enterGuideAngle'),
+      placeholder: t('promptDialog.guideAnglePlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseFloat(val);
+        if (isNaN(n)) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const angleDeg = parseFloat(result);
+        const rad = (angleDeg * Math.PI) / 180;
+        const extent = 10_000;
+        const dx = Math.cos(rad) * extent;
+        const dy = Math.sin(rad) * extent;
+        const start: Point2D = { x: origin.x - dx, y: origin.y - dy };
+        const end: Point2D = { x: origin.x + dx, y: origin.y + dy };
+        guideState.addDiagonalGuide(start, end);
+      }
+    });
+  }, [showPromptDialog, t, guideState]);
+
   // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
   const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
   const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
@@ -1377,6 +1403,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onPolarArrayCenterSet: handlePolarArrayCenterSet,
     // ADR-189 B32: Scale grid
     onScaleOriginSet: handleScaleOriginSet,
+    // ADR-189 B16: Guide at angle
+    onGuideAngleOriginSet: handleGuideAngleOriginSet,
   });
 
   const { handleSmartDelete } = useSmartDelete({

@@ -543,6 +543,15 @@
         "Enter scale factor in dialog"
       ],
       "shortcuts": "G→3 | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-angle": {
+      "name": "Guide at Angle",
+      "description": "Create a diagonal guide at a typed angle through a point",
+      "steps": [
+        "Click to set origin point",
+        "Enter angle in degrees in dialog"
+      ],
+      "shortcuts": "G→4 | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {
