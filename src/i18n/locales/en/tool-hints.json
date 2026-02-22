@@ -481,6 +481,15 @@
       "description": "Place construction point at center of circle or arc",
       "steps": ["Click on a circle or arc to place point at its center"],
       "shortcuts": "G→C | ESC=Cancel"
+    },
+    "guide-grid": {
+      "name": "Auto Grid",
+      "description": "Create a grid of guides with equal or custom spacing",
+      "steps": [
+        "Click to set grid origin point",
+        "Enter spacing pattern (e.g., 5x4 or 5,3,7)"
+      ],
+      "shortcuts": "G→B | ESC=Cancel"
     }
   },
   "common": {

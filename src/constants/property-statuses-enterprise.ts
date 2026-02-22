@@ -1444,6 +1444,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_RECT_CENTER: 'tools.guideRectCenter',
   GUIDE_LINE_MIDPOINT: 'tools.guideLineMidpoint',
   GUIDE_CIRCLE_CENTER: 'tools.guideCircleCenter',
+  GUIDE_GRID: 'tools.guideGrid',
 } as const;
 
 /**

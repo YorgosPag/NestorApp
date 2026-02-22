@@ -555,19 +555,25 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         }
       }
 
-      // 3.5️⃣ RENDER GUIDE DIMENSIONS (B3: distance labels between consecutive guides)
-      // 🏢 FIX (2026-02-22): Rendered AFTER rulers so dimension annotations appear ON TOP.
-      // Previously at step 2.55 (before rulers), the left ruler (30px wide) painted OVER
-      // the Y-axis dimension bar (at x=16), making horizontal guide dimensions invisible.
-      if (guideRendererRef.current && guidesVisibleRef.current && showGuideDimensionsRef.current) {
+      // 3.5️⃣ RENDER GUIDE OVERLAYS — After rulers so they appear ON TOP
+      // Includes: B1 axis label bubbles + B3 dimension annotations
+      if (guideRendererRef.current && guidesVisibleRef.current) {
         const currentGuides = guidesRef.current;
-        if (currentGuides && currentGuides.length >= 2) {
+        if (currentGuides && currentGuides.length > 0) {
           const canvas = canvasRef.current;
           const ctx = canvas?.getContext('2d');
           if (ctx) {
-            guideRendererRef.current.renderGuideDimensions(
+            // B1: Axis label bubbles (A, B, C / 1, 2, 3) — always shown with guides
+            guideRendererRef.current.renderGuideBubbles(
               ctx, currentGuides, currentTransform, currentViewport,
             );
+
+            // B3: Dimension annotations — toggleable via showGuideDimensions setting
+            if (showGuideDimensionsRef.current && currentGuides.length >= 2) {
+              guideRendererRef.current.renderGuideDimensions(
+                ctx, currentGuides, currentTransform, currentViewport,
+              );
+            }
           }
         }
       }

@@ -1458,7 +1458,8 @@
     "guideDelete": "Delete Guide",
     "guideRectCenter": "Rectangle Center",
     "guideLineMidpoint": "Line Midpoint",
-    "guideCircleCenter": "Circle Center"
+    "guideCircleCenter": "Circle Center",
+    "guideGrid": "Auto Grid"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1484,7 +1485,10 @@
     "arcPointDistance": "Arc Point Distance",
     "enterArcPointDistance": "Distance along arc between points",
     "noIntersectionFound": "No intersection found between line and arc",
-    "noCircleIntersectionFound": "No intersection found between the two circles/arcs"
+    "noCircleIntersectionFound": "No intersection found between the two circles/arcs",
+    "gridPattern": "Auto Grid",
+    "enterGridPattern": "Spacing pattern (e.g., 5x4 or 5,3,7)",
+    "gridPatternPlaceholder": "e.g., 5x4 or 5,3,7"
   },
   "entityJoin": {
     "menuTitle": "Join",

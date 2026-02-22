@@ -680,4 +680,128 @@ export class GuideRenderer {
     ctx.textBaseline = 'middle';
     ctx.fillText(text, x, y);
   }
+
+  // ── Axis Label Bubbles (B1: Revit/AutoCAD-style grid identifiers) ──
+
+  /** Bubble circle radius (px, screen-space) */
+  private static readonly BUBBLE_RADIUS = 10;
+  /** Font for bubble labels — bold for readability at small size */
+  private static readonly BUBBLE_FONT = 'bold 10px Inter, sans-serif';
+  /** Bubble fill color (white background) */
+  private static readonly BUBBLE_FILL = '#FFFFFF';
+  /** Bubble circle stroke width (px) */
+  private static readonly BUBBLE_STROKE_WIDTH = 1.5;
+  /** Y-position of top bubble for X (vertical) guides */
+  private static readonly BUBBLE_TOP_Y = 14;
+  /** X-position of left bubble for Y (horizontal) guides */
+  private static readonly BUBBLE_LEFT_X = 14;
+
+  /**
+   * Generate an auto-label for a guide based on its sorted index.
+   *
+   * Convention (AutoCAD/Revit structural grid standard):
+   * - X guides (vertical lines): Letters A, B, C, ... Z, AA, AB, ...
+   * - Y guides (horizontal lines): Numbers 1, 2, 3, ...
+   */
+  private static autoLabel(index: number, axis: 'X' | 'Y'): string {
+    if (axis === 'X') {
+      if (index < 26) return String.fromCharCode(65 + index);
+      const first = String.fromCharCode(65 + Math.floor(index / 26) - 1);
+      const second = String.fromCharCode(65 + (index % 26));
+      return first + second;
+    }
+    return String(index + 1);
+  }
+
+  /**
+   * Render axis label bubbles (circles with letters/numbers) at guide endpoints.
+   *
+   * - X guides (vertical): bubble at the TOP edge of the viewport
+   * - Y guides (horizontal): bubble at the LEFT edge of the viewport
+   *
+   * Auto-labels follow AutoCAD/Revit convention:
+   * X → A, B, C, ... | Y → 1, 2, 3, ...
+   * Custom labels (guide.label) override auto-labels.
+   *
+   * @since B1 (ADR-189 Phase 1)
+   */
+  renderGuideBubbles(
+    ctx: CanvasRenderingContext2D,
+    guides: readonly Guide[],
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    const xGuides: Array<{ offset: number; label: string | null }> = [];
+    const yGuides: Array<{ offset: number; label: string | null }> = [];
+
+    for (const g of guides) {
+      if (!g.visible || g.axis === 'XZ') continue;
+      if (g.axis === 'X') xGuides.push({ offset: g.offset, label: g.label });
+      else yGuides.push({ offset: g.offset, label: g.label });
+    }
+
+    if (xGuides.length === 0 && yGuides.length === 0) return;
+
+    ctx.save();
+
+    // Sort by offset for consistent auto-labeling order
+    xGuides.sort((a, b) => a.offset - b.offset);
+    yGuides.sort((a, b) => a.offset - b.offset);
+
+    // X guides → bubbles at TOP
+    for (let i = 0; i < xGuides.length; i++) {
+      const screenX = this.guideOffsetToScreen('X', xGuides[i].offset, transform, viewport);
+      // Skip if off-screen
+      if (screenX < -GuideRenderer.BUBBLE_RADIUS || screenX > viewport.width + GuideRenderer.BUBBLE_RADIUS) continue;
+      const label = xGuides[i].label ?? GuideRenderer.autoLabel(i, 'X');
+      this.drawBubble(ctx, screenX, GuideRenderer.BUBBLE_TOP_Y, label, GUIDE_COLORS.X);
+    }
+
+    // Y guides → bubbles at LEFT
+    for (let i = 0; i < yGuides.length; i++) {
+      const screenY = this.guideOffsetToScreen('Y', yGuides[i].offset, transform, viewport);
+      // Skip if off-screen
+      if (screenY < -GuideRenderer.BUBBLE_RADIUS || screenY > viewport.height + GuideRenderer.BUBBLE_RADIUS) continue;
+      const label = yGuides[i].label ?? GuideRenderer.autoLabel(i, 'Y');
+      this.drawBubble(ctx, GuideRenderer.BUBBLE_LEFT_X, screenY, label, GUIDE_COLORS.Y);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw a single axis label bubble (filled circle with centered text).
+   * All coordinates are in screen-space (px).
+   */
+  private drawBubble(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    label: string,
+    color: string,
+  ): void {
+    const r = GuideRenderer.BUBBLE_RADIUS;
+
+    // Circle fill (white background)
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = GuideRenderer.BUBBLE_FILL;
+    ctx.globalAlpha = 0.95;
+    ctx.fill();
+
+    // Circle stroke (guide axis color)
+    ctx.strokeStyle = color;
+    ctx.lineWidth = GuideRenderer.BUBBLE_STROKE_WIDTH;
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    ctx.stroke();
+
+    // Label text (guide axis color, centered)
+    ctx.font = GuideRenderer.BUBBLE_FONT;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y + 0.5); // +0.5 optical centering
+  }
 }

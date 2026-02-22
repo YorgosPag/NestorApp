@@ -1452,7 +1452,8 @@
     "guideDelete": "Διαγραφή Οδηγού",
     "guideRectCenter": "Κέντρο Ορθογωνίου",
     "guideLineMidpoint": "Μέσο Ευθυγράμμου",
-    "guideCircleCenter": "Κέντρο Κύκλου"
+    "guideCircleCenter": "Κέντρο Κύκλου",
+    "guideGrid": "Αυτόματο Πλέγμα"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1478,7 +1479,10 @@
     "arcPointDistance": "Απόσταση Σημείων Τόξου",
     "enterArcPointDistance": "Απόσταση κατά μήκος τόξου μεταξύ σημείων",
     "noIntersectionFound": "Δεν βρέθηκε τομή μεταξύ γραμμής και τόξου",
-    "noCircleIntersectionFound": "Δεν βρέθηκε τομή μεταξύ των δύο κύκλων/τόξων"
+    "noCircleIntersectionFound": "Δεν βρέθηκε τομή μεταξύ των δύο κύκλων/τόξων",
+    "gridPattern": "Αυτόματη Κάνναβος",
+    "enterGridPattern": "Μοτίβο αποστάσεων (π.χ. 5x4 ή 5,3,7)",
+    "gridPatternPlaceholder": "π.χ. 5x4 ή 5,3,7"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",

@@ -472,6 +472,57 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, cpState]);
 
+  // ADR-189 B2: Automatic grid generation — 1-click + dialog
+  const handleGridOriginSet = useCallback((origin: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.gridPattern'),
+      label: t('promptDialog.enterGridPattern'),
+      placeholder: t('promptDialog.gridPatternPlaceholder'),
+      inputType: 'text',
+      validate: (val) => {
+        const trimmed = val.trim();
+        if (!trimmed) return t('promptDialog.invalidNumber');
+        // Accept formats: "5x4" (equal) or "5,3,7" (custom) or "5" (single interval)
+        const equalMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+)$/i);
+        if (equalMatch) return null;
+        const parts = trimmed.split(',').map(s => parseFloat(s.trim()));
+        if (parts.some(isNaN) || parts.some(n => n <= 0)) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const trimmed = result.trim();
+        const offsets: number[] = [];
+
+        // Parse: "5x4" → 4 intervals of 5m
+        const equalMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+)$/i);
+        if (equalMatch) {
+          const spacing = parseFloat(equalMatch[1]);
+          const count = parseInt(equalMatch[2], 10);
+          for (let i = 0; i <= count; i++) offsets.push(i * spacing);
+        } else {
+          // Parse: "5,3,7" → cumulative offsets: 0, 5, 8, 15
+          offsets.push(0);
+          const parts = trimmed.split(',').map(s => parseFloat(s.trim()));
+          let cumulative = 0;
+          for (const p of parts) {
+            cumulative += p;
+            offsets.push(cumulative);
+          }
+        }
+
+        // Create X guides (vertical) from origin
+        for (const off of offsets) {
+          guideState.addGuide('X', origin.x + off);
+        }
+        // Create Y guides (horizontal) from origin
+        for (const off of offsets) {
+          guideState.addGuide('Y', origin.y + off);
+        }
+      }
+    });
+  }, [showPromptDialog, t, guideState]);
+
   // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
   const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
   const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
@@ -1086,6 +1137,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // Guide line-midpoint + circle-center
     onLineMidpointPlace: handleLineMidpointPlace,
     onCircleCenterPlace: handleCircleCenterPlace,
+    // ADR-189 B2: Grid generation
+    onGridOriginSet: handleGridOriginSet,
   });
 
   const { handleSmartDelete } = useSmartDelete({
