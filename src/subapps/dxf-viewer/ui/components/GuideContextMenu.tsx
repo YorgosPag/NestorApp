@@ -193,10 +193,10 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
           <span className={styles.menuItemLabel}>Edit Label</span>
         </DropdownMenuItem>
 
-        {/* Change Color (B6) */}
+        {/* Change Color (B6) — onSelect preventDefault keeps menu open */}
         <DropdownMenuItem
           className={styles.menuItem}
-          onClick={handleToggleColors}
+          onSelect={(e) => { e.preventDefault(); handleToggleColors(); }}
         >
           <span className={styles.menuItemIcon}><Palette size={16} /></span>
           <span className={styles.menuItemLabel}>Color</span>

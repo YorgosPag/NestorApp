@@ -647,10 +647,10 @@ export class GuideRenderer {
         // Label (above connector)
         this.renderDimensionLabel(ctx, text, mid, yLine - tick - 2, color);
       } else {
-        // Y guides (horizontal) → dimension bar along LEFT edge
+        // Y guides (horizontal) → dimension bar along RIGHT edge (away from left ruler)
         const p1 = pixelPerfect(pos1);
         const p2 = pixelPerfect(pos2);
-        const xLine = edge;
+        const xLine = viewport.width - edge;
 
         // Tick marks (horizontal)
         ctx.beginPath();
@@ -663,9 +663,9 @@ export class GuideRenderer {
         ctx.lineTo(xLine, p2);
         ctx.stroke();
 
-        // Label (rotated -90°, to the right of connector)
+        // Label (rotated -90°, to the left of connector)
         ctx.save();
-        ctx.translate(xLine - tick - 2, mid);
+        ctx.translate(xLine + tick + 2, mid);
         ctx.rotate(-Math.PI / 2);
         this.renderDimensionLabel(ctx, text, 0, 0, color);
         ctx.restore();
