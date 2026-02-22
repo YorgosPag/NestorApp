@@ -1463,7 +1463,8 @@
     "guideRotate": "Rotate Guide",
     "guideRotateAll": "Rotate All Guides",
     "guideRotateGroup": "Rotate Guide Group",
-    "guideEqualize": "Equalize Guide Spacing"
+    "guideEqualize": "Equalize Guide Spacing",
+    "guidePolarArray": "Polar Array"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1497,7 +1498,10 @@
     "rotateAllGuidesAngle": "Rotate All Guides — Angle",
     "rotateGuideGroupAngle": "Rotate Guide Group — Angle",
     "enterRotateAngle": "Enter angle in degrees (positive = CCW)",
-    "rotateAnglePlaceholder": "45"
+    "rotateAnglePlaceholder": "45",
+    "polarArrayCount": "Polar Array — Number of Guides",
+    "enterPolarArrayCount": "Number of guides around center",
+    "polarArrayCountPlaceholder": "12"
   },
   "entityJoin": {
     "menuTitle": "Join",

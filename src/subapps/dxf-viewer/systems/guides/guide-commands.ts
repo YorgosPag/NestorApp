@@ -924,3 +924,114 @@ export class RotateGuideGroupCommand implements ICommand {
     return Array.from(this.rotatedEndpoints.keys());
   }
 }
+
+// ============================================================================
+// POLAR ARRAY GUIDES COMMAND (B31)
+// ============================================================================
+
+/**
+ * Command for creating N guides at equal angular intervals around a center point.
+ *
+ * Creates radial guides (spokes) through the center point, each as an XZ diagonal
+ * guide extending ±10000 units. The angle between consecutive guides is 360°/count.
+ *
+ * @see ADR-189 B31 (Polar Array — Ν οδηγοί σε ίσες γωνίες γύρω από κέντρο)
+ */
+export class PolarArrayGuidesCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'PolarArrayGuides';
+  readonly type = 'polar-array-guides';
+  readonly timestamp: number;
+
+  /** Guides created by this command (for undo) */
+  private createdGuides: Guide[] = [];
+
+  /** Computed angle increment in degrees */
+  readonly angleIncrement: number;
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly center: Point2D,
+    private readonly count: number,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+    this.angleIncrement = count > 0 ? 360 / count : 0;
+  }
+
+  /** Whether the command has valid work to do */
+  get isValid(): boolean {
+    return this.count >= 2 && this.angleIncrement > 0;
+  }
+
+  execute(): void {
+    if (this.createdGuides.length > 0) {
+      // Redo: restore previously created guides
+      for (const guide of this.createdGuides) {
+        this.store.restoreGuide(guide);
+      }
+      return;
+    }
+
+    const extent = 10_000;
+
+    for (let i = 0; i < this.count; i++) {
+      const angleDeg = i * this.angleIncrement;
+      const rad = (angleDeg * Math.PI) / 180;
+      const dx = Math.cos(rad) * extent;
+      const dy = Math.sin(rad) * extent;
+
+      const startPoint: Point2D = {
+        x: this.center.x - dx,
+        y: this.center.y - dy,
+      };
+      const endPoint: Point2D = {
+        x: this.center.x + dx,
+        y: this.center.y + dy,
+      };
+
+      const guide = this.store.addDiagonalGuideRaw(startPoint, endPoint);
+      if (guide) {
+        this.createdGuides.push(guide);
+      }
+    }
+  }
+
+  undo(): void {
+    for (const guide of this.createdGuides) {
+      this.store.removeGuideById(guide.id);
+    }
+  }
+
+  redo(): void {
+    this.execute();
+  }
+
+  getDescription(): string {
+    return `Polar array: ${this.count} guides at ${this.angleIncrement.toFixed(1)}° intervals`;
+  }
+
+  canMergeWith(): boolean {
+    return false;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: {
+        center: this.center,
+        count: this.count,
+        angleIncrement: this.angleIncrement,
+        createdGuideIds: this.createdGuides.map(g => g.id),
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuides.map(g => g.id);
+  }
+}

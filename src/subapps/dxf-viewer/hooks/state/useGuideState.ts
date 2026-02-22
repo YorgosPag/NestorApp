@@ -12,7 +12,7 @@
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
@@ -54,6 +54,8 @@ export interface UseGuideStateReturn {
   rotateGuideGroup: (guideIds: readonly string[], pivot: Point2D, angleDeg: number) => RotateGuideGroupCommand;
   /** Equalize spacing between 3+ same-axis guides. Returns the command for undo. */
   equalizeGuides: (guideIds: readonly string[]) => EqualizeGuidesCommand;
+  /** Create N guides at equal angular intervals around center. Returns the command for undo. */
+  createPolarArray: (center: Point2D, count: number) => PolarArrayGuidesCommand;
   /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
   getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
@@ -193,6 +195,15 @@ export function useGuideState(): UseGuideStateReturn {
     return cmd;
   }, [store]);
 
+  const createPolarArray = useCallback((center: Point2D, count: number): PolarArrayGuidesCommand => {
+    const cmd = new PolarArrayGuidesCommand(store, center, count);
+    if (cmd.isValid) {
+      cmd.execute();
+      EventBus.emit('grid:polar-array-created', { center, count, angleIncrement: cmd.angleIncrement });
+    }
+    return cmd;
+  }, [store]);
+
   const getStore = useCallback(() => store, [store]);
 
   return {
@@ -208,6 +219,7 @@ export function useGuideState(): UseGuideStateReturn {
     rotateAllGuides,
     rotateGuideGroup,
     equalizeGuides,
+    createPolarArray,
     toggleVisibility,
     toggleSnap,
     clearAll,

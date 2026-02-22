@@ -664,6 +664,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
+  // ADR-189 B31: Set center for polar array → open count dialog
+  const handlePolarArrayCenterSet = useCallback((center: Point2D) => {
+    showPromptDialog({
+      title: t('promptDialog.polarArrayCount'),
+      label: t('promptDialog.enterPolarArrayCount'),
+      placeholder: t('promptDialog.polarArrayCountPlaceholder'),
+      inputType: 'number',
+      validate: (val) => {
+        const n = parseInt(val, 10);
+        if (isNaN(n) || n < 2) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const count = parseInt(result, 10);
+        guideState.createPolarArray(center, count);
+      }
+    });
+  }, [showPromptDialog, t, guideState]);
+
   // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
   const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
   const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
@@ -1333,6 +1353,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     equalizeSelectedIds,
     onEqualizeToggle: handleEqualizeToggle,
     onEqualizeApply: handleEqualizeApply,
+    // ADR-189 B31: Polar array
+    onPolarArrayCenterSet: handlePolarArrayCenterSet,
   });
 
   const { handleSmartDelete } = useSmartDelete({

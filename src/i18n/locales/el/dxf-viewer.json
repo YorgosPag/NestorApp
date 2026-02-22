@@ -1457,7 +1457,8 @@
     "guideRotate": "Περιστροφή Οδηγού",
     "guideRotateAll": "Περιστροφή Κάνναβου",
     "guideRotateGroup": "Περιστροφή Ομάδας",
-    "guideEqualize": "Ισαπόσταση Οδηγών"
+    "guideEqualize": "Ισαπόσταση Οδηγών",
+    "guidePolarArray": "Πολικός Πίνακας"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1491,7 +1492,10 @@
     "rotateAllGuidesAngle": "Περιστροφή Κάνναβου — Γωνία",
     "rotateGuideGroupAngle": "Περιστροφή Ομάδας — Γωνία",
     "enterRotateAngle": "Εισαγωγή γωνίας σε μοίρες (θετική = αριστερόστροφα)",
-    "rotateAnglePlaceholder": "45"
+    "rotateAnglePlaceholder": "45",
+    "polarArrayCount": "Πολικός Πίνακας — Αριθμός Οδηγών",
+    "enterPolarArrayCount": "Πλήθος οδηγών γύρω από το κέντρο",
+    "polarArrayCountPlaceholder": "12"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",

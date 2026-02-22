@@ -525,6 +525,15 @@
         "🟢 Click empty area to apply equal spacing"
       ],
       "shortcuts": "G→Y | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-polar-array": {
+      "name": "Polar Array",
+      "description": "Create N guides at equal angles around a center point",
+      "steps": [
+        "Click to set center point",
+        "Enter number of guides in dialog"
+      ],
+      "shortcuts": "G→2 | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {

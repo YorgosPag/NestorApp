@@ -22,6 +22,7 @@ import {
   CircleDashed, // ADR-189 §3.11: Circle-Circle intersection icon
   LocateFixed, // Midpoint on line
   Target, // Circle center
+  Radar, // ADR-189 B31: Polar array icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -276,6 +277,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-rotate-all' as ToolType, icon: RotateCw, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ROTATE_ALL, hotkey: 'G→J' },
           { id: 'guide-rotate-group' as ToolType, icon: RotateCw, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ROTATE_GROUP, hotkey: 'G→F' },
           { id: 'guide-equalize' as ToolType, icon: ArrowDownUp, label: DXF_DRAWING_TOOL_LABELS.GUIDE_EQUALIZE, hotkey: 'G→Y' },
+          { id: 'guide-polar-array' as ToolType, icon: Radar, label: DXF_DRAWING_TOOL_LABELS.GUIDE_POLAR_ARRAY, hotkey: 'G→2' },
         ],
       },
     ],

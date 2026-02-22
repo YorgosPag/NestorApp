@@ -268,6 +268,10 @@ export interface UseCanvasClickHandlerParams {
   onEqualizeToggle?: (guideId: string) => void;
   /** Apply equalization (fires when clicking empty space with ≥3 same-axis selected) */
   onEqualizeApply?: (guideIds: readonly string[]) => void;
+
+  // ── ADR-189 B31: Polar array tool ──────────────────────
+  /** Set center point for polar array (opens PromptDialog for count) */
+  onPolarArrayCenterSet?: (center: Point2D) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -324,6 +328,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     rotateGroupSelectedIds, onRotateGroupToggle, onRotateGroupPivotSet,
     // ADR-189 B33: Equalize guide spacing
     equalizeSelectedIds, onEqualizeToggle, onEqualizeApply,
+    // ADR-189 B31: Polar array
+    onPolarArrayCenterSet,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -1109,6 +1115,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.8996: ADR-189 B31 — Polar array (1-click center → PromptDialog for count)
+    if (activeTool === 'guide-polar-array' && onPolarArrayCenterSet) {
+      onPolarArrayCenterSet(worldPoint);
+      dlog('useCanvasClickHandler', 'Polar array: center set', worldPoint);
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -1349,6 +1362,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // Guide line-midpoint + circle-center
     onLineMidpointPlace, onCircleCenterPlace,
     onGridOriginSet,
+    // ADR-189 B31: Polar array
+    onPolarArrayCenterSet,
   ]);
 
   return { handleCanvasClick };

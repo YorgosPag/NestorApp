@@ -126,6 +126,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-rotate-group': { id: 'guide-rotate-group', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-189 B33: Smart equalize guide spacing
   'guide-equalize': { id: 'guide-equalize', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B31: Polar array of guides
+  'guide-polar-array': { id: 'guide-polar-array', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 // ============================================================================

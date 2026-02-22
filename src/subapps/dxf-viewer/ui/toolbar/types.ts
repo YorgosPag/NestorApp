@@ -69,7 +69,8 @@ export type ToolType =
   | 'guide-rotate'            // ADR-189 B28: Rotate guide by typed angle
   | 'guide-rotate-all'        // ADR-189 B30: Rotate all guides around pivot
   | 'guide-rotate-group'      // ADR-189 B29: Rotate selected group of guides
-  | 'guide-equalize';         // ADR-189 B33: Smart equalize spacing between guides
+  | 'guide-equalize'          // ADR-189 B33: Smart equalize spacing between guides
+  | 'guide-polar-array';      // ADR-189 B31: Polar array of guides around center
 
 
 export interface ToolDefinition {
