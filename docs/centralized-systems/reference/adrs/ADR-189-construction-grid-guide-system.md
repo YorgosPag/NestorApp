@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B16 Guide at Angle ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 13 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B16 Guide at Angle ✅, B19 Mirror ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 14 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -438,7 +438,7 @@
 
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
-| B19 | **Symmetric/Mirror guides** | Άξονας συμμετρίας → οι οδηγοί αντικατοπτρίζονται αυτόματα | Μεσαία |
+| B19 | ✅ **Symmetric/Mirror guides** | Click σε X/Y οδηγό → `MirrorGuidesCommand` αντικατοπτρίζει ΟΛΟΥΣ τους υπόλοιπους. G→5 | ✅ Υλοποιήθηκε |
 | B20 | **Guide Undo/Redo** | Ctrl+Z αναιρεί τελευταίο οδηγό, Ctrl+Y επαναφέρει | ⭐ Υψηλή |
 | B21 | **Snap priority** | Ρύθμιση προτεραιότητας: τομές > endpoints > midpoints | Χαμηλή |
 | B22 | **Right-click context menu** | Δεξί κλικ σε οδηγό → Lock, Delete, Color, Properties, Add Points | ⭐ Υψηλή |
@@ -1884,6 +1884,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **B31: Polar Array (G→2)**: 1-click center → PromptDialog count → `PolarArrayGuidesCommand` creates N XZ diagonal guides at equal angles (360°/N). Full undo/redo. Radar icon. 14 files modified, 200 lines added |
 | 2026-02-22 | **B32: Scale Grid (G→3)**: 1-click origin → PromptDialog scale factor → `ScaleAllGuidesCommand` scales all visible/unlocked guides. X/Y keep axis type (linear offset scaling), XZ scales both endpoints. Preserves axis type unlike rotation. Scaling icon. 14 files, 223 lines added |
 | 2026-02-22 | **B16: Guide at Angle (G→4)**: 1-click origin → PromptDialog angle (degrees) → creates XZ guide through origin at typed angle. Reuses `addDiagonalGuide` (no new command). Compass icon. 11 files, 81 lines added |
+| 2026-02-23 | **B19: Mirror Guides (G→5)**: 1-click on X/Y guide → `MirrorGuidesCommand` creates mirrored copies of all visible/unlocked guides. X guides mirror offset, XZ mirror endpoints. FlipHorizontal2 icon. Hover highlight. 14 files, 219 lines |
 
 ---
 
@@ -2635,3 +2636,41 @@ click at worldPoint:
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Compass icon |
 | i18n (el/en dxf-viewer.json) | Tool labels + PromptDialog titles (angle) |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, 2 steps, shortcuts (G→4) |
+
+## 25. B19: Mirror Guides — Implementation Details (2026-02-23)
+
+### 25.1 Architecture
+
+Αντικατοπτρίζει ΟΛΟΥΣ τους visible/unlocked οδηγούς ως προς επιλεγμένο X ή Y οδηγό (άξονας συμμετρίας). Δημιουργεί **νέα αντίγραφα** — οι αρχικοί οδηγοί παραμένουν αμετάβλητοι. Δεν υποστηρίζει XZ ως mirror axis (μόνο X/Y).
+
+- **Workflow**: 1-click σε X/Y guide → `MirrorGuidesCommand` (no dialog)
+- **X mirror axis** (vertical, offset=ax): X guides → `2*ax - offset`, XZ → mirror x-coordinates
+- **Y mirror axis** (horizontal, offset=ay): Y guides → `2*ay - offset`, XZ → mirror y-coordinates
+- Guides parallel to mirror axis are skipped (ήδη symmetric)
+- Labels + styles preserved σε mirrored copies
+
+### 25.2 Command Pattern
+
+| Component | Implementation |
+|-----------|---------------|
+| `MirrorGuidesCommand` | ICommand — creates mirrored guide copies, stores for undo |
+| `execute()` | Uses `addGuideRaw` for X/Y, `addDiagonalGuideRaw` for XZ |
+| `undo()` | Removes all created mirrored guides by ID |
+| Redo | Re-executes using `restoreGuide` for stored guides |
+
+### 25.3 Files Modified (Session 2026-02-23 — B19)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-mirror'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `MirrorGuidesCommand` class (~130 lines) |
+| `hooks/state/useGuideState.ts` | `mirrorGuides()` method |
+| `systems/events/EventBus.ts` | `grid:guides-mirrored` event type |
+| `hooks/canvas/useCanvasClickHandler.ts` | 1-click handler (PRIORITY 1.8999, X/Y only) |
+| `components/dxf-layout/CanvasSection.tsx` | `handleMirrorAxisSelected` callback + highlight |
+| `config/keyboard-shortcuts.ts` | G→5 chord (numeric key) |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_MIRROR` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with FlipHorizontal2 icon |
+| i18n (el/en dxf-viewer.json) | Tool labels |
+| i18n (el/en tool-hints.json) | Tool hints: name, description, 1 step, shortcuts (G→5) |
