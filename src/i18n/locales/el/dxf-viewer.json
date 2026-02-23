@@ -1460,7 +1460,8 @@
     "guideEqualize": "Ισαπόσταση Οδηγών",
     "guidePolarArray": "Πολικός Πίνακας",
     "guideScale": "Κλιμάκωση Κάνναβου",
-    "guideAngle": "Οδηγός σε Γωνία"
+    "guideAngle": "Οδηγός σε Γωνία",
+    "guideMirror": "Αντικατοπτρισμός Οδηγών"
   },
   "promptDialog": {
     "confirm": "OK",

@@ -132,6 +132,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-scale': { id: 'guide-scale', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-189 B16: Guide at typed angle
   'guide-angle': { id: 'guide-angle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-189 B19: Mirror guides across axis
+  'guide-mirror': { id: 'guide-mirror', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 // ============================================================================

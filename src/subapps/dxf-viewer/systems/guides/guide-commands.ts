@@ -1169,3 +1169,136 @@ export class ScaleAllGuidesCommand implements ICommand {
     return Array.from(this.scaledValues.keys());
   }
 }
+
+// ============================================================================
+// MIRROR GUIDES COMMAND (ADR-189 B19)
+// ============================================================================
+
+/**
+ * Mirrors all visible/unlocked guides across a selected axis guide.
+ * Creates NEW mirrored copies — original guides remain unchanged.
+ * Only supports X/Y axis guides as mirror axis (not XZ).
+ */
+export class MirrorGuidesCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'MirrorGuides';
+  readonly type = 'mirror-guides';
+  readonly timestamp: number;
+  private createdGuides: Guide[] = [];
+  private readonly mirrorAxis: 'X' | 'Y';
+  private readonly mirrorOffset: number;
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly axisGuideId: string,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+
+    const axisGuide = store.getGuides().find(g => g.id === axisGuideId);
+    this.mirrorAxis = axisGuide?.axis === 'Y' ? 'Y' : 'X';
+    this.mirrorOffset = axisGuide?.offset ?? 0;
+  }
+
+  get isValid(): boolean {
+    const axisGuide = this.store.getGuides().find(g => g.id === this.axisGuideId);
+    if (!axisGuide || axisGuide.axis === 'XZ') return false;
+    // Need at least 1 other guide to mirror
+    return this.store.getGuides().some(g =>
+      g.id !== this.axisGuideId && g.visible && !g.locked
+    );
+  }
+
+  execute(): void {
+    // Re-execution (redo) — restore previously created guides
+    if (this.createdGuides.length > 0) {
+      for (const guide of this.createdGuides) {
+        this.store.restoreGuide(guide);
+      }
+      return;
+    }
+
+    const ax = this.mirrorOffset;
+    const guides = this.store.getGuides();
+
+    for (const guide of guides) {
+      if (guide.id === this.axisGuideId || !guide.visible || guide.locked) continue;
+
+      if (this.mirrorAxis === 'X') {
+        // Mirror across vertical line x = ax
+        if (guide.axis === 'X') {
+          const newOffset = 2 * ax - guide.offset;
+          if (Math.abs(newOffset - guide.offset) < 0.001) continue; // Same position
+          const created = this.store.addGuideRaw('X', newOffset, guide.label);
+          if (created) {
+            if (guide.style) created.style = { ...guide.style };
+            this.createdGuides.push(created);
+          }
+        } else if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+          const start: Point2D = { x: 2 * ax - guide.startPoint.x, y: guide.startPoint.y };
+          const end: Point2D = { x: 2 * ax - guide.endPoint.x, y: guide.endPoint.y };
+          const created = this.store.addDiagonalGuideRaw(start, end, guide.label);
+          if (created) {
+            if (guide.style) created.style = { ...guide.style };
+            this.createdGuides.push(created);
+          }
+        }
+        // Y guides are parallel to mirror axis → no mirroring needed
+      } else {
+        // Mirror across horizontal line y = ax
+        if (guide.axis === 'Y') {
+          const newOffset = 2 * ax - guide.offset;
+          if (Math.abs(newOffset - guide.offset) < 0.001) continue;
+          const created = this.store.addGuideRaw('Y', newOffset, guide.label);
+          if (created) {
+            if (guide.style) created.style = { ...guide.style };
+            this.createdGuides.push(created);
+          }
+        } else if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+          const start: Point2D = { x: guide.startPoint.x, y: 2 * ax - guide.startPoint.y };
+          const end: Point2D = { x: guide.endPoint.x, y: 2 * ax - guide.endPoint.y };
+          const created = this.store.addDiagonalGuideRaw(start, end, guide.label);
+          if (created) {
+            if (guide.style) created.style = { ...guide.style };
+            this.createdGuides.push(created);
+          }
+        }
+        // X guides are perpendicular to mirror axis → no mirroring needed
+      }
+    }
+  }
+
+  undo(): void {
+    for (const guide of this.createdGuides) {
+      this.store.removeGuideById(guide.id);
+    }
+  }
+
+  redo(): void {
+    this.execute();
+  }
+
+  canMergeWith(): boolean {
+    return false;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: {
+        axisGuideId: this.axisGuideId,
+        mirrorAxis: this.mirrorAxis,
+        mirrorOffset: this.mirrorOffset,
+        createdCount: this.createdGuides.length,
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuides.map(g => g.id);
+  }
+}

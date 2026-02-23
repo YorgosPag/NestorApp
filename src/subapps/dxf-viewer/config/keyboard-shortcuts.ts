@@ -693,6 +693,7 @@ export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: To
   '2': { action: 'tool:guide-polar-array', toolType: 'guide-polar-array' as ToolType, descriptionKey: 'shortcuts.guides.guidePolarArray' },
   '3': { action: 'tool:guide-scale', toolType: 'guide-scale' as ToolType, descriptionKey: 'shortcuts.guides.guideScale' },
   '4': { action: 'tool:guide-angle', toolType: 'guide-angle' as ToolType, descriptionKey: 'shortcuts.guides.guideAngle' },
+  '5': { action: 'tool:guide-mirror', toolType: 'guide-mirror' as ToolType, descriptionKey: 'shortcuts.guides.guideMirror' },
   V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },
   L: { action: 'action:toggle-guide-panel', descriptionKey: 'shortcuts.guides.guidePanel' },
 } as const;

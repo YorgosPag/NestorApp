@@ -552,6 +552,14 @@
         "Enter angle in degrees in dialog"
       ],
       "shortcuts": "G→4 | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "guide-mirror": {
+      "name": "Mirror Guides",
+      "description": "Click on X/Y guide to mirror all others across it",
+      "steps": [
+        "Click on an X or Y guide to use as mirror axis"
+      ],
+      "shortcuts": "G→5 | Ctrl+Z=Undo | ESC=Cancel"
     }
   },
   "common": {

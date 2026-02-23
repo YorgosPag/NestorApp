@@ -1452,6 +1452,7 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_POLAR_ARRAY: 'tools.guidePolarArray',
   GUIDE_SCALE: 'tools.guideScale',
   GUIDE_ANGLE: 'tools.guideAngle',
+  GUIDE_MIRROR: 'tools.guideMirror',
 } as const;
 
 /**

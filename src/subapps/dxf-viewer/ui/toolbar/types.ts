@@ -72,7 +72,8 @@ export type ToolType =
   | 'guide-equalize'          // ADR-189 B33: Smart equalize spacing between guides
   | 'guide-polar-array'       // ADR-189 B31: Polar array of guides around center
   | 'guide-scale'             // ADR-189 B32: Scale all guides from origin
-  | 'guide-angle';            // ADR-189 B16: Guide at typed angle through point
+  | 'guide-angle'             // ADR-189 B16: Guide at typed angle through point
+  | 'guide-mirror';           // ADR-189 B19: Mirror guides across axis
 
 
 export interface ToolDefinition {

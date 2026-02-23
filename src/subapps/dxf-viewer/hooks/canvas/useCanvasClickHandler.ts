@@ -280,6 +280,10 @@ export interface UseCanvasClickHandlerParams {
   // ── ADR-189 B16: Guide at angle tool ──────────────────
   /** Set origin point for guide-at-angle (opens PromptDialog for angle) */
   onGuideAngleOriginSet?: (origin: Point2D) => void;
+
+  // ── ADR-189 B19: Mirror guides tool ──────────────────
+  /** Click on X/Y guide → mirror all others across it */
+  onMirrorAxisSelected?: (axisGuideId: string) => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
@@ -342,6 +346,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onScaleOriginSet,
     // ADR-189 B16: Guide at angle
     onGuideAngleOriginSet,
+    // ADR-189 B19: Mirror guides
+    onMirrorAxisSelected,
   } = params;
 
   const handleCanvasClick = useCallback((worldPoint: Point2D) => {
@@ -1148,6 +1154,28 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.8999: ADR-189 B19 — Mirror guides (1-click on X/Y guide as axis)
+    if (activeTool === 'guide-mirror' && guides && guides.length > 0 && onMirrorAxisSelected) {
+      const hitToleranceWorld = 30 / transform.scale;
+      let nearestGuide: Guide | undefined;
+      let nearestDist = hitToleranceWorld;
+      for (const guide of guides) {
+        if (!guide.visible || guide.axis === 'XZ') continue; // Only X/Y as mirror axis
+        const dist = guide.axis === 'X'
+          ? Math.abs(worldPoint.x - guide.offset)
+          : Math.abs(worldPoint.y - guide.offset);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestGuide = guide;
+        }
+      }
+      if (nearestGuide) {
+        onMirrorAxisSelected(nearestGuide.id);
+        dlog('useCanvasClickHandler', 'Mirror: axis guide selected', nearestGuide.id, nearestGuide.axis);
+      }
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -1394,6 +1422,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onScaleOriginSet,
     // ADR-189 B16: Guide at angle
     onGuideAngleOriginSet,
+    // ADR-189 B19: Mirror guides
+    onMirrorAxisSelected,
   ]);
 
   return { handleCanvasClick };

@@ -12,7 +12,7 @@
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
@@ -58,6 +58,8 @@ export interface UseGuideStateReturn {
   createPolarArray: (center: Point2D, count: number) => PolarArrayGuidesCommand;
   /** Scale all visible/unlocked guides from origin by a factor. Returns the command for undo. */
   scaleAllGuides: (origin: Point2D, scaleFactor: number) => ScaleAllGuidesCommand;
+  /** Mirror all visible/unlocked guides across a selected X/Y axis guide. Returns the command for undo. */
+  mirrorGuides: (axisGuideId: string) => MirrorGuidesCommand;
   /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
   getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
@@ -215,6 +217,20 @@ export function useGuideState(): UseGuideStateReturn {
     return cmd;
   }, [store]);
 
+  const mirrorGuides = useCallback((axisGuideId: string): MirrorGuidesCommand => {
+    const cmd = new MirrorGuidesCommand(store, axisGuideId);
+    if (cmd.isValid) {
+      cmd.execute();
+      const axisGuide = store.getGuides().find(g => g.id === axisGuideId);
+      EventBus.emit('grid:guides-mirrored', {
+        axisGuideId,
+        mirrorAxis: axisGuide?.axis === 'Y' ? 'Y' : 'X',
+        createdCount: cmd.getAffectedEntityIds().length,
+      });
+    }
+    return cmd;
+  }, [store]);
+
   const getStore = useCallback(() => store, [store]);
 
   return {
@@ -232,6 +248,7 @@ export function useGuideState(): UseGuideStateReturn {
     equalizeGuides,
     createPolarArray,
     scaleAllGuides,
+    mirrorGuides,
     toggleVisibility,
     toggleSnap,
     clearAll,

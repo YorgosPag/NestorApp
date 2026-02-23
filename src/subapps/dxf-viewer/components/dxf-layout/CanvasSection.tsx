@@ -730,6 +730,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
+  // ADR-189 B19: Mirror guides — click on X/Y guide → mirror all others immediately
+  const handleMirrorAxisSelected = useCallback((axisGuideId: string) => {
+    guideState.mirrorGuides(axisGuideId);
+  }, [guideState]);
+
   // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
   const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
   const [arcLineLine, setArcLineLine] = useState<LinePickableEntity | null>(null);
@@ -969,7 +974,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       (activeTool === 'guide-parallel' && !parallelRefGuideId) ||
       (activeTool === 'guide-rotate' && !rotateRefGuideId) ||
       activeTool === 'guide-rotate-group' ||
-      activeTool === 'guide-equalize';
+      activeTool === 'guide-equalize' ||
+      activeTool === 'guide-mirror';
 
     if (needsToolHighlight) {
       const hitToleranceWorld = 30 / transform.scale;
@@ -1405,6 +1411,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onScaleOriginSet: handleScaleOriginSet,
     // ADR-189 B16: Guide at angle
     onGuideAngleOriginSet: handleGuideAngleOriginSet,
+    // ADR-189 B19: Mirror guides
+    onMirrorAxisSelected: handleMirrorAxisSelected,
   });
 
   const { handleSmartDelete } = useSmartDelete({

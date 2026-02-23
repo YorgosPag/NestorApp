@@ -1466,7 +1466,8 @@
     "guideEqualize": "Equalize Guide Spacing",
     "guidePolarArray": "Polar Array",
     "guideScale": "Scale Grid",
-    "guideAngle": "Guide at Angle"
+    "guideAngle": "Guide at Angle",
+    "guideMirror": "Mirror Guides"
   },
   "promptDialog": {
     "confirm": "OK",
