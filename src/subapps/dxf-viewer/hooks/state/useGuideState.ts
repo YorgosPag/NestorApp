@@ -12,6 +12,7 @@
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
@@ -67,18 +68,17 @@ export interface UseGuideStateReturn {
 /**
  * React hook for the Construction Guide system.
  *
+ * B20: All mutations route through `getGlobalCommandHistory()` so every guide
+ * operation automatically enters the undo/redo stack. Ctrl+Z / Ctrl+Y is
+ * handled by `useCommandHistoryKeyboard()` in CanvasSection.
+ *
  * Usage:
  * ```tsx
- * const { guides, guidesVisible, addGuide, removeGuide } = useGuideState();
- * const { execute } = useCommandHistory();
+ * const { guides, addGuide, removeGuide } = useGuideState();
  *
- * // Add a vertical guide at X=100 (undoable)
- * const cmd = addGuide('X', 100);
- * execute(cmd);
+ * // Add a vertical guide at X=100 (automatically undoable via Ctrl+Z)
+ * addGuide('X', 100);
  * ```
- *
- * The caller is responsible for passing the returned command to `useCommandHistory().execute()`
- * so it enters the undo stack. This follows the same pattern as entity creation.
  */
 export function useGuideState(): UseGuideStateReturn {
   const store = getGlobalGuideStore();
@@ -108,11 +108,13 @@ export function useGuideState(): UseGuideStateReturn {
     () => store.count,
   );
 
-  // ── Mutations (return Commands — caller executes them) ──
+  // ── Mutations (B20: route through CommandHistory for undo/redo) ──
+
+  const history = getGlobalCommandHistory();
 
   const addGuide = useCallback((axis: GridAxis, offset: number, label: string | null = null): CreateGuideCommand => {
     const cmd = new CreateGuideCommand(store, axis, offset, label);
-    cmd.execute();
+    history.execute(cmd);
 
     const createdGuide = cmd.getCreatedGuide();
     if (createdGuide) {
@@ -120,20 +122,20 @@ export function useGuideState(): UseGuideStateReturn {
     }
 
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const removeGuide = useCallback((guideId: string): DeleteGuideCommand => {
     const cmd = new DeleteGuideCommand(store, guideId);
-    cmd.execute();
+    history.execute(cmd);
 
     EventBus.emit('grid:guide-removed', { guideId });
 
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const addParallelGuide = useCallback((referenceGuideId: string, offsetDistance: number): CreateParallelGuideCommand => {
     const cmd = new CreateParallelGuideCommand(store, referenceGuideId, offsetDistance);
-    cmd.execute();
+    history.execute(cmd);
 
     const createdGuide = cmd.getCreatedGuide();
     if (createdGuide) {
@@ -141,11 +143,11 @@ export function useGuideState(): UseGuideStateReturn {
     }
 
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const addDiagonalGuide = useCallback((startPoint: Point2D, endPoint: Point2D, label: string | null = null): CreateDiagonalGuideCommand => {
     const cmd = new CreateDiagonalGuideCommand(store, startPoint, endPoint, label);
-    cmd.execute();
+    history.execute(cmd);
 
     const createdGuide = cmd.getCreatedGuide();
     if (createdGuide) {
@@ -153,7 +155,7 @@ export function useGuideState(): UseGuideStateReturn {
     }
 
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const toggleVisibility = useCallback(() => {
     store.setVisible(!store.isVisible());
@@ -171,56 +173,56 @@ export function useGuideState(): UseGuideStateReturn {
 
   const rotateGuide = useCallback((guideId: string, pivot: Point2D, angleDeg: number): RotateGuideCommand => {
     const cmd = new RotateGuideCommand(store, guideId, pivot, angleDeg);
-    cmd.execute();
+    history.execute(cmd);
     EventBus.emit('grid:guide-rotated', { guideId, angleDeg });
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const rotateAllGuides = useCallback((pivot: Point2D, angleDeg: number): RotateAllGuidesCommand => {
     const cmd = new RotateAllGuidesCommand(store, pivot, angleDeg);
-    cmd.execute();
+    history.execute(cmd);
     EventBus.emit('grid:all-guides-rotated', { angleDeg, pivot });
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const rotateGuideGroup = useCallback((guideIds: readonly string[], pivot: Point2D, angleDeg: number): RotateGuideGroupCommand => {
     const cmd = new RotateGuideGroupCommand(store, guideIds, pivot, angleDeg);
-    cmd.execute();
+    history.execute(cmd);
     EventBus.emit('grid:guide-group-rotated', { guideIds, angleDeg, pivot });
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const equalizeGuides = useCallback((guideIds: readonly string[]): EqualizeGuidesCommand => {
     const cmd = new EqualizeGuidesCommand(store, guideIds);
     if (cmd.isValid) {
-      cmd.execute();
+      history.execute(cmd);
       EventBus.emit('grid:guides-equalized', { guideIds, spacing: cmd.spacing });
     }
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const createPolarArray = useCallback((center: Point2D, count: number): PolarArrayGuidesCommand => {
     const cmd = new PolarArrayGuidesCommand(store, center, count);
     if (cmd.isValid) {
-      cmd.execute();
+      history.execute(cmd);
       EventBus.emit('grid:polar-array-created', { center, count, angleIncrement: cmd.angleIncrement });
     }
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const scaleAllGuides = useCallback((origin: Point2D, scaleFactor: number): ScaleAllGuidesCommand => {
     const cmd = new ScaleAllGuidesCommand(store, origin, scaleFactor);
     if (cmd.isValid) {
-      cmd.execute();
+      history.execute(cmd);
       EventBus.emit('grid:all-guides-scaled', { origin, scaleFactor });
     }
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const mirrorGuides = useCallback((axisGuideId: string): MirrorGuidesCommand => {
     const cmd = new MirrorGuidesCommand(store, axisGuideId);
     if (cmd.isValid) {
-      cmd.execute();
+      history.execute(cmd);
       const axisGuide = store.getGuides().find(g => g.id === axisGuideId);
       EventBus.emit('grid:guides-mirrored', {
         axisGuideId,
@@ -229,7 +231,7 @@ export function useGuideState(): UseGuideStateReturn {
       });
     }
     return cmd;
-  }, [store]);
+  }, [store, history]);
 
   const getStore = useCallback(() => store, [store]);
 
