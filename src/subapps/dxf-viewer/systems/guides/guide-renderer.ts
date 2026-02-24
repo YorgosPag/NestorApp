@@ -604,7 +604,7 @@ export class GuideRenderer {
    */
   private renderAxisDimensions(
     ctx: CanvasRenderingContext2D,
-    sortedGuides: readonly Array<{ offset: number }>,
+    sortedGuides: ReadonlyArray<{ offset: number }>,
     axis: 'X' | 'Y',
     transform: ViewTransform,
     viewport: Viewport,
