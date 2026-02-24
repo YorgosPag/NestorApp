@@ -1667,6 +1667,14 @@
     "delete": "Διαγραφή",
     "deleteGroup": "Διαγραφή Ομάδας"
   },
+  "guideGroups": {
+    "create": "Νέα Ομάδα",
+    "createTitle": "Δημιουργία Ομάδας Οδηγών",
+    "nameLabel": "Όνομα ομάδας",
+    "rename": "Μετονομασία",
+    "deleteGroup": "Διαγραφή Ομάδας",
+    "ungrouped": "Χωρίς ομάδα"
+  },
   "guideContextMenu": {
     "color": "Χρώμα",
     "hideAll": "Απόκρυψη Όλων",

@@ -44,10 +44,30 @@ export interface Guide {
   readonly createdAt: string;
   /** Optional reference to parent guide (for parallel guides) */
   readonly parentId: string | null;
+  /** B7: Group membership — null means ungrouped */
+  groupId: string | null;
   /** Start point for diagonal (XZ) guides. Undefined for axis-aligned guides. */
   readonly startPoint?: Point2D;
   /** End point for diagonal (XZ) guides. Undefined for axis-aligned guides. */
   readonly endPoint?: Point2D;
+}
+
+// ============================================================================
+// B7: GUIDE GROUPS
+// ============================================================================
+
+/** A named group of construction guides (e.g. "Δομικός Κάνναβος", "MEP") */
+export interface GuideGroup {
+  /** Unique identifier */
+  readonly id: string;
+  /** User-visible name */
+  name: string;
+  /** Display color (hex) — applied to all guides in group if they have no custom style */
+  color: string;
+  /** Whether the group is locked (locks all member guides) */
+  locked: boolean;
+  /** Whether the group is visible (hides all member guides) */
+  visible: boolean;
 }
 
 // ============================================================================

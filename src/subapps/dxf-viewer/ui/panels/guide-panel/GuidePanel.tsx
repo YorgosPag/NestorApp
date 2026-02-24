@@ -14,7 +14,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { Ruler, Eye, EyeOff, Trash2, Magnet } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
+import { Ruler, Eye, EyeOff, Trash2, Magnet, FolderPlus } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -66,6 +67,14 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
     removeGuide, toggleVisibility, toggleSnap, clearAll: clearAllGuides, getStore,
   } = useGuideState();
 
+  // B7: Group state (subscribe to store for group updates)
+  const store = getStore();
+  const groups = useSyncExternalStore(
+    (cb) => store.subscribe(cb),
+    () => store.getGroups(),
+    () => store.getGroups(),
+  );
+
   // Construction point state
   const {
     points, pointCount, deletePoint, clearAll: clearAllPoints, getStore: getPointStore,
@@ -106,6 +115,45 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
       getStore().setGuideLabel(guideId, result.trim() || null);
     }
   }, [getStore, prompt, t]);
+
+  // ── B7: Group actions ──
+
+  const handleCreateGroup = useCallback(async () => {
+    const result = await prompt({
+      title: t('guideGroups.createTitle'),
+      label: t('guideGroups.nameLabel'),
+      defaultValue: '',
+    });
+    if (result !== null && result.trim()) {
+      getStore().addGroup(result.trim());
+    }
+  }, [getStore, prompt, t]);
+
+  const handleRenameGroup = useCallback(async (groupId: string) => {
+    const group = getStore().getGroupById(groupId);
+    if (!group) return;
+
+    const result = await prompt({
+      title: t('guideGroups.rename'),
+      label: t('guideGroups.nameLabel'),
+      defaultValue: group.name,
+    });
+    if (result !== null && result.trim()) {
+      getStore().renameGroup(groupId, result.trim());
+    }
+  }, [getStore, prompt, t]);
+
+  const handleToggleGroupVisible = useCallback((groupId: string, visible: boolean) => {
+    getStore().setGroupVisible(groupId, visible);
+  }, [getStore]);
+
+  const handleToggleGroupLock = useCallback((groupId: string, locked: boolean) => {
+    getStore().setGroupLocked(groupId, locked);
+  }, [getStore]);
+
+  const handleDeleteGuideGroup = useCallback((groupId: string) => {
+    getStore().removeGroupWithGuides(groupId);
+  }, [getStore]);
 
   // ── Construction point actions ──
 
@@ -209,6 +257,22 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
               <TooltipContent>{t('guidePanel.snapToGuides')}</TooltipContent>
             </Tooltip>
 
+            {/* B7: Create Group */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7"
+                  onClick={handleCreateGroup}
+                >
+                  <FolderPlus className={iconSizes.xs} />
+                  <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guideGroups.create')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('guideGroups.create')}</TooltipContent>
+            </Tooltip>
+
             {/* Delete all guides */}
             {guideCount > 0 && (
               <Tooltip>
@@ -256,11 +320,16 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
           {/* Guide list */}
           <GuideListSection
             guides={guides}
+            groups={groups}
             onToggleVisible={handleToggleGuideVisible}
             onToggleLock={handleToggleGuideLock}
             onDelete={handleDeleteGuide}
             onHover={handleHoverGuide}
             onEditLabel={handleEditLabel}
+            onToggleGroupVisible={handleToggleGroupVisible}
+            onToggleGroupLock={handleToggleGroupLock}
+            onDeleteGroup={handleDeleteGuideGroup}
+            onRenameGroup={handleRenameGroup}
             t={t}
           />
 

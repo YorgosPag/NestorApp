@@ -22,7 +22,7 @@ import type {
   GridOperationResult,
 } from '../../ai-assistant/grid-types';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Guide } from './guide-types';
+import type { Guide, GuideGroup } from './guide-types';
 import { GUIDE_LIMITS, pointToSegmentDistance } from './guide-types';
 import { generateEntityId } from '../entity-creation/utils';
 
@@ -43,6 +43,7 @@ type StoreListener = () => void;
  */
 export class GuideStore implements IGridHeadlessAPI {
   private guides: Guide[] = [];
+  private groups: GuideGroup[] = [];
   private visible = true;
   private snapToGrid = true;
   private listeners = new Set<StoreListener>();
@@ -135,7 +136,7 @@ export class GuideStore implements IGridHeadlessAPI {
   // ── Write Operations ──
 
   /** Add a guide. Returns the created guide or undefined if limit reached. */
-  addGuideRaw(axis: GridAxis, offset: number, label: string | null = null, parentId: string | null = null): Guide | undefined {
+  addGuideRaw(axis: GridAxis, offset: number, label: string | null = null, parentId: string | null = null, groupId: string | null = null): Guide | undefined {
     if (this.guides.length >= GUIDE_LIMITS.MAX_GUIDES) {
       console.warn(`[GuideStore] Max guides limit reached (${GUIDE_LIMITS.MAX_GUIDES})`);
       return undefined;
@@ -159,6 +160,7 @@ export class GuideStore implements IGridHeadlessAPI {
       locked: false,
       createdAt: new Date().toISOString(),
       parentId,
+      groupId,
     };
 
     // CRITICAL: Create new array — useSyncExternalStore uses Object.is()
@@ -197,6 +199,7 @@ export class GuideStore implements IGridHeadlessAPI {
       locked: false,
       createdAt: new Date().toISOString(),
       parentId: null,
+      groupId: null,
       startPoint: { x: startPoint.x, y: startPoint.y },
       endPoint: { x: endPoint.x, y: endPoint.y },
     };
@@ -340,6 +343,7 @@ export class GuideStore implements IGridHeadlessAPI {
       locked: oldGuide.locked,
       createdAt: oldGuide.createdAt,
       parentId: oldGuide.parentId,
+      groupId: oldGuide.groupId,
       startPoint: { x: newStart.x, y: newStart.y },
       endPoint: { x: newEnd.x, y: newEnd.y },
     };
@@ -380,10 +384,141 @@ export class GuideStore implements IGridHeadlessAPI {
     this.notify();
   }
 
-  /** Clear all guides */
+  /** Clear all guides and groups */
   clear(): void {
-    if (this.guides.length === 0) return;
+    if (this.guides.length === 0 && this.groups.length === 0) return;
     this.guides = [];
+    this.groups = [];
+    this.notify();
+  }
+
+  // ── B7: Guide Group Operations ──
+
+  /** Get all groups (readonly snapshot) */
+  getGroups(): readonly GuideGroup[] {
+    return this.groups;
+  }
+
+  /** Get a group by ID */
+  getGroupById(id: string): GuideGroup | undefined {
+    return this.groups.find(g => g.id === id);
+  }
+
+  /** Get all guides belonging to a group */
+  getGuidesByGroupId(groupId: string): readonly Guide[] {
+    return this.guides.filter(g => g.groupId === groupId);
+  }
+
+  /** Create a named guide group. Returns the created group. */
+  addGroup(name: string, color = '#6366F1'): GuideGroup {
+    const group: GuideGroup = {
+      id: `grp_${generateEntityId()}`,
+      name,
+      color,
+      locked: false,
+      visible: true,
+    };
+    this.groups = [...this.groups, group];
+    this.notify();
+    return group;
+  }
+
+  /** Remove a group and ungroup all its guides (guides are NOT deleted). */
+  removeGroup(groupId: string): boolean {
+    const index = this.groups.findIndex(g => g.id === groupId);
+    if (index === -1) return false;
+
+    this.groups = this.groups.filter(g => g.id !== groupId);
+    // Ungroup all member guides (set groupId to null)
+    this.guides = this.guides.map(g =>
+      g.groupId === groupId ? { ...g, groupId: null } : g
+    );
+    this.notify();
+    return true;
+  }
+
+  /** Remove a group AND delete all its member guides. Returns removed guides. */
+  removeGroupWithGuides(groupId: string): readonly Guide[] {
+    const index = this.groups.findIndex(g => g.id === groupId);
+    if (index === -1) return [];
+
+    const removed = this.guides.filter(g => g.groupId === groupId && !g.locked);
+    this.groups = this.groups.filter(g => g.id !== groupId);
+    this.guides = this.guides.filter(g => g.groupId !== groupId || g.locked);
+    this.notify();
+    return removed;
+  }
+
+  /** Rename a group */
+  renameGroup(groupId: string, name: string): boolean {
+    const group = this.groups.find(g => g.id === groupId);
+    if (!group || group.name === name) return false;
+
+    this.groups = this.groups.map(g =>
+      g.id === groupId ? { ...g, name } : g
+    );
+    this.notify();
+    return true;
+  }
+
+  /** Set group locked state — also locks/unlocks all member guides */
+  setGroupLocked(groupId: string, locked: boolean): boolean {
+    const group = this.groups.find(g => g.id === groupId);
+    if (!group || group.locked === locked) return false;
+
+    this.groups = this.groups.map(g =>
+      g.id === groupId ? { ...g, locked } : g
+    );
+    this.guides = this.guides.map(g =>
+      g.groupId === groupId ? { ...g, locked } : g
+    );
+    this.notify();
+    return true;
+  }
+
+  /** Set group visibility — also shows/hides all member guides */
+  setGroupVisible(groupId: string, visible: boolean): boolean {
+    const group = this.groups.find(g => g.id === groupId);
+    if (!group || group.visible === visible) return false;
+
+    this.groups = this.groups.map(g =>
+      g.id === groupId ? { ...g, visible } : g
+    );
+    this.guides = this.guides.map(g =>
+      g.groupId === groupId ? { ...g, visible } : g
+    );
+    this.notify();
+    return true;
+  }
+
+  /** Set group color */
+  setGroupColor(groupId: string, color: string): boolean {
+    const group = this.groups.find(g => g.id === groupId);
+    if (!group || group.color === color) return false;
+
+    this.groups = this.groups.map(g =>
+      g.id === groupId ? { ...g, color } : g
+    );
+    this.notify();
+    return true;
+  }
+
+  /** Assign a guide to a group (or ungroup by passing null) */
+  setGuideGroupId(guideId: string, groupId: string | null): boolean {
+    const guide = this.guides.find(g => g.id === guideId);
+    if (!guide || guide.groupId === groupId) return false;
+
+    this.guides = this.guides.map(g =>
+      g.id === guideId ? { ...g, groupId } : g
+    );
+    this.notify();
+    return true;
+  }
+
+  /** Restore a group (for undo) */
+  restoreGroup(group: GuideGroup): void {
+    if (this.groups.some(g => g.id === group.id)) return;
+    this.groups = [...this.groups, { ...group }];
     this.notify();
   }
 

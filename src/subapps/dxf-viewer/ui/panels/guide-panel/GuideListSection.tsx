@@ -2,14 +2,15 @@
 
 /**
  * @module ui/panels/guide-panel/GuideListSection
- * @description Guide list grouped by axis (X, Y, XZ) with per-item actions.
+ * @description Guide list with B7 group support — grouped guides first, then ungrouped by axis.
  *
  * @see ADR-189 §4.13 (Guide Panel UI)
+ * @see ADR-189 §4.3 B7 (Guide Groups)
  * @since 2026-02-21
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Trash2, Pencil } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, Pencil, FolderOpen } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { GUIDE_COLORS, isDiagonalGuide } from '../../../systems/guides/guide-types';
-import type { Guide, GridAxis } from '../../../systems/guides/guide-types';
+import type { Guide, GuideGroup, GridAxis } from '../../../systems/guides/guide-types';
 import type { TFunction } from 'i18next';
 
 // ============================================================================
@@ -26,11 +27,17 @@ import type { TFunction } from 'i18next';
 
 interface GuideListSectionProps {
   guides: readonly Guide[];
+  groups: readonly GuideGroup[];
   onToggleVisible: (guideId: string, visible: boolean) => void;
   onToggleLock: (guideId: string, locked: boolean) => void;
   onDelete: (guideId: string) => void;
   onHover: (guideId: string | null) => void;
   onEditLabel: (guideId: string) => void;
+  /** B7: Group-level actions */
+  onToggleGroupVisible: (groupId: string, visible: boolean) => void;
+  onToggleGroupLock: (groupId: string, locked: boolean) => void;
+  onDeleteGroup: (groupId: string) => void;
+  onRenameGroup: (groupId: string) => void;
   t: TFunction;
 }
 
@@ -154,31 +161,165 @@ const GuideItem = React.memo<GuideItemProps>(({
 GuideItem.displayName = 'GuideItem';
 
 // ============================================================================
+// B7: GROUP HEADER (with group-level actions)
+// ============================================================================
+
+interface GroupHeaderProps {
+  group: GuideGroup;
+  memberCount: number;
+  onToggleVisible: (groupId: string, visible: boolean) => void;
+  onToggleLock: (groupId: string, locked: boolean) => void;
+  onDelete: (groupId: string) => void;
+  onRename: (groupId: string) => void;
+  t: TFunction;
+}
+
+const GroupHeader = React.memo<GroupHeaderProps>(({
+  group, memberCount, onToggleVisible, onToggleLock, onDelete, onRename, t,
+}) => {
+  const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+
+  return (
+    <CollapsibleTrigger className={`flex items-center ${PANEL_LAYOUT.GAP.XS} w-full ${PANEL_LAYOUT.SPACING.XS} hover:bg-accent/30 rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} group/grp`}>
+      <FolderOpen className="w-3.5 h-3.5 shrink-0" style={{ color: group.color }} />
+      <span className={`flex-1 text-left truncate ${!group.visible ? 'opacity-40' : ''}`}>{group.name}</span>
+      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>({memberCount})</span>
+
+      {/* Group-level action buttons */}
+      <nav className="flex items-center opacity-0 group-hover/grp:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => onRename(group.id)}>
+              <Pencil className={iconSizes.xs} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t('guideGroups.rename')}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => onToggleVisible(group.id, !group.visible)}>
+              {group.visible
+                ? <Eye className={iconSizes.xs} />
+                : <EyeOff className={`${iconSizes.xs} opacity-40`} />
+              }
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{group.visible ? t('guidePanel.hide') : t('guidePanel.show')}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => onToggleLock(group.id, !group.locked)}>
+              {group.locked
+                ? <Lock className={`${iconSizes.xs} text-amber-500`} />
+                : <Unlock className={iconSizes.xs} />
+              }
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{group.locked ? t('guidePanel.unlock') : t('guidePanel.lock')}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => onDelete(group.id)}>
+              <Trash2 className={`${iconSizes.xs} text-destructive`} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t('guideGroups.deleteGroup')}</TooltipContent>
+        </Tooltip>
+      </nav>
+    </CollapsibleTrigger>
+  );
+});
+GroupHeader.displayName = 'GroupHeader';
+
+// ============================================================================
 // GUIDE LIST SECTION
 // ============================================================================
 
 export const GuideListSection: React.FC<GuideListSectionProps> = ({
-  guides, onToggleVisible, onToggleLock, onDelete, onHover, onEditLabel, t,
+  guides, groups,
+  onToggleVisible, onToggleLock, onDelete, onHover, onEditLabel,
+  onToggleGroupVisible, onToggleGroupLock, onDeleteGroup, onRenameGroup,
+  t,
 }) => {
   const colors = useSemanticColors();
 
-  const grouped = useMemo<GroupedGuides>(() => {
-    const result: GroupedGuides = { x: [], y: [], xz: [] };
+  // Separate grouped vs ungrouped guides
+  const { groupedByGroup, ungrouped } = useMemo(() => {
+    const byGroup = new Map<string, Guide[]>();
+    const noGroup: Guide[] = [];
+
     for (const guide of guides) {
+      if (guide.groupId) {
+        if (!byGroup.has(guide.groupId)) byGroup.set(guide.groupId, []);
+        byGroup.get(guide.groupId)!.push(guide);
+      } else {
+        noGroup.push(guide);
+      }
+    }
+
+    return { groupedByGroup: byGroup, ungrouped: noGroup };
+  }, [guides]);
+
+  // Ungrouped guides by axis (original view)
+  const ungroupedByAxis = useMemo<GroupedGuides>(() => {
+    const result: GroupedGuides = { x: [], y: [], xz: [] };
+    for (const guide of ungrouped) {
       const key = guide.axis.toLowerCase() as keyof GroupedGuides;
       if (key in result) {
         result[key].push(guide);
       }
     }
     return result;
-  }, [guides]);
+  }, [ungrouped]);
 
   if (guides.length === 0) return null;
 
   return (
     <section>
+      {/* B7: Named groups first */}
+      {groups.map((group) => {
+        const memberGuides = groupedByGroup.get(group.id) ?? [];
+        if (memberGuides.length === 0) return null;
+
+        return (
+          <Collapsible key={group.id} defaultOpen>
+            <GroupHeader
+              group={group}
+              memberCount={memberGuides.length}
+              onToggleVisible={onToggleGroupVisible}
+              onToggleLock={onToggleGroupLock}
+              onDelete={onDeleteGroup}
+              onRename={onRenameGroup}
+              t={t}
+            />
+            <CollapsibleContent>
+              <ul className={PANEL_LAYOUT.MARGIN.LEFT_SM}>
+                {memberGuides.map(guide => (
+                  <GuideItem
+                    key={guide.id}
+                    guide={guide}
+                    onToggleVisible={onToggleVisible}
+                    onToggleLock={onToggleLock}
+                    onDelete={onDelete}
+                    onHover={onHover}
+                    onEditLabel={onEditLabel}
+                    color={guide.style?.color ?? group.color}
+                    t={t}
+                  />
+                ))}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+
+      {/* Ungrouped guides by axis (original view) */}
       {AXIS_GROUPS.map(({ key, colorKey, i18nKey }) => {
-        const groupGuides = grouped[key];
+        const groupGuides = ungroupedByAxis[key];
         if (groupGuides.length === 0) return null;
 
         const color = GUIDE_COLORS[colorKey];

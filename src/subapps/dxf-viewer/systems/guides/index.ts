@@ -6,7 +6,7 @@
  */
 
 // Types
-export type { Guide, GuideRenderStyle, GridAxis, ConstructionPoint } from './guide-types';
+export type { Guide, GuideGroup, GuideRenderStyle, GridAxis, ConstructionPoint } from './guide-types';
 export { GUIDE_COLORS, GUIDE_COLOR_PALETTE, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, GUIDE_LIMITS, CONSTRUCTION_POINT_LIMITS } from './guide-types';
 export { isDiagonalGuide, pointToSegmentDistance, projectPointOnSegment } from './guide-types';
 
