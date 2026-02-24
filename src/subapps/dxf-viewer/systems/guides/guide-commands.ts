@@ -1278,6 +1278,10 @@ export class MirrorGuidesCommand implements ICommand {
     this.execute();
   }
 
+  getDescription(): string {
+    return `Mirror ${this.createdGuides.length} guides across ${this.mirrorAxis} axis at offset ${this.mirrorOffset.toFixed(1)}`;
+  }
+
   canMergeWith(): boolean {
     return false;
   }
