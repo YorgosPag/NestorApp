@@ -1673,6 +1673,13 @@
     "delete": "Delete",
     "deleteGroup": "Delete Group"
   },
+  "guideContextMenu": {
+    "color": "Color",
+    "hideAll": "Hide All",
+    "showAll": "Show All",
+    "cancel": "Cancel",
+    "resetColor": "Reset to default"
+  },
   "guides": {
     "measureToGuide": "Create guides at measurement points?",
     "createGuides": "Create Guides",

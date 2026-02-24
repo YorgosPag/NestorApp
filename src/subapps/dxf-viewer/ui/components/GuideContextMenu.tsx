@@ -32,6 +32,7 @@ import styles from './DrawingContextMenu.module.css';
 import colorStyles from './GuideColorPalette.module.css';
 import { cn } from '@/lib/utils';
 import { Trash2, Lock, Unlock, Tag, Eye, EyeOff, X, Palette, RotateCcw } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 import type { Guide } from '../../systems/guides/guide-types';
 import { GUIDE_COLOR_PALETTE } from '../../systems/guides/guide-types';
 
@@ -71,6 +72,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
   guidesVisible,
   onCancel,
 }, ref) => {
+  const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [targetGuide, setTargetGuide] = useState<Guide | null>(null);
@@ -190,7 +192,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
           onClick={handleEditLabel}
         >
           <span className={styles.menuItemIcon}><Tag size={16} /></span>
-          <span className={styles.menuItemLabel}>Edit Label</span>
+          <span className={styles.menuItemLabel}>{t('guidePanel.editLabel')}</span>
         </DropdownMenuItem>
 
         {/* Change Color (B6) — onSelect preventDefault keeps menu open */}
@@ -199,7 +201,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
           onSelect={(e) => { e.preventDefault(); handleToggleColors(); }}
         >
           <span className={styles.menuItemIcon}><Palette size={16} /></span>
-          <span className={styles.menuItemLabel}>Color</span>
+          <span className={styles.menuItemLabel}>{t('guideContextMenu.color')}</span>
           {currentColor && (
             <span
               className={colorStyles.currentSwatch}
@@ -244,7 +246,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
             {isLocked ? <Unlock size={16} /> : <Lock size={16} />}
           </span>
           <span className={styles.menuItemLabel}>
-            {isLocked ? 'Unlock' : 'Lock'}
+            {isLocked ? t('guidePanel.unlock') : t('guidePanel.lock')}
           </span>
         </DropdownMenuItem>
 
@@ -257,7 +259,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
           disabled={isLocked}
         >
           <span className={styles.menuItemIcon}><Trash2 size={16} /></span>
-          <span className={styles.menuItemLabel}>Delete</span>
+          <span className={styles.menuItemLabel}>{t('guidePanel.delete')}</span>
           <span className={styles.menuItemShortcut}>G→D</span>
         </DropdownMenuItem>
 
@@ -272,7 +274,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
             {guidesVisible ? <EyeOff size={16} /> : <Eye size={16} />}
           </span>
           <span className={styles.menuItemLabel}>
-            {guidesVisible ? 'Hide All' : 'Show All'}
+            {guidesVisible ? t('guideContextMenu.hideAll') : t('guideContextMenu.showAll')}
           </span>
           <span className={styles.menuItemShortcut}>G→V</span>
         </DropdownMenuItem>
@@ -285,7 +287,7 @@ const GuideContextMenuInner = forwardRef<GuideContextMenuHandle, GuideContextMen
           onClick={handleCancel}
         >
           <span className={styles.menuItemIcon}><X size={16} /></span>
-          <span className={styles.menuItemLabel}>Cancel</span>
+          <span className={styles.menuItemLabel}>{t('guideContextMenu.cancel')}</span>
           <span className={styles.menuItemShortcut}>Esc</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

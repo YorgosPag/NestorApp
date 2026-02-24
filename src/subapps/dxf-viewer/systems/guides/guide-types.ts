@@ -118,6 +118,11 @@ export const HIGHLIGHT_GUIDE_STYLE: GuideRenderStyle = {
   opacity: HOVER_HIGHLIGHT.GUIDE.opacity,
 };
 
+/** B4: Opacity multiplier for locked guides — muted appearance on canvas */
+export const LOCKED_GUIDE_OPACITY_FACTOR = 0.35;
+/** B4: Dash pattern for locked guides — longer gaps convey "inactive" feel */
+export const LOCKED_GUIDE_DASH_PATTERN: readonly number[] = [4, 6];
+
 // ============================================================================
 // SYSTEM LIMITS
 // ============================================================================

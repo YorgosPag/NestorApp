@@ -1667,6 +1667,13 @@
     "delete": "Διαγραφή",
     "deleteGroup": "Διαγραφή Ομάδας"
   },
+  "guideContextMenu": {
+    "color": "Χρώμα",
+    "hideAll": "Απόκρυψη Όλων",
+    "showAll": "Εμφάνιση Όλων",
+    "cancel": "Ακύρωση",
+    "resetColor": "Επαναφορά προεπιλογής"
+  },
   "guides": {
     "measureToGuide": "Δημιουργία οδηγών στα σημεία μέτρησης;",
     "createGuides": "Δημιουργία Οδηγών",

@@ -17,7 +17,7 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Guide, GuideRenderStyle, ConstructionPoint } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE } from './guide-types';
+import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, LOCKED_GUIDE_OPACITY_FACTOR, LOCKED_GUIDE_DASH_PATTERN } from './guide-types';
 // 🏢 Centralized hover highlight config — shadowBlur glow for highlighted guides
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-088: Pixel-perfect alignment for crisp 1px rendering
@@ -75,7 +75,7 @@ export class GuideRenderer {
       // ADR-189 §3.3: Diagonal (XZ) guides — finite line segment
       if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
         // 🏢 Centralized: Keep original style, glow is applied by drawDiagonalGuideLine
-        const style = this.resolveDiagonalStyle();
+        const style = this.applyLockedMuting(this.resolveDiagonalStyle(), guide.locked);
         const { screenStart, screenEnd } = this.drawDiagonalGuideLine(
           ctx, guide.startPoint, guide.endPoint, transform, viewport, style, isHighlighted,
         );
@@ -85,7 +85,8 @@ export class GuideRenderer {
 
       // Axis-aligned guides (X / Y)
       // 🏢 Centralized: Keep original style — glow is applied inside drawGuideLine when highlighted
-      const style = this.resolveStyle(guide);
+      // B4: Locked guides get muted appearance (reduced opacity + longer dash)
+      const style = this.applyLockedMuting(this.resolveStyle(guide), guide.locked);
       const screenPos = this.guideOffsetToScreen(guide.axis, guide.offset, transform, viewport);
 
       // Skip if entirely off-screen
@@ -370,6 +371,22 @@ export class GuideRenderer {
     // Standard axis coloring
     const color = guide.axis === 'X' ? GUIDE_COLORS.X : GUIDE_COLORS.Y;
     return { ...DEFAULT_GUIDE_STYLE, color };
+  }
+
+  // ── B4: Locked Guide Muting ──
+
+  /**
+   * Apply muted appearance to a guide style when the guide is locked.
+   * Reduces opacity and widens dash gaps to convey "inactive / protected" state.
+   * Returns the original style unmodified when `locked` is false.
+   */
+  private applyLockedMuting(style: GuideRenderStyle, locked: boolean): GuideRenderStyle {
+    if (!locked) return style;
+    return {
+      ...style,
+      opacity: style.opacity * LOCKED_GUIDE_OPACITY_FACTOR,
+      dashPattern: [...LOCKED_GUIDE_DASH_PATTERN],
+    };
   }
 
   // ── Construction Point Rendering (ADR-189 §3.7-3.16) ──
