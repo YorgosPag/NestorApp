@@ -77,6 +77,11 @@
     "empty": {
       "title": "No contacts found",
       "subtitle": "Add your first contact"
+    },
+    "share": {
+      "noContactSelected": "Select a contact to share",
+      "copied": "Link copied!",
+      "success": "Shared via {platform} successfully!"
     }
   },
   "types": {

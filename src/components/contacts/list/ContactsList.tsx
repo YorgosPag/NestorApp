@@ -17,6 +17,9 @@ import { ContactsService } from '@/services/contacts.service';
 import toast from 'react-hot-toast';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+// 🏢 ENTERPRISE: Centralized sharing system (SSoT)
+import { ShareModal } from '@/components/ui/ShareModal';
+import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -59,6 +62,9 @@ export function ContactsList({
 
   // 🏢 ENTERPRISE: Quick filter state for contact types
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  // 🏢 ENTERPRISE: Centralized share modal state (SSoT - ShareModal)
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareData, setShareData] = useState<ShareData | null>(null);
 
   const toggleFavorite = async (contactId: string) => {
     const contact = contacts.find(c => c.id === contactId);
@@ -129,6 +135,22 @@ export function ContactsList({
       : bValue.localeCompare(aValue);
   });
 
+  // 🏢 ENTERPRISE: Centralized share handler using ShareModal (SSoT)
+  const handleShareContact = () => {
+    if (!selectedContact) {
+      toast.error(t('list.share.noContactSelected'));
+      return;
+    }
+    const contactName = getContactDisplayName(selectedContact);
+    const contactUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/contacts?id=${selectedContact.id}`;
+    setShareData({
+      title: contactName,
+      text: contactName,
+      url: contactUrl,
+    });
+    setShareModalOpen(true);
+  };
+
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
 
@@ -178,9 +200,7 @@ export function ContactsList({
           onFavoritesManagement={() => {
             // Debug logging removed
           }}
-          onShare={() => {
-            // Debug logging removed
-          }}
+          onShare={handleShareContact}
           onSettings={() => {
             // Debug logging removed
           }}
@@ -219,9 +239,7 @@ export function ContactsList({
           onFavoritesManagement={() => {
             // Debug logging removed
           }}
-          onShare={() => {
-            // Debug logging removed
-          }}
+          onShare={handleShareContact}
           onSettings={() => {
             // Debug logging removed
           }}
@@ -266,6 +284,17 @@ export function ContactsList({
           )}
         </div>
       </ScrollArea>
+
+      {/* 🏢 ENTERPRISE: Centralized ShareModal (SSoT - share-utils + ShareModal) */}
+      {shareData && (
+        <ShareModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          shareData={shareData}
+          onCopySuccess={() => toast.success(t('list.share.copied'))}
+          onShareSuccess={(platform) => toast.success(t('list.share.success', { platform }))}
+        />
+      )}
     </EntityListColumn>
   );
 }
