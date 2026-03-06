@@ -117,7 +117,7 @@ const shareholdersSection: SectionConfig = {
 };
 
 // Quick simplified sections για completeness - 🏢 i18n keys
-const documentsSection: SectionConfig = { id: 'documents', title: 'sections.documentsCertificates', icon: 'file-text', order: 7, fields: [], description: 'sectionDescriptions.documentsCertificates' };
+const filesSection: SectionConfig = { id: 'files', title: 'sections.files', icon: 'file-text', order: 7, fields: [], description: 'sectionDescriptions.files' };
 const decisionsSection: SectionConfig = { id: 'decisions', title: 'sections.organDecisions', icon: 'gavel', order: 8, fields: [], description: 'sectionDescriptions.organDecisions' };
 const historySection: SectionConfig = { id: 'companyVersions', title: 'sections.historyChanges', icon: 'history', order: 9, fields: [], description: 'sectionDescriptions.historyChanges' };
 // representativesSection REMOVED — merged into relationshipsSection (Πρόσωπα & Ρόλοι)
@@ -145,7 +145,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   // Remaining sections
   addressesSection,
   communicationSection, // 🏢 ENTERPRISE: Communication tab for companies (phones, emails, websites, social media)
-  documentsSection,
+  filesSection,
   photosSection,
   relationshipsSection,
   bankingSection, // 🏢 ENTERPRISE: Banking System (ADR-126)
