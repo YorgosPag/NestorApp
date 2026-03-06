@@ -38,6 +38,7 @@ import type { KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
 import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAddressesSection';
 // 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
+import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
@@ -647,8 +648,28 @@ export function UnifiedContactTabbedSection({
           ),
         } : {}),
 
-        // 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
+        // 🏢 ENTERPRISE: Public Service Registry Picker + Ministry Picker (services only)
         ...(contactType === 'service' ? {
+          name: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+            <PublicServicePicker
+              value={(formData.name as string) ?? ''}
+              disabled={fieldDisabled}
+              onNameChange={(name: string) => {
+                if (setFormData) {
+                  setFormData({ ...formData, name });
+                }
+              }}
+              onEntitySelected={(entity) => {
+                if (setFormData) {
+                  setFormData({
+                    ...formData,
+                    name: entity.name,
+                    supervisionMinistry: entity.supervisingMinistry,
+                  });
+                }
+              }}
+            />
+          ),
           supervisionMinistry: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
             <MinistryPicker
               value={formData.supervisionMinistry ?? ''}
