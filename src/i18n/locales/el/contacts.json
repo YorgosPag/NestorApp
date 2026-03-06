@@ -485,6 +485,8 @@
       "username": "π.χ. @username",
       "socialLabel": "π.χ. Προσωπικό προφίλ"
     },
+    "addContactInfo": "Προσθέστε στοιχεία επικοινωνίας",
+    "addNew": "Προσθήκη {{type}}",
     "emptyStates": {
       "phones": "Δεν έχουν προστεθεί τηλέφωνα",
       "emails": "Δεν έχουν προστεθεί e-mails",

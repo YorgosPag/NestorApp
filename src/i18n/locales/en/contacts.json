@@ -485,6 +485,8 @@
       "username": "e.g. @username",
       "socialLabel": "e.g. Personal profile"
     },
+    "addContactInfo": "Add contact information",
+    "addNew": "Add {{type}}",
     "emptyStates": {
       "phones": "No phones added",
       "emails": "No emails added",
