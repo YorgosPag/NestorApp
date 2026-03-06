@@ -147,22 +147,30 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           </Tooltip>
         </div>
 
-        {/* 🏢 ENTERPRISE: Dropdown menu */}
+        {/* 🏢 ENTERPRISE: Dropdown menu with grouped sections (ADR-189 §37) */}
         {showDropdown && (
-          <nav className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground rounded-md shadow-lg z-50 min-w-max border border-border py-1">
-            {tool.dropdownOptions!.map((option) => {
+          <nav className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground rounded-md shadow-lg z-50 min-w-max border border-border py-1 max-h-[70vh] overflow-y-auto">
+            {tool.dropdownOptions!.map((option, index) => {
               const OptionIcon = option.icon;
+              const prevGroup = index > 0 ? tool.dropdownOptions![index - 1].group : undefined;
+              const showGroupHeader = option.group && option.group !== prevGroup;
               return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => handleDropdownItemClick(option.id)}
-                  className={`flex items-center w-full px-3 py-1.5 ${PANEL_LAYOUT.TYPOGRAPHY.SM} whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground`}
-                >
-                  {OptionIcon && <OptionIcon className={`${iconSizes.sm} mr-2 shrink-0 ${iconColorClass}`} />}
-                  <span className="flex-1 text-left">{t(option.label)}</span>
-                  {option.hotkey && <span className={`ml-2 text-[10px] shrink-0 ${colors.text.muted}`}>{option.hotkey}</span>}
-                </button>
+                <React.Fragment key={option.id}>
+                  {showGroupHeader && (
+                    <header className={`px-3 py-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-semibold ${colors.text.muted} uppercase tracking-wider select-none ${index > 0 ? 'border-t border-border mt-1 pt-1.5' : ''}`}>
+                      {t(option.group!)}
+                    </header>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDropdownItemClick(option.id)}
+                    className={`flex items-center w-full px-3 py-1.5 ${PANEL_LAYOUT.TYPOGRAPHY.SM} whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground`}
+                  >
+                    {OptionIcon && <OptionIcon className={`${iconSizes.sm} mr-2 shrink-0 ${iconColorClass}`} />}
+                    <span className="flex-1 text-left">{t(option.label)}</span>
+                    {option.hotkey && <span className={`ml-2 text-[10px] shrink-0 ${colors.text.muted}`}>{option.hotkey}</span>}
+                  </button>
+                </React.Fragment>
               );
             })}
           </nav>

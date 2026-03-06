@@ -3101,3 +3101,38 @@ All features are pure TypeScript services with zero React dependency.
 **B100 Green Deal**: EU Taxonomy basic validation (concrete intensity, CO₂ rating, waste factor, regularity).
 **B101 DIN/VOB**: 3 German standard grid templates (Wohnungsbau, Büro, Industriebau).
 **B113 Multi-Language**: Confirmed — i18n already supports EN/EL.
+
+## 37. Guide Menu Reorganization — Grouped Categories (2026-03-06)
+
+### Problem
+Flat dropdown with 33 guide tools overflows viewport — users cannot see or reach items at the bottom of the list.
+
+### Solution
+Grouped dropdown menu with section headers (AutoCAD/Revit panel pattern) + `max-h-[70vh]` scroll containment.
+
+### Implementation
+
+**Type extension** (`types.ts`): Added optional `group?: string` to dropdown option interface.
+
+**ToolButton rendering** (`ToolButton.tsx`):
+- `max-h-[70vh] overflow-y-auto` on dropdown `<nav>` — never exceeds 70% viewport height
+- When `group` changes between consecutive items → renders `<header>` with muted uppercase text + `border-t` separator
+- Non-clickable section headers, compact spacing
+
+**6 categories** (33 tools organized):
+
+| Category | i18n Key | Count |
+|----------|----------|-------|
+| Δημιουργία | `guideMenuGroups.create` | 5 |
+| Σημεία Κατασκευής | `guideMenuGroups.points` | 8 |
+| Κέντρα & Μέσα | `guideMenuGroups.centers` | 3 |
+| Διαχείριση | `guideMenuGroups.manage` | 3 |
+| Μετασχηματισμοί | `guideMenuGroups.transforms` | 8 |
+| Πλέγμα & Στοιχεία | `guideMenuGroups.grid` | 6 |
+
+### Files Changed
+- `ui/toolbar/types.ts` — `group?: string` in dropdown option
+- `ui/toolbar/ToolButton.tsx` — Grouped rendering + max-height scroll
+- `ui/toolbar/toolDefinitions.tsx` — `group` field on each guide option
+- `i18n/locales/en/dxf-viewer.json` — 6 EN group headers
+- `i18n/locales/el/dxf-viewer.json` — 6 EL group headers

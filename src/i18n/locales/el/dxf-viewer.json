@@ -1729,6 +1729,14 @@
     "deleteGroup": "Διαγραφή Ομάδας",
     "ungrouped": "Χωρίς ομάδα"
   },
+  "guideMenuGroups": {
+    "create": "Δημιουργία",
+    "points": "Σημεία Κατασκευής",
+    "centers": "Κέντρα & Μέσα",
+    "manage": "Διαχείριση",
+    "transforms": "Μετασχηματισμοί",
+    "grid": "Πλέγμα & Στοιχεία"
+  },
   "guideContextMenu": {
     "color": "Χρώμα",
     "hideAll": "Απόκρυψη Όλων",

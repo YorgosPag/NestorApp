@@ -1735,6 +1735,14 @@
     "deleteGroup": "Delete Group",
     "ungrouped": "Ungrouped"
   },
+  "guideMenuGroups": {
+    "create": "Create",
+    "points": "Construction Points",
+    "centers": "Centers & Midpoints",
+    "manage": "Management",
+    "transforms": "Transforms",
+    "grid": "Grid & Entities"
+  },
   "guideContextMenu": {
     "color": "Color",
     "hideAll": "Hide All",
