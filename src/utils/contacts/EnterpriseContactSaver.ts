@@ -11,7 +11,7 @@
 //
 // ============================================================================
 
-import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactFormData, CompanyAddress, KadActivity } from '@/types/ContactFormTypes';
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -129,6 +129,59 @@ export class EnterpriseContactSaver {
     }
 
     // ========================================================================
+    // COMPANY CUSTOM FIELDS: form fields → customFields + addresses[]
+    // 🏢 ENTERPRISE: Company-specific fields must be nested in customFields
+    // for Firestore, because the read mapper (companyMapper.ts) reads from there.
+    // ========================================================================
+
+    if (formData.type === 'company') {
+      const customFields: Record<string, unknown> = {};
+
+      // Multi-address: companyAddresses → customFields + top-level addresses[]
+      const companyAddresses = formData.companyAddresses;
+      if (Array.isArray(companyAddresses) && companyAddresses.length > 0) {
+        customFields.companyAddresses = companyAddresses;
+
+        // Override top-level addresses[] with converted company addresses
+        enterpriseData.addresses = this.buildAddressesFromCompany(companyAddresses);
+      }
+
+      // Multi-KAD activities
+      if (formData.activities !== undefined) {
+        customFields.activities = formData.activities ?? [];
+      }
+
+      // Sync legacy singular KAD + other company fields
+      const companyCustomFieldKeys = [
+        'gemiStatus', 'gemiStatusDate',
+        'activityCodeKAD', 'activityDescription', 'activityType',
+        'chamber', 'capitalAmount', 'currency', 'extraordinaryCapital',
+        'registrationDate', 'lastUpdateDate',
+        'gemiDepartment', 'prefecture', 'municipality',
+      ] as const;
+
+      for (const key of companyCustomFieldKeys) {
+        if (formData[key] !== undefined) {
+          customFields[key] = formData[key];
+        }
+      }
+
+      if (Object.keys(customFields).length > 0) {
+        (enterpriseData as Record<string, unknown>).customFields = customFields;
+        logger.info('ENTERPRISE SAVER: Built company customFields', { keys: Object.keys(customFields) });
+      }
+
+      // Remove company form-only fields from top level (they live in customFields)
+      const companyOnlyFields = [
+        'companyAddresses', 'activities',
+        ...companyCustomFieldKeys,
+      ] as const;
+      for (const field of companyOnlyFields) {
+        delete (enterpriseData as Record<string, unknown>)[field];
+      }
+    }
+
+    // ========================================================================
     // REMOVE FLAT FIELDS FROM PAYLOAD
     // Note: This removes from payload only. Service layer handles deleteField() for updates
     // ========================================================================
@@ -232,6 +285,24 @@ export class EnterpriseContactSaver {
   }
 
   /**
+   * Convert CompanyAddress[] to AddressInfo[] for Firestore top-level addresses field.
+   * Same logic as mappers/company.ts buildAddresses.
+   */
+  private static buildAddressesFromCompany(companyAddresses: CompanyAddress[]): AddressInfo[] {
+    return companyAddresses.map((ca, i) => ({
+      street: ca.street,
+      number: ca.number,
+      city: ca.city,
+      postalCode: ca.postalCode,
+      region: ca.region ?? '',
+      country: 'GR',
+      type: 'work' as const,
+      isPrimary: i === 0 || ca.type === 'headquarters',
+      label: ca.type === 'headquarters' ? 'Έδρα' : 'Υποκατάστημα',
+    }));
+  }
+
+  /**
    * Update existing arrays with new data (maintains other entries)
    *
    * @param existingContact - Current contact from database
@@ -244,14 +315,23 @@ export class EnterpriseContactSaver {
     const updatedData = { ...existingContact };
     const newData = this.convertToEnterpriseStructure(formData);
 
+    // 🏢 ENTERPRISE: Deep merge customFields before Object.assign (which overwrites)
+    // Preserve existing customFields and merge new ones on top
+    const existingCustom = (updatedData as Record<string, unknown>).customFields as Record<string, unknown> | undefined;
+    const newCustom = (newData as Record<string, unknown>).customFields as Record<string, unknown> | undefined;
+    if (newCustom && Object.keys(newCustom).length > 0) {
+      (newData as Record<string, unknown>).customFields = {
+        ...(existingCustom ?? {}),
+        ...newCustom,
+      };
+    }
+
     // Merge new data
     Object.assign(updatedData, newData);
 
-    // Special handling for arrays - replace primary entries
+    // Replace addresses with the new set (company multi-address or single primary)
     if (newData.addresses && newData.addresses.length > 0) {
-      const existingAddresses = updatedData.addresses || [];
-      const nonPrimaryAddresses = existingAddresses.filter(addr => !addr.isPrimary);
-      updatedData.addresses = [...newData.addresses, ...nonPrimaryAddresses];
+      updatedData.addresses = newData.addresses;
     }
 
     if (newData.websites && newData.websites.length > 0) {

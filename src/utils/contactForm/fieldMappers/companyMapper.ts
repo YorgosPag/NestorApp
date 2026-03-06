@@ -31,12 +31,19 @@ function getContactValue(contact: ExtendedCompanyContact, fieldName: string): st
  * Reads `customFields.activities[]` first; falls back to legacy singular fields.
  */
 function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
+  // Primary: customFields.activities
   const stored = contact.customFields?.activities;
   if (Array.isArray(stored) && stored.length > 0) {
     return stored as KadActivity[];
   }
 
-  // Fallback: build from legacy singular fields
+  // Secondary fallback: root-level activities (legacy data from EnterpriseContactSaver)
+  const rootActivities = (contact as Record<string, unknown>).activities;
+  if (Array.isArray(rootActivities) && rootActivities.length > 0) {
+    return rootActivities as KadActivity[];
+  }
+
+  // Tertiary fallback: build from legacy singular fields
   const code = getContactValue(contact, 'activityCodeKAD');
   if (code) {
     return [{
@@ -51,15 +58,23 @@ function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
 
 /**
  * Resolve company addresses from Firestore contact.
- * Reads `customFields.companyAddresses[]` first; falls back to Contact.addresses[].
+ * Reads `customFields.companyAddresses[]` first; falls back to root-level,
+ * then Contact.addresses[].
  */
 function resolveCompanyAddresses(contact: ExtendedCompanyContact): CompanyAddress[] {
+  // Primary: customFields.companyAddresses
   const stored = contact.customFields?.companyAddresses;
   if (Array.isArray(stored) && stored.length > 0) {
     return stored as CompanyAddress[];
   }
 
-  // Fallback: build from Contact.addresses[]
+  // Secondary fallback: root-level companyAddresses (legacy data from EnterpriseContactSaver)
+  const rootAddresses = (contact as Record<string, unknown>).companyAddresses;
+  if (Array.isArray(rootAddresses) && rootAddresses.length > 0) {
+    return rootAddresses as CompanyAddress[];
+  }
+
+  // Tertiary fallback: build from Contact.addresses[]
   const contactAddresses = contact.addresses;
   if (Array.isArray(contactAddresses) && contactAddresses.length > 0) {
     return contactAddresses.map((addr, i) => ({
