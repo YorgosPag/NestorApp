@@ -26,6 +26,7 @@
   },
   "sectionDescriptions": {
     "basicInfoGemi": "Basic company information from GEMI",
+    "basicInfo": "Basic company information",
     "activitiesKad": "Activity codes and business descriptions",
     "capitalFinancials": "Company capital and financial information",
     "datesLocation": "Registration dates and headquarters location",

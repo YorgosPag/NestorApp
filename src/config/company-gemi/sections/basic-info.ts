@@ -24,9 +24,9 @@ import { LEGAL_FORM_OPTIONS, GEMI_STATUS_OPTIONS } from '../options';
  */
 export const basicInfoSection: SectionConfig = {
   id: 'basicInfo',
-  title: 'sections.basicInfoGemi', // i18n key
+  title: 'sections.basicInfo', // i18n key
   icon: 'info',
-  description: 'sectionDescriptions.basicInfoGemi', // i18n key
+  description: 'sectionDescriptions.basicInfo', // i18n key
   order: 1,
   fields: [
     {

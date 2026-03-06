@@ -27,48 +27,6 @@ import {
 // REMAINING SECTIONS (TO BE SPLIT FURTHER IF NEEDED)
 // ============================================================================
 
-// Temporary sections που θα μπορούσαν να γίνουν μελλοντικά modular αν χρειαστεί
-// 🏢 i18n: Uses i18n keys that are translated at runtime by GenericFormRenderer
-const datesLocationSection: SectionConfig = {
-  id: 'datesLocation',
-  title: 'sections.datesLocation', // i18n key
-  icon: 'calendar',
-  description: 'sectionDescriptions.datesLocation', // i18n key
-  order: 5, // 🔄 Moved from 4 to 5 (addresses is now 2nd)
-  fields: [
-    {
-      id: 'registrationDate',
-      label: fieldLabels.registrationDate,
-      type: 'date',
-      helpText: gemiHelps.registration_date_help,
-    },
-    {
-      id: 'gemiStatusDate',
-      label: fieldLabels.statusDate,
-      type: 'date',
-      helpText: gemiHelps.last_change_date_help,
-    },
-    {
-      id: 'prefecture',
-      label: fieldLabels.prefecture,
-      type: 'input',
-      helpText: gemiHelps.region_help,
-    },
-    {
-      id: 'municipality',
-      label: fieldLabels.municipality,
-      type: 'input',
-      helpText: gemiHelps.municipality_help,
-    },
-    {
-      id: 'gemiDepartment',
-      label: fieldLabels.gemiDepartment,
-      type: 'input',
-      helpText: gemiHelps.local_office_help,
-    },
-  ],
-};
-
 const addressesSection: SectionConfig = {
   id: 'addresses',
   title: 'sections.addressesBranches', // i18n key
@@ -185,7 +143,6 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   activitiesSection,
 
   // Remaining sections
-  datesLocationSection,
   addressesSection,
   communicationSection, // 🏢 ENTERPRISE: Communication tab for companies (phones, emails, websites, social media)
   documentsSection,
