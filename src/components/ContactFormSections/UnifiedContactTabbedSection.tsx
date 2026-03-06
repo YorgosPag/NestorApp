@@ -420,7 +420,7 @@ export function UnifiedContactTabbedSection({
             );
           },
 
-          // 🏢 ENTERPRISE: Multi-address Section — headquarters + N branches
+          // 🏢 ENTERPRISE: Multi-address Section — hierarchy + headquarters + N branches + map
           addresses: () => {
             const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
             // Fallback: build from legacy singular fields if no array yet
@@ -431,23 +431,88 @@ export function UnifiedContactTabbedSection({
                 : [{ type: 'headquarters' as const, street: '', number: '', postalCode: '', city: '' }];
 
             return (
-              <CompanyAddressesSection
-                addresses={effectiveAddresses}
-                disabled={disabled}
-                onChange={(newAddresses) => {
-                  if (!setFormData) return;
-                  // Sync headquarters back to legacy singular fields
-                  const hq = newAddresses.find((a) => a.type === 'headquarters') ?? newAddresses[0];
-                  setFormData({
-                    ...formData,
-                    companyAddresses: newAddresses,
-                    street: hq?.street ?? '',
-                    streetNumber: hq?.number ?? '',
-                    postalCode: hq?.postalCode ?? '',
-                    city: hq?.city ?? '',
-                  });
-                }}
-              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* LEFT: Hierarchy + Branches */}
+                <div className="space-y-6">
+                  {/* Administrative Hierarchy for HQ address */}
+                  <AdministrativeAddressPicker
+                    value={{
+                      settlementName: (formData.settlement as string) || (formData.city as string) || '',
+                      communityName: (formData.community as string) ?? '',
+                      municipalUnitName: (formData.municipalUnit as string) ?? '',
+                      municipalityName: (formData.municipality as string) ?? '',
+                      regionalUnitName: (formData.regionalUnit as string) ?? '',
+                      regionName: (formData.region as string) ?? '',
+                      decentAdminName: (formData.decentAdmin as string) ?? '',
+                      majorGeoName: (formData.majorGeo as string) ?? '',
+                      postalCode: (formData.postalCode as string) ?? '',
+                    }}
+                    onChange={(addr: AdministrativeAddress) => {
+                      if (setFormData) {
+                        // Sync hierarchy to form + update HQ address in companyAddresses
+                        const updatedAddresses = [...effectiveAddresses];
+                        const hqIndex = updatedAddresses.findIndex(a => a.type === 'headquarters');
+                        if (hqIndex >= 0) {
+                          updatedAddresses[hqIndex] = {
+                            ...updatedAddresses[hqIndex],
+                            city: addr.settlementName || addr.municipalityName,
+                            postalCode: addr.postalCode,
+                          };
+                        }
+                        setFormData({
+                          ...formData,
+                          city: addr.settlementName || addr.municipalityName,
+                          postalCode: addr.postalCode,
+                          municipality: addr.municipalityName,
+                          municipalityId: addr.municipalityId,
+                          regionalUnit: addr.regionalUnitName,
+                          region: addr.regionName,
+                          decentAdmin: addr.decentAdminName,
+                          majorGeo: addr.majorGeoName,
+                          settlement: addr.settlementName,
+                          settlementId: addr.settlementId,
+                          community: addr.communityName,
+                          municipalUnit: addr.municipalUnitName,
+                          companyAddresses: updatedAddresses,
+                        });
+                      }
+                    }}
+                    disabled={disabled}
+                    visibleLevels={[8, 7, 6, 5, 4, 3]}
+                  />
+
+                  {/* Branches section */}
+                  <CompanyAddressesSection
+                    addresses={effectiveAddresses}
+                    disabled={disabled}
+                    onChange={(newAddresses) => {
+                      if (!setFormData) return;
+                      // Sync headquarters back to legacy singular fields
+                      const hq = newAddresses.find((a) => a.type === 'headquarters') ?? newAddresses[0];
+                      setFormData({
+                        ...formData,
+                        companyAddresses: newAddresses,
+                        street: hq?.street ?? '',
+                        streetNumber: hq?.number ?? '',
+                        postalCode: hq?.postalCode ?? '',
+                        city: hq?.city ?? '',
+                      });
+                    }}
+                  />
+                </div>
+
+                {/* RIGHT: Map preview */}
+                <aside className="lg:sticky lg:top-4 lg:self-start">
+                  <ContactAddressMapPreview
+                    contactId={formData.id}
+                    street={formData.street}
+                    streetNumber={formData.streetNumber}
+                    city={formData.city}
+                    postalCode={formData.postalCode}
+                    companyAddresses={formData.companyAddresses}
+                  />
+                </aside>
+              </div>
             );
           },
         } : {}),
@@ -804,16 +869,7 @@ export function UnifiedContactTabbedSection({
             postalCode={formData.postalCode}
           />
         ),
-        addresses: () => (
-          <ContactAddressMapPreview
-            contactId={formData.id}
-            street={formData.street}
-            streetNumber={formData.streetNumber}
-            city={formData.city}
-            postalCode={formData.postalCode}
-            companyAddresses={formData.companyAddresses}
-          />
-        ),
+        // addresses footer removed — map is now inside the addresses customRenderer
       }
     };
 
