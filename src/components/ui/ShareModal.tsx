@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { designSystem } from '@/lib/design-system';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getSocialShareUrls, getPhotoSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -39,6 +40,8 @@ export interface ShareModalProps {
   shareData: ShareData & {
     isPhoto?: boolean;
   };
+  /** Custom modal title — defaults to i18n common:share.share */
+  modalTitle?: string;
   onCopySuccess?: () => void;
   onShareSuccess?: (platform: string) => void;
   onShareError?: (platform: string, error: string) => void;
@@ -52,6 +55,7 @@ export function ShareModal({
   isOpen,
   onClose,
   shareData,
+  modalTitle,
   onCopySuccess,
   onShareSuccess,
   onShareError
@@ -62,6 +66,7 @@ export function ShareModal({
 
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { t } = useTranslation('common');
   const [showEmailForm, setShowEmailForm] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
@@ -234,7 +239,7 @@ export function ShareModal({
             "bg-gradient-to-r bg-clip-text text-transparent",
             "from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400"
           )}>
-            Κοινοποίηση Ακινήτου
+            {modalTitle || t('share.share')}
           </DialogTitle>
 
           <p className={designSystem.cn(
@@ -256,7 +261,7 @@ export function ShareModal({
                 gridConfig={{
                   columns: 3,
                   buttonVariant: 'default',
-                  iconSize: 'md',
+                  iconSize: 'lg',
                   showLabels: true,
                   spacing: 'normal'
                 }}

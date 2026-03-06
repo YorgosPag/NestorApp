@@ -374,6 +374,7 @@ export function ContactsList({
           isOpen={shareModalOpen}
           onClose={() => setShareModalOpen(false)}
           shareData={shareData}
+          modalTitle={t('list.share.modalTitle')}
           onCopySuccess={() => toast.success(t('list.share.copied'))}
           onShareSuccess={(platform) => toast.success(t('list.share.success', { platform }))}
         />

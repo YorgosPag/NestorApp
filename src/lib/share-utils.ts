@@ -274,8 +274,7 @@ export function getSocialShareUrls(url: string, text: string) {
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-    twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+    instagram: `https://www.instagram.com/`,
     whatsapp: `https://wa.me/?text=${encodedText} ${encodedUrl}`,
     telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
     email: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}`
@@ -292,8 +291,7 @@ export function getPhotoSocialShareUrls(photoUrl: string, text: string, pageUrl?
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedPhotoUrl}&quote=${encodedText}`,
-    twitter: `https://twitter.com/intent/tweet?url=${encodedPhotoUrl}&text=${encodedText}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedPageUrl}`,
+    instagram: `https://www.instagram.com/`,
     whatsapp: `https://wa.me/?text=${encodedText} ${encodedPhotoUrl}`,
     telegram: `https://t.me/share/url?url=${encodedPhotoUrl}&text=${encodedText}`,
     email: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedPhotoUrl}`

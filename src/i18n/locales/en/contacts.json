@@ -102,6 +102,7 @@
       "subtitle": "Add your first contact"
     },
     "share": {
+      "modalTitle": "Share Contact",
       "noContactSelected": "Select a contact to share",
       "copied": "Link copied!",
       "success": "Shared via {platform} successfully!"
