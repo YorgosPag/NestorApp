@@ -862,30 +862,22 @@ body > button[style*="fixed"][style*="bottom"],
 }
 
 /* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */
+/* Force Popper wrapper to match trigger width (overrides inline max-content) */
 [data-radix-popper-content-wrapper] {
   z-index: var(--z-index-dropdown);
+  min-width: var(--radix-select-trigger-width, auto) !important;
 }
 
-/* Force width for Radix Select Viewport */
+/* Force width for Radix Select Viewport - matches trigger width */
 [data-radix-select-viewport] {
-  min-width: 320px !important;
-  width: 320px !important;
+  width: 100% !important;
 }
 
 /* Better styling for Select Items */
 [data-radix-select-item] {
-  padding: 12px 16px !important;
-  min-height: 48px !important;
   display: flex !important;
   align-items: center !important;
   width: 100% !important;
-  min-width: 300px !important;
-}
-
-/* Select item content wrapper */
-[data-radix-select-item] > div {
-  width: 100% !important;
-  min-width: 280px !important;
 }
 
 /* Select item text should not wrap */
