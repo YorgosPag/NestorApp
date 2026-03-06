@@ -62,7 +62,8 @@ export class EnterpriseContactSaver {
     // ========================================================================
 
     const hasAddressData = formData.street || formData.streetNumber ||
-                          formData.city || formData.postalCode;
+                          formData.city || formData.postalCode ||
+                          formData.municipality || formData.settlement;
 
     if (hasAddressData) {
       // 🌐 i18n: Labels converted to i18n keys - 2026-01-18
@@ -74,7 +75,18 @@ export class EnterpriseContactSaver {
         country: 'GR', // Default to Greece
         type: this.getAddressTypeForContactType(formData.type || 'individual'),
         isPrimary: true,
-        label: 'contacts.address.primary'
+        label: 'contacts.address.primary',
+        // Administrative Hierarchy fields (conditional spread — omit empty strings)
+        ...(formData.municipality ? { municipality: formData.municipality } : {}),
+        ...(formData.municipalityId != null ? { municipalityId: formData.municipalityId } : {}),
+        ...(formData.regionalUnit ? { regionalUnit: formData.regionalUnit } : {}),
+        ...(formData.region ? { region: formData.region } : {}),
+        ...(formData.decentAdmin ? { decentAdmin: formData.decentAdmin } : {}),
+        ...(formData.majorGeo ? { majorGeo: formData.majorGeo } : {}),
+        ...(formData.settlement ? { settlement: formData.settlement } : {}),
+        ...(formData.settlementId != null ? { settlementId: formData.settlementId } : {}),
+        ...(formData.community ? { community: formData.community } : {}),
+        ...(formData.municipalUnit ? { municipalUnit: formData.municipalUnit } : {}),
       };
 
       enterpriseData.addresses = [primaryAddress];
@@ -359,6 +371,16 @@ export class EnterpriseContactSaver {
     delete (updatedData as Record<string, unknown>).city;
     delete (updatedData as Record<string, unknown>).postalCode;
     delete (updatedData as Record<string, unknown>).website;
+    // Administrative Hierarchy flat fields → stored inside addresses[]
+    delete (updatedData as Record<string, unknown>).municipality;
+    delete (updatedData as Record<string, unknown>).municipalityId;
+    delete (updatedData as Record<string, unknown>).regionalUnit;
+    delete (updatedData as Record<string, unknown>).decentAdmin;
+    delete (updatedData as Record<string, unknown>).majorGeo;
+    delete (updatedData as Record<string, unknown>).settlement;
+    delete (updatedData as Record<string, unknown>).settlementId;
+    delete (updatedData as Record<string, unknown>).community;
+    delete (updatedData as Record<string, unknown>).municipalUnit;
 
     logger.info('ENTERPRISE SAVER: Update complete');
     return updatedData;

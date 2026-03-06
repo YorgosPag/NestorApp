@@ -260,6 +260,16 @@ export interface AddressInfo {
     lat: number;
     lng: number;
   };
+  // Administrative Hierarchy fields
+  municipality?: string;
+  municipalityId?: string | null;
+  regionalUnit?: string;
+  decentAdmin?: string;
+  majorGeo?: string;
+  settlement?: string;
+  settlementId?: string | null;
+  community?: string;
+  municipalUnit?: string;
 }
 
 export interface WebsiteInfo {
