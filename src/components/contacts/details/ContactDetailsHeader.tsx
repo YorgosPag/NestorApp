@@ -6,7 +6,7 @@ import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
-import { Edit, Trash2, Check, X } from 'lucide-react';
+import { Edit, Trash2, Check, X, UserPlus } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
@@ -25,6 +25,7 @@ interface ContactDetailsHeaderProps {
   onEditContact?: () => void;
   onDeleteContact?: () => void;
   onContactUpdate?: (updatedContact: Partial<Contact>) => void;
+  onNewContact?: () => void;
   // 🎯 NEW: Edit mode props για κουμπιά στην επικεφαλίδα
   isEditing?: boolean;
   onStartEdit?: () => void;
@@ -39,6 +40,7 @@ export function ContactDetailsHeader({
   onEditContact,
   onDeleteContact,
   onContactUpdate,
+  onNewContact,
   isEditing,
   onStartEdit,
   onSaveEdit,
@@ -205,6 +207,13 @@ export function ContactDetailsHeader({
           avatarImageUrl={avatarImageUrl}
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
           actions={[
+            // 🆕 New Contact button - always visible
+            ...(onNewContact ? [{
+              label: t('header.newContact'),
+              onClick: () => onNewContact(),
+              icon: UserPlus,
+              className: GRADIENT_HOVER_EFFECTS.GREEN
+            }] : []),
             // 🎯 Edit Mode Actions - Μόνο για Desktop
             // 🏢 ENTERPRISE: Hidden on subcollection tabs (banking, files, relationships) - they save independently
             ...(!hideEditControls ? (

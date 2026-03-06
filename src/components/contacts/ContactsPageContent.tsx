@@ -771,6 +771,7 @@ export function ContactsPageContent() {
                   onEditContact={handleEditContact}
                   onDeleteContact={() => handleDeleteContacts()}
                   onContactUpdated={refreshContacts}
+                  onNewContact={handleNewContact}
                 />
               </section>
 
@@ -819,6 +820,7 @@ export function ContactsPageContent() {
                     onEditContact={handleEditContact}
                     onDeleteContact={() => handleDeleteContacts()}
                     onContactUpdated={refreshContacts}
+                  onNewContact={handleNewContact}
                   />
                 )}
               </MobileDetailsSlideIn>
@@ -877,6 +879,7 @@ export function ContactsPageContent() {
                     onEditContact={handleEditContact}
                     onDeleteContact={() => handleDeleteContacts()}
                     onContactUpdated={refreshContacts}
+                  onNewContact={handleNewContact}
                   />
                 )}
               </MobileDetailsSlideIn>
