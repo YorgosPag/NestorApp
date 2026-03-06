@@ -255,6 +255,39 @@ export function useAdministrativeHierarchy(): UseAdministrativeHierarchyReturn {
     return children;
   }, []);
 
+  /**
+   * Build a disambiguation label by walking up the parent chain.
+   * e.g. Settlement "Αγία Παρασκευή" → "Δ. Λέσβου, Π.Ε. Λέσβου"
+   * This helps users distinguish between 1,369 homonymous settlements.
+   */
+  const buildSecondaryLabel = useCallback((entity: AdminEntity): string => {
+    if (!cachedEntities) return '';
+    const parts: string[] = [];
+
+    // Walk up to find municipality (level 5) and regional unit (level 4)
+    let current: AdminEntity | undefined = entity.parentId
+      ? cachedEntities.get(entity.parentId)
+      : undefined;
+
+    while (current) {
+      if (current.level === 5) {
+        const name = current.shortName || current.name;
+        parts.push(`Δ. ${name}`);
+      } else if (current.level === 4) {
+        const name = current.shortName || current.name;
+        parts.push(`Π.Ε. ${name}`);
+        break;
+      }
+      current = current.parentId ? cachedEntities.get(current.parentId) : undefined;
+    }
+
+    if (entity.postalCode) {
+      parts.push(`ΤΚ ${entity.postalCode}`);
+    }
+
+    return parts.join(', ');
+  }, []);
+
   const searchOptions = useCallback(
     (query: string, level: AdminLevel, maxResults = 30): ComboboxOption[] => {
       if (!cachedByLevel || !query.trim()) return [];
@@ -264,6 +297,7 @@ export function useAdministrativeHierarchy(): UseAdministrativeHierarchyReturn {
       const normalizedQuery = normalizeSearch(query);
       const results: ComboboxOption[] = [];
 
+      const needsDisambiguation = level >= 5;
       for (const entity of entities) {
         if (results.length >= maxResults) break;
         const normalizedEntityName = normalizeSearch(entity.name);
@@ -271,25 +305,27 @@ export function useAdministrativeHierarchy(): UseAdministrativeHierarchyReturn {
           results.push({
             value: entity.id,
             label: entity.name,
-            secondaryLabel: entity.postalCode
-              ? `ΤΚ ${entity.postalCode}`
+            secondaryLabel: needsDisambiguation
+              ? buildSecondaryLabel(entity)
               : undefined,
           });
         }
       }
       return results;
     },
-    [],
+    [buildSecondaryLabel],
   );
 
   const levelOptions = useCallback((level: AdminLevel): ComboboxOption[] => {
     const entities = cachedByLevel?.get(level) ?? [];
+    // Only compute disambiguation for levels with potential homonyms (5+)
+    const needsDisambiguation = level >= 5;
     return entities.map((e) => ({
       value: e.id,
       label: e.name,
-      secondaryLabel: e.postalCode ? `ΤΚ ${e.postalCode}` : undefined,
+      secondaryLabel: needsDisambiguation ? buildSecondaryLabel(e) : undefined,
     }));
-  }, []);
+  }, [buildSecondaryLabel]);
 
   return {
     isLoading,
