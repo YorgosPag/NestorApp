@@ -1453,6 +1453,9 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_SCALE: 'tools.guideScale',
   GUIDE_ANGLE: 'tools.guideAngle',
   GUIDE_MIRROR: 'tools.guideMirror',
+  GUIDE_FROM_ENTITY: 'tools.guideFromEntity',
+  GUIDE_SELECT: 'tools.guideSelect',
+  GUIDE_COPY_PATTERN: 'tools.guideCopyPattern',
 } as const;
 
 /**

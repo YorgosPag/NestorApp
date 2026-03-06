@@ -73,7 +73,10 @@ export type ToolType =
   | 'guide-polar-array'       // ADR-189 B31: Polar array of guides around center
   | 'guide-scale'             // ADR-189 B32: Scale all guides from origin
   | 'guide-angle'             // ADR-189 B16: Guide at typed angle through point
-  | 'guide-mirror';           // ADR-189 B19: Mirror guides across axis
+  | 'guide-mirror'            // ADR-189 B19: Mirror guides across axis
+  | 'guide-from-entity'       // ADR-189 B8: Guide from DXF entity (LINE/CIRCLE/ARC/POLYLINE)
+  | 'guide-select'            // ADR-189 B14: Multi-select guides for batch operations
+  | 'guide-copy-pattern';     // ADR-189 B17: Copy/offset pattern of selected guides
 
 
 export interface ToolDefinition {

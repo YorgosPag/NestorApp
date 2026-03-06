@@ -72,6 +72,8 @@ interface DxfCanvasProps {
   ghostGuide?: { axis: GridAxis; offset: number } | null;
   ghostDiagonalGuide?: { start: Point2D; end: Point2D } | null;
   highlightedGuideId?: string | null;
+  /** B14: Set of selected guide IDs for multi-select rendering */
+  selectedGuideIds?: ReadonlySet<string>;
   // ADR-189 §3.7-3.16: Construction snap points
   constructionPoints?: readonly ConstructionPoint[];
   highlightedPointId?: string | null;
@@ -80,7 +82,7 @@ interface DxfCanvasProps {
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void; // ✅ ZOOM SYSTEM INTEGRATION
-  onCanvasClick?: (point: Point2D) => void; // 🎯 DRAWING TOOLS: Click handler for entity drawing
+  onCanvasClick?: (point: Point2D, shiftKey?: boolean) => void; // 🎯 DRAWING TOOLS: Click handler for entity drawing
   onContextMenu?: (e: React.MouseEvent) => void; // 🏢 ADR-053: Right-click context menu for drawing tools
   // 🏢 ENTERPRISE (2026-02-13): Marquee selection support — forwarded to useCentralizedMouseHandlers
   onLayerSelected?: (layerId: string, position: Point2D) => void;
@@ -127,6 +129,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   ghostGuide,
   ghostDiagonalGuide,
   highlightedGuideId,
+  selectedGuideIds,
   // ADR-189 §3.7-3.16: Construction snap points
   constructionPoints,
   highlightedPointId,
@@ -212,6 +215,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   showGuideDimensionsRef.current = showGuideDimensions;
   const highlightedGuideIdRef = useRef(highlightedGuideId);
   highlightedGuideIdRef.current = highlightedGuideId;
+  const selectedGuideIdsRef = useRef(selectedGuideIds);
+  selectedGuideIdsRef.current = selectedGuideIds;
   const ghostGuideRef = useRef(ghostGuide);
   ghostGuideRef.current = ghostGuide;
   const ghostDiagonalGuideRef = useRef(ghostDiagonalGuide);
@@ -486,6 +491,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
             guideRendererRef.current.renderGuides(
               ctx, currentGuides, currentTransform, currentViewport,
               highlightedGuideIdRef.current,
+              selectedGuideIdsRef.current,
             );
           }
         }

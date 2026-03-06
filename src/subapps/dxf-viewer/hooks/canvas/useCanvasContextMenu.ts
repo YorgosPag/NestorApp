@@ -59,6 +59,11 @@ export interface UseCanvasContextMenuParams {
   guides?: readonly Guide[];
   /** Current canvas transform (for world-to-screen conversion during hit-testing) */
   transformRef?: MutableRefObject<ViewTransform>;
+  // ADR-189 B14: Batch guide context menu
+  /** Imperative ref to GuideBatchContextMenu */
+  guideBatchMenuRef?: RefObject<import('../../ui/components/GuideBatchContextMenu').GuideBatchContextMenuHandle | null>;
+  /** Currently selected guide IDs */
+  selectedGuideIds?: ReadonlySet<string>;
 }
 
 export interface UseCanvasContextMenuReturn {
@@ -84,6 +89,8 @@ export function useCanvasContextMenu({
   guideMenuRef,
   guides,
   transformRef,
+  guideBatchMenuRef,
+  selectedGuideIds,
 }: UseCanvasContextMenuParams): UseCanvasContextMenuReturn {
 
   // React handler — ALWAYS prevent browser context menu on canvas
@@ -105,6 +112,12 @@ export function useCanvasContextMenu({
       // PRIORITY 0: ADR-188 — Rotation angle input (right-click during awaiting-angle → PromptDialog)
       if (activeTool === 'rotate' && rotationPhase === 'awaiting-angle' && onRotationAnglePrompt) {
         onRotationAnglePrompt();
+        return;
+      }
+
+      // PRIORITY 0.3: ADR-189 B14 — Batch guide context menu (right-click with multi-select active)
+      if (guideBatchMenuRef?.current && selectedGuideIds && selectedGuideIds.size > 0 && activeTool === 'guide-select') {
+        guideBatchMenuRef.current.open(e.clientX, e.clientY, selectedGuideIds.size);
         return;
       }
 
@@ -164,7 +177,7 @@ export function useCanvasContextMenu({
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, guides, transformRef]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, guides, transformRef, guideBatchMenuRef, selectedGuideIds]);
 
   return {
     handleDrawingContextMenu,

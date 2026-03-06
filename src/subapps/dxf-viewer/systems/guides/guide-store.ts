@@ -310,6 +310,58 @@ export class GuideStore implements IGridHeadlessAPI {
     return true;
   }
 
+  // ── B14: Batch Operations ──
+
+  /** Remove multiple guides by ID. Returns removed guides (locked guides are skipped). */
+  removeGuidesById(ids: readonly string[]): Guide[] {
+    const idSet = new Set(ids);
+    const removed: Guide[] = [];
+    const remaining: Guide[] = [];
+    for (const g of this.guides) {
+      if (idSet.has(g.id) && !g.locked) {
+        removed.push(g);
+      } else {
+        remaining.push(g);
+      }
+    }
+    if (removed.length > 0) {
+      this.guides = remaining;
+      this.notify();
+    }
+    return removed;
+  }
+
+  /** Set locked state for multiple guides at once. */
+  setGuidesLocked(ids: readonly string[], locked: boolean): void {
+    const idSet = new Set(ids);
+    let changed = false;
+    this.guides = this.guides.map(g => {
+      if (idSet.has(g.id) && g.locked !== locked) {
+        changed = true;
+        return { ...g, locked };
+      }
+      return g;
+    });
+    if (changed) this.notify();
+  }
+
+  /** Set color for multiple guides at once. null = reset to default. */
+  setGuidesColor(ids: readonly string[], color: string | null): void {
+    const idSet = new Set(ids);
+    let changed = false;
+    this.guides = this.guides.map(g => {
+      if (idSet.has(g.id)) {
+        changed = true;
+        const newStyle = color
+          ? { color, lineWidth: g.style?.lineWidth ?? 0.5, dashPattern: g.style?.dashPattern ?? [6, 3] }
+          : null;
+        return { ...g, style: newStyle };
+      }
+      return g;
+    });
+    if (changed) this.notify();
+  }
+
   /**
    * Replace a guide with a rotated version (always becomes XZ diagonal).
    * Preserves id, label, style, visible, locked, createdAt, parentId.

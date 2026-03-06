@@ -7,7 +7,7 @@
 
 // Types
 export type { Guide, GuideGroup, GuideRenderStyle, GridAxis, ConstructionPoint } from './guide-types';
-export { GUIDE_COLORS, GUIDE_COLOR_PALETTE, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, GUIDE_LIMITS, CONSTRUCTION_POINT_LIMITS } from './guide-types';
+export { GUIDE_COLORS, GUIDE_COLOR_PALETTE, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, SELECTED_GUIDE_STYLE, GUIDE_LIMITS, CONSTRUCTION_POINT_LIMITS } from './guide-types';
 export { isDiagonalGuide, pointToSegmentDistance, projectPointOnSegment } from './guide-types';
 
 // Store
@@ -15,7 +15,8 @@ export { GuideStore, getGlobalGuideStore } from './guide-store';
 export { ConstructionPointStore, getGlobalConstructionPointStore } from './construction-point-store';
 
 // Commands
-export { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand } from './guide-commands';
+export { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand } from './guide-commands';
+export type { EntityGuideParams } from './guide-commands';
 export { AddConstructionPointCommand, AddConstructionPointBatchCommand, DeleteConstructionPointCommand } from './construction-point-commands';
 
 // Renderer

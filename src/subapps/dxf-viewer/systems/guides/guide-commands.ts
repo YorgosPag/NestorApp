@@ -18,6 +18,19 @@ import type { GuideStore } from './guide-store';
 import { generateEntityId } from '../entity-creation/utils';
 import { rotatePoint } from '../../utils/rotation-math';
 
+/** Entity type info passed from entity picking to GuideFromEntityCommand */
+export interface EntityGuideParams {
+  entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE';
+  /** For LINE/POLYLINE segment: start and end of the line segment */
+  lineStart?: Point2D;
+  lineEnd?: Point2D;
+  /** For CIRCLE/ARC: center and radius */
+  center?: Point2D;
+  radius?: number;
+  /** For ARC: click point (for radial guide direction) */
+  clickPoint?: Point2D;
+}
+
 // ============================================================================
 // CREATE GUIDE COMMAND
 // ============================================================================
@@ -949,14 +962,19 @@ export class PolarArrayGuidesCommand implements ICommand {
   /** Computed angle increment in degrees */
   readonly angleIncrement: number;
 
+  /** Starting angle offset in degrees (default 0 = first guide at 0°) */
+  readonly startAngleDeg: number;
+
   constructor(
     private readonly store: GuideStore,
     private readonly center: Point2D,
     private readonly count: number,
+    startAngleDeg: number = 0,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
     this.angleIncrement = count > 0 ? 360 / count : 0;
+    this.startAngleDeg = startAngleDeg;
   }
 
   /** Whether the command has valid work to do */
@@ -976,7 +994,7 @@ export class PolarArrayGuidesCommand implements ICommand {
     const extent = 10_000;
 
     for (let i = 0; i < this.count; i++) {
-      const angleDeg = i * this.angleIncrement;
+      const angleDeg = this.startAngleDeg + i * this.angleIncrement;
       const rad = (angleDeg * Math.PI) / 180;
       const dx = Math.cos(rad) * extent;
       const dy = Math.sin(rad) * extent;
@@ -1008,7 +1026,8 @@ export class PolarArrayGuidesCommand implements ICommand {
   }
 
   getDescription(): string {
-    return `Polar array: ${this.count} guides at ${this.angleIncrement.toFixed(1)}° intervals`;
+    const startInfo = this.startAngleDeg !== 0 ? ` starting at ${this.startAngleDeg.toFixed(1)}°` : '';
+    return `Polar array: ${this.count} guides at ${this.angleIncrement.toFixed(1)}° intervals${startInfo}`;
   }
 
   canMergeWith(): boolean {
@@ -1025,6 +1044,7 @@ export class PolarArrayGuidesCommand implements ICommand {
         center: this.center,
         count: this.count,
         angleIncrement: this.angleIncrement,
+        startAngleDeg: this.startAngleDeg,
         createdGuideIds: this.createdGuides.map(g => g.id),
       },
       version: 1,
@@ -1296,6 +1316,268 @@ export class MirrorGuidesCommand implements ICommand {
         axisGuideId: this.axisGuideId,
         mirrorAxis: this.mirrorAxis,
         mirrorOffset: this.mirrorOffset,
+        createdCount: this.createdGuides.length,
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuides.map(g => g.id);
+  }
+}
+
+// ============================================================================
+// GUIDE FROM ENTITY COMMAND (ADR-189 B8)
+// ============================================================================
+
+/**
+ * Creates guide(s) from a DXF entity:
+ * - LINE/POLYLINE segment → XZ diagonal guide along the line direction (±10000)
+ * - CIRCLE → X + Y guides through center
+ * - ARC → XZ radial guide from center through click point
+ */
+export class GuideFromEntityCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'GuideFromEntity';
+  readonly type = 'guide-from-entity';
+  readonly timestamp: number;
+  private createdGuides: Guide[] = [];
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly params: EntityGuideParams,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+  }
+
+  execute(): void {
+    if (this.createdGuides.length > 0) {
+      for (const guide of this.createdGuides) {
+        this.store.restoreGuide(guide);
+      }
+      return;
+    }
+
+    const { entityType, lineStart, lineEnd, center, clickPoint } = this.params;
+    const extent = 10_000;
+
+    if ((entityType === 'LINE' || entityType === 'POLYLINE') && lineStart && lineEnd) {
+      const dx = lineEnd.x - lineStart.x;
+      const dy = lineEnd.y - lineStart.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len > 0.001) {
+        const nx = dx / len;
+        const ny = dy / len;
+        const mid: Point2D = { x: (lineStart.x + lineEnd.x) / 2, y: (lineStart.y + lineEnd.y) / 2 };
+        const start: Point2D = { x: mid.x - nx * extent, y: mid.y - ny * extent };
+        const end: Point2D = { x: mid.x + nx * extent, y: mid.y + ny * extent };
+        const guide = this.store.addDiagonalGuideRaw(start, end);
+        if (guide) this.createdGuides.push(guide);
+      }
+    } else if (entityType === 'CIRCLE' && center) {
+      const gx = this.store.addGuideRaw('X', center.x);
+      if (gx) this.createdGuides.push(gx);
+      const gy = this.store.addGuideRaw('Y', center.y);
+      if (gy) this.createdGuides.push(gy);
+    } else if (entityType === 'ARC' && center && clickPoint) {
+      const dx = clickPoint.x - center.x;
+      const dy = clickPoint.y - center.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len > 0.001) {
+        const nx = dx / len;
+        const ny = dy / len;
+        const start: Point2D = { x: center.x - nx * extent, y: center.y - ny * extent };
+        const end: Point2D = { x: center.x + nx * extent, y: center.y + ny * extent };
+        const guide = this.store.addDiagonalGuideRaw(start, end);
+        if (guide) this.createdGuides.push(guide);
+      }
+    }
+  }
+
+  undo(): void {
+    for (const guide of this.createdGuides) {
+      this.store.removeGuideById(guide.id);
+    }
+  }
+
+  redo(): void { this.execute(); }
+
+  getDescription(): string {
+    return `Guide from ${this.params.entityType} entity (${this.createdGuides.length} guide${this.createdGuides.length !== 1 ? 's' : ''})`;
+  }
+
+  canMergeWith(): boolean { return false; }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
+      data: { entityType: this.params.entityType, createdGuideIds: this.createdGuides.map(g => g.id) },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuides.map(g => g.id);
+  }
+}
+
+// ============================================================================
+// BATCH DELETE GUIDES COMMAND (ADR-189 B14)
+// ============================================================================
+
+/**
+ * Deletes multiple guides at once. Skips locked guides.
+ * Stores snapshots for full undo/redo.
+ */
+export class BatchDeleteGuidesCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'BatchDeleteGuides';
+  readonly type = 'batch-delete-guides';
+  readonly timestamp: number;
+  private deletedGuides: Guide[] = [];
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly guideIds: readonly string[],
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+  }
+
+  execute(): void {
+    if (this.deletedGuides.length > 0) {
+      for (const guide of this.deletedGuides) {
+        this.store.removeGuideById(guide.id);
+      }
+      return;
+    }
+    for (const gid of this.guideIds) {
+      const removed = this.store.removeGuideById(gid);
+      if (removed) this.deletedGuides.push(removed);
+    }
+  }
+
+  undo(): void {
+    for (let i = this.deletedGuides.length - 1; i >= 0; i--) {
+      this.store.restoreGuide(this.deletedGuides[i]);
+    }
+  }
+
+  redo(): void { this.execute(); }
+
+  getDescription(): string {
+    return `Batch delete ${this.deletedGuides.length} guides`;
+  }
+
+  canMergeWith(): boolean { return false; }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
+      data: { guideIds: [...this.guideIds], deletedCount: this.deletedGuides.length },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.deletedGuides.map(g => g.id);
+  }
+}
+
+// ============================================================================
+// COPY GUIDE PATTERN COMMAND (ADR-189 B17)
+// ============================================================================
+
+/**
+ * Copies selected guides with an offset, repeating N times.
+ * For X/Y guides: offset is added to the guide offset.
+ * For XZ guides: perpendicular shift by offset distance.
+ */
+export class CopyGuidePatternCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'CopyGuidePattern';
+  readonly type = 'copy-guide-pattern';
+  readonly timestamp: number;
+  private createdGuides: Guide[] = [];
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly sourceGuideIds: readonly string[],
+    private readonly offsetDistance: number,
+    private readonly repetitions: number,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+  }
+
+  get isValid(): boolean {
+    return this.sourceGuideIds.length > 0 && this.repetitions >= 1 && this.offsetDistance !== 0;
+  }
+
+  execute(): void {
+    if (this.createdGuides.length > 0) {
+      for (const guide of this.createdGuides) {
+        this.store.restoreGuide(guide);
+      }
+      return;
+    }
+
+    const guides = this.store.getGuides();
+    for (const sourceId of this.sourceGuideIds) {
+      const source = guides.find(g => g.id === sourceId);
+      if (!source) continue;
+
+      for (let i = 1; i <= this.repetitions; i++) {
+        if (source.axis === 'X' || source.axis === 'Y') {
+          const newOffset = source.offset + i * this.offsetDistance;
+          const created = this.store.addGuideRaw(source.axis, newOffset, source.label);
+          if (created) {
+            if (source.style) created.style = { ...source.style };
+            this.createdGuides.push(created);
+          }
+        } else if (source.axis === 'XZ' && source.startPoint && source.endPoint) {
+          const dx = source.endPoint.x - source.startPoint.x;
+          const dy = source.endPoint.y - source.startPoint.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len < 0.001) continue;
+          const nx = -dy / len;
+          const ny = dx / len;
+          const shift = i * this.offsetDistance;
+          const newStart: Point2D = { x: source.startPoint.x + nx * shift, y: source.startPoint.y + ny * shift };
+          const newEnd: Point2D = { x: source.endPoint.x + nx * shift, y: source.endPoint.y + ny * shift };
+          const created = this.store.addDiagonalGuideRaw(newStart, newEnd, source.label);
+          if (created) {
+            if (source.style) created.style = { ...source.style };
+            this.createdGuides.push(created);
+          }
+        }
+      }
+    }
+  }
+
+  undo(): void {
+    for (const guide of this.createdGuides) {
+      this.store.removeGuideById(guide.id);
+    }
+  }
+
+  redo(): void { this.execute(); }
+
+  getDescription(): string {
+    return `Copy ${this.sourceGuideIds.length} guides × ${this.repetitions} repetitions, offset ${this.offsetDistance}`;
+  }
+
+  canMergeWith(): boolean { return false; }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
+      data: {
+        sourceGuideIds: [...this.sourceGuideIds],
+        offsetDistance: this.offsetDistance,
+        repetitions: this.repetitions,
         createdCount: this.createdGuides.length,
       },
       version: 1,

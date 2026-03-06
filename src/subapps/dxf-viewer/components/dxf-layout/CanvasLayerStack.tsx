@@ -166,7 +166,7 @@ export interface CanvasLayerStackProps {
   // === Canvas interaction handlers ===
   handleOverlayClick: (overlayId: string, point: Point2D) => void;
   handleMultiOverlayClick: (layerIds: string[]) => void;
-  handleCanvasClick: (worldPoint: Point2D) => void;
+  handleCanvasClick: (worldPoint: Point2D, shiftKey?: boolean) => void;
   /** ADR-183: Unified grip mouse move handler (replaces handleLayerCanvasMouseMove bridge hack) */
   handleUnifiedMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
   handleDrawingContextMenu: (e: React.MouseEvent) => void;
@@ -205,6 +205,8 @@ export interface CanvasLayerStackProps {
   ghostGuide?: { axis: import('../../ai-assistant/grid-types').GridAxis; offset: number } | null;
   ghostDiagonalGuide?: { start: import('../../rendering/types/Types').Point2D; end: import('../../rendering/types/Types').Point2D } | null;
   highlightedGuideId?: string | null;
+  /** B14: Selected guide IDs for multi-select rendering */
+  selectedGuideIds?: ReadonlySet<string>;
   // ADR-189 §3.7-3.16: Construction snap points
   constructionPoints?: readonly import('../../systems/guides/guide-types').ConstructionPoint[];
   highlightedPointId?: string | null;
@@ -235,7 +237,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   drawingState, entityJoin, pdf, onMouseMove,
   entityPickingActive,
   // ADR-189: Construction guides
-  guides, guidesVisible, ghostGuide, ghostDiagonalGuide, ghostSegmentLine, highlightedGuideId,
+  guides, guidesVisible, ghostGuide, ghostDiagonalGuide, ghostSegmentLine, highlightedGuideId, selectedGuideIds,
   constructionPoints, highlightedPointId,
 }) => {
   // 🚀 PERF (2026-02-21): Subscribe to snap result via ImmediateSnapStore (useSyncExternalStore).
@@ -495,6 +497,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               ghostDiagonalGuide={ghostDiagonalGuide}
               ghostSegmentLine={ghostSegmentLine}
               highlightedGuideId={highlightedGuideId}
+              selectedGuideIds={selectedGuideIds}
               constructionPoints={constructionPoints}
               highlightedPointId={highlightedPointId}
               onLayerSelected={handleOverlayClickWithEntityClear}

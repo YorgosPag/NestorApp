@@ -134,6 +134,12 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-angle': { id: 'guide-angle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-189 B19: Mirror guides across axis
   'guide-mirror': { id: 'guide-mirror', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-189 B8: Guide from entity
+  'guide-from-entity': { id: 'guide-from-entity', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B14: Multi-select guides
+  'guide-select': { id: 'guide-select', category: 'selection', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B17: Copy/offset pattern
+  'guide-copy-pattern': { id: 'guide-copy-pattern', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 // ============================================================================

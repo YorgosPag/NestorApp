@@ -1461,7 +1461,10 @@
     "guidePolarArray": "Πολικός Πίνακας",
     "guideScale": "Κλιμάκωση Κάνναβου",
     "guideAngle": "Οδηγός σε Γωνία",
-    "guideMirror": "Αντικατοπτρισμός Οδηγών"
+    "guideMirror": "Αντικατοπτρισμός Οδηγών",
+    "guideFromEntity": "Οδηγός από Στοιχείο",
+    "guideSelect": "Επιλογή Οδηγών",
+    "guideCopyPattern": "Αντιγραφή/Μετατόπιση"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1497,14 +1500,18 @@
     "enterRotateAngle": "Εισαγωγή γωνίας σε μοίρες (θετική = αριστερόστροφα)",
     "rotateAnglePlaceholder": "45",
     "polarArrayCount": "Πολικός Πίνακας — Αριθμός Οδηγών",
-    "enterPolarArrayCount": "Πλήθος οδηγών γύρω από το κέντρο",
-    "polarArrayCountPlaceholder": "12",
+    "enterPolarArrayCount": "Πλήθος (ή πλήθος,γωνία π.χ. 8,45)",
+    "polarArrayCountPlaceholder": "8,45",
     "scaleAllGuides": "Κλιμάκωση Κάνναβου — Συντελεστής",
     "enterScaleFactor": "Συντελεστής κλίμακας (π.χ. 2 = διπλάσιο, 0.5 = μισό)",
     "scaleFactorPlaceholder": "2",
     "guideAtAngle": "Οδηγός σε Γωνία",
     "enterGuideAngle": "Εισαγωγή γωνίας σε μοίρες (0° = οριζόντια)",
-    "guideAnglePlaceholder": "45"
+    "guideAnglePlaceholder": "45",
+    "copyPattern": "Αντιγραφή/Μετατόπιση",
+    "enterOffsetAndCount": "Απόσταση, επαναλήψεις (π.χ. 100,3)",
+    "copyPatternPlaceholder": "100,3",
+    "selectGuidesFirst": "Επιλέξτε πρώτα οδηγούς (G→6)"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",
@@ -1686,5 +1693,14 @@
     "measureToGuide": "Δημιουργία οδηγών στα σημεία μέτρησης;",
     "createGuides": "Δημιουργία Οδηγών",
     "equalizeRequiresSameAxis": "Η ισαπόσταση απαιτεί 3+ οδηγούς στον ίδιο άξονα (X ή Y)"
+  },
+  "guideBatchMenu": {
+    "selectedCount": "{{count}} οδηγοί επιλεγμένοι",
+    "deleteSelected": "Διαγραφή Επιλεγμένων",
+    "lockSelected": "Κλείδωμα Επιλεγμένων",
+    "unlockSelected": "Ξεκλείδωμα Επιλεγμένων",
+    "colorSelected": "Αλλαγή Χρώματος",
+    "groupSelected": "Ομαδοποίηση Επιλεγμένων",
+    "cancel": "Ακύρωση"
   }
 }

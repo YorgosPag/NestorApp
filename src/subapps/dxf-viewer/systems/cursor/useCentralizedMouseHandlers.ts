@@ -81,7 +81,7 @@ interface CentralizedMouseHandlersProps {
   // 🏢 ENTERPRISE (2026-01-25): Multi-selection callback for marquee selection
   onMultiLayerSelected?: (layerIds: string[]) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement>; // ✅ ADD: Canvas reference για getBoundingClientRect
-  onCanvasClick?: (point: Point2D) => void; // 🎯 DRAWING TOOLS: Click handler for drawing entities
+  onCanvasClick?: (point: Point2D, shiftKey?: boolean) => void; // 🎯 DRAWING TOOLS: Click handler for drawing entities
   // 🏢 ENTERPRISE (2026-01-25): Flag to prevent selection start during grip drag
   isGripDragging?: boolean;
   // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback for measurement/drawing tools
@@ -701,7 +701,7 @@ export function useCentralizedMouseHandlers({
       }
 
       // Pass WORLD coordinates directly - no more double conversion!
-      onCanvasClick(worldPoint);
+      onCanvasClick(worldPoint, e.shiftKey);
     }
 
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION - Χρήση UniversalMarqueeSelector
@@ -837,11 +837,11 @@ export function useCentralizedMouseHandlers({
               // 🏢 ENTERPRISE (2026-02-15): ALWAYS route to onCanvasClick so grip handlers
               // and drawing handlers get a chance to fire.
               if (onCanvasClick) {
-                onCanvasClick(worldPoint);
+                onCanvasClick(worldPoint, e.shiftKey);
               }
             } else if (onCanvasClick) {
               // Fallback: No hit-test available — route to canvasClick
-              onCanvasClick(worldPoint);
+              onCanvasClick(worldPoint, e.shiftKey);
             }
           } else {
             // 🏢 ENTERPRISE (2026-01-25): When marquee selects nothing, trigger canvas click for deselection
@@ -852,7 +852,7 @@ export function useCentralizedMouseHandlers({
               if (!emptySnap) return;
               const emptyScreenPos = getScreenPosFromEvent(e, emptySnap);
               const worldPt = screenToWorldWithSnapshot(emptyScreenPos, transform, emptySnap);
-              onCanvasClick(worldPt);
+              onCanvasClick(worldPt, e.shiftKey);
             }
           }
         }

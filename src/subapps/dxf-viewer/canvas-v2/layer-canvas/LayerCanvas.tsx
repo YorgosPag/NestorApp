@@ -80,7 +80,7 @@ interface LayerCanvasProps {
   onLayerClick?: (layerId: string, point: Point2D) => void;
   // 🏢 ENTERPRISE (2026-01-25): Multi-selection callback for marquee selection
   onMultiLayerClick?: (layerIds: string[]) => void;
-  onCanvasClick?: (point: Point2D) => void;
+  onCanvasClick?: (point: Point2D, shiftKey?: boolean) => void;
   // 🏢 ENTERPRISE (2026-01-25): Flag to prevent selection start during grip drag
   isGripDragging?: boolean;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;

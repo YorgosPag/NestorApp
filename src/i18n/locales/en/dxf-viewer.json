@@ -1467,7 +1467,10 @@
     "guidePolarArray": "Polar Array",
     "guideScale": "Scale Grid",
     "guideAngle": "Guide at Angle",
-    "guideMirror": "Mirror Guides"
+    "guideMirror": "Mirror Guides",
+    "guideFromEntity": "Guide from Entity",
+    "guideSelect": "Select Guides",
+    "guideCopyPattern": "Copy/Offset Pattern"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1503,14 +1506,18 @@
     "enterRotateAngle": "Enter angle in degrees (positive = CCW)",
     "rotateAnglePlaceholder": "45",
     "polarArrayCount": "Polar Array — Number of Guides",
-    "enterPolarArrayCount": "Number of guides around center",
-    "polarArrayCountPlaceholder": "12",
+    "enterPolarArrayCount": "Count (or count,startAngle e.g. 8,45)",
+    "polarArrayCountPlaceholder": "8,45",
     "scaleAllGuides": "Scale All Guides — Scale Factor",
     "enterScaleFactor": "Scale factor (e.g. 2 = double, 0.5 = half)",
     "scaleFactorPlaceholder": "2",
     "guideAtAngle": "Guide at Angle",
     "enterGuideAngle": "Enter angle in degrees (0° = horizontal)",
-    "guideAnglePlaceholder": "45"
+    "guideAnglePlaceholder": "45",
+    "copyPattern": "Copy/Offset Pattern",
+    "enterOffsetAndCount": "Offset distance, repetitions (e.g. 100,3)",
+    "copyPatternPlaceholder": "100,3",
+    "selectGuidesFirst": "Select guides first (G→6)"
   },
   "entityJoin": {
     "menuTitle": "Join",
@@ -1692,5 +1699,14 @@
     "measureToGuide": "Create guides at measurement points?",
     "createGuides": "Create Guides",
     "equalizeRequiresSameAxis": "Equalize requires 3+ guides on the same axis (X or Y)"
+  },
+  "guideBatchMenu": {
+    "selectedCount": "{{count}} guides selected",
+    "deleteSelected": "Delete Selected",
+    "lockSelected": "Lock Selected",
+    "unlockSelected": "Unlock Selected",
+    "colorSelected": "Change Color",
+    "groupSelected": "Group Selected",
+    "cancel": "Cancel"
   }
 }

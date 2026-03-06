@@ -13,7 +13,7 @@
 import { useSyncExternalStore, useCallback } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand, type EntityGuideParams } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
@@ -55,12 +55,18 @@ export interface UseGuideStateReturn {
   rotateGuideGroup: (guideIds: readonly string[], pivot: Point2D, angleDeg: number) => RotateGuideGroupCommand;
   /** Equalize spacing between 3+ same-axis guides. Returns the command for undo. */
   equalizeGuides: (guideIds: readonly string[]) => EqualizeGuidesCommand;
-  /** Create N guides at equal angular intervals around center. Returns the command for undo. */
-  createPolarArray: (center: Point2D, count: number) => PolarArrayGuidesCommand;
+  /** Create N guides at equal angular intervals around center. startAngleDeg offsets the first spoke. */
+  createPolarArray: (center: Point2D, count: number, startAngleDeg?: number) => PolarArrayGuidesCommand;
   /** Scale all visible/unlocked guides from origin by a factor. Returns the command for undo. */
   scaleAllGuides: (origin: Point2D, scaleFactor: number) => ScaleAllGuidesCommand;
   /** Mirror all visible/unlocked guides across a selected X/Y axis guide. Returns the command for undo. */
   mirrorGuides: (axisGuideId: string) => MirrorGuidesCommand;
+  /** B8: Create guide(s) from a DXF entity. Returns the command for undo. */
+  createGuideFromEntity: (params: EntityGuideParams) => GuideFromEntityCommand;
+  /** B14: Batch-delete multiple guides. Skips locked. Returns the command for undo. */
+  batchDeleteGuides: (guideIds: readonly string[]) => BatchDeleteGuidesCommand;
+  /** B17: Copy selected guides with offset and repetitions. Returns the command for undo. */
+  copyGuidePattern: (sourceGuideIds: readonly string[], offsetDistance: number, repetitions: number) => CopyGuidePatternCommand;
   /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
   getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
@@ -201,8 +207,8 @@ export function useGuideState(): UseGuideStateReturn {
     return cmd;
   }, [store, history]);
 
-  const createPolarArray = useCallback((center: Point2D, count: number): PolarArrayGuidesCommand => {
-    const cmd = new PolarArrayGuidesCommand(store, center, count);
+  const createPolarArray = useCallback((center: Point2D, count: number, startAngleDeg: number = 0): PolarArrayGuidesCommand => {
+    const cmd = new PolarArrayGuidesCommand(store, center, count, startAngleDeg);
     if (cmd.isValid) {
       history.execute(cmd);
       EventBus.emit('grid:polar-array-created', { center, count, angleIncrement: cmd.angleIncrement });
@@ -233,6 +239,29 @@ export function useGuideState(): UseGuideStateReturn {
     return cmd;
   }, [store, history]);
 
+  const createGuideFromEntity = useCallback((params: EntityGuideParams): GuideFromEntityCommand => {
+    const cmd = new GuideFromEntityCommand(store, params);
+    history.execute(cmd);
+    EventBus.emit('grid:guide-from-entity', { entityType: params.entityType, createdCount: cmd.getAffectedEntityIds().length });
+    return cmd;
+  }, [store, history]);
+
+  const batchDeleteGuides = useCallback((guideIds: readonly string[]): BatchDeleteGuidesCommand => {
+    const cmd = new BatchDeleteGuidesCommand(store, guideIds);
+    history.execute(cmd);
+    EventBus.emit('grid:guides-batch-deleted', { count: cmd.getAffectedEntityIds().length });
+    return cmd;
+  }, [store, history]);
+
+  const copyGuidePattern = useCallback((sourceGuideIds: readonly string[], offsetDistance: number, repetitions: number): CopyGuidePatternCommand => {
+    const cmd = new CopyGuidePatternCommand(store, sourceGuideIds, offsetDistance, repetitions);
+    if (cmd.isValid) {
+      history.execute(cmd);
+      EventBus.emit('grid:guide-pattern-copied', { sourceCount: sourceGuideIds.length, repetitions, offset: offsetDistance });
+    }
+    return cmd;
+  }, [store, history]);
+
   const getStore = useCallback(() => store, [store]);
 
   return {
@@ -251,6 +280,9 @@ export function useGuideState(): UseGuideStateReturn {
     createPolarArray,
     scaleAllGuides,
     mirrorGuides,
+    createGuideFromEntity,
+    batchDeleteGuides,
+    copyGuidePattern,
     toggleVisibility,
     toggleSnap,
     clearAll,

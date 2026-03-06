@@ -284,10 +284,24 @@ export interface UseCanvasClickHandlerParams {
   // ── ADR-189 B19: Mirror guides tool ──────────────────
   /** Click on X/Y guide → mirror all others across it */
   onMirrorAxisSelected?: (axisGuideId: string) => void;
+
+  // ── ADR-189 B8: Guide from entity tool ────────────────
+  /** Callback: entity picked → create guide(s) from it */
+  onGuideFromEntity?: (entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE', params: {
+    lineStart?: Point2D; lineEnd?: Point2D;
+    center?: Point2D; radius?: number;
+    clickPoint?: Point2D;
+  }) => void;
+
+  // ── ADR-189 B14: Guide multi-select tool ──────────────
+  /** Toggle guide selection (shift = add to selection) */
+  onGuideSelectToggle?: (guideId: string, addToSelection: boolean) => void;
+  /** Deselect all guides (click on empty space) */
+  onGuideDeselectAll?: () => void;
 }
 
 export interface UseCanvasClickHandlerReturn {
-  handleCanvasClick: (worldPoint: Point2D) => void;
+  handleCanvasClick: (worldPoint: Point2D, shiftKey?: boolean) => void;
 }
 
 // ============================================================================
@@ -348,9 +362,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onGuideAngleOriginSet,
     // ADR-189 B19: Mirror guides
     onMirrorAxisSelected,
+    // ADR-189 B8: Guide from entity
+    onGuideFromEntity,
+    // ADR-189 B14: Guide multi-select
+    onGuideSelectToggle, onGuideDeselectAll,
   } = params;
 
-  const handleCanvasClick = useCallback((worldPoint: Point2D) => {
+  const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false) => {
     // Block interactions until viewport is ready
     if (!viewportReady) {
       dwarn('useCanvasClickHandler', 'Click blocked: viewport not ready', viewport);
@@ -1176,6 +1194,100 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.89991: ADR-189 B8 — Guide from entity (entity picking)
+    if (activeTool === 'guide-from-entity' && onGuideFromEntity) {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
+        // Iterate backwards (top-most first)
+        for (let i = scene.entities.length - 1; i >= 0; i--) {
+          const entity = scene.entities[i];
+
+          if (isLineEntity(entity)) {
+            const start: Point2D = { x: entity.start.x, y: entity.start.y };
+            const end: Point2D = { x: entity.end.x, y: entity.end.y };
+            const dist = pointToLineDistance(worldPoint, start, end);
+            if (dist < hitTolerance) {
+              onGuideFromEntity('LINE', { lineStart: start, lineEnd: end });
+              dlog('useCanvasClickHandler', 'B8: Guide from LINE entity');
+              return;
+            }
+          }
+
+          if (isCircleEntity(entity)) {
+            const center: Point2D = { x: entity.center.x, y: entity.center.y };
+            const distToCenter = Math.sqrt(
+              (worldPoint.x - center.x) ** 2 + (worldPoint.y - center.y) ** 2,
+            );
+            if (Math.abs(distToCenter - entity.radius) < hitTolerance) {
+              onGuideFromEntity('CIRCLE', { center, radius: entity.radius });
+              dlog('useCanvasClickHandler', 'B8: Guide from CIRCLE entity');
+              return;
+            }
+          }
+
+          if (isArcEntity(entity)) {
+            const center: Point2D = { x: entity.center.x, y: entity.center.y };
+            const dist = pointToArcDistance(worldPoint, entity);
+            if (dist < hitTolerance) {
+              onGuideFromEntity('ARC', { center, radius: entity.radius, clickPoint: worldPoint });
+              dlog('useCanvasClickHandler', 'B8: Guide from ARC entity');
+              return;
+            }
+          }
+
+          if ((isPolylineEntity(entity) || isLWPolylineEntity(entity)) && entity.vertices && entity.vertices.length >= 2) {
+            for (let j = 0; j < entity.vertices.length - 1; j++) {
+              const v0 = entity.vertices[j];
+              const v1 = entity.vertices[j + 1];
+              const segStart: Point2D = { x: v0.x, y: v0.y };
+              const segEnd: Point2D = { x: v1.x, y: v1.y };
+              const dist = pointToLineDistance(worldPoint, segStart, segEnd);
+              if (dist < hitTolerance) {
+                onGuideFromEntity('POLYLINE', { lineStart: segStart, lineEnd: segEnd });
+                dlog('useCanvasClickHandler', 'B8: Guide from POLYLINE segment');
+                return;
+              }
+            }
+          }
+        }
+      }
+      return;
+    }
+
+    // PRIORITY 1.89992: ADR-189 B14 — Guide select (multi-select guides)
+    if (activeTool === 'guide-select' && guides) {
+      const hitToleranceWorld = 30 / transform.scale;
+      let nearestGuide: Guide | undefined;
+      let nearestDist = hitToleranceWorld;
+      for (const guide of guides) {
+        if (!guide.visible) continue;
+        let dist: number;
+        if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+          dist = pointToSegmentDistance(worldPoint, guide.startPoint, guide.endPoint);
+        } else {
+          dist = guide.axis === 'X'
+            ? Math.abs(worldPoint.x - guide.offset)
+            : Math.abs(worldPoint.y - guide.offset);
+        }
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestGuide = guide;
+        }
+      }
+      if (nearestGuide && onGuideSelectToggle) {
+        onGuideSelectToggle(nearestGuide.id, shiftKey);
+        dlog('useCanvasClickHandler', 'B14: Guide select toggle', nearestGuide.id, 'shift:', shiftKey);
+      } else if (onGuideDeselectAll) {
+        onGuideDeselectAll();
+        dlog('useCanvasClickHandler', 'B14: Guide deselect all (empty click)');
+      }
+      return;
+    }
+
     // PRIORITY 1.9: Angle entity measurement picking (constraint, line-arc, two-arcs)
     if (angleEntityMeasurement.isActive && angleEntityMeasurement.isWaitingForEntitySelection) {
       const scene = levelManager.currentLevelId
@@ -1424,6 +1536,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onGuideAngleOriginSet,
     // ADR-189 B19: Mirror guides
     onMirrorAxisSelected,
+    // ADR-189 B8: Guide from entity
+    onGuideFromEntity,
+    // ADR-189 B14: Guide multi-select
+    onGuideSelectToggle, onGuideDeselectAll,
   ]);
 
   return { handleCanvasClick };

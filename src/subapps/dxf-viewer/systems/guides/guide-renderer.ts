@@ -17,7 +17,7 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Guide, GuideRenderStyle, ConstructionPoint } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, LOCKED_GUIDE_OPACITY_FACTOR, LOCKED_GUIDE_DASH_PATTERN } from './guide-types';
+import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, LOCKED_GUIDE_OPACITY_FACTOR, LOCKED_GUIDE_DASH_PATTERN, SELECTED_GUIDE_STYLE } from './guide-types';
 // 🏢 Centralized hover highlight config — shadowBlur glow for highlighted guides
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-088: Pixel-perfect alignment for crisp 1px rendering
@@ -55,6 +55,7 @@ export class GuideRenderer {
     transform: ViewTransform,
     viewport: Viewport,
     highlightedGuideId?: string | null,
+    selectedGuideIds?: ReadonlySet<string>,
   ): void {
     if (guides.length === 0) return;
 
@@ -71,13 +72,15 @@ export class GuideRenderer {
       if (!guide.visible) continue;
 
       const isHighlighted = guide.id === highlightedGuideId;
+      const isSelected = selectedGuideIds?.has(guide.id) ?? false;
 
       // ADR-189 §3.3: Diagonal (XZ) guides — finite line segment
       if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
         // 🏢 Centralized: Keep original style, glow is applied by drawDiagonalGuideLine
-        const style = this.applyLockedMuting(this.resolveDiagonalStyle(), guide.locked);
+        const baseStyle = isSelected ? SELECTED_GUIDE_STYLE : this.resolveDiagonalStyle();
+        const style = this.applyLockedMuting(baseStyle, guide.locked);
         const { screenStart, screenEnd } = this.drawDiagonalGuideLine(
-          ctx, guide.startPoint, guide.endPoint, transform, viewport, style, isHighlighted,
+          ctx, guide.startPoint, guide.endPoint, transform, viewport, style, isHighlighted || isSelected,
         );
         diagonalGuides.push({ guide, screenStart, screenEnd });
         continue;
@@ -86,14 +89,16 @@ export class GuideRenderer {
       // Axis-aligned guides (X / Y)
       // 🏢 Centralized: Keep original style — glow is applied inside drawGuideLine when highlighted
       // B4: Locked guides get muted appearance (reduced opacity + longer dash)
-      const style = this.applyLockedMuting(this.resolveStyle(guide), guide.locked);
+      // B14: Selected guides get bright gold style
+      const baseStyle = isSelected ? SELECTED_GUIDE_STYLE : this.resolveStyle(guide);
+      const style = this.applyLockedMuting(baseStyle, guide.locked);
       const screenPos = this.guideOffsetToScreen(guide.axis, guide.offset, transform, viewport);
 
       // Skip if entirely off-screen
       if (guide.axis === 'X' && (screenPos < -1 || screenPos > viewport.width + 1)) continue;
       if (guide.axis === 'Y' && (screenPos < -1 || screenPos > viewport.height + 1)) continue;
 
-      this.drawGuideLine(ctx, guide.axis, screenPos, viewport, style, isHighlighted);
+      this.drawGuideLine(ctx, guide.axis, screenPos, viewport, style, isHighlighted || isSelected);
 
       // Collect for intersections
       if (guide.axis === 'X') xPositions.push(screenPos);

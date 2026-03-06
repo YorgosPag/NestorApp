@@ -26,6 +26,9 @@ import {
   Scaling, // ADR-189 B32: Scale grid icon
   Compass, // ADR-189 B16: Guide at angle icon
   FlipHorizontal2, // ADR-189 B19: Mirror guides icon
+  FileDown, // ADR-189 B8: Guide from entity icon
+  BoxSelect, // ADR-189 B14: Guide multi-select icon
+  CopyCheck, // ADR-189 B17: Copy/offset pattern icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -284,6 +287,9 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-scale' as ToolType, icon: Scaling, label: DXF_DRAWING_TOOL_LABELS.GUIDE_SCALE, hotkey: 'G→3' },
           { id: 'guide-angle' as ToolType, icon: Compass, label: DXF_DRAWING_TOOL_LABELS.GUIDE_ANGLE, hotkey: 'G→4' },
           { id: 'guide-mirror' as ToolType, icon: FlipHorizontal2, label: DXF_DRAWING_TOOL_LABELS.GUIDE_MIRROR, hotkey: 'G→5' },
+          { id: 'guide-select' as ToolType, icon: BoxSelect, label: DXF_DRAWING_TOOL_LABELS.GUIDE_SELECT, hotkey: 'G→6' },
+          { id: 'guide-copy-pattern' as ToolType, icon: CopyCheck, label: DXF_DRAWING_TOOL_LABELS.GUIDE_COPY_PATTERN, hotkey: 'G→7' },
+          { id: 'guide-from-entity' as ToolType, icon: FileDown, label: DXF_DRAWING_TOOL_LABELS.GUIDE_FROM_ENTITY, hotkey: 'G→8' },
         ],
       },
     ],

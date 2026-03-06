@@ -90,6 +90,9 @@ export interface DrawingEventMap {
   'grid:polar-array-created': { center: { x: number; y: number }; count: number; angleIncrement: number };
   'grid:all-guides-scaled': { origin: { x: number; y: number }; scaleFactor: number };
   'grid:guides-mirrored': { axisGuideId: string; mirrorAxis: 'X' | 'Y'; createdCount: number };
+  'grid:guide-from-entity': { entityType: string; createdCount: number };
+  'grid:guides-batch-deleted': { count: number };
+  'grid:guide-pattern-copied': { sourceCount: number; repetitions: number; offset: number };
   'grid:group-created': { group: GridGroup };
   'grid:snap-toggled': { enabled: boolean };
   // 🏢 ADR-189 §4.13: Guide panel → canvas highlight communication

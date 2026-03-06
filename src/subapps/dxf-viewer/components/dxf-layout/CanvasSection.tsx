@@ -57,6 +57,8 @@ import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/comp
 import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
 // ADR-189: Guide context menu
 import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
+// ADR-189 B14: Batch guide context menu
+import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
 // Tool hint step override for guide tools (they don't use DrawingStateMachine)
 import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
@@ -664,22 +666,31 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     });
   }, [showPromptDialog, t, guideState]);
 
-  // ADR-189 B31: Set center for polar array → open count dialog
+  // ADR-189 B31/B9: Set center for polar array → open count+startAngle dialog
   const handlePolarArrayCenterSet = useCallback((center: Point2D) => {
     showPromptDialog({
       title: t('promptDialog.polarArrayCount'),
       label: t('promptDialog.enterPolarArrayCount'),
       placeholder: t('promptDialog.polarArrayCountPlaceholder'),
-      inputType: 'number',
+      inputType: 'text',
       validate: (val) => {
-        const n = parseInt(val, 10);
+        const trimmed = val.trim();
+        // Accept "N" or "N,angle"
+        const parts = trimmed.split(',');
+        const n = parseInt(parts[0], 10);
         if (isNaN(n) || n < 2) return t('promptDialog.invalidNumber');
+        if (parts.length > 1) {
+          const angle = parseFloat(parts[1]);
+          if (isNaN(angle)) return t('promptDialog.invalidNumber');
+        }
         return null;
       },
     }).then((result) => {
       if (result !== null) {
-        const count = parseInt(result, 10);
-        guideState.createPolarArray(center, count);
+        const parts = result.trim().split(',');
+        const count = parseInt(parts[0], 10);
+        const startAngle = parts.length > 1 ? parseFloat(parts[1]) : 0;
+        guideState.createPolarArray(center, count, startAngle);
       }
     });
   }, [showPromptDialog, t, guideState]);
@@ -734,6 +745,85 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const handleMirrorAxisSelected = useCallback((axisGuideId: string) => {
     guideState.mirrorGuides(axisGuideId);
   }, [guideState]);
+
+  // ADR-189 B8: Guide from entity — entity picked → create guide(s)
+  const handleGuideFromEntity = useCallback((
+    entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE',
+    params: { lineStart?: Point2D; lineEnd?: Point2D; center?: Point2D; radius?: number; clickPoint?: Point2D },
+  ) => {
+    guideState.createGuideFromEntity({ entityType, ...params });
+  }, [guideState]);
+
+  // ADR-189 B14: Multi-select guides
+  const [selectedGuideIds, setSelectedGuideIds] = useState<ReadonlySet<string>>(new Set());
+
+  const handleGuideSelectToggle = useCallback((guideId: string, addToSelection: boolean) => {
+    setSelectedGuideIds(prev => {
+      const next = new Set(prev);
+      if (addToSelection) {
+        if (next.has(guideId)) next.delete(guideId);
+        else next.add(guideId);
+      } else {
+        // Single-click: toggle or replace
+        if (next.size === 1 && next.has(guideId)) {
+          next.clear();
+        } else {
+          next.clear();
+          next.add(guideId);
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const handleGuideDeselectAll = useCallback(() => {
+    setSelectedGuideIds(new Set());
+  }, []);
+
+  // B14: Clear selection when switching tools
+  useEffect(() => {
+    if (activeTool !== 'guide-select' && activeTool !== 'guide-copy-pattern') {
+      setSelectedGuideIds(new Set());
+    }
+  }, [activeTool]);
+
+  // ADR-189 B17: Copy/Offset Pattern handler
+  const handleCopyPatternTrigger = useCallback(() => {
+    if (selectedGuideIds.size === 0) {
+      notifyWarning(t('promptDialog.selectGuidesFirst'));
+      return;
+    }
+    showPromptDialog({
+      title: t('promptDialog.copyPattern'),
+      label: t('promptDialog.enterOffsetAndCount'),
+      placeholder: t('promptDialog.copyPatternPlaceholder'),
+      inputType: 'text',
+      validate: (val) => {
+        const parts = val.trim().split(',');
+        if (parts.length < 2) return t('promptDialog.invalidNumber');
+        const offset = parseFloat(parts[0]);
+        const count = parseInt(parts[1], 10);
+        if (isNaN(offset) || offset === 0) return t('promptDialog.invalidNumber');
+        if (isNaN(count) || count < 1) return t('promptDialog.invalidNumber');
+        return null;
+      },
+    }).then((result) => {
+      if (result !== null) {
+        const parts = result.trim().split(',');
+        const offset = parseFloat(parts[0]);
+        const count = parseInt(parts[1], 10);
+        guideState.copyGuidePattern(Array.from(selectedGuideIds), offset, count);
+      }
+    });
+  }, [selectedGuideIds, showPromptDialog, t, guideState, notifyWarning]);
+
+  // B17: Auto-trigger dialog when tool activated with selection
+  useEffect(() => {
+    if (activeTool === 'guide-copy-pattern') {
+      handleCopyPatternTrigger();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool]);
 
   // ADR-189 §3.12: Arc-Line intersection — 2-step state (step 0: pick line, step 1: pick arc)
   const [arcLineStep, setArcLineStep] = useState<0 | 1>(0);
@@ -1264,6 +1354,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
   const entityMenuRef = useRef<EntityContextMenuHandle>(null);
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
+  const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
 
   // ADR-188: Entity Rotation Tool (must be before useCanvasContextMenu + useCanvasClickHandler)
   const rotationTool = useRotationTool({
@@ -1308,6 +1399,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     guideMenuRef,
     guides: guideState.guides,
     transformRef,
+    // ADR-189 B14: Batch guide context menu
+    guideBatchMenuRef,
+    selectedGuideIds,
   });
 
   const { handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = useDrawingUIHandlers({
@@ -1413,6 +1507,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onGuideAngleOriginSet: handleGuideAngleOriginSet,
     // ADR-189 B19: Mirror guides
     onMirrorAxisSelected: handleMirrorAxisSelected,
+    // ADR-189 B8: Guide from entity
+    onGuideFromEntity: handleGuideFromEntity,
+    // ADR-189 B14: Guide multi-select
+    onGuideSelectToggle: handleGuideSelectToggle,
+    onGuideDeselectAll: handleGuideDeselectAll,
   });
 
   const { handleSmartDelete } = useSmartDelete({
@@ -1587,6 +1686,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         ghostDiagonalGuide={ghostDiagonalGuide}
         ghostSegmentLine={ghostSegmentLine}
         highlightedGuideId={effectiveHighlightedGuideId}
+        selectedGuideIds={selectedGuideIds}
         constructionPoints={cpState.points}
         highlightedPointId={highlightedPointId ?? panelHighlightPointId}
       />
@@ -1626,6 +1726,40 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onToggleVisibility={guideState.toggleVisibility}
         guidesVisible={guideState.guidesVisible}
         onCancel={() => guideMenuRef.current?.close()}
+      />
+
+      {/* ADR-189 B14: Batch context menu for selected guides */}
+      <GuideBatchContextMenu
+        ref={guideBatchMenuRef}
+        onDeleteSelected={() => {
+          if (selectedGuideIds.size > 0) {
+            guideState.batchDeleteGuides(Array.from(selectedGuideIds));
+            setSelectedGuideIds(new Set());
+          }
+        }}
+        onLockSelected={() => {
+          const store = guideState.getStore();
+          store.setGuidesLocked(Array.from(selectedGuideIds), true);
+        }}
+        onUnlockSelected={() => {
+          const store = guideState.getStore();
+          store.setGuidesLocked(Array.from(selectedGuideIds), false);
+        }}
+        onChangeColor={(color) => {
+          const store = guideState.getStore();
+          store.setGuidesColor(Array.from(selectedGuideIds), color);
+        }}
+        onGroupSelected={() => {
+          // B7: Create new group from selected guides
+          const store = guideState.getStore();
+          const group = store.addGroup(`Group ${Date.now()}`);
+          if (group) {
+            for (const gid of selectedGuideIds) {
+              store.setGuideGroupId(gid, group.id);
+            }
+          }
+        }}
+        onCancel={() => guideBatchMenuRef.current?.close()}
       />
 
       {/* ADR-189: Centralized prompt dialog (parallel guide distance, future tools) */}
