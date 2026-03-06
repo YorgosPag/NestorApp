@@ -263,6 +263,9 @@ export function UnifiedContactTabbedSection({
   );
 
   // 🔄 UNIFIED PHOTO HANDLER: Consolidate all photo change handlers (extracted)
+  // 🔧 FIX (ADR-190): Removed formData from deps — it caused callback recreation on every
+  // formData change, which triggered re-renders → re-uploads → flickering loop.
+  // The fallback handler is never reached because handleMultiplePhotosChange is always provided.
   const unifiedPhotosChange = useMemo(() =>
     createUnifiedPhotosChangeHandler({
       onPhotosChange,
@@ -270,7 +273,8 @@ export function UnifiedContactTabbedSection({
       setFormData,
       formData
     }),
-    [onPhotosChange, handleMultiplePhotosChange, setFormData, formData]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onPhotosChange, handleMultiplePhotosChange, setFormData]
   );
 
   // 🎯 DYNAMIC RENDERER: Choose the right renderer for this contact type

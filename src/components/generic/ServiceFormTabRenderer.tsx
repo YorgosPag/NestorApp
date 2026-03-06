@@ -147,7 +147,7 @@ function createServiceFormTabsFromConfig(
         return (
           <div className="flex flex-col items-center space-y-4 p-6 min-h-[360px]">
             <MultiplePhotosUpload
-              key={`logo-upload-${multiplePhotos.length}-${multiplePhotos[0]?.uploadUrl || 'empty'}`}
+              key="service-logo-upload"
               photos={multiplePhotos}
               maxPhotos={1} // For service logos, we use exactly 1 slot
               onPhotosChange={onPhotosChange as ((photos: import('@/components/ui/MultiplePhotosUpload').PhotoSlot[]) => void) | undefined}
