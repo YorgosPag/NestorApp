@@ -109,8 +109,10 @@ export function SearchableCombobox({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync input value from external value (e.g. when form resets or contact auto-fills)
+  // Skip sync while popover is open — user is actively typing, don't override their input
   useEffect(() => {
-    // Find the option matching the current value to show its label
+    if (open) return;
+
     const matchingOption = options.find((o) => o.value === value);
     if (matchingOption) {
       setInputValue(matchingOption.label);
@@ -120,7 +122,7 @@ export function SearchableCombobox({
     } else {
       setInputValue('');
     }
-  }, [value, options]);
+  }, [value, options, open]);
 
   // Debounced filtering
   useEffect(() => {
