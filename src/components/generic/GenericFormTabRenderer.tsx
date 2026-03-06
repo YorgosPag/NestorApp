@@ -122,7 +122,22 @@ function createFormTabsFromConfig(
       if (customRenderers?.[section.id] && section.id !== 'companyPhotos' && section.id !== 'relationships') {
         logger.info('Using generic custom renderer for section', { sectionId: section.id });
         const renderer = customRenderers[section.id] as LocalCustomRendererFn;
-        return renderer();
+        const customContent = renderer();
+
+        // 🗺️ Also render section footer (e.g. map preview) after custom section content
+        const footerFn = sectionFooterRenderers?.[section.id] as LocalCustomRendererFn | undefined;
+        if (footerFn) {
+          return (
+            <>
+              {customContent}
+              <div className="w-full mt-4">
+                {footerFn()}
+              </div>
+            </>
+          );
+        }
+
+        return customContent;
       }
 
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
