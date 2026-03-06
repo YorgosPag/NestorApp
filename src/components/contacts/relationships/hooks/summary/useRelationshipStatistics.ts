@@ -9,6 +9,7 @@
 
 import { useMemo } from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
+import type { ContactType } from '@/types/contacts';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { calculateRelationshipStats, type RelationshipStats } from '../../utils/summary/statistics-calculator';
 import {
@@ -19,7 +20,8 @@ import {
   Star,
   Target,
   Award,
-  Zap
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -40,7 +42,8 @@ const logger = createModuleLogger('useRelationshipStatistics');
  */
 export function useRelationshipStatistics(
   relationships: ContactRelationship[],
-  contactId: string
+  contactId: string,
+  contactType?: ContactType
 ) {
   const { t } = useTranslation('contacts');
   // ============================================================================
@@ -98,12 +101,20 @@ export function useRelationshipStatistics(
         icon: Briefcase,
         color: "green"
       },
-      {
-        title: t("relationships.stats.shareholders"),
-        value: stats.shareholders,
-        icon: Award,
-        color: "purple"
-      },
+      // Service contacts: "Δημόσιοι Υπάλληλοι" αντί για "Μέτοχοι"
+      contactType === 'service'
+        ? {
+            title: t("relationships.stats.civilServants"),
+            value: stats.byType['civil_servant'] || 0,
+            icon: ShieldCheck,
+            color: "purple"
+          }
+        : {
+            title: t("relationships.stats.shareholders"),
+            value: stats.shareholders,
+            icon: Award,
+            color: "purple"
+          },
       {
         title: t("relationships.stats.consultants"),
         value: stats.consultants,
@@ -137,7 +148,7 @@ export function useRelationshipStatistics(
         color: "cyan"
       }
     ];
-  }, [stats, t]);
+  }, [stats, t, contactType]);
 
   // ============================================================================
   // DEBUG LOGGING

@@ -196,6 +196,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
           <StatisticsSection
             relationships={relationships}
             contactId={contactId}
+            contactType={contactType}
             onCardClick={handleDashboardCardClick}
           />
 

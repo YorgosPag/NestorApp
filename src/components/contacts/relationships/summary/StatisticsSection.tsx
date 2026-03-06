@@ -11,6 +11,7 @@
 
 import React from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
+import type { ContactType } from '@/types/contacts';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -25,6 +26,8 @@ interface StatisticsSectionProps {
   relationships: ContactRelationship[];
   /** Current contact ID for context */
   contactId: string;
+  /** Contact type — determines which stat cards to show */
+  contactType?: ContactType;
   /** Callback when dashboard card is clicked */
   onCardClick?: (stat: DashboardStat, index: number) => void;
   /** Optional CSS className */
@@ -49,6 +52,7 @@ interface StatisticsSectionProps {
 export const StatisticsSection: React.FC<StatisticsSectionProps> = ({
   relationships,
   contactId,
+  contactType,
   onCardClick,
   className = "mb-6"
 }) => {
@@ -57,7 +61,7 @@ export const StatisticsSection: React.FC<StatisticsSectionProps> = ({
   // ============================================================================
 
   const { quick } = useBorderTokens();
-  const { stats, dashboardStats } = useRelationshipStatistics(relationships, contactId);
+  const { stats, dashboardStats } = useRelationshipStatistics(relationships, contactId, contactType);
 
   // ============================================================================
   // RENDER
