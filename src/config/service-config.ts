@@ -8,12 +8,10 @@
 import {
   getServiceFieldLabels,
   getServiceCategoryOptions,
-  getLegalStatusOptions
 } from '../subapps/dxf-viewer/config/modal-select';
 
 // 🏢 ENTERPRISE: Import centralized service form field labels - ZERO HARDCODED VALUES
 import {
-  SERVICE_ADMINISTRATIVE_INFO_LABELS,
   ADDRESS_INFO_FIELD_LABELS
 } from '../constants/property-statuses-enterprise';
 //
@@ -96,49 +94,6 @@ const basicInfoSection: ServiceSectionConfig = (() => {
   ]
   };
 })();
-
-/**
- * Διοικητικά Στοιχεία
- * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
- */
-const administrativeSection: ServiceSectionConfig = {
-  id: 'administrative',
-  title: 'contacts.service.sections.administrative.title',
-  icon: 'shield',
-  fields: [
-    {
-      id: 'legalStatus',
-      type: 'select',
-      label: SERVICE_ADMINISTRATIVE_INFO_LABELS.LEGAL_STATUS,
-      required: true,
-      options: [
-        // ✅ ENTERPRISE: Using centralized legal status options - NO MORE HARDCODED VALUES
-        ...getLegalStatusOptions()
-      ]
-    },
-    {
-      id: 'establishmentLaw',
-      type: 'input',
-      label: SERVICE_ADMINISTRATIVE_INFO_LABELS.ESTABLISHMENT_LAW,
-      placeholder: 'contacts.service.fields.establishmentLaw.placeholder',
-      helpText: 'contacts.service.fields.establishmentLaw.helpText'
-    },
-    {
-      id: 'headTitle',
-      type: 'input',
-      label: SERVICE_ADMINISTRATIVE_INFO_LABELS.HEAD_TITLE,
-      placeholder: 'contacts.service.fields.headTitle.placeholder',
-      helpText: 'contacts.service.fields.headTitle.helpText'
-    },
-    {
-      id: 'headName',
-      type: 'input',
-      label: SERVICE_ADMINISTRATIVE_INFO_LABELS.HEAD_NAME,
-      placeholder: 'contacts.service.fields.headName.placeholder',
-      helpText: 'contacts.service.fields.headName.helpText'
-    }
-  ]
-};
 
 /**
  * Διεύθυνση Υπηρεσίας
@@ -254,7 +209,6 @@ const bankingSection: ServiceSectionConfig = {
 
 export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   basicInfoSection,
-  administrativeSection,
   addressSection,
   communicationSection,
   logoSection,
