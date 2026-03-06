@@ -326,12 +326,20 @@ export function SearchableCombobox({
             </button>
           )}
           {/* Chevron indicator */}
-          <ChevronDown
-            className={cn(
-              'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none transition-transform',
-              open && 'rotate-180',
-            )}
-          />
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => { if (!disabled) setOpen(!open); }}
+            className="absolute right-0 top-0 h-full px-2 flex items-center cursor-pointer"
+            aria-label="Toggle dropdown"
+          >
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-muted-foreground transition-transform',
+                open && 'rotate-180',
+              )}
+            />
+          </button>
         </div>
       </PopoverTrigger>
 
