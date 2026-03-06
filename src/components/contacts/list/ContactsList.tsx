@@ -221,17 +221,52 @@ export function ContactsList({
   };
 
   // 🏢 ENTERPRISE: Centralized share handler using ShareModal (SSoT)
+  // Builds formatted TEXT content (name, profession, email, phone) instead of URL link
   const handleShareContact = () => {
     if (!selectedContact) {
       toast.error(t('list.share.noContactSelected'));
       return;
     }
     const contactName = getContactDisplayName(selectedContact);
-    const contactUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/contacts?id=${selectedContact.id}`;
+
+    // Build formatted contact text for sharing
+    const lines: string[] = [];
+    lines.push(`👤 ${contactName}`);
+
+    if (selectedContact.type === 'company' && selectedContact.companyName) {
+      lines.push(`🏢 ${t('list.share.company')}: ${selectedContact.companyName}`);
+    }
+    if (selectedContact.type === 'service' && selectedContact.serviceName) {
+      lines.push(`🔧 ${t('list.share.service')}: ${selectedContact.serviceName}`);
+    }
+    if (selectedContact.profession) {
+      lines.push(`💼 ${t('list.share.profession')}: ${selectedContact.profession}`);
+    }
+    // Primary email
+    const primaryEmail = selectedContact.emails?.find(e => e.isPrimary) || selectedContact.emails?.[0];
+    if (primaryEmail) {
+      lines.push(`📧 Email: ${primaryEmail.email}`);
+    }
+    // Primary phone
+    const primaryPhone = selectedContact.phones?.find(p => p.isPrimary) || selectedContact.phones?.[0];
+    if (primaryPhone) {
+      lines.push(`📞 ${t('list.share.phone')}: ${primaryPhone.number}`);
+    }
+    // Primary address
+    const primaryAddress = selectedContact.addresses?.find(a => a.isPrimary) || selectedContact.addresses?.[0];
+    if (primaryAddress) {
+      const addressParts = [primaryAddress.street, primaryAddress.city, primaryAddress.postalCode].filter(Boolean);
+      if (addressParts.length > 0) {
+        lines.push(`📍 ${t('list.share.address')}: ${addressParts.join(', ')}`);
+      }
+    }
+
+    const contactText = lines.join('\n');
+
     setShareData({
-      title: contactName,
-      text: contactName,
-      url: contactUrl,
+      title: t('list.share.modalTitle'),
+      text: contactText,
+      url: '', // No URL — share pure text content
     });
     setShareModalOpen(true);
   };

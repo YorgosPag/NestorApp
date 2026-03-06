@@ -106,6 +106,18 @@ export function ShareModal({
     onClose();
 
     try {
+      // Messenger: Copy text to clipboard + open Messenger (no API key needed)
+      if (platformId === 'messenger') {
+        const textToCopy = shareData.text || shareData.title;
+        await navigator.clipboard.writeText(textToCopy);
+        window.open('https://www.messenger.com/new', '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes');
+        trackShareEvent(platformId, 'contact', shareData.url);
+        setTimeout(() => {
+          onShareSuccess?.(platformId);
+        }, 1500);
+        return;
+      }
+
       let url = socialUrls[platformId as keyof typeof socialUrls];
 
       // Special Facebook handling για photos
@@ -133,10 +145,10 @@ export function ShareModal({
         // Always use platform-specific URLs (never navigator.share which opens OS dialog)
         const shareWindow = window.open(url, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes');
         if (!shareWindow) {
-          await navigator.clipboard.writeText(shareData.url);
+          await navigator.clipboard.writeText(shareData.text || shareData.url);
         }
 
-        trackShareEvent(platformId, 'property', shareData.url);
+        trackShareEvent(platformId, 'contact', shareData.url);
         setTimeout(() => {
           onShareSuccess?.(platformId);
         }, 1500);

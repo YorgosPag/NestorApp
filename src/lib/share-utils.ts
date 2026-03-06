@@ -274,10 +274,11 @@ export function getSocialShareUrls(url: string, text: string) {
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    messenger: `https://www.messenger.com/new`,
     instagram: `https://www.instagram.com/`,
-    whatsapp: `https://wa.me/?text=${encodedText} ${encodedUrl}`,
+    whatsapp: `https://wa.me/?text=${encodedText}${url ? ' ' + encodedUrl : ''}`,
     telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
-    email: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}`
+    email: `mailto:?subject=${encodedText}&body=${encodedText}${url ? '%0A%0A' + encodedUrl : ''}`
   };
 }
 
@@ -287,10 +288,10 @@ export function getSocialShareUrls(url: string, text: string) {
 export function getPhotoSocialShareUrls(photoUrl: string, text: string, pageUrl?: string) {
   const encodedPhotoUrl = encodeURIComponent(photoUrl);
   const encodedText = encodeURIComponent(text);
-  const encodedPageUrl = pageUrl ? encodeURIComponent(pageUrl) : encodedPhotoUrl;
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedPhotoUrl}&quote=${encodedText}`,
+    messenger: `https://www.messenger.com/new`,
     instagram: `https://www.instagram.com/`,
     whatsapp: `https://wa.me/?text=${encodedText} ${encodedPhotoUrl}`,
     telegram: `https://t.me/share/url?url=${encodedPhotoUrl}&text=${encodedText}`,

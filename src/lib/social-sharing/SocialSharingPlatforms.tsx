@@ -110,6 +110,15 @@ export const TelegramIcon: React.FC<{ className?: string }> = ({ className }) =>
   </svg>
 );
 
+/**
+ * 💬 Messenger Icon - Enterprise Version
+ */
+export const MessengerIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-label="Messenger">
+    <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.654V24l4.088-2.242c1.092.3 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111S18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.2l3.131 3.26 5.886-3.26-6.558 6.763z"/>
+  </svg>
+);
+
 // ============================================================================
 // ENTERPRISE PLATFORM CONFIGURATIONS με DESIGN SYSTEM
 // ============================================================================
@@ -120,22 +129,23 @@ export const TelegramIcon: React.FC<{ className?: string }> = ({ className }) =>
 export const getSocialSharingPlatforms = (): SharePlatform[] => {
   // Access semantic colors hook here would not work in non-React context
   // Using designSystem directly for consistency
-  // Σειρά: Facebook → Instagram → WhatsApp → Telegram → Email
+  // Σειρά: Messenger → Instagram → WhatsApp → Telegram → Email
   return [
   {
-    id: 'facebook',
-    name: 'Facebook',
-    icon: FacebookIcon,
+    id: 'messenger',
+    name: 'Messenger',
+    icon: MessengerIcon,
     colors: {
-      primary: designSystem.getStatusColor('info', 'bg'),
-      gradient: 'from-blue-500 via-blue-600 to-blue-700',
+      primary: 'bg-gradient-to-br from-blue-500 to-purple-600',
+      gradient: 'from-blue-500 via-purple-500 to-purple-600',
       hover: designSystem.cn(
-        designSystem.getStatusColor('info', 'bg'),
-        HOVER_SHADOWS.COLORED.BLUE
+        'bg-gradient-to-br from-blue-500 to-purple-600',
+        HOVER_SHADOWS.COLORED.PURPLE
       ),
       text: 'text-white'
     },
     config: {
+      mobileOptimized: true,
       supportsMedia: true
     }
   },
@@ -346,6 +356,7 @@ export const buildPlatformShareUrl = (platformId: string, url: string, text: str
 
   const urlBuilders: Record<string, string> = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    messenger: `https://www.facebook.com/dialog/send?link=${encodedUrl}&redirect_uri=${encodedUrl}`,
     instagram: `https://www.instagram.com/`, // Instagram doesn't support direct URL sharing — opens app
     whatsapp: `https://wa.me/?text=${encodedText} ${encodedUrl}`,
     telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
@@ -377,6 +388,7 @@ export default {
   platforms: SOCIAL_SHARING_PLATFORMS,
   icons: {
     FacebookIcon,
+    MessengerIcon,
     InstagramIcon,
     WhatsAppIcon,
     TelegramIcon

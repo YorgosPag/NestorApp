@@ -104,8 +104,13 @@
     "share": {
       "modalTitle": "Share Contact",
       "noContactSelected": "Select a contact to share",
-      "copied": "Link copied!",
-      "success": "Shared via {platform} successfully!"
+      "copied": "Contact info copied!",
+      "success": "Shared via {platform} successfully!",
+      "company": "Company",
+      "service": "Service",
+      "profession": "Profession",
+      "phone": "Phone",
+      "address": "Address"
     }
   },
   "types": {
