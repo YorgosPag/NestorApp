@@ -15,6 +15,10 @@ interface ContactAddressMapPreviewProps {
   postalCode?: string;
   /** Multi-address array for company contacts (HQ + branches) */
   companyAddresses?: CompanyAddress[];
+  /** Map height preset override */
+  heightPreset?: 'viewerCompact' | 'viewerStandard' | 'viewerExpanded' | 'viewerFullscreen';
+  /** Additional CSS classes for map container */
+  className?: string;
 }
 
 /** Map CompanyAddress type to ProjectAddressType with correct labels */
@@ -30,6 +34,8 @@ export function ContactAddressMapPreview({
   city,
   postalCode,
   companyAddresses,
+  heightPreset,
+  className,
 }: ContactAddressMapPreviewProps) {
   const fallbackAddressIdRef = useRef<string>(AddressUtils.generateAddressId());
 
@@ -91,6 +97,8 @@ export function ContactAddressMapPreview({
       highlightPrimary
       showGeocodingStatus
       enableClickToFocus
+      {...(heightPreset ? { heightPreset } : {})}
+      className={className}
     />
   );
 }
