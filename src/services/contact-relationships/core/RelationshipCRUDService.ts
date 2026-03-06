@@ -320,9 +320,9 @@ export class RelationshipCRUDService {
   // ========================================================================
 
   /**
-   * 🗑️ Delete Relationship (Soft Delete)
+   * 🗑️ Delete Relationship (Hard Delete + Cascade Reciprocal)
    */
-  static async deleteRelationship(relationshipId: string, deletedBy: string): Promise<boolean> {
+  static async deleteRelationship(relationshipId: string, _deletedBy: string): Promise<boolean> {
     try {
       const relationship = await this.getRelationshipById(relationshipId);
       if (!relationship) {
@@ -330,15 +330,17 @@ export class RelationshipCRUDService {
         return false;
       }
 
-      // Soft delete by updating status
-      await this.updateRelationship(relationshipId, {
-        status: 'terminated',
-        endDate: new Date().toISOString(),
-        lastModifiedBy: deletedBy,
-        relationshipNotes: `${relationship.relationshipNotes || ''}\n[DELETED: ${new Date().toISOString()}]`
-      });
+      // Hard delete the relationship from Firestore
+      await FirestoreRelationshipAdapter.deleteRelationship(relationshipId);
+      logger.info('✅ CRUD: Relationship hard-deleted:', relationshipId);
 
-      logger.info('✅ CRUD: Relationship soft-deleted successfully:', relationshipId);
+      // Cascade: delete reciprocal relationship (reverse direction, same type or mapped type)
+      try {
+        await this.deleteReciprocalRelationship(relationship);
+      } catch (reciprocalError) {
+        logger.warn('⚠️ CRUD: Reciprocal deletion failed (non-blocking):', reciprocalError);
+      }
+
       return true;
 
     } catch (error) {
@@ -348,16 +350,37 @@ export class RelationshipCRUDService {
   }
 
   /**
-   * 🗑️ Hard Delete Relationship
+   * 🔄 Delete Reciprocal Relationship (cascade)
    */
-  static async hardDeleteRelationship(relationshipId: string): Promise<boolean> {
+  private static async deleteReciprocalRelationship(relationship: ContactRelationship): Promise<void> {
+    const reciprocalMappings: Partial<Record<RelationshipType, RelationshipType>> = {
+      'client': 'vendor',
+      'vendor': 'client',
+      'partner': 'partner',
+      'colleague': 'colleague',
+      'mentor': 'protege',
+      'protege': 'mentor',
+      'friend': 'friend',
+      'family': 'family',
+    };
+
+    const reciprocalType = reciprocalMappings[relationship.relationshipType];
+    if (!reciprocalType) return; // Employment/government types have no reciprocal
+
     try {
-      await FirestoreRelationshipAdapter.deleteRelationship(relationshipId);
-      logger.info('✅ CRUD: Relationship hard-deleted successfully:', relationshipId);
-      return true;
+      const reciprocal = await FirestoreRelationshipAdapter.getSpecificRelationship(
+        relationship.targetContactId,
+        relationship.sourceContactId,
+        reciprocalType
+      );
+
+      if (reciprocal) {
+        await FirestoreRelationshipAdapter.deleteRelationship(reciprocal.id);
+        logger.info('✅ CRUD: Reciprocal relationship cascade-deleted:', reciprocal.id);
+      }
     } catch (error) {
-      logger.error('❌ CRUD: Error hard-deleting relationship:', error);
-      return false;
+      // Swallow index errors — reciprocal might not exist
+      logger.warn('⚠️ CRUD: Could not find/delete reciprocal:', error);
     }
   }
 
