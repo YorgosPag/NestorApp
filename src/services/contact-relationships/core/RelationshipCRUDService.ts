@@ -12,8 +12,7 @@
 
 import {
   ContactRelationship,
-  RelationshipType,
-  isGovernmentRelationship
+  RelationshipType
 } from '@/types/contacts/relationships';
 import { Contact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -489,55 +488,24 @@ export class RelationshipCRUDService {
   }
 
   /**
-   * 🔍 Validate Business Rules (Updated για εταιρικές συμμετοχές)
+   * 🔍 Validate Business Rules — delegates to centralized RelationshipValidationService (SSoT)
    */
   private static async validateBusinessRules(
     source: Contact,
     target: Contact,
     relationshipType: RelationshipType
   ): Promise<void> {
-    logger.info('🔍 VALIDATION: Checking business rules', {
+    logger.info('🔍 VALIDATION: Delegating to centralized RelationshipValidationService', {
       sourceType: source.type,
       targetType: target.type,
       relationshipType
     });
 
-    // Individual can't be an employee of another individual
-    if (source.type === 'individual' && target.type === 'individual' &&
-        ['employee', 'manager', 'director'].includes(relationshipType)) {
-      throw new Error('Individual cannot have employment relationship with another individual');
-    }
-
-    // Service contacts can only have government-related relationships
-    if (target.type === 'service' && !isGovernmentRelationship({ relationshipType } as ContactRelationship)) {
-      // Allow some general relationships για services
-      const allowedForServices = ['representative', 'advisor', 'consultant', 'client'];
-      if (!allowedForServices.includes(relationshipType)) {
-        throw new Error('Invalid relationship type for public service organization');
-      }
-    }
-
-    // 💼 ΕΤΑΙΡΙΚΕΣ ΣΥΜΜΕΤΟΧΕΣ - Business ownership validations
-    if (relationshipType === 'shareholder') {
-      // Εταιρεία μπορεί να έχει μετόχους: individuals ή other companies
-      if (target.type === 'company') {
-        // ✅ Individual → shareholder → Company (φυσικός μέτοχος)
-        // ✅ Company → shareholder → Company (εταιρική συμμετοχή)
-        logger.info('✅ VALIDATION: Valid shareholder relationship', {
-          source: source.type,
-          target: target.type
-        });
-      } else {
-        throw new Error('Shareholder relationships can only target companies');
-      }
-    }
-
-    // 🏢 EMPLOYMENT - Employment relationship validation
-    if (['employee', 'manager', 'director', 'executive'].includes(relationshipType)) {
-      if (target.type === 'individual') {
-        throw new Error('Employment relationships require a company or service as target');
-      }
-    }
+    RelationshipValidationService.validateBusinessRules(
+      source.type,
+      target.type,
+      relationshipType
+    );
 
     logger.info('✅ VALIDATION: Business rules passed');
   }
