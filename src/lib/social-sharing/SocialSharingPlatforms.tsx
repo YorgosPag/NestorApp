@@ -273,17 +273,17 @@ export const generatePlatformButtonStyles = (platform: SharePlatform, variant: '
 
   const variantStyles = {
     default: designSystem.cn(
-      'rounded-2xl p-3 aspect-square w-full',
+      'rounded-2xl !p-3 !h-auto aspect-square w-full',
       `bg-gradient-to-br ${platform.colors.gradient}`,
       platform.colors.text
     ),
     compact: designSystem.cn(
-      'rounded-xl p-2 aspect-square',
+      'rounded-xl !p-2 !h-auto aspect-square',
       platform.colors.primary,
       platform.colors.text
     ),
     minimal: designSystem.cn(
-      'rounded-lg p-2 aspect-square',
+      'rounded-lg !p-2 !h-auto aspect-square',
       'bg-transparent border',
       designSystem.getStatusColor('info', 'border'),
       HOVER_BACKGROUND_EFFECTS.LIGHT
