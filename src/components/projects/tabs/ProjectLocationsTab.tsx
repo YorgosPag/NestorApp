@@ -309,10 +309,13 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
   const primary = getPrimaryAddress(localAddresses);
 
+  // Show inline form (add/edit) in full-width mode
+  const isInlineFormActive = isAddFormOpen || editingIndex !== null;
+
   return (
-    <div className={spacing.spaceBetween.lg}>
+    <section className={spacing.spaceBetween.lg}>
       {/* Header Section */}
-      <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between">
         <div>
           <h2 className={cn(typography.heading.lg, "flex items-center", spacing.gap.sm)}>
             <MapPin className={iconSizes.lg} />
@@ -328,22 +331,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             Νέα Διεύθυνση
           </Button>
         )}
-      </div>
+      </header>
 
-      {/* 🗺️ ENTERPRISE: Address Map Integration (ADR-168) */}
-      {localAddresses.length > 0 && !isAddFormOpen && editingIndex === null && (
-        <AddressMap
-          addresses={localAddresses}
-          highlightPrimary
-          showGeocodingStatus
-          enableClickToFocus
-          onMarkerClick={handleMarkerClick}
-          heightPreset="viewerStandard"
-          className="rounded-lg border shadow-sm"
-        />
-      )}
-
-      {/* 🏢 ENTERPRISE: Inline Add Form (Procore Pattern) */}
+      {/* Inline Add Form (full width — replaces 2-column layout) */}
       {isAddFormOpen && (
         <div className={cn("border-2 border-primary rounded-lg bg-card", spacing.padding.sm, spacing.spaceBetween.md)}>
           <div className="flex items-center justify-between">
@@ -356,7 +346,6 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           </div>
 
-          {/* 🗺️ Draggable map for new address */}
           <AddressMap
             addresses={[]}
             draggableMarkers
@@ -381,130 +370,156 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         </div>
       )}
 
-      {/* Addresses List */}
-      {localAddresses.length === 0 ? (
-        <div className={cn("text-center border-2 border-dashed rounded-lg", spacing.padding.y["2xl"])}>
-          <MapPin className={cn(iconSizes.xl, "mx-auto", colors.text.muted, spacing.margin.bottom.md)} />
-          <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>Δεν υπάρχουν διευθύνσεις</h3>
-          <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.bottom.md)}>
-            Προσθέστε τουλάχιστον μία διεύθυνση για το έργο
-          </p>
-          <Button onClick={() => setIsAddFormOpen(true)}>
-            <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-            Προσθήκη Πρώτης Διεύθυνσης
-          </Button>
-        </div>
-      ) : (
-        <div className={spacing.spaceBetween.md}>
-          <div className="flex items-center justify-between">
-            <h3 className={typography.heading.md}>
-              Διευθύνσεις Έργου ({localAddresses.length})
-            </h3>
-          </div>
-
-          {localAddresses.map((address, index) => (
-            <div
-              key={address.id}
-              id={`address-card-${address.id}`}
-              className={cn("relative border rounded-lg hover:shadow-md transition-shadow", spacing.padding.sm)}
-            >
-              {/* 🏢 ENTERPRISE: Inline Edit Mode or Display Mode */}
-              {editingIndex === index ? (
-                // EDIT MODE: Inline form + draggable map
-                <div className={spacing.spaceBetween.md}>
-                  <div className={cn("flex items-center justify-between", spacing.margin.bottom.md)}>
-                    <h4 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
-                      <Pencil className={iconSizes.md} />
-                      Επεξεργασία Διεύθυνσης
-                    </h4>
-                    <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                      <X className={iconSizes.sm} />
-                    </Button>
-                  </div>
-
-                  {/* 🗺️ Draggable map for edit mode */}
-                  <AddressMap
-                    addresses={[address]}
-                    draggableMarkers
-                    onAddressDragUpdate={setEditDragAddress}
-                    heightPreset="viewerCompact"
-                    className="rounded-lg border shadow-sm"
-                  />
-
-                  <AddressFormSection
-                    onChange={setEditedAddress}
-                    initialValues={address}
-                    externalValues={editDragAddress}
-                  />
-
-                  <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
-                    <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
-                      Ακύρωση
-                    </Button>
-                    <Button onClick={handleSaveEdit} disabled={isSaving}>
-                      {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                // DISPLAY MODE: Address card with action buttons
-                <>
-                  <AddressCard address={address} />
-
-                  {/* Action Buttons */}
-                  <div className={cn("absolute top-4 right-4 flex", spacing.gap.sm)}>
-                    {/* Primary Badge or Set Primary Button */}
-                    {address.isPrimary ? (
-                      <Badge variant="default" className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-current" />
-                        Κύρια
-                      </Badge>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSetPrimary(index)}
-                        title="Ορισμός ως κύρια διεύθυνση"
-                      >
-                        <Star className={iconSizes.sm} />
-                      </Button>
-                    )}
-
-                    {/* Edit Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStartEdit(index)}
-                      title="Επεξεργασία διεύθυνσης"
-                    >
-                      <Pencil className={iconSizes.sm} />
-                    </Button>
-
-                    {/* Delete Button */}
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteAddress(index)}
-                      title="Διαγραφή διεύθυνσης"
-                    >
-                      <Trash2 className={iconSizes.sm} />
-                    </Button>
-                  </div>
-
-                  {/* Metadata */}
-                  <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
-                    <span>ID: {address.id.slice(0, 8)}...</span>
-                    {address.sortOrder !== undefined && (
-                      <span className={spacing.margin.left.md}>Σειρά: {address.sortOrder}</span>
-                    )}
-                  </div>
-                </>
-              )}
+      {/* 2-Column Layout: Addresses LEFT, Map RIGHT */}
+      {!isInlineFormActive && (
+        <>
+          {localAddresses.length === 0 ? (
+            <div className={cn("text-center border-2 border-dashed rounded-lg", spacing.padding.y["2xl"])}>
+              <MapPin className={cn(iconSizes.xl, "mx-auto", colors.text.muted, spacing.margin.bottom.md)} />
+              <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>Δεν υπάρχουν διευθύνσεις</h3>
+              <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.bottom.md)}>
+                Προσθέστε τουλάχιστον μία διεύθυνση για το έργο
+              </p>
+              <Button onClick={() => setIsAddFormOpen(true)}>
+                <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+                Προσθήκη Πρώτης Διεύθυνσης
+              </Button>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* LEFT COLUMN: Address Cards */}
+              <aside className={spacing.spaceBetween.md}>
+                <div className="flex items-center justify-between">
+                  <h3 className={typography.heading.md}>
+                    Διευθύνσεις Έργου ({localAddresses.length})
+                  </h3>
+                </div>
+
+                {localAddresses.map((address, index) => (
+                  <article
+                    key={address.id}
+                    id={`address-card-${address.id}`}
+                    className={cn("relative border rounded-lg hover:shadow-md transition-shadow", spacing.padding.sm)}
+                  >
+                    {editingIndex === index ? (
+                      <div className={spacing.spaceBetween.md}>
+                        <div className={cn("flex items-center justify-between", spacing.margin.bottom.md)}>
+                          <h4 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
+                            <Pencil className={iconSizes.md} />
+                            Επεξεργασία Διεύθυνσης
+                          </h4>
+                          <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
+                            <X className={iconSizes.sm} />
+                          </Button>
+                        </div>
+
+                        <AddressMap
+                          addresses={[address]}
+                          draggableMarkers
+                          onAddressDragUpdate={setEditDragAddress}
+                          heightPreset="viewerCompact"
+                          className="rounded-lg border shadow-sm"
+                        />
+
+                        <AddressFormSection
+                          onChange={setEditedAddress}
+                          initialValues={address}
+                          externalValues={editDragAddress}
+                        />
+
+                        <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
+                          <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
+                            Ακύρωση
+                          </Button>
+                          <Button onClick={handleSaveEdit} disabled={isSaving}>
+                            {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <AddressCard address={address} />
+
+                        <div className={cn("absolute top-4 right-4 flex", spacing.gap.sm)}>
+                          {address.isPrimary ? (
+                            <Badge variant="default" className="flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-current" />
+                              Κύρια
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSetPrimary(index)}
+                              title="Ορισμός ως κύρια διεύθυνση"
+                            >
+                              <Star className={iconSizes.sm} />
+                            </Button>
+                          )}
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleStartEdit(index)}
+                            title="Επεξεργασία διεύθυνσης"
+                          >
+                            <Pencil className={iconSizes.sm} />
+                          </Button>
+
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteAddress(index)}
+                            title="Διαγραφή διεύθυνσης"
+                          >
+                            <Trash2 className={iconSizes.sm} />
+                          </Button>
+                        </div>
+
+                        <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
+                          <span>ID: {address.id.slice(0, 8)}...</span>
+                          {address.sortOrder !== undefined && (
+                            <span className={spacing.margin.left.md}>Σειρά: {address.sortOrder}</span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </article>
+                ))}
+              </aside>
+
+              {/* RIGHT COLUMN: Map — sticky, fills to bottom of viewport */}
+              <aside className="hidden lg:block">
+                <div className="sticky top-0 h-[calc(100vh-12rem)]">
+                  <AddressMap
+                    addresses={localAddresses}
+                    highlightPrimary
+                    showGeocodingStatus
+                    enableClickToFocus
+                    onMarkerClick={handleMarkerClick}
+                    heightPreset="viewerFullscreen"
+                    className="rounded-lg border shadow-sm !h-full"
+                  />
+                </div>
+              </aside>
+
+              {/* Mobile: Map below addresses */}
+              <div className="lg:hidden">
+                <AddressMap
+                  addresses={localAddresses}
+                  highlightPrimary
+                  showGeocodingStatus
+                  enableClickToFocus
+                  onMarkerClick={handleMarkerClick}
+                  heightPreset="viewerStandard"
+                  className="rounded-lg border shadow-sm"
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
-    </div>
+    </section>
   );
 }
 

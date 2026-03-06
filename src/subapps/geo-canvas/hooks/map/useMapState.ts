@@ -92,7 +92,7 @@ export interface MapStateReturn {
  */
 export const useMapState = (config: MapStateConfig = {}): MapStateReturn => {
   const {
-    initialStyle = 'osm',
+    initialStyle = 'greece',
     initialViewState = {
       longitude: 23.7275,
       latitude: 37.9755,
