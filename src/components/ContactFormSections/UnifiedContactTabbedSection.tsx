@@ -712,6 +712,7 @@ export function UnifiedContactTabbedSection({
             streetNumber={formData.streetNumber}
             city={formData.city}
             postalCode={formData.postalCode}
+            companyAddresses={formData.companyAddresses}
           />
         ),
       }
