@@ -7,6 +7,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
@@ -52,6 +53,7 @@ export const SocialRenderer: React.FC<SocialRendererProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const { t } = useTranslation('contacts');
 
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή για social media
   if (isDesktop) {
@@ -70,7 +72,7 @@ export const SocialRenderer: React.FC<SocialRendererProps> = ({
             <SelectContent>
               {config.types.map(type => (
                 <SelectItem key={type.value} value={type.value}>
-                  {type.label}
+                  {t(type.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -90,7 +92,7 @@ export const SocialRenderer: React.FC<SocialRendererProps> = ({
             <SelectContent>
               {(config.platformTypes || config.types).map(type => (
                 <SelectItem key={type.value} value={type.value}>
-                  {type.label}
+                  {t(type.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -124,7 +126,7 @@ export const SocialRenderer: React.FC<SocialRendererProps> = ({
           <Input
             value={item.label || ''}
             onChange={(e) => updateItem(index, 'label', e.target.value)}
-            placeholder={config.labelPlaceholder}
+            placeholder={t(config.labelPlaceholder)}
             disabled={disabled}
             className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
           />

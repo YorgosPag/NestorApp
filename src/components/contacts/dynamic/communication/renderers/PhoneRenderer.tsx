@@ -8,6 +8,7 @@ import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
@@ -54,6 +55,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const { t } = useTranslation('contacts');
 
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή
   if (isDesktop) {
@@ -72,7 +74,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
             <SelectContent>
               {config.types.map(type => (
                 <SelectItem key={type.value} value={type.value}>
-                  {type.label}
+                  {t(type.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -107,7 +109,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
           <Input
             value={item.label || ''}
             onChange={(e) => updateItem(index, 'label', e.target.value)}
-            placeholder={config.labelPlaceholder}
+            placeholder={t(config.labelPlaceholder)}
             disabled={disabled}
             className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
           />

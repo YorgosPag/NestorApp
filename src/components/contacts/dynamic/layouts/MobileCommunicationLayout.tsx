@@ -123,7 +123,7 @@ function MobileCommunicationItem({
               type={getInputType(config.type)}
               value={(item[config.fields.primary] as string | undefined) ?? ''}
               onChange={(e) => updateItem(index, config.fields.primary, e.target.value)}
-              placeholder={config.placeholder}
+              placeholder={t(config.placeholder)}
               disabled={disabled}
               className={`flex-1 ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
@@ -155,7 +155,7 @@ function MobileCommunicationItem({
                   {/* 🎯 Χρησιμοποιούμε platformTypes αν υπάρχει (για social media), αλλιώς types */}
                   {(config.platformTypes || config.types).map(type => (
                     <SelectItem key={type.value} value={type.value}>
-                      {type.label}
+                      {t(type.label)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -178,7 +178,7 @@ function MobileCommunicationItem({
             <SelectContent>
               {config.types.map(type => (
                 <SelectItem key={type.value} value={type.value}>
-                  {type.label}
+                  {t(type.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -205,7 +205,7 @@ function MobileCommunicationItem({
           <Input
             value={item.label || ''}
             onChange={(e) => updateItem(index, 'label', e.target.value)}
-            placeholder={config.labelPlaceholder}
+            placeholder={t(config.labelPlaceholder)}
             disabled={disabled}
             className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
           />
