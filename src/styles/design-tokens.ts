@@ -278,7 +278,7 @@ const borderVariants = {
   },
   input: {
     default: {
-      className: 'border border-gray-300 rounded-md'
+      className: 'border border-input rounded-md'
     }
   },
   modal: {

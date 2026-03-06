@@ -191,7 +191,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* Relationship Type Selection */}
-        <div className="md:col-span-1">
+        <div className="md:col-span-1 space-y-2">
           {renderFieldLabel(t('relationships.form.labels.relationshipType'), finalFieldConfig.required.relationshipType)}
           <Select
             value={formData.relationshipType}

@@ -177,10 +177,10 @@ export const borderVariants = {
   input: {
     default: {
       width: borderWidth.default,
-      color: borderColors.default.css,
+      color: 'hsl(var(--input))',
       radius: borderRadius.md,
       style: borderStyle.solid,
-      className: `border-[${borderWidth.default}] border-[${borderColors.default.light}] rounded-md`
+      className: 'border border-input rounded-md'
     },
     focus: {
       width: borderWidth.medium,

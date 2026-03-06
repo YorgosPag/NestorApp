@@ -235,8 +235,8 @@ export function useBorderTokens() {
       /** Default button border */
       button: 'border border-border', // 🏢 ENTERPRISE: Centralized
 
-      /** Default input border */
-      input: 'border border-border rounded-md', // 🏢 ENTERPRISE: Centralized
+      /** Default input border — uses --input variable (darker than --border) for visibility */
+      input: 'border border-input rounded-md', // 🏢 ENTERPRISE: SSoT (ADR-190)
 
       /** Checkbox border */
       checkbox: 'border border-border rounded-md', // 🏢 ENTERPRISE: Centralized
