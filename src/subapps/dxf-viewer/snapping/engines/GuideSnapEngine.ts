@@ -20,6 +20,7 @@ import { BaseSnapEngine, type SnapEngineContext, type SnapEngineResult } from '.
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 import { projectPointOnSegment } from '../../systems/guides/guide-types';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { generateFractalSubdivisions } from '../../systems/guides/guide-advanced-geometry';
 
 /**
  * Snap engine for construction guide lines.
@@ -104,6 +105,11 @@ export class GuideSnapEngine extends BaseSnapEngine {
       this.addMidpointCandidates(candidates, guides, cursorPoint, radius);
     }
 
+    // B80: Fractal subdivision snap candidates (1/3, 1/4 positions between guides)
+    if (candidates.length < 8) {
+      this.addFractalCandidates(candidates, guides, cursorPoint, radius);
+    }
+
     return { candidates };
   }
 
@@ -164,6 +170,77 @@ export class GuideSnapEngine extends BaseSnapEngine {
               SNAP_ENGINE_PRIORITIES.GUIDE,
               `midpoint_y_${i}`,
             ));
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * B80: Find fractal subdivision snap candidates between adjacent same-axis guides.
+   * Generates 1/4 and 3/4 positions (depth=2 fractal) for finer snapping.
+   */
+  private addFractalCandidates(
+    candidates: SnapCandidate[],
+    guides: readonly import('../../systems/guides/guide-types').Guide[],
+    cursor: Point2D,
+    radius: number,
+  ): void {
+    const xOffsets: number[] = [];
+    const yOffsets: number[] = [];
+
+    for (const g of guides) {
+      if (!g.visible || g.axis === 'XZ') continue;
+      if (g.axis === 'X') xOffsets.push(g.offset);
+      else yOffsets.push(g.offset);
+    }
+
+    // X axis: fractal snaps between bracketing guides
+    if (xOffsets.length >= 2) {
+      xOffsets.sort((a, b) => a - b);
+      for (let i = 0; i < xOffsets.length - 1; i++) {
+        if (xOffsets[i] <= cursor.x && cursor.x <= xOffsets[i + 1]) {
+          const subdivisions = generateFractalSubdivisions(xOffsets[i], xOffsets[i + 1], 2);
+          // Skip the midpoint (already covered by B12), keep 1/4 and 3/4
+          for (const pos of subdivisions) {
+            const mid = (xOffsets[i] + xOffsets[i + 1]) / 2;
+            if (Math.abs(pos - mid) < 0.001) continue; // Skip midpoint
+            const dist = Math.abs(cursor.x - pos);
+            if (dist <= radius && candidates.length < 8) {
+              candidates.push(this.createCandidate(
+                { x: pos, y: cursor.y },
+                'Guide Fractal (X)',
+                dist,
+                SNAP_ENGINE_PRIORITIES.GUIDE,
+                `fractal_x_${i}_${pos.toFixed(2)}`,
+              ));
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    // Y axis: fractal snaps between bracketing guides
+    if (yOffsets.length >= 2) {
+      yOffsets.sort((a, b) => a - b);
+      for (let i = 0; i < yOffsets.length - 1; i++) {
+        if (yOffsets[i] <= cursor.y && cursor.y <= yOffsets[i + 1]) {
+          const subdivisions = generateFractalSubdivisions(yOffsets[i], yOffsets[i + 1], 2);
+          for (const pos of subdivisions) {
+            const mid = (yOffsets[i] + yOffsets[i + 1]) / 2;
+            if (Math.abs(pos - mid) < 0.001) continue;
+            const dist = Math.abs(cursor.y - pos);
+            if (dist <= radius && candidates.length < 8) {
+              candidates.push(this.createCandidate(
+                { x: cursor.x, y: pos },
+                'Guide Fractal (Y)',
+                dist,
+                SNAP_ENGINE_PRIORITIES.GUIDE,
+                `fractal_y_${i}_${pos.toFixed(2)}`,
+              ));
+            }
           }
           break;
         }

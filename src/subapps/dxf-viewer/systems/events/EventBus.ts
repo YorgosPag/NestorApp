@@ -105,6 +105,16 @@ export interface DrawingEventMap {
   'grid:guide-panel-highlight': { guideId: string | null };
   // 🏢 ADR-189 §4.13: Construction point panel → canvas highlight communication
   'grid:point-panel-highlight': { pointId: string | null };
+  // B58: Anomaly detection completed
+  'grid:anomaly-detected': { count: number; errors: number; warnings: number };
+  // B89: Analytics computed
+  'grid:analytics-computed': { totalGuides: number; densityScore: number; complexityScore: number };
+  // B93/B95: Compliance check completed
+  'grid:compliance-checked': { standard: string; passed: boolean; failCount: number };
+  // B60: NLP command parsed
+  'grid:nlp-parsed': { input: string; type: 'preset' | 'custom' | 'unknown'; confidence: number };
+  // B88: IFC export completed
+  'grid:ifc-exported': { axisCount: number; format: 'IFC4' };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

@@ -3053,3 +3053,51 @@ Batch version του B8: πολλαπλά selected entities → guides.
 | `constants/property-statuses-enterprise.ts` | `GUIDE_FROM_SELECTION` label |
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Layers icon |
 | i18n (el/en dxf-viewer.json) | Tool labels |
+
+## 36. B56-B120: Advanced Guide Features — Implementation Details (2026-03-06)
+
+### 36.1 Overview
+
+Implementation of ~20 implementable B-features from the B56-B120 range.
+All features are pure TypeScript services with zero React dependency.
+
+### 36.2 New Service Files
+
+| File | Features | Description |
+|------|----------|-------------|
+| `systems/guides/guide-analysis.ts` | B58, B89 | Anomaly detection + grid analytics |
+| `systems/guides/guide-advanced-geometry.ts` | B77, B78, B80 | Adaptive spacing, constraint solver, fractal subdivision |
+| `systems/guides/guide-compliance.ts` | B93, B95, B98, B101 | Building code, seismic, ISO 19650, DIN/VOB |
+| `systems/guides/guide-sustainability.ts` | B72, B74, B75, B100 | Eco presets, material/carbon estimation, Green Deal |
+| `systems/guides/guide-nlp.ts` | B60 | Natural language grid command parsing (regex) |
+| `systems/guides/guide-ifc-exporter.ts` | B88, B96 | IFC-SPF export + quantity takeoff |
+
+### 36.3 Modified Files
+
+| File | Changes |
+|------|---------|
+| `systems/guides/guide-presets.ts` | Extended `GuideGridPreset` with `category` + `description` fields; exported `generateLetterLabels`/`generateNumberLabels` |
+| `systems/guides/index.ts` | Barrel exports for all 6 new modules |
+| `snapping/engines/GuideSnapEngine.ts` | B80 fractal subdivision snap candidates (1/4, 3/4 positions) |
+| `systems/events/EventBus.ts` | 5 new events: `grid:anomaly-detected`, `grid:analytics-computed`, `grid:compliance-checked`, `grid:nlp-parsed`, `grid:ifc-exported` |
+| i18n (el/en dxf-viewer.json) | ~30 keys for presets, anomalies, analytics, compliance, sustainability |
+
+### 36.4 Feature Details
+
+**B58 Anomaly Detection**: Detects too-close guides, uneven spacing (CV > 15%), orphans, diagonal clashes.
+**B60 NLP Parsing**: Regex-based parsing of EN/EL grid commands (e.g., "κάνναβος 5x5μ 20x30").
+**B72 Eco Presets**: 3 eco-optimized presets (4m compact, 6m optimal, 7m optimal).
+**B74 Material Estimation**: Concrete volume + steel weight + waste factor from grid layout.
+**B75 Carbon Estimation**: CO₂ rating A-E based on EN 15804 emission factors.
+**B77 Adaptive Spacing**: Cosine-weighted density profiles (uniform, denser-edges, denser-center).
+**B78 Constraint Solver**: Auto-spacing from totalSpan + count/spacing + min/max bounds.
+**B80 Fractal Subdivision**: Recursive midpoint generation (depth 1-6) for progressive grid refinement.
+**B88 IFC Export**: Full IFC4 SPF file generation with IFCGRID + IFCGRIDAXIS entities.
+**B89 Analytics**: Grid statistics (density score, complexity score, bounding box, per-axis counts).
+**B93 Building Code**: Generic/EN/DIN compliance checks (max span, min span, aspect ratio, duplicates).
+**B95 Seismic**: EN 1998 / EAK 2000 compliance (zone-specific max span, min frames, regularity).
+**B96 Quantity Takeoff**: Column count, beam lengths, slab area, estimated cost from grid.
+**B98 ISO 19650**: 3 BIM-standard grid templates (residential, office, industrial).
+**B100 Green Deal**: EU Taxonomy basic validation (concrete intensity, CO₂ rating, waste factor, regularity).
+**B101 DIN/VOB**: 3 German standard grid templates (Wohnungsbau, Büro, Industriebau).
+**B113 Multi-Language**: Confirmed — i18n already supports EN/EL.

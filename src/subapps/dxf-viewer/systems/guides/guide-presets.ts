@@ -29,6 +29,10 @@ export interface GuideGridPreset {
   readonly xLabels?: readonly string[];
   /** Optional labels for Y guides — defaults to 1, 2, 3, ... */
   readonly yLabels?: readonly string[];
+  /** B72/B95/B98/B101: Preset category for filtering */
+  readonly category?: 'structural' | 'eco' | 'seismic' | 'iso19650' | 'din-vob';
+  /** Tooltip description for the preset */
+  readonly description?: string;
 }
 
 // ============================================================================
@@ -38,7 +42,7 @@ export interface GuideGridPreset {
 /**
  * Auto-generate letter labels (A, B, C, ... Z, AA, AB, ...) for a given count.
  */
-function generateLetterLabels(count: number): string[] {
+export function generateLetterLabels(count: number): string[] {
   const labels: string[] = [];
   for (let i = 0; i < count; i++) {
     if (i < 26) {
@@ -55,7 +59,7 @@ function generateLetterLabels(count: number): string[] {
 /**
  * Auto-generate number labels (1, 2, 3, ...) for a given count.
  */
-function generateNumberLabels(count: number): string[] {
+export function generateNumberLabels(count: number): string[] {
   return Array.from({ length: count }, (_, i) => String(i + 1));
 }
 
