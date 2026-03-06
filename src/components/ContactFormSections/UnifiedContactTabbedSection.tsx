@@ -502,8 +502,9 @@ export function UnifiedContactTabbedSection({
                 </div>
 
                 {/* RIGHT: Map preview */}
-                <aside className="lg:sticky lg:top-4 lg:self-start">
+                <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
                   <ContactAddressMapPreview
+                    className="!min-h-0 h-full rounded-lg"
                     contactId={formData.id}
                     street={formData.street}
                     streetNumber={formData.streetNumber}
