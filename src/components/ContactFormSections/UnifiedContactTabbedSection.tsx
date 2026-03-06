@@ -299,6 +299,7 @@ export function UnifiedContactTabbedSection({
               websites={Array.isArray(formData.websites) ? formData.websites : []}
               socialMedia={formData.socialMediaArray || []}
               disabled={fieldDisabled ?? disabled}
+              contactType={contactType}
               onPhonesChange={(phones) => {
                 logger.info('UnifiedContactTabbedSection: onPhonesChange called with:', { count: phones.length });
                 if (setFormData) {

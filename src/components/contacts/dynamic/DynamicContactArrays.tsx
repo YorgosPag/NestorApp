@@ -68,9 +68,12 @@ const websitesToCommunicationItems = (websites: WebsiteInfo[]): CommunicationIte
     url: website.url
   })) : [];
 
-const socialToCommunicationItems = (socialMedia: SocialMediaInfo[]): CommunicationItem[] =>
+const socialToCommunicationItems = (
+  socialMedia: SocialMediaInfo[],
+  defaultType: string = 'personal'
+): CommunicationItem[] =>
   Array.isArray(socialMedia) ? socialMedia.map(social => ({
-    type: social.platform,
+    type: defaultType,
     label: social.label,
     username: social.username,
     url: social.url,
@@ -183,7 +186,7 @@ export function DynamicContactArrays({
       {/* 📱 SOCIAL MEDIA - UniversalCommunicationManager */}
       <UniversalCommunicationManager
         config={socialConfig}
-        items={socialToCommunicationItems(socialMedia)}
+        items={socialToCommunicationItems(socialMedia, socialConfig.defaultType)}
         disabled={disabled}
         onChange={(items) => {
           const social = communicationItemsToSocial(items);
