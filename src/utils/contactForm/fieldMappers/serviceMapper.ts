@@ -114,6 +114,17 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     streetNumber: contact.addresses?.[0]?.number || '',
     city: contact.addresses?.[0]?.city || '',
     postalCode: contact.addresses?.[0]?.postalCode || '',
+    // Administrative Hierarchy from addresses[0]
+    municipality: contact.addresses?.[0]?.municipality || '',
+    municipalityId: contact.addresses?.[0]?.municipalityId ?? null,
+    regionalUnit: contact.addresses?.[0]?.regionalUnit || '',
+    region: contact.addresses?.[0]?.region || '',
+    decentAdmin: contact.addresses?.[0]?.decentAdmin || '',
+    majorGeo: contact.addresses?.[0]?.majorGeo || '',
+    settlement: contact.addresses?.[0]?.settlement || '',
+    settlementId: contact.addresses?.[0]?.settlementId ?? null,
+    community: contact.addresses?.[0]?.community || '',
+    municipalUnit: contact.addresses?.[0]?.municipalUnit || '',
     fax: getSafeFieldValue(serviceContact, 'fax'),
     website: contact.websites?.[0]?.url || foundWebsite,
 

@@ -758,6 +758,98 @@ export function UnifiedContactTabbedSection({
           ),
         } : {}),
 
+        // Service address: 2-column layout (fields + hierarchy left, map right)
+        ...(contactType === 'service' ? {
+          address: () => (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* LEFT: Address fields + Hierarchy */}
+              <div className="space-y-4">
+                {/* Row 1: Οδός + Αριθμός */}
+                <div className="grid grid-cols-3 gap-3">
+                  <fieldset className="col-span-2 space-y-1">
+                    <label htmlFor="street" className="text-xs font-medium text-muted-foreground">
+                      {t('address.fields.street')}
+                    </label>
+                    <input
+                      id="street"
+                      name="street"
+                      type="text"
+                      value={(formData.street as string) || ''}
+                      onChange={handleChange}
+                      disabled={disabled}
+                      placeholder={t('individual.placeholders.street')}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </fieldset>
+                  <fieldset className="space-y-1">
+                    <label htmlFor="streetNumber" className="text-xs font-medium text-muted-foreground">
+                      {t('address.fields.streetNumber')}
+                    </label>
+                    <input
+                      id="streetNumber"
+                      name="streetNumber"
+                      type="text"
+                      value={(formData.streetNumber as string) || ''}
+                      onChange={handleChange}
+                      disabled={disabled}
+                      placeholder={t('individual.placeholders.streetNumber')}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </fieldset>
+                </div>
+
+                {/* Administrative Hierarchy */}
+                <AdministrativeAddressPicker
+                  value={{
+                    settlementName: (formData.settlement as string) || (formData.city as string) || '',
+                    communityName: (formData.community as string) ?? '',
+                    municipalUnitName: (formData.municipalUnit as string) ?? '',
+                    municipalityName: (formData.municipality as string) ?? '',
+                    regionalUnitName: (formData.regionalUnit as string) ?? '',
+                    regionName: (formData.region as string) ?? '',
+                    decentAdminName: (formData.decentAdmin as string) ?? '',
+                    majorGeoName: (formData.majorGeo as string) ?? '',
+                    postalCode: (formData.postalCode as string) ?? '',
+                  }}
+                  onChange={(addr: AdministrativeAddress) => {
+                    if (setFormData) {
+                      setFormData({
+                        ...formData,
+                        city: addr.settlementName || addr.municipalityName,
+                        postalCode: addr.postalCode,
+                        municipality: addr.municipalityName,
+                        municipalityId: addr.municipalityId,
+                        regionalUnit: addr.regionalUnitName,
+                        region: addr.regionName,
+                        decentAdmin: addr.decentAdminName,
+                        majorGeo: addr.majorGeoName,
+                        settlement: addr.settlementName,
+                        settlementId: addr.settlementId,
+                        community: addr.communityName,
+                        municipalUnit: addr.municipalUnitName,
+                      });
+                    }
+                  }}
+                  disabled={disabled}
+                  visibleLevels={[8, 7, 6, 5, 4, 3]}
+                />
+              </div>
+
+              {/* RIGHT: Map preview — full height */}
+              <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
+                <ContactAddressMapPreview
+                  className="!min-h-0 h-full rounded-lg"
+                  contactId={formData.id}
+                  street={formData.street}
+                  streetNumber={formData.streetNumber}
+                  city={formData.city}
+                  postalCode={formData.postalCode}
+                />
+              </aside>
+            </div>
+          ),
+        } : {}),
+
         // Individual address: 2-column layout (fields left, map right)
         ...(contactType === 'individual' ? {
           address: () => (
@@ -852,16 +944,7 @@ export function UnifiedContactTabbedSection({
 
       },
       sectionFooterRenderers: {
-        // Company/service address tab: map only (individual uses customRenderers.address)
-        address: () => contactType !== 'individual' ? (
-          <ContactAddressMapPreview
-            contactId={formData.id}
-            street={formData.street}
-            streetNumber={formData.streetNumber}
-            city={formData.city}
-            postalCode={formData.postalCode}
-          />
-        ) : null,
+        // Address footer removed for individual/service/company — map is inside customRenderers
         contact: () => (
           <ContactAddressMapPreview
             contactId={formData.id}
