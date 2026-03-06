@@ -13,7 +13,7 @@ import { SectionConfig } from './field-types';
 // Import modular sections
 import { basicInfoSection } from '../sections/basic-info';
 import { activitiesSection } from '../sections/activities';
-import { capitalSection } from '../sections/capital';
+// capitalSection removed — tab αφαιρέθηκε κατόπιν αιτήματος
 
 // ENTERPRISE: Import remaining sections από original config
 import { fieldLabels } from '../labels/field-labels';
@@ -183,19 +183,13 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   // Modular sections (fully implemented)
   basicInfoSection,
   activitiesSection,
-  capitalSection,
 
-  // Remaining sections (simplified για demo)
+  // Remaining sections
   datesLocationSection,
   addressesSection,
   communicationSection, // 🏢 ENTERPRISE: Communication tab for companies (phones, emails, websites, social media)
-  shareholdersSection,
   documentsSection,
-  decisionsSection,
-  historySection,
   representativesSection,
-  announcementsSection,
-  statusesSection,
   photosSection,
   relationshipsSection,
   bankingSection, // 🏢 ENTERPRISE: Banking System (ADR-126)
