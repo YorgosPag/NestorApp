@@ -76,8 +76,8 @@ export const MODAL_SELECT_LEGAL_STATUSES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ACTIVITY_TYPES = [
-  { value: 'main', label: 'contacts.options.activityTypes.main' },
-  { value: 'secondary', label: 'contacts.options.activityTypes.secondary' }
+  { value: 'main', label: 'options.activityTypes.main' },
+  { value: 'secondary', label: 'options.activityTypes.secondary' }
 ] as const;
 
 /**
