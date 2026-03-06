@@ -115,7 +115,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
   const legacyHandlers = useContactFormHandlers({
     handleFileChange,
     handleLogoChange,
-    handleUploadedLogoURL,
     handleDrop,
     handleDragOver
   });
@@ -193,7 +192,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     handleProfilePhotoSelection,
 
     // Advanced handlers (για επέκταση)
-    logoHandlers: legacyHandlers.logoHandlers,
     multiplePhotosHandlers,
 
     // Utilities

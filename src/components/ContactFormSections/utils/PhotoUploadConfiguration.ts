@@ -3,11 +3,8 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult, FileUploadProgress } from '@/hooks/useFileUploadState';
-import { PhotoUploadService as FirebasePhotoUploadService } from '@/services/photo-upload.service';
-// 🏢 ENTERPRISE: Centralized constants (ADR-031)
-import { LEGACY_STORAGE_PATHS, UPLOAD_PURPOSE } from '@/config/domain-constants';
-// 🏢 ENTERPRISE: Centralized compression usage constants (ADR-031)
-import { COMPRESSION_USAGE } from '@/config/photo-compression-config';
+// 🏢 ENTERPRISE: SSoT upload handler factory (ADR-190)
+import { createUploadHandlerFromPreset } from '@/services/upload-handlers';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -87,12 +84,10 @@ export function getPhotoUploadHandlers(
   canonicalContext?: CanonicalUploadContext
 ): PhotoUploadHandlers {
   // 🏢 ENTERPRISE: Resolve contact name based on contact type
-  // Returns undefined if no name available - let naming builder/i18n handle fallback
   const resolveContactName = (): string | undefined => {
     if (canonicalContext?.contactName) {
       return canonicalContext.contactName;
     }
-    // Fallback to formData - return undefined if empty (no hardcoded 'Unknown')
     if (formData.type === 'individual') {
       const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
       return fullName || undefined;
@@ -100,53 +95,32 @@ export function getPhotoUploadHandlers(
     return formData.companyName || formData.serviceName || formData.name || undefined;
   };
 
-  // 🏢 ENTERPRISE: Build contactData object for FileNamingService compatibility
-  const contactDataForService = {
+  // 🏢 ENTERPRISE: Build contactData for FileNamingService compatibility
+  const contactData = {
     type: formData.type,
     name: formData.name || formData.companyName || formData.serviceName || `${formData.firstName} ${formData.lastName}`.trim(),
     id: formData.id,
   };
 
-  return {
-    // 🏢 COMPANY LOGO UPLOAD with canonical support
-    logoUploadHandler: (file, onProgress) =>
-      FirebasePhotoUploadService.uploadPhoto(file, {
-        // Legacy field (will be ignored if canonical fields present)
-        folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
-        onProgress,
-        enableCompression: true,
-        compressionUsage: COMPRESSION_USAGE.COMPANY_LOGO,
-        contactData: contactDataForService,
-        purpose: UPLOAD_PURPOSE.LOGO,
-        // 🏢 CANONICAL FIELDS (ADR-031)
-        ...(canonicalContext && {
-          companyId: canonicalContext.companyId,
-          createdBy: canonicalContext.createdBy,
-          contactId: canonicalContext.contactId,
-          contactName: resolveContactName(),
-        }),
-      }),
+  // 🏢 ADR-190: Use SSoT factory (defaultUploadHandler) instead of direct service calls
+  const canonicalOverrides = canonicalContext
+    ? {
+        companyId: canonicalContext.companyId,
+        createdBy: canonicalContext.createdBy,
+        contactId: canonicalContext.contactId,
+        contactName: resolveContactName(),
+      }
+    : {};
 
-    // 🏢 REPRESENTATIVE PHOTO UPLOAD with canonical support
-    photoUploadHandler: (file, onProgress) => {
-      // 🏢 ENTERPRISE: Debug logging removed - use centralized telemetry in photo-upload.service.ts
-      return FirebasePhotoUploadService.uploadPhoto(file, {
-        // Legacy field (will be ignored if canonical fields present)
-        folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
-        onProgress,
-        enableCompression: true,
-        compressionUsage: COMPRESSION_USAGE.PROFILE_MODAL,
-        contactData: contactDataForService,
-        purpose: UPLOAD_PURPOSE.REPRESENTATIVE,
-        // 🏢 CANONICAL FIELDS (ADR-031)
-        ...(canonicalContext && {
-          companyId: canonicalContext.companyId,
-          createdBy: canonicalContext.createdBy,
-          contactId: canonicalContext.contactId,
-          contactName: resolveContactName(),
-        }),
-      });
-    },
+  return {
+    logoUploadHandler: createUploadHandlerFromPreset('company-logo', {
+      contactData,
+      ...canonicalOverrides,
+    }),
+    photoUploadHandler: createUploadHandlerFromPreset('contact-representative', {
+      contactData,
+      ...canonicalOverrides,
+    }),
   };
 }
 

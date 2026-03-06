@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 156 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-02-17
+**📊 Stats**: 157 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-06
 
 ---
 
@@ -205,6 +205,7 @@
 | **ADR-187** | Floor-Level Floorplans (IFC-Compliant) | ✅ IMPLEMENTED | 2026-02-19 | Building Management | [📄](./adrs/ADR-187-floor-level-floorplans.md) |
 | **ADR-188** | Angle Measurement Variants — Line-Arc, Two-Arcs, MeasureGeom, Constraint | ✅ IMPLEMENTED | 2026-02-19 | DXF Viewer / Measurement | [📄](./adrs/ADR-188-angle-measurement-variants.md) |
 | **ADR-189** | Construction Grid & Guide System — 14/14 Commands + 31 Enhancements (B1-B9/B11-B17/B19-B20/B22-B24/B28-B33/B35-B38) | ✅ PHASE_2_ENHANCEMENTS | 2026-03-06 | DXF Viewer / Construction Guides | [📄](./adrs/ADR-189-construction-grid-guide-system.md) |
+| **ADR-190** | Photo/Logo Upload System — SSoT Consolidation | ✅ ACCEPTED | 2026-03-06 | Infrastructure / File Upload | [📄](./adrs/ADR-190-photo-upload-ssot-consolidation.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

@@ -54,11 +54,9 @@ import { useDragAndDrop, type UseDragAndDropReturn } from './interactions';
 export { useDragAndDrop, type UseDragAndDropReturn };
 
 // =============================================================================
-// ORCHESTRATOR EXPORTS - 🎼 Main orchestrated hook (legacy compatibility)
+// NOTE: Orchestrator removed (ADR-190) — dead code, never imported in production.
+// useContactFormState lives in src/hooks/useContactFormState.ts (the canonical hook).
 // =============================================================================
-// 🔧 FIX: Import first to create local binding for ContactFormHooks object
-import { useContactFormState, type UseContactFormStateReturn } from './modular/orchestrator';
-export { useContactFormState, type UseContactFormStateReturn };
 
 // =============================================================================
 // CONVENIENCE RE-EXPORTS - Most commonly used hooks in grouped format
@@ -85,10 +83,7 @@ export const ContactFormHooks = {
   interactions: {
     useDragAndDrop
   },
-  // Main orchestrator
-  orchestrator: {
-    useContactFormState
-  }
+  // Note: orchestrator removed (ADR-190) — use useContactFormState from '@/hooks/useContactFormState'
 };
 
 // =============================================================================
@@ -111,7 +106,7 @@ export const MODULE_INFO = {
     ]
   },
   compatibility: {
-    backward: '100% (re-exports from orchestrator)',
+    backward: '100% (sub-hooks still available)',
     forward: 'Modular imports recommended'
   }
 } as const;

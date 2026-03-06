@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import React from 'react';
-import { useContactLogoHandlers } from './useContactLogoHandlers';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -9,89 +8,50 @@ import { useContactLogoHandlers } from './useContactLogoHandlers';
 interface UseContactFormHandlersProps {
   handleFileChange: (file: File | null) => void;
   handleLogoChange: (file: File | null) => void;
-  handleUploadedLogoURL: (logoURL: string) => void;
   handleDrop: (e: React.DragEvent) => void;
   handleDragOver: (e: React.DragEvent) => void;
 }
 
 // ============================================================================
-// 🔥 EXTRACTED: LEGACY HANDLERS FUNCTIONALITY
+// CONTACT FORM HANDLERS HOOK
 // ============================================================================
 
 /**
- * Contact Form Handlers Hook - Specialized για legacy compatibility
+ * Contact Form Handlers Hook
  *
- * Extracted από useContactForm για Single Responsibility Principle.
- * Χειρίζεται μόνο τους legacy handlers και backward compatibility.
+ * Thin wrapper for legacy compatibility. Logo validation is handled
+ * by EnterprisePhotoUpload → useEnterpriseFileUpload.validateAndPreview() (SSoT).
  *
- * Features:
- * - Legacy file handlers με enterprise validation
- * - Drag & drop functionality
- * - Logo handling integration
- * - Stable useCallback implementations
- * - Zero-dependency handlers για performance
+ * ADR-190: Removed duplicate useContactLogoHandlers — validation centralised.
  */
 export function useContactFormHandlers({
   handleFileChange,
   handleLogoChange,
-  handleUploadedLogoURL,
   handleDrop,
   handleDragOver
 }: UseContactFormHandlersProps) {
 
-  // ========================================================================
-  // LOGO HANDLING INTEGRATION
-  // ========================================================================
+  const wrappedFileChange = useCallback((file: File | null) => {
+    handleFileChange(file);
+  }, [handleFileChange]);
 
-  // 4️⃣ Logo upload handlers
-  const logoHandlers = useContactLogoHandlers({
-    onLogoChange: handleLogoChange,
-    onUploadComplete: handleUploadedLogoURL
-  });
+  // Logo validation is done upstream by EnterprisePhotoUpload → useEnterpriseFileUpload
+  const wrappedLogoChange = useCallback((file: File | null) => {
+    handleLogoChange(file);
+  }, [handleLogoChange]);
 
-  // ========================================================================
-  // LEGACY API COMPATIBILITY HANDLERS
-  // ========================================================================
+  const wrappedDrop = useCallback((e: React.DragEvent) => {
+    handleDrop(e);
+  }, [handleDrop]);
 
-  // Για backward compatibility με existing components που χρησιμοποιούν το hook
-  const legacyHandlers = {
-    // File handlers (με enterprise validation)
-    // 🔧 FIX: Removed dependencies to prevent unnecessary re-renders
-    handleFileChange: useCallback((file: File | null) => {
-      // Photo handling now done by UnifiedPhotoManager directly
-      handleFileChange(file);
-    }, [handleFileChange]),
-
-    handleLogoChange: useCallback((file: File | null) => {
-      if (file) {
-        logoHandlers.processLogoFile(file);
-      } else {
-        logoHandlers.clearLogo();
-      }
-    }, [logoHandlers]), // 🔧 FIX: Using logoHandlers dependency
-
-    // Drag & drop (enhanced με validation) - 🔧 FIX: Simplified to standard HTML5 drag behavior
-    handleDrop: useCallback((e: React.DragEvent) => {
-      handleDrop(e);
-    }, [handleDrop]), // Using existing form drag handler
-
-    handleDragOver: useCallback((e: React.DragEvent) => {
-      handleDragOver(e);
-    }, [handleDragOver]) // Using existing form drag handler
-  };
-
-  // ========================================================================
-  // RETURN API
-  // ========================================================================
+  const wrappedDragOver = useCallback((e: React.DragEvent) => {
+    handleDragOver(e);
+  }, [handleDragOver]);
 
   return {
-    // Legacy file handlers (enhanced)
-    handleFileChange: legacyHandlers.handleFileChange,
-    handleLogoChange: legacyHandlers.handleLogoChange,
-    handleDrop: legacyHandlers.handleDrop,
-    handleDragOver: legacyHandlers.handleDragOver,
-
-    // Advanced handlers (για επέκταση)
-    logoHandlers
+    handleFileChange: wrappedFileChange,
+    handleLogoChange: wrappedLogoChange,
+    handleDrop: wrappedDrop,
+    handleDragOver: wrappedDragOver,
   };
 }
