@@ -34,6 +34,8 @@ import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
 // 🏢 ENTERPRISE: Multi-KAD Section — primary + N secondary activities
 import { ContactKadSection } from '@/components/contacts/dynamic/ContactKadSection';
 import type { KadActivity } from '@/types/ContactFormTypes';
+// 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
+import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
@@ -605,7 +607,25 @@ export function UnifiedContactTabbedSection({
               }}
             />
           ),
-        } : {})
+        } : {}),
+
+        // 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
+        ...(contactType === 'service' ? {
+          supervisionMinistry: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+            <MinistryPicker
+              value={formData.supervisionMinistry ?? ''}
+              disabled={fieldDisabled}
+              onChange={(name: string) => {
+                if (setFormData) {
+                  setFormData({
+                    ...formData,
+                    supervisionMinistry: name,
+                  });
+                }
+              }}
+            />
+          ),
+        } : {}),
       },
       sectionFooterRenderers: {
         address: () => (
