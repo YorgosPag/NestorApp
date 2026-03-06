@@ -1593,10 +1593,10 @@ export const PROFESSIONAL_INFO_FIELD_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const ADDRESS_INFO_FIELD_LABELS = {
-  STREET: 'individual.fields.street',
-  STREET_NUMBER: 'individual.fields.streetNumber',
-  CITY: 'individual.fields.city',
-  POSTAL_CODE: 'individual.fields.postalCode'
+  STREET: 'contacts.address.fields.street',
+  STREET_NUMBER: 'contacts.address.fields.streetNumber',
+  CITY: 'contacts.address.fields.city',
+  POSTAL_CODE: 'contacts.address.fields.postalCode'
 } as const;
 
 /**
