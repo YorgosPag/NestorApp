@@ -35,6 +35,8 @@ import type {
   BlockSideDirection,
   PartialProjectAddress
 } from '@/types/project/addresses';
+import { AdministrativeAddressPicker } from '@/components/contacts/pickers/AdministrativeAddressPicker';
+import type { AdministrativeAddress } from '@/components/contacts/pickers/AdministrativeAddressPicker';
 
 // =============================================================================
 // COMPONENT PROPS
@@ -261,67 +263,39 @@ export function AddressFormSection({
         </div>
       </div>
 
-      {/* City + Neighborhood + Postal Code */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="city" className="text-sm font-medium">
-            {t('form.city')} *
-          </Label>
-          <Input
-            id="city"
-            value={formData.city}
-            onChange={(e) => handleTextChange('city', e.target.value)}
-            placeholder={t('form.cityPlaceholder')}
-            className={errors.city ? 'border-red-500' : ''}
-          />
-          {errors.city && (
-            <p className="text-xs text-red-500 mt-1">{t('form.validation.cityRequired')}</p>
-          )}
-        </div>
+      {/* Greek Administrative Division Hierarchy */}
+      <AdministrativeAddressPicker
+        value={{
+          settlementName: formData.city,
+          regionName: formData.region,
+          postalCode: formData.postalCode,
+        }}
+        onChange={(adminAddr: AdministrativeAddress) => {
+          // Map administrative hierarchy fields to address form
+          const updatedCity = adminAddr.settlementName || adminAddr.municipalityName || formData.city;
+          const updatedRegion = adminAddr.regionName || formData.region;
+          const updatedNeighborhood = adminAddr.communityName || formData.neighborhood;
+          const updatedPostalCode = adminAddr.postalCode || formData.postalCode;
 
-        <div>
-          <Label htmlFor="neighborhood" className="text-sm font-medium">
-            {t('form.neighborhood')}
-          </Label>
-          <Input
-            id="neighborhood"
-            value={formData.neighborhood}
-            onChange={(e) => handleTextChange('neighborhood', e.target.value)}
-            placeholder={t('form.neighborhoodPlaceholder')}
-          />
-        </div>
+          setFormData(prev => {
+            const newData = {
+              ...prev,
+              city: updatedCity,
+              neighborhood: updatedNeighborhood,
+              region: updatedRegion,
+              postalCode: updatedPostalCode,
+            };
+            // Immediate parent notification (discrete change)
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+            notifyParent(newData);
+            return newData;
+          });
+        }}
+        showPostalCode
+      />
 
-        <div>
-          <Label htmlFor="postalCode" className="text-sm font-medium">
-            {t('form.postalCode')} *
-          </Label>
-          <Input
-            id="postalCode"
-            value={formData.postalCode}
-            onChange={(e) => handleTextChange('postalCode', e.target.value)}
-            placeholder={t('form.postalCodePlaceholder')}
-            className={errors.postalCode ? 'border-red-500' : ''}
-          />
-          {errors.postalCode && (
-            <p className="text-xs text-red-500 mt-1">{t('form.validation.postalCodeRequired')}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Region + Country */}
+      {/* Country */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="region" className="text-sm font-medium">
-            {t('form.region')}
-          </Label>
-          <Input
-            id="region"
-            value={formData.region}
-            onChange={(e) => handleTextChange('region', e.target.value)}
-            placeholder={t('form.regionPlaceholder')}
-          />
-        </div>
-
         <div>
           <Label htmlFor="country" className="text-sm font-medium">
             {t('form.country')}

@@ -309,7 +309,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
   const primary = getPrimaryAddress(localAddresses);
 
-  // Show inline form (add/edit) in full-width mode
+  // Show inline form in full-width mode (replaces 2-column layout)
   const isInlineFormActive = isAddFormOpen || editingIndex !== null;
 
   return (
@@ -333,7 +333,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         )}
       </header>
 
-      {/* Inline Add Form (full width — replaces 2-column layout) */}
+      {/* Inline Add Form — 2-column: form LEFT, map RIGHT */}
       {isAddFormOpen && (
         <div className={cn("border-2 border-primary rounded-lg bg-card", spacing.padding.sm, spacing.spaceBetween.md)}>
           <div className="flex items-center justify-between">
@@ -346,31 +346,111 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           </div>
 
-          <AddressMap
-            addresses={[]}
-            draggableMarkers
-            onAddressDragUpdate={setDragUpdatedAddress}
-            heightPreset="viewerCompact"
-            className="rounded-lg border shadow-sm"
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* LEFT: Form fields */}
+            <div className={spacing.spaceBetween.md}>
+              <AddressFormSection
+                onChange={setTempAddress}
+                externalValues={dragUpdatedAddress}
+              />
 
-          <AddressFormSection
-            onChange={setTempAddress}
-            externalValues={dragUpdatedAddress}
-          />
+              <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
+                <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>
+                  Ακύρωση
+                </Button>
+                <Button onClick={handleSaveNewAddress} disabled={isSaving}>
+                  {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
+                </Button>
+              </div>
+            </div>
 
-          <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
-            <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>
-              Ακύρωση
-            </Button>
-            <Button onClick={handleSaveNewAddress} disabled={isSaving}>
-              {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
-            </Button>
+            {/* RIGHT: Draggable map — full height */}
+            <aside className="hidden lg:block">
+              <div className="sticky top-0 h-[calc(100vh-12rem)]">
+                <AddressMap
+                  addresses={[]}
+                  draggableMarkers
+                  onAddressDragUpdate={setDragUpdatedAddress}
+                  heightPreset="viewerFullscreen"
+                  className="rounded-lg border shadow-sm !h-full"
+                />
+              </div>
+            </aside>
+
+            {/* Mobile: Map below form */}
+            <div className="lg:hidden">
+              <AddressMap
+                addresses={[]}
+                draggableMarkers
+                onAddressDragUpdate={setDragUpdatedAddress}
+                heightPreset="viewerCompact"
+                className="rounded-lg border shadow-sm"
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {/* 2-Column Layout: Addresses LEFT, Map RIGHT */}
+      {/* Inline Edit Form — 2-column: form LEFT, map RIGHT */}
+      {editingIndex !== null && !isAddFormOpen && (
+        <div className={cn("border-2 border-primary rounded-lg bg-card", spacing.padding.sm, spacing.spaceBetween.md)}>
+          <div className="flex items-center justify-between">
+            <h3 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
+              <Pencil className={iconSizes.md} />
+              Επεξεργασία Διεύθυνσης
+            </h3>
+            <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
+              <X className={iconSizes.sm} />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* LEFT: Form fields */}
+            <div className={spacing.spaceBetween.md}>
+              <AddressFormSection
+                onChange={setEditedAddress}
+                initialValues={localAddresses[editingIndex]}
+                externalValues={editDragAddress}
+              />
+
+              <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
+                <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
+                  Ακύρωση
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={isSaving}>
+                  {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
+                </Button>
+              </div>
+            </div>
+
+            {/* RIGHT: Draggable map — full height */}
+            <aside className="hidden lg:block">
+              <div className="sticky top-0 h-[calc(100vh-12rem)]">
+                <AddressMap
+                  addresses={[localAddresses[editingIndex]]}
+                  draggableMarkers
+                  onAddressDragUpdate={setEditDragAddress}
+                  heightPreset="viewerFullscreen"
+                  className="rounded-lg border shadow-sm !h-full"
+                />
+              </div>
+            </aside>
+
+            {/* Mobile: Map below form */}
+            <div className="lg:hidden">
+              <AddressMap
+                addresses={[localAddresses[editingIndex]]}
+                draggableMarkers
+                onAddressDragUpdate={setEditDragAddress}
+                heightPreset="viewerCompact"
+                className="rounded-lg border shadow-sm"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2-Column Layout: Addresses LEFT, Map RIGHT (view mode) */}
       {!isInlineFormActive && (
         <>
           {localAddresses.length === 0 ? (
@@ -401,89 +481,50 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                     id={`address-card-${address.id}`}
                     className={cn("relative border rounded-lg hover:shadow-md transition-shadow", spacing.padding.sm)}
                   >
-                    {editingIndex === index ? (
-                      <div className={spacing.spaceBetween.md}>
-                        <div className={cn("flex items-center justify-between", spacing.margin.bottom.md)}>
-                          <h4 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
-                            <Pencil className={iconSizes.md} />
-                            Επεξεργασία Διεύθυνσης
-                          </h4>
-                          <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                            <X className={iconSizes.sm} />
-                          </Button>
-                        </div>
+                    <AddressCard address={address} />
 
-                        <AddressMap
-                          addresses={[address]}
-                          draggableMarkers
-                          onAddressDragUpdate={setEditDragAddress}
-                          heightPreset="viewerCompact"
-                          className="rounded-lg border shadow-sm"
-                        />
+                    <div className={cn("absolute top-4 right-4 flex", spacing.gap.sm)}>
+                      {address.isPrimary ? (
+                        <Badge variant="default" className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-current" />
+                          Κύρια
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSetPrimary(index)}
+                          title="Ορισμός ως κύρια διεύθυνση"
+                        >
+                          <Star className={iconSizes.sm} />
+                        </Button>
+                      )}
 
-                        <AddressFormSection
-                          onChange={setEditedAddress}
-                          initialValues={address}
-                          externalValues={editDragAddress}
-                        />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStartEdit(index)}
+                        title="Επεξεργασία διεύθυνσης"
+                      >
+                        <Pencil className={iconSizes.sm} />
+                      </Button>
 
-                        <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
-                          <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
-                            Ακύρωση
-                          </Button>
-                          <Button onClick={handleSaveEdit} disabled={isSaving}>
-                            {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <AddressCard address={address} />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteAddress(index)}
+                        title="Διαγραφή διεύθυνσης"
+                      >
+                        <Trash2 className={iconSizes.sm} />
+                      </Button>
+                    </div>
 
-                        <div className={cn("absolute top-4 right-4 flex", spacing.gap.sm)}>
-                          {address.isPrimary ? (
-                            <Badge variant="default" className="flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-current" />
-                              Κύρια
-                            </Badge>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSetPrimary(index)}
-                              title="Ορισμός ως κύρια διεύθυνση"
-                            >
-                              <Star className={iconSizes.sm} />
-                            </Button>
-                          )}
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleStartEdit(index)}
-                            title="Επεξεργασία διεύθυνσης"
-                          >
-                            <Pencil className={iconSizes.sm} />
-                          </Button>
-
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteAddress(index)}
-                            title="Διαγραφή διεύθυνσης"
-                          >
-                            <Trash2 className={iconSizes.sm} />
-                          </Button>
-                        </div>
-
-                        <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
-                          <span>ID: {address.id.slice(0, 8)}...</span>
-                          {address.sortOrder !== undefined && (
-                            <span className={spacing.margin.left.md}>Σειρά: {address.sortOrder}</span>
-                          )}
-                        </div>
-                      </>
-                    )}
+                    <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
+                      <span>ID: {address.id.slice(0, 8)}...</span>
+                      {address.sortOrder !== undefined && (
+                        <span className={spacing.margin.left.md}>Σειρά: {address.sortOrder}</span>
+                      )}
+                    </div>
                   </article>
                 ))}
               </aside>
