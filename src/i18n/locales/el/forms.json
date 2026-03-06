@@ -265,7 +265,13 @@
   },
   "kad": {
     "searchPlaceholder": "Αναζήτηση ΚΑΔ (κωδικός ή περιγραφή)...",
-    "noResults": "Δεν βρέθηκε ΚΑΔ"
+    "noResults": "Δεν βρέθηκε ΚΑΔ",
+    "primaryActivity": "Κύρια Δραστηριότητα",
+    "secondaryActivities": "Δευτερεύουσες Δραστηριότητες",
+    "noSecondaryActivities": "Δεν έχουν προστεθεί δευτερεύουσες δραστηριότητες",
+    "addActivity": "Προσθήκη ΚΑΔ",
+    "removeActivity": "Αφαίρεση ΚΑΔ",
+    "chamber": "Επιμελητήριο / Τ.Υ. ΓΕΜΗ"
   },
   "labels": {
     "name": "Όνομα",

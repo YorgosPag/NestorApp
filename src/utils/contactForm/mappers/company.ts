@@ -8,7 +8,7 @@
 //
 // ============================================================================
 
-import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactFormData, KadActivity } from '@/types/ContactFormTypes';
 import type { AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
@@ -21,6 +21,7 @@ interface CompanyCustomFields {
   activityCodeKAD?: string;
   activityDescription?: string;
   activityType?: string;
+  activities?: KadActivity[];
   chamber?: string;
   capitalAmount?: string;
   currency?: string;
@@ -94,9 +95,12 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
     customFields: {
       gemiStatus: formData.gemiStatus,
       gemiStatusDate: formData.gemiStatusDate,
+      // Legacy singular fields (backward compatibility)
       activityCodeKAD: formData.activityCodeKAD,
       activityDescription: formData.activityDescription,
       activityType: formData.activityType,
+      // Multi-KAD activities array
+      activities: formData.activities ?? [],
       chamber: formData.chamber,
       capitalAmount: formData.capitalAmount,
       currency: formData.currency,

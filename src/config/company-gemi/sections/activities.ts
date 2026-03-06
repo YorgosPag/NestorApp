@@ -9,9 +9,6 @@
  */
 
 import { SectionConfig } from '../core/field-types';
-import { fieldLabels } from '../labels/field-labels';
-import { gemiHelps } from '../labels/help-texts';
-import { ACTIVITY_TYPE_OPTIONS } from '../options';
 
 // ============================================================================
 // ACTIVITIES SECTION DEFINITION
@@ -19,42 +16,23 @@ import { ACTIVITY_TYPE_OPTIONS } from '../options';
 
 /**
  * Section 2: Δραστηριότητες & ΚΑΔ
- * ENTERPRISE: Uses centralized labels, help texts, και options
- * 🏢 i18n: Uses i18n keys that are translated at runtime by GenericFormRenderer
+ * ENTERPRISE: Uses section-level custom renderer (ContactKadSection)
+ * The 'activities' trigger field is intercepted by GenericFormTabRenderer
+ * and replaced with the multi-KAD section component.
+ *
+ * @see ContactKadSection — dynamic array of primary + secondary ΚΑΔ
  */
 export const activitiesSection: SectionConfig = {
   id: 'activities',
   title: 'sections.activitiesKad', // i18n key
   icon: 'file-text',
-  description: 'sectionDescriptions.activitiesKad', // i18n key (will fallback if not exists)
-  order: 3, // 🔄 Moved from 2 to 3 (addresses is now 2nd)
+  description: 'sectionDescriptions.activitiesKad', // i18n key
+  order: 3,
   fields: [
     {
-      id: 'activityCodeKAD',
-      label: fieldLabels.activityCode,
-      type: 'input',
-      placeholder: 'π.χ. 47.11.10',
-      helpText: gemiHelps.kad_code_help,
-    },
-    {
-      id: 'activityDescription',
-      label: fieldLabels.activityDescription,
-      type: 'input',
-      helpText: gemiHelps.business_description_help,
-    },
-    {
-      id: 'activityType',
-      label: fieldLabels.activityType,
-      type: 'select',
-      options: ACTIVITY_TYPE_OPTIONS,
-      defaultValue: 'main',
-      helpText: gemiHelps.activity_category_help,
-    },
-    {
-      id: 'chamber',
-      label: fieldLabels.chamber,
-      type: 'input',
-      helpText: gemiHelps.chamber_office_help,
+      id: 'activities',
+      label: 'kad.primaryActivity',
+      type: 'input', // Placeholder — section-level custom renderer intercepts this
     },
   ],
 };

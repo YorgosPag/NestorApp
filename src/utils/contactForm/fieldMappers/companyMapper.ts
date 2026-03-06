@@ -1,5 +1,5 @@
 import type { Contact, CompanyContact, SocialMediaInfo } from '@/types/contacts';
-import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactFormData, KadActivity } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue } from '../contactMapper';
 
@@ -20,6 +20,33 @@ function getContactValue(contact: ExtendedCompanyContact, fieldName: string): st
   // Try customFields
   const customValue = contact.customFields?.[fieldName];
   return typeof customValue === 'string' ? customValue : '';
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Resolve activities array from Firestore contact.
+ * Reads `customFields.activities[]` first; falls back to legacy singular fields.
+ */
+function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
+  const stored = contact.customFields?.activities;
+  if (Array.isArray(stored) && stored.length > 0) {
+    return stored as KadActivity[];
+  }
+
+  // Fallback: build from legacy singular fields
+  const code = getContactValue(contact, 'activityCodeKAD');
+  if (code) {
+    return [{
+      code,
+      description: getContactValue(contact, 'activityDescription'),
+      type: 'primary',
+    }];
+  }
+
+  return [];
 }
 
 // ============================================================================
@@ -85,6 +112,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     activityCodeKAD: getContactValue(companyContact, 'activityCodeKAD'),
     activityDescription: getContactValue(companyContact, 'activityDescription'),
     activityType: (getContactValue(companyContact, 'activityType') as 'main' | 'secondary') || 'main',
+    activities: resolveActivities(companyContact),
     activityValidFrom: getContactValue(companyContact, 'activityValidFrom'),
     activityValidTo: getContactValue(companyContact, 'activityValidTo'),
     capitalAmount: getContactValue(companyContact, 'capitalAmount'),

@@ -265,7 +265,13 @@
   },
   "kad": {
     "searchPlaceholder": "Search KAD (code or description)...",
-    "noResults": "No KAD code found"
+    "noResults": "No KAD code found",
+    "primaryActivity": "Primary Activity",
+    "secondaryActivities": "Secondary Activities",
+    "noSecondaryActivities": "No secondary activities added",
+    "addActivity": "Add KAD",
+    "removeActivity": "Remove KAD",
+    "chamber": "Chamber / GEMI Office"
   },
   "labels": {
     "name": "Name",

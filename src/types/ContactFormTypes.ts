@@ -13,6 +13,14 @@ export interface AddNewContactDialogProps {
 // Import Contact type
 import type { Contact } from '@/types/contacts';
 
+/** Single KAD activity entry — primary or secondary */
+export interface KadActivity {
+  code: string;
+  description: string;
+  type: 'primary' | 'secondary';
+  activeFrom?: string;
+}
+
 export interface ContactFormData {
   type: ContactType;
   id?: string; // 🔥 CRITICAL: Contact ID for relationship management
@@ -103,9 +111,11 @@ export interface ContactFormData {
   gemiDepartment: string; // Τοπική υπηρεσία ΓΕΜΗ
   prefecture: string; // Νομός
   municipality: string; // Δήμος
-  activityCodeKAD: string; // ΚΑΔ κωδικός
-  activityDescription: string; // Περιγραφή δραστηριότητας
-  activityType: 'main' | 'secondary'; // Κύρια/Δευτερεύουσα
+  activityCodeKAD: string; // ΚΑΔ κωδικός (legacy singular)
+  activityDescription: string; // Περιγραφή δραστηριότητας (legacy singular)
+  activityType: 'main' | 'secondary'; // Κύρια/Δευτερεύουσα (legacy singular)
+  /** Multi-KAD activities array — primary + secondary */
+  activities?: KadActivity[];
   activityValidFrom: string;
   activityValidTo: string;
   // Κεφάλαιο (capital)
@@ -337,6 +347,7 @@ export const initialFormData: ContactFormData = {
   activityCodeKAD: '',
   activityDescription: '',
   activityType: 'main',
+  activities: [],
   activityValidFrom: '',
   activityValidTo: '',
   // Κεφάλαιο (capital)
