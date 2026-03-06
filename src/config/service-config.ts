@@ -14,7 +14,6 @@ import {
 // 🏢 ENTERPRISE: Import centralized service form field labels - ZERO HARDCODED VALUES
 import {
   SERVICE_ADMINISTRATIVE_INFO_LABELS,
-  SERVICE_RESPONSIBILITIES_LABELS,
   ADDRESS_INFO_FIELD_LABELS
 } from '../constants/property-statuses-enterprise';
 //
@@ -207,47 +206,6 @@ const communicationSection: ServiceSectionConfig = {
 };
 
 /**
- * Αρμοδιότητες & Υπηρεσίες
- * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
- */
-const servicesSection: ServiceSectionConfig = {
-  id: 'services',
-  title: 'contacts.service.sections.services.title',
-  icon: 'clipboard-list',
-  fields: [
-    {
-      id: 'mainResponsibilities',
-      type: 'textarea',
-      label: SERVICE_RESPONSIBILITIES_LABELS.MAIN_RESPONSIBILITIES,
-      placeholder: 'contacts.service.fields.mainResponsibilities.placeholder',
-      required: true,
-      helpText: 'contacts.service.fields.mainResponsibilities.helpText'
-    },
-    {
-      id: 'citizenServices',
-      type: 'textarea',
-      label: SERVICE_RESPONSIBILITIES_LABELS.CITIZEN_SERVICES,
-      placeholder: 'contacts.service.fields.citizenServices.placeholder',
-      helpText: 'contacts.service.fields.citizenServices.helpText'
-    },
-    {
-      id: 'onlineServices',
-      type: 'input',
-      label: SERVICE_RESPONSIBILITIES_LABELS.ONLINE_SERVICES,
-      placeholder: 'https://gov.gr-connect',
-      helpText: 'contacts.service.fields.onlineServices.helpText'
-    },
-    {
-      id: 'serviceHours',
-      type: 'input',
-      label: SERVICE_RESPONSIBILITIES_LABELS.SERVICE_HOURS,
-      placeholder: 'contacts.service.fields.serviceHours.placeholder',
-      helpText: 'contacts.service.fields.serviceHours.helpText'
-    }
-  ]
-};
-
-/**
  * Λογότυπο & Επικοινωνία
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
@@ -299,7 +257,6 @@ export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   administrativeSection,
   addressSection,
   communicationSection,
-  servicesSection,
   logoSection,
   relationshipsSection,
   bankingSection
