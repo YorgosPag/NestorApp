@@ -149,9 +149,8 @@ export class RelationshipValidationService {
       );
     }
 
-    // Service contacts can only have government-related relationships
-    if (targetType === 'service' && !isGovernment) {
-      // Allow some general relationships για services
+    // Service contacts can only have government, employment, or approved general relationships
+    if (targetType === 'service' && !isGovernment && !isEmployment) {
       const allowedForServices = ['representative', 'advisor', 'consultant', 'client'];
       if (!allowedForServices.includes(relationshipType)) {
         throw new InvalidRelationshipError(
