@@ -130,36 +130,10 @@ export function ShareModal({
       }
 
       if (url) {
-        // Enhanced sharing logic
-        if (isDirectPhotoUrl && !isWebpagePhotoShare) {
-          if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            window.location.href = url;
-          } else {
-            const shareWindow = window.open(url, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes');
-            if (!shareWindow) {
-              await navigator.clipboard.writeText(url);
-            }
-          }
-        } else {
-          if (navigator.share && platformId !== 'facebook' && platformId !== 'twitter' && platformId !== 'linkedin') {
-            try {
-              await navigator.share({
-                title: shareData.title,
-                text: shareData.text,
-                url: shareData.url,
-              });
-            } catch (shareError) {
-              const shareWindow = window.open(url, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes');
-              if (!shareWindow) {
-                await navigator.clipboard.writeText(url);
-              }
-            }
-          } else {
-            const shareWindow = window.open(url, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes');
-            if (!shareWindow) {
-              await navigator.clipboard.writeText(url);
-            }
-          }
+        // Always use platform-specific URLs (never navigator.share which opens OS dialog)
+        const shareWindow = window.open(url, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes');
+        if (!shareWindow) {
+          await navigator.clipboard.writeText(shareData.url);
         }
 
         trackShareEvent(platformId, 'property', shareData.url);
@@ -259,11 +233,11 @@ export function ShareModal({
                 onPlatformSelect={handlePlatformShare}
                 loading={loading}
                 gridConfig={{
-                  columns: 3,
+                  columns: 5,
                   buttonVariant: 'default',
-                  iconSize: 'lg',
+                  iconSize: 'md',
                   showLabels: true,
-                  spacing: 'normal'
+                  spacing: 'tight'
                 }}
               />
 

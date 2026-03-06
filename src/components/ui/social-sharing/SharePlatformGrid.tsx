@@ -48,7 +48,7 @@ export interface SharePlatformGridProps {
   /** Grid configuration */
   gridConfig?: {
     /** Columns για grid layout */
-    columns?: 2 | 3 | 4 | 6;
+    columns?: 2 | 3 | 4 | 5 | 6;
     /** Button variant style */
     buttonVariant?: 'default' | 'compact' | 'minimal';
     /** Icon size */
@@ -156,6 +156,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
       2: 'grid-cols-2',
       3: 'grid-cols-3',
       4: 'grid-cols-4',
+      5: 'grid-cols-5',
       6: 'grid-cols-6'
     };
 
