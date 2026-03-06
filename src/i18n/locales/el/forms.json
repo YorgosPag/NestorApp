@@ -263,6 +263,10 @@
     "bankruptcy": "Υπό Πτώχευση",
     "merged": "Συγχωνευμένη"
   },
+  "kad": {
+    "searchPlaceholder": "Αναζήτηση ΚΑΔ (κωδικός ή περιγραφή)...",
+    "noResults": "Δεν βρέθηκε ΚΑΔ"
+  },
   "labels": {
     "name": "Όνομα",
     "email": "Email",

@@ -263,6 +263,10 @@
     "bankruptcy": "Under Bankruptcy",
     "merged": "Merged"
   },
+  "kad": {
+    "searchPlaceholder": "Search KAD (code or description)...",
+    "noResults": "No KAD code found"
+  },
   "labels": {
     "name": "Name",
     "email": "Email",

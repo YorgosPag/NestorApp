@@ -31,6 +31,8 @@ import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-type
 // 🏢 ENTERPRISE: Employer Entity Linking (ADR-177)
 import { EmployerPicker } from '@/components/shared/EmployerPicker';
 import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
+// 🏢 ENTERPRISE: KAD Code Picker — Searchable ΚΑΔ dropdown (10.521 entries)
+import { KadCodePicker } from '@/components/shared/KadCodePicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
@@ -366,7 +368,26 @@ export function UnifiedContactTabbedSection({
               disabled={disabled}
               className="mt-4"
             />
-          )
+          ),
+
+          // 🏢 ENTERPRISE: KAD Code Picker — Searchable ΚΑΔ dropdown (10.521 entries from AADE)
+          // Replaces plain text input with searchable dropdown, auto-fills activityDescription
+          activityCodeKAD: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+            <KadCodePicker
+              value={formData.activityCodeKAD ?? ''}
+              description={formData.activityDescription ?? ''}
+              disabled={fieldDisabled}
+              onChange={({ code, description }) => {
+                if (setFormData) {
+                  setFormData({
+                    ...formData,
+                    activityCodeKAD: code,
+                    activityDescription: description,
+                  });
+                }
+              }}
+            />
+          ),
         } : {}),
 
         // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types
