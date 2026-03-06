@@ -75,10 +75,15 @@ const DEFAULT_DEBOUNCE_MS = 150;
 
 /**
  * Normalize text for accent-insensitive Greek search.
- * Removes diacritics so "Πατ" matches "Πατρών".
+ * Removes diacritics so "Πατ" matches "Πατρών",
+ * and punctuation so "ΔΟΥ" matches "Δ.Ο.Υ." and "ΕΥΔΑΠ" matches "Ε.ΥΔ.Α.Π.".
  */
 function normalizeGreek(text: string): string {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.\-_/\\()]/g, '')
+    .toLowerCase();
 }
 
 // ============================================================================
