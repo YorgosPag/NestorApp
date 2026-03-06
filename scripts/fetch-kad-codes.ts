@@ -21,9 +21,9 @@ import { join } from 'path';
 // ============================================================================
 
 interface ForinKadResponse {
-  recordsTotal: number;
-  recordsFiltered: number;
-  data: string[][];
+  iTotalRecords: number;
+  iTotalDisplayRecords: number;
+  aaData: string[][];
 }
 
 interface KadCode {
@@ -36,20 +36,15 @@ interface KadCode {
 // ============================================================================
 
 const API_URL = 'https://www.forin.gr/tools/kad/kads';
-const PAGE_SIZE = 1000;
+const PAGE_SIZE = 500; // forin.gr uses legacy DataTables — keep pages reasonable
 
 async function fetchPage(start: number): Promise<ForinKadResponse> {
+  // forin.gr uses legacy DataTables 1.9 params (iDisplayStart/iDisplayLength)
   const params = new URLSearchParams({
-    draw: '1',
-    start: String(start),
-    length: String(PAGE_SIZE),
-    'columns[0][data]': '0',
-    'columns[0][searchable]': 'true',
-    'columns[1][data]': '1',
-    'columns[1][searchable]': 'true',
-    'search[value]': '',
-    'order[0][column]': '0',
-    'order[0][dir]': 'asc',
+    sEcho: '1',
+    iDisplayStart: String(start),
+    iDisplayLength: String(PAGE_SIZE),
+    sSearch: '',
   });
 
   const response = await fetch(`${API_URL}?${params.toString()}`, {
@@ -75,12 +70,13 @@ async function fetchAllKadCodes(): Promise<KadCode[]> {
 
   while (start < total) {
     const page = await fetchPage(start);
-    total = page.recordsTotal;
+    total = page.iTotalRecords;
 
-    for (const row of page.data) {
-      // row[0] = code (may contain HTML), row[1] = description (may contain HTML)
+    for (const row of page.aaData) {
+      // row[0] = code (may contain HTML), row[1] = description HTML with nested <li> elements
       const code = stripHtml(row[0]).trim();
-      const description = stripHtml(row[1]).trim();
+      // Extract the last <li> content as the most specific description
+      const description = extractLastLi(row[1]);
       if (code && description) {
         allCodes.push({ code, description });
       }
@@ -98,6 +94,14 @@ async function fetchAllKadCodes(): Promise<KadCode[]> {
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+}
+
+function extractLastLi(html: string): string {
+  // The API returns nested <ul><li>...</li></ul> — the last <li> has the most specific description
+  const liMatches = html.match(/<li[^>]*>(.*?)<\/li>/g);
+  if (!liMatches || liMatches.length === 0) return stripHtml(html).trim();
+  const lastLi = liMatches[liMatches.length - 1];
+  return stripHtml(lastLi).trim();
 }
 
 // ============================================================================
