@@ -20,6 +20,10 @@ import { matchesSearchTerm } from '@/lib/search/search';
 // 🏢 ENTERPRISE: Centralized sharing system (SSoT)
 import { ShareModal } from '@/components/ui/ShareModal';
 import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
+// 🏢 ENTERPRISE: Centralized data exchange (SSoT - DataExportService/DataImportService)
+import { exportContacts } from '@/utils/contacts/contact-data-exchange';
+import { ImportContactsDialog } from '@/components/contacts/dialogs/ImportContactsDialog';
+import type { ContactImportRecord } from '@/utils/contacts/contact-data-exchange';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -65,6 +69,8 @@ export function ContactsList({
   // 🏢 ENTERPRISE: Centralized share modal state (SSoT - ShareModal)
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareData, setShareData] = useState<ShareData | null>(null);
+  // 🏢 ENTERPRISE: Import dialog state (SSoT - DataImportService)
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const toggleFavorite = async (contactId: string) => {
     const contact = contacts.find(c => c.id === contactId);
@@ -135,6 +141,85 @@ export function ContactsList({
       : bValue.localeCompare(aValue);
   });
 
+  // 🏢 ENTERPRISE: Export handler using centralized DataExportService (SSoT)
+  const handleExportContact = async () => {
+    if (!selectedContact) {
+      toast.error(t('export.noContactSelected'));
+      return;
+    }
+    try {
+      await exportContacts([selectedContact], 'csv');
+      toast.success(t('export.success'));
+    } catch {
+      toast.error('Export failed');
+    }
+  };
+
+  // 🏢 ENTERPRISE: Import handler — opens ImportContactsDialog
+  const handleImportContacts = () => {
+    setImportDialogOpen(true);
+  };
+
+  // 🏢 ENTERPRISE: Import complete — save contacts to Firestore
+  const handleImportComplete = async (records: ContactImportRecord[]) => {
+    let saved = 0;
+    for (const record of records) {
+      try {
+        const contactData: Record<string, unknown> = {
+          type: record.type || 'individual',
+          status: record.status || 'active',
+          isFavorite: false,
+          notes: record.notes || '',
+          tags: record.tags ? record.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        };
+
+        // Type-specific fields
+        if (record.type === 'individual') {
+          contactData.firstName = record.firstName || record.displayName || '';
+          contactData.lastName = record.lastName || '';
+          contactData.profession = record.profession || '';
+        } else if (record.type === 'company') {
+          contactData.companyName = record.companyName || record.displayName || '';
+          contactData.vatNumber = record.vatNumber || '';
+        } else if (record.type === 'service') {
+          contactData.serviceName = record.serviceName || record.displayName || '';
+          contactData.serviceType = 'other';
+        }
+
+        // Communication arrays
+        if (record.primaryEmail) {
+          contactData.emails = [{ email: record.primaryEmail, type: 'work', isPrimary: true }];
+        }
+        if (record.primaryPhone) {
+          contactData.phones = [{ number: record.primaryPhone, type: 'mobile', isPrimary: true }];
+        }
+
+        // Address
+        if (record.street || record.city) {
+          contactData.addresses = [{
+            street: record.street || '',
+            city: record.city || '',
+            postalCode: record.postalCode || '',
+            region: record.region || '',
+            municipality: record.municipality || '',
+            country: 'GR',
+            type: 'work',
+            isPrimary: true,
+          }];
+        }
+
+        await ContactsService.createContact(contactData);
+        saved++;
+      } catch {
+        // Continue with next record on error
+      }
+    }
+    if (saved > 0) {
+      toast.success(t('import.success', { count: saved }));
+      onContactUpdated?.();
+    }
+  };
+
   // 🏢 ENTERPRISE: Centralized share handler using ShareModal (SSoT)
   const handleShareContact = () => {
     if (!selectedContact) {
@@ -191,9 +276,8 @@ export function ContactsList({
           onNewItem={onNewContact}
           onEditItem={(id) => selectedContact && onEditContact?.()}
           onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
-          onExport={() => {
-            // Debug logging removed
-          }}
+          onExport={handleExportContact}
+          onImport={handleImportContacts}
           onRefresh={() => {
             // Debug logging removed
           }}
@@ -230,9 +314,8 @@ export function ContactsList({
           onNewItem={onNewContact}
           onEditItem={(id) => selectedContact && onEditContact?.()}
           onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
-          onExport={() => {
-            // Debug logging removed
-          }}
+          onExport={handleExportContact}
+          onImport={handleImportContacts}
           onRefresh={() => {
             // Debug logging removed
           }}
@@ -295,6 +378,13 @@ export function ContactsList({
           onShareSuccess={(platform) => toast.success(t('list.share.success', { platform }))}
         />
       )}
+
+      {/* 🏢 ENTERPRISE: Import Dialog (SSoT - DataImportService) */}
+      <ImportContactsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImportComplete={handleImportComplete}
+      />
     </EntityListColumn>
   );
 }

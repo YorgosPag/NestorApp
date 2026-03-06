@@ -3,6 +3,29 @@
     "title": "Select a contact",
     "description": "Select a contact from the list to view its details."
   },
+  "export": {
+    "noContactSelected": "Select a contact to export",
+    "success": "Export completed successfully!",
+    "successMultiple": "Exported {count} contacts successfully!"
+  },
+  "import": {
+    "title": "Import Contacts",
+    "description": "Select a CSV or JSON file to bulk import contacts.",
+    "selectFile": "Select file...",
+    "acceptedFormats": "Accepted formats: CSV, JSON",
+    "parsing": "Parsing file...",
+    "previewReady": "File parsed successfully",
+    "totalRecords": "Total records: {count}",
+    "validRecords": "Valid records: {count}",
+    "invalidRecords": "Invalid records: {count}",
+    "warnings": "Warnings: {count}",
+    "showErrors": "Show errors ({count})",
+    "parseError": "Failed to parse the file. Please check its format.",
+    "allInvalid": "No valid records found in the file.",
+    "cancel": "Cancel",
+    "confirm": "Import {count} contacts",
+    "success": "Imported {count} contacts successfully!"
+  },
   "header": {
     "title": "Contact Management",
     "titleWithCount": "Contact Management ({count})",
