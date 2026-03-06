@@ -503,11 +503,23 @@ export class ContactsService {
 
       // 🔥 ΚΡΙΣΙΜΟ: Firestore ΑΠΟΡΡΙΠΤΕΙ undefined — αφαίρεση ΟΛΩΝ των undefined τιμών
       // (Firestore δέχεται null αλλά ΟΧΙ undefined)
-      for (const key of Object.keys(udRecord)) {
-        if (udRecord[key] === undefined) {
-          delete udRecord[key];
+      // Deep clean: αφαιρεί undefined σε nested objects και arrays
+      function deepCleanUndefined(obj: Record<string, unknown>): void {
+        for (const key of Object.keys(obj)) {
+          if (obj[key] === undefined) {
+            delete obj[key];
+          } else if (Array.isArray(obj[key])) {
+            for (const item of obj[key] as unknown[]) {
+              if (item && typeof item === 'object' && !Array.isArray(item)) {
+                deepCleanUndefined(item as Record<string, unknown>);
+              }
+            }
+          } else if (obj[key] && typeof obj[key] === 'object' && !(obj[key] instanceof Date)) {
+            deepCleanUndefined(obj[key] as Record<string, unknown>);
+          }
         }
       }
+      deepCleanUndefined(udRecord);
 
       // Type assertion needed for Firestore updateDoc compatibility
       await updateDoc(docRef, udRecord);
