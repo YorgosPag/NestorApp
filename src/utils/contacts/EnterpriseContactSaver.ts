@@ -211,10 +211,21 @@ export class EnterpriseContactSaver {
 
       if (extractedURLs.length > 0) {
         enterpriseData.multiplePhotoURLs = extractedURLs;
-        // Πρώτη φωτογραφία γίνεται profile photo (αν δεν έχει ήδη)
-        if (!enterpriseData.photoURL || (enterpriseData.photoURL as string).startsWith('blob:')) {
-          enterpriseData.photoURL = extractedURLs[0];
+
+        // 🏢 SERVICE/COMPANY: If contact is service or company, first photo = logoURL
+        const contactType = formData.type || enterpriseData.type;
+        if (contactType === 'service' || contactType === 'company') {
+          enterpriseData.logoURL = extractedURLs[0];
+          logger.info('ENTERPRISE SAVER: Extracted logoURL from multiplePhotos for ' + contactType, {
+            logoURL: extractedURLs[0].substring(0, 60),
+          });
+        } else {
+          // Individual: first photo = profile photo (if not already set)
+          if (!enterpriseData.photoURL || (enterpriseData.photoURL as string).startsWith('blob:')) {
+            enterpriseData.photoURL = extractedURLs[0];
+          }
         }
+
         logger.info('ENTERPRISE SAVER: Extracted photo URLs from multiplePhotos', {
           count: extractedURLs.length,
         });
