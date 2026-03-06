@@ -13,6 +13,16 @@ export interface AddNewContactDialogProps {
 // Import Contact type
 import type { Contact } from '@/types/contacts';
 
+/** Single company address entry */
+export interface CompanyAddress {
+  type: 'headquarters' | 'branch';
+  street: string;
+  number: string;
+  postalCode: string;
+  city: string;
+  region?: string;
+}
+
 /** Single KAD activity entry — primary or secondary */
 export interface KadActivity {
   code: string;
@@ -57,11 +67,13 @@ export interface ContactFormData {
   websites?: WebsiteInfo[];
   socialMediaArray?: SocialMediaInfo[];
 
-  // Address fields (separate from arrays)
+  // Address fields (separate from arrays — legacy singular)
   street: string;
   streetNumber: string;
   city: string;
   postalCode: string;
+  /** Multi-address array for companies */
+  companyAddresses?: CompanyAddress[];
   // Επαγγελματικά
   profession: string;
   specialty: string;
@@ -295,6 +307,7 @@ export const initialFormData: ContactFormData = {
   streetNumber: '',
   city: '',
   postalCode: '',
+  companyAddresses: [],
   // Επαγγελματικά
   profession: '',
   specialty: '',

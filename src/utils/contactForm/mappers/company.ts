@@ -8,7 +8,7 @@
 //
 // ============================================================================
 
-import type { ContactFormData, KadActivity } from '@/types/ContactFormTypes';
+import type { ContactFormData, KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
 import type { AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
@@ -22,6 +22,7 @@ interface CompanyCustomFields {
   activityDescription?: string;
   activityType?: string;
   activities?: KadActivity[];
+  companyAddresses?: CompanyAddress[];
   chamber?: string;
   capitalAmount?: string;
   currency?: string;
@@ -56,6 +57,27 @@ interface MappedCompanyContactData {
 }
 
 /**
+ * Build addresses array from companyAddresses (if present) or fallback to enterprise structure.
+ */
+function buildAddresses(formData: ContactFormData, fallbackAddresses?: AddressInfo[]): AddressInfo[] {
+  const companyAddresses = formData.companyAddresses;
+  if (companyAddresses && companyAddresses.length > 0) {
+    return companyAddresses.map((ca, i) => ({
+      street: ca.street,
+      number: ca.number,
+      city: ca.city,
+      postalCode: ca.postalCode,
+      region: ca.region ?? '',
+      country: 'GR',
+      type: 'work' as const,
+      isPrimary: i === 0 || ca.type === 'headquarters',
+      label: ca.type === 'headquarters' ? 'Έδρα' : 'Υποκατάστημα',
+    }));
+  }
+  return fallbackAddresses ?? [];
+}
+
+/**
  * Map Company Contact form data to Contact object
  *
  * @param formData - Contact form data
@@ -83,7 +105,7 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
     multiplePhotoURLs,
     emails,
     phones,
-    addresses: enterpriseData.addresses,
+    addresses: buildAddresses(formData, enterpriseData.addresses),
     websites: enterpriseData.websites,
     isFavorite: false,
     status: 'active',
@@ -101,6 +123,8 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
       activityType: formData.activityType,
       // Multi-KAD activities array
       activities: formData.activities ?? [],
+      // Multi-address array
+      companyAddresses: formData.companyAddresses ?? [],
       chamber: formData.chamber,
       capitalAmount: formData.capitalAmount,
       currency: formData.currency,

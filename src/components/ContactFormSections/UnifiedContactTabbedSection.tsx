@@ -33,7 +33,9 @@ import { EmployerPicker } from '@/components/shared/EmployerPicker';
 import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
 // 🏢 ENTERPRISE: Multi-KAD Section — primary + N secondary activities
 import { ContactKadSection } from '@/components/contacts/dynamic/ContactKadSection';
-import type { KadActivity } from '@/types/ContactFormTypes';
+import type { KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
+// 🏢 ENTERPRISE: Multi-address Section — headquarters + N branches
+import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAddressesSection';
 // 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
@@ -400,6 +402,37 @@ export function UnifiedContactTabbedSection({
                     activityCodeKAD: primary?.code ?? '',
                     activityDescription: primary?.description ?? '',
                     activityType: 'main',
+                  });
+                }}
+              />
+            );
+          },
+
+          // 🏢 ENTERPRISE: Multi-address Section — headquarters + N branches
+          addresses: () => {
+            const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
+            // Fallback: build from legacy singular fields if no array yet
+            const effectiveAddresses: CompanyAddress[] = currentAddresses.length > 0
+              ? currentAddresses
+              : formData.street
+                ? [{ type: 'headquarters' as const, street: formData.street, number: formData.streetNumber ?? '', postalCode: formData.postalCode ?? '', city: formData.city ?? '' }]
+                : [{ type: 'headquarters' as const, street: '', number: '', postalCode: '', city: '' }];
+
+            return (
+              <CompanyAddressesSection
+                addresses={effectiveAddresses}
+                disabled={disabled}
+                onChange={(newAddresses) => {
+                  if (!setFormData) return;
+                  // Sync headquarters back to legacy singular fields
+                  const hq = newAddresses.find((a) => a.type === 'headquarters') ?? newAddresses[0];
+                  setFormData({
+                    ...formData,
+                    companyAddresses: newAddresses,
+                    street: hq?.street ?? '',
+                    streetNumber: hq?.number ?? '',
+                    postalCode: hq?.postalCode ?? '',
+                    city: hq?.city ?? '',
                   });
                 }}
               />

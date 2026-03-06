@@ -1,5 +1,5 @@
 import type { Contact, CompanyContact, SocialMediaInfo } from '@/types/contacts';
-import type { ContactFormData, KadActivity } from '@/types/ContactFormTypes';
+import type { ContactFormData, KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue } from '../contactMapper';
 
@@ -49,6 +49,32 @@ function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
   return [];
 }
 
+/**
+ * Resolve company addresses from Firestore contact.
+ * Reads `customFields.companyAddresses[]` first; falls back to Contact.addresses[].
+ */
+function resolveCompanyAddresses(contact: ExtendedCompanyContact): CompanyAddress[] {
+  const stored = contact.customFields?.companyAddresses;
+  if (Array.isArray(stored) && stored.length > 0) {
+    return stored as CompanyAddress[];
+  }
+
+  // Fallback: build from Contact.addresses[]
+  const contactAddresses = contact.addresses;
+  if (Array.isArray(contactAddresses) && contactAddresses.length > 0) {
+    return contactAddresses.map((addr, i) => ({
+      type: (i === 0 ? 'headquarters' : 'branch') as 'headquarters' | 'branch',
+      street: addr.street || '',
+      number: addr.number || '',
+      postalCode: addr.postalCode || '',
+      city: addr.city || '',
+      region: addr.region,
+    }));
+  }
+
+  return [];
+}
+
 // ============================================================================
 // COMPANY CONTACT MAPPER
 // ============================================================================
@@ -84,6 +110,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     streetNumber: contact.addresses?.[0]?.number || '',
     city: contact.addresses?.[0]?.city || '',
     postalCode: contact.addresses?.[0]?.postalCode || '',
+    companyAddresses: resolveCompanyAddresses(companyContact),
     phone: contact.phones?.[0]?.number || '',
     email: contact.emails?.[0]?.email || '',
     website: contact.websites?.[0]?.url || '',

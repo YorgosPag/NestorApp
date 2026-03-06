@@ -149,7 +149,7 @@ function renderSelectField(
       disabled={disabled}
     >
       <SelectTrigger>
-        <SelectValue placeholder={`Select ${placeholder}`} />
+        <SelectValue placeholder={`${translateText('common.select', t)} ${placeholder}`} />
       </SelectTrigger>
       <SelectContent>
         {field.options.map(option => (
