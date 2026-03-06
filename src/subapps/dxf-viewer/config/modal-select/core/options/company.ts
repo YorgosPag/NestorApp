@@ -53,6 +53,16 @@ export const MODAL_SELECT_SERVICE_CATEGORIES = [
   { value: 'municipality', label: 'contacts.options.serviceCategories.municipality' },
   { value: 'public_entity', label: 'contacts.options.serviceCategories.publicEntity' },
   { value: 'independent_authority', label: 'contacts.options.serviceCategories.independentAuthority' },
+  { value: 'tax_office', label: 'contacts.options.serviceCategories.taxOffice' },
+  { value: 'social_security', label: 'contacts.options.serviceCategories.socialSecurity' },
+  { value: 'urban_planning', label: 'contacts.options.serviceCategories.urbanPlanning' },
+  { value: 'land_registry', label: 'contacts.options.serviceCategories.landRegistry' },
+  { value: 'fire_department', label: 'contacts.options.serviceCategories.fireDepartment' },
+  { value: 'police', label: 'contacts.options.serviceCategories.police' },
+  { value: 'court', label: 'contacts.options.serviceCategories.court' },
+  { value: 'chamber', label: 'contacts.options.serviceCategories.chamber' },
+  { value: 'utility', label: 'contacts.options.serviceCategories.utility' },
+  { value: 'military', label: 'contacts.options.serviceCategories.military' },
   { value: 'university', label: 'contacts.options.serviceCategories.university' },
   { value: 'hospital', label: 'contacts.options.serviceCategories.hospital' },
   { value: 'school', label: 'contacts.options.serviceCategories.school' },
@@ -85,8 +95,8 @@ export const MODAL_SELECT_ACTIVITY_TYPES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ADDRESS_TYPES = [
-  { value: 'headquarters', label: 'contacts.options.addressTypes.headquarters' },
-  { value: 'branch', label: 'contacts.options.addressTypes.branch' }
+  { value: 'headquarters', label: 'options.addressTypes.headquarters' },
+  { value: 'branch', label: 'options.addressTypes.branch' }
 ] as const;
 
 /**

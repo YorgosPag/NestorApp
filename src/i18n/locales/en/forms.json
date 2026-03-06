@@ -1,4 +1,22 @@
 {
+  "common": {
+    "select": "Select"
+  },
+  "addresses": {
+    "headquarters": "Headquarters",
+    "addAddress": "Add Address",
+    "removeAddress": "Remove Address",
+    "noAdditional": "No additional addresses added",
+    "additionalAddresses": "Branches / Additional Addresses",
+    "street": "Street",
+    "number": "Number",
+    "postalCode": "Postal Code",
+    "city": "City",
+    "region": "Region",
+    "type": "Type",
+    "typeHeadquarters": "Headquarters",
+    "typeBranch": "Branch"
+  },
   "sections": {
     "basicInfoGemi": "GEMI Basic Information",
     "activitiesKad": "Activities & KAD",
@@ -394,6 +412,16 @@
       "municipality": "Municipality",
       "publicEntity": "Public Entity",
       "independentAuthority": "Independent Authority",
+      "taxOffice": "Tax Office",
+      "socialSecurity": "Social Security / EFKA",
+      "urbanPlanning": "Urban Planning Office",
+      "landRegistry": "Land Registry / Cadastre",
+      "fireDepartment": "Fire Department",
+      "police": "Police",
+      "court": "Court",
+      "chamber": "Chamber of Commerce",
+      "utility": "Public Utility (DEI, EYDAP etc)",
+      "military": "Military Service",
       "university": "University",
       "hospital": "Hospital",
       "school": "Educational Institution",

@@ -1,4 +1,22 @@
 {
+  "common": {
+    "select": "Επιλέξτε"
+  },
+  "addresses": {
+    "headquarters": "Έδρα",
+    "addAddress": "Προσθήκη Διεύθυνσης",
+    "removeAddress": "Αφαίρεση Διεύθυνσης",
+    "noAdditional": "Δεν έχουν προστεθεί επιπλέον διευθύνσεις",
+    "additionalAddresses": "Υποκαταστήματα / Επιπλέον Διευθύνσεις",
+    "street": "Οδός",
+    "number": "Αριθμός",
+    "postalCode": "Τ.Κ.",
+    "city": "Πόλη",
+    "region": "Περιοχή",
+    "type": "Τύπος",
+    "typeHeadquarters": "Έδρα",
+    "typeBranch": "Υποκατάστημα"
+  },
   "sections": {
     "basicInfoGemi": "Βασικά Στοιχεία ΓΕΜΗ",
     "activitiesKad": "Δραστηριότητες & ΚΑΔ",
@@ -394,6 +412,16 @@
       "municipality": "Δήμος",
       "publicEntity": "Δημόσιος Οργανισμός",
       "independentAuthority": "Ανεξάρτητη Αρχή",
+      "taxOffice": "ΔΟΥ (Εφορία)",
+      "socialSecurity": "ΕΦΚΑ / Ασφαλιστικός Φορέας",
+      "urbanPlanning": "Πολεοδομία / ΥΔΟΜ",
+      "landRegistry": "Κτηματολόγιο",
+      "fireDepartment": "Πυροσβεστική",
+      "police": "Αστυνομία",
+      "court": "Δικαστήριο",
+      "chamber": "Επιμελητήριο",
+      "utility": "ΔΕΚΟ (ΔΕΗ, ΕΥΔΑΠ κλπ)",
+      "military": "Στρατιωτική Υπηρεσία",
       "university": "Πανεπιστήμιο",
       "hospital": "Νοσοκομείο",
       "school": "Εκπαιδευτικό Ίδρυμα",
