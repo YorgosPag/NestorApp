@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ContactsService } from '@/services/contacts.service';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('useContactName');
 
@@ -22,6 +23,7 @@ const logger = createModuleLogger('useContactName');
  * @returns Object with contactName and loading state
  */
 export const useContactName = (contactId: string | undefined) => {
+  const { t } = useTranslation('contacts');
   const [contactName, setContactName] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
@@ -34,46 +36,39 @@ export const useContactName = (contactId: string | undefined) => {
 
       try {
         setLoading(true);
-        logger.info('Fetching contact name', { contactId });
 
         const contact = await ContactsService.getContact(contactId);
 
         if (contact) {
-          // Try different name fields με προτεραιότητα στο πλήρες όνομα
-          let contactName = 'Άγνωστη Επαφή';
+          let resolved = t('relationships.organizationTree.unknownContact');
 
           if (contact.name) {
-            // Primary name field (πλήρες όνομα)
-            contactName = contact.name;
+            resolved = contact.name;
           } else if (contact.firstName && contact.lastName) {
-            // Συνδυασμός ονόματος και επωνύμου
-            contactName = `${contact.firstName} ${contact.lastName}`;
+            resolved = `${contact.firstName} ${contact.lastName}`;
           } else if (contact.companyName) {
-            // Company name
-            contactName = contact.companyName;
+            resolved = contact.companyName;
           } else if (contact.serviceName) {
-            // Service name
-            contactName = contact.serviceName;
+            resolved = contact.serviceName;
           } else if (contact.firstName) {
-            // Μόνο το όνομα αν δεν υπάρχει επώνυμο
-            contactName = contact.firstName;
+            resolved = contact.firstName;
           }
 
-          setContactName(contactName);
+          setContactName(resolved);
         } else {
           logger.warn('Contact not found', { contactId });
-          setContactName('Όνομα μη διαθέσιμο');
+          setContactName(t('relationships.organizationTree.unknownContact'));
         }
       } catch (error) {
         logger.error('Error fetching contact name', { error });
-        setContactName('Σφάλμα φόρτωσης ονόματος');
+        setContactName(t('relationships.organizationTree.unknownContact'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchContactName();
-  }, [contactId]);
+  }, [contactId, t]);
 
   return { contactName, loading };
 };

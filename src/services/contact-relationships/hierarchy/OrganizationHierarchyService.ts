@@ -160,12 +160,15 @@ export class OrganizationHierarchyService {
         children.map(c => ({ id: c.id, position: c.position, type: c.relationshipType }))
       );
 
+      const now = new Date().toISOString();
       const result: OrganizationTree = {
         organization,
         topLevel,
         statistics,
         departments,
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: now,
+        updatedAt: now,
+        createdAt: now,
         children // 🔧 FIX: Add children array for UI component
       };
 

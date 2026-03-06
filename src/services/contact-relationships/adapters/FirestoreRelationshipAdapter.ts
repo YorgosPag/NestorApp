@@ -266,11 +266,10 @@ export class FirestoreRelationshipAdapter {
 
       logger.info('🏢 FIRESTORE: Querying employees for organization:', organizationId);
 
-      // Simplified query: Get all relationships for this organization
+      // Single-field query to avoid composite index requirement
       const q = query(
         colRef,
-        where('targetContactId', '==', organizationId),
-        where('status', '==', 'active')
+        where('targetContactId', '==', organizationId)
       );
 
       const snapshot = await getDocs(q);
@@ -282,8 +281,11 @@ export class FirestoreRelationshipAdapter {
           ...doc.data()
         } as ContactRelationship;
 
-        // Filter by relationship types in-memory (to avoid compound index)
-        if (relationshipTypes.includes(relationship.relationshipType)) {
+        // Filter by status and relationship type in-memory (avoids composite index)
+        if (
+          relationship.status === 'active' &&
+          relationshipTypes.includes(relationship.relationshipType)
+        ) {
           relationships.push(relationship);
         }
       });
