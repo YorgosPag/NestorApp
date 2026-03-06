@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -90,6 +90,17 @@ export function useAutoUploadEffect({
   purpose = 'photo',
   debug = false,
 }: UseAutoUploadEffectConfig): void {
+  // 🏢 ENTERPRISE: Track the last successfully uploaded file to prevent re-upload loops.
+  // When uploadHandler or formData changes after a successful upload, the effect re-fires
+  // but we must NOT re-upload the same file — that causes flickering + repeated notifications.
+  const uploadedFileRef = useRef<File | null>(null);
+
+  // 🏢 ENTERPRISE: Stable refs for callbacks to prevent re-trigger on handler recreation
+  const uploadHandlerRef = useRef(uploadHandler);
+  uploadHandlerRef.current = uploadHandler;
+  const onUploadCompleteRef = useRef(onUploadComplete);
+  onUploadCompleteRef.current = onUploadComplete;
+
   useEffect(() => {
     if (debug) {
       logger.info('AUTO-UPLOAD EFFECT TRIGGERED', {
@@ -127,13 +138,21 @@ export function useAutoUploadEffect({
       return;
     }
 
+    // 🏢 ENTERPRISE: Prevent re-uploading the same file (breaks flickering loop)
+    if (file === uploadedFileRef.current) {
+      if (debug) {
+        logger.info('AUTO-UPLOAD: Skipping — same file already uploaded', { fileName: file.name });
+      }
+      return;
+    }
+
     if (debug) {
       logger.info('AUTO-UPLOAD: Starting upload', { fileName: file.name });
     }
 
     const startUpload = async () => {
       try {
-        const result = await upload.uploadFile(file, uploadHandler);
+        const result = await upload.uploadFile(file, uploadHandlerRef.current);
 
         if (debug) {
           logger.info('AUTO-UPLOAD: Result received', {
@@ -144,21 +163,22 @@ export function useAutoUploadEffect({
           });
         }
 
-        if (result?.success && onUploadComplete) {
-          onUploadComplete(result);
-        } else if (result?.url && onUploadComplete) {
-          // No explicit success flag but has URL - assume success
-          const enhancedResult: FileUploadResult = {
-            ...result,
-            success: true,
-          };
-          onUploadComplete(enhancedResult);
+        if (result?.success || result?.url) {
+          // Mark file as uploaded to prevent re-upload loops
+          uploadedFileRef.current = file;
+
+          if (onUploadCompleteRef.current) {
+            const finalResult: FileUploadResult = result.success
+              ? result
+              : { ...result, success: true };
+            onUploadCompleteRef.current(finalResult);
+          }
         } else if (debug) {
           logger.error('AUTO-UPLOAD: Callback NOT called', {
             hasResult: !!result,
             hasSuccess: !!result?.success,
             hasUrl: !!result?.url,
-            hasCallback: !!onUploadComplete,
+            hasCallback: !!onUploadCompleteRef.current,
             purpose,
           });
         }
@@ -166,10 +186,10 @@ export function useAutoUploadEffect({
         logger.error('AUTO-UPLOAD: Failed', { error: err, purpose, fileName: file?.name });
 
         // Call onUploadComplete even on failure to prevent hanging
-        if (onUploadComplete) {
+        if (onUploadCompleteRef.current) {
           const fallbackFileSize = file ? file.size : 0;
           const fallbackMimeType = file ? file.type : '';
-          onUploadComplete({
+          onUploadCompleteRef.current({
             success: false,
             error: err instanceof Error ? err.message : 'Upload failed',
             url: '',
@@ -182,5 +202,8 @@ export function useAutoUploadEffect({
     };
 
     startUpload();
-  }, [file, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload, purpose, debug]);
+    // 🏢 ENTERPRISE: Only re-fire when the FILE changes or upload state changes.
+    // uploadHandler and onUploadComplete use refs — safe to exclude from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, upload.isUploading, upload.success, purpose, debug]);
 }

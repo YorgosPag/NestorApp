@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type React from 'react';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { useAutoUploadEffect } from '@/hooks/upload/useAutoUploadEffect';
@@ -99,21 +99,28 @@ export function usePhotoUploadLogic({
   // DEFAULT UPLOAD HANDLER (ADR-054: Using centralized factory)
   // ========================================================================
 
+  // 🏢 ENTERPRISE: Use ref for contactData to prevent handler recreation on formData changes.
+  // contactData is only used for file naming metadata — NOT for upload logic.
+  // Without this, every formData change recreates the handler → triggers re-upload → flickering loop.
+  const contactDataRef = useRef(contactData);
+  contactDataRef.current = contactData;
+
   const defaultUploadHandler = useMemo(() => {
     // Determine preset based on purpose
     const preset = purpose === 'logo' ? 'company-logo' : 'contact-photo';
 
     return createUploadHandlerFromPreset(preset, {
-      contactData,
+      contactData: contactDataRef.current,
       photoIndex,
       fileName: customFileName,
       contactId,
       companyId,
       createdBy,
-      contactName: contactName || (contactData?.name as string),
+      contactName: contactName || (contactDataRef.current?.name as string),
       purpose,
     });
-  }, [purpose, contactData, photoIndex, customFileName, contactId, companyId, createdBy, contactName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purpose, photoIndex, customFileName, contactId, companyId, createdBy, contactName]);
 
   // Select handler: custom or default
   const uploadHandler = customUploadHandler || defaultUploadHandler;
