@@ -17,16 +17,16 @@
  * Labels are translated at runtime by GenericFormRenderer
  */
 export const MODAL_SELECT_LEGAL_FORMS = [
-  { value: 'ae', label: 'contacts.company.legalForms.ae' },
-  { value: 'epe', label: 'contacts.company.legalForms.epe' },
-  { value: 'ee', label: 'contacts.company.legalForms.ee' },
-  { value: 'oe', label: 'contacts.company.legalForms.oe' },
-  { value: 'ike', label: 'contacts.company.legalForms.ike' },
-  { value: 'syndicate', label: 'contacts.company.legalForms.smpc' },
-  { value: 'sole_proprietorship', label: 'contacts.company.legalForms.mono' },
-  { value: 'civil_partnership', label: 'contacts.company.legalForms.other' },
-  { value: 'joint_venture', label: 'contacts.company.legalForms.other' },
-  { value: 'other', label: 'contacts.company.legalForms.other' }
+  { value: 'ae', label: 'options.legalForms.ae' },
+  { value: 'epe', label: 'options.legalForms.epe' },
+  { value: 'ee', label: 'options.legalForms.ee' },
+  { value: 'oe', label: 'options.legalForms.oe' },
+  { value: 'ike', label: 'options.legalForms.ike' },
+  { value: 'syndicate', label: 'options.legalForms.syndicate' },
+  { value: 'sole_proprietorship', label: 'options.legalForms.soleProprietorship' },
+  { value: 'civil_partnership', label: 'options.legalForms.civilPartnership' },
+  { value: 'joint_venture', label: 'options.legalForms.jointVenture' },
+  { value: 'other', label: 'options.legalForms.other' }
 ] as const;
 
 /**
@@ -34,13 +34,13 @@ export const MODAL_SELECT_LEGAL_FORMS = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_GEMI_STATUSES = [
-  { value: 'active', label: 'contacts.options.gemiStatuses.active' },
-  { value: 'inactive', label: 'contacts.options.gemiStatuses.inactive' },
-  { value: 'suspended', label: 'contacts.options.gemiStatuses.suspended' },
-  { value: 'dissolution', label: 'contacts.options.gemiStatuses.dissolution' },
-  { value: 'dissolved', label: 'contacts.options.gemiStatuses.dissolved' },
-  { value: 'bankruptcy', label: 'contacts.options.gemiStatuses.bankruptcy' },
-  { value: 'liquidation', label: 'contacts.options.gemiStatuses.liquidation' }
+  { value: 'active', label: 'options.gemiStatuses.active' },
+  { value: 'inactive', label: 'options.gemiStatuses.inactive' },
+  { value: 'suspended', label: 'options.gemiStatuses.suspended' },
+  { value: 'dissolution', label: 'options.gemiStatuses.dissolution' },
+  { value: 'dissolved', label: 'options.gemiStatuses.dissolved' },
+  { value: 'bankruptcy', label: 'options.gemiStatuses.bankruptcy' },
+  { value: 'liquidation', label: 'options.gemiStatuses.liquidation' }
 ] as const;
 
 /**
