@@ -29,6 +29,8 @@ import {
   FileDown, // ADR-189 B8: Guide from entity icon
   BoxSelect, // ADR-189 B14: Guide multi-select icon
   CopyCheck, // ADR-189 B17: Copy/offset pattern icon
+  Grid3x3, // ADR-189 B23: Structural preset grid icon
+  Layers, // ADR-189 B37: Guide from selection icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -290,6 +292,9 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'guide-select' as ToolType, icon: BoxSelect, label: DXF_DRAWING_TOOL_LABELS.GUIDE_SELECT, hotkey: 'G→6' },
           { id: 'guide-copy-pattern' as ToolType, icon: CopyCheck, label: DXF_DRAWING_TOOL_LABELS.GUIDE_COPY_PATTERN, hotkey: 'G→7' },
           { id: 'guide-from-entity' as ToolType, icon: FileDown, label: DXF_DRAWING_TOOL_LABELS.GUIDE_FROM_ENTITY, hotkey: 'G→8' },
+          { id: 'guide-offset-entity' as ToolType, icon: Ruler, label: DXF_DRAWING_TOOL_LABELS.GUIDE_OFFSET_ENTITY, hotkey: 'G→9' },
+          { id: 'guide-preset-grid' as ToolType, icon: Grid3x3, label: DXF_DRAWING_TOOL_LABELS.GUIDE_PRESET_GRID, hotkey: 'G→1' },
+          { id: 'guide-from-selection' as ToolType, icon: Layers, label: DXF_DRAWING_TOOL_LABELS.GUIDE_FROM_SELECTION, hotkey: 'G→0' },
         ],
       },
     ],

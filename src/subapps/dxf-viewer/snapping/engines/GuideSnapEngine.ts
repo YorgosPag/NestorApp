@@ -99,7 +99,76 @@ export class GuideSnapEngine extends BaseSnapEngine {
       if (candidates.length >= 4) break;
     }
 
+    // B12: Midpoint snap between adjacent same-axis guides
+    if (candidates.length < 6) {
+      this.addMidpointCandidates(candidates, guides, cursorPoint, radius);
+    }
+
     return { candidates };
+  }
+
+  /**
+   * B12: Find midpoint snap candidates between adjacent same-axis guides.
+   * For each axis (X, Y), sorts guides by offset, finds the pair bracketing the cursor,
+   * and emits a midpoint snap if close enough.
+   */
+  private addMidpointCandidates(
+    candidates: SnapCandidate[],
+    guides: readonly import('../../systems/guides/guide-types').Guide[],
+    cursor: Point2D,
+    radius: number,
+  ): void {
+    // Collect visible X and Y guide offsets
+    const xOffsets: number[] = [];
+    const yOffsets: number[] = [];
+
+    for (const g of guides) {
+      if (!g.visible || g.axis === 'XZ') continue;
+      if (g.axis === 'X') xOffsets.push(g.offset);
+      else yOffsets.push(g.offset);
+    }
+
+    // X guides: find bracketing pair for cursor.x → midpoint snap
+    if (xOffsets.length >= 2) {
+      xOffsets.sort((a, b) => a - b);
+      for (let i = 0; i < xOffsets.length - 1; i++) {
+        if (xOffsets[i] <= cursor.x && cursor.x <= xOffsets[i + 1]) {
+          const mid = (xOffsets[i] + xOffsets[i + 1]) / 2;
+          const dist = Math.abs(cursor.x - mid);
+          if (dist <= radius) {
+            candidates.push(this.createCandidate(
+              { x: mid, y: cursor.y },
+              'Guide Midpoint (X)',
+              dist,
+              SNAP_ENGINE_PRIORITIES.GUIDE,
+              `midpoint_x_${i}`,
+            ));
+          }
+          break;
+        }
+      }
+    }
+
+    // Y guides: find bracketing pair for cursor.y → midpoint snap
+    if (yOffsets.length >= 2) {
+      yOffsets.sort((a, b) => a - b);
+      for (let i = 0; i < yOffsets.length - 1; i++) {
+        if (yOffsets[i] <= cursor.y && cursor.y <= yOffsets[i + 1]) {
+          const mid = (yOffsets[i] + yOffsets[i + 1]) / 2;
+          const dist = Math.abs(cursor.y - mid);
+          if (dist <= radius) {
+            candidates.push(this.createCandidate(
+              { x: cursor.x, y: mid },
+              'Guide Midpoint (Y)',
+              dist,
+              SNAP_ENGINE_PRIORITIES.GUIDE,
+              `midpoint_y_${i}`,
+            ));
+          }
+          break;
+        }
+      }
+    }
   }
 
   /** No resources to clean up. */

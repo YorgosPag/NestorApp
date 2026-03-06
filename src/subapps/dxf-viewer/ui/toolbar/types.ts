@@ -76,7 +76,10 @@ export type ToolType =
   | 'guide-mirror'            // ADR-189 B19: Mirror guides across axis
   | 'guide-from-entity'       // ADR-189 B8: Guide from DXF entity (LINE/CIRCLE/ARC/POLYLINE)
   | 'guide-select'            // ADR-189 B14: Multi-select guides for batch operations
-  | 'guide-copy-pattern';     // ADR-189 B17: Copy/offset pattern of selected guides
+  | 'guide-copy-pattern'      // ADR-189 B17: Copy/offset pattern of selected guides
+  | 'guide-offset-entity'     // ADR-189 B24: Guide offset from entity edge
+  | 'guide-preset-grid'       // ADR-189 B23: Structural preset grid
+  | 'guide-from-selection';   // ADR-189 B37: Batch guide from selection
 
 
 export interface ToolDefinition {

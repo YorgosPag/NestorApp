@@ -1588,3 +1588,289 @@ export class CopyGuidePatternCommand implements ICommand {
     return this.createdGuides.map(g => g.id);
   }
 }
+
+// ============================================================================
+// GUIDE OFFSET FROM ENTITY COMMAND (ADR-189 B24)
+// ============================================================================
+
+/**
+ * Creates guide(s) offset from a DXF entity edge by a perpendicular distance.
+ * - LINE/POLYLINE → shifted parallel lines (normal vector offset, both sides)
+ * - CIRCLE → 4 guides at center ± offset on each axis
+ */
+export class GuideOffsetFromEntityCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'GuideOffsetFromEntity';
+  readonly type = 'guide-offset-entity';
+  readonly timestamp: number;
+  private createdGuides: Guide[] = [];
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly params: EntityGuideParams,
+    private readonly offsetDistance: number,
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+  }
+
+  execute(): void {
+    if (this.createdGuides.length > 0) {
+      for (const guide of this.createdGuides) {
+        this.store.restoreGuide(guide);
+      }
+      return;
+    }
+
+    const { entityType, lineStart, lineEnd, center } = this.params;
+    const offset = this.offsetDistance;
+    const extent = 10_000;
+
+    if ((entityType === 'LINE' || entityType === 'POLYLINE') && lineStart && lineEnd) {
+      const dx = lineEnd.x - lineStart.x;
+      const dy = lineEnd.y - lineStart.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len > 0.001) {
+        // Normal vector perpendicular to line direction
+        const nx = -dy / len;
+        const ny = dx / len;
+        const dir = { x: dx / len, y: dy / len };
+        const mid: Point2D = { x: (lineStart.x + lineEnd.x) / 2, y: (lineStart.y + lineEnd.y) / 2 };
+
+        // Create offset guide on both sides (+offset and -offset)
+        for (const sign of [1, -1]) {
+          const shiftedMid: Point2D = { x: mid.x + nx * offset * sign, y: mid.y + ny * offset * sign };
+          const start: Point2D = { x: shiftedMid.x - dir.x * extent, y: shiftedMid.y - dir.y * extent };
+          const end: Point2D = { x: shiftedMid.x + dir.x * extent, y: shiftedMid.y + dir.y * extent };
+          const guide = this.store.addDiagonalGuideRaw(start, end);
+          if (guide) this.createdGuides.push(guide);
+        }
+      }
+    } else if (entityType === 'CIRCLE' && center) {
+      // 4 guides: center.x ± offset (X guides), center.y ± offset (Y guides)
+      for (const sign of [1, -1]) {
+        const gx = this.store.addGuideRaw('X', center.x + offset * sign);
+        if (gx) this.createdGuides.push(gx);
+        const gy = this.store.addGuideRaw('Y', center.y + offset * sign);
+        if (gy) this.createdGuides.push(gy);
+      }
+    }
+  }
+
+  undo(): void {
+    for (const guide of this.createdGuides) {
+      this.store.removeGuideById(guide.id);
+    }
+  }
+
+  redo(): void { this.execute(); }
+
+  getDescription(): string {
+    return `Offset ${this.offsetDistance}m from ${this.params.entityType} (${this.createdGuides.length} guides)`;
+  }
+
+  canMergeWith(): boolean { return false; }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
+      data: { entityType: this.params.entityType, offset: this.offsetDistance, createdGuideIds: this.createdGuides.map(g => g.id) },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuides.map(g => g.id);
+  }
+}
+
+// ============================================================================
+// CREATE GRID FROM PRESET COMMAND (ADR-189 B23)
+// ============================================================================
+
+/**
+ * Creates a structural grid from a preset or custom spacings.
+ * Creates a GuideGroup and adds X + Y guides at specified offsets.
+ */
+export class CreateGridFromPresetCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'CreateGridFromPreset';
+  readonly type = 'create-grid-from-preset';
+  readonly timestamp: number;
+  private createdGuides: Guide[] = [];
+  private createdGroupId: string | null = null;
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly xOffsets: readonly number[],
+    private readonly yOffsets: readonly number[],
+    private readonly xLabels: readonly string[] | null = null,
+    private readonly yLabels: readonly string[] | null = null,
+    private readonly groupName: string = 'Structural Grid',
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+  }
+
+  execute(): void {
+    if (this.createdGuides.length > 0) {
+      // Redo: restore group and guides
+      if (this.createdGroupId) {
+        this.store.restoreGroup({ id: this.createdGroupId, name: this.groupName, color: '#6366F1', locked: false, visible: true });
+      }
+      for (const guide of this.createdGuides) {
+        this.store.restoreGuide(guide);
+      }
+      return;
+    }
+
+    // Create group
+    const group = this.store.addGroup(this.groupName);
+    this.createdGroupId = group.id;
+
+    // Create X guides
+    for (let i = 0; i < this.xOffsets.length; i++) {
+      const label = this.xLabels?.[i] ?? null;
+      const guide = this.store.addGuideRaw('X', this.xOffsets[i], label, null, group.id);
+      if (guide) this.createdGuides.push(guide);
+    }
+
+    // Create Y guides
+    for (let i = 0; i < this.yOffsets.length; i++) {
+      const label = this.yLabels?.[i] ?? null;
+      const guide = this.store.addGuideRaw('Y', this.yOffsets[i], label, null, group.id);
+      if (guide) this.createdGuides.push(guide);
+    }
+  }
+
+  undo(): void {
+    for (const guide of this.createdGuides) {
+      this.store.removeGuideById(guide.id);
+    }
+    if (this.createdGroupId) {
+      this.store.removeGroup(this.createdGroupId);
+    }
+  }
+
+  redo(): void { this.execute(); }
+
+  getDescription(): string {
+    return `Structural grid: ${this.xOffsets.length}×${this.yOffsets.length} (${this.groupName})`;
+  }
+
+  canMergeWith(): boolean { return false; }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
+      data: {
+        xOffsets: [...this.xOffsets],
+        yOffsets: [...this.yOffsets],
+        groupName: this.groupName,
+        createdCount: this.createdGuides.length,
+      },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuides.map(g => g.id);
+  }
+}
+
+// ============================================================================
+// BATCH GUIDE FROM ENTITIES COMMAND (ADR-189 B37)
+// ============================================================================
+
+/**
+ * Creates guides from multiple selected entities (batch version of B8).
+ * Reuses the same entity → guide logic as GuideFromEntityCommand.
+ */
+export class BatchGuideFromEntitiesCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'BatchGuideFromEntities';
+  readonly type = 'batch-guide-from-entities';
+  readonly timestamp: number;
+  private createdGuides: Guide[] = [];
+
+  constructor(
+    private readonly store: GuideStore,
+    private readonly entityParamsList: readonly EntityGuideParams[],
+  ) {
+    this.id = generateEntityId();
+    this.timestamp = Date.now();
+  }
+
+  execute(): void {
+    if (this.createdGuides.length > 0) {
+      for (const guide of this.createdGuides) {
+        this.store.restoreGuide(guide);
+      }
+      return;
+    }
+
+    const extent = 10_000;
+
+    for (const params of this.entityParamsList) {
+      const { entityType, lineStart, lineEnd, center, clickPoint } = params;
+
+      if ((entityType === 'LINE' || entityType === 'POLYLINE') && lineStart && lineEnd) {
+        const dx = lineEnd.x - lineStart.x;
+        const dy = lineEnd.y - lineStart.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0.001) {
+          const nx = dx / len;
+          const ny = dy / len;
+          const mid: Point2D = { x: (lineStart.x + lineEnd.x) / 2, y: (lineStart.y + lineEnd.y) / 2 };
+          const start: Point2D = { x: mid.x - nx * extent, y: mid.y - ny * extent };
+          const end: Point2D = { x: mid.x + nx * extent, y: mid.y + ny * extent };
+          const guide = this.store.addDiagonalGuideRaw(start, end);
+          if (guide) this.createdGuides.push(guide);
+        }
+      } else if (entityType === 'CIRCLE' && center) {
+        const gx = this.store.addGuideRaw('X', center.x);
+        if (gx) this.createdGuides.push(gx);
+        const gy = this.store.addGuideRaw('Y', center.y);
+        if (gy) this.createdGuides.push(gy);
+      } else if (entityType === 'ARC' && center && clickPoint) {
+        const dx = clickPoint.x - center.x;
+        const dy = clickPoint.y - center.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0.001) {
+          const nx = dx / len;
+          const ny = dy / len;
+          const start: Point2D = { x: center.x - nx * extent, y: center.y - ny * extent };
+          const end: Point2D = { x: center.x + nx * extent, y: center.y + ny * extent };
+          const guide = this.store.addDiagonalGuideRaw(start, end);
+          if (guide) this.createdGuides.push(guide);
+        }
+      }
+    }
+  }
+
+  undo(): void {
+    for (const guide of this.createdGuides) {
+      this.store.removeGuideById(guide.id);
+    }
+  }
+
+  redo(): void { this.execute(); }
+
+  getDescription(): string {
+    return `Guides from ${this.entityParamsList.length} entities (${this.createdGuides.length} guides)`;
+  }
+
+  canMergeWith(): boolean { return false; }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
+      data: { entityCount: this.entityParamsList.length, createdCount: this.createdGuides.length },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return this.createdGuides.map(g => g.id);
+  }
+}

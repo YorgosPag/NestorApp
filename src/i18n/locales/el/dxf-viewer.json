@@ -1464,7 +1464,12 @@
     "guideMirror": "Αντικατοπτρισμός Οδηγών",
     "guideFromEntity": "Οδηγός από Στοιχείο",
     "guideSelect": "Επιλογή Οδηγών",
-    "guideCopyPattern": "Αντιγραφή/Μετατόπιση"
+    "guideCopyPattern": "Αντιγραφή/Μετατόπιση",
+    "guideOffsetEntity": "Μετατόπιση από Στοιχείο",
+    "guidePresetGrid": "Δομικός Κάνναβος",
+    "guideFromSelection": "Οδηγοί από Επιλογή",
+    "temporaryMode": "Προσωρινή Λειτουργία",
+    "temporaryModeActive": "Ενεργή λειτουργία — οι οδηγοί αφαιρούνται αυτόματα μετά τη σχεδίαση"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1511,7 +1516,18 @@
     "copyPattern": "Αντιγραφή/Μετατόπιση",
     "enterOffsetAndCount": "Απόσταση, επαναλήψεις (π.χ. 100,3)",
     "copyPatternPlaceholder": "100,3",
-    "selectGuidesFirst": "Επιλέξτε πρώτα οδηγούς (G→6)"
+    "selectGuidesFirst": "Επιλέξτε πρώτα οδηγούς (G→6)",
+    "offsetDistance": "Απόσταση Μετατόπισης",
+    "enterOffsetDistance": "Κάθετη μετατόπιση από ακμή στοιχείου (μέτρα)",
+    "offsetDistancePlaceholder": "π.χ. 10",
+    "selectPreset": "Δομικός Κάνναβος",
+    "enterPresetChoice": "Επιλέξτε preset (4m/5m/6m/8m) ή χειροκίνητα",
+    "presetPlaceholder": "4m, 5m, 6m, 8m, ή custom",
+    "enterXSpacings": "Αποστάσεις X (χωρισμένα με κόμμα, μέτρα)",
+    "xSpacingsPlaceholder": "0,5,10,15",
+    "enterYSpacings": "Αποστάσεις Y (χωρισμένα με κόμμα, μέτρα)",
+    "ySpacingsPlaceholder": "0,5,10",
+    "selectEntitiesFirst": "Επιλέξτε πρώτα στοιχεία (χρησιμοποιήστε το εργαλείο Επιλογής)"
   },
   "entityJoin": {
     "menuTitle": "Ένωση",

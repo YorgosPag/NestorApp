@@ -1470,7 +1470,12 @@
     "guideMirror": "Mirror Guides",
     "guideFromEntity": "Guide from Entity",
     "guideSelect": "Select Guides",
-    "guideCopyPattern": "Copy/Offset Pattern"
+    "guideCopyPattern": "Copy/Offset Pattern",
+    "guideOffsetEntity": "Offset from Entity",
+    "guidePresetGrid": "Structural Preset Grid",
+    "guideFromSelection": "Guide from Selection",
+    "temporaryMode": "Temporary Mode",
+    "temporaryModeActive": "Temporary mode active — guides auto-removed on drawing completion"
   },
   "promptDialog": {
     "confirm": "OK",
@@ -1517,7 +1522,18 @@
     "copyPattern": "Copy/Offset Pattern",
     "enterOffsetAndCount": "Offset distance, repetitions (e.g. 100,3)",
     "copyPatternPlaceholder": "100,3",
-    "selectGuidesFirst": "Select guides first (G→6)"
+    "selectGuidesFirst": "Select guides first (G→6)",
+    "offsetDistance": "Offset Distance",
+    "enterOffsetDistance": "Perpendicular offset from entity edge (meters)",
+    "offsetDistancePlaceholder": "e.g. 10",
+    "selectPreset": "Structural Grid Preset",
+    "enterPresetChoice": "Select preset (4m/5m/6m/8m) or custom spacings",
+    "presetPlaceholder": "4m, 5m, 6m, 8m, or custom",
+    "enterXSpacings": "X spacings (comma-separated, meters)",
+    "xSpacingsPlaceholder": "0,5,10,15",
+    "enterYSpacings": "Y spacings (comma-separated, meters)",
+    "ySpacingsPlaceholder": "0,5,10",
+    "selectEntitiesFirst": "Select entities first (use Select tool)"
   },
   "entityJoin": {
     "menuTitle": "Join",

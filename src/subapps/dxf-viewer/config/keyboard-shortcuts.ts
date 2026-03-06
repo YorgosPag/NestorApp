@@ -697,6 +697,9 @@ export const DXF_GUIDE_CHORD_MAP: Record<string, { action: string; toolType?: To
   '6': { action: 'tool:guide-select', toolType: 'guide-select' as ToolType, descriptionKey: 'shortcuts.guides.guideSelect' },
   '7': { action: 'tool:guide-copy-pattern', toolType: 'guide-copy-pattern' as ToolType, descriptionKey: 'shortcuts.guides.guideCopyPattern' },
   '8': { action: 'tool:guide-from-entity', toolType: 'guide-from-entity' as ToolType, descriptionKey: 'shortcuts.guides.guideFromEntity' },
+  '9': { action: 'tool:guide-offset-entity', toolType: 'guide-offset-entity' as ToolType, descriptionKey: 'shortcuts.guides.guideOffsetEntity' },
+  '1': { action: 'tool:guide-preset-grid', toolType: 'guide-preset-grid' as ToolType, descriptionKey: 'shortcuts.guides.guidePresetGrid' },
+  '0': { action: 'tool:guide-from-selection', toolType: 'guide-from-selection' as ToolType, descriptionKey: 'shortcuts.guides.guideFromSelection' },
   V: { action: 'action:toggle-guides', descriptionKey: 'shortcuts.guides.toggleVisibility' },
   L: { action: 'action:toggle-guide-panel', descriptionKey: 'shortcuts.guides.guidePanel' },
 } as const;

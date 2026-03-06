@@ -140,6 +140,12 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-select': { id: 'guide-select', category: 'selection', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-189 B17: Copy/offset pattern
   'guide-copy-pattern': { id: 'guide-copy-pattern', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-189 B24: Guide offset from entity edge
+  'guide-offset-entity': { id: 'guide-offset-entity', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-189 B23: Structural preset grid
+  'guide-preset-grid': { id: 'guide-preset-grid', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-189 B37: Batch guide from selection
+  'guide-from-selection': { id: 'guide-from-selection', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 // ============================================================================

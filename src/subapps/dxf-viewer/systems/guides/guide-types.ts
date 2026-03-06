@@ -50,6 +50,8 @@ export interface Guide {
   readonly startPoint?: Point2D;
   /** End point for diagonal (XZ) guides. Undefined for axis-aligned guides. */
   readonly endPoint?: Point2D;
+  /** B35: Temporary guide — auto-removed on drawing completion */
+  readonly temporary?: boolean;
 }
 
 // ============================================================================
@@ -144,6 +146,14 @@ export const SELECTED_GUIDE_STYLE: GuideRenderStyle = {
   lineWidth: 2,
   dashPattern: [],
   opacity: 0.8,
+};
+
+/** B35: Rendering style for temporary (construction line) guides */
+export const TEMPORARY_GUIDE_STYLE: GuideRenderStyle = {
+  color: '#FFFFFF',
+  lineWidth: 0.3,
+  dashPattern: [2, 4],
+  opacity: 0.2,
 };
 
 /** B4: Opacity multiplier for locked guides — muted appearance on canvas */

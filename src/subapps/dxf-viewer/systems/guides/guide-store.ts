@@ -136,7 +136,7 @@ export class GuideStore implements IGridHeadlessAPI {
   // ── Write Operations ──
 
   /** Add a guide. Returns the created guide or undefined if limit reached. */
-  addGuideRaw(axis: GridAxis, offset: number, label: string | null = null, parentId: string | null = null, groupId: string | null = null): Guide | undefined {
+  addGuideRaw(axis: GridAxis, offset: number, label: string | null = null, parentId: string | null = null, groupId: string | null = null, temporary = false): Guide | undefined {
     if (this.guides.length >= GUIDE_LIMITS.MAX_GUIDES) {
       console.warn(`[GuideStore] Max guides limit reached (${GUIDE_LIMITS.MAX_GUIDES})`);
       return undefined;
@@ -161,6 +161,7 @@ export class GuideStore implements IGridHeadlessAPI {
       createdAt: new Date().toISOString(),
       parentId,
       groupId,
+      ...(temporary ? { temporary: true } : {}),
     };
 
     // CRITICAL: Create new array — useSyncExternalStore uses Object.is()
@@ -420,6 +421,18 @@ export class GuideStore implements IGridHeadlessAPI {
     );
     this.notify();
     return true;
+  }
+
+  // ── B35: Temporary Guide Cleanup ──
+
+  /** Remove all temporary guides. Returns the removed guides (for event logging). */
+  removeTemporaryGuides(): Guide[] {
+    const removed = this.guides.filter(g => g.temporary);
+    if (removed.length === 0) return [];
+
+    this.guides = this.guides.filter(g => !g.temporary);
+    this.notify();
+    return removed;
   }
 
   /** Toggle global visibility */

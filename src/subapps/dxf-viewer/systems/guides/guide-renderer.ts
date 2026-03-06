@@ -17,7 +17,7 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Guide, GuideRenderStyle, ConstructionPoint } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
-import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, LOCKED_GUIDE_OPACITY_FACTOR, LOCKED_GUIDE_DASH_PATTERN, SELECTED_GUIDE_STYLE } from './guide-types';
+import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, LOCKED_GUIDE_OPACITY_FACTOR, LOCKED_GUIDE_DASH_PATTERN, SELECTED_GUIDE_STYLE, TEMPORARY_GUIDE_STYLE } from './guide-types';
 // 🏢 Centralized hover highlight config — shadowBlur glow for highlighted guides
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-088: Pixel-perfect alignment for crisp 1px rendering
@@ -358,6 +358,11 @@ export class GuideRenderer {
    * Resolve the render style for a guide based on its axis and parentId.
    */
   private resolveStyle(guide: Guide): GuideRenderStyle {
+    // B35: Temporary guides get a distinct faint white style
+    if (guide.temporary) {
+      return { ...TEMPORARY_GUIDE_STYLE };
+    }
+
     // B6: Per-guide custom style override takes highest priority
     if (guide.style) {
       return {

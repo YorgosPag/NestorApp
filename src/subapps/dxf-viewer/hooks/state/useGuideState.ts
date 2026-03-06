@@ -10,10 +10,10 @@
  * @since 2026-02-19
  */
 
-import { useSyncExternalStore, useCallback } from 'react';
+import { useSyncExternalStore, useCallback, useState } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand, type EntityGuideParams } from '../../systems/guides/guide-commands';
+import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand, GuideOffsetFromEntityCommand, CreateGridFromPresetCommand, BatchGuideFromEntitiesCommand, type EntityGuideParams } from '../../systems/guides/guide-commands';
 import { EventBus } from '../../systems/events/EventBus';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
@@ -67,6 +67,18 @@ export interface UseGuideStateReturn {
   batchDeleteGuides: (guideIds: readonly string[]) => BatchDeleteGuidesCommand;
   /** B17: Copy selected guides with offset and repetitions. Returns the command for undo. */
   copyGuidePattern: (sourceGuideIds: readonly string[], offsetDistance: number, repetitions: number) => CopyGuidePatternCommand;
+  /** B24: Create guide(s) offset from a DXF entity edge by a perpendicular distance. */
+  createGuideOffsetFromEntity: (params: EntityGuideParams, offsetDistance: number) => GuideOffsetFromEntityCommand;
+  /** B23: Create a structural grid from preset spacings. */
+  createGridFromPreset: (xOffsets: readonly number[], yOffsets: readonly number[], xLabels?: readonly string[] | null, yLabels?: readonly string[] | null, groupName?: string) => CreateGridFromPresetCommand;
+  /** B37: Batch create guides from multiple selected entities. */
+  createGuidesFromSelection: (paramsList: readonly EntityGuideParams[]) => BatchGuideFromEntitiesCommand;
+  /** B35: Whether new guides are created as temporary (auto-removed on drawing completion) */
+  temporaryMode: boolean;
+  /** B35: Toggle temporary guide creation mode */
+  toggleTemporaryMode: () => void;
+  /** B35: Remove all temporary guides (called on drawing completion) */
+  removeTemporaryGuides: () => void;
   /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
   getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
@@ -113,6 +125,17 @@ export function useGuideState(): UseGuideStateReturn {
     () => store.count,
     () => store.count,
   );
+
+  // ── B35: Temporary guide mode ──
+  const [temporaryMode, setTemporaryMode] = useState(false);
+
+  const toggleTemporaryMode = useCallback(() => {
+    setTemporaryMode(prev => !prev);
+  }, []);
+
+  const removeTemporaryGuides = useCallback(() => {
+    store.removeTemporaryGuides();
+  }, [store]);
 
   // ── Mutations (B20: route through CommandHistory for undo/redo) ──
 
@@ -262,6 +285,27 @@ export function useGuideState(): UseGuideStateReturn {
     return cmd;
   }, [store, history]);
 
+  const createGuideOffsetFromEntity = useCallback((params: EntityGuideParams, offsetDistance: number): GuideOffsetFromEntityCommand => {
+    const cmd = new GuideOffsetFromEntityCommand(store, params, offsetDistance);
+    history.execute(cmd);
+    EventBus.emit('grid:guide-offset-from-entity', { entityType: params.entityType, offset: offsetDistance, createdCount: cmd.getAffectedEntityIds().length });
+    return cmd;
+  }, [store, history]);
+
+  const createGridFromPreset = useCallback((xOffsets: readonly number[], yOffsets: readonly number[], xLabels: readonly string[] | null = null, yLabels: readonly string[] | null = null, groupName = 'Structural Grid'): CreateGridFromPresetCommand => {
+    const cmd = new CreateGridFromPresetCommand(store, xOffsets, yOffsets, xLabels, yLabels, groupName);
+    history.execute(cmd);
+    EventBus.emit('grid:preset-applied', { presetId: groupName, xCount: xOffsets.length, yCount: yOffsets.length });
+    return cmd;
+  }, [store, history]);
+
+  const createGuidesFromSelection = useCallback((paramsList: readonly EntityGuideParams[]): BatchGuideFromEntitiesCommand => {
+    const cmd = new BatchGuideFromEntitiesCommand(store, paramsList);
+    history.execute(cmd);
+    EventBus.emit('grid:guide-from-entity', { entityType: 'BATCH', createdCount: cmd.getAffectedEntityIds().length });
+    return cmd;
+  }, [store, history]);
+
   const getStore = useCallback(() => store, [store]);
 
   return {
@@ -283,6 +327,12 @@ export function useGuideState(): UseGuideStateReturn {
     createGuideFromEntity,
     batchDeleteGuides,
     copyGuidePattern,
+    createGuideOffsetFromEntity,
+    createGridFromPreset,
+    createGuidesFromSelection,
+    temporaryMode,
+    toggleTemporaryMode,
+    removeTemporaryGuides,
     toggleVisibility,
     toggleSnap,
     clearAll,

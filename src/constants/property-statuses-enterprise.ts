@@ -1456,6 +1456,9 @@ export const DXF_DRAWING_TOOL_LABELS = {
   GUIDE_FROM_ENTITY: 'tools.guideFromEntity',
   GUIDE_SELECT: 'tools.guideSelect',
   GUIDE_COPY_PATTERN: 'tools.guideCopyPattern',
+  GUIDE_OFFSET_ENTITY: 'tools.guideOffsetEntity',
+  GUIDE_PRESET_GRID: 'tools.guidePresetGrid',
+  GUIDE_FROM_SELECTION: 'tools.guideFromSelection',
 } as const;
 
 /**

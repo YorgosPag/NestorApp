@@ -293,6 +293,14 @@ export interface UseCanvasClickHandlerParams {
     clickPoint?: Point2D;
   }) => void;
 
+  // ── ADR-189 B24: Guide offset from entity tool ──────────
+  /** Callback: entity picked → prompt offset → create offset guides */
+  onGuideOffsetFromEntity?: (entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE', params: {
+    lineStart?: Point2D; lineEnd?: Point2D;
+    center?: Point2D; radius?: number;
+    clickPoint?: Point2D;
+  }) => void;
+
   // ── ADR-189 B14: Guide multi-select tool ──────────────
   /** Toggle guide selection (shift = add to selection) */
   onGuideSelectToggle?: (guideId: string, addToSelection: boolean) => void;
@@ -364,6 +372,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onMirrorAxisSelected,
     // ADR-189 B8: Guide from entity
     onGuideFromEntity,
+    // ADR-189 B24: Guide offset from entity
+    onGuideOffsetFromEntity,
     // ADR-189 B14: Guide multi-select
     onGuideSelectToggle, onGuideDeselectAll,
   } = params;
@@ -1258,6 +1268,43 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 1.89991b: ADR-189 B24 — Guide offset from entity (entity picking → offset prompt)
+    if (activeTool === 'guide-offset-entity' && onGuideOffsetFromEntity) {
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        const hitTolerance = 30 / transform.scale;
+
+        for (const entity of scene.entities) {
+          if (isLineEntity(entity)) {
+            const start: Point2D = { x: entity.start.x, y: entity.start.y };
+            const end: Point2D = { x: entity.end.x, y: entity.end.y };
+            const dist = pointToLineDistance(worldPoint, start, end);
+            if (dist < hitTolerance) {
+              onGuideOffsetFromEntity('LINE', { lineStart: start, lineEnd: end });
+              dlog('useCanvasClickHandler', 'B24: Offset guide from LINE entity');
+              return;
+            }
+          }
+
+          if (isCircleEntity(entity)) {
+            const center: Point2D = { x: entity.center.x, y: entity.center.y };
+            const distToCenter = Math.sqrt(
+              (worldPoint.x - center.x) ** 2 + (worldPoint.y - center.y) ** 2,
+            );
+            if (Math.abs(distToCenter - entity.radius) < hitTolerance) {
+              onGuideOffsetFromEntity('CIRCLE', { center, radius: entity.radius });
+              dlog('useCanvasClickHandler', 'B24: Offset guide from CIRCLE entity');
+              return;
+            }
+          }
+        }
+      }
+      return;
+    }
+
     // PRIORITY 1.89992: ADR-189 B14 — Guide select (multi-select guides)
     if (activeTool === 'guide-select' && guides) {
       const hitToleranceWorld = 30 / transform.scale;
@@ -1538,6 +1585,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     onMirrorAxisSelected,
     // ADR-189 B8: Guide from entity
     onGuideFromEntity,
+    // ADR-189 B24: Guide offset from entity
+    onGuideOffsetFromEntity,
     // ADR-189 B14: Guide multi-select
     onGuideSelectToggle, onGuideDeselectAll,
   ]);

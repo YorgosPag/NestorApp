@@ -95,6 +95,12 @@ export interface DrawingEventMap {
   'grid:guide-pattern-copied': { sourceCount: number; repetitions: number; offset: number };
   'grid:group-created': { group: GridGroup };
   'grid:snap-toggled': { enabled: boolean };
+  // B35: Temporary guides removed on drawing completion
+  'grid:temporary-guides-removed': { count: number };
+  // B24: Guide offset from entity edge
+  'grid:guide-offset-from-entity': { entityType: string; offset: number; createdCount: number };
+  // B23: Structural preset grid applied
+  'grid:preset-applied': { presetId: string; xCount: number; yCount: number };
   // 🏢 ADR-189 §4.13: Guide panel → canvas highlight communication
   'grid:guide-panel-highlight': { guideId: string | null };
   // 🏢 ADR-189 §4.13: Construction point panel → canvas highlight communication

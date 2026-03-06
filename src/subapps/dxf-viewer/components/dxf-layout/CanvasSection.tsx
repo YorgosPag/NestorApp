@@ -17,7 +17,7 @@ import { dwarn, derr } from '../../debug';
 // Snap result is read imperatively from ImmediateSnapStore to avoid re-renders.
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { usePdfBackgroundStore } from '../../pdf-background';
-import { useEventBus } from '../../systems/events';
+import { useEventBus, EventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
 import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
@@ -754,6 +754,130 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     guideState.createGuideFromEntity({ entityType, ...params });
   }, [guideState]);
 
+  // ADR-189 B24: Guide offset from entity — entity picked → prompt offset → create offset guides
+  const handleGuideOffsetFromEntity = useCallback((
+    entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE',
+    params: { lineStart?: Point2D; lineEnd?: Point2D; center?: Point2D; radius?: number; clickPoint?: Point2D },
+  ) => {
+    showPromptDialog({
+      title: t('promptDialog.offsetDistance'),
+      message: t('promptDialog.enterOffsetDistance'),
+      placeholder: t('promptDialog.offsetDistancePlaceholder'),
+    }).then(value => {
+      if (value === null) return;
+      const offset = parseFloat(value);
+      if (isNaN(offset) || offset <= 0) return;
+      guideState.createGuideOffsetFromEntity({ entityType, ...params }, offset);
+    });
+  }, [guideState, showPromptDialog, t]);
+
+  // ADR-189 B23: Structural preset grid
+  const handlePresetGrid = useCallback(() => {
+    showPromptDialog({
+      title: t('promptDialog.selectPreset'),
+      message: t('promptDialog.enterPresetChoice'),
+      placeholder: t('promptDialog.presetPlaceholder'),
+    }).then(value => {
+      if (value === null) return;
+      const input = value.trim().toLowerCase();
+
+      // Check preset shortcuts
+      const presetMap: Record<string, { x: readonly number[]; y: readonly number[]; name: string }> = {
+        '4m': { x: [0, 4, 8, 12, 16], y: [0, 4, 8, 12], name: 'Bay 4m Grid' },
+        '5m': { x: [0, 5, 10, 15, 20], y: [0, 5, 10, 15], name: 'Bay 5m Grid' },
+        '6m': { x: [0, 6, 12, 18, 24], y: [0, 6, 12, 18], name: 'Bay 6m Grid' },
+        '8m': { x: [0, 8, 16, 24], y: [0, 8, 16], name: 'Bay 8m Grid' },
+      };
+
+      const preset = presetMap[input];
+      if (preset) {
+        guideState.createGridFromPreset(preset.x, preset.y, null, null, preset.name);
+        return;
+      }
+
+      // Custom: ask for X spacings, then Y spacings
+      showPromptDialog({
+        title: t('promptDialog.enterXSpacings'),
+        message: t('promptDialog.enterXSpacings'),
+        placeholder: t('promptDialog.xSpacingsPlaceholder'),
+      }).then(xInput => {
+        if (xInput === null) return;
+        const xValues = xInput.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        if (xValues.length < 2) return;
+
+        showPromptDialog({
+          title: t('promptDialog.enterYSpacings'),
+          message: t('promptDialog.enterYSpacings'),
+          placeholder: t('promptDialog.ySpacingsPlaceholder'),
+        }).then(yInput => {
+          if (yInput === null) return;
+          const yValues = yInput.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+          if (yValues.length < 2) return;
+
+          guideState.createGridFromPreset(xValues, yValues, null, null, 'Custom Grid');
+        });
+      });
+    });
+  }, [guideState, showPromptDialog, t]);
+
+  // ADR-189 B37: Guide from selection — batch create guides from selected entities
+  const handleGuideFromSelection = useCallback(() => {
+    const selIds = universalSelection.selectedEntityIds;
+    if (selIds.size === 0) {
+      notifyWarning(t('promptDialog.selectEntitiesFirst'));
+      return;
+    }
+
+    // Get scene for entity lookup
+    const scene = props.currentScene;
+    if (!scene) return;
+
+    const paramsList: Array<{ entityType: 'LINE' | 'CIRCLE' | 'ARC' | 'POLYLINE'; lineStart?: Point2D; lineEnd?: Point2D; center?: Point2D; radius?: number; clickPoint?: Point2D }> = [];
+
+    for (const entityId of selIds) {
+      const entity = scene.entities?.find(e => e.id === entityId);
+      if (!entity) continue;
+
+      if (entity.type === 'line' && 'start' in entity && 'end' in entity) {
+        const ent = entity as { start: Point2D; end: Point2D; [key: string]: unknown };
+        paramsList.push({
+          entityType: 'LINE',
+          lineStart: { x: ent.start.x, y: ent.start.y },
+          lineEnd: { x: ent.end.x, y: ent.end.y },
+        });
+      } else if (entity.type === 'circle' && 'center' in entity && 'radius' in entity) {
+        const ent = entity as { center: Point2D; radius: number; [key: string]: unknown };
+        paramsList.push({
+          entityType: 'CIRCLE',
+          center: { x: ent.center.x, y: ent.center.y },
+          radius: ent.radius,
+        });
+      } else if (entity.type === 'arc' && 'center' in entity && 'radius' in entity) {
+        const ent = entity as { center: Point2D; radius: number; [key: string]: unknown };
+        paramsList.push({
+          entityType: 'ARC',
+          center: { x: ent.center.x, y: ent.center.y },
+          radius: ent.radius,
+          clickPoint: { x: ent.center.x, y: ent.center.y + ent.radius },
+        });
+      }
+    }
+
+    if (paramsList.length > 0) {
+      guideState.createGuidesFromSelection(paramsList);
+    }
+  }, [guideState, universalSelection, props.currentScene, notifyWarning, t]);
+
+  // ADR-189 B23/B37: Auto-trigger preset/selection tools when activated
+  useEffect(() => {
+    if (activeTool === 'guide-preset-grid') {
+      handlePresetGrid();
+    } else if (activeTool === 'guide-from-selection') {
+      handleGuideFromSelection();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool]);
+
   // ADR-189 B14: Multi-select guides
   const [selectedGuideIds, setSelectedGuideIds] = useState<ReadonlySet<string>>(new Set());
 
@@ -1118,6 +1242,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setPanelHighlightPointId(pointId);
     });
   }, [eventBus]);
+
+  // B35: Auto-remove temporary guides when a drawing operation completes
+  useEffect(() => {
+    return EventBus.on('drawing:complete', () => {
+      const removed = guideState.getStore().removeTemporaryGuides();
+      if (removed.length > 0) {
+        EventBus.emit('grid:temporary-guides-removed', { count: removed.length });
+      }
+    });
+  }, [guideState]);
 
   // Merge: panel highlight takes precedence when no tool-based highlight
   const effectiveHighlightedGuideId = highlightedGuideId ?? panelHighlightGuideId;
@@ -1509,6 +1643,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onMirrorAxisSelected: handleMirrorAxisSelected,
     // ADR-189 B8: Guide from entity
     onGuideFromEntity: handleGuideFromEntity,
+    // ADR-189 B24: Guide offset from entity
+    onGuideOffsetFromEntity: handleGuideOffsetFromEntity,
     // ADR-189 B14: Guide multi-select
     onGuideSelectToggle: handleGuideSelectToggle,
     onGuideDeselectAll: handleGuideDeselectAll,
