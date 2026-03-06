@@ -23,6 +23,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { designSystem } from '@/lib/design-system';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { Phone, Mail, Hash, MapPin } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -291,35 +292,47 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
               {t('relationships.form.labels.professionalInfo')}
             </Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                placeholder={t('relationships.form.placeholders.businessPhone')}
-                value={formData.contactInfo?.businessPhone || ''}
-                onChange={(e) => handleContactInfoChange('businessPhone', e.target.value)}
-                disabled={loading}
-                className={designSystem.getFormFieldClass(false, loading)}
-              />
-              <Input
-                placeholder={t('relationships.form.placeholders.businessEmail')}
-                type="email"
-                value={formData.contactInfo?.businessEmail || ''}
-                onChange={(e) => handleContactInfoChange('businessEmail', e.target.value)}
-                disabled={loading}
-                className={designSystem.getFormFieldClass(false, loading)}
-              />
-              <Input
-                placeholder={t('relationships.form.placeholders.extensionNumber')}
-                value={formData.contactInfo?.extensionNumber || ''}
-                onChange={(e) => handleContactInfoChange('extensionNumber', e.target.value)}
-                disabled={loading}
-                className={designSystem.getFormFieldClass(false, loading)}
-              />
-              <Input
-                placeholder={t('relationships.form.placeholders.businessAddress')}
-                value={formData.contactInfo?.businessAddress || ''}
-                onChange={(e) => handleContactInfoChange('businessAddress', e.target.value)}
-                disabled={loading}
-                className={designSystem.getFormFieldClass(false, loading)}
-              />
+              <div className="relative">
+                <Phone className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
+                <Input
+                  placeholder={t('relationships.form.placeholders.businessPhone')}
+                  value={formData.contactInfo?.businessPhone || ''}
+                  onChange={(e) => handleContactInfoChange('businessPhone', e.target.value)}
+                  disabled={loading}
+                  hasLeftIcon
+                />
+              </div>
+              <div className="relative">
+                <Mail className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
+                <Input
+                  placeholder={t('relationships.form.placeholders.businessEmail')}
+                  type="email"
+                  value={formData.contactInfo?.businessEmail || ''}
+                  onChange={(e) => handleContactInfoChange('businessEmail', e.target.value)}
+                  disabled={loading}
+                  hasLeftIcon
+                />
+              </div>
+              <div className="relative">
+                <Hash className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
+                <Input
+                  placeholder={t('relationships.form.placeholders.extensionNumber')}
+                  value={formData.contactInfo?.extensionNumber || ''}
+                  onChange={(e) => handleContactInfoChange('extensionNumber', e.target.value)}
+                  disabled={loading}
+                  hasLeftIcon
+                />
+              </div>
+              <div className="relative">
+                <MapPin className={designSystem.cn(iconSizes.sm, "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground")} />
+                <Input
+                  placeholder={t('relationships.form.placeholders.businessAddress')}
+                  value={formData.contactInfo?.businessAddress || ''}
+                  onChange={(e) => handleContactInfoChange('businessAddress', e.target.value)}
+                  disabled={loading}
+                  hasLeftIcon
+                />
+              </div>
             </div>
           </div>
         )}

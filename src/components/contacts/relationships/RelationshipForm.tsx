@@ -67,7 +67,16 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   const handleContactSelect = (contact: ContactSummary | null) => {
     setFormData(prev => ({
       ...prev,
-      targetContactId: contact?.id || ''
+      targetContactId: contact?.id || '',
+      // Auto-populate professional contact info from selected contact
+      ...(contact && {
+        contactInfo: {
+          ...prev.contactInfo,
+          // Only fill if currently empty — don't overwrite user edits
+          businessPhone: prev.contactInfo?.businessPhone || contact.phone || '',
+          businessEmail: prev.contactInfo?.businessEmail || contact.email || '',
+        }
+      })
     }));
 
     // Clear validation errors when contact is selected
