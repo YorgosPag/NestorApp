@@ -162,11 +162,11 @@ const shareholdersSection: SectionConfig = {
 const documentsSection: SectionConfig = { id: 'documents', title: 'sections.documentsCertificates', icon: 'file-text', order: 7, fields: [], description: 'sectionDescriptions.documentsCertificates' };
 const decisionsSection: SectionConfig = { id: 'decisions', title: 'sections.organDecisions', icon: 'gavel', order: 8, fields: [], description: 'sectionDescriptions.organDecisions' };
 const historySection: SectionConfig = { id: 'companyVersions', title: 'sections.historyChanges', icon: 'history', order: 9, fields: [], description: 'sectionDescriptions.historyChanges' };
-const representativesSection: SectionConfig = { id: 'representatives', title: 'sections.representativesManagement', icon: 'user-check', order: 10, fields: [], description: 'sectionDescriptions.representativesManagement' };
+// representativesSection REMOVED — merged into relationshipsSection (Πρόσωπα & Ρόλοι)
 const announcementsSection: SectionConfig = { id: 'announcements', title: 'sections.announcementsPublications', icon: 'megaphone', order: 11, fields: [], description: 'sectionDescriptions.announcementsPublications' };
 const statusesSection: SectionConfig = { id: 'statuses', title: 'sections.statusesLifecycle', icon: 'activity', order: 12, fields: [], description: 'sectionDescriptions.statusesLifecycle' };
 const photosSection: SectionConfig = { id: 'companyPhotos', title: 'sections.logoPhotos', icon: 'image', order: 13, fields: [], description: 'sectionDescriptions.logoPhotos' };
-const relationshipsSection: SectionConfig = { id: 'relationships', title: 'sections.shareholdersEmployees', icon: 'users', order: 14, fields: [], description: 'sectionDescriptions.shareholdersPartners' };
+const relationshipsSection: SectionConfig = { id: 'relationships', title: 'sections.peopleRoles', icon: 'users', order: 14, fields: [], description: 'sectionDescriptions.peopleRoles' };
 
 // 🏢 ENTERPRISE: Banking System (ADR-126)
 const bankingSection: SectionConfig = { id: 'banking', title: 'sections.banking', icon: 'credit-card', order: 15, fields: [], description: 'sectionDescriptions.banking' };
@@ -189,7 +189,6 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   addressesSection,
   communicationSection, // 🏢 ENTERPRISE: Communication tab for companies (phones, emails, websites, social media)
   documentsSection,
-  representativesSection,
   photosSection,
   relationshipsSection,
   bankingSection, // 🏢 ENTERPRISE: Banking System (ADR-126)

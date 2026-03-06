@@ -14,6 +14,7 @@
     "statusesLifecycle": "Statuses & Lifecycle",
     "logoPhotos": "Logo & Photos",
     "shareholdersEmployees": "Shareholders & Employees",
+    "peopleRoles": "People & Roles",
     "basicInfo": "Basic Information",
     "administrative": "Administrative Information",
     "contactInfo": "Contact Information",
@@ -38,6 +39,7 @@
     "statusesLifecycle": "Company lifecycle and statuses",
     "logoPhotos": "Logo and photos",
     "shareholdersEmployees": "Shareholders and employees management",
+    "peopleRoles": "Shareholders, representatives, management and employees",
     "banking": "Manage contact bank accounts",
     "communication": "Phone numbers, emails, websites and social media"
   },
