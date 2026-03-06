@@ -20,8 +20,21 @@ import {
   SOCIAL_PLATFORM_LABELS,
   IDENTITY_TYPE_LABELS,
   PROFESSIONAL_TYPE_LABELS,
-  ADDRESS_TYPE_LABELS
+  ADDRESS_TYPE_LABELS,
+  SERVICE_PHONE_TYPE_LABELS,
+  SERVICE_EMAIL_TYPE_LABELS,
+  SERVICE_WEBSITE_TYPE_LABELS,
+  SERVICE_SOCIAL_MEDIA_TYPE_LABELS,
+  COMPANY_PHONE_TYPE_LABELS,
+  COMPANY_EMAIL_TYPE_LABELS,
+  COMPANY_WEBSITE_TYPE_LABELS,
+  COMPANY_SOCIAL_MEDIA_TYPE_LABELS
 } from '@/constants/property-statuses-enterprise';
+
+/**
+ * Contact entity type — determines which communication type options to show
+ */
+export type ContactEntityType = 'individual' | 'company' | 'service';
 
 // ============================================================================
 // MAIN COMMUNICATION CONFIGURATIONS
@@ -253,4 +266,128 @@ export function getTypeOptions(type: CommunicationType): { value: string; label:
 export function getPlatformOptions(type: CommunicationType): { value: string; label: string; }[] | undefined {
   const config = getCommunicationConfig(type);
   return config.platformTypes;
+}
+
+// ============================================================================
+// ENTITY-AWARE TYPE OVERRIDES
+// ============================================================================
+
+/**
+ * Type options per entity type — overrides the default individual-oriented labels
+ * with context-appropriate labels for services and companies.
+ */
+const SERVICE_TYPE_OVERRIDES: Partial<Record<CommunicationType, { types: { value: string; label: string }[]; defaultType: string }>> = {
+  phone: {
+    types: [
+      { value: 'main', label: SERVICE_PHONE_TYPE_LABELS.main },
+      { value: 'department', label: SERVICE_PHONE_TYPE_LABELS.department },
+      { value: 'secretariat', label: SERVICE_PHONE_TYPE_LABELS.secretariat },
+      { value: 'helpdesk', label: SERVICE_PHONE_TYPE_LABELS.helpdesk },
+      { value: 'fax', label: SERVICE_PHONE_TYPE_LABELS.fax },
+      { value: 'other', label: SERVICE_PHONE_TYPE_LABELS.other }
+    ],
+    defaultType: 'main'
+  },
+  email: {
+    types: [
+      { value: 'general', label: SERVICE_EMAIL_TYPE_LABELS.general },
+      { value: 'department', label: SERVICE_EMAIL_TYPE_LABELS.department },
+      { value: 'secretariat', label: SERVICE_EMAIL_TYPE_LABELS.secretariat },
+      { value: 'info', label: SERVICE_EMAIL_TYPE_LABELS.info },
+      { value: 'other', label: SERVICE_EMAIL_TYPE_LABELS.other }
+    ],
+    defaultType: 'general'
+  },
+  website: {
+    types: [
+      { value: 'official', label: SERVICE_WEBSITE_TYPE_LABELS.official },
+      { value: 'eServices', label: SERVICE_WEBSITE_TYPE_LABELS.eServices },
+      { value: 'portal', label: SERVICE_WEBSITE_TYPE_LABELS.portal },
+      { value: 'other', label: SERVICE_WEBSITE_TYPE_LABELS.other }
+    ],
+    defaultType: 'official'
+  },
+  social: {
+    types: [
+      { value: 'official', label: SERVICE_SOCIAL_MEDIA_TYPE_LABELS.official },
+      { value: 'informational', label: SERVICE_SOCIAL_MEDIA_TYPE_LABELS.informational },
+      { value: 'other', label: SERVICE_SOCIAL_MEDIA_TYPE_LABELS.other }
+    ],
+    defaultType: 'official'
+  }
+};
+
+const COMPANY_TYPE_OVERRIDES: Partial<Record<CommunicationType, { types: { value: string; label: string }[]; defaultType: string }>> = {
+  phone: {
+    types: [
+      { value: 'main', label: COMPANY_PHONE_TYPE_LABELS.main },
+      { value: 'department', label: COMPANY_PHONE_TYPE_LABELS.department },
+      { value: 'secretariat', label: COMPANY_PHONE_TYPE_LABELS.secretariat },
+      { value: 'sales', label: COMPANY_PHONE_TYPE_LABELS.sales },
+      { value: 'support', label: COMPANY_PHONE_TYPE_LABELS.support },
+      { value: 'fax', label: COMPANY_PHONE_TYPE_LABELS.fax },
+      { value: 'other', label: COMPANY_PHONE_TYPE_LABELS.other }
+    ],
+    defaultType: 'main'
+  },
+  email: {
+    types: [
+      { value: 'general', label: COMPANY_EMAIL_TYPE_LABELS.general },
+      { value: 'department', label: COMPANY_EMAIL_TYPE_LABELS.department },
+      { value: 'sales', label: COMPANY_EMAIL_TYPE_LABELS.sales },
+      { value: 'support', label: COMPANY_EMAIL_TYPE_LABELS.support },
+      { value: 'info', label: COMPANY_EMAIL_TYPE_LABELS.info },
+      { value: 'other', label: COMPANY_EMAIL_TYPE_LABELS.other }
+    ],
+    defaultType: 'general'
+  },
+  website: {
+    types: [
+      { value: 'corporate', label: COMPANY_WEBSITE_TYPE_LABELS.corporate },
+      { value: 'eshop', label: COMPANY_WEBSITE_TYPE_LABELS.eshop },
+      { value: 'blog', label: COMPANY_WEBSITE_TYPE_LABELS.blog },
+      { value: 'other', label: COMPANY_WEBSITE_TYPE_LABELS.other }
+    ],
+    defaultType: 'corporate'
+  },
+  social: {
+    types: [
+      { value: 'corporate', label: COMPANY_SOCIAL_MEDIA_TYPE_LABELS.corporate },
+      { value: 'marketing', label: COMPANY_SOCIAL_MEDIA_TYPE_LABELS.marketing },
+      { value: 'other', label: COMPANY_SOCIAL_MEDIA_TYPE_LABELS.other }
+    ],
+    defaultType: 'corporate'
+  }
+};
+
+/**
+ * Returns communication config with entity-appropriate type options.
+ *
+ * - individual: personal/home/work types (default)
+ * - service: main/department/secretariat/helpdesk types
+ * - company: main/department/sales/support types
+ */
+export function getEntityAwareCommunicationConfig(
+  commType: CommunicationType,
+  entityType: ContactEntityType
+): CommunicationConfig {
+  const baseConfig = getCommunicationConfig(commType);
+
+  if (entityType === 'individual') {
+    return baseConfig;
+  }
+
+  const overrides = entityType === 'service'
+    ? SERVICE_TYPE_OVERRIDES[commType]
+    : COMPANY_TYPE_OVERRIDES[commType];
+
+  if (!overrides) {
+    return baseConfig;
+  }
+
+  return {
+    ...baseConfig,
+    types: overrides.types,
+    defaultType: overrides.defaultType
+  };
 }

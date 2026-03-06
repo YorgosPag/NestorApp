@@ -463,6 +463,60 @@
       "business": "Business",
       "other": "Other"
     },
+    "servicePhoneTypes": {
+      "main": "Main",
+      "department": "Department",
+      "secretariat": "Secretariat",
+      "helpdesk": "Helpdesk",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "serviceEmailTypes": {
+      "general": "General",
+      "department": "Department",
+      "secretariat": "Secretariat",
+      "info": "Info",
+      "other": "Other"
+    },
+    "serviceWebsiteTypes": {
+      "official": "Official",
+      "eServices": "E-Services",
+      "portal": "Portal",
+      "other": "Other"
+    },
+    "serviceSocialMediaTypes": {
+      "official": "Official",
+      "informational": "Informational",
+      "other": "Other"
+    },
+    "companyPhoneTypes": {
+      "main": "Main",
+      "department": "Department",
+      "secretariat": "Secretariat",
+      "sales": "Sales",
+      "support": "Support",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "companyEmailTypes": {
+      "general": "General",
+      "department": "Department",
+      "sales": "Sales",
+      "support": "Support",
+      "info": "Info",
+      "other": "Other"
+    },
+    "companyWebsiteTypes": {
+      "corporate": "Corporate",
+      "eshop": "E-Shop",
+      "blog": "Blog",
+      "other": "Other"
+    },
+    "companySocialMediaTypes": {
+      "corporate": "Corporate",
+      "marketing": "Marketing",
+      "other": "Other"
+    },
     "platforms": {
       "linkedin": "LinkedIn",
       "facebook": "Facebook",

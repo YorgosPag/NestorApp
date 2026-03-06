@@ -463,6 +463,60 @@
       "business": "Επιχειρηματικό",
       "other": "Άλλο"
     },
+    "servicePhoneTypes": {
+      "main": "Κεντρικό",
+      "department": "Τμήμα",
+      "secretariat": "Γραμματεία",
+      "helpdesk": "Εξυπηρέτηση",
+      "fax": "Fax",
+      "other": "Άλλο"
+    },
+    "serviceEmailTypes": {
+      "general": "Γενικό",
+      "department": "Τμήμα",
+      "secretariat": "Γραμματεία",
+      "info": "Πληροφορίες",
+      "other": "Άλλο"
+    },
+    "serviceWebsiteTypes": {
+      "official": "Επίσημη",
+      "eServices": "Ηλ. Υπηρεσίες",
+      "portal": "Πύλη",
+      "other": "Άλλο"
+    },
+    "serviceSocialMediaTypes": {
+      "official": "Επίσημο",
+      "informational": "Ενημερωτικό",
+      "other": "Άλλο"
+    },
+    "companyPhoneTypes": {
+      "main": "Κεντρικό",
+      "department": "Τμήμα",
+      "secretariat": "Γραμματεία",
+      "sales": "Πωλήσεις",
+      "support": "Υποστήριξη",
+      "fax": "Fax",
+      "other": "Άλλο"
+    },
+    "companyEmailTypes": {
+      "general": "Γενικό",
+      "department": "Τμήμα",
+      "sales": "Πωλήσεις",
+      "support": "Υποστήριξη",
+      "info": "Πληροφορίες",
+      "other": "Άλλο"
+    },
+    "companyWebsiteTypes": {
+      "corporate": "Εταιρικό",
+      "eshop": "E-Shop",
+      "blog": "Blog",
+      "other": "Άλλο"
+    },
+    "companySocialMediaTypes": {
+      "corporate": "Εταιρικό",
+      "marketing": "Marketing",
+      "other": "Άλλο"
+    },
     "platforms": {
       "linkedin": "LinkedIn",
       "facebook": "Facebook",

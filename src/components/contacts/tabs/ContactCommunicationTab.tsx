@@ -3,6 +3,7 @@
 import React from 'react';
 import type { Contact, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactEntityType } from '@/components/contacts/dynamic/communication';
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
 
 interface ContactCommunicationTabProps {
@@ -32,6 +33,7 @@ export function ContactCommunicationTab({
   } = additionalData || {};
 
   const effectiveFormData = formData || data;
+  const contactType = data.type as ContactEntityType;
 
   const handlePhonesChange = React.useCallback((phones: PhoneInfo[]) => {
     if (setFormData && formData) {
@@ -65,6 +67,7 @@ export function ContactCommunicationTab({
         websites={Array.isArray(effectiveFormData.websites) ? effectiveFormData.websites : []}
         socialMedia={effectiveFormData.socialMediaArray || []}
         disabled={disabled}
+        contactType={contactType}
         onPhonesChange={handlePhonesChange}
         onEmailsChange={handleEmailsChange}
         onWebsitesChange={handleWebsitesChange}

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
-import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
-import { COMMUNICATION_CONFIGS } from '@/components/contacts/dynamic/communication';
+import type { CommunicationItem, ContactEntityType } from '@/components/contacts/dynamic/communication';
+import { COMMUNICATION_CONFIGS, getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================
@@ -28,6 +28,8 @@ export interface DynamicContactArraysProps {
   websites?: WebsiteInfo[];
   socialMedia?: SocialMediaInfo[];
   disabled?: boolean;
+  /** Entity type — determines which communication type labels to show */
+  contactType?: ContactEntityType;
   onPhonesChange?: (phones: PhoneInfo[]) => void;
   onEmailsChange?: (emails: EmailInfo[]) => void;
   onWebsitesChange?: (websites: WebsiteInfo[]) => void;
@@ -117,6 +119,7 @@ export function DynamicContactArrays({
   websites = [],
   socialMedia = [],
   disabled = false,
+  contactType = 'individual',
   onPhonesChange,
   onEmailsChange,
   onWebsitesChange,
@@ -136,11 +139,17 @@ export function DynamicContactArrays({
   const normalizedPhones = Array.isArray(phones) ? phones : [];
   const normalizedEmails = Array.isArray(emails) ? emails : [];
 
+  // Entity-aware configs: show appropriate type labels per contact type
+  const phoneConfig = getEntityAwareCommunicationConfig('phone', contactType);
+  const emailConfig = getEntityAwareCommunicationConfig('email', contactType);
+  const websiteConfig = getEntityAwareCommunicationConfig('website', contactType);
+  const socialConfig = getEntityAwareCommunicationConfig('social', contactType);
+
   return (
     <div className="w-full space-y-8">
       {/* 📱 PHONES - UniversalCommunicationManager */}
       <UniversalCommunicationManager
-        config={COMMUNICATION_CONFIGS.phone}
+        config={phoneConfig}
         items={phonesToCommunicationItems(normalizedPhones)}
         disabled={disabled}
         onChange={(items) => {
@@ -151,7 +160,7 @@ export function DynamicContactArrays({
 
       {/* 📧 EMAILS - UniversalCommunicationManager */}
       <UniversalCommunicationManager
-        config={COMMUNICATION_CONFIGS.email}
+        config={emailConfig}
         items={emailsToCommunicationItems(normalizedEmails)}
         disabled={disabled}
         onChange={(items) => {
@@ -162,7 +171,7 @@ export function DynamicContactArrays({
 
       {/* 🌐 WEBSITES - UniversalCommunicationManager */}
       <UniversalCommunicationManager
-        config={COMMUNICATION_CONFIGS.website}
+        config={websiteConfig}
         items={websitesToCommunicationItems(websites)}
         disabled={disabled}
         onChange={(items) => {
@@ -173,7 +182,7 @@ export function DynamicContactArrays({
 
       {/* 📱 SOCIAL MEDIA - UniversalCommunicationManager */}
       <UniversalCommunicationManager
-        config={COMMUNICATION_CONFIGS.social}
+        config={socialConfig}
         items={socialToCommunicationItems(socialMedia)}
         disabled={disabled}
         onChange={(items) => {

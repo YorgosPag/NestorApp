@@ -37,8 +37,10 @@ export {
   COMMUNICATION_CONFIGS,
   COMMUNICATION_STYLES,
   getCommunicationConfig,
+  getEntityAwareCommunicationConfig,
   getAllCommunicationTypes
 } from './config';
+export type { ContactEntityType } from './config';
 
 // Renderers
 export {

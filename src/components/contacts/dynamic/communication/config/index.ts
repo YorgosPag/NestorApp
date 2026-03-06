@@ -15,10 +15,12 @@ export * from './CommunicationStyles';
 export {
   COMMUNICATION_CONFIGS,
   getCommunicationConfig,
+  getEntityAwareCommunicationConfig,
   getAllCommunicationTypes,
   getTypeOptions,
   getPlatformOptions
 } from './CommunicationConfigs';
+export type { ContactEntityType } from './CommunicationConfigs';
 
 export {
   COMMUNICATION_STYLES,
