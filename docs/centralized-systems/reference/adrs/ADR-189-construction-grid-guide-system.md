@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B14 Multi-select ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 18 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (31): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅. 14/14 commands + 31 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -363,12 +363,12 @@
 | B1 | **Axis Labels με Bubbles** ✅ | Κυκλάκια στις άκρες οδηγών (Α, Β, Γ / 1, 2, 3) — πρότυπο Revit/AutoCAD. X→κορυφή, Y→δεξιά πλευρά | ⭐ Υψηλή |
 | B2 | **Αυτόματη δημιουργία πλέγματος** ✅ | Εντολή "Κάνναβος" (G→B): ισαπέχουσες ή ανισαπέχουσες αποστάσεις. Toolbar dropdown + shortcut | ⭐ Υψηλή |
 | B3 | **Διαστάσεις μεταξύ οδηγών** ✅ | Annotations απόστασης (π.χ. "5.00μ") — X→κορυφή, Y→δεξιά πλευρά (μακριά από χάρακα) | Μεσαία |
-| B4 | **Κλείδωμα οδηγών (Lock)** | Lock/unlock ανά οδηγό για αποφυγή κατά λάθος διαγραφής | Μεσαία |
+| B4 | **Κλείδωμα οδηγών (Lock)** ✅ | Lock/unlock ανά οδηγό μέσω context menu. `setGuideLocked()` — locked guides skip delete/move operations | ✅ Υλοποιήθηκε |
 | B5 | **Drag μετακίνηση** | Drag & drop για μετακίνηση τοποθετημένου οδηγού με real-time preview | ⭐ Υψηλή |
 | B6 | **Χρώματα / Στυλ ανά ομάδα** ✅ | Per-guide color via context menu (8-χρωμη παλέτα + reset). resolveStyle() respects guide.style overrides | ⭐ Υψηλή |
-| B8 | **Οδηγός από υφιστάμενη οντότητα** | Κλικ σε DXF entity (τοίχος, γραμμή) → αυτόματος οδηγός πάνω του | Μεσαία |
-| B9 | **Ακτινικοί οδηγοί** | Ακτίνες από κεντρικό σημείο ανά γωνία (30°/45°/60°) — κυκλικές κατασκευές | Μεσαία |
-| B12 | **Snap μεσαίου** | Αυτόματο snap στο μέσον μεταξύ δύο παράλληλων οδηγών | Μεσαία |
+| B8 | **Οδηγός από υφιστάμενη οντότητα** ✅ | Κλικ σε DXF entity → `GuideFromEntityCommand`: LINE→XZ, CIRCLE→X+Y, ARC→radial XZ. G→8 | ✅ Υλοποιήθηκε |
+| B9 | **Polar Array Start Angle** ✅ | `PolarArrayGuidesCommand` + optional `startAngleDeg`. Input "count,startAngle". G→2 | ✅ Υλοποιήθηκε |
+| B12 | **Snap μεσαίου** ✅ | Αυτόματο snap στο μέσον μεταξύ δύο γειτονικών same-axis guides. `addMidpointCandidates()` στο GuideSnapEngine | ✅ Υλοποιήθηκε |
 
 ### 4.2 Οπτική Διαφοροποίηση Οδηγών (ΚΡΙΣΙΜΟ)
 
@@ -390,13 +390,13 @@
 
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
-| B7 | **Ομαδοποίηση (Groups)** | Ομαδοποίηση οδηγών σε named groups (π.χ. "Δομικός Κάνναβος", "MEP") | Μεσαία |
-| B11 | **Info Panel** | Side panel με ιδιότητες επιλεγμένου οδηγού (θέση, γωνία, μήκος) | Χαμηλή |
-| B13 | **Keyboard Shortcuts** | G+X=Οδηγός X, G+Z=Οδηγός Z, G+P=Παράλληλοι κ.λπ. | ⭐ Υψηλή |
-| B14 | **Multi-select οδηγών** | Batch operations: διαγραφή, lock, αλλαγή χρώματος πολλών | Μεσαία |
-| B15 | **Toggle ορατότητας** | Κουμπί εμφάνισης/απόκρυψης ΟΛΩΝ των οδηγών (χωρίς διαγραφή) | ⭐ Υψηλή |
+| B7 | **Ομαδοποίηση (Groups)** ✅ | Named groups με batch visibility/lock/delete. `GuideGroup` interface, group CRUD στο GuideStore | ✅ Υλοποιήθηκε |
+| B11 | **Info Panel** ✅ | GuidePanel (G→L): floating panel με guide list ανά type (X/Y/XZ), ιδιότητες, construction points | ✅ Υλοποιήθηκε |
+| B13 | **Keyboard Shortcuts** ✅ | G-leader chord σύστημα (20+ shortcuts). G→X, G→Y, G→K, G→P, G→A, G→S κ.λπ. | ✅ Υλοποιήθηκε |
+| B14 | **Multi-select οδηγών** ✅ | G→6: click/shift-click toggle. `BatchDeleteGuidesCommand`, batch lock/color. GuideBatchContextMenu | ✅ Υλοποιήθηκε |
+| B15 | **Toggle ορατότητας** ✅ | `toggleVisibility()` — εμφάνιση/απόκρυψη ΟΛΩΝ χωρίς διαγραφή. `store.setVisible()` | ✅ Υλοποιήθηκε |
 | B16 | ✅ **Οδηγός σε γωνία** | 1-click origin → PromptDialog γωνία → XZ guide (±10000 extent). Reuses `addDiagonalGuide`. G→4 | ✅ Υλοποιήθηκε |
-| B17 | **Copy/Offset pattern** | Αντιγραφή ομάδας οδηγών με μετατόπιση | Μεσαία |
+| B17 | **Copy/Offset pattern** ✅ | `CopyGuidePatternCommand`: αντιγραφή selected guides με offset × repetitions. G→7 | ✅ Υλοποιήθηκε |
 | B18 | **Coordinate labels** | Labels δίπλα στα X markers (x=5.00, z=3.00) — toggle | Χαμηλή |
 
 ### 4.4 Αλληλεπίδραση με Υφιστάμενες Οντότητες (Γιώργος ✅)
@@ -439,9 +439,9 @@
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
 | B19 | ✅ **Symmetric/Mirror guides** | Click σε X/Y οδηγό → `MirrorGuidesCommand` αντικατοπτρίζει ΟΛΟΥΣ τους υπόλοιπους. G→5 | ✅ Υλοποιήθηκε |
-| B20 | **Guide Undo/Redo** | Ctrl+Z αναιρεί τελευταίο οδηγό, Ctrl+Y επαναφέρει | ⭐ Υψηλή |
+| B20 | **Guide Undo/Redo** ✅ | ALL commands via ICommand + `CommandHistory`. Ctrl+Z/Y μέσω `useCommandHistoryKeyboard()` | ✅ Υλοποιήθηκε |
 | B21 | **Snap priority** | Ρύθμιση προτεραιότητας: τομές > endpoints > midpoints | Χαμηλή |
-| B22 | **Right-click context menu** | Δεξί κλικ σε οδηγό → Lock, Delete, Color, Properties, Add Points | ⭐ Υψηλή |
+| B22 | **Right-click context menu** ✅ | `GuideContextMenu`: Lock, Delete, Color (palette), Edit Label, Visibility toggle | ✅ Υλοποιήθηκε |
 
 ### 4.6 Πάρε/Δώσε Παραμέτρους — Property Eyedropper (ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ)
 
@@ -467,8 +467,8 @@
 
 | # | Βελτίωση | Περιγραφή | Προτεραιότητα |
 |---|----------|-----------|---------------|
-| B23 | **Structural presets** | Προκαθορισμένα πλέγματα μηχανικού (ανά 4μ, 5μ, 6μ, 8μ — τυπικά ανοίγματα) | Μεσαία |
-| B24 | **Offset from entity edge** | Οδηγός σε ακριβή απόσταση από ακμή οντότητας (π.χ. 10cm από τοίχο) | Μεσαία |
+| B23 | **Structural presets** ✅ | `CreateGridFromPresetCommand`: 4 presets (bay-4m/5m/6m/8m) + custom. Αξονική ονομασία (A,B,C / 1,2,3). G→1 | ✅ Υλοποιήθηκε |
+| B24 | **Offset from entity edge** ✅ | `GuideOffsetFromEntityCommand`: LINE→2 XZ shifted, CIRCLE→4 axis guides (center±offset). G→9 | ✅ Υλοποιήθηκε |
 | B25 | **Intersection table** | Πίνακας συντεταγμένων ΟΛΩΝ των σημείων τομής — exportable | Χαμηλή |
 | B26 | **Export coordinates** | Εξαγωγή σε CSV/Excel για τοπογράφους/εργοτάξιο | Χαμηλή |
 | B27 | **Import coordinates** | Εισαγωγή από τοπογράφο → αυτόματη δημιουργία οδηγών | Χαμηλή |
@@ -503,10 +503,10 @@
 | B32 | ✅ **Κλιμάκωση κάνναβου (Scale)** | Αλλαγή κλίμακας ολόκληρου grid — μεγέθυνση/σμίκρυνση | Μεσαία |
 | B33 | **Smart equalize** ✅ | 3+ same-axis guides → `EqualizeGuidesCommand` → ισαπόσταση (κρατάει first/last, redistributes intermediates) | ✅ Υλοποιήθηκε |
 | B34 | **Guide constraints** | Παραμετρική σχέση: "πάντα 5μ μεταξύ τους" | Χαμηλή |
-| B35 | **Construction line (XLINE)** | Προσωρινή γραμμή — αυτο-διαγράφεται μετά σχεδίαση entity | Μεσαία |
+| B35 | **Construction line (XLINE)** ✅ | `temporary: true` flag σε Guide. `TEMPORARY_GUIDE_STYLE`. Auto-remove on `drawing:complete` event | ✅ Υλοποιήθηκε |
 | B36 | **Measure → Guide** ✅ | Μετά μέτρηση: notification με "Create Guides" button → αυτόματη δημιουργία X/Y οδηγών στα σημεία μέτρησης | ⭐ Υψηλή |
-| B37 | **Guide from selection** | Πολλά entities → αυτόματοι οδηγοί στις ακμές/κέντρα | Μεσαία |
-| B38 | **Custom labels** | Ελεύθερο κείμενο σε οδηγό: "Φέρων τοίχος" | Μεσαία |
+| B37 | **Guide from selection** ✅ | `BatchGuideFromEntitiesCommand`: selected entities → guides per entity (same logic as B8). G→0 | ✅ Υλοποιήθηκε |
+| B38 | **Custom labels** ✅ | `guide.label` field + context menu edit. Bubbles render custom text. `setGuideLabel()` στο GuideStore | ✅ Υλοποιήθηκε |
 
 ### 4.10 Context-Aware Guides — Έξυπνοι Οδηγοί Βάσει Γεωμετρίας (Γιώργος ✅)
 
@@ -2844,3 +2844,212 @@ Tool `guide-select` (G→6): click guide → toggle selection. Shift+click → a
 | `constants/property-statuses-enterprise.ts` | `GUIDE_COPY_PATTERN` label |
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with CopyCheck icon |
 | i18n (el/en dxf-viewer.json) | Tool labels + prompt dialog keys (4 keys) |
+
+---
+
+## 30. B7: Guide Groups — Implementation Details (2026-03-06)
+
+### 30.1 Architecture
+
+Named groups: `GuideGroup` interface στο `guide-types.ts`. Groups με batch visibility, lock, delete.
+
+- **GuideGroup**: `{ id, name, guideIds[], visible, locked, createdAt }`
+- **GuideStore**: `addGroup()`, `removeGroup()`, `updateGroup()`, `getGroups()`, `addGuidesToGroup()`, `removeGuidesFromGroup()`
+- **GuidePanel**: Group listing με expand/collapse, batch operations per group
+
+### 30.2 Files Modified (Session 2026-03-06 — B7)
+
+| File | Changes |
+|------|---------|
+| `systems/guides/guide-types.ts` | `GuideGroup` interface |
+| `systems/guides/guide-store.ts` | Group CRUD methods |
+| `systems/guides/guide-renderer.ts` | Group visibility checks |
+| `systems/guides/index.ts` | Barrel exports for GuideGroup |
+| `ui/panels/guide-panel/GuidePanel.tsx` | Group section in panel |
+| i18n (el/en dxf-viewer.json) | Group labels |
+
+---
+
+## 31. B12: Snap Midpoint Between Parallel Guides — Implementation Details (2026-03-06)
+
+### 31.1 Architecture
+
+Αυτόματο snap στο μέσον μεταξύ δύο γειτονικών same-axis guides. Υλοποιείται μέσα στο `GuideSnapEngine`.
+
+- **Method**: `addMidpointCandidates()` (private method στο GuideSnapEngine)
+- **Algorithm**:
+  1. Collect all visible X guide offsets → sort ascending
+  2. Find bracketing pair: `left.offset ≤ cursor.x ≤ right.offset`
+  3. Compute `midpoint = (left + right) / 2`
+  4. If `|cursor.x - midpoint| < radius` → emit snap candidate
+  5. Same logic for Y guides with `cursor.y`
+- **Snap type**: `guide-midpoint`
+- **XZ parallel midpoint**: Deferred (πολύπλοκο, χαμηλό ROI)
+
+### 31.2 Files Modified (Session 2026-03-06 — B12)
+
+| File | Changes |
+|------|---------|
+| `snapping/engines/GuideSnapEngine.ts` | `addMidpointCandidates()` method — called after per-guide loop in `findSnapCandidates()` |
+
+---
+
+## 32. B35: Construction Line (Temporary Guide) — Implementation Details (2026-03-06)
+
+### 32.1 Architecture
+
+Guides με `temporary: true` αυτο-διαγράφονται μετά ολοκλήρωση σχεδίασης entity.
+
+- **Guide interface**: `readonly temporary?: boolean`
+- **TEMPORARY_GUIDE_STYLE**: `{ color: '#FFFFFF', lineWidth: 0.3, dashPattern: [2, 4], opacity: 0.2 }`
+- **GuideStore**: `removeTemporaryGuides(): Guide[]` — filters out all temporary guides, returns snapshots
+- **GuideRenderer**: `resolveStyle()` checks `guide.temporary` first → returns `TEMPORARY_GUIDE_STYLE`
+- **CanvasSection**: `useEffect` → `EventBus.on('drawing:complete')` → `store.removeTemporaryGuides()`
+- **useGuideState**: `temporaryMode` state + `toggleTemporaryMode()` — sets flag on subsequent guide creations
+
+### 32.2 Files Modified (Session 2026-03-06 — B35)
+
+| File | Changes |
+|------|---------|
+| `systems/guides/guide-types.ts` | `temporary?: boolean` σε Guide interface, `TEMPORARY_GUIDE_STYLE` constant |
+| `systems/guides/guide-store.ts` | `addGuideRaw()` accepts temporary param, `removeTemporaryGuides()` method |
+| `systems/guides/guide-renderer.ts` | `resolveStyle()` checks `guide.temporary` |
+| `systems/guides/index.ts` | Barrel exports for `TEMPORARY_GUIDE_STYLE` |
+| `hooks/state/useGuideState.ts` | `temporaryMode` state, `toggleTemporaryMode()`, `removeTemporaryGuides()` |
+| `components/dxf-layout/CanvasSection.tsx` | `drawing:complete` EventBus listener |
+| i18n (el/en dxf-viewer.json) | `guides.temporaryMode`, `guides.temporaryModeActive` |
+
+---
+
+## 33. B24: Offset from Entity Edge — Implementation Details (2026-03-06)
+
+### 33.1 Architecture
+
+Σαν B8 (guide-from-entity) αλλά με perpendicular offset. Entity picking → PromptDialog offset → `GuideOffsetFromEntityCommand`.
+
+- **Keyboard**: G→9
+- **Workflow**: Pick entity → PromptDialog "Offset distance (m)" → create offset guides
+- **LINE/POLYLINE offset**: Normal vector `(-dy, dx)/len` → shift start/end by `±offset * normal` → 2 XZ guides (both sides)
+- **CIRCLE offset**: X guides at `center.x ± offset`, Y guides at `center.y ± offset` → 4 guides total
+
+### 33.2 Command Pattern
+
+| Component | Implementation |
+|-----------|---------------|
+| `GuideOffsetFromEntityCommand` | ICommand — extends `EntityGuideParams` + `offsetDistance` |
+| `execute()` | Creates offset guides based on entity type |
+| `undo()` | Removes all created guides |
+| `getDescription()` | `"Create offset guide from entity"` |
+| EventBus | `grid:guide-offset-from-entity` event |
+
+### 33.3 Files Modified (Session 2026-03-06 — B24)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-offset-entity'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `GuideOffsetFromEntityCommand` class |
+| `hooks/canvas/useCanvasClickHandler.ts` | `guide-offset-entity` case + `onGuideOffsetFromEntity` callback |
+| `hooks/state/useGuideState.ts` | `createGuideOffsetFromEntity()` method |
+| `components/dxf-layout/CanvasSection.tsx` | `handleGuideOffsetFromEntity` handler with PromptDialog |
+| `systems/events/EventBus.ts` | `grid:guide-offset-from-entity` event type |
+| `config/keyboard-shortcuts.ts` | G→9 chord |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_OFFSET_ENTITY` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Ruler icon |
+| i18n (el/en dxf-viewer.json) | Tool labels + prompt dialog keys |
+
+---
+
+## 34. B23: Structural Presets — Implementation Details (2026-03-06)
+
+### 34.1 Architecture
+
+Προκαθορισμένα πλέγματα μηχανικού. Νέο αρχείο `guide-presets.ts` + `CreateGridFromPresetCommand`.
+
+- **Presets**: 4 standard bay grids (4m, 5m, 6m, 8m) + custom option
+- **Label convention**: X axis → A, B, C, ... (letter labels), Y axis → 1, 2, 3, ... (number labels)
+- **Keyboard**: G→1
+- **Workflow**: Multi-step PromptDialog
+  1. Step 1: Select preset (4m/5m/6m/8m/custom)
+  2. Step 2 (custom only): X spacings comma-separated + Y spacings comma-separated
+
+### 34.2 New File: `guide-presets.ts`
+
+```typescript
+interface GuideGridPreset {
+  id: string;           // 'bay-4m', 'bay-5m', etc.
+  nameKey: string;      // i18n key
+  xSpacings: number[];  // absolute offsets [0, 4, 8, 12, 16]
+  ySpacings: number[];  // absolute offsets [0, 4, 8, 12]
+  xLabels?: string[];   // ['A', 'B', 'C', 'D', 'E']
+  yLabels?: string[];   // ['1', '2', '3', '4']
+}
+
+STRUCTURAL_PRESETS = [
+  { id: 'bay-4m', xSpacings: [0,4,8,12,16], ySpacings: [0,4,8,12] },
+  { id: 'bay-5m', xSpacings: [0,5,10,15,20], ySpacings: [0,5,10,15] },
+  { id: 'bay-6m', xSpacings: [0,6,12,18,24], ySpacings: [0,6,12,18] },
+  { id: 'bay-8m', xSpacings: [0,8,16,24], ySpacings: [0,8,16] },
+]
+```
+
+### 34.3 Command Pattern
+
+| Component | Implementation |
+|-----------|---------------|
+| `CreateGridFromPresetCommand` | ICommand — creates GuideGroup + X/Y guides |
+| Constructor | `(store, xOffsets[], yOffsets[], xLabels?, yLabels?, groupName?)` |
+| `execute()` | Creates group → X guides from xOffsets → Y guides from yOffsets (via `addGuideRaw`) |
+| `undo()` | Removes all created guides + group |
+| EventBus | `grid:preset-applied` event |
+
+### 34.4 Files Modified (Session 2026-03-06 — B23)
+
+| File | Changes |
+|------|---------|
+| `systems/guides/guide-presets.ts` | **NEW** — GuideGridPreset, STRUCTURAL_PRESETS, getPresetById, parseCustomSpacings |
+| `systems/guides/guide-commands.ts` | `CreateGridFromPresetCommand` class |
+| `systems/guides/index.ts` | Barrel exports for presets |
+| `hooks/state/useGuideState.ts` | `createGridFromPreset()` method |
+| `components/dxf-layout/CanvasSection.tsx` | `handlePresetGrid` handler with multi-step PromptDialog |
+| `systems/events/EventBus.ts` | `grid:preset-applied` event type |
+| `config/keyboard-shortcuts.ts` | G→1 chord |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Grid3x3 icon |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_PRESET_GRID` label |
+| i18n (el/en dxf-viewer.json) | Preset names + dialog labels |
+
+---
+
+## 35. B37: Guide from Selection — Implementation Details (2026-03-06)
+
+### 35.1 Architecture
+
+Batch version του B8: πολλαπλά selected entities → guides.
+
+- **Keyboard**: G→0
+- **Workflow**: Select entities (standard select tool) → G→0 → system reads `universalSelection.selectedEntityIds` → maps each entity to `EntityGuideParams` → `BatchGuideFromEntitiesCommand`
+- **Empty selection**: Warning notification "Select entities first"
+
+### 35.2 Command Pattern
+
+| Component | Implementation |
+|-----------|---------------|
+| `BatchGuideFromEntitiesCommand` | ICommand — wraps N × GuideFromEntity logic |
+| Constructor | `(store, entityParamsList: EntityGuideParams[])` |
+| `execute()` | Loop: for each entity → same guide creation logic as `GuideFromEntityCommand` |
+| `undo()` | Removes all created guides |
+| EventBus | `grid:guide-from-entity` (entityType: 'BATCH') |
+
+### 35.3 Files Modified (Session 2026-03-06 — B37)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-from-selection'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `BatchGuideFromEntitiesCommand` class |
+| `hooks/state/useGuideState.ts` | `createGuidesFromSelection()` method |
+| `components/dxf-layout/CanvasSection.tsx` | `handleGuideFromSelection` handler + auto-trigger useEffect |
+| `config/keyboard-shortcuts.ts` | G→0 chord |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_FROM_SELECTION` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with Layers icon |
+| i18n (el/en dxf-viewer.json) | Tool labels |
