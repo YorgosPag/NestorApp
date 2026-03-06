@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B16 Guide at Angle ✅, B19 Mirror ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 14 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements: B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B5 Drag ✅, B6 Colors ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B14 Multi-select ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B36 Measure→Guide ✅. 14/14 commands + 18 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -2674,3 +2674,173 @@ click at worldPoint:
 | `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with FlipHorizontal2 icon |
 | i18n (el/en dxf-viewer.json) | Tool labels |
 | i18n (el/en tool-hints.json) | Tool hints: name, description, 1 step, shortcuts (G→5) |
+
+---
+
+## 26. B9: Polar Array Start Angle — Implementation Details (2026-03-06)
+
+### 26.1 Architecture
+
+Επέκταση της υπάρχουσας `PolarArrayGuidesCommand` (B31) με optional `startAngleDeg` παράμετρο. Αντί να ξεκινούν πάντα από 0°, οι ακτινικοί οδηγοί ξεκινούν από αυθαίρετη γωνία.
+
+- **Input format**: `"count,startAngle"` (π.χ. `"8,45"` → 8 guides ξεκινώντας από 45°)
+- **Backward compatible**: `"8"` → 8 guides from 0° (default)
+- **Formula**: `angleDeg = startAngleDeg + i * (360 / count)`
+
+### 26.2 Files Modified (Session 2026-03-06 — B9)
+
+| File | Changes |
+|------|---------|
+| `systems/guides/guide-commands.ts` | `PolarArrayGuidesCommand` — added `startAngleDeg` param to constructor, updated angle calc |
+| `hooks/state/useGuideState.ts` | `createPolarArray()` — added optional `startAngleDeg` parameter |
+| `components/dxf-layout/CanvasSection.tsx` | Polar array dialog — parse `"count,startAngle"` format, inputType→text |
+| i18n (el/en dxf-viewer.json) | Updated placeholder text: `"8,45"` |
+
+---
+
+## 27. B8: Guide from Entity — Implementation Details (2026-03-06)
+
+### 27.1 Architecture
+
+Κλικ σε DXF entity → αυτόματη δημιουργία οδηγού πάνω στο entity. Entity picking με hit tolerance (`TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale`). Iterate entities backwards (top-first).
+
+| Entity Type | Created Guide(s) |
+|-------------|------------------|
+| **LINE** / **POLYLINE segment** | 1 × XZ guide along direction (±10000 extension) |
+| **CIRCLE** | 2 guides: X through center + Y through center |
+| **ARC** | 1 × XZ radial guide from center through click point |
+
+- **Command**: `GuideFromEntityCommand` (ICommand) — stores child guide IDs for undo
+- **Keyboard**: G→8
+
+### 27.2 Command Pattern
+
+| Component | Implementation |
+|-----------|---------------|
+| `GuideFromEntityCommand` | ICommand — delegates to `addGuideRaw`/`addDiagonalGuideRaw` |
+| `EntityGuideParams` | Interface: `{ entityType, start, end, center?, radius? }` |
+| `execute()` | Switch on entityType → creates 1-2 guides |
+| `undo()` | Removes all created guides by stored IDs |
+| `redo()` | Re-executes with `restoreGuide` |
+| EventBus | `grid:guide-from-entity` event |
+
+### 27.3 Files Modified (Session 2026-03-06 — B8)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-from-entity'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `EntityGuideParams` interface + `GuideFromEntityCommand` class (~100 lines) |
+| `hooks/state/useGuideState.ts` | `createGuideFromEntity()` method |
+| `hooks/canvas/useCanvasClickHandler.ts` | Entity picking case — LINE/CIRCLE/ARC/POLYLINE detection |
+| `components/dxf-layout/CanvasSection.tsx` | `handleGuideFromEntity` callback |
+| `systems/events/EventBus.ts` | `grid:guide-from-entity` event type |
+| `config/keyboard-shortcuts.ts` | G→8 chord |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_FROM_ENTITY` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with FileDown icon |
+| i18n (el/en dxf-viewer.json) | Tool labels |
+
+---
+
+## 28. B14: Multi-select Guides — Implementation Details (2026-03-06)
+
+### 28.1 Architecture
+
+Tool `guide-select` (G→6): click guide → toggle selection. Shift+click → add to selection. Click empty → deselect all. Selected guides render with gold highlight (2px solid, opacity 0.8). Right-click with selection → batch context menu.
+
+- **Selection state**: `useState<Set<string>>` στο CanvasSection (O(1) toggle/has)
+- **Auto-clear**: Selection clears on tool change (useEffect)
+- **shiftKey propagation**: Mouse event → useCentralizedMouseHandlers → CanvasLayerStack → LayerCanvas → DxfCanvas → useCanvasClickHandler
+
+### 28.2 Batch Operations (GuideBatchContextMenu)
+
+| Action | Implementation |
+|--------|---------------|
+| Delete Selected | `BatchDeleteGuidesCommand` — skips locked guides, stores snapshots for undo |
+| Lock Selected | `GuideStore.setGuidesLocked(ids, true)` |
+| Unlock Selected | `GuideStore.setGuidesLocked(ids, false)` |
+| Change Color | `GuideStore.setGuidesColor(ids, color)` — with GUIDE_COLOR_PALETTE swatches |
+| Group Selected | Delegates to existing group creation flow |
+| Cancel | Closes menu |
+
+### 28.3 Visual Rendering
+
+| Property | Value |
+|----------|-------|
+| `SELECTED_GUIDE_STYLE.color` | `#FFD700` (gold) |
+| `SELECTED_GUIDE_STYLE.lineWidth` | 2 |
+| `SELECTED_GUIDE_STYLE.dashPattern` | `[]` (solid) |
+| `SELECTED_GUIDE_STYLE.opacity` | 0.8 |
+| Glow effect | `shadowBlur: 6`, `shadowColor: #FFD700` |
+
+### 28.4 Files Modified (Session 2026-03-06 — B14)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-select'` added to ToolType union |
+| `ui/components/GuideBatchContextMenu.tsx` | **NEW** — imperative handle context menu (~193 lines) |
+| `systems/guides/guide-types.ts` | `SELECTED_GUIDE_STYLE` constant |
+| `systems/guides/guide-store.ts` | `removeGuidesById()`, `setGuidesLocked()`, `setGuidesColor()` batch methods |
+| `systems/guides/guide-commands.ts` | `BatchDeleteGuidesCommand` class (~60 lines) |
+| `systems/guides/guide-renderer.ts` | `selectedGuideIds` param — gold highlight pass for selected guides |
+| `systems/guides/index.ts` | Barrel exports for new commands + `SELECTED_GUIDE_STYLE` |
+| `hooks/canvas/useCanvasClickHandler.ts` | `guide-select` case + `onGuideSelectToggle`/`onGuideDeselectAll` callbacks |
+| `hooks/canvas/useCanvasContextMenu.ts` | Priority 0.3 batch menu trigger |
+| `hooks/state/useGuideState.ts` | `batchDeleteGuides()` method |
+| `systems/cursor/useCentralizedMouseHandlers.ts` | shiftKey propagation (4 call sites) |
+| `canvas-v2/dxf-canvas/DxfCanvas.tsx` | `selectedGuideIds` prop → `renderGuides()` |
+| `canvas-v2/layer-canvas/LayerCanvas.tsx` | Updated `onCanvasClick` type signature |
+| `components/dxf-layout/CanvasLayerStack.tsx` | `selectedGuideIds` prop pass-through |
+| `components/dxf-layout/CanvasSection.tsx` | Selection state, handlers, batch menu integration |
+| `systems/events/EventBus.ts` | `grid:guides-batch-deleted` event type |
+| `config/keyboard-shortcuts.ts` | G→6 chord |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_SELECT` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with BoxSelect icon |
+| i18n (el/en dxf-viewer.json) | Tool labels + `guideBatchMenu.*` keys (7 keys) |
+
+---
+
+## 29. B17: Copy/Offset Pattern — Implementation Details (2026-03-06)
+
+### 29.1 Architecture
+
+Αντιγράφει επιλεγμένους οδηγούς (από B14 selection) με μετατόπιση, πολλαπλές φορές.
+
+- **Input format**: `"offset,count"` (π.χ. `"100,3"` → 3 repetitions, 100px offset each)
+- **Requires selection**: If `selectedGuideIds.size === 0` → warning notification "Select guides first"
+- **Auto-trigger**: When `guide-copy-pattern` tool activated with existing selection → opens PromptDialog
+
+### 29.2 Offset Logic
+
+| Guide Type | Offset Calculation |
+|------------|-------------------|
+| **X guide** | `newOffset = sourceOffset + i * offsetDistance` (horizontal shift) |
+| **Y guide** | `newOffset = sourceOffset + i * offsetDistance` (vertical shift) |
+| **XZ guide** | Perpendicular shift: `normal = (-dy/len, dx/len)`, new start/end += `normal * i * offset` |
+
+### 29.3 Command Pattern
+
+| Component | Implementation |
+|-----------|---------------|
+| `CopyGuidePatternCommand` | ICommand — creates offset copies, stores for undo |
+| Constructor | `(store, sourceGuideIds[], offsetDistance, repetitions)` |
+| `execute()` | For each source × each repetition: creates offset copy |
+| `undo()` | Removes all created guides |
+| `getDescription()` | `"Copy N guides × M repetitions, offset D"` |
+| EventBus | `grid:guide-pattern-copied` event |
+
+### 29.4 Files Modified (Session 2026-03-06 — B17)
+
+| File | Changes |
+|------|---------|
+| `ui/toolbar/types.ts` | `'guide-copy-pattern'` added to ToolType union |
+| `systems/guides/guide-commands.ts` | `CopyGuidePatternCommand` class (~120 lines) |
+| `hooks/state/useGuideState.ts` | `copyGuidePattern()` method |
+| `components/dxf-layout/CanvasSection.tsx` | `handleCopyPatternTrigger` + auto-trigger useEffect |
+| `systems/events/EventBus.ts` | `grid:guide-pattern-copied` event type |
+| `config/keyboard-shortcuts.ts` | G→7 chord |
+| `systems/tools/ToolStateManager.ts` | Tool registry entry |
+| `constants/property-statuses-enterprise.ts` | `GUIDE_COPY_PATTERN` label |
+| `ui/toolbar/toolDefinitions.tsx` | Dropdown entry with CopyCheck icon |
+| i18n (el/en dxf-viewer.json) | Tool labels + prompt dialog keys (4 keys) |

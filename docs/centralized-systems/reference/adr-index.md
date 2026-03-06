@@ -204,7 +204,7 @@
 | **ADR-186** | Entity Join System — AutoCAD JOIN Semantics | ✅ IMPLEMENTED | 2026-02-17 | DXF Viewer / Entity Operations | [📄](./adrs/ADR-186-entity-join-system.md) |
 | **ADR-187** | Floor-Level Floorplans (IFC-Compliant) | ✅ IMPLEMENTED | 2026-02-19 | Building Management | [📄](./adrs/ADR-187-floor-level-floorplans.md) |
 | **ADR-188** | Angle Measurement Variants — Line-Arc, Two-Arcs, MeasureGeom, Constraint | ✅ IMPLEMENTED | 2026-02-19 | DXF Viewer / Measurement | [📄](./adrs/ADR-188-angle-measurement-variants.md) |
-| **ADR-189** | Construction Grid & Guide System — 14/14 Commands + B1/B2/B3/B5/B6/B28-B30/B36 Enhancements | ✅ PHASE_2_ENHANCEMENTS | 2026-02-22 | DXF Viewer / Construction Guides | [📄](./adrs/ADR-189-construction-grid-guide-system.md) |
+| **ADR-189** | Construction Grid & Guide System — 14/14 Commands + 18 Enhancements (B1-B3/B5-B6/B8-B9/B14/B16-B17/B19/B28-B33/B36) | ✅ PHASE_2_ENHANCEMENTS | 2026-03-06 | DXF Viewer / Construction Guides | [📄](./adrs/ADR-189-construction-grid-guide-system.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
