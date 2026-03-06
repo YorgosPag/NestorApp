@@ -39,6 +39,8 @@ import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAd
 // 🏢 ENTERPRISE: Ministry Picker — searchable dropdown for supervisionMinistry (services)
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
+import { AdministrativeAddressPicker } from '@/components/contacts/pickers/AdministrativeAddressPicker';
+import type { AdministrativeAddress } from '@/components/contacts/pickers/AdministrativeAddressPicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
@@ -685,16 +687,53 @@ export function UnifiedContactTabbedSection({
             />
           ),
         } : {}),
+
       },
       sectionFooterRenderers: {
         address: () => (
-          <ContactAddressMapPreview
-            contactId={formData.id}
-            street={formData.street}
-            streetNumber={formData.streetNumber}
-            city={formData.city}
-            postalCode={formData.postalCode}
-          />
+          <>
+            {contactType === 'individual' && (
+              <AdministrativeAddressPicker
+                value={{
+                  settlementName: (formData.city as string) ?? '',
+                  municipalityName: (formData.municipality as string) ?? '',
+                  regionalUnitName: (formData.regionalUnit as string) ?? '',
+                  regionName: (formData.region as string) ?? '',
+                  decentAdminName: (formData.decentAdmin as string) ?? '',
+                  majorGeoName: (formData.majorGeo as string) ?? '',
+                  postalCode: (formData.postalCode as string) ?? '',
+                }}
+                onChange={(addr: AdministrativeAddress) => {
+                  if (setFormData) {
+                    setFormData({
+                      ...formData,
+                      city: addr.settlementName || addr.municipalityName,
+                      postalCode: addr.postalCode,
+                      municipality: addr.municipalityName,
+                      municipalityId: addr.municipalityId,
+                      regionalUnit: addr.regionalUnitName,
+                      region: addr.regionName,
+                      decentAdmin: addr.decentAdminName,
+                      majorGeo: addr.majorGeoName,
+                      settlement: addr.settlementName,
+                      settlementId: addr.settlementId,
+                      community: addr.communityName,
+                      municipalUnit: addr.municipalUnitName,
+                    });
+                  }
+                }}
+                disabled={disabled}
+                visibleLevels={[8, 7, 6, 5, 4, 3]}
+              />
+            )}
+            <ContactAddressMapPreview
+              contactId={formData.id}
+              street={formData.street}
+              streetNumber={formData.streetNumber}
+              city={formData.city}
+              postalCode={formData.postalCode}
+            />
+          </>
         ),
         contact: () => (
           <ContactAddressMapPreview
