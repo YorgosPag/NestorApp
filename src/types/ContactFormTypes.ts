@@ -123,6 +123,16 @@ export interface ContactFormData {
   gemiDepartment: string; // Τοπική υπηρεσία ΓΕΜΗ
   prefecture: string; // Νομός
   municipality: string; // Δήμος
+  // Administrative Hierarchy (Διοικητική Διαίρεση)
+  municipalityId: string | null;
+  regionalUnit: string;
+  region: string;
+  decentAdmin: string;
+  majorGeo: string;
+  settlement: string;
+  settlementId: string | null;
+  community: string;
+  municipalUnit: string;
   activityCodeKAD: string; // ΚΑΔ κωδικός (legacy singular)
   activityDescription: string; // Περιγραφή δραστηριότητας (legacy singular)
   activityType: 'main' | 'secondary'; // Κύρια/Δευτερεύουσα (legacy singular)
@@ -357,6 +367,15 @@ export const initialFormData: ContactFormData = {
   gemiDepartment: '',
   prefecture: '',
   municipality: '',
+  municipalityId: null,
+  regionalUnit: '',
+  region: '',
+  decentAdmin: '',
+  majorGeo: '',
+  settlement: '',
+  settlementId: null,
+  community: '',
+  municipalUnit: '',
   activityCodeKAD: '',
   activityDescription: '',
   activityType: 'main',
