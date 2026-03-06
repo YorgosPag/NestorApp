@@ -278,16 +278,7 @@ export function ContactsList({
           onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
           onExport={handleExportContact}
           onImport={handleImportContacts}
-          onRefresh={() => {
-            // Debug logging removed
-          }}
-          onFavoritesManagement={() => {
-            // Debug logging removed
-          }}
           onShare={handleShareContact}
-          onSettings={() => {
-            // Debug logging removed
-          }}
         />
         </div>
 
@@ -316,16 +307,7 @@ export function ContactsList({
           onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
           onExport={handleExportContact}
           onImport={handleImportContacts}
-          onRefresh={() => {
-            // Debug logging removed
-          }}
-          onFavoritesManagement={() => {
-            // Debug logging removed
-          }}
           onShare={handleShareContact}
-          onSettings={() => {
-            // Debug logging removed
-          }}
         />
           )}
         </div>

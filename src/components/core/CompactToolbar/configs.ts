@@ -285,8 +285,23 @@ export const buildingsToolbarConfig: CompactToolbarConfig = createToolbarConfig(
 // 🚀 ENTERPRISE: Projects Configuration - Using Smart Factory (90+ lines → 1 line!)
 export const projectsToolbarConfig: CompactToolbarConfig = createToolbarConfig('projects');
 
-// 🚀 ENTERPRISE: Contacts Configuration - Using Smart Factory (90+ lines → 1 line!)
-export const contactsToolbarConfig: CompactToolbarConfig = createToolbarConfig('contacts');
+// 🚀 ENTERPRISE: Contacts Configuration - Factory + overrides for dead buttons removal
+const _contactsBase = createToolbarConfig('contacts');
+export const contactsToolbarConfig: CompactToolbarConfig = {
+  ..._contactsBase,
+  availableActions: {
+    ..._contactsBase.availableActions,
+    // Removed: no functionality behind these in contacts
+    copy: false,
+    refresh: false,
+    favorites: false,
+    favoritesManagement: false,
+    reports: false,
+    settings: false,
+    preview: false,
+    help: false,
+  },
+};
 
 // 🚀 ENTERPRISE: Units Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const unitsToolbarConfig: CompactToolbarConfig = createToolbarConfig('units');
