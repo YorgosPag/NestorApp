@@ -38,7 +38,7 @@ function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
   }
 
   // Secondary fallback: root-level activities (legacy data from EnterpriseContactSaver)
-  const rootActivities = (contact as Record<string, unknown>).activities;
+  const rootActivities = (contact as unknown as Record<string, unknown>).activities;
   if (Array.isArray(rootActivities) && rootActivities.length > 0) {
     return rootActivities as KadActivity[];
   }
@@ -69,7 +69,7 @@ function resolveCompanyAddresses(contact: ExtendedCompanyContact): CompanyAddres
   }
 
   // Secondary fallback: root-level companyAddresses (legacy data from EnterpriseContactSaver)
-  const rootAddresses = (contact as Record<string, unknown>).companyAddresses;
+  const rootAddresses = (contact as unknown as Record<string, unknown>).companyAddresses;
   if (Array.isArray(rootAddresses) && rootAddresses.length > 0) {
     return rootAddresses as CompanyAddress[];
   }

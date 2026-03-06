@@ -67,8 +67,8 @@ export function CommunicationEmptyState({
   onAddItem
 }: CommunicationEmptyStateProps): JSX.Element {
   const iconSizes = useIconSizes();
-  // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('contacts');
+  // 🏢 ENTERPRISE: i18n support with namespace readiness check
+  const { t, isNamespaceReady } = useTranslation('contacts');
   const IconComponent = config.icon;
 
   return (
@@ -87,9 +87,11 @@ export function CommunicationEmptyState({
         <p className="font-medium text-gray-700">
           {t(config.emptyStateText)}
         </p>
-        <p className="text-sm mt-1 text-gray-500">
-          {t('communication.addContactInfo')}
-        </p>
+        {isNamespaceReady && (
+          <p className="text-sm mt-1 text-gray-500">
+            {t('communication.addContactInfo')}
+          </p>
+        )}
       </section>
 
       {/* 🎯 SEMANTIC BUTTON: Add new item action */}
