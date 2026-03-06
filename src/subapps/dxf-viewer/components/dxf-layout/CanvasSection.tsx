@@ -761,7 +761,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   ) => {
     showPromptDialog({
       title: t('promptDialog.offsetDistance'),
-      message: t('promptDialog.enterOffsetDistance'),
+      label: t('promptDialog.enterOffsetDistance'),
       placeholder: t('promptDialog.offsetDistancePlaceholder'),
     }).then(value => {
       if (value === null) return;
@@ -775,7 +775,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const handlePresetGrid = useCallback(() => {
     showPromptDialog({
       title: t('promptDialog.selectPreset'),
-      message: t('promptDialog.enterPresetChoice'),
+      label: t('promptDialog.enterPresetChoice'),
       placeholder: t('promptDialog.presetPlaceholder'),
     }).then(value => {
       if (value === null) return;
@@ -798,7 +798,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       // Custom: ask for X spacings, then Y spacings
       showPromptDialog({
         title: t('promptDialog.enterXSpacings'),
-        message: t('promptDialog.enterXSpacings'),
+        label: t('promptDialog.enterXSpacings'),
         placeholder: t('promptDialog.xSpacingsPlaceholder'),
       }).then(xInput => {
         if (xInput === null) return;
@@ -807,7 +807,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
         showPromptDialog({
           title: t('promptDialog.enterYSpacings'),
-          message: t('promptDialog.enterYSpacings'),
+          label: t('promptDialog.enterYSpacings'),
           placeholder: t('promptDialog.ySpacingsPlaceholder'),
         }).then(yInput => {
           if (yInput === null) return;
@@ -822,8 +822,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // ADR-189 B37: Guide from selection — batch create guides from selected entities
   const handleGuideFromSelection = useCallback(() => {
-    const selIds = universalSelection.selectedEntityIds;
-    if (selIds.size === 0) {
+    const selIds = universalSelection.getIds();
+    if (selIds.length === 0) {
       notifyWarning(t('promptDialog.selectEntitiesFirst'));
       return;
     }
@@ -839,21 +839,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       if (!entity) continue;
 
       if (entity.type === 'line' && 'start' in entity && 'end' in entity) {
-        const ent = entity as { start: Point2D; end: Point2D; [key: string]: unknown };
+        const ent = entity as unknown as { start: Point2D; end: Point2D };
         paramsList.push({
           entityType: 'LINE',
           lineStart: { x: ent.start.x, y: ent.start.y },
           lineEnd: { x: ent.end.x, y: ent.end.y },
         });
       } else if (entity.type === 'circle' && 'center' in entity && 'radius' in entity) {
-        const ent = entity as { center: Point2D; radius: number; [key: string]: unknown };
+        const ent = entity as unknown as { center: Point2D; radius: number };
         paramsList.push({
           entityType: 'CIRCLE',
           center: { x: ent.center.x, y: ent.center.y },
           radius: ent.radius,
         });
       } else if (entity.type === 'arc' && 'center' in entity && 'radius' in entity) {
-        const ent = entity as { center: Point2D; radius: number; [key: string]: unknown };
+        const ent = entity as unknown as { center: Point2D; radius: number };
         paramsList.push({
           entityType: 'ARC',
           center: { x: ent.center.x, y: ent.center.y },
