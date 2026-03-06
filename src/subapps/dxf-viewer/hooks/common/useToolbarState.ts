@@ -21,6 +21,8 @@ export function useToolbarState() {
   const [showCursorSettings, setShowCursorSettings] = useState(false);
   // ADR-189 §4.13: Guide Panel visibility
   const [showGuidePanel, setShowGuidePanel] = useState(false);
+  // ADR-189: Guide Analysis Panel visibility
+  const [showGuideAnalysisPanel, setShowGuideAnalysisPanel] = useState(false);
 
   // Tool change handler
   const handleToolChange = useCallback((
@@ -76,6 +78,7 @@ export function useToolbarState() {
   const toggleGuidePanel = useCallback(() => setShowGuidePanel(p => !p), []);
   // ADR-189: Open only (idempotent — won't close if already open)
   const openGuidePanel = useCallback(() => setShowGuidePanel(true), []);
+  const toggleGuideAnalysisPanel = useCallback(() => setShowGuideAnalysisPanel(p => !p), []);
 
   return {
     // State - activeTool removed, now managed by parent
@@ -84,6 +87,7 @@ export function useToolbarState() {
     showCalibration,
     showCursorSettings,
     showGuidePanel,
+    showGuideAnalysisPanel,
 
     // Actions - setActiveTool removed, now managed by parent
     handleToolChange,
@@ -92,6 +96,7 @@ export function useToolbarState() {
     toggleCalibration,
     toggleCursorSettings,
     toggleGuidePanel,
-    openGuidePanel
+    openGuidePanel,
+    toggleGuideAnalysisPanel
   };
 }

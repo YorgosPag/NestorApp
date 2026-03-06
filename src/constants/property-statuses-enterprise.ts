@@ -1521,7 +1521,9 @@ export const DXF_UTILITY_TOOL_LABELS = {
   // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
   PDF_BACKGROUND: 'tools.pdfBackground',
   // 🤖 ADR-185: AI Drawing Assistant Toggle
-  AI_ASSISTANT: 'tools.aiAssistant'
+  AI_ASSISTANT: 'tools.aiAssistant',
+  // ADR-189: Guide Analysis Panel Toggle
+  GUIDE_ANALYSIS: 'tools.guideAnalysis'
 } as const;
 
 // ============================================================================

@@ -239,6 +239,10 @@ export function useDxfViewerState() {
       case 'toggle-guide-panel':
         toolbarState.toggleGuidePanel();
         break;
+      // ADR-189: Toggle Guide Analysis Panel
+      case 'toggle-guide-analysis-panel':
+        toolbarState.toggleGuideAnalysisPanel();
+        break;
       default:
         console.warn('Unknown action:', action);
     }

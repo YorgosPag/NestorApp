@@ -275,6 +275,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     showCalibration,
     showCursorSettings,
     showGuidePanel,
+    showGuideAnalysisPanel,
     currentZoom,
     handleFileImport,
     currentScene,
@@ -1068,6 +1069,7 @@ Check console for detailed metrics`;
         showCursorSettings={showCursorSettings}
         showCalibration={showCalibration}
         showGuidePanel={showGuidePanel}
+        showGuideAnalysisPanel={showGuideAnalysisPanel}
         handleAction={wrappedHandleAction}
         activeTool={activeTool}
         overlayMode={overlayMode}

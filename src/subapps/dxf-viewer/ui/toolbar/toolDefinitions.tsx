@@ -7,6 +7,7 @@ import {
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
   FileUp, // 🏢 ENTERPRISE: PDF Background icon
   Sparkles, // 🤖 ADR-185: AI Drawing Assistant icon
+  BarChart3, // ADR-189: Guide Analysis Panel icon
   RotateCw, // 🏢 ADR-188: Entity Rotation System icon
   ArrowDownUp, // ADR-189: Guide vertical icon
   ArrowLeftRight, // ADR-189: Guide horizontal icon
@@ -415,6 +416,15 @@ export const createActionButtons = (props: {
     active: props.guidesVisible,
     colorClass: DXF_ACTION_COLORS.grid,
     onClick: () => props.onAction('toggle-guides')
+  },
+  // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
+  {
+    id: 'toggle-guide-analysis',
+    icon: BarChart3,
+    label: DXF_UTILITY_TOOL_LABELS.GUIDE_ANALYSIS,
+    hotkey: '',
+    colorClass: DXF_ACTION_COLORS.grid,
+    onClick: () => props.onAction('toggle-guide-analysis-panel')
   },
   {
     id: 'autocrop',

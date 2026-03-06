@@ -1435,6 +1435,7 @@
     "togglePerf": "Παρακολούθηση Απόδοσης",
     "pdfBackground": "PDF Υπόβαθρο",
     "aiAssistant": "AI Σχεδίαση",
+    "guideAnalysis": "Ανάλυση Οδηγών",
     "guideX": "Κάθετος Οδηγός",
     "guideZ": "Οριζόντιος Οδηγός",
     "guideXZ": "Λοξός Οδηγός",
@@ -1757,5 +1758,77 @@
     "colorSelected": "Αλλαγή Χρώματος",
     "groupSelected": "Ομαδοποίηση Επιλεγμένων",
     "cancel": "Ακύρωση"
+  },
+  "guideAnalysis": {
+    "title": "Ανάλυση Οδηγών",
+    "tabs": {
+      "diagnostics": "Διαγνωστικά",
+      "compliance": "Συμμόρφωση",
+      "sustainability": "Βιωσιμότητα",
+      "export": "Εξαγωγή"
+    },
+    "diagnostics": {
+      "runAnalysis": "Εκτέλεση Ανάλυσης",
+      "totalGuides": "Σύνολο Οδηγών",
+      "byAxis": "Ανά Άξονα",
+      "avgSpacing": "Μέσο Διάστημα",
+      "density": "Πυκνότητα",
+      "complexity": "Πολυπλοκότητα",
+      "anomalies": "Ανωμαλίες",
+      "noAnomalies": "Δεν εντοπίστηκαν ανωμαλίες",
+      "suggestedFixes": "Προτεινόμενες Διορθώσεις",
+      "empty": "Προσθέστε οδηγούς για ανάλυση"
+    },
+    "compliance": {
+      "buildingCode": "Κωδικός Κτιρίου",
+      "seismicZone": "Σεισμική Ζώνη",
+      "check": "Έλεγχος Συμμόρφωσης",
+      "passed": "Όλοι οι έλεγχοι πέρασαν",
+      "failed": "Κάποιοι έλεγχοι απέτυχαν",
+      "code": "Κωδικός",
+      "description": "Περιγραφή",
+      "value": "Τιμή",
+      "limit": "Όριο",
+      "status": "Κατάσταση",
+      "zoneI": "Ζώνη I (PGA 0.12g)",
+      "zoneII": "Ζώνη II (PGA 0.16g)",
+      "zoneIII": "Ζώνη III (PGA 0.24g)",
+      "zoneIV": "Ζώνη IV (PGA 0.36g)",
+      "generic": "Γενικός",
+      "empty": "Προσθέστε οδηγούς για έλεγχο συμμόρφωσης"
+    },
+    "sustainability": {
+      "slabThickness": "Πάχος Πλάκας (m)",
+      "columnSize": "Μέγεθος Στύλου (m)",
+      "estimate": "Εκτίμηση",
+      "material": "Εκτίμηση Υλικών",
+      "concrete": "Σκυρόδεμα",
+      "steel": "Χάλυβας",
+      "waste": "Συντελεστής Αποβλήτων",
+      "cost": "Εκτιμώμενο Κόστος",
+      "carbon": "Αποτύπωμα Άνθρακα",
+      "totalCO2": "Συνολικό CO₂",
+      "rating": "Βαθμολογία",
+      "greenDeal": "EU Green Deal",
+      "ecoPresets": "Οικολογικές Ρυθμίσεις",
+      "applyPreset": "Εφαρμογή",
+      "empty": "Προσθέστε οδηγούς για εκτίμηση βιωσιμότητας"
+    },
+    "export": {
+      "ifcExport": "Εξαγωγή IFC",
+      "exportIFC": "Εξαγωγή .IFC",
+      "quantityTakeoff": "Προμέτρηση",
+      "calculate": "Υπολογισμός",
+      "columns": "Στύλοι",
+      "beams": "Δοκοί",
+      "slabArea": "Εμβαδόν Πλάκας",
+      "estimatedCost": "Εκτιμώμενο Κόστος",
+      "nlpCommand": "Εντολή NLP",
+      "nlpPlaceholder": "π.χ. \"κάνναβος 5x5μ 20x30\" ή \"σεισμική ζώνη 3\"",
+      "run": "Εκτέλεση",
+      "applyGrid": "Εφαρμογή Κανάβου",
+      "confidence": "Εμπιστοσύνη",
+      "empty": "Προσθέστε οδηγούς για επιλογές εξαγωγής"
+    }
   }
 }

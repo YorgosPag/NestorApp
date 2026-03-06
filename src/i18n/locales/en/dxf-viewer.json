@@ -1441,6 +1441,7 @@
     "togglePerf": "Performance Monitor",
     "pdfBackground": "PDF Background",
     "aiAssistant": "AI Drawing",
+    "guideAnalysis": "Guide Analysis",
     "guideX": "Vertical Guide",
     "guideZ": "Horizontal Guide",
     "guideXZ": "Diagonal Guide",
@@ -1763,5 +1764,77 @@
     "colorSelected": "Change Color",
     "groupSelected": "Group Selected",
     "cancel": "Cancel"
+  },
+  "guideAnalysis": {
+    "title": "Guide Analysis",
+    "tabs": {
+      "diagnostics": "Diagnostics",
+      "compliance": "Compliance",
+      "sustainability": "Sustainability",
+      "export": "Export"
+    },
+    "diagnostics": {
+      "runAnalysis": "Run Analysis",
+      "totalGuides": "Total Guides",
+      "byAxis": "By Axis",
+      "avgSpacing": "Average Spacing",
+      "density": "Density",
+      "complexity": "Complexity",
+      "anomalies": "Anomalies",
+      "noAnomalies": "No anomalies detected",
+      "suggestedFixes": "Suggested Fixes",
+      "empty": "Add guides to run analysis"
+    },
+    "compliance": {
+      "buildingCode": "Building Code",
+      "seismicZone": "Seismic Zone",
+      "check": "Check Compliance",
+      "passed": "All checks passed",
+      "failed": "Some checks failed",
+      "code": "Code",
+      "description": "Description",
+      "value": "Value",
+      "limit": "Limit",
+      "status": "Status",
+      "zoneI": "Zone I (PGA 0.12g)",
+      "zoneII": "Zone II (PGA 0.16g)",
+      "zoneIII": "Zone III (PGA 0.24g)",
+      "zoneIV": "Zone IV (PGA 0.36g)",
+      "generic": "Generic",
+      "empty": "Add guides and run compliance check"
+    },
+    "sustainability": {
+      "slabThickness": "Slab Thickness (m)",
+      "columnSize": "Column Size (m)",
+      "estimate": "Estimate",
+      "material": "Material Estimate",
+      "concrete": "Concrete",
+      "steel": "Steel",
+      "waste": "Waste Factor",
+      "cost": "Estimated Cost",
+      "carbon": "Carbon Footprint",
+      "totalCO2": "Total CO₂",
+      "rating": "Rating",
+      "greenDeal": "EU Green Deal",
+      "ecoPresets": "Eco Presets",
+      "applyPreset": "Apply",
+      "empty": "Add guides to estimate sustainability"
+    },
+    "export": {
+      "ifcExport": "IFC Export",
+      "exportIFC": "Export .IFC",
+      "quantityTakeoff": "Quantity Takeoff",
+      "calculate": "Calculate",
+      "columns": "Columns",
+      "beams": "Beams",
+      "slabArea": "Slab Area",
+      "estimatedCost": "Estimated Cost",
+      "nlpCommand": "NLP Command",
+      "nlpPlaceholder": "e.g. \"grid 5x5m 20x30\" or \"seismic zone 3\"",
+      "run": "Run",
+      "applyGrid": "Apply Grid",
+      "confidence": "Confidence",
+      "empty": "Add guides for export options"
+    }
   }
 }

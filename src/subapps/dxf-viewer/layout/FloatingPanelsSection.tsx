@@ -20,6 +20,8 @@ import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import CursorSettingsPanel from '../ui/CursorSettingsPanel';
 // ADR-189 §4.13: Guide Panel
 import { GuidePanel } from '../ui/panels/guide-panel';
+// ADR-189: Guide Analysis Panel (10 services → 4 tabs)
+import { GuideAnalysisPanel } from '../ui/panels/guide-analysis-panel';
 import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
 import { DraggableOverlayToolbar } from '../ui/components/DraggableOverlayToolbar';
 import { DraggableOverlayProperties } from '../ui/components/DraggableOverlayProperties';
@@ -50,6 +52,7 @@ interface FloatingPanelsSectionProps {
   showCursorSettings: boolean;
   showCalibration: boolean;
   showGuidePanel: boolean;
+  showGuideAnalysisPanel: boolean;
   handleAction: (action: string) => void;
 
   // Overlay Toolbar
@@ -95,6 +98,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   showCursorSettings,
   showCalibration,
   showGuidePanel,
+  showGuideAnalysisPanel,
   handleAction,
   activeTool,
   overlayMode,
@@ -181,6 +185,14 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         <GuidePanel
           isVisible={showGuidePanel}
           onClose={() => handleAction('toggle-guide-panel')}
+        />
+      )}
+
+      {/* ADR-189: GUIDE ANALYSIS PANEL (10 services → 4 tabs) */}
+      {showGuideAnalysisPanel && (
+        <GuideAnalysisPanel
+          isVisible={showGuideAnalysisPanel}
+          onClose={() => handleAction('toggle-guide-analysis-panel')}
         />
       )}
 
