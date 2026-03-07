@@ -40,9 +40,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     issuingAuthority: '',
     issueDate: '',
     status: project.status,
-    mapPath: '\\\\Server\\shared\\6. erga\\Eterpis_Gen\\Eterp_Gen_Images\\Eterp_Xartis.jpg',
-    floorPlanPath: '\\\\Server\\shared\\6. erga\\TEST\\SSSSSS.pdf',
-    percentagesPath: '\\\\Server\\shared\\6. erga\\TEST\\SSSSSSSS.xls',
     companyName: project.companyName,
     // Λεπτομέρειες (from project entity)
     type: project.type || '',

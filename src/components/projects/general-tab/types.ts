@@ -23,9 +23,6 @@ export interface ProjectFormData {
   issuingAuthority: string;
   issueDate: string;
   status: ProjectStatus;
-  mapPath: string;
-  floorPlanPath: string;
-  percentagesPath: string;
   companyName: string;
   // Λεπτομέρειες (inline editing — moved from modal)
   type: ProjectType | '';
