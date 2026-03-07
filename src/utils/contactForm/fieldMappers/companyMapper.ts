@@ -111,6 +111,13 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     : [];
 
 
+  const companyAddresses = resolveCompanyAddresses(companyContact);
+  // HQ address: prioritize companyAddresses[0] (has hierarchy), fallback to legacy addresses[0]
+  const hqAddr = companyAddresses.find(a => a.type === 'headquarters') ?? companyAddresses[0];
+  const legacyAddr = contact.addresses?.[0];
+  // Root-level flat fields (saved by UnifiedContactTabbedSection)
+  const rootRecord = contact as unknown as Record<string, unknown>;
+
   const formData: ContactFormData = {
     ...initialFormData,
     type: 'company',
@@ -121,22 +128,22 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     companyVatNumber: getSafeFieldValue(companyContact, 'vatNumber') ||
       getSafeFieldValue(companyContact, 'companyVatNumber'),
 
-    street: contact.addresses?.[0]?.street || '',
-    streetNumber: contact.addresses?.[0]?.number || '',
-    city: contact.addresses?.[0]?.city || '',
-    postalCode: contact.addresses?.[0]?.postalCode || '',
-    // Administrative Hierarchy from addresses[0]
-    municipality: contact.addresses?.[0]?.municipality || '',
-    municipalityId: contact.addresses?.[0]?.municipalityId ?? null,
-    regionalUnit: contact.addresses?.[0]?.regionalUnit || '',
-    region: contact.addresses?.[0]?.region || '',
-    decentAdmin: contact.addresses?.[0]?.decentAdmin || '',
-    majorGeo: contact.addresses?.[0]?.majorGeo || '',
-    settlement: contact.addresses?.[0]?.settlement || '',
-    settlementId: contact.addresses?.[0]?.settlementId ?? null,
-    community: contact.addresses?.[0]?.community || '',
-    municipalUnit: contact.addresses?.[0]?.municipalUnit || '',
-    companyAddresses: resolveCompanyAddresses(companyContact),
+    street: hqAddr?.street || legacyAddr?.street || '',
+    streetNumber: hqAddr?.number || legacyAddr?.number || '',
+    city: hqAddr?.city || legacyAddr?.city || '',
+    postalCode: hqAddr?.postalCode || legacyAddr?.postalCode || '',
+    // Administrative Hierarchy: companyAddresses[0] → root-level flat fields → legacy addresses[0]
+    municipality: hqAddr?.municipalityName || (rootRecord.municipality as string) || legacyAddr?.municipality || '',
+    municipalityId: hqAddr?.municipalityId ?? (rootRecord.municipalityId as string | null) ?? legacyAddr?.municipalityId ?? null,
+    regionalUnit: hqAddr?.regionalUnitName || (rootRecord.regionalUnit as string) || legacyAddr?.regionalUnit || '',
+    region: hqAddr?.regionName || hqAddr?.region || (rootRecord.region as string) || legacyAddr?.region || '',
+    decentAdmin: hqAddr?.decentAdminName || (rootRecord.decentAdmin as string) || legacyAddr?.decentAdmin || '',
+    majorGeo: hqAddr?.majorGeoName || (rootRecord.majorGeo as string) || legacyAddr?.majorGeo || '',
+    settlement: hqAddr?.city || (rootRecord.settlement as string) || legacyAddr?.settlement || '',
+    settlementId: hqAddr?.settlementId ?? (rootRecord.settlementId as string | null) ?? legacyAddr?.settlementId ?? null,
+    community: hqAddr?.communityName || (rootRecord.community as string) || legacyAddr?.community || '',
+    municipalUnit: hqAddr?.municipalUnitName || (rootRecord.municipalUnit as string) || legacyAddr?.municipalUnit || '',
+    companyAddresses,
     phone: contact.phones?.[0]?.number || '',
     email: contact.emails?.[0]?.email || '',
     website: contact.websites?.[0]?.url || '',

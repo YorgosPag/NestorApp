@@ -468,6 +468,16 @@ export function UnifiedContactTabbedSection({
                             number: addr.number,
                             city: addr.settlementName || addr.municipalityName,
                             postalCode: addr.postalCode,
+                            settlementId: addr.settlementId,
+                            communityName: addr.communityName,
+                            municipalUnitName: addr.municipalUnitName,
+                            municipalityName: addr.municipalityName,
+                            municipalityId: addr.municipalityId,
+                            regionalUnitName: addr.regionalUnitName,
+                            regionName: addr.regionName,
+                            region: addr.regionName,
+                            decentAdminName: addr.decentAdminName,
+                            majorGeoName: addr.majorGeoName,
                           };
                         }
                         setFormData({
