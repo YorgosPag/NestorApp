@@ -4,12 +4,9 @@ import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Button } from '@/components/ui/button';
-import { Edit, Save, X, CheckCircle, Copy } from 'lucide-react';
-// 🏢 ENTERPRISE: Import from canonical location
+import { CheckCircle, Copy } from 'lucide-react';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-// 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
 import {
@@ -17,7 +14,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -27,15 +23,9 @@ interface GeneralProjectHeaderProps {
     isEditing: boolean;
     autoSaving: boolean;
     lastSaved: Date | null;
-    setIsEditing: (isEditing: boolean) => void;
-    handleSave: () => void;
-    /** 🏢 ENTERPRISE: Human-readable project code (e.g., "PRJ-001") */
     projectCode?: string;
-    /** 🏢 ENTERPRISE: Technical Firestore document ID (for support/debugging) */
     projectId?: string;
-    /** 🏢 ENTERPRISE: Indicates if save operation is in progress */
     isSaving?: boolean;
-    /** 🏢 ENTERPRISE: Error message from failed save operation */
     saveError?: string | null;
 }
 
@@ -43,8 +33,6 @@ export function GeneralProjectHeader({
     isEditing,
     autoSaving,
     lastSaved,
-    setIsEditing,
-    handleSave,
     projectCode,
     projectId,
     isSaving = false,
@@ -53,17 +41,10 @@ export function GeneralProjectHeader({
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
-    // 🏢 ENTERPRISE: Centralized spacing tokens
     const spacing = useSpacingTokens();
     const typography = useTypography();
     const [copied, setCopied] = React.useState(false);
 
-    const handleCancel = () => {
-        // Here you might want to reset form data to its initial state
-        setIsEditing(false);
-    };
-
-    /** 🏢 ENTERPRISE: Copy technical ID to clipboard for support/debugging */
     const handleCopyTechnicalId = async () => {
         if (!projectId) return;
         try {
@@ -75,7 +56,6 @@ export function GeneralProjectHeader({
         }
     };
 
-    /** 🏢 ENTERPRISE: Display code - prioritize projectCode, fallback to truncated ID */
     const displayCode = projectCode || (projectId ? `ID: ${projectId.substring(0, 8)}...` : 'ID: ---');
 
     return (
@@ -112,7 +92,7 @@ export function GeneralProjectHeader({
                   variant="outline"
                   size="sm"
                 />
-                
+
                 {isEditing && (
                 <div className={cn("flex items-center", typography.body.xs, spacing.gap.sm)}>
                     {autoSaving ? (
@@ -131,40 +111,19 @@ export function GeneralProjectHeader({
                 </div>
                 )}
             </div>
-      
-            <div className={cn("flex items-center", spacing.gap.sm)}>
-                {!isEditing ? (
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    <Edit className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-                    {t('projectHeader.edit')}
-                </Button>
-                ) : (
-                <>
-                    <Button variant="outline" size="sm" onClick={handleCancel} disabled={isSaving}>
-                        <X className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-                        {t('projectHeader.cancel')}
-                    </Button>
-                    <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? (
-                            <>
-                                <AnimatedSpinner size="small" className="mr-2" />
-                                {t('projectHeader.saving')}
-                            </>
-                        ) : (
-                            <>
-                                <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-                                {t('projectHeader.save')}
-                            </>
-                        )}
-                    </Button>
-                    {saveError && (
-                        <span className={cn(typography.body.xs, colors.text.error)}>
-                            {saveError}
-                        </span>
-                    )}
-                </>
-                )}
-            </div>
+
+            {/* Save status indicators */}
+            {isSaving && (
+                <div className={cn("flex items-center", spacing.gap.sm)}>
+                    <AnimatedSpinner size="small" />
+                    <span className={cn(typography.body.xs, colors.text.info)}>{t('projectHeader.saving')}</span>
+                </div>
+            )}
+            {saveError && (
+                <span className={cn(typography.body.xs, colors.text.error)}>
+                    {saveError}
+                </span>
+            )}
         </div>
     );
 }

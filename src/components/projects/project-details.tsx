@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Project Details Component
+ * Project Details Component
  * =============================================================================
  *
  * Main container for project details display with tabbed interface.
@@ -12,27 +12,19 @@
  * - Uses UniversalTabsRenderer for flexible tab rendering
  * - Floorplan tabs use centralized file storage (same as Photos/Videos)
  * - Each tab component is self-contained (no props drilling for floorplans)
- *
- * MIGRATION NOTE (ADR-033):
- * - Legacy FloorplanService/DxfImportModal removed
- * - ProjectFloorplanTab now handles upload internally
- * - Storage: companies/{companyId}/entities/project/{projectId}/domains/construction/categories/floorplans/
+ * - Edit state is lifted here and passed to header + tabs via globalProps
  */
 
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type { Project } from '@/types/project';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { Briefcase } from 'lucide-react';
-// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
-// UniversalTabsRenderer from generic (renderer only, no mappings)
 import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
-// PROJECT_COMPONENT_MAPPING from domain-scoped file (not master barrel)
 import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/projectMappings';
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
@@ -43,10 +35,6 @@ interface ProjectDetailsProps {
   project: Project & { companyName: string };
   /** Deep-link initial tab — overrides default "general" tab */
   initialTab?: string;
-  isEditing?: boolean;
-  onStartEdit?: () => void;
-  onSaveEdit?: () => void;
-  onCancelEdit?: () => void;
   onNewProject?: () => void;
   onDeleteProject?: () => void;
 }
@@ -55,25 +43,39 @@ interface ProjectDetailsProps {
 // COMPONENT
 // ============================================================================
 
-/**
- * 🏢 ENTERPRISE: Project Details Component
- *
- * Displays project information in a tabbed interface.
- * Floorplan tabs (ProjectFloorplanTab) are self-contained and handle
- * their own upload/display using centralized EntityFilesManager pattern.
- */
 export function ProjectDetails({
   project,
   initialTab,
-  isEditing,
-  onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
   onNewProject,
   onDeleteProject
 }: ProjectDetailsProps) {
-  // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+
+  // Lifted edit state — shared between header buttons and GeneralProjectTab
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Ref for save callback registered by GeneralProjectTab
+  const saveCallbackRef = useRef<(() => void) | null>(null);
+
+  const handleStartEdit = useCallback(() => {
+    setIsEditing(true);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+  }, []);
+
+  const handleSaveEdit = useCallback(() => {
+    // Delegate to the tab's save function if registered
+    if (saveCallbackRef.current) {
+      saveCallbackRef.current();
+    }
+  }, []);
+
+  // Callback for GeneralProjectTab to register its save function
+  const registerSaveCallback = useCallback((saveFn: () => void) => {
+    saveCallbackRef.current = saveFn;
+  }, []);
 
   // Get project tabs from centralized config
   const projectTabs = getSortedProjectTabs();
@@ -85,9 +87,9 @@ export function ProjectDetails({
         <ProjectDetailsHeader
           project={project!}
           isEditing={isEditing}
-          onStartEdit={onStartEdit}
-          onSaveEdit={onSaveEdit}
-          onCancelEdit={onCancelEdit}
+          onStartEdit={handleStartEdit}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={handleCancelEdit}
           onNewProject={onNewProject}
           onDeleteProject={onDeleteProject}
         />
@@ -99,10 +101,12 @@ export function ProjectDetails({
           componentMapping={PROJECT_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
           defaultTab={initialTab || "general"}
           theme="default"
-          // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
           translationNamespace="building"
           globalProps={{
-            projectId: project!.id
+            projectId: project!.id,
+            isEditing,
+            onSetEditing: setIsEditing,
+            registerSaveCallback,
           }}
         />
       }

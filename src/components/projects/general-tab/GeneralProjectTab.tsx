@@ -1,9 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-// 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 import { GeneralProjectHeader } from '../GeneralProjectHeader';
@@ -12,25 +10,36 @@ import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 
 import { useAutosave } from './hooks/useAutosave';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🏢 ENTERPRISE: Project update server action (SAP/Salesforce pattern)
 import { updateProject } from '@/services/projects.service';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('GeneralProjectTab');
 
-export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
-  // 🏢 ENTERPRISE: Router for soft refresh after save
-  const router = useRouter();
-  // 🏢 ENTERPRISE: i18n hook
+interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
+  /** Lifted edit state from ProjectDetails header */
+  isEditing?: boolean;
+  /** Callback to update lifted edit state */
+  onSetEditing?: (editing: boolean) => void;
+  /** Register save callback with parent for header Save button */
+  registerSaveCallback?: (saveFn: () => void) => void;
+}
+
+export function GeneralProjectTab({
+  project,
+  isEditing: externalIsEditing,
+  onSetEditing,
+  registerSaveCallback,
+}: ExtendedGeneralProjectTabProps) {
   const { t } = useTranslation('projects');
-  // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
-  const [isEditing, setIsEditing] = useState(false);
+
+  // Use lifted state if available, otherwise fallback to local state
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+  const isEditing = externalIsEditing ?? localIsEditing;
+  const setIsEditing = onSetEditing ?? setLocalIsEditing;
+
   const [projectData, setProjectData] = useState<ProjectFormData>({
-    // Βασικά πεδία
     name: project.name,
     licenseTitle: project.title,
     description: project.description || t('generalTab.defaultDescription'),
@@ -41,7 +50,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     issueDate: '',
     status: project.status,
     companyName: project.companyName,
-    // Λεπτομέρειες (from project entity)
     type: project.type || '',
     priority: project.priority || '',
     riskLevel: project.riskLevel || '',
@@ -89,21 +97,12 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  /**
-   * 🏢 ENTERPRISE: Handle project save using Server Action
-   *
-   * Pattern: SAP/Salesforce/Microsoft Dynamics
-   * - Client calls Server Action (not direct database access)
-   * - Server validates and writes to database
-   * - Returns success/error to client
-   */
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       setIsSaving(true);
       setSaveError(null);
       logger.info('Saving project via Server Action...', { data: projectData });
 
-      // 🏢 ENTERPRISE: Build update payload with ALL modified fields
       const updatePayload: Parameters<typeof updateProject>[1] = {
         name: projectData.name,
         title: projectData.licenseTitle,
@@ -132,7 +131,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       logger.info('Project saved successfully via Server Action');
       setIsEditing(false);
 
-      // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
       RealtimeService.dispatch('PROJECT_UPDATED', {
         projectId: project.id,
         updates: {
@@ -149,20 +147,25 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [projectData, project.id, setIsEditing]);
+
+  // Register save callback with parent so header Save button works
+  useEffect(() => {
+    if (registerSaveCallback) {
+      registerSaveCallback(handleSave);
+    }
+  }, [registerSaveCallback, handleSave]);
 
   return (
     <>
       <GeneralProjectHeader
-        isEditing={isEditing}
-        setIsEditing={setIsEditing}
         autoSaving={autoSaving}
         lastSaved={lastSaved}
-        handleSave={handleSave}
         projectCode={project.projectCode}
         projectId={project.id}
         isSaving={isSaving}
         saveError={saveError}
+        isEditing={isEditing}
       />
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>
