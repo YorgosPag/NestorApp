@@ -138,8 +138,9 @@ async function fetchNominatimReverse(url: string): Promise<NominatimReverseResul
  * E.g. "Δημοτική Ενότητα Ελευθερίου Κορδελιού" → "Ελευθερίου Κορδελιού"
  * Server-side duplicate of address-helpers.stripAdminPrefix (cannot import client code).
  */
-function stripAdminPrefix(name: string): string {
+function cleanNominatimName(name: string): string {
   return name
+    // Strip admin prefixes
     .replace(/^Δημοτική\s+Ενότητα\s+/i, '')
     .replace(/^Δημοτική\s+Κοινότητα\s+/i, '')
     .replace(/^Τοπική\s+Κοινότητα\s+/i, '')
@@ -147,6 +148,9 @@ function stripAdminPrefix(name: string): string {
     .replace(/^Περιφερειακή\s+Ενότητα\s+/i, '')
     .replace(/^Περιφέρεια\s+/i, '')
     .replace(/^Αποκεντρωμένη\s+Διοίκηση\s+/i, '')
+    // Strip hyphens (Nominatim returns "Ελευθέριο-Κορδελιό" but hierarchy has "Ελευθέριο Κορδελιό")
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -162,8 +166,8 @@ function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingAp
   return {
     street: addr.road ?? '',
     number: addr.house_number ?? '',
-    city: stripAdminPrefix(rawCity),
-    neighborhood: stripAdminPrefix(rawNeighborhood),
+    city: cleanNominatimName(rawCity),
+    neighborhood: cleanNominatimName(rawNeighborhood),
     postalCode: addr.postcode ?? '',
     region: addr.state ?? '',
     country: addr.country ?? '',

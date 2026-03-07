@@ -326,18 +326,42 @@ export function AddressWithHierarchy({
     // Only trigger when: settlement name exists, no ID (set externally), data loaded
     if (isLoading || !current.settlementName.trim() || current.settlementId) return;
 
-    // Search for matching settlement in hierarchy data (level 8 = settlement)
-    const matches = searchOptions(current.settlementName.trim(), 8, 10);
+    // Normalize for matching: strip accents, hyphens, lowercase
+    const normalize = (s: string) =>
+      s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[-]/g, ' ').toLowerCase().trim();
+
+    // Clean the input (strip hyphens, e.g. "Ελευθέριο-Κορδελιό" → "Ελευθέριο Κορδελιό")
+    const cleanedName = current.settlementName.trim().replace(/-/g, ' ');
+    const normalizedTarget = normalize(cleanedName);
+
+    // Search hierarchy data (level 8 = settlement)
+    const matches = searchOptions(cleanedName, 8, 20);
     if (matches.length === 0) return;
 
-    // Look for exact name match (case-insensitive)
-    const target = current.settlementName.trim().toLowerCase();
-    const exactMatch = matches.find(opt => opt.label.toLowerCase() === target);
-    if (!exactMatch) return;
+    // 1. Try exact match (after normalization)
+    let bestMatch = matches.find(opt => normalize(opt.label) === normalizedTarget);
+
+    // 2. Fuzzy: prefix-based word matching (handles genitive → nominative)
+    // "ελευθεριου κορδελιου" vs "ελευθεριο κορδελιο" — first 5 chars of each word match
+    if (!bestMatch && normalizedTarget.length >= 4) {
+      const targetWords = normalizedTarget.split(/\s+/);
+      bestMatch = matches.find(opt => {
+        const optWords = normalize(opt.label).split(/\s+/);
+        if (optWords.length !== targetWords.length) return false;
+        return targetWords.every((tw, i) => {
+          const prefixLen = Math.min(5, Math.min(tw.length, optWords[i].length));
+          return tw.substring(0, prefixLen) === optWords[i].substring(0, prefixLen);
+        });
+      });
+    }
+
+    if (!bestMatch) return;
 
     // Resolve full hierarchy from matched settlement
-    const path = resolvePath(exactMatch.value);
+    const path = resolvePath(bestMatch.value);
     const updated = { ...current };
+    // Use the canonical settlement name from hierarchy data
+    updated.settlementName = bestMatch.label;
     for (const mapping of PATH_TO_VALUE) {
       const entity = path[mapping.pathKey];
       if (entity) {

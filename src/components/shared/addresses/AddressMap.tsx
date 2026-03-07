@@ -409,29 +409,50 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
    * Runs when geocoding completes και map is ready
    */
   useEffect(() => {
-    if (!mapRef.current || !mapReady || geocodedAddresses.size === 0) {
-      return;
-    }
+    if (!mapRef.current || !mapReady) return;
 
     try {
       const bounds = new LngLatBounds();
 
+      // Include geocoded positions
       geocodedAddresses.forEach(result => {
         bounds.extend([result.lng, result.lat]);
       });
 
-      // Only fit bounds if we have valid bounds
-      if (!bounds.isEmpty()) {
-        mapRef.current.fitBounds(bounds, {
-          padding: ADDRESS_MAP_CONFIG.FIT_BOUNDS_PADDING,
-          maxZoom: ADDRESS_MAP_CONFIG.DEFAULT_MAX_ZOOM,
-          duration: ADDRESS_MAP_CONFIG.ANIMATION.FIT_BOUNDS
+      // In draggable mode: also include drag positions (for new/moved markers)
+      if (draggableMarkers) {
+        dragPositions.forEach(pos => {
+          bounds.extend([pos.lng, pos.lat]);
         });
+        // Include default positions for empty addresses (not geocoded, not dragged)
+        const refPos = (() => {
+          for (const addr of addresses) {
+            const dp = dragPositions.get(addr.id);
+            if (dp) return dp;
+            const gc = geocodedAddresses.get(addr.id);
+            if (gc) return { lng: gc.lng, lat: gc.lat };
+          }
+          return null;
+        })();
+        for (let i = 0; i < addresses.length; i++) {
+          const addr = addresses[i];
+          if (!dragPositions.has(addr.id) && !geocodedAddresses.has(addr.id) && refPos) {
+            bounds.extend([refPos.lng - 0.003 * i, refPos.lat + 0.003 * i]);
+          }
+        }
       }
+
+      if (bounds.isEmpty()) return;
+
+      mapRef.current.fitBounds(bounds, {
+        padding: ADDRESS_MAP_CONFIG.FIT_BOUNDS_PADDING,
+        maxZoom: ADDRESS_MAP_CONFIG.DEFAULT_MAX_ZOOM,
+        duration: ADDRESS_MAP_CONFIG.ANIMATION.FIT_BOUNDS
+      });
     } catch (error) {
       logger.error('fitBounds failed:', { error: error });
     }
-  }, [geocodedAddresses, mapReady]);
+  }, [geocodedAddresses, mapReady, draggableMarkers, dragPositions, addresses]);
 
   // ===========================================================================
   // GEOJSON DATA (for read-only Source+Layer mode)
