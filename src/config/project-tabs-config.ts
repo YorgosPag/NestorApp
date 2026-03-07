@@ -159,7 +159,11 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 7. ΣΤΟΙΧΕΙΑ ΔΟΜΗΣΗΣ
+  // 7. ΣΤΟΙΧΕΙΑ ΔΟΜΗΣΗΣ — ΠΑΓΩΜΕΝΟ (2026-03-07)
+  // Ο Γιώργος ζήτησε να μην εμφανίζεται η καρτέλα "Στοιχεία Δόμησης"
+  // (Όροι Δόμησης Οικοπέδου, Επιτρεπόμενα, Πραγματοποιούμενα, Λοιπά Στοιχεία).
+  // Ο κώδικας παραμένει στο codebase — ενδέχεται να επαναχρησιμοποιηθεί αργότερα.
+  // Για επανενεργοποίηση: enabled: true
   // -------------------------------------------------------------------------
   {
     id: 'building-data',
@@ -168,7 +172,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     icon: 'bar-chart',
     description: PROJECT_TAB_DESCRIPTIONS.BUILDING_DATA,
     order: 7,
-    enabled: true,
+    enabled: false,
     component: 'BuildingDataTab',
   },
 
