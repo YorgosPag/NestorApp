@@ -3,9 +3,7 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Save, X, Plus, Trash2 } from 'lucide-react';
-import { EntityDetailsHeader } from '@/core/entity-headers';
-import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';
 
@@ -67,44 +65,18 @@ export function UnitDetailsHeader({
     );
   }
 
-  // 🏢 ENTERPRISE: Actions change based on edit mode
-  // Normal mode: "Επεξεργασία" + "Νέα Μονάδα" + "Διαγραφή"
-  // Edit mode: "Αποθήκευση" (green) + "Ακύρωση" (outline)
+  // 🏢 ENTERPRISE: Actions via centralized presets
+  // Normal mode: Edit (🔵), Νέα Μονάδα (🟢), Διαγραφή (🔴)
+  // Edit mode: Save (🟢), Cancel (⚪)
   const actions = isEditMode
     ? [
-        {
-          label: t('buildingSelector.save', { defaultValue: 'Αποθήκευση' }),
-          onClick: handleHeaderSave,
-          icon: Save,
-          className: 'bg-green-600 hover:bg-green-700 text-white',
-        },
-        {
-          label: t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' }),
-          onClick: handleHeaderCancel,
-          icon: X,
-          variant: 'outline' as const,
-        },
+        createEntityAction('save', t('buildingSelector.save', { defaultValue: 'Αποθήκευση' }), handleHeaderSave),
+        createEntityAction('cancel', t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' }), handleHeaderCancel),
       ]
     : [
-        {
-          label: t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }),
-          onClick: () => onToggleEditMode?.(),
-          icon: Pencil,
-          className: `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`,
-        },
-        {
-          label: t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' }),
-          onClick: () => onNewUnit?.(),
-          icon: Plus,
-          variant: 'outline' as const,
-        },
-        {
-          label: t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }),
-          onClick: () => onDeleteUnit?.(),
-          icon: Trash2,
-          variant: 'outline' as const,
-          className: 'text-destructive border-destructive/50 hover:bg-destructive/10',
-        },
+        createEntityAction('edit', t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }), () => onToggleEditMode?.()),
+        createEntityAction('new', t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' }), () => onNewUnit?.()),
+        createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }), () => onDeleteUnit?.()),
       ];
 
   // Selected State - Unit is selected

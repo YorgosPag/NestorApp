@@ -19,5 +19,9 @@ export type {
   EntityHeaderProps
 } from './UnifiedEntityHeaderSystem';
 
+// Action Presets Factory
+export { ENTITY_ACTION_PRESETS, createEntityAction } from './entity-action-presets';
+export type { ActionType, EntityActionPreset } from './entity-action-presets';
+
 // Default export
 export { default } from './UnifiedEntityHeaderSystem';

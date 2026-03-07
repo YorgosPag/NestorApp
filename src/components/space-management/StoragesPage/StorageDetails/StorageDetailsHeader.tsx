@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Warehouse, Eye, Edit, FileText } from 'lucide-react';
-import { EntityDetailsHeader } from '@/core/entity-headers';
+import { Warehouse } from 'lucide-react';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Storage } from '@/types/storage/contracts';
-import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -32,24 +31,9 @@ export function StorageDetailsHeader({ storage }: StorageDetailsHeaderProps) {
           icon={Warehouse}
           title={storage.name}
           actions={[
-            {
-              label: t('header.viewStorage'),
-              onClick: () => logger.info('Show storage details'),
-              icon: Eye,
-              className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
-            },
-            {
-              label: t('header.edit'),
-              onClick: () => logger.info('Edit storage'),
-              icon: Edit,
-              variant: 'outline'
-            },
-            {
-              label: t('header.print'),
-              onClick: () => logger.info('Print storage details'),
-              icon: FileText,
-              variant: 'outline'
-            }
+            createEntityAction('view', t('header.viewStorage'), () => logger.info('Show storage details')),
+            createEntityAction('edit', t('header.edit'), () => logger.info('Edit storage')),
+            createEntityAction('print', t('header.print'), () => logger.info('Print storage details')),
           ]}
           variant="detailed"
         />

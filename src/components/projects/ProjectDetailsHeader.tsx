@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Briefcase, Eye } from 'lucide-react';
-import { EntityDetailsHeader } from '@/core/entity-headers';
-import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+import { Briefcase } from 'lucide-react';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Project } from '@/types/project';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -19,14 +18,9 @@ export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('projects');
 
-    // 🏢 ENTERPRISE: Actions — edit moved to inline (GeneralProjectTab)
+    // 🏢 ENTERPRISE: Actions via centralized presets
     const actions = [
-        {
-            label: t('detailsHeader.showProject'),
-            onClick: () => logger.info('Show project details'),
-            icon: Eye,
-            className: `bg-gradient-to-r from-blue-500 to-purple-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
-        }
+        createEntityAction('view', t('detailsHeader.showProject'), () => logger.info('Show project details'))
     ];
 
     return (

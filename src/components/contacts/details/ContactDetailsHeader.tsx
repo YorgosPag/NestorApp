@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
-import { EntityDetailsHeader } from '@/core/entity-headers';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
-import { Edit, Trash2, Check, X, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
@@ -208,44 +207,23 @@ export function ContactDetailsHeader({
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
           actions={[
             // 🆕 New Contact button - always visible
-            ...(onNewContact ? [{
-              label: t('header.newContact'),
-              onClick: () => onNewContact(),
-              icon: UserPlus,
-              className: GRADIENT_HOVER_EFFECTS.GREEN
-            }] : []),
+            ...(onNewContact ? [
+              createEntityAction('new', t('header.newContact'), () => onNewContact(), { icon: UserPlus })
+            ] : []),
             // 🎯 Edit Mode Actions - Μόνο για Desktop
             // 🏢 ENTERPRISE: Hidden on subcollection tabs (banking, files, relationships) - they save independently
             ...(!hideEditControls ? (
               !isEditing ? [
-                {
-                  label: t('header.actions.edit'),
-                  onClick: () => onStartEdit?.(),
-                  icon: Edit,
-                  className: GRADIENT_HOVER_EFFECTS.BLUE
-                }
+                createEntityAction('edit', t('header.actions.edit'), () => onStartEdit?.())
               ] : [
-                {
-                  label: t('header.actions.save'),
-                  onClick: () => onSaveEdit?.(),
-                  icon: Check,
-                  className: GRADIENT_HOVER_EFFECTS.GREEN
-                },
-                {
-                  label: t('header.actions.cancel'),
-                  onClick: () => onCancelEdit?.(),
-                  icon: X,
-                  className: GRADIENT_HOVER_EFFECTS.GRAY
-                }
+                createEntityAction('save', t('header.actions.save'), () => onSaveEdit?.()),
+                createEntityAction('cancel', t('header.actions.cancel'), () => onCancelEdit?.())
               ]
             ) : []),
             // Delete Action - Κρύβεται στα subcollection tabs (banking, files, relationships)
-            ...(!hideEditControls && onDeleteContact ? [{
-              label: t('header.actions.delete'),
-              onClick: () => onDeleteContact?.(),
-              icon: Trash2,
-              className: GRADIENT_HOVER_EFFECTS.RED
-            }] : [])
+            ...(!hideEditControls && onDeleteContact ? [
+              createEntityAction('delete', t('header.actions.delete'), () => onDeleteContact?.())
+            ] : [])
           ]}
           variant="detailed"
         />

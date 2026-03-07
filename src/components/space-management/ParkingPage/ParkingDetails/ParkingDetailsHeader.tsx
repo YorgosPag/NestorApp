@@ -5,14 +5,14 @@
  *
  * Header για τις λεπτομέρειες θέσης στάθμευσης.
  * Supports inline editing toggle (Edit ↔ Save/Cancel).
- * Follows the exact pattern from BuildingDetailsHeader.tsx.
+ * Uses centralized entity action presets.
  */
 
 import React from 'react';
-import { Car, Eye, Edit, Save, X, FileText } from 'lucide-react';
-import { EntityDetailsHeader, type EntityHeaderAction } from '@/core/entity-headers';
+import { Car } from 'lucide-react';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import type { EntityHeaderAction } from '@/core/entity-headers';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
-import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -42,41 +42,18 @@ export function ParkingDetailsHeader({
 }: ParkingDetailsHeaderProps) {
   const { t } = useTranslation('parking');
 
-  // Build actions array based on editing state
+  // 🏢 ENTERPRISE: Actions via centralized presets
+  // Edit mode: Save (🟢), Cancel (⚪)
+  // Normal mode: View (🔵 primary), Edit (🔵), Print (⚪)
   const actions: EntityHeaderAction[] = isEditing
     ? [
-        {
-          label: isSaving ? t('header.saving') : t('header.save'),
-          onClick: isSaving ? () => {} : onSave,
-          icon: Save,
-          className: `bg-gradient-to-r from-green-500 to-emerald-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`,
-        },
-        {
-          label: t('header.cancel'),
-          onClick: onCancel,
-          icon: X,
-          variant: 'outline',
-        },
+        createEntityAction('save', isSaving ? t('header.saving') : t('header.save'), isSaving ? () => {} : onSave),
+        createEntityAction('cancel', t('header.cancel'), onCancel),
       ]
     : [
-        {
-          label: t('header.viewParking'),
-          onClick: () => logger.info('Show parking details'),
-          icon: Eye,
-          className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON,
-        },
-        {
-          label: t('header.edit'),
-          onClick: onStartEdit,
-          icon: Edit,
-          variant: 'outline',
-        },
-        {
-          label: t('header.print'),
-          onClick: () => logger.info('Print parking details'),
-          icon: FileText,
-          variant: 'outline',
-        },
+        createEntityAction('view', t('header.viewParking'), () => logger.info('Show parking details')),
+        createEntityAction('edit', t('header.edit'), onStartEdit),
+        createEntityAction('print', t('header.print'), () => logger.info('Print parking details')),
       ];
 
   return (
