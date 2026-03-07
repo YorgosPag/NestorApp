@@ -145,7 +145,7 @@ export function AddressWithHierarchy({
   hierarchyLevels = [7, 6, 5, 4, 3],
   defaultExpanded = false,
 }: AddressWithHierarchyProps) {
-  const { isLoading, resolvePath, levelOptions } = useAdministrativeHierarchy();
+  const { isLoading, resolvePath, searchOptions, levelOptions } = useAdministrativeHierarchy();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(defaultExpanded);
 
   const current = useMemo(
@@ -316,6 +316,39 @@ export function AddressWithHierarchy({
       }
     };
   }, [current.street, current.number, current.postalCode, current.settlementName, disabled, current, onChange]);
+
+  // =========================================================================
+  // AUTO-RESOLVE: When settlementName is set externally (e.g. from map drag)
+  // without a settlementId, search hierarchy data for exact match and auto-fill
+  // =========================================================================
+
+  useEffect(() => {
+    // Only trigger when: settlement name exists, no ID (set externally), data loaded
+    if (isLoading || !current.settlementName.trim() || current.settlementId) return;
+
+    // Search for matching settlement in hierarchy data (level 8 = settlement)
+    const matches = searchOptions(current.settlementName.trim(), 8, 10);
+    if (matches.length === 0) return;
+
+    // Look for exact name match (case-insensitive)
+    const target = current.settlementName.trim().toLowerCase();
+    const exactMatch = matches.find(opt => opt.label.toLowerCase() === target);
+    if (!exactMatch) return;
+
+    // Resolve full hierarchy from matched settlement
+    const path = resolvePath(exactMatch.value);
+    const updated = { ...current };
+    for (const mapping of PATH_TO_VALUE) {
+      const entity = path[mapping.pathKey];
+      if (entity) {
+        (updated[mapping.idField] as string | null) = entity.id;
+        (updated[mapping.nameField] as string) = entity.name;
+      }
+    }
+
+    onChange(updated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current.settlementName, current.settlementId, isLoading]);
 
   // =========================================================================
   // RENDER

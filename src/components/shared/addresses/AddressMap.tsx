@@ -525,6 +525,31 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [onMarkerClick]);
 
   /**
+   * Auto-pan: continuous requestAnimationFrame loop when marker near viewport edges.
+   * Much smoother than discrete panBy calls on each onDrag event.
+   */
+  const autoPanRafRef = useRef<number | null>(null);
+  const autoPanDeltaRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+
+  const stopAutoPan = useCallback(() => {
+    if (autoPanRafRef.current) {
+      cancelAnimationFrame(autoPanRafRef.current);
+      autoPanRafRef.current = null;
+    }
+    autoPanDeltaRef.current = { dx: 0, dy: 0 };
+  }, []);
+
+  // Continuous pan loop
+  const tickAutoPan = useCallback(() => {
+    const map = mapRef.current;
+    const { dx, dy } = autoPanDeltaRef.current;
+    if (map && (dx !== 0 || dy !== 0)) {
+      map.panBy([dx, dy], { duration: 0 });
+    }
+    autoPanRafRef.current = requestAnimationFrame(tickAutoPan);
+  }, []);
+
+  /**
    * Handle drag end — reverse geocode the new position
    * @param addressId - ID of the address being dragged (for position tracking)
    * @param addressIndex - Index in the addresses array (passed to callback)
@@ -534,6 +559,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     addressId: string,
     addressIndex: number,
   ) => {
+    stopAutoPan();
     const { lng, lat } = event.lngLat;
     setDragPositions(prev => {
       const next = new Map(prev);
@@ -554,11 +580,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     } finally {
       setIsReverseGeocoding(false);
     }
-  }, [onAddressDragUpdate]);
+  }, [onAddressDragUpdate, stopAutoPan]);
 
-  /**
-   * Auto-pan map when marker is dragged near viewport edges
-   */
   const handleAutoPan = useCallback((event: { lngLat: { lng: number; lat: number } }) => {
     const map = mapRef.current;
     if (!map) return;
@@ -567,21 +590,26 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     const container = map.getContainer();
     const width = container.clientWidth;
     const height = container.clientHeight;
+    const { EDGE_THRESHOLD, PAN_SPEED } = AUTO_PAN;
 
     let dx = 0;
     let dy = 0;
-    const { EDGE_THRESHOLD, PAN_SPEED } = AUTO_PAN;
-
     if (point.x < EDGE_THRESHOLD) dx = -PAN_SPEED;
     else if (point.x > width - EDGE_THRESHOLD) dx = PAN_SPEED;
-
     if (point.y < EDGE_THRESHOLD) dy = -PAN_SPEED;
     else if (point.y > height - EDGE_THRESHOLD) dy = PAN_SPEED;
 
+    autoPanDeltaRef.current = { dx, dy };
+
+    // Start loop if needed, stop if not in edge zone
     if (dx !== 0 || dy !== 0) {
-      map.panBy([dx, dy], { duration: 0 });
+      if (!autoPanRafRef.current) {
+        autoPanRafRef.current = requestAnimationFrame(tickAutoPan);
+      }
+    } else {
+      stopAutoPan();
     }
-  }, []);
+  }, [tickAutoPan, stopAutoPan]);
 
   // ===========================================================================
   // RENDERING
@@ -659,13 +687,24 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               className="w-full h-full rounded-lg overflow-hidden"
             >
               {/* Draggable Marker Mode — one marker per address */}
-              {draggableMarkers && addresses.map((addr, index) => {
+              {draggableMarkers && (() => {
+                // Find a reference position (first geocoded or dragged address, typically HQ)
+                const refPos = (() => {
+                  for (const addr of addresses) {
+                    const dp = dragPositions.get(addr.id);
+                    if (dp) return dp;
+                    const gc = geocodedAddresses.get(addr.id);
+                    if (gc) return { lng: gc.lng, lat: gc.lat };
+                  }
+                  return defaultCenter;
+                })();
+                return addresses.map((addr, index) => {
                 const geocoded = geocodedAddresses.get(addr.id);
                 const dragPos = dragPositions.get(addr.id);
-                // Use drag position > geocoded position > offset default
+                // Use drag position > geocoded position > offset from reference (HQ)
                 const position = dragPos
                   ?? (geocoded ? { lng: geocoded.lng, lat: geocoded.lat } : null)
-                  ?? { lng: defaultCenter.lng + index * 0.005, lat: defaultCenter.lat + index * 0.003 };
+                  ?? { lng: refPos.lng - 0.003 * index, lat: refPos.lat + 0.003 * index };
                 const hasData = !!(dragPos || geocoded);
 
                 return (
@@ -685,7 +724,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                     />
                   </Marker>
                 );
-              })}
+              });
+              })()}
               {/* Fallback: single pin when no addresses exist in draggable mode */}
               {draggableMarkers && addresses.length === 0 && (
                 <Marker
