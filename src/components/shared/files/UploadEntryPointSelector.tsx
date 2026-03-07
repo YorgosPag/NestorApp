@@ -21,9 +21,10 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { SearchInput } from '@/components/ui/search/SearchInput';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EntityType, FileCategory } from '@/config/domain-constants';
@@ -87,6 +88,7 @@ export function UploadEntryPointSelector({
 }: UploadEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
   const { t, i18n } = useTranslation('files');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 🏢 ENTERPRISE: Use current i18n language unless explicitly overridden
   // Fixes bug where cards showed Greek text even with English selected
@@ -110,6 +112,30 @@ export function UploadEntryPointSelector({
     return true;
   });
 
+  // 🏢 ENTERPRISE: Search filtering — searches both el/en label + description
+  // "Άλλο Έγγραφο" (requiresCustomTitle) is always pinned visible
+  const filteredEntryPoints = useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return entryPoints;
+
+    return entryPoints.filter((ep) => {
+      // Always pin "Άλλο Έγγραφο" cards
+      if (ep.requiresCustomTitle) return true;
+
+      const haystack = [
+        ep.label.el,
+        ep.label.en,
+        ep.description?.el,
+        ep.description?.en,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(trimmed);
+    });
+  }, [entryPoints, searchQuery]);
+
   // Get selected entry point
   const selectedEntryPoint = entryPoints.find((ep) => ep.id === selectedEntryPointId);
 
@@ -117,6 +143,8 @@ export function UploadEntryPointSelector({
   if (entryPoints.length === 0) {
     return null;
   }
+
+  const showSearch = entryPoints.length > 8;
 
   // Get icon component from lucide-react (type-safe dynamic lookup)
   const getIcon = (iconName?: string): LucideIcons.LucideIcon => {
@@ -137,63 +165,98 @@ export function UploadEntryPointSelector({
         </p>
       </header>
 
+      {/* Search Input — visible only when >8 entry points */}
+      {showSearch && (
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t('upload.searchDocumentPlaceholder')}
+          debounceMs={0}
+          className="text-sm"
+        />
+      )}
+
       {/* Entry Points Grid */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {entryPoints.map((entryPoint) => {
-          const Icon = getIcon(entryPoint.icon);
-          const isSelected = selectedEntryPointId === entryPoint.id;
+      {filteredEntryPoints.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          {t('upload.noSearchResults')}
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {filteredEntryPoints.map((entryPoint) => {
+            const Icon = getIcon(entryPoint.icon);
+            const isSelected = selectedEntryPointId === entryPoint.id;
+            const isCustomTitle = entryPoint.requiresCustomTitle === true;
 
-          return (
-            <Tooltip key={entryPoint.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => onSelect(entryPoint)}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-2 rounded-lg border-2 transition-all',
-                    'hover:shadow-md hover:scale-105',
-                    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                    isSelected
-                      ? 'border-primary bg-primary/10 shadow-md scale-105'
-                      : 'border-border bg-card hover:border-primary/50'
-                  )}
-                  role="radio"
-                  aria-checked={isSelected}
-                  aria-label={entryPoint.label[currentLanguage]}
-                >
-                  {/* Icon */}
-                  <div
+            return (
+              <Tooltip key={entryPoint.id}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(entryPoint)}
                     className={cn(
-                      'flex items-center justify-center w-10 h-10 rounded-full',
-                      isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                      'flex flex-col items-center gap-2 p-2 rounded-lg border-2 transition-all',
+                      'hover:shadow-md hover:scale-105',
+                      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                      isSelected
+                        ? 'border-primary bg-primary/10 shadow-md scale-105'
+                        : isCustomTitle
+                          ? 'border-dashed border-amber-400 bg-amber-50 hover:border-amber-500 dark:border-amber-600 dark:bg-amber-950/30 dark:hover:border-amber-500'
+                          : 'border-border bg-card hover:border-primary/50'
                     )}
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={entryPoint.label[currentLanguage]}
                   >
-                    <Icon className={iconSizes.md} aria-hidden="true" />
-                  </div>
+                    {/* Icon */}
+                    <div
+                      className={cn(
+                        'flex items-center justify-center w-10 h-10 rounded-full',
+                        isSelected
+                          ? 'bg-primary text-primary-foreground'
+                          : isCustomTitle
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                            : 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      <Icon className={iconSizes.md} aria-hidden="true" />
+                    </div>
 
-                  {/* Label */}
-                  <span
-                    className={cn(
-                      'text-xs font-medium text-center leading-tight',
-                      isSelected ? 'text-primary' : 'text-foreground'
+                    {/* Label */}
+                    <span
+                      className={cn(
+                        'text-xs font-medium text-center leading-tight',
+                        isSelected
+                          ? 'text-primary'
+                          : isCustomTitle
+                            ? 'text-amber-800 dark:text-amber-300'
+                            : 'text-foreground'
+                      )}
+                    >
+                      {entryPoint.label[currentLanguage]}
+                    </span>
+
+                    {/* Free-title hint for custom title entries */}
+                    {isCustomTitle && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 leading-tight">
+                        {currentLanguage === 'el' ? '(ελεύθερος τίτλος)' : '(free title)'}
+                      </span>
                     )}
-                  >
-                    {entryPoint.label[currentLanguage]}
-                  </span>
 
-                  {/* Selected indicator */}
-                  {isSelected && (
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" aria-hidden="true" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              {entryPoint.description?.[currentLanguage] && (
-                <TooltipContent>{entryPoint.description[currentLanguage]}</TooltipContent>
-              )}
-            </Tooltip>
-          );
-        })}
-      </div>
+                    {/* Selected indicator */}
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" aria-hidden="true" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {entryPoint.description?.[currentLanguage] && (
+                  <TooltipContent>{entryPoint.description[currentLanguage]}</TooltipContent>
+                )}
+              </Tooltip>
+            );
+          })}
+        </div>
+      )}
 
       {/* Selected description */}
       {selectedEntryPointId && (

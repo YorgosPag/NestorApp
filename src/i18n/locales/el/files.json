@@ -68,6 +68,8 @@
     "customTitlePlaceholder": "π.χ. Πληρεξούσιο, Υπεύθυνη Δήλωση, κτλ.",
     "customTitleHint": "Υποχρεωτικό πεδίο - Εισάγετε περιγραφικό τίτλο για το έγγραφο",
     "selectDocumentType": "Επιλογή τύπου εγγράφου",
+    "searchDocumentPlaceholder": "Αναζήτηση εγγράφου...",
+    "noSearchResults": "Δεν βρέθηκαν έγγραφα",
     "success": "{count, plural, =1 {1 αρχείο ανέβηκε επιτυχώς} other {{count} αρχεία ανέβηκαν επιτυχώς}}",
     "errors": {
       "generic": "Σφάλμα κατά την αποστολή του αρχείου",

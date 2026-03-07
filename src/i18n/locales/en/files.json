@@ -68,6 +68,8 @@
     "customTitlePlaceholder": "e.g. Power of Attorney, Affidavit, etc.",
     "customTitleHint": "Required field - Enter a descriptive title for the document",
     "selectDocumentType": "Select document type",
+    "searchDocumentPlaceholder": "Search document...",
+    "noSearchResults": "No documents found",
     "success": "{count, plural, =1 {1 file uploaded successfully} other {{count} files uploaded successfully}}",
     "errors": {
       "generic": "Error uploading file",
