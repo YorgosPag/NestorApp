@@ -2,11 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { CheckCircle, Ruler, TrendingUp } from 'lucide-react';
-import { getThemeVariant } from '@/components/ui/theme/ThemeComponents';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -20,7 +18,6 @@ const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
 import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
-import { ProjectDetailsSubTab } from './parts/ProjectDetailsSubTab';
 
 import { useProjectStats } from './hooks/useProjectStats';
 import { useAutosave } from './hooks/useAutosave';
@@ -177,9 +174,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   const salesPercentage = stats && stats.totalUnits > 0 ? (stats.soldUnits / stats.totalUnits) * 100 : 0;
   const availableUnits = stats ? stats.totalUnits - stats.soldUnits : 0;
 
-  // Get centralized theme configuration
-  const themeConfig = getThemeVariant('default');
-
   return (
     <>
       <GeneralProjectHeader
@@ -256,40 +250,22 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         </Card>
       )}
 
-      <Tabs defaultValue="basic-info" className="w-full">
-        <TabsList className={cn("flex flex-wrap w-full h-auto min-h-fit", spacing.gap.sm)}>
-          <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>{t('generalTab.tabs.basicInfo')}</TabsTrigger>
-          <TabsTrigger value="details" className={themeConfig.tabTrigger}>{t('generalTab.tabs.details')}</TabsTrigger>
-          <TabsTrigger value="permits" className={themeConfig.tabTrigger}>{t('generalTab.tabs.permits')}</TabsTrigger>
-        </TabsList>
+      <section className={spacing.spaceBetween.md}>
+        <BasicProjectInfoTab
+          data={projectData}
+          setData={setProjectData}
+          isEditing={isEditing}
+        />
 
-        <TabsContent value="basic-info" className={spacing.padding.top.md}>
-          <BasicProjectInfoTab
-            data={projectData}
-            setData={setProjectData}
-            isEditing={isEditing}
-          />
-          {/* 🏢 ENTERPRISE: Κτίρια που ανήκουν στο έργο */}
-          <ProjectBuildingsCard projectId={project.id} />
-          <ProjectCustomersTable projectId={project.id} />
-        </TabsContent>
+        <PermitsAndStatusTab
+          data={projectData}
+          setData={setProjectData}
+          isEditing={isEditing}
+        />
 
-        <TabsContent value="details" className={spacing.padding.top.md}>
-          <ProjectDetailsSubTab
-            data={projectData}
-            setData={setProjectData}
-            isEditing={isEditing}
-          />
-        </TabsContent>
-
-        <TabsContent value="permits" className={spacing.padding.top.md}>
-          <PermitsAndStatusTab 
-            data={projectData}
-            setData={setProjectData}
-            isEditing={isEditing}
-          />
-        </TabsContent>
-      </Tabs>
+        <ProjectBuildingsCard projectId={project.id} />
+        <ProjectCustomersTable projectId={project.id} />
+      </section>
     </>
   );
 }
