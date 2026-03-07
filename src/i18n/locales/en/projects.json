@@ -724,10 +724,8 @@
     "protocolNumber": "Protocol Number",
     "licenseNumber": "License Number",
     "issuingAuthority": "Issuing Authority",
+    "issueDate": "Issue Date",
     "projectStatus": "Project Status",
-    "options": "Options",
-    "showOnWeb": "Show on web",
-    "selectProject": "Select Project",
     "statusConstructed": "Constructed",
     "statusPlanning": "Planning",
     "statusInProgress": "In Progress"

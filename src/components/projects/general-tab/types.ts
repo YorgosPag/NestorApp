@@ -21,8 +21,8 @@ export interface ProjectFormData {
   protocolNumber: string;
   licenseNumber: string;
   issuingAuthority: string;
+  issueDate: string;
   status: ProjectStatus;
-  showOnWeb: boolean;
   mapPath: string;
   floorPlanPath: string;
   percentagesPath: string;

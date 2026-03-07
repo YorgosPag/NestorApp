@@ -724,10 +724,8 @@
     "protocolNumber": "Αρ. Πρωτοκόλλου",
     "licenseNumber": "Αριθμός Άδειας",
     "issuingAuthority": "Αρχή Έκδοσης",
+    "issueDate": "Ημερομηνία Έκδοσης",
     "projectStatus": "Κατάσταση Έργου",
-    "options": "Επιλογές",
-    "showOnWeb": "Προβολή στο διαδίκτυο",
-    "selectProject": "Επιλογή Έργου",
     "statusConstructed": "Κατασκευασμένα",
     "statusPlanning": "Σχεδιασμός",
     "statusInProgress": "Σε εξέλιξη"
