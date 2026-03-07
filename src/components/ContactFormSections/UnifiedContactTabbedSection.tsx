@@ -43,7 +43,7 @@ import { AdministrativeAddressPicker } from '@/components/contacts/pickers/Admin
 import type { AdministrativeAddress } from '@/components/contacts/pickers/AdministrativeAddressPicker';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
-import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
+import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 import { useTranslation } from 'react-i18next';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
@@ -523,7 +523,7 @@ export function UnifiedContactTabbedSection({
                   />
                 </div>
 
-                {/* RIGHT: Map preview */}
+                {/* RIGHT: Map preview — draggable pin in edit mode */}
                 <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
                   <ContactAddressMapPreview
                     className="!min-h-0 h-full rounded-lg"
@@ -533,6 +533,17 @@ export function UnifiedContactTabbedSection({
                     city={formData.city}
                     postalCode={formData.postalCode}
                     companyAddresses={formData.companyAddresses}
+                    draggable={!disabled}
+                    onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress) => {
+                      setFormData({
+                        ...formData,
+                        street: addr.street,
+                        streetNumber: addr.number,
+                        postalCode: addr.postalCode,
+                        city: addr.city,
+                        settlement: addr.city,
+                      });
+                    } : undefined}
                   />
                 </aside>
               </div>
@@ -825,7 +836,7 @@ export function UnifiedContactTabbedSection({
                 disabled={disabled}
               />
 
-              {/* RIGHT: Map preview — full height */}
+              {/* RIGHT: Map preview — draggable pin in edit mode */}
               <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
                 <ContactAddressMapPreview
                   className="!min-h-0 h-full rounded-lg"
@@ -837,6 +848,17 @@ export function UnifiedContactTabbedSection({
                   municipality={formData.municipality as string}
                   regionalUnit={formData.regionalUnit as string}
                   region={formData.region as string}
+                  draggable={!disabled}
+                  onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress) => {
+                    setFormData({
+                      ...formData,
+                      street: addr.street,
+                      streetNumber: addr.number,
+                      postalCode: addr.postalCode,
+                      city: addr.city,
+                      settlement: addr.city,
+                    });
+                  } : undefined}
                 />
               </aside>
             </div>
@@ -900,6 +922,17 @@ export function UnifiedContactTabbedSection({
                   municipality={formData.municipality as string}
                   regionalUnit={formData.regionalUnit as string}
                   region={formData.region as string}
+                  draggable={!disabled}
+                  onDragResolve={!disabled && setFormData ? (resolved: DragResolvedAddress) => {
+                    setFormData({
+                      ...formData,
+                      street: resolved.street,
+                      streetNumber: resolved.number,
+                      postalCode: resolved.postalCode,
+                      city: resolved.city,
+                      settlement: resolved.city,
+                    });
+                  } : undefined}
                 />
               </aside>
             </div>

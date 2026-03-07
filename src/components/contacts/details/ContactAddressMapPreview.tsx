@@ -4,8 +4,18 @@ import { useMemo, useRef } from 'react';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressUtils } from '@/config/address-config';
 import { createProjectAddress } from '@/types/project/address-helpers';
-import type { ProjectAddress, ProjectAddressType } from '@/types/project/addresses';
+import type { ProjectAddress, ProjectAddressType, PartialProjectAddress } from '@/types/project/addresses';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
+
+/** Address data returned by draggable pin reverse geocoding */
+export interface DragResolvedAddress {
+  street: string;
+  number: string;
+  postalCode: string;
+  city: string;
+  neighborhood: string;
+  region: string;
+}
 
 interface ContactAddressMapPreviewProps {
   contactId?: string;
@@ -23,6 +33,10 @@ interface ContactAddressMapPreviewProps {
   companyAddresses?: CompanyAddress[];
   /** Map height preset override */
   heightPreset?: 'viewerCompact' | 'viewerStandard' | 'viewerExpanded' | 'viewerFullscreen';
+  /** Enable draggable pin for address selection (edit mode) */
+  draggable?: boolean;
+  /** Callback when user drags pin — provides resolved address data */
+  onDragResolve?: (address: DragResolvedAddress) => void;
   /** Additional CSS classes for map container */
   className?: string;
 }
@@ -44,6 +58,8 @@ export function ContactAddressMapPreview({
   region,
   companyAddresses,
   heightPreset,
+  draggable = false,
+  onDragResolve,
   className,
 }: ContactAddressMapPreviewProps) {
   const fallbackAddressIdRef = useRef<string>(AddressUtils.generateAddressId());
@@ -102,7 +118,25 @@ export function ContactAddressMapPreview({
     ];
   }, [city, contactId, postalCode, street, streetNumber, municipality, regionalUnit, region, companyAddresses]);
 
-  if (addresses.length === 0) {
+  // Map drag handler — converts ProjectAddress partial to DragResolvedAddress
+  const handleDragUpdate = useMemo(() => {
+    if (!draggable || !onDragResolve) return undefined;
+    return (data: Partial<PartialProjectAddress>) => {
+      // Split "Σαμοθράκης 16" into street + number
+      const streetParts = (data.street ?? '').match(/^(.+?)\s+(\d+\S*)$/);
+      onDragResolve({
+        street: streetParts ? streetParts[1] : (data.street ?? ''),
+        number: streetParts ? streetParts[2] : '',
+        postalCode: data.postalCode ?? '',
+        city: data.city ?? data.neighborhood ?? '',
+        neighborhood: data.neighborhood ?? '',
+        region: data.region ?? '',
+      });
+    };
+  }, [draggable, onDragResolve]);
+
+  // In draggable mode: always show map (even without addresses)
+  if (addresses.length === 0 && !draggable) {
     return null;
   }
 
@@ -112,6 +146,8 @@ export function ContactAddressMapPreview({
       highlightPrimary
       showGeocodingStatus
       enableClickToFocus
+      draggableMarkers={draggable}
+      onAddressDragUpdate={handleDragUpdate}
       {...(heightPreset ? { heightPreset } : {})}
       className={className}
     />
