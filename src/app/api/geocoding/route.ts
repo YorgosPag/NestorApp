@@ -278,8 +278,9 @@ function toOsmStyleQuery(params: GeocodingRequestBody): string {
     // Urban: "Σαμοθράκης 56334 Ελευθέριο Κορδελιό"
     return [params.street, params.postalCode, cleanLocality].filter(Boolean).join(' ');
   }
-  // Settlement/village: "Χωριό, Δήμος, ΤΚ"
-  return [cleanLocality, params.municipality, params.postalCode].filter(Boolean).join(', ');
+  // Settlement/village: "Χωριό, ΤΚ" — keep it simple for OSM-style
+  // Municipality/county are used in structured search variants (2-5)
+  return [cleanLocality, params.postalCode].filter(Boolean).join(', ');
 }
 
 /**

@@ -491,6 +491,23 @@ export function hasCoordinates(address: ProjectAddress): boolean {
  * @param address - Address to format
  * @returns Structured geocoding query for /api/geocoding
  */
+/**
+ * Strip Greek administrative prefixes for geocoding.
+ * Nominatim doesn't understand "ΔΗΜΟΣ ΛΑΓΚΑΔΑ" — it needs just "ΛΑΓΚΑΔΑ".
+ */
+function stripAdminPrefix(name: string | undefined): string | undefined {
+  if (!name) return undefined;
+  return name
+    .replace(/^ΔΗΜΟΣ\s+/i, '')
+    .replace(/^ΔΗΜΟΤΙΚΗ\s+ΕΝΟΤΗΤΑ\s+/i, '')
+    .replace(/^ΔΗΜΟΤΙΚΗ\s+ΚΟΙΝΟΤΗΤΑ\s+/i, '')
+    .replace(/^ΤΟΠΙΚΗ\s+ΚΟΙΝΟΤΗΤΑ\s+/i, '')
+    .replace(/^ΠΕΡΙΦΕΡΕΙΑΚΗ\s+ΕΝΟΤΗΤΑ\s+/i, '')
+    .replace(/^ΠΕΡΙΦΕΡΕΙΑ\s+/i, '')
+    .replace(/^ΑΠΟΚΕΝΤΡΩΜΕΝΗ\s+ΔΙΟΙΚΗΣΗ\s+/i, '')
+    .trim() || undefined;
+}
+
 export function formatAddressForGeocoding(address: ProjectAddress): StructuredGeocodingQuery {
   const streetParts = [address.street, address.number].filter(Boolean);
 
@@ -499,9 +516,9 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
     city: address.city || undefined,
     neighborhood: address.neighborhood || undefined,
     postalCode: address.postalCode || undefined,
-    county: address.regionalUnit || undefined,
-    municipality: address.municipality || undefined,
-    region: address.region || undefined,
+    county: stripAdminPrefix(address.regionalUnit),
+    municipality: stripAdminPrefix(address.municipality),
+    region: stripAdminPrefix(address.region),
     country: address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
   };
 }
