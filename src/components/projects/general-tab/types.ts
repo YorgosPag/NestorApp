@@ -6,7 +6,6 @@ import type {
   ProjectRiskLevel,
   ProjectComplexity,
 } from "@/types/project";
-import type { ProjectStats } from "@/types/project";
 
 export interface GeneralProjectTabProps {
   project: Project & { companyName: string };
@@ -37,16 +36,6 @@ export interface ProjectFormData {
   completionDate: string;
   client: string;
   location: string;
-}
-
-export interface ProjectCustomersTableProps {
-  projectId: string;
-}
-
-export interface UseProjectStatsState {
-  stats: ProjectStats | null;
-  loading: boolean;
-  error: string | null;
 }
 
 export interface UseAutosaveState {
