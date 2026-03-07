@@ -139,7 +139,7 @@ function ProjectAddressFields({
   return (
     <fieldset className="grid grid-cols-2 gap-4">
       <div className="space-y-1.5">
-        <Label>{t('addressType') || 'Τύπος Διεύθυνσης'}</Label>
+        <Label>{t('form.type')}</Label>
         <Select value={type} onValueChange={(v) => onTypeChange(v as ProjectAddressType)}>
           <SelectTrigger>
             <SelectValue />
@@ -147,7 +147,7 @@ function ProjectAddressFields({
           <SelectContent>
             {ADDRESS_TYPE_KEYS.map((key) => (
               <SelectItem key={key} value={key}>
-                {t(`addressTypes.${key}`) || key}
+                {t(`types.${key}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -155,7 +155,7 @@ function ProjectAddressFields({
       </div>
 
       <div className="space-y-1.5">
-        <Label>{t('blockSide') || 'Πλευρά Οικοδομικού'}</Label>
+        <Label>{t('form.blockSide')}</Label>
         <Select
           value={blockSide}
           onValueChange={(v) =>
@@ -163,13 +163,13 @@ function ProjectAddressFields({
           }
         >
           <SelectTrigger>
-            <SelectValue placeholder={t('selectBlockSide') || 'Επιλέξτε...'} />
+            <SelectValue placeholder={t('form.blockSidePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={SELECT_CLEAR_VALUE}>{t('none') || 'Καμία'}</SelectItem>
+            <SelectItem value={SELECT_CLEAR_VALUE}>{t('form.blockSideNone')}</SelectItem>
             {BLOCK_SIDE_KEYS.map((key) => (
               <SelectItem key={key} value={key}>
-                {t(`blockSides.${key}`) || key}
+                {t(`blockSides.${key}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -177,11 +177,11 @@ function ProjectAddressFields({
       </div>
 
       <div className="space-y-1.5">
-        <Label>{t('addressLabel') || 'Ετικέτα'}</Label>
+        <Label>{t('form.label')}</Label>
         <Input
           value={label}
           onChange={(e) => onLabelChange(e.target.value)}
-          placeholder={t('addressLabelPlaceholder') || 'π.χ. Κεντρική Είσοδος'}
+          placeholder={t('form.labelPlaceholder')}
         />
       </div>
 
@@ -191,7 +191,7 @@ function ProjectAddressFields({
             checked={isPrimary}
             onCheckedChange={(checked) => onIsPrimaryChange(checked === true)}
           />
-          <span className="text-sm">{t('setPrimary') || 'Κύρια Διεύθυνση'}</span>
+          <span className="text-sm">{t('form.isPrimary')}</span>
         </label>
       </div>
     </fieldset>
