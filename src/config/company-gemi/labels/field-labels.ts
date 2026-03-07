@@ -31,6 +31,7 @@ export const fieldLabels = {
   tradeName: COMPANY_FIELD_LABELS.trade_name,
   vatNumber: COMPANY_FIELD_LABELS.vat_number,
   gemiNumber: COMPANY_FIELD_LABELS.gemi_number,
+  taxOffice: COMPANY_FIELD_LABELS.tax_office,
   legalForm: COMPANY_FIELD_LABELS.legal_form,
   gemiStatus: COMPANY_FIELD_LABELS.gemi_status,
 

@@ -44,6 +44,10 @@ import type { AdministrativeAddress } from '@/components/contacts/pickers/Admini
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
+// 🏢 ENTERPRISE: Tax Office (DOY) searchable dropdown
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import { GREEK_TAX_OFFICES } from '@/subapps/accounting/data/greek-tax-offices';
+import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { useTranslation } from 'react-i18next';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('UnifiedContactTabbedSection');
@@ -178,6 +182,16 @@ export function UnifiedContactTabbedSection({
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
   const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
+
+  // 🏢 ENTERPRISE: Tax Office (DOY) options — memoized from static data
+  const taxOfficeOptions: ComboboxOption[] = useMemo(() =>
+    GREEK_TAX_OFFICES.map((office) => ({
+      value: office.code,
+      label: office.name,
+      secondaryLabel: office.region,
+    })),
+    []
+  );
 
   // 🎭 ENTERPRISE: Dynamic sections — merge standard + persona sections for individuals (ADR-121)
   const sections = useMemo(() => {
@@ -571,6 +585,20 @@ export function UnifiedContactTabbedSection({
               </div>
             );
           },
+
+          // 🏢 ENTERPRISE: Tax Office (DOY) — searchable dropdown with GREEK_TAX_OFFICES data
+          taxOffice: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
+            <SearchableCombobox
+              value={formData.taxOffice ?? ''}
+              onValueChange={(value) => {
+                handleSelectChange('taxOffice', value);
+              }}
+              options={taxOfficeOptions}
+              placeholder={t('company.searchTaxOffice', { ns: 'forms', defaultValue: 'Search tax office...' })}
+              emptyMessage={t('company.noTaxOfficeFound', { ns: 'forms', defaultValue: 'No tax office found' })}
+              disabled={fieldDisabled ?? disabled}
+            />
+          ),
         } : {}),
 
         // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types

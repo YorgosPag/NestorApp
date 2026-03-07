@@ -125,6 +125,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
 
     companyName: getSafeFieldValue(companyContact, 'companyName'),
     vatNumber: getSafeFieldValue(companyContact, 'vatNumber'),
+    taxOffice: getSafeFieldValue(companyContact, 'taxOffice'),
     companyVatNumber: getSafeFieldValue(companyContact, 'vatNumber') ||
       getSafeFieldValue(companyContact, 'companyVatNumber'),
 

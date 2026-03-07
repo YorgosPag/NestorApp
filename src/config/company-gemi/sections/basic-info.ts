@@ -13,6 +13,10 @@ import { fieldLabels } from '../labels/field-labels';
 import { gemiHelps } from '../labels/help-texts';
 import { LEGAL_FORM_OPTIONS, GEMI_STATUS_OPTIONS } from '../options';
 
+// Field type for taxOffice — rendered via customRenderer (SearchableCombobox)
+// The 'input' type is a placeholder; the actual rendering is handled by the custom renderer
+// keyed by field id 'taxOffice' in UnifiedContactTabbedSection
+
 // ============================================================================
 // BASIC INFO SECTION DEFINITION
 // ============================================================================
@@ -56,6 +60,12 @@ export const basicInfoSection: SectionConfig = {
       label: fieldLabels.gemiNumber,
       type: 'input',
       helpText: gemiHelps.gemi_number_help,
+    },
+    {
+      id: 'taxOffice',
+      label: fieldLabels.taxOffice,
+      type: 'input',
+      helpText: gemiHelps.tax_office_help,
     },
     {
       id: 'legalForm',

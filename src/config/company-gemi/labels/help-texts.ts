@@ -36,6 +36,7 @@ export const gemiHelps = {
   trade_name_help: 'helpTexts.tradeName',
   vat_number_help: 'helpTexts.vatNumber',
   gemi_number_help: 'helpTexts.gemiNumber',
+  tax_office_help: 'helpTexts.taxOffice',
   legal_form_help: 'helpTexts.legalForm',
   company_status_help: 'helpTexts.gemiStatus',
 

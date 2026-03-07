@@ -35,6 +35,7 @@ export const MODAL_SELECT_COMPANY_FIELD_LABELS = {
   trade_name: 'company.tradeName',
   vat_number: 'company.vatNumber',
   gemi_number: 'company.gemiNumber',
+  tax_office: 'company.taxOffice',
   legal_form: 'company.legalForm',
   gemi_status: 'company.gemiStatus',
   activity_code: 'company.activityCode',
