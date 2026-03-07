@@ -495,7 +495,7 @@ export function hasCoordinates(address: ProjectAddress): boolean {
  * Strip Greek administrative prefixes for geocoding.
  * Nominatim doesn't understand "ΔΗΜΟΣ ΛΑΓΚΑΔΑ" — it needs just "ΛΑΓΚΑΔΑ".
  */
-function stripAdminPrefix(name: string | undefined): string | undefined {
+export function stripAdminPrefix(name: string | undefined): string | undefined {
   if (!name) return undefined;
   return name
     .replace(/^ΔΗΜΟΣ\s+/i, '')

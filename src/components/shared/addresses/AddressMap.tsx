@@ -65,6 +65,20 @@ const PIN_COLORS = {
   shadow: 'rgba(0,0,0,0.3)',         // subtle shadow
 } as const;
 
+/** Branch pin colors — visually distinct from HQ */
+const BRANCH_PIN_COLORS = {
+  body: colors.amber['500'],         // #f59e0b — amber for branches
+  stroke: colors.background.primary,
+  innerCircle: colors.background.primary,
+  shadow: 'rgba(0,0,0,0.3)',
+} as const;
+
+/** Auto-pan configuration for edge dragging */
+const AUTO_PAN = {
+  EDGE_THRESHOLD: 60,   // pixels from viewport edge to start panning
+  PAN_SPEED: 8,         // pixels per pan step
+} as const;
+
 /** Map text layer colors — SSoT: design-tokens */
 const MAP_TEXT_COLORS = {
   label: colors.text.primary,        // #1e293b — slate-800
@@ -103,8 +117,8 @@ export interface AddressMapProps {
   /** Enable draggable markers (for add/edit mode) */
   draggableMarkers?: boolean;
 
-  /** Callback when user drags a marker — provides reverse-geocoded address data */
-  onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>) => void;
+  /** Callback when user drags a marker — provides reverse-geocoded address data + address index */
+  onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>, addressIndex: number) => void;
 
   /** Additional CSS classes */
   className?: string;
@@ -124,28 +138,40 @@ type AddressFeatureProperties = {
 
 interface DraggableMarkerPinProps {
   isPrimary?: boolean;
+  /** Show pulsating glow for new empty pins */
+  pulsate?: boolean;
+  /** Label shown below the pin */
+  label?: string;
 }
 
-function DraggableMarkerPin({ isPrimary }: DraggableMarkerPinProps) {
+function DraggableMarkerPin({ isPrimary, pulsate, label }: DraggableMarkerPinProps) {
   const size = isPrimary ? 40 : 32;
   const viewBoxHeight = Math.round(size * 1.25);
+  const pinColors = isPrimary ? PIN_COLORS : BRANCH_PIN_COLORS;
   return (
-    <svg
-      width={size}
-      height={viewBoxHeight}
-      viewBox={`0 0 40 50`}
-      xmlns="http://www.w3.org/2000/svg"
-      className="cursor-grab active:cursor-grabbing drop-shadow-md"
-    >
-      <ellipse cx="20" cy="47" rx="8" ry="3" fill={PIN_COLORS.shadow} />
-      <path
-        d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
-        fill={PIN_COLORS.body}
-        stroke={PIN_COLORS.stroke}
-        strokeWidth="2"
-      />
-      <circle cx="20" cy="16" r="6" fill={PIN_COLORS.innerCircle} />
-    </svg>
+    <figure className="flex flex-col items-center m-0">
+      <svg
+        width={size}
+        height={viewBoxHeight}
+        viewBox="0 0 40 50"
+        xmlns="http://www.w3.org/2000/svg"
+        className={`cursor-grab active:cursor-grabbing drop-shadow-md ${pulsate ? 'animate-bounce' : ''}`}
+      >
+        <ellipse cx="20" cy="47" rx="8" ry="3" fill={pinColors.shadow} />
+        <path
+          d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
+          fill={pinColors.body}
+          stroke={pinColors.stroke}
+          strokeWidth="2"
+        />
+        <circle cx="20" cy="16" r="6" fill={pinColors.innerCircle} />
+      </svg>
+      {label && (
+        <span className="mt-0.5 text-[10px] font-semibold leading-none whitespace-nowrap rounded bg-background/90 px-1 py-0.5 shadow-sm text-foreground">
+          {label}
+        </span>
+      )}
+    </figure>
   );
 }
 
@@ -208,8 +234,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const [mapReady, setMapReady] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
 
-  // Draggable marker state — position of the single draggable pin
-  const [dragMarkerPosition, setDragMarkerPosition] = useState<{ lng: number; lat: number } | null>(null);
+  // Draggable marker state — per-address positions (key = address ID)
+  const [dragPositions, setDragPositions] = useState<Map<string, { lng: number; lat: number }>>(new Map());
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
 
   const mapRef = useRef<MapInstance | null>(null);
@@ -352,10 +378,17 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
           onGeocodingComplete(geocodedMap);
         }
 
-        // For draggable mode + existing address: set marker at first geocoded position
-        if (draggableMarkers && successCount > 0 && !dragMarkerPosition) {
-          const firstResult = geocodedMap.values().next().value as GeocodingServiceResult;
-          setDragMarkerPosition({ lng: firstResult.lng, lat: firstResult.lat });
+        // For draggable mode: initialize drag positions from geocoded results
+        if (draggableMarkers && successCount > 0) {
+          setDragPositions(prev => {
+            const next = new Map(prev);
+            geocodedMap.forEach((result, id) => {
+              if (!next.has(id)) {
+                next.set(id, { lng: result.lng, lat: result.lat });
+              }
+            });
+            return next;
+          });
         }
       } catch (error) {
         logger.error('Geocoding failed:', { error: error });
@@ -493,16 +526,26 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
   /**
    * Handle drag end — reverse geocode the new position
+   * @param addressId - ID of the address being dragged (for position tracking)
+   * @param addressIndex - Index in the addresses array (passed to callback)
    */
-  const handleDragEnd = useCallback(async (event: { lngLat: { lng: number; lat: number } }) => {
+  const handleDragEnd = useCallback(async (
+    event: { lngLat: { lng: number; lat: number } },
+    addressId: string,
+    addressIndex: number,
+  ) => {
     const { lng, lat } = event.lngLat;
-    setDragMarkerPosition({ lng, lat });
+    setDragPositions(prev => {
+      const next = new Map(prev);
+      next.set(addressId, { lng, lat });
+      return next;
+    });
     setIsReverseGeocoding(true);
 
     try {
       const result = await reverseGeocode(lat, lng);
       if (result && onAddressDragUpdate) {
-        onAddressDragUpdate(reverseResultToAddress(result));
+        onAddressDragUpdate(reverseResultToAddress(result), addressIndex);
       } else if (!result) {
         logger.warn('Reverse geocoding returned no result', { data: { lat, lng } });
       }
@@ -512,6 +555,33 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       setIsReverseGeocoding(false);
     }
   }, [onAddressDragUpdate]);
+
+  /**
+   * Auto-pan map when marker is dragged near viewport edges
+   */
+  const handleAutoPan = useCallback((event: { lngLat: { lng: number; lat: number } }) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const point = map.project([event.lngLat.lng, event.lngLat.lat]);
+    const container = map.getContainer();
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    let dx = 0;
+    let dy = 0;
+    const { EDGE_THRESHOLD, PAN_SPEED } = AUTO_PAN;
+
+    if (point.x < EDGE_THRESHOLD) dx = -PAN_SPEED;
+    else if (point.x > width - EDGE_THRESHOLD) dx = PAN_SPEED;
+
+    if (point.y < EDGE_THRESHOLD) dy = -PAN_SPEED;
+    else if (point.y > height - EDGE_THRESHOLD) dy = PAN_SPEED;
+
+    if (dx !== 0 || dy !== 0) {
+      map.panBy([dx, dy], { duration: 0 });
+    }
+  }, []);
 
   // ===========================================================================
   // RENDERING
@@ -564,7 +634,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     hasEverRenderedRef.current;
 
   // Default position for new address draggable pin (center of Greece)
-  const defaultDragPosition = dragMarkerPosition ?? {
+  const defaultCenter = {
     lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
     lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
   };
@@ -588,16 +658,45 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               showMapControls={false}
               className="w-full h-full rounded-lg overflow-hidden"
             >
-              {/* Draggable Marker Mode — <Marker> components */}
-              {draggableMarkers && (
+              {/* Draggable Marker Mode — one marker per address */}
+              {draggableMarkers && addresses.map((addr, index) => {
+                const geocoded = geocodedAddresses.get(addr.id);
+                const dragPos = dragPositions.get(addr.id);
+                // Use drag position > geocoded position > offset default
+                const position = dragPos
+                  ?? (geocoded ? { lng: geocoded.lng, lat: geocoded.lat } : null)
+                  ?? { lng: defaultCenter.lng + index * 0.005, lat: defaultCenter.lat + index * 0.003 };
+                const hasData = !!(dragPos || geocoded);
+
+                return (
+                  <Marker
+                    key={addr.id}
+                    longitude={position.lng}
+                    latitude={position.lat}
+                    anchor="bottom"
+                    draggable
+                    onDragEnd={(e) => handleDragEnd(e, addr.id, index)}
+                    onDrag={handleAutoPan}
+                  >
+                    <DraggableMarkerPin
+                      isPrimary={addr.isPrimary}
+                      pulsate={!hasData}
+                      label={addr.label}
+                    />
+                  </Marker>
+                );
+              })}
+              {/* Fallback: single pin when no addresses exist in draggable mode */}
+              {draggableMarkers && addresses.length === 0 && (
                 <Marker
-                  longitude={defaultDragPosition.lng}
-                  latitude={defaultDragPosition.lat}
+                  longitude={defaultCenter.lng}
+                  latitude={defaultCenter.lat}
                   anchor="bottom"
                   draggable
-                  onDragEnd={handleDragEnd}
+                  onDragEnd={(e) => handleDragEnd(e, '__new__', 0)}
+                  onDrag={handleAutoPan}
                 >
-                  <DraggableMarkerPin isPrimary />
+                  <DraggableMarkerPin isPrimary pulsate />
                 </Marker>
               )}
 

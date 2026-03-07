@@ -35,8 +35,8 @@ interface ContactAddressMapPreviewProps {
   heightPreset?: 'viewerCompact' | 'viewerStandard' | 'viewerExpanded' | 'viewerFullscreen';
   /** Enable draggable pin for address selection (edit mode) */
   draggable?: boolean;
-  /** Callback when user drags pin — provides resolved address data */
-  onDragResolve?: (address: DragResolvedAddress) => void;
+  /** Callback when user drags pin — provides resolved address data + address index */
+  onDragResolve?: (address: DragResolvedAddress, addressIndex: number) => void;
   /** Additional CSS classes for map container */
   className?: string;
 }
@@ -69,8 +69,11 @@ export function ContactAddressMapPreview({
 
     // Multi-address mode: company contacts with HQ + branches
     if (companyAddresses && companyAddresses.length > 0) {
-      return companyAddresses
-        .filter((addr) => addr.city.trim() || (addr.street.trim() && addr.postalCode.trim()))
+      // In draggable mode: include ALL addresses (even empty) so each gets a pin
+      const filtered = draggable
+        ? companyAddresses
+        : companyAddresses.filter((addr) => addr.city.trim() || (addr.street.trim() && addr.postalCode.trim()));
+      return filtered
         .map((addr, index) => {
           const isHq = addr.type === 'headquarters';
           return createProjectAddress({
@@ -121,17 +124,17 @@ export function ContactAddressMapPreview({
   // Map drag handler — converts ProjectAddress partial to DragResolvedAddress
   const handleDragUpdate = useMemo(() => {
     if (!draggable || !onDragResolve) return undefined;
-    return (data: Partial<PartialProjectAddress>) => {
+    return (data: Partial<PartialProjectAddress>, addressIndex: number) => {
       // Split "Σαμοθράκης 16" into street + number
       const streetParts = (data.street ?? '').match(/^(.+?)\s+(\d+\S*)$/);
       onDragResolve({
         street: streetParts ? streetParts[1] : (data.street ?? ''),
         number: streetParts ? streetParts[2] : '',
         postalCode: data.postalCode ?? '',
-        city: data.city ?? data.neighborhood ?? '',
+        city: data.neighborhood || data.city || '',
         neighborhood: data.neighborhood ?? '',
         region: data.region ?? '',
-      });
+      }, addressIndex);
     };
   }, [draggable, onDragResolve]);
 

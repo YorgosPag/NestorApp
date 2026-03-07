@@ -133,14 +133,37 @@ async function fetchNominatimReverse(url: string): Promise<NominatimReverseResul
   }
 }
 
+/**
+ * Strip Greek administrative prefixes from Nominatim results.
+ * E.g. "Δημοτική Ενότητα Ελευθερίου Κορδελιού" → "Ελευθερίου Κορδελιού"
+ * Server-side duplicate of address-helpers.stripAdminPrefix (cannot import client code).
+ */
+function stripAdminPrefix(name: string): string {
+  return name
+    .replace(/^Δημοτική\s+Ενότητα\s+/i, '')
+    .replace(/^Δημοτική\s+Κοινότητα\s+/i, '')
+    .replace(/^Τοπική\s+Κοινότητα\s+/i, '')
+    .replace(/^Δήμος\s+/i, '')
+    .replace(/^Περιφερειακή\s+Ενότητα\s+/i, '')
+    .replace(/^Περιφέρεια\s+/i, '')
+    .replace(/^Αποκεντρωμένη\s+Διοίκηση\s+/i, '')
+    .trim();
+}
+
 function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingApiResponse {
   const addr = result.address;
+
+  // For Greek addresses, suburb = actual settlement (Ελευθέριο Κορδελιό)
+  // city/town = municipality level (Δήμος Κορδελιού-Ευόσμου)
+  // Prefer suburb > neighbourhood > village > town > city (most specific first)
+  const rawCity = addr.suburb ?? addr.neighbourhood ?? addr.village ?? addr.town ?? addr.city ?? '';
+  const rawNeighborhood = addr.suburb ?? addr.neighbourhood ?? '';
 
   return {
     street: addr.road ?? '',
     number: addr.house_number ?? '',
-    city: addr.city ?? addr.town ?? addr.village ?? '',
-    neighborhood: addr.suburb ?? addr.neighbourhood ?? '',
+    city: stripAdminPrefix(rawCity),
+    neighborhood: stripAdminPrefix(rawNeighborhood),
     postalCode: addr.postcode ?? '',
     region: addr.state ?? '',
     country: addr.country ?? '',

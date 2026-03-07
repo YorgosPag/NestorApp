@@ -534,14 +534,27 @@ export function UnifiedContactTabbedSection({
                     postalCode={formData.postalCode}
                     companyAddresses={formData.companyAddresses}
                     draggable={!disabled}
-                    onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress) => {
+                    onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
+                      const currentAddresses = [...(formData.companyAddresses ?? [])];
+                      if (addressIndex >= 0 && addressIndex < currentAddresses.length) {
+                        currentAddresses[addressIndex] = {
+                          ...currentAddresses[addressIndex],
+                          street: addr.street,
+                          number: addr.number,
+                          postalCode: addr.postalCode,
+                          city: addr.city,
+                        };
+                      }
+                      // Sync HQ to root fields
+                      const hq = currentAddresses.find(a => a.type === 'headquarters') ?? currentAddresses[0];
                       setFormData({
                         ...formData,
-                        street: addr.street,
-                        streetNumber: addr.number,
-                        postalCode: addr.postalCode,
-                        city: addr.city,
-                        settlement: addr.city,
+                        companyAddresses: currentAddresses,
+                        street: hq?.street ?? '',
+                        streetNumber: hq?.number ?? '',
+                        postalCode: hq?.postalCode ?? '',
+                        city: hq?.city ?? '',
+                        settlement: hq?.city ?? '',
                       });
                     } : undefined}
                   />
@@ -849,7 +862,7 @@ export function UnifiedContactTabbedSection({
                   regionalUnit={formData.regionalUnit as string}
                   region={formData.region as string}
                   draggable={!disabled}
-                  onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress) => {
+                  onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress, _index: number) => {
                     setFormData({
                       ...formData,
                       street: addr.street,
@@ -923,7 +936,7 @@ export function UnifiedContactTabbedSection({
                   regionalUnit={formData.regionalUnit as string}
                   region={formData.region as string}
                   draggable={!disabled}
-                  onDragResolve={!disabled && setFormData ? (resolved: DragResolvedAddress) => {
+                  onDragResolve={!disabled && setFormData ? (resolved: DragResolvedAddress, _index: number) => {
                     setFormData({
                       ...formData,
                       street: resolved.street,
