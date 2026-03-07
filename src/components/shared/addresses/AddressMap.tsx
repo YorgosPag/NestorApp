@@ -549,11 +549,18 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     );
   }
 
-  // Determine if map should render
+  // Track if map has ever rendered (prevents unmount during re-geocoding)
+  const hasEverRenderedRef = useRef(false);
+  if (geocodingStatus === 'success' || geocodingStatus === 'partial') {
+    hasEverRenderedRef.current = true;
+  }
+
+  // Determine if map should render — stay visible once rendered (no unmount/remount cycle)
   const shouldRenderMap =
     isDraggableMode ||
     geocodingStatus === 'success' ||
-    geocodingStatus === 'partial';
+    geocodingStatus === 'partial' ||
+    (hasEverRenderedRef.current && geocodingStatus === 'loading');
 
   // Default position for new address draggable pin (center of Greece)
   const defaultDragPosition = dragMarkerPosition ?? {
