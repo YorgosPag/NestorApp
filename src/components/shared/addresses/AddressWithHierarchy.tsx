@@ -145,7 +145,7 @@ export function AddressWithHierarchy({
   hierarchyLevels = [7, 6, 5, 4, 3],
   defaultExpanded = false,
 }: AddressWithHierarchyProps) {
-  const { isLoading, resolvePath, searchOptions, levelOptions } = useAdministrativeHierarchy();
+  const { isLoading, findById, resolvePath, searchOptions, levelOptions } = useAdministrativeHierarchy();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(defaultExpanded);
 
   const current = useMemo(
@@ -330,37 +330,62 @@ export function AddressWithHierarchy({
     const normalize = (s: string) =>
       s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[-]/g, ' ').toLowerCase().trim();
 
-    // Clean the input (strip hyphens, e.g. "Ελευθέριο-Κορδελιό" → "Ελευθέριο Κορδελιό")
+    // Clean the input (strip hyphens)
     const cleanedName = current.settlementName.trim().replace(/-/g, ' ');
     const normalizedTarget = normalize(cleanedName);
 
-    // Search hierarchy data (level 8 = settlement)
-    const matches = searchOptions(cleanedName, 8, 20);
+    // Search hierarchy data (level 8 = settlement) — use first word for broader search
+    const firstWord = cleanedName.split(/\s+/)[0];
+    const matches = searchOptions(firstWord, 8, 50);
     if (matches.length === 0) return;
 
-    // 1. Try exact match (after normalization)
-    let bestMatch = matches.find(opt => normalize(opt.label) === normalizedTarget);
+    // Helper: check if option matches (exact or fuzzy prefix)
+    const isMatch = (opt: ComboboxOption): boolean => {
+      const normalizedOpt = normalize(opt.label);
+      // Exact match
+      if (normalizedOpt === normalizedTarget) return true;
+      // Fuzzy: prefix-based word matching (handles genitive → nominative)
+      if (normalizedTarget.length >= 4) {
+        const targetWords = normalizedTarget.split(/\s+/);
+        const optWords = normalizedOpt.split(/\s+/);
+        if (optWords.length === targetWords.length) {
+          return targetWords.every((tw, i) => {
+            const prefixLen = Math.min(5, Math.min(tw.length, optWords[i].length));
+            return tw.substring(0, prefixLen) === optWords[i].substring(0, prefixLen);
+          });
+        }
+      }
+      return false;
+    };
 
-    // 2. Fuzzy: prefix-based word matching (handles genitive → nominative)
-    // "ελευθεριου κορδελιου" vs "ελευθεριο κορδελιο" — first 5 chars of each word match
-    if (!bestMatch && normalizedTarget.length >= 4) {
-      const targetWords = normalizedTarget.split(/\s+/);
-      bestMatch = matches.find(opt => {
-        const optWords = normalize(opt.label).split(/\s+/);
-        if (optWords.length !== targetWords.length) return false;
-        return targetWords.every((tw, i) => {
-          const prefixLen = Math.min(5, Math.min(tw.length, optWords[i].length));
-          return tw.substring(0, prefixLen) === optWords[i].substring(0, prefixLen);
+    // Filter all matching settlements
+    const candidates = matches.filter(isMatch);
+    if (candidates.length === 0) return;
+
+    let bestMatch: ComboboxOption;
+
+    if (candidates.length === 1) {
+      // Unique match — use it directly
+      bestMatch = candidates[0];
+    } else {
+      // Multiple homonymous settlements — disambiguate by postal code
+      const postalCode = current.postalCode.trim();
+      if (postalCode.length === 5) {
+        const postalMatch = candidates.find(opt => {
+          const entity = findById(opt.value);
+          return entity?.postalCode === postalCode;
         });
-      });
+        bestMatch = postalMatch ?? candidates[0];
+      } else {
+        // No postal code available — use first match
+        bestMatch = candidates[0];
+      }
     }
-
-    if (!bestMatch) return;
 
     // Resolve full hierarchy from matched settlement
     const path = resolvePath(bestMatch.value);
     const updated = { ...current };
-    // Use the canonical settlement name from hierarchy data
+    // Use canonical settlement name from hierarchy data
     updated.settlementName = bestMatch.label;
     for (const mapping of PATH_TO_VALUE) {
       const entity = path[mapping.pathKey];

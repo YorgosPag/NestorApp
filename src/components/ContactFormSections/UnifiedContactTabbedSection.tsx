@@ -545,7 +545,7 @@ export function UnifiedContactTabbedSection({
                           city: addr.city,
                         };
                       }
-                      // Sync HQ to root fields
+                      // Sync HQ to root fields + clear hierarchy for re-resolution
                       const hq = currentAddresses.find(a => a.type === 'headquarters') ?? currentAddresses[0];
                       setFormData({
                         ...formData,
@@ -555,6 +555,15 @@ export function UnifiedContactTabbedSection({
                         postalCode: hq?.postalCode ?? '',
                         city: hq?.city ?? '',
                         settlement: hq?.city ?? '',
+                        settlementId: null,
+                        community: '',
+                        municipalUnit: '',
+                        municipality: '',
+                        municipalityId: null,
+                        regionalUnit: '',
+                        region: '',
+                        decentAdmin: '',
+                        majorGeo: '',
                       });
                     } : undefined}
                   />
@@ -870,6 +879,15 @@ export function UnifiedContactTabbedSection({
                       postalCode: addr.postalCode,
                       city: addr.city,
                       settlement: addr.city,
+                      settlementId: null,
+                      community: '',
+                      municipalUnit: '',
+                      municipality: '',
+                      municipalityId: null,
+                      regionalUnit: '',
+                      region: '',
+                      decentAdmin: '',
+                      majorGeo: '',
                     });
                   } : undefined}
                 />
@@ -944,6 +962,15 @@ export function UnifiedContactTabbedSection({
                       postalCode: resolved.postalCode,
                       city: resolved.city,
                       settlement: resolved.city,
+                      settlementId: null,
+                      community: '',
+                      municipalUnit: '',
+                      municipality: '',
+                      municipalityId: null,
+                      regionalUnit: '',
+                      region: '',
+                      decentAdmin: '',
+                      majorGeo: '',
                     });
                   } : undefined}
                 />
