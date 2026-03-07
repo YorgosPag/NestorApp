@@ -791,7 +791,7 @@
       "statistics": "Statistics",
       "projectGeneral": "Project General",
       "projectFloorplan": "Project Floor Plan",
-      "parkingFloorplan": "Parking Floor Plan",
+      "parkingFloorplan": "Parking Spaces",
       "projectStructure": "Project Structure",
       "buildingData": "Building Data",
       "parking": "Parking Spaces",
@@ -804,7 +804,7 @@
     "descriptions": {
       "projectGeneral": "Basic information and project details",
       "projectFloorplan": "Architectural floor plan and project drawings",
-      "parkingFloorplan": "Parking spaces layout and arrangement",
+      "parkingFloorplan": "Floor plans and parking spaces list for the project",
       "projectStructure": "Organizational structure and project hierarchy",
       "timeline": "Project timeline and milestones",
       "customers": "Project customers and buyers",

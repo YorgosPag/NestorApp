@@ -43,6 +43,8 @@ export type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZo
 interface UseFirestoreParkingOptions {
   /** Filter by building ID (RECOMMENDED per local_4.log architecture) */
   buildingId?: string;
+  /** Filter by project ID — returns all parking spots across all buildings of the project (ADR-191) */
+  projectId?: string;
   /** Auto-fetch on mount (default: true) */
   autoFetch?: boolean;
 }
@@ -93,7 +95,7 @@ const logger = createModuleLogger('useFirestoreParkingSpots');
 export function useFirestoreParkingSpots(
   options: UseFirestoreParkingOptions = {}
 ): UseFirestoreParkingReturn {
-  const { buildingId, autoFetch = true } = options;
+  const { buildingId, projectId, autoFetch = true } = options;
 
   // 🔐 ENTERPRISE: Auth-ready gating - wait for user to be authenticated
   const { user, loading: authLoading } = useAuth();
@@ -122,10 +124,11 @@ export function useFirestoreParkingSpots(
 
       logger.info('Fetching parking spots');
 
-      // Build API URL με optional buildingId filter
-      const url = buildingId
-        ? `/api/parking?buildingId=${encodeURIComponent(buildingId)}`
-        : '/api/parking';
+      // Build API URL with optional filters
+      const params = new URLSearchParams();
+      if (buildingId) params.set('buildingId', buildingId);
+      if (projectId) params.set('projectId', projectId);
+      const url = params.toString() ? `/api/parking?${params.toString()}` : '/api/parking';
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const data = await apiClient.get<ParkingApiResponse>(url);
@@ -142,7 +145,7 @@ export function useFirestoreParkingSpots(
     } finally {
       setLoading(false);
     }
-  }, [buildingId, user, authLoading]);
+  }, [buildingId, projectId, user, authLoading]);
 
   // Auto-fetch on mount and when buildingId/auth changes
   useEffect(() => {

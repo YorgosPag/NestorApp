@@ -32,6 +32,7 @@ import { ProjectCustomersTab } from '@/components/projects/customers-tab';
 import { ProjectStructureTab } from '@/components/projects/tabs/ProjectStructureTab';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
 import { ProjectFloorplanTab } from '@/components/projects/tabs/ProjectFloorplanTab';
+import { ProjectParkingTab } from '@/components/projects/tabs/ProjectParkingTab';
 // 🏢 ENTERPRISE: Multi-address locations tab (ADR-167)
 import { ProjectLocationsTab } from '@/components/projects/tabs/ProjectLocationsTab';
 
@@ -54,6 +55,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   // 🏢 ENTERPRISE: ProjectFloorplanTab uses centralized EntityFilesManager pattern
   // Same storage structure as Photos, Videos, Documents (ADR-033)
   'ProjectFloorplanTab': ProjectFloorplanTab,
+  // ADR-191: Unified parking tab with floorplans + list sub-tabs
+  'ProjectParkingTab': ProjectParkingTab,
   // 🔄 LEGACY: FloorplanViewerTab kept for backward compatibility
   'FloorplanViewerTab': FloorplanViewerTab,
   // 🏢 ENTERPRISE: Multi-address locations management tab (ADR-167)

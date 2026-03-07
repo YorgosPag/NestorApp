@@ -94,5 +94,18 @@
     "ownerLabel": "Owner:",
     "saveSuccess": "Parking spot updated",
     "saveError": "Failed to save"
+  },
+  "projectTab": {
+    "subtabs": {
+      "floorplans": "Floor Plans",
+      "list": "List"
+    },
+    "empty": "No parking spaces found for this project",
+    "stats": {
+      "total": "Total",
+      "available": "Available",
+      "reserved": "Reserved",
+      "sold": "Sold"
+    }
   }
 }

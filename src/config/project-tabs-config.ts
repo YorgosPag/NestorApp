@@ -99,7 +99,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 3. ΚΑΤΟΨΗ ΘΕΣΕΩΝ ΣΤΑΘΜΕΥΣΗΣ - 🏢 ENTERPRISE: Uses centralized file storage (ADR-033)
+  // 3. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ — Κατόψεις + Λίστα (ADR-191)
   // -------------------------------------------------------------------------
   {
     id: 'parking-floorplan',
@@ -109,7 +109,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     description: PROJECT_TAB_DESCRIPTIONS.PARKING_FLOORPLAN,
     order: 3,
     enabled: true,
-    component: 'ProjectFloorplanTab',
+    component: 'ProjectParkingTab',
     componentProps: {
       title: PROJECT_COMPONENT_LABELS.PARKING_FLOORPLAN_TITLE,
       floorplanType: 'parking'
