@@ -279,25 +279,7 @@ export function AddressWithHierarchy({
     <section className="space-y-4">
       {/* Section 1: Basic Address Fields (always visible) */}
       <div className="space-y-3">
-        {/* Row 1: Oikismos / City (SearchableCombobox with hierarchy data) */}
-        <fieldset className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">
-            Οικισμός / Πόλη
-          </Label>
-          <SearchableCombobox
-            value={current.settlementName}
-            onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
-            options={settlementOptions}
-            placeholder="π.χ. Θεσσαλονίκη, Μαρούσι, Λεπτοκαρυά..."
-            emptyMessage="Πληκτρολογήστε για αναζήτηση..."
-            isLoading={isLoading}
-            allowFreeText
-            disabled={disabled}
-            maxDisplayed={30}
-          />
-        </fieldset>
-
-        {/* Row 2: Street + Number */}
+        {/* Row 1: Street + Number */}
         {showStreetFields && (
           <div className="grid grid-cols-3 gap-3">
             <fieldset className="col-span-2 space-y-1">
@@ -321,7 +303,7 @@ export function AddressWithHierarchy({
           </div>
         )}
 
-        {/* Row 3: Postal Code */}
+        {/* Row 2: Postal Code */}
         <fieldset className="space-y-1 max-w-[200px]">
           <Label className="text-xs font-medium text-muted-foreground">Τ.Κ.</Label>
           <Input
@@ -334,6 +316,24 @@ export function AddressWithHierarchy({
             maxLength={5}
             inputMode="numeric"
             disabled={disabled}
+          />
+        </fieldset>
+
+        {/* Row 3: Settlement / City (SearchableCombobox with hierarchy data) */}
+        <fieldset className="space-y-1">
+          <Label className="text-xs font-medium text-muted-foreground">
+            Οικισμός / Πόλη
+          </Label>
+          <SearchableCombobox
+            value={current.settlementName}
+            onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
+            options={settlementOptions}
+            placeholder="π.χ. Θεσσαλονίκη, Μαρούσι, Λεπτοκαρυά..."
+            emptyMessage="Πληκτρολογήστε για αναζήτηση..."
+            isLoading={isLoading}
+            allowFreeText
+            disabled={disabled}
+            maxDisplayed={30}
           />
         </fieldset>
       </div>
@@ -386,6 +386,19 @@ export function AddressWithHierarchy({
                 </fieldset>
               );
             })}
+
+            {/* Country — auto-filled as "Ελλάδα" for Greek admin hierarchy */}
+            <fieldset className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Χώρα
+              </label>
+              <Input
+                value="Ελλάδα"
+                disabled
+                readOnly
+                className="opacity-75"
+              />
+            </fieldset>
           </div>
         )}
       </div>
