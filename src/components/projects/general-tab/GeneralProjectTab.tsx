@@ -2,27 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from "@/components/ui/card";
-import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
-import { CheckCircle, Ruler, TrendingUp } from 'lucide-react';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { useTypography } from '@/hooks/useTypography';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
-// 🏢 ENTERPRISE: Centralized Unit Icon
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
 import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 
-import { useProjectStats } from './hooks/useProjectStats';
 import { useAutosave } from './hooks/useAutosave';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
-import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ProjectCustomersTable } from './parts/ProjectCustomersTable';
 import { ProjectBuildingsCard } from './parts/ProjectBuildingsCard';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
@@ -42,8 +30,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   const { t } = useTranslation('projects');
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
-  const typography = useTypography();
-  const colors = useSemanticColors();
   const [isEditing, setIsEditing] = useState(false);
   const [projectData, setProjectData] = useState<ProjectFormData>({
     // Βασικά πεδία
@@ -75,7 +61,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     location: project.location || '',
   });
 
-  const { stats, loading: loadingStats } = useProjectStats(project.id);
   const { autoSaving, lastSaved, setDirty } = useAutosave(projectData, isEditing);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -171,9 +156,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     }
   };
 
-  const salesPercentage = stats && stats.totalUnits > 0 ? (stats.soldUnits / stats.totalUnits) * 100 : 0;
-  const availableUnits = stats ? stats.totalUnits - stats.soldUnits : 0;
-
   return (
     <>
       <GeneralProjectHeader
@@ -187,70 +169,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         isSaving={isSaving}
         saveError={saveError}
       />
-      
-      <div className={cn(spacing.margin.top.lg, spacing.margin.bottom.sm)}>
-        <UnifiedDashboard
-          stats={[
-            {
-              title: t('generalTab.totalUnits'),
-              value: loadingStats ? '...' : stats?.totalUnits ?? 0,
-              icon: UnitIcon,
-              color: 'blue',
-              loading: loadingStats,
-            },
-            {
-              title: t('generalTab.soldUnits'),
-              value: loadingStats ? '...' : stats?.soldUnits ?? 0,
-              icon: CheckCircle,
-              color: 'green',
-              loading: loadingStats,
-            },
-            {
-              title: t('generalTab.totalSoldArea'),
-              value: loadingStats ? '...' : `${(stats?.totalSoldArea ?? 0).toLocaleString('el-GR')} m²`,
-              icon: Ruler,
-              color: 'purple',
-              loading: loadingStats,
-            },
-            {
-              title: t('generalTab.salesPercentage'),
-              value: loadingStats ? '...' : `${salesPercentage.toFixed(1)}%`,
-              icon: TrendingUp,
-              color: 'orange',
-              loading: loadingStats,
-              description: loadingStats ? '' : t('generalTab.availableUnits', { count: availableUnits }),
-            },
-          ] satisfies DashboardStat[]}
-          columns={4}
-          className=""
-        />
-      </div>
 
-      {!loadingStats && stats && (
-        <Card className={spacing.margin.bottom.sm}>
-          <CardContent className={spacing.padding.sm}>
-            <div className={spacing.spaceBetween.sm}>
-              <div className={cn("flex justify-between", typography.body.sm)}>
-                <span>{t('generalTab.salesProgress')}</span>
-                <span>{t('generalTab.unitsProgress', { sold: stats.soldUnits, total: stats.totalUnits })}</span>
-              </div>
-              <ThemeProgressBar
-                progress={salesPercentage}
-                label={t('generalTab.salesProgress')}
-                size="md"
-                showPercentage={false}
-              />
-              <div className={cn("flex justify-between", typography.body.xs, colors.text.muted)}>
-                <span>0%</span>
-                <span>{t('generalTab.percentageComplete', { percentage: salesPercentage.toFixed(1) })}</span>
-                <span>100%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <section className={spacing.spaceBetween.md}>
+      <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>
         <BasicProjectInfoTab
           data={projectData}
           setData={setProjectData}
