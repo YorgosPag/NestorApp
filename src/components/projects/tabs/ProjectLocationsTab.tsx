@@ -27,11 +27,24 @@
 
 import React, { useState, useCallback } from 'react';
 import type { Project } from '@/types/project';
-import type { ProjectAddress } from '@/types/project/addresses';
-import { AddressCard, AddressFormSection } from '@/components/shared/addresses';
+import type { ProjectAddress, ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
+import { AddressCard } from '@/components/shared/addresses';
+import { AddressWithHierarchy, type AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
+import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { MapPin, Plus, Star, Trash2, X, Pencil } from 'lucide-react';
 import {
   getPrimaryAddress,
@@ -40,13 +53,58 @@ import {
   createProjectAddress,
 } from '@/types/project/address-helpers';
 import { updateProjectClient } from '@/services/projects-client.service';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import toast from 'react-hot-toast';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
-// 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+
+// =============================================================================
+// ADDRESS TYPE / BLOCK SIDE OPTIONS
+// =============================================================================
+
+const ADDRESS_TYPE_KEYS: readonly ProjectAddressType[] = [
+  'site', 'entrance', 'delivery', 'legal', 'postal', 'billing', 'correspondence', 'other',
+] as const;
+
+const BLOCK_SIDE_KEYS: readonly BlockSideDirection[] = [
+  'north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest', 'corner', 'internal',
+] as const;
+
+/** Convert ProjectAddress → AddressWithHierarchyValue for the centralized component */
+function toHierarchyValue(addr: Partial<ProjectAddress>): Partial<AddressWithHierarchyValue> {
+  return {
+    street: addr.street ?? '',
+    number: addr.number ?? '',
+    postalCode: addr.postalCode ?? '',
+    settlementName: addr.city ?? '',
+    settlementId: null,
+    communityName: addr.neighborhood ?? '',
+    municipalUnitName: '',
+    municipalityName: addr.municipality ?? '',
+    municipalityId: null,
+    regionalUnitName: addr.regionalUnit ?? '',
+    regionName: addr.region ?? '',
+    decentAdminName: '',
+    majorGeoName: '',
+  };
+}
+
+/** Convert AddressWithHierarchyValue → partial ProjectAddress fields */
+function fromHierarchyValue(val: AddressWithHierarchyValue): Partial<ProjectAddress> {
+  return {
+    street: val.street,
+    number: val.number || undefined,
+    city: val.settlementName || val.municipalityName,
+    postalCode: val.postalCode,
+    neighborhood: val.communityName || undefined,
+    municipality: val.municipalityName || undefined,
+    regionalUnit: val.regionalUnitName || undefined,
+    region: val.regionName || undefined,
+  };
+}
 
 // =============================================================================
 // TYPES
@@ -57,18 +115,101 @@ interface ProjectLocationsTabProps {
   projectId?: string;
 }
 
+interface ProjectAddressFieldsProps {
+  type: ProjectAddressType;
+  blockSide: BlockSideDirection | typeof SELECT_CLEAR_VALUE;
+  label: string;
+  isPrimary: boolean;
+  onTypeChange: (val: ProjectAddressType) => void;
+  onBlockSideChange: (val: BlockSideDirection | typeof SELECT_CLEAR_VALUE) => void;
+  onLabelChange: (val: string) => void;
+  onIsPrimaryChange: (val: boolean) => void;
+  t: (key: string) => string;
+}
+
+// =============================================================================
+// PROJECT ADDRESS FIELDS — Type, Block Side, Label, Primary
+// =============================================================================
+
+function ProjectAddressFields({
+  type, blockSide, label, isPrimary,
+  onTypeChange, onBlockSideChange, onLabelChange, onIsPrimaryChange,
+  t,
+}: ProjectAddressFieldsProps) {
+  return (
+    <fieldset className="grid grid-cols-2 gap-4">
+      <div className="space-y-1.5">
+        <Label>{t('addressType') || 'Τύπος Διεύθυνσης'}</Label>
+        <Select value={type} onValueChange={(v) => onTypeChange(v as ProjectAddressType)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ADDRESS_TYPE_KEYS.map((key) => (
+              <SelectItem key={key} value={key}>
+                {t(`addressTypes.${key}`) || key}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t('blockSide') || 'Πλευρά Οικοδομικού'}</Label>
+        <Select
+          value={blockSide}
+          onValueChange={(v) =>
+            onBlockSideChange(v === SELECT_CLEAR_VALUE ? SELECT_CLEAR_VALUE : v as BlockSideDirection)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={t('selectBlockSide') || 'Επιλέξτε...'} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={SELECT_CLEAR_VALUE}>{t('none') || 'Καμία'}</SelectItem>
+            {BLOCK_SIDE_KEYS.map((key) => (
+              <SelectItem key={key} value={key}>
+                {t(`blockSides.${key}`) || key}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t('addressLabel') || 'Ετικέτα'}</Label>
+        <Input
+          value={label}
+          onChange={(e) => onLabelChange(e.target.value)}
+          placeholder={t('addressLabelPlaceholder') || 'π.χ. Κεντρική Είσοδος'}
+        />
+      </div>
+
+      <div className="flex items-end pb-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <Checkbox
+            checked={isPrimary}
+            onCheckedChange={(checked) => onIsPrimaryChange(checked === true)}
+          />
+          <span className="text-sm">{t('setPrimary') || 'Κύρια Διεύθυνση'}</span>
+        </label>
+      </div>
+    </fieldset>
+  );
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
 export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps) {
+  const { t } = useTranslation('addresses');
   const iconSizes = useIconSizes();
   const typography = useTypography();
-  // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
 
-  // 🏢 ENTERPRISE: State management
+  // State management
   const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(
     project.addresses ||
       (project.address && project.city
@@ -76,18 +217,24 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         : [])
   );
 
-  // 🏢 ENTERPRISE: Inline form state (Procore pattern)
+  // Inline form state
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-  const [tempAddress, setTempAddress] = useState<Partial<ProjectAddress> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 🏢 ENTERPRISE: Edit mode state (inline editing)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editedAddress, setEditedAddress] = useState<Partial<ProjectAddress> | null>(null);
+  // Add mode: hierarchy + project-specific fields
+  const [addHierarchy, setAddHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
+  const [addType, setAddType] = useState<ProjectAddressType>('site');
+  const [addBlockSide, setAddBlockSide] = useState<BlockSideDirection | typeof SELECT_CLEAR_VALUE>(SELECT_CLEAR_VALUE);
+  const [addLabel, setAddLabel] = useState('');
+  const [addIsPrimary, setAddIsPrimary] = useState(false);
 
-  // 🗺️ Reverse geocoding drag update — shared between add + edit mode
-  const [dragUpdatedAddress, setDragUpdatedAddress] = useState<Partial<ProjectAddress> | null>(null);
-  const [editDragAddress, setEditDragAddress] = useState<Partial<ProjectAddress> | null>(null);
+  // Edit mode state
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editHierarchy, setEditHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
+  const [editType, setEditType] = useState<ProjectAddressType>('site');
+  const [editBlockSide, setEditBlockSide] = useState<BlockSideDirection | typeof SELECT_CLEAR_VALUE>(SELECT_CLEAR_VALUE);
+  const [editLabel, setEditLabel] = useState('');
+  const [editIsPrimary, setEditIsPrimary] = useState(false);
 
   // ==========================================================================
   // HANDLERS
@@ -187,18 +334,22 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
    * 🏢 ENTERPRISE: Save new address inline (Procore pattern)
    */
   const handleSaveNewAddress = async () => {
-    if (!tempAddress || !tempAddress.city) {
-      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον την Πόλη/Οικισμό');
+    const addressFields = fromHierarchyValue({ ...({ street: '', number: '', postalCode: '', settlementName: '', settlementId: null, communityName: '', communityId: null, municipalUnitName: '', municipalUnitId: null, municipalityName: '', municipalityId: null, regionalUnitName: '', regionalUnitId: null, regionName: '', regionId: null, decentAdminName: '', decentAdminId: null, majorGeoName: '', majorGeoId: null }), ...addHierarchy } as AddressWithHierarchyValue);
+    if (!addressFields.city) {
+      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
       return;
     }
 
     setIsSaving(true);
-
     try {
+      const blockSideValue = addBlockSide === SELECT_CLEAR_VALUE ? undefined : addBlockSide as BlockSideDirection;
       const newAddress = createProjectAddress({
-        ...tempAddress,
-        city: tempAddress.city!,
-        isPrimary: localAddresses.length === 0, // First address = primary
+        ...addressFields,
+        city: addressFields.city,
+        type: addType,
+        blockSide: blockSideValue,
+        label: addLabel || undefined,
+        isPrimary: localAddresses.length === 0 || addIsPrimary,
       });
 
       const newAddresses = [...localAddresses, newAddress];
@@ -212,63 +363,64 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       if (result.success) {
         setLocalAddresses(newAddresses);
-        setTempAddress(null);
-        setIsAddFormOpen(false);
+        handleCancelAdd();
         toast.success('Η διεύθυνση προστέθηκε επιτυχώς!');
-        // Reload to refresh UI
         setTimeout(() => window.location.reload(), 500);
       } else {
         toast.error(result.error || 'Σφάλμα αποθήκευσης διεύθυνσης');
       }
-    } catch (error) {
+    } catch {
       toast.error('Σφάλμα αποθήκευσης διεύθυνσης');
     } finally {
       setIsSaving(false);
     }
   };
 
-  /**
-   * Cancel add form
-   */
   const handleCancelAdd = () => {
     setIsAddFormOpen(false);
-    setTempAddress(null);
-    setDragUpdatedAddress(null);
+    setAddHierarchy({});
+    setAddType('site');
+    setAddBlockSide(SELECT_CLEAR_VALUE);
+    setAddLabel('');
+    setAddIsPrimary(false);
   };
 
-  /**
-   * 🏢 ENTERPRISE: Start editing existing address (inline)
-   */
   const handleStartEdit = (index: number) => {
+    const addr = localAddresses[index];
     setEditingIndex(index);
-    setEditedAddress({ ...localAddresses[index] });
+    setEditHierarchy(toHierarchyValue(addr));
+    setEditType(addr.type || 'site');
+    setEditBlockSide(addr.blockSide || SELECT_CLEAR_VALUE);
+    setEditLabel(addr.label || '');
+    setEditIsPrimary(addr.isPrimary ?? false);
   };
 
-  /**
-   * 🏢 ENTERPRISE: Save edited address
-   */
   const handleSaveEdit = async () => {
-    if (editingIndex === null || !editedAddress || !editedAddress.city) {
-      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον την Πόλη/Οικισμό');
+    if (editingIndex === null) return;
+    const addressFields = fromHierarchyValue({ ...({ street: '', number: '', postalCode: '', settlementName: '', settlementId: null, communityName: '', communityId: null, municipalUnitName: '', municipalUnitId: null, municipalityName: '', municipalityId: null, regionalUnitName: '', regionalUnitId: null, regionName: '', regionId: null, decentAdminName: '', decentAdminId: null, majorGeoName: '', majorGeoId: null }), ...editHierarchy } as AddressWithHierarchyValue);
+    if (!addressFields.city) {
+      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
       return;
     }
 
     setIsSaving(true);
-
     try {
-      // Update the address in the array
+      const blockSideValue = editBlockSide === SELECT_CLEAR_VALUE ? undefined : editBlockSide as BlockSideDirection;
       const newAddresses = localAddresses.map((addr, i) =>
         i === editingIndex
           ? {
               ...addr,
-              ...editedAddress,
-              city: editedAddress.city!,
+              ...addressFields,
+              city: addressFields.city!,
+              type: editType,
+              blockSide: blockSideValue,
+              label: editLabel || undefined,
+              isPrimary: editIsPrimary,
             }
           : addr
       );
 
       const legacy = extractLegacyFields(newAddresses);
-
       const result = await updateProjectClient(project.id!, {
         addresses: newAddresses,
         address: legacy.address,
@@ -277,28 +429,26 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       if (result.success) {
         setLocalAddresses(newAddresses);
-        setEditingIndex(null);
-        setEditedAddress(null);
+        handleCancelEdit();
         toast.success('Η διεύθυνση ενημερώθηκε επιτυχώς!');
-        // Reload to refresh UI
         setTimeout(() => window.location.reload(), 500);
       } else {
         toast.error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
       }
-    } catch (error) {
+    } catch {
       toast.error('Σφάλμα ενημέρωσης διεύθυνσης');
     } finally {
       setIsSaving(false);
     }
   };
 
-  /**
-   * Cancel edit mode
-   */
   const handleCancelEdit = () => {
     setEditingIndex(null);
-    setEditedAddress(null);
-    setEditDragAddress(null);
+    setEditHierarchy({});
+    setEditType('site');
+    setEditBlockSide(SELECT_CLEAR_VALUE);
+    setEditLabel('');
+    setEditIsPrimary(false);
   };
 
   // ==========================================================================
@@ -331,7 +481,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         )}
       </header>
 
-      {/* Inline Add Form — 2-column: form LEFT, map RIGHT */}
+      {/* Inline Add Form — AddressWithHierarchy + project fields + map */}
       {isAddFormOpen && (
         <div className={cn("border-2 border-primary rounded-lg bg-card", spacing.padding.sm, spacing.spaceBetween.md)}>
           <div className="flex items-center justify-between">
@@ -344,52 +494,67 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* LEFT: Form fields */}
-            <div className={spacing.spaceBetween.md}>
-              <AddressFormSection
-                onChange={setTempAddress}
-                externalValues={dragUpdatedAddress}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <AddressWithHierarchy
+                value={addHierarchy}
+                onChange={(val) => setAddHierarchy(val)}
               />
-
+              <ProjectAddressFields
+                type={addType}
+                blockSide={addBlockSide}
+                label={addLabel}
+                isPrimary={addIsPrimary}
+                onTypeChange={setAddType}
+                onBlockSideChange={setAddBlockSide}
+                onLabelChange={setAddLabel}
+                onIsPrimaryChange={setAddIsPrimary}
+                t={t}
+              />
               <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
-                <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>
-                  Ακύρωση
-                </Button>
+                <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>Ακύρωση</Button>
                 <Button onClick={handleSaveNewAddress} disabled={isSaving}>
                   {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
                 </Button>
               </div>
             </div>
 
-            {/* RIGHT: Draggable map — full height */}
-            <aside className="hidden lg:block">
-              <div className="sticky top-0 h-[calc(100vh-12rem)]">
-                <AddressMap
-                  addresses={[]}
-                  draggableMarkers
-                  onAddressDragUpdate={setDragUpdatedAddress}
-                  heightPreset="viewerFullscreen"
-                  className="rounded-lg border shadow-sm !h-full"
-                />
-              </div>
-            </aside>
-
-            {/* Mobile: Map below form */}
-            <div className="lg:hidden">
-              <AddressMap
-                addresses={[]}
-                draggableMarkers
-                onAddressDragUpdate={setDragUpdatedAddress}
-                heightPreset="viewerCompact"
-                className="rounded-lg border shadow-sm"
+            <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-12rem)]">
+              <ContactAddressMapPreview
+                className="!min-h-0 h-full rounded-lg border shadow-sm"
+                street={addHierarchy.street}
+                streetNumber={addHierarchy.number}
+                city={addHierarchy.settlementName}
+                postalCode={addHierarchy.postalCode}
+                municipality={addHierarchy.municipalityName}
+                regionalUnit={addHierarchy.regionalUnitName}
+                region={addHierarchy.regionName}
+                draggable
+                onDragResolve={(resolved: DragResolvedAddress) => {
+                  setAddHierarchy(prev => ({
+                    ...prev,
+                    street: resolved.street,
+                    number: resolved.number,
+                    postalCode: resolved.postalCode,
+                    settlementName: resolved.city,
+                    settlementId: null,
+                    communityName: '',
+                    municipalUnitName: '',
+                    municipalityName: '',
+                    municipalityId: null,
+                    regionalUnitName: '',
+                    regionName: '',
+                    decentAdminName: '',
+                    majorGeoName: '',
+                  }));
+                }}
               />
-            </div>
+            </aside>
           </div>
         </div>
       )}
 
-      {/* Inline Edit Form — 2-column: form LEFT, map RIGHT */}
+      {/* Inline Edit Form — AddressWithHierarchy + project fields + map */}
       {editingIndex !== null && !isAddFormOpen && (
         <div className={cn("border-2 border-primary rounded-lg bg-card", spacing.padding.sm, spacing.spaceBetween.md)}>
           <div className="flex items-center justify-between">
@@ -402,48 +567,63 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* LEFT: Form fields */}
-            <div className={spacing.spaceBetween.md}>
-              <AddressFormSection
-                onChange={setEditedAddress}
-                initialValues={localAddresses[editingIndex]}
-                externalValues={editDragAddress}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <AddressWithHierarchy
+                value={editHierarchy}
+                onChange={(val) => setEditHierarchy(val)}
               />
-
+              <ProjectAddressFields
+                type={editType}
+                blockSide={editBlockSide}
+                label={editLabel}
+                isPrimary={editIsPrimary}
+                onTypeChange={setEditType}
+                onBlockSideChange={setEditBlockSide}
+                onLabelChange={setEditLabel}
+                onIsPrimaryChange={setEditIsPrimary}
+                t={t}
+              />
               <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
-                <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
-                  Ακύρωση
-                </Button>
+                <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>Ακύρωση</Button>
                 <Button onClick={handleSaveEdit} disabled={isSaving}>
                   {isSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}
                 </Button>
               </div>
             </div>
 
-            {/* RIGHT: Draggable map — full height */}
-            <aside className="hidden lg:block">
-              <div className="sticky top-0 h-[calc(100vh-12rem)]">
-                <AddressMap
-                  addresses={[localAddresses[editingIndex]]}
-                  draggableMarkers
-                  onAddressDragUpdate={setEditDragAddress}
-                  heightPreset="viewerFullscreen"
-                  className="rounded-lg border shadow-sm !h-full"
-                />
-              </div>
-            </aside>
-
-            {/* Mobile: Map below form */}
-            <div className="lg:hidden">
-              <AddressMap
-                addresses={[localAddresses[editingIndex]]}
-                draggableMarkers
-                onAddressDragUpdate={setEditDragAddress}
-                heightPreset="viewerCompact"
-                className="rounded-lg border shadow-sm"
+            <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-12rem)]">
+              <ContactAddressMapPreview
+                className="!min-h-0 h-full rounded-lg border shadow-sm"
+                contactId={localAddresses[editingIndex]?.id}
+                street={editHierarchy.street}
+                streetNumber={editHierarchy.number}
+                city={editHierarchy.settlementName}
+                postalCode={editHierarchy.postalCode}
+                municipality={editHierarchy.municipalityName}
+                regionalUnit={editHierarchy.regionalUnitName}
+                region={editHierarchy.regionName}
+                draggable
+                onDragResolve={(resolved: DragResolvedAddress) => {
+                  setEditHierarchy(prev => ({
+                    ...prev,
+                    street: resolved.street,
+                    number: resolved.number,
+                    postalCode: resolved.postalCode,
+                    settlementName: resolved.city,
+                    settlementId: null,
+                    communityName: '',
+                    municipalUnitName: '',
+                    municipalityName: '',
+                    municipalityId: null,
+                    regionalUnitName: '',
+                    regionName: '',
+                    decentAdminName: '',
+                    majorGeoName: '',
+                  }));
+                }}
               />
-            </div>
+            </aside>
           </div>
         </div>
       )}
