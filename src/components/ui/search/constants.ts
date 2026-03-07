@@ -70,7 +70,7 @@ export const SEARCH_UI = {
 
   INPUT: {
     FOCUS: 'focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-0', // 🎨 Enterprise focus ring - όμορφο μπλε περίγραμμα χωρίς offset
-    DISABLED: 'disabled:cursor-not-allowed disabled:opacity-50',
+    DISABLED: 'disabled:cursor-not-allowed disabled:bg-muted/50',
     RESPONSIVE: 'w-full flex-1', // 🔧 Ensure full width + flex behavior
   },
 

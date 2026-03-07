@@ -114,7 +114,8 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
   const colors = useSemanticColors();
 
   // 🎨 ENTERPRISE DISABLED INPUT STYLING - Centralized pattern
-  const disabledInputClasses = `min-h-10 flex items-center px-3 py-2 ${quick.input} ${colors.bg.primary} text-sm`;
+  // Uses bg-muted/50 to match disabled Input/Select/Combobox across the app
+  const disabledInputClasses = `min-h-10 flex items-center px-3 py-2 ${quick.input} ${colors.bg.disabled} text-sm`;
   // 📧 EMAIL LINK - Always use Gmail web interface
   if (type === 'email') {
     return (

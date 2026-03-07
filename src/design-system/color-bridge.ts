@@ -67,6 +67,9 @@ export const COLOR_BRIDGE = {
     errorLight: 'bg-[hsl(var(--bg-error))]/30',       // Light error background
     warningLight: 'bg-[hsl(var(--bg-warning))]/30',   // Light warning background
 
+    // Disabled state
+    disabled: 'bg-muted/50',       // Disabled field background — unified across Input, Select, Combobox
+
     // Special backgrounds
     light: 'bg-card',              // ✅ ENTERPRISE: Light surface (was white, now beautiful blue)
     transparent: 'bg-transparent', // Transparent
