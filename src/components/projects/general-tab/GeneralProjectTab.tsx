@@ -20,9 +20,7 @@ const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
 import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
-import { ProjectAttachmentsTab } from '../ProjectAttachmentsTab';
 import { ProjectDetailsSubTab } from './parts/ProjectDetailsSubTab';
-import MapTabContent from '../../building-management/tabs/MapTabContent';
 
 import { useProjectStats } from './hooks/useProjectStats';
 import { useAutosave } from './hooks/useAutosave';
@@ -262,9 +260,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         <TabsList className={cn("flex flex-wrap w-full h-auto min-h-fit", spacing.gap.sm)}>
           <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>{t('generalTab.tabs.basicInfo')}</TabsTrigger>
           <TabsTrigger value="details" className={themeConfig.tabTrigger}>{t('generalTab.tabs.details')}</TabsTrigger>
-          <TabsTrigger value="location" className={themeConfig.tabTrigger}>{t('generalTab.tabs.location')}</TabsTrigger>
           <TabsTrigger value="permits" className={themeConfig.tabTrigger}>{t('generalTab.tabs.permits')}</TabsTrigger>
-          <TabsTrigger value="attachments" className={themeConfig.tabTrigger}>{t('generalTab.tabs.attachments')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic-info" className={spacing.padding.top.md}>
@@ -286,26 +282,11 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           />
         </TabsContent>
 
-        <TabsContent value="location" className={spacing.padding.top.md}>
-          <MapTabContent building={{ 
-            name: project.name, 
-            address: project.address || '', 
-            city: project.city || '' 
-          }} />
-        </TabsContent>
-        
         <TabsContent value="permits" className={spacing.padding.top.md}>
           <PermitsAndStatusTab 
             data={projectData}
             setData={setProjectData}
             isEditing={isEditing}
-          />
-        </TabsContent>
-        
-        <TabsContent value="attachments" className={spacing.padding.top.md}>
-          <ProjectAttachmentsTab 
-            data={projectData}
-            setData={setProjectData}
           />
         </TabsContent>
       </Tabs>
