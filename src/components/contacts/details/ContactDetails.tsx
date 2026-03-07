@@ -87,13 +87,26 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     }
   }, [contact, savedPhotoURLs]);
 
-  // Clear optimistic personas once the contact prop catches up from Firestore refresh
+  // Clear optimistic personas once the contact prop reflects the change
   useEffect(() => {
-    if (optimisticPersonas && contact) {
+    if (!optimisticPersonas || !contact) return;
+
+    const contactPersonas = ('personas' in contact && Array.isArray((contact as Record<string, unknown>).personas))
+      ? ((contact as Record<string, unknown>).personas as Array<{ personaType: string; status: string }>)
+        .filter(p => p.status === 'active')
+        .map(p => p.personaType)
+      : [];
+
+    // Clear optimistic state only when Firestore data matches our optimistic update
+    const optimisticSet = new Set(optimisticPersonas.activePersonas);
+    const firestoreSet = new Set(contactPersonas);
+    const matches = optimisticSet.size === firestoreSet.size &&
+      [...optimisticSet].every(p => firestoreSet.has(p));
+
+    if (matches) {
       setOptimisticPersonas(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact]);
+  }, [contact, optimisticPersonas]);
 
   // 🔴 BROWSER DEBUG: Track editedData.multiplePhotos changes
   useEffect(() => {
