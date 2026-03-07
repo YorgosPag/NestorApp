@@ -474,16 +474,8 @@ export class ContactsService {
       delete (updateData as Record<string, unknown>).city;
       delete (updateData as Record<string, unknown>).postalCode;
       delete (updateData as Record<string, unknown>).website;
-      // Administrative Hierarchy flat fields → stored inside addresses[]
-      delete (updateData as Record<string, unknown>).municipality;
-      delete (updateData as Record<string, unknown>).municipalityId;
-      delete (updateData as Record<string, unknown>).regionalUnit;
-      delete (updateData as Record<string, unknown>).decentAdmin;
-      delete (updateData as Record<string, unknown>).majorGeo;
-      delete (updateData as Record<string, unknown>).settlement;
-      delete (updateData as Record<string, unknown>).settlementId;
-      delete (updateData as Record<string, unknown>).community;
-      delete (updateData as Record<string, unknown>).municipalUnit;
+      // Administrative Hierarchy flat fields — persisted for address display + geocoding
+      // These are set by AddressWithHierarchy and need to survive save/reload
 
       // 🎭 ENTERPRISE: Convert form-level persona fields to Firestore structure (ADR-121)
       // activePersonas + personaData are form-only → mapped to personas[] for Firestore

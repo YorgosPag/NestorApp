@@ -13,10 +13,8 @@
  */
 
 import { useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
@@ -90,60 +88,6 @@ function fromHierarchyValue(
 }
 
 // ============================================================================
-// SUB-COMPONENT: Single branch card with AddressWithHierarchy
-// ============================================================================
-
-interface BranchCardProps {
-  address: CompanyAddress;
-  index: number;
-  disabled: boolean;
-  onChange: (updated: CompanyAddress) => void;
-  onRemove: () => void;
-  onTypeChange: (type: string) => void;
-}
-
-function BranchCard({ address, index, disabled, onChange, onRemove, onTypeChange }: BranchCardProps) {
-  const { t } = useTranslation('forms');
-
-  return (
-    <article className="rounded-lg border p-4 space-y-3">
-      <header className="flex items-center justify-between">
-        <Select
-          value={address.type}
-          onValueChange={onTypeChange}
-          disabled={disabled}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder={t('addresses.type')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="headquarters">{t('addresses.typeHeadquarters')}</SelectItem>
-            <SelectItem value="branch">{t('addresses.typeBranch')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onRemove}
-          disabled={disabled}
-          aria-label={t('addresses.removeAddress')}
-          className="text-destructive hover:text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </header>
-
-      <AddressWithHierarchy
-        value={toHierarchyValue(address)}
-        onChange={(val) => onChange(fromHierarchyValue(address, val))}
-        disabled={disabled}
-      />
-    </article>
-  );
-}
-
-// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -152,8 +96,6 @@ export function CompanyAddressesSection({
   disabled = false,
   onChange,
 }: CompanyAddressesSectionProps) {
-  const { t } = useTranslation('forms');
-
   // Headquarters = first entry with type 'headquarters', or first entry
   const hqIndex = addresses.findIndex((a) => a.type === 'headquarters');
   const effectiveHqIndex = hqIndex >= 0 ? hqIndex : 0;
@@ -167,23 +109,6 @@ export function CompanyAddressesSection({
         if (i === effectiveHqIndex) continue;
         if (branchCount === branchVisualIndex) {
           newAddresses[i] = updated;
-          onChange(newAddresses);
-          return;
-        }
-        branchCount++;
-      }
-    },
-    [addresses, effectiveHqIndex, onChange],
-  );
-
-  const handleBranchTypeChange = useCallback(
-    (branchVisualIndex: number, type: string) => {
-      const newAddresses = [...addresses];
-      let branchCount = 0;
-      for (let i = 0; i < newAddresses.length; i++) {
-        if (i === effectiveHqIndex) continue;
-        if (branchCount === branchVisualIndex) {
-          newAddresses[i] = { ...newAddresses[i], type: type as 'headquarters' | 'branch' };
           onChange(newAddresses);
           return;
         }
@@ -215,14 +140,14 @@ export function CompanyAddressesSection({
   );
 
   return (
-    <fieldset className="space-y-6" disabled={disabled}>
+    <div className="space-y-6">
       <Separator />
 
       {/* Branches / Additional Addresses */}
-      <section aria-label={t('addresses.additionalAddresses')}>
+      <section aria-label="Υποκαταστήματα / Επιπλέον Διευθύνσεις">
         <header className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground">
-            {t('addresses.additionalAddresses')}
+            Υποκαταστήματα / Επιπλέον Διευθύνσεις
           </h3>
           <Button
             type="button"
@@ -232,32 +157,46 @@ export function CompanyAddressesSection({
             disabled={disabled}
           >
             <Plus className="mr-1 h-4 w-4" />
-            {t('addresses.addAddress')}
+            Προσθήκη Διεύθυνσης
           </Button>
         </header>
 
         {branches.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            {t('addresses.noAdditional')}
+            Δεν υπάρχουν επιπλέον διευθύνσεις
           </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {branches.map((addr, i) => (
-              <li key={i}>
-                <BranchCard
-                  address={addr}
-                  index={i}
+              <li key={i} className="space-y-3">
+                <header className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-foreground">
+                    Υποκατάστημα {branches.length > 1 ? `#${i + 1}` : ''}
+                  </h4>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeBranch(i)}
+                    disabled={disabled}
+                    aria-label="Αφαίρεση Διεύθυνσης"
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </header>
+                <AddressWithHierarchy
+                  value={toHierarchyValue(addr)}
+                  onChange={(val) => handleBranchUpdate(i, fromHierarchyValue(addr, val))}
                   disabled={disabled}
-                  onChange={(updated) => handleBranchUpdate(i, updated)}
-                  onRemove={() => removeBranch(i)}
-                  onTypeChange={(type) => handleBranchTypeChange(i, type)}
                 />
+                {i < branches.length - 1 && <Separator />}
               </li>
             ))}
           </ul>
         )}
       </section>
-    </fieldset>
+    </div>
   );
 }
 

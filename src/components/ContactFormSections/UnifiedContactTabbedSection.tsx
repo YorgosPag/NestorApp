@@ -437,6 +437,9 @@ export function UnifiedContactTabbedSection({
                 {/* LEFT: AddressWithHierarchy for HQ + Branches */}
                 <div className="space-y-6">
                   {/* HQ address with hierarchy */}
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Έδρα
+                  </h3>
                   <AddressWithHierarchy
                     value={{
                       street: (formData.street as string) || '',

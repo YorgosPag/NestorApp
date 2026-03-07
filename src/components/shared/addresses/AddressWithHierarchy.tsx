@@ -303,39 +303,39 @@ export function AddressWithHierarchy({
           </div>
         )}
 
-        {/* Row 2: Postal Code */}
-        <fieldset className="space-y-1 max-w-[200px]">
-          <Label className="text-xs font-medium text-muted-foreground">Τ.Κ.</Label>
-          <Input
-            value={current.postalCode}
-            onChange={e => {
-              const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
-              handleBasicChange('postalCode', val);
-            }}
-            placeholder="π.χ. 54621"
-            maxLength={5}
-            inputMode="numeric"
-            disabled={disabled}
-          />
-        </fieldset>
-
-        {/* Row 3: Settlement / City (SearchableCombobox with hierarchy data) */}
-        <fieldset className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">
-            Οικισμός / Πόλη
-          </Label>
-          <SearchableCombobox
-            value={current.settlementName}
-            onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
-            options={settlementOptions}
-            placeholder="π.χ. Θεσσαλονίκη, Μαρούσι, Λεπτοκαρυά..."
-            emptyMessage="Πληκτρολογήστε για αναζήτηση..."
-            isLoading={isLoading}
-            allowFreeText
-            disabled={disabled}
-            maxDisplayed={30}
-          />
-        </fieldset>
+        {/* Row 2: Postal Code + Settlement / City (same line) */}
+        <div className="grid grid-cols-3 gap-3">
+          <fieldset className="space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">Τ.Κ.</Label>
+            <Input
+              value={current.postalCode}
+              onChange={e => {
+                const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+                handleBasicChange('postalCode', val);
+              }}
+              placeholder="π.χ. 54621"
+              maxLength={5}
+              inputMode="numeric"
+              disabled={disabled}
+            />
+          </fieldset>
+          <fieldset className="col-span-2 space-y-1">
+            <Label className="text-xs font-medium text-muted-foreground">
+              Οικισμός / Πόλη
+            </Label>
+            <SearchableCombobox
+              value={current.settlementName}
+              onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
+              options={settlementOptions}
+              placeholder="π.χ. Θεσσαλονίκη, Μαρούσι, Λεπτοκαρυά..."
+              emptyMessage="Πληκτρολογήστε για αναζήτηση..."
+              isLoading={isLoading}
+              allowFreeText
+              disabled={disabled}
+              maxDisplayed={30}
+            />
+          </fieldset>
+        </div>
       </div>
 
       {/* Section 2: Collapsible Greek Administrative Hierarchy */}
