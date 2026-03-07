@@ -67,7 +67,7 @@ const PIN_COLORS = {
 
 /** Branch pin colors — visually distinct from HQ */
 const BRANCH_PIN_COLORS = {
-  body: colors.amber['500'],         // #f59e0b — amber for branches
+  body: colors.orange['500'],        // #f97316 — orange for branches
   stroke: colors.background.primary,
   innerCircle: colors.background.primary,
   shadow: 'rgba(0,0,0,0.3)',
