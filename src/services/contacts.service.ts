@@ -480,8 +480,11 @@ export class ContactsService {
       // 🎭 ENTERPRISE: Convert form-level persona fields to Firestore structure (ADR-121)
       // activePersonas + personaData are form-only → mapped to personas[] for Firestore
       const udRecord = updateData as Record<string, unknown>;
-      if (udRecord.activePersonas && Array.isArray(udRecord.activePersonas) && (udRecord.activePersonas as string[]).length > 0) {
-        udRecord.personas = mapActivePersonas(updateData as unknown as ContactFormData);
+      if (udRecord.activePersonas && Array.isArray(udRecord.activePersonas)) {
+        // Map active personas to Firestore structure (or empty array for full deactivation)
+        udRecord.personas = (udRecord.activePersonas as string[]).length > 0
+          ? mapActivePersonas(updateData as unknown as ContactFormData)
+          : [];
       }
       delete udRecord.activePersonas;
       delete udRecord.personaData;

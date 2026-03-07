@@ -51,6 +51,11 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
+  // Optimistic persona state for instant UI response in view mode
+  const [optimisticPersonas, setOptimisticPersonas] = useState<{
+    activePersonas: PersonaType[];
+    personaData: Record<string, Record<string, string | number | null>>;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('basicInfo'); // 🏢 ENTERPRISE: Track active tab
   // 🖼️ OPTIMISTIC PHOTO STATE: Preserve photo URLs between save and contact refresh
   const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
@@ -66,6 +71,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     setIsEditing(false);
     setEditedData({});
     setSavedPhotoURLs({});
+    setOptimisticPersonas(null);
   }, [contact?.id]);
 
   // 🖼️ OPTIMISTIC: Clear saved photo URLs once the contact prop catches up
@@ -80,6 +86,14 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       setSavedPhotoURLs({});
     }
   }, [contact, savedPhotoURLs]);
+
+  // Clear optimistic personas once the contact prop catches up from Firestore refresh
+  useEffect(() => {
+    if (optimisticPersonas && contact) {
+      setOptimisticPersonas(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact]);
 
   // 🔴 BROWSER DEBUG: Track editedData.multiplePhotos changes
   useEffect(() => {
@@ -140,8 +154,18 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     // exclusively by individualMapper.ts (ADR-054). The previous code here
     // concatenated the SAME photos again, causing duplicates in the UI.
     // See: src/utils/contactForm/fieldMappers/individualMapper.ts (lines 43-81)
+
+    // Optimistic persona merge — instant UI update before Firestore refresh
+    if (optimisticPersonas) {
+      formData = {
+        ...formData,
+        activePersonas: optimisticPersonas.activePersonas,
+        personaData: optimisticPersonas.personaData,
+      };
+    }
+
     return formData;
-  }, [contact, savedPhotoURLs]);
+  }, [contact, savedPhotoURLs, optimisticPersonas]);
 
   // 🎯 EDIT MODE HANDLERS
   const handleStartEdit = useCallback(() => {
@@ -292,7 +316,12 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
         personaData: updatedPersonaData,
       }));
     } else {
-      // View mode: save directly to Firestore (subcollection-style immediate save)
+      // View mode: optimistic UI update + save to Firestore
+      setOptimisticPersonas({
+        activePersonas: updatedActive,
+        personaData: updatedPersonaData as Record<string, Record<string, string | number | null>>,
+      });
+
       try {
         await ContactsService.updateContactFromForm(contact.id, {
           activePersonas: updatedActive,
@@ -303,6 +332,8 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
         onContactUpdated?.();
       } catch (error) {
         logger.error('Failed to toggle persona', { error, personaType });
+        // Rollback optimistic update on failure
+        setOptimisticPersonas(null);
       }
     }
   }, [contact?.id, isEditing, editedData, enhancedFormData, onContactUpdated]);
