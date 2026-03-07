@@ -54,7 +54,7 @@ export function ContactAddressMapPreview({
     // Multi-address mode: company contacts with HQ + branches
     if (companyAddresses && companyAddresses.length > 0) {
       return companyAddresses
-        .filter((addr) => addr.city.trim())
+        .filter((addr) => addr.city.trim() || (addr.street.trim() && addr.postalCode.trim()))
         .map((addr, index) => {
           const isHq = addr.type === 'headquarters';
           return createProjectAddress({
@@ -80,7 +80,7 @@ export function ContactAddressMapPreview({
     const trimmedStreetNumber = (streetNumber ?? '').trim();
     const trimmedPostalCode = (postalCode ?? '').trim();
 
-    if (!trimmedCity) {
+    if (!trimmedCity && !(trimmedStreet && trimmedPostalCode)) {
       return [];
     }
 

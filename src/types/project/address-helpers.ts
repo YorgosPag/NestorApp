@@ -528,12 +528,14 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
  * Enterprise pattern: Data readiness filtering
  *
  * Accepts addresses with:
- * - street + city (urban addresses)
- * - city only (settlements/villages without streets)
+ * - city (settlements/villages/cities)
+ * - street + postalCode (urban addresses without explicit city)
  *
  * @param addresses - Addresses to filter
- * @returns Geocodable addresses (have at least city/settlement name)
+ * @returns Geocodable addresses
  */
 export function getGeocodableAddresses(addresses: ProjectAddress[]): ProjectAddress[] {
-  return addresses.filter(addr => addr.city?.trim());
+  return addresses.filter(addr =>
+    addr.city?.trim() || (addr.street?.trim() && addr.postalCode?.trim())
+  );
 }
