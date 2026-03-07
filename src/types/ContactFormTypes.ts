@@ -21,6 +21,16 @@ export interface CompanyAddress {
   postalCode: string;
   city: string;
   region?: string;
+  /** Greek administrative hierarchy (optional — auto-filled from AddressWithHierarchy) */
+  settlementId?: string | null;
+  communityName?: string;
+  municipalUnitName?: string;
+  municipalityName?: string;
+  municipalityId?: string | null;
+  regionalUnitName?: string;
+  regionName?: string;
+  decentAdminName?: string;
+  majorGeoName?: string;
 }
 
 /** Single KAD activity entry — primary or secondary */
