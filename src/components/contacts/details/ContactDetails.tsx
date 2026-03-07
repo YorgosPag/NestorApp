@@ -103,6 +103,14 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     const matches = optimisticSet.size === firestoreSet.size &&
       [...optimisticSet].every(p => firestoreSet.has(p));
 
+    console.log('🎭 OPTIMISTIC CLEANUP DEBUG', {
+      optimisticPersonas: [...optimisticSet],
+      firestorePersonas: [...firestoreSet],
+      matches,
+      willClear: matches,
+      contactHasPersonasField: 'personas' in contact,
+    });
+
     if (matches) {
       setOptimisticPersonas(null);
     }
@@ -206,10 +214,18 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       }
 
       // 🏢 ENTERPRISE: Use new form-to-arrays conversion method
+      const editedFormData = editedData as Partial<ContactFormData>;
+
+      // 🔍 DIAGNOSTIC: Log persona data before save
+      console.log('🎭 PERSONA SAVE DEBUG', {
+        activePersonas: editedFormData.activePersonas,
+        personaDataKeys: editedFormData.personaData ? Object.keys(editedFormData.personaData) : [],
+        editedDataKeys: Object.keys(editedData),
+      });
+
       await ContactsService.updateContactFromForm(contact.id, editedData);
 
       // 🖼️ OPTIMISTIC: Preserve photo URLs so they remain visible while async refresh loads
-      const editedFormData = editedData as Partial<ContactFormData>;
       const newSavedPhotos: { logoURL?: string; photoURL?: string } = {};
       if (editedFormData.logoURL) newSavedPhotos.logoURL = editedFormData.logoURL;
       if (editedFormData.photoURL) newSavedPhotos.photoURL = editedFormData.photoURL;
@@ -219,6 +235,11 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
 
       // Preserve persona state across edit→view transition (same pattern as photo URLs)
       const savedPersonas = editedFormData.activePersonas;
+      console.log('🎭 PERSONA OPTIMISTIC DEBUG', {
+        savedPersonas,
+        willSetOptimistic: !!(savedPersonas && savedPersonas.length > 0),
+      });
+
       if (savedPersonas && savedPersonas.length > 0) {
         setOptimisticPersonas({
           activePersonas: savedPersonas,

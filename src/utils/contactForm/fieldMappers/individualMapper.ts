@@ -83,6 +83,11 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
   // 🎭 ENTERPRISE: Extract persona data from contact (ADR-121)
   const rawPersonas = getSafeArrayValue<PersonaData>(individualContact, 'personas');
+  console.log('🎭 MAPPER PERSONA DEBUG', {
+    rawPersonasCount: rawPersonas.length,
+    rawPersonas: rawPersonas.map(p => ({ type: p?.personaType, status: p?.status })),
+    hasPersonasField: 'personas' in individualContact,
+  });
   const activePersonas: PersonaType[] = rawPersonas
     .filter(p => p && p.status === 'active')
     .map(p => p.personaType);
