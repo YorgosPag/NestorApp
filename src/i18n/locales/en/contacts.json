@@ -716,6 +716,9 @@
       "relationships": {
         "title": "Relationships"
       },
+      "files": {
+        "title": "Contact Documents"
+      },
       "banking": {
         "title": "Banking"
       }

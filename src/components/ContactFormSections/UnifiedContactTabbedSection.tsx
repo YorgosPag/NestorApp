@@ -650,7 +650,7 @@ export function UnifiedContactTabbedSection({
           if (!contactId || !currentUserId || !companyId) {
             return (
               <div className="p-8 text-center text-muted-foreground">
-                <p>Το Files tab θα είναι διαθέσιμο αφού αποθηκεύσετε την επαφή.</p>
+                <p>{t('individual.sections.files.description')}</p>
               </div>
             );
           }

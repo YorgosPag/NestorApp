@@ -716,6 +716,9 @@
       "relationships": {
         "title": "Σχέσεις"
       },
+      "files": {
+        "title": "Έγγραφα Επαφής"
+      },
       "banking": {
         "title": "Τραπεζικά"
       }

@@ -195,7 +195,26 @@ const relationshipsSection: ServiceSectionConfig = {
 };
 
 // -------------------------------------------------------------------------
-// 7. ΤΡΑΠΕΖΙΚΑ - 🏢 ENTERPRISE BANKING SYSTEM (ADR-126)
+// 7. ΕΓΓΡΑΦΑ ΕΠΑΦΗΣ - 🏢 ENTERPRISE FILE MANAGEMENT (ADR-031)
+// -------------------------------------------------------------------------
+const filesSection: ServiceSectionConfig = {
+  id: 'files',
+  title: 'contacts.service.sections.files.title',
+  icon: 'file-text',
+  fields: [
+    // 🎯 DUMMY FIELD για custom renderer triggering
+    // Fields are handled by EntityFilesManager component
+    {
+      id: 'files',
+      type: 'input',
+      label: 'contacts.service.sections.files.title'
+      // Dummy field - actual UI rendered by EntityFilesManager
+    }
+  ]
+};
+
+// -------------------------------------------------------------------------
+// 8. ΤΡΑΠΕΖΙΚΑ - 🏢 ENTERPRISE BANKING SYSTEM (ADR-126)
 // -------------------------------------------------------------------------
 const bankingSection: ServiceSectionConfig = {
   id: 'banking',
@@ -213,6 +232,7 @@ export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   communicationSection,
   logoSection,
   relationshipsSection,
+  filesSection,
   bankingSection
 ];
 
