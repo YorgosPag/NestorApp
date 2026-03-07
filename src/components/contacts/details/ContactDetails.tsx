@@ -217,6 +217,15 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
         setSavedPhotoURLs(newSavedPhotos);
       }
 
+      // Preserve persona state across edit→view transition (same pattern as photo URLs)
+      const savedPersonas = editedFormData.activePersonas;
+      if (savedPersonas && savedPersonas.length > 0) {
+        setOptimisticPersonas({
+          activePersonas: savedPersonas,
+          personaData: (editedFormData.personaData ?? {}) as Record<string, Record<string, string | number | null>>,
+        });
+      }
+
       setIsEditing(false);
       setEditedData({});
 
