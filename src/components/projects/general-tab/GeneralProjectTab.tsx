@@ -21,9 +21,7 @@ import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
 import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 import { ProjectAttachmentsTab } from '../ProjectAttachmentsTab';
-import { ProjectStructureTab } from '../tabs/ProjectStructureTab';
 import { ProjectDetailsSubTab } from './parts/ProjectDetailsSubTab';
-import { ProjectFeaturesSubTab } from './parts/ProjectFeaturesSubTab';
 import MapTabContent from '../../building-management/tabs/MapTabContent';
 
 import { useProjectStats } from './hooks/useProjectStats';
@@ -80,13 +78,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     completionDate: project.completionDate || '',
     client: project.client || '',
     location: project.location || '',
-    // Χαρακτηριστικά (booleans)
-    hasPermits: project.hasPermits || false,
-    hasFinancing: project.hasFinancing || false,
-    isEcological: project.isEcological || false,
-    hasSubcontractors: project.hasSubcontractors || false,
-    isActive: project.isActive ?? true,
-    hasIssues: project.hasIssues || false,
   });
 
   const { stats, loading: loadingStats } = useProjectStats(project.id);
@@ -117,12 +108,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       completionDate: project.completionDate || '',
       client: project.client || '',
       location: project.location || '',
-      hasPermits: project.hasPermits || false,
-      hasFinancing: project.hasFinancing || false,
-      isEcological: project.isEcological || false,
-      hasSubcontractors: project.hasSubcontractors || false,
-      isActive: project.isActive ?? true,
-      hasIssues: project.hasIssues || false,
     }));
   }, [project]);
 
@@ -161,12 +146,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         duration: typeof projectData.duration === 'number' ? projectData.duration : undefined,
         startDate: projectData.startDate || undefined,
         completionDate: projectData.completionDate || undefined,
-        hasPermits: projectData.hasPermits,
-        hasFinancing: projectData.hasFinancing,
-        isEcological: projectData.isEcological,
-        hasSubcontractors: projectData.hasSubcontractors,
-        isActive: projectData.isActive,
-        hasIssues: projectData.hasIssues,
       };
 
       const result = await updateProject(project.id, updatePayload);
@@ -283,8 +262,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         <TabsList className={cn("flex flex-wrap w-full h-auto min-h-fit", spacing.gap.sm)}>
           <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>{t('generalTab.tabs.basicInfo')}</TabsTrigger>
           <TabsTrigger value="details" className={themeConfig.tabTrigger}>{t('generalTab.tabs.details')}</TabsTrigger>
-          <TabsTrigger value="features" className={themeConfig.tabTrigger}>{t('generalTab.tabs.features')}</TabsTrigger>
-          <TabsTrigger value="structure" className={themeConfig.tabTrigger}>{t('generalTab.tabs.structure')}</TabsTrigger>
           <TabsTrigger value="location" className={themeConfig.tabTrigger}>{t('generalTab.tabs.location')}</TabsTrigger>
           <TabsTrigger value="permits" className={themeConfig.tabTrigger}>{t('generalTab.tabs.permits')}</TabsTrigger>
           <TabsTrigger value="attachments" className={themeConfig.tabTrigger}>{t('generalTab.tabs.attachments')}</TabsTrigger>
@@ -309,18 +286,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           />
         </TabsContent>
 
-        <TabsContent value="features" className={spacing.padding.top.md}>
-          <ProjectFeaturesSubTab
-            data={projectData}
-            setData={setProjectData}
-            isEditing={isEditing}
-          />
-        </TabsContent>
-
-        <TabsContent value="structure" className={spacing.padding.top.md}>
-          <ProjectStructureTab projectId={project.id} />
-        </TabsContent>
-        
         <TabsContent value="location" className={spacing.padding.top.md}>
           <MapTabContent building={{ 
             name: project.name, 

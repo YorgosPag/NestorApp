@@ -40,13 +40,6 @@ export interface ProjectFormData {
   completionDate: string;
   client: string;
   location: string;
-  // Χαρακτηριστικά (booleans — moved from modal)
-  hasPermits: boolean;
-  hasFinancing: boolean;
-  isEcological: boolean;
-  hasSubcontractors: boolean;
-  isActive: boolean;
-  hasIssues: boolean;
 }
 
 export interface ProjectCustomersTableProps {
