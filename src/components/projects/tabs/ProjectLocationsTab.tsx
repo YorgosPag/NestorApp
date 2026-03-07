@@ -187,8 +187,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
    * 🏢 ENTERPRISE: Save new address inline (Procore pattern)
    */
   const handleSaveNewAddress = async () => {
-    if (!tempAddress || !tempAddress.street || !tempAddress.city) {
-      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον Οδό και Πόλη');
+    if (!tempAddress || !tempAddress.city) {
+      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον την Πόλη/Οικισμό');
       return;
     }
 
@@ -197,7 +197,6 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     try {
       const newAddress = createProjectAddress({
         ...tempAddress,
-        street: tempAddress.street!,
         city: tempAddress.city!,
         isPrimary: localAddresses.length === 0, // First address = primary
       });
@@ -249,8 +248,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
    * 🏢 ENTERPRISE: Save edited address
    */
   const handleSaveEdit = async () => {
-    if (editingIndex === null || !editedAddress || !editedAddress.street || !editedAddress.city) {
-      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον Οδό και Πόλη');
+    if (editingIndex === null || !editedAddress || !editedAddress.city) {
+      toast.error('Παρακαλώ συμπληρώστε τουλάχιστον την Πόλη/Οικισμό');
       return;
     }
 
@@ -263,7 +262,6 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           ? {
               ...addr,
               ...editedAddress,
-              street: editedAddress.street!,
               city: editedAddress.city!,
             }
           : addr

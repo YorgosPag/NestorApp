@@ -64,6 +64,8 @@ interface AddressFormData {
   neighborhood: string;
   postalCode: string;
   region: string;
+  regionalUnit: string;
+  municipality: string;
   country: string;
   type: ProjectAddressType;
   isPrimary: boolean;
@@ -103,6 +105,8 @@ export function AddressFormSection({
     neighborhood: initialValues?.neighborhood || '',
     postalCode: initialValues?.postalCode || '',
     region: initialValues?.region || '',
+    regionalUnit: initialValues?.regionalUnit || '',
+    municipality: initialValues?.municipality || '',
     country: initialValues?.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
     type: initialValues?.type || 'site',
     isPrimary: initialValues?.isPrimary || false,
@@ -163,6 +167,8 @@ export function AddressFormSection({
           neighborhood: merged.neighborhood || undefined,
           postalCode: merged.postalCode,
           region: merged.region || undefined,
+          regionalUnit: merged.regionalUnit || undefined,
+          municipality: merged.municipality || undefined,
           country: merged.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
           type: merged.type,
           isPrimary: merged.isPrimary,
@@ -189,6 +195,8 @@ export function AddressFormSection({
       neighborhood: data.neighborhood || undefined,
       postalCode: data.postalCode,
       region: data.region || undefined,
+      regionalUnit: data.regionalUnit || undefined,
+      municipality: data.municipality || undefined,
       country: data.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
       type: data.type,
       isPrimary: data.isPrimary,
@@ -223,9 +231,8 @@ export function AddressFormSection({
     });
   }, [notifyParent]);
 
-  // Validation
+  // Validation — street is optional (villages/settlements may not have streets)
   const errors = {
-    street: showErrors && !formData.street.trim(),
     city: showErrors && !formData.city.trim(),
     postalCode: showErrors && !formData.postalCode.trim()
   };
@@ -236,18 +243,14 @@ export function AddressFormSection({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2">
           <Label htmlFor="street" className="text-sm font-medium">
-            {t('form.street')} *
+            {t('form.street')}
           </Label>
           <Input
             id="street"
             value={formData.street}
             onChange={(e) => handleTextChange('street', e.target.value)}
             placeholder={t('form.streetPlaceholder')}
-            className={errors.street ? 'border-red-500' : ''}
           />
-          {errors.street && (
-            <p className="text-xs text-red-500 mt-1">{t('form.validation.streetRequired')}</p>
-          )}
         </div>
 
         <div>
@@ -274,6 +277,8 @@ export function AddressFormSection({
           // Map administrative hierarchy fields to address form
           const updatedCity = adminAddr.settlementName || adminAddr.municipalityName || formData.city;
           const updatedRegion = adminAddr.regionName || formData.region;
+          const updatedRegionalUnit = adminAddr.regionalUnitName || formData.regionalUnit;
+          const updatedMunicipality = adminAddr.municipalityName || formData.municipality;
           const updatedNeighborhood = adminAddr.communityName || formData.neighborhood;
           const updatedPostalCode = adminAddr.postalCode || formData.postalCode;
 
@@ -283,6 +288,8 @@ export function AddressFormSection({
               city: updatedCity,
               neighborhood: updatedNeighborhood,
               region: updatedRegion,
+              regionalUnit: updatedRegionalUnit,
+              municipality: updatedMunicipality,
               postalCode: updatedPostalCode,
             };
             // Immediate parent notification (discrete change)

@@ -159,15 +159,16 @@ export function formatAddressType(
  * @returns Complete ProjectAddress
  */
 export function createProjectAddress(
-  data: Partial<ProjectAddress> & { street: string; city: string }
+  data: Partial<ProjectAddress> & { city: string }
 ): ProjectAddress {
   return {
     id: data.id || crypto.randomUUID(),
-    street: data.street,
+    street: data.street || '',
     number: data.number,
     city: data.city,
     postalCode: data.postalCode || '',
     region: data.region,
+    regionalUnit: data.regionalUnit,
     country: data.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
     type: data.type || 'site',
     isPrimary: data.isPrimary ?? false,
@@ -398,13 +399,9 @@ export function validateAddress(
 ): string[] {
   const errors: string[] = [];
 
-  // Required fields
-  if (!address.street?.trim()) {
-    errors.push('Η οδός είναι υποχρεωτική');
-  }
-
+  // Required fields — city is always required, street is optional for settlements/villages
   if (!address.city?.trim()) {
-    errors.push('Η πόλη είναι υποχρεωτική');
+    errors.push('Η πόλη/οικισμός είναι υποχρεωτικός');
   }
 
   if (!address.postalCode?.trim()) {
@@ -502,6 +499,8 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
     city: address.city || undefined,
     neighborhood: address.neighborhood || undefined,
     postalCode: address.postalCode || undefined,
+    county: address.regionalUnit || undefined,
+    municipality: address.municipality || undefined,
     region: address.region || undefined,
     country: address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
   };
@@ -511,11 +510,13 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
  * Filter addresses that can be geocoded
  * Enterprise pattern: Data readiness filtering
  *
+ * Accepts addresses with:
+ * - street + city (urban addresses)
+ * - city only (settlements/villages without streets)
+ *
  * @param addresses - Addresses to filter
- * @returns Geocodable addresses (have street + city)
+ * @returns Geocodable addresses (have at least city/settlement name)
  */
 export function getGeocodableAddresses(addresses: ProjectAddress[]): ProjectAddress[] {
-  return addresses.filter(addr =>
-    addr.street?.trim() && addr.city?.trim()
-  );
+  return addresses.filter(addr => addr.city?.trim());
 }

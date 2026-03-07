@@ -35,6 +35,10 @@ export interface StructuredGeocodingQuery {
   /** Neighborhood / area — more specific than city (e.g. "Εύοσμος" within "Θεσσαλονίκη") */
   neighborhood?: string;
   postalCode?: string;
+  /** Regional Unit / Π.Ε. — maps to Nominatim `county` (e.g. "Π.Ε. Θεσσαλονίκης") */
+  county?: string;
+  /** Municipality / Δήμος (e.g. "Δήμος Καλαμαριάς") — used for free-form fallback */
+  municipality?: string;
   region?: string;
   country?: string;
 }
@@ -81,6 +85,8 @@ function getCacheKey(query: StructuredGeocodingQuery): string {
   return [
     query.street,
     query.city,
+    query.county,
+    query.municipality,
     query.postalCode,
     query.region,
     query.country,

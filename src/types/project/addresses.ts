@@ -102,8 +102,10 @@ export interface ProjectAddress {
   city: string;
   /** Postal code (e.g., "54621") */
   postalCode: string;
-  /** Region (e.g., "Κεντρική Μακεδονία") */
+  /** Region / Περιφέρεια (e.g., "Κεντρική Μακεδονία") */
   region?: string;
+  /** Regional Unit / Περιφερειακή Ενότητα (e.g., "Π.Ε. Θεσσαλονίκης") */
+  regionalUnit?: string;
   /** Country (default: "Greece") */
   country: string;
 
@@ -160,10 +162,10 @@ export interface BuildingAddressReference {
 
 /**
  * Partial address for forms (before full validation)
+ * Note: street is optional — settlements/villages (οικισμοί/χωριά) may not have streets
  */
 export type PartialProjectAddress = Partial<ProjectAddress> & {
-  street: string; // Street is required
-  city: string;   // City is required
+  city: string;   // City/settlement is required
 };
 
 /**

@@ -35,6 +35,10 @@ interface GeocodingRequestBody {
   city?: string;
   neighborhood?: string;
   postalCode?: string;
+  /** Regional Unit / Π.Ε. — maps to Nominatim `county` parameter */
+  county?: string;
+  /** Municipality / Δήμος — used in free-form fallback for disambiguation */
+  municipality?: string;
   region?: string;
   country?: string;
 }
@@ -95,6 +99,9 @@ function buildStructuredUrl(params: GeocodingRequestBody): string {
     searchParams.set('city', params.neighborhood);
   } else if (params.city) {
     searchParams.set('city', params.city);
+  }
+  if (params.county) {
+    searchParams.set('county', params.county);
   }
   if (params.region) {
     searchParams.set('state', params.region);
@@ -177,6 +184,12 @@ function calculateConfidence(
   } else if (params.city && display.includes(normalizeGreekText(params.city))) {
     score += GEOCODING.CONFIDENCE.CITY_MATCH;
   }
+  if (params.county && display.includes(normalizeGreekText(params.county))) {
+    score += GEOCODING.CONFIDENCE.CITY_MATCH * 0.5; // County match = half of city bonus
+  }
+  if (params.municipality && display.includes(normalizeGreekText(params.municipality))) {
+    score += GEOCODING.CONFIDENCE.CITY_MATCH * 0.3;
+  }
   if (params.postalCode && display.includes(params.postalCode)) {
     score += GEOCODING.CONFIDENCE.POSTAL_MATCH;
   }
@@ -192,7 +205,7 @@ function calculateConfidence(
 function toFreeformQuery(params: GeocodingRequestBody): string {
   // Prefer neighborhood over city for free-form (more specific locality)
   const locality = params.neighborhood || params.city;
-  return [params.street, locality, params.postalCode, params.region]
+  return [params.street, locality, params.municipality, params.county, params.postalCode, params.region]
     .filter(Boolean)
     .join(', ');
 }
@@ -206,6 +219,8 @@ function createAccentStrippedVariant(params: GeocodingRequestBody): GeocodingReq
     city: params.city ? normalizeGreekText(params.city) : undefined,
     neighborhood: params.neighborhood ? normalizeGreekText(params.neighborhood) : undefined,
     postalCode: params.postalCode,
+    county: params.county ? normalizeGreekText(params.county) : undefined,
+    municipality: params.municipality ? normalizeGreekText(params.municipality) : undefined,
     region: params.region ? normalizeGreekText(params.region) : undefined,
     country: params.country,
   };
@@ -233,6 +248,8 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
       ? transliterateGreeklish(params.neighborhood)
       : params.neighborhood,
     postalCode: params.postalCode,
+    county: params.county,
+    municipality: params.municipality,
     region: params.region && !containsGreek(params.region)
       ? transliterateGreeklish(params.region)
       : params.region,
@@ -245,12 +262,18 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
 // =============================================================================
 
 /**
- * Build OSM-style free-form query: "street number postalcode"
- * This is how openstreetmap.org itself searches — space-separated,
- * no city, no commas. The postal code is enough to disambiguate.
+ * Build OSM-style free-form query.
+ * With street: "street number postalcode" (most reliable for urban addresses)
+ * Without street: "city/settlement, municipality, postalcode" (for villages/settlements)
  */
 function toOsmStyleQuery(params: GeocodingRequestBody): string {
-  return [params.street, params.postalCode].filter(Boolean).join(' ');
+  if (params.street) {
+    // Urban: "Αχιλλέως 17 56224"
+    return [params.street, params.postalCode].filter(Boolean).join(' ');
+  }
+  // Settlement/village: "Χωριό, Δήμος, ΤΚ"
+  const locality = params.neighborhood || params.city;
+  return [locality, params.municipality, params.postalCode].filter(Boolean).join(', ');
 }
 
 /**
@@ -380,7 +403,7 @@ function validateRequestBody(body: unknown): body is GeocodingRequestBody {
   if (!hasSearchField) return false;
 
   // All fields must be string or undefined
-  for (const key of ['street', 'city', 'neighborhood', 'postalCode', 'region', 'country']) {
+  for (const key of ['street', 'city', 'neighborhood', 'postalCode', 'county', 'municipality', 'region', 'country']) {
     if (b[key] !== undefined && typeof b[key] !== 'string') return false;
   }
 
