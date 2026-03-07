@@ -714,8 +714,19 @@
     "description": "General details and project description",
     "projectTitle": "Project Title",
     "licenseTitle": "License Title",
-    "company": "Company",
-    "projectDescription": "Project Description"
+    "projectDescription": "Project Description",
+    "companyLink": {
+      "title": "Link to Company",
+      "label": "Belongs to Company",
+      "placeholder": "Select company...",
+      "noSelection": "No company",
+      "loading": "Loading companies...",
+      "save": "Save",
+      "saving": "Saving...",
+      "success": "Project linked to company!",
+      "error": "Error saving",
+      "currentLabel": "Current company:"
+    }
   },
   "permitsTab": {
     "title": "Permits & Status",

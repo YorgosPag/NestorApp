@@ -170,6 +170,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           data={projectData}
           setData={setProjectData}
           isEditing={isEditing}
+          projectId={project.id}
+          companyId={project.companyId}
         />
 
         <PermitsAndStatusTab

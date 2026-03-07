@@ -345,6 +345,57 @@ export async function getIncompleteUnits(): Promise<UnitModel[]> {
  * @param unitId Unit ID to update
  * @param coverage Coverage updates
  */
+/**
+ * Update unit entity links (company, project, building) via Admin SDK API
+ * @param unitId Unit ID to update
+ * @param updates Link fields to update
+ */
+export async function updateUnitLink(
+  unitId: string,
+  updates: {
+    companyId?: string | null;
+    companyName?: string;
+    projectId?: string | null;
+    projectName?: string;
+    buildingId?: string | null;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiClient.patch(`/api/units/${unitId}`, updates);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update unit link',
+    };
+  }
+}
+
+/**
+ * Get list of buildings for entity linking
+ */
+export async function getBuildingsList(): Promise<Array<{ id: string; name: string }>> {
+  try {
+    interface BuildingFromAPI {
+      id: string;
+      name?: string;
+    }
+    interface BuildingsResponse {
+      buildings: BuildingFromAPI[];
+    }
+
+    const result = await apiClient.get<BuildingsResponse>('/api/buildings');
+    if (!result?.buildings) return [];
+
+    return result.buildings.map(b => ({
+      id: b.id,
+      name: b.name || b.id,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function updateUnitCoverage(
   unitId: string,
   coverage: Partial<{

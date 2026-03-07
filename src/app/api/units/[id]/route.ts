@@ -33,6 +33,14 @@ interface UnitPatchPayload {
   description?: string;
   /** Set to null to unlink from building, or string to link */
   buildingId?: string | null;
+  /** Set to null to unlink from project, or string to link */
+  projectId?: string | null;
+  /** Set to null to unlink from company, or string to link */
+  companyId?: string | null;
+  /** Company display name (denormalized for quick reads) */
+  companyName?: string;
+  /** Project display name (denormalized for quick reads) */
+  projectName?: string;
 }
 
 interface UnitMutationResult {
@@ -78,6 +86,10 @@ export const PATCH = withStandardRateLimit(
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
         if (body.description !== undefined) updateData.description = body.description?.trim() || null;
         if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
+        if (body.projectId !== undefined) updateData.projectId = body.projectId ?? null;
+        if (body.companyId !== undefined) updateData.companyId = body.companyId ?? null;
+        if (body.companyName !== undefined) updateData.companyName = body.companyName ?? null;
+        if (body.projectName !== undefined) updateData.projectName = body.projectName ?? null;
 
         await docRef.update(updateData);
 

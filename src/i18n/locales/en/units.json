@@ -568,5 +568,37 @@
     "success": "Saved!",
     "error": "Error",
     "noLinkedSpaces": "No linked spaces"
+  },
+  "entityLinks": {
+    "save": "Save",
+    "saving": "Saving...",
+    "error": "Error saving",
+    "company": {
+      "title": "Link to Company",
+      "label": "Belongs to Company",
+      "placeholder": "Select company...",
+      "noSelection": "No company",
+      "loading": "Loading companies...",
+      "success": "Unit linked to company!",
+      "currentLabel": "Current company:"
+    },
+    "project": {
+      "title": "Link to Project",
+      "label": "Belongs to Project",
+      "placeholder": "Select project...",
+      "noSelection": "No project",
+      "loading": "Loading projects...",
+      "success": "Unit linked to project!",
+      "currentLabel": "Current project:"
+    },
+    "building": {
+      "title": "Link to Building",
+      "label": "Belongs to Building",
+      "placeholder": "Select building...",
+      "noSelection": "No building",
+      "loading": "Loading buildings...",
+      "success": "Unit linked to building!",
+      "currentLabel": "Current building:"
+    }
   }
 }

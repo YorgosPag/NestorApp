@@ -23,23 +23,13 @@ import { DatesBlock } from './components/DatesBlock';
 import { UnitFieldsBlock } from './components/UnitFieldsBlock';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-// 🏢 ENTERPRISE: Centralized feature flags
-import { isAppFeatureEnabled } from '@/config/feature-flags';
-
 import { resolveAttachments } from './utils/attachments';
 import { makeSafeUpdate } from './utils/safeUpdate';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PropertyDetailsContent');
 
-// 🏢 ENTERPRISE: Lazy imports for Unit Linking (behind feature flag)
-// These are only loaded when UNIT_LINKING feature is enabled
-const BuildingSelectorCard = isAppFeatureEnabled('UNIT_LINKING')
-  ? require('./components/BuildingSelectorCard').BuildingSelectorCard
-  : null;
-const LinkedSpacesCard = isAppFeatureEnabled('UNIT_LINKING')
-  ? require('./components/LinkedSpacesCard').LinkedSpacesCard
-  : null;
+import { UnitEntityLinks } from './components/UnitEntityLinks';
 
 export function PropertyDetailsContent({
   property,
@@ -158,43 +148,15 @@ export function PropertyDetailsContent({
         onExitEditMode={handleExitEditMode}
       />
 
-      {/* 🏢 ENTERPRISE: Unit Linking Section (Building, Floor, Parking, Storage) */}
-      {/* 🚫 FEATURE FLAG: UNIT_LINKING - Currently DISABLED */}
-      {/* Root Cause: State mirroring anti-pattern causing ref attach/detach loop */}
-      {/* Fix Required: Convert to fully controlled components (ΒΗΜΑ 2) */}
-      {/* See: src/config/feature-flags.ts for details */}
-      {isAppFeatureEnabled('UNIT_LINKING') && !isReadOnly && isEditMode && BuildingSelectorCard && (
-        <>
-          <BuildingSelectorCard
-            unitId={resolvedProperty?.id ?? ''}
-            currentBuildingId={resolvedProperty?.buildingId}
-            currentFloorId={resolvedProperty?.floorId}
-            isEditing
-            onBuildingChanged={(newBuildingId: string, newFloorId?: string) => {
-              if (onUpdateProperty && resolvedProperty?.id) {
-                const updates: Partial<Property> = { buildingId: newBuildingId };
-                if (newFloorId) {
-                  updates.floorId = newFloorId;
-                }
-                onUpdateProperty(resolvedProperty.id, updates);
-              }
-            }}
-          />
-
-          {resolvedProperty?.buildingId && LinkedSpacesCard && (
-            <LinkedSpacesCard
-              unitId={resolvedProperty?.id ?? ''}
-              buildingId={resolvedProperty.buildingId}
-              currentLinkedSpaces={resolvedProperty?.linkedSpaces}
-              isEditing
-              onLinkedSpacesChanged={(newLinkedSpaces: Property['linkedSpaces']) => {
-                if (onUpdateProperty && resolvedProperty?.id) {
-                  onUpdateProperty(resolvedProperty.id, { linkedSpaces: newLinkedSpaces });
-                }
-              }}
-            />
-          )}
-        </>
+      {/* Entity Linking: Company, Project, Building */}
+      {!isReadOnly && (
+        <UnitEntityLinks
+          unitId={resolvedProperty?.id ?? ''}
+          currentCompanyId={(resolvedProperty as Record<string, unknown>)?.companyId as string | undefined}
+          currentProjectId={(resolvedProperty as Record<string, unknown>)?.projectId as string | undefined}
+          currentBuildingId={resolvedProperty?.buildingId}
+          isEditing={isEditMode}
+        />
       )}
 
       {/* Share Button - Always visible for easy sharing */}

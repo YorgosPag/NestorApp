@@ -1,38 +1,63 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Building2 } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
-// 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
+import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
+import { getAllActiveCompanies } from '@/services/companies.service';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectFormData } from './general-tab/types';
 
 interface BasicProjectInfoTabProps {
     data: ProjectFormData;
     setData: React.Dispatch<React.SetStateAction<ProjectFormData>>;
     isEditing: boolean;
+    projectId: string;
+    companyId?: string;
 }
 
-export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectInfoTabProps) {
-    // 🏢 ENTERPRISE: i18n hook
+export function BasicProjectInfoTab({ data, setData, isEditing, projectId, companyId }: BasicProjectInfoTabProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
-    // 🏢 ENTERPRISE: Centralized spacing tokens
     const spacing = useSpacingTokens();
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
+
+    const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
+        const companies = await getAllActiveCompanies();
+        return companies
+            .filter(c => c.id)
+            .map(c => ({ id: c.id!, name: c.companyName || '' }));
+    }, []);
+
+    const saveCompany = useCallback(async (newId: string | null, name: string) => {
+        try {
+            await apiClient.patch(`/api/projects/${projectId}`, {
+                companyId: newId,
+                company: name || null,
+            });
+            // Update local state to reflect change
+            setData(prev => ({ ...prev, companyName: name || '' }));
+            return { success: true };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to update',
+            };
+        }
+    }, [projectId, setData]);
 
     return (
         <Card>
@@ -56,20 +81,29 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
                         <Input id="licenseTitle" name="licenseTitle" value={data.licenseTitle} onChange={handleChange} disabled={!isEditing} className="h-10" />
                     </div>
                 </div>
-                <div className={spacing.spaceBetween.sm}>
-                    <Label htmlFor="companyName" className="text-sm font-medium">{t('basicInfo.company')}</Label>
-                     <div className="relative">
-                        {/* 🏢 ENTERPRISE: Using centralized company icon/color */}
-                        <NAVIGATION_ENTITIES.company.icon className={cn("absolute left-3 top-1/2 -translate-y-1/2", iconSizes.sm, NAVIGATION_ENTITIES.company.color)} />
-                        <Input
-                            id="companyName"
-                            name="companyName"
-                            value={data.companyName}
-                            disabled
-                            className="h-10 bg-muted/50 pl-10 font-medium"
-                        />
-                    </div>
-                </div>
+
+                {/* Company Link — EntityLinkCard (centralized) */}
+                <EntityLinkCard
+                    cardId="project-company-link"
+                    icon={Building2}
+                    currentValue={companyId}
+                    loadOptions={loadCompanies}
+                    onSave={saveCompany}
+                    isEditing={isEditing}
+                    labels={{
+                        title: t('basicInfo.companyLink.title'),
+                        label: t('basicInfo.companyLink.label'),
+                        placeholder: t('basicInfo.companyLink.placeholder'),
+                        noSelection: t('basicInfo.companyLink.noSelection'),
+                        loading: t('basicInfo.companyLink.loading'),
+                        save: t('basicInfo.companyLink.save'),
+                        saving: t('basicInfo.companyLink.saving'),
+                        success: t('basicInfo.companyLink.success'),
+                        error: t('basicInfo.companyLink.error'),
+                        currentLabel: t('basicInfo.companyLink.currentLabel'),
+                    }}
+                />
+
                 <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="description" className="text-sm font-medium">{t('basicInfo.projectDescription')}</Label>
                     <Textarea
