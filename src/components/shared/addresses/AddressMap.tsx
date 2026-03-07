@@ -63,6 +63,7 @@ const PIN_COLORS = {
   stroke: colors.background.primary, // white
   innerCircle: colors.background.primary, // white
   shadow: 'rgba(0,0,0,0.3)',         // subtle shadow
+  labelClass: 'text-blue-600 bg-blue-50/90',
 } as const;
 
 /** Branch pin colors — visually distinct from HQ */
@@ -71,6 +72,7 @@ const BRANCH_PIN_COLORS = {
   stroke: colors.background.primary,
   innerCircle: colors.background.primary,
   shadow: 'rgba(0,0,0,0.3)',
+  labelClass: 'text-orange-600 bg-orange-50/90',
 } as const;
 
 /** Auto-pan configuration for edge dragging */
@@ -81,7 +83,7 @@ const AUTO_PAN = {
 
 /** Map text layer colors — SSoT: design-tokens */
 const MAP_TEXT_COLORS = {
-  label: colors.text.primary,        // #1e293b — slate-800
+  label: colors.blue['700'],         // #1d4ed8 — blue-700, matches pin branding
   halo: colors.background.primary,   // white
 } as const;
 
@@ -167,9 +169,11 @@ function DraggableMarkerPin({ isPrimary, pulsate, label }: DraggableMarkerPinPro
         <circle cx="20" cy="16" r="6" fill={pinColors.innerCircle} />
       </svg>
       {label && (
-        <span className="mt-0.5 text-[10px] font-semibold leading-none whitespace-nowrap rounded bg-background/90 px-1 py-0.5 shadow-sm text-foreground">
+        <figcaption
+          className={`mt-0.5 text-[10px] font-semibold leading-none whitespace-nowrap rounded px-1 py-0.5 shadow-sm ${pinColors.labelClass}`}
+        >
           {label}
-        </span>
+        </figcaption>
       )}
     </figure>
   );

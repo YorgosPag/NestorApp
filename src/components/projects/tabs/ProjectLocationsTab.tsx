@@ -698,9 +698,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                     </div>
 
                     <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
-                      <span>ID: {address.id.slice(0, 8)}...</span>
-                      {address.sortOrder !== undefined && (
-                        <span className={spacing.margin.left.md}>Σειρά: {address.sortOrder}</span>
+                      {address.type && (
+                        <span>{t(`types.${address.type}`)}</span>
                       )}
                     </div>
                   </article>
