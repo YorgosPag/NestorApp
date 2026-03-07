@@ -11,7 +11,6 @@ import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
 import { PermitsAndStatusTab } from '../PermitsAndStatusTab';
 
 import { useAutosave } from './hooks/useAutosave';
-import { ProjectCustomersTable } from './parts/ProjectCustomersTable';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -182,7 +181,6 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           isEditing={isEditing}
         />
 
-        <ProjectCustomersTable projectId={project.id} />
       </section>
     </>
   );
