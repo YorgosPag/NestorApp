@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LucideIcon } from 'lucide-react';
 
@@ -71,9 +71,13 @@ export function TabsContainer({
 }: TabsContainerProps) {
   const iconSizes = useIconSizes();
   const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
+  const [, startTransition] = useTransition();
 
   const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
+    // INP fix: defer heavy re-render to keep UI responsive
+    startTransition(() => {
+      setActiveTab(tabId);
+    });
     onTabChange?.(tabId);
   };
 
@@ -191,6 +195,7 @@ export function TabsOnlyTriggers({
   alwaysShowLabels = false
 }: TabsOnlyTriggersProps) {
   const iconSizes = useIconSizes();
+  const [, startTransition] = useTransition();
   // 🏢 ENTERPRISE: Support controlled mode - use value prop if provided
   const [internalActiveTab, setInternalActiveTab] = useState(defaultTab || tabs[0]?.id);
 
@@ -198,9 +203,11 @@ export function TabsOnlyTriggers({
   const activeTab = value !== undefined ? value : internalActiveTab;
 
   const handleTabChange = (tabId: string) => {
-    // Only update internal state in uncontrolled mode
+    // INP fix: defer heavy re-render to keep UI responsive
     if (value === undefined) {
-      setInternalActiveTab(tabId);
+      startTransition(() => {
+        setInternalActiveTab(tabId);
+      });
     }
     onTabChange?.(tabId);
   };
