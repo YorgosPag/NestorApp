@@ -2,11 +2,14 @@
 
 /**
  * ============================================================================
- * 🎭 PERSONA SELECTOR — Chip Badge Toggle Component
+ * PERSONA SELECTOR — Chip Badge Toggle Component
  * ============================================================================
  *
  * SAP Business Partner pattern: Toggle personas on/off via chip badges.
  * Each active persona adds a conditional tab with role-specific fields.
+ *
+ * - Edit mode: all personas clickable (toggle on/off)
+ * - View mode: active personas show X button for removal, inactive are disabled
  *
  * @see ADR-121 Contact Persona System
  */
@@ -14,6 +17,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
 import type { PersonaType } from '@/types/contacts/personas';
 import { PERSONA_METADATA } from '@/config/persona-config';
 import {
@@ -59,11 +63,9 @@ export function PersonaSelector({
 
   const handleToggle = useCallback(
     (personaType: PersonaType) => {
-      if (!disabled) {
-        onToggle(personaType);
-      }
+      onToggle(personaType);
     },
-    [disabled, onToggle]
+    [onToggle]
   );
 
   return (
@@ -77,7 +79,7 @@ export function PersonaSelector({
         </p>
       </header>
 
-      <fieldset disabled={disabled}>
+      <fieldset>
         <legend className="sr-only">
           {t('persona.selector.legend')}
         </legend>
@@ -87,12 +89,16 @@ export function PersonaSelector({
             const isActive = activePersonas.includes(persona.type);
             const IconComponent = PERSONA_ICON_MAP[persona.icon];
 
+            // In view mode: inactive personas are disabled, active can be removed
+            const isButtonDisabled = disabled && !isActive;
+
             return (
               <button
                 key={persona.type}
                 type="button"
                 role="switch"
                 aria-checked={isActive}
+                disabled={isButtonDisabled}
                 onClick={() => handleToggle(persona.type)}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5',
@@ -102,7 +108,7 @@ export function PersonaSelector({
                   isActive
                     ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
                     : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  disabled && 'cursor-not-allowed opacity-50'
+                  isButtonDisabled && 'cursor-not-allowed opacity-50'
                 )}
               >
                 {IconComponent && (
@@ -114,6 +120,12 @@ export function PersonaSelector({
                   />
                 )}
                 <span>{t(persona.label)}</span>
+                {isActive && (
+                  <X
+                    className="h-3.5 w-3.5 ml-0.5 text-primary/60 hover:text-destructive transition-colors"
+                    aria-label={t('persona.selector.remove', { defaultValue: 'Remove' })}
+                  />
+                )}
               </button>
             );
           })}
