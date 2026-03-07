@@ -39,13 +39,15 @@ import { FilesList } from './FilesList';
 import { FileUploadZone } from './FileUploadZone';
 import { FilePathTree } from './FilePathTree';
 import { UploadEntryPointSelector } from './UploadEntryPointSelector';
+import { HierarchicalEntryPointSelector } from './HierarchicalEntryPointSelector';
 import { TrashView } from './TrashView'; // 🗑️ ENTERPRISE: Trash System (ADR-032)
 import { SearchInput } from '@/components/ui/search'; // 🔍 ENTERPRISE: Centralized Search System
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized Toast System
 import { FileRecordService } from '@/services/file-record.service';
 import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
-import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
+import type { UploadEntryPoint, CaptureMetadata, FloorInfo } from '@/config/upload-entry-points';
+import { getAvailableGroups } from '@/config/upload-entry-points';
 import { AddCaptureMenu } from './AddCaptureMenu';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
@@ -106,6 +108,8 @@ export interface EntityFilesManagerProps {
   contactType?: ContactType;
   /** 🎭 ENTERPRISE: Active personas for individual contacts (ADR-121) */
   activePersonas?: PersonaType[];
+  /** 🏢 ADR-191: Floor data for per-floor entry point expansion (building entity) */
+  floors?: FloorInfo[];
 }
 
 // ============================================================================
@@ -140,6 +144,7 @@ export function EntityFilesManager({
   displayStyle = 'standard', // 🏢 ENTERPRISE: Default to standard list/tree view
   contactType,
   activePersonas,
+  floors,
 }: EntityFilesManagerProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -752,18 +757,31 @@ export function EntityFilesManager({
         {/* Upload Pipeline (conditional) - Only show on files tab */}
         {activeTab === 'files' && showUploadZone && (
           <div className="space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
-            {/* Step 1: Entry Point Selection */}
-            <UploadEntryPointSelector
-              entityType={entityType}
-              selectedEntryPointId={selectedEntryPoint?.id}
-              onSelect={setSelectedEntryPoint}
-              customTitle={customTitle}
-              onCustomTitleChange={setCustomTitle}
-              categoryFilter={entryPointCategoryFilter}
-              excludeCategories={entryPointExcludeCategories}
-              contactType={contactType}
-              activePersonas={activePersonas}
-            />
+            {/* Step 1: Entry Point Selection — flat (contacts) vs hierarchical (projects/buildings) */}
+            {getAvailableGroups(entityType).length > 0 ? (
+              <HierarchicalEntryPointSelector
+                entityType={entityType}
+                selectedEntryPointId={selectedEntryPoint?.id}
+                onSelect={setSelectedEntryPoint}
+                customTitle={customTitle}
+                onCustomTitleChange={setCustomTitle}
+                categoryFilter={entryPointCategoryFilter}
+                excludeCategories={entryPointExcludeCategories}
+                floors={floors}
+              />
+            ) : (
+              <UploadEntryPointSelector
+                entityType={entityType}
+                selectedEntryPointId={selectedEntryPoint?.id}
+                onSelect={setSelectedEntryPoint}
+                customTitle={customTitle}
+                onCustomTitleChange={setCustomTitle}
+                categoryFilter={entryPointCategoryFilter}
+                excludeCategories={entryPointExcludeCategories}
+                contactType={contactType}
+                activePersonas={activePersonas}
+              />
+            )}
 
             {/* Step 2: File Upload Zone (enabled only when entry point selected AND custom title provided if required) */}
             {selectedEntryPoint && (

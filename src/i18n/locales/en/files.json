@@ -405,5 +405,17 @@
   },
   "common": {
     "cancel": "Cancel"
+  },
+  "studies": {
+    "selectGroup": "Select study category",
+    "backToGroups": "Back to categories",
+    "noFloorsWarning": "You must first create floors in the building for per-floor drawings",
+    "entriesCount": "{{count}} documents",
+    "searchAcrossAll": "Search across all categories...",
+    "generalDocuments": "General Documents",
+    "generalDocumentsDescription": "Basic documents without study category",
+    "perFloorLabel": "per floor",
+    "studyCategories": "Study Categories",
+    "searchResults": "Search results"
   }
 }

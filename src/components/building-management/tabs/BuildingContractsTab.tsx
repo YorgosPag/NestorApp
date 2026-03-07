@@ -19,11 +19,13 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Building } from '@/types/building/contracts';
+import type { FloorInfo } from '@/config/upload-entry-points';
 
 // =============================================================================
 // PROPS
@@ -59,6 +61,7 @@ export function BuildingContractsTab({
 }: BuildingContractsTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('building');
+  const [floors, setFloors] = useState<FloorInfo[]>([]);
 
   // Resolve building from props
   const resolvedBuilding = building || data;
@@ -66,6 +69,28 @@ export function BuildingContractsTab({
   // Get companyId and userId from auth context
   const companyId = user?.companyId;
   const currentUserId = user?.uid;
+
+  // 🏢 ADR-191: Fetch floors for per-floor entry point expansion
+  const fetchFloors = useCallback(async () => {
+    if (!resolvedBuilding?.id) return;
+    try {
+      const result = await apiClient.get<{ floors: Array<{ id: string; number: number; name: string }> }>(
+        `/api/floors?buildingId=${resolvedBuilding.id}`
+      );
+      if (result?.floors) {
+        const sorted = [...result.floors]
+          .sort((a, b) => a.number - b.number)
+          .map((f) => ({ id: f.id, number: f.number, name: f.name }));
+        setFloors(sorted);
+      }
+    } catch {
+      // Non-blocking: floors are optional for the documents tab
+    }
+  }, [resolvedBuilding?.id]);
+
+  useEffect(() => {
+    fetchFloors();
+  }, [fetchFloors]);
 
   // If no building, companyId, or userId, show placeholder
   if (!resolvedBuilding?.id || !companyId || !currentUserId) {
@@ -88,6 +113,7 @@ export function BuildingContractsTab({
       category="documents"
       purpose="document"
       entryPointExcludeCategories={['photos', 'videos']}
+      floors={floors}
     />
   );
 }
