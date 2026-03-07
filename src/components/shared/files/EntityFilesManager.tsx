@@ -43,6 +43,8 @@ import { TrashView } from './TrashView'; // 🗑️ ENTERPRISE: Trash System (AD
 import { SearchInput } from '@/components/ui/search'; // 🔍 ENTERPRISE: Centralized Search System
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized Toast System
 import { FileRecordService } from '@/services/file-record.service';
+import type { ContactType } from '@/types/contacts';
+import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { AddCaptureMenu } from './AddCaptureMenu';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -100,6 +102,10 @@ export interface EntityFilesManagerProps {
    * - 'floorplan-gallery': Full-width DXF/PDF viewer with navigation (Bentley/Autodesk pattern)
    */
   displayStyle?: 'standard' | 'media-gallery' | 'floorplan-gallery';
+  /** 🏢 ENTERPRISE: Contact type for persona-aware entry point filtering */
+  contactType?: ContactType;
+  /** 🎭 ENTERPRISE: Active personas for individual contacts (ADR-121) */
+  activePersonas?: PersonaType[];
 }
 
 // ============================================================================
@@ -132,6 +138,8 @@ export function EntityFilesManager({
   entryPointCategoryFilter,
   entryPointExcludeCategories,
   displayStyle = 'standard', // 🏢 ENTERPRISE: Default to standard list/tree view
+  contactType,
+  activePersonas,
 }: EntityFilesManagerProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -753,6 +761,8 @@ export function EntityFilesManager({
               onCustomTitleChange={setCustomTitle}
               categoryFilter={entryPointCategoryFilter}
               excludeCategories={entryPointExcludeCategories}
+              contactType={contactType}
+              activePersonas={activePersonas}
             />
 
             {/* Step 2: File Upload Zone (enabled only when entry point selected AND custom title provided if required) */}

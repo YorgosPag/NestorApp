@@ -25,6 +25,8 @@
  */
 
 import type { EntityType, FileDomain, FileCategory } from './domain-constants';
+import type { PersonaType } from '@/types/contacts/personas';
+import type { ContactType } from '@/types/contacts';
 
 // ============================================================================
 // TYPES
@@ -113,6 +115,17 @@ export interface UploadEntryPoint {
   requiresCustomTitle?: boolean;
   /** 🏢 ENTERPRISE: Override default category capture capabilities */
   allowedSources?: CaptureSource[];
+  /**
+   * 🏢 ENTERPRISE: Restrict entry point to specific contact types.
+   * If omitted → visible to ALL contact types (base entry).
+   */
+  contactTypes?: ContactType[];
+  /**
+   * 🎭 ENTERPRISE: Restrict entry point to specific personas (individual only).
+   * If omitted → base entry, always visible for the matching contactTypes.
+   * Requires contactTypes to include 'individual'.
+   */
+  personas?: PersonaType[];
 }
 
 /**
@@ -134,154 +147,386 @@ export const UPLOAD_ENTRY_POINTS: UploadEntryPointsConfig = {
   // ==========================================================================
   // CONTACT ENTRY POINTS
   // ==========================================================================
+  // 🏢 ENTERPRISE: Persona-aware entry points (ADR-121 + ADR-031)
+  // - No contactTypes/personas → visible to ALL contacts (base)
+  // - contactTypes only → visible to those contact types (base for that type)
+  // - contactTypes + personas → visible when persona is active (individual)
+  // ==========================================================================
   contact: [
-    // ------------------------------------------------------------------------
-    // IDENTITY DOCUMENTS
-    // ------------------------------------------------------------------------
-    {
-      id: 'id-card',
-      purpose: 'id',
-      domain: 'admin',
-      category: 'documents',
-      label: {
-        el: 'Ταυτότητα',
-        en: 'ID Card',
-      },
-      description: {
-        el: 'Αστυνομική ταυτότητα ή διαβατήριο',
-        en: 'Police ID or passport',
-      },
-      icon: 'CreditCard',
-      order: 1,
-    },
+    // ========================================================================
+    // Α. ΒΑΣΗ — Κοινά ΟΛΩΝ (χωρίς filter)
+    // ========================================================================
     {
       id: 'tax-id',
       purpose: 'tax',
       domain: 'admin',
       category: 'documents',
-      label: {
-        el: 'ΑΦΜ',
-        en: 'Tax ID',
-      },
+      label: { el: 'ΑΦΜ', en: 'Tax ID' },
       description: {
         el: 'Αριθμός Φορολογικού Μητρώου',
         en: 'Tax Identification Number',
       },
       icon: 'FileText',
+      order: 1,
+    },
+    {
+      id: 'private-agreement',
+      purpose: 'private-agreement',
+      domain: 'legal',
+      category: 'contracts',
+      label: { el: 'Ιδιωτικό Συμφωνητικό', en: 'Private Agreement' },
+      description: {
+        el: 'Ιδιωτικό συμφωνητικό συνεργασίας ή άλλο',
+        en: 'Private cooperation or other agreement',
+      },
+      icon: 'Handshake',
       order: 2,
     },
-
-    // ------------------------------------------------------------------------
-    // CONTACT INFORMATION
-    // ------------------------------------------------------------------------
-    {
-      id: 'address-proof',
-      purpose: 'address',
-      domain: 'admin',
-      category: 'documents',
-      label: {
-        el: 'Απόδειξη Διεύθυνσης',
-        en: 'Address Proof',
-      },
-      description: {
-        el: 'Λογαριασμός ΔΕΗ/ΕΥΔΑΠ ή άλλο έγγραφο με διεύθυνση',
-        en: 'Utility bill or other document with address',
-      },
-      icon: 'Home',
-      order: 3,
-    },
-    {
-      id: 'phone-verification',
-      purpose: 'phone',
-      domain: 'admin',
-      category: 'documents',
-      label: {
-        el: 'Επαλήθευση Τηλεφώνου',
-        en: 'Phone Verification',
-      },
-      description: {
-        el: 'Λογαριασμός τηλεφωνίας ή συμβόλαιο',
-        en: 'Phone bill or contract',
-      },
-      icon: 'Phone',
-      order: 4,
-    },
-
-    // ------------------------------------------------------------------------
-    // PHOTOS
-    // ------------------------------------------------------------------------
-    {
-      id: 'profile-photo',
-      purpose: 'profile',
-      domain: 'admin',
-      category: 'photos',
-      label: {
-        el: 'Φωτογραφία Προφίλ',
-        en: 'Profile Photo',
-      },
-      description: {
-        el: 'Προσωπική φωτογραφία για το προφίλ',
-        en: 'Personal photo for profile',
-      },
-      icon: 'User',
-      order: 5,
-    },
-
-    // ------------------------------------------------------------------------
-    // CONTRACTS & LEGAL
-    // ------------------------------------------------------------------------
-    {
-      id: 'signed-contract',
-      purpose: 'signed',
-      domain: 'legal',
-      category: 'contracts',
-      label: {
-        el: 'Υπογεγραμμένο Συμβόλαιο',
-        en: 'Signed Contract',
-      },
-      description: {
-        el: 'Συμβόλαιο με υπογραφές',
-        en: 'Contract with signatures',
-      },
-      icon: 'FileSignature',
-      order: 6,
-    },
-    {
-      id: 'draft-contract',
-      purpose: 'draft',
-      domain: 'legal',
-      category: 'contracts',
-      label: {
-        el: 'Πρόχειρο Συμβόλαιο',
-        en: 'Draft Contract',
-      },
-      description: {
-        el: 'Συμβόλαιο προς υπογραφή',
-        en: 'Contract pending signature',
-      },
-      icon: 'FilePenLine',
-      order: 7,
-    },
-
-    // ------------------------------------------------------------------------
-    // GENERIC
-    // ------------------------------------------------------------------------
     {
       id: 'generic-document',
       purpose: 'generic',
       domain: 'admin',
       category: 'documents',
-      label: {
-        el: 'Άλλο Έγγραφο',
-        en: 'Other Document',
-      },
+      label: { el: 'Άλλο Έγγραφο', en: 'Other Document' },
       description: {
         el: 'Γενικό έγγραφο χωρίς συγκεκριμένη κατηγορία',
         en: 'Generic document without specific category',
       },
       icon: 'File',
       order: 99,
-      requiresCustomTitle: true, // 🏢 ENTERPRISE: Mandatory title field (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+      requiresCustomTitle: true,
+    },
+
+    // ========================================================================
+    // Β. Βάση Individual (contactTypes: ['individual'], χωρίς personas)
+    // ========================================================================
+    {
+      id: 'id-card',
+      purpose: 'id',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Ταυτότητα / Διαβατήριο', en: 'ID Card / Passport' },
+      description: {
+        el: 'Αστυνομική ταυτότητα ή διαβατήριο',
+        en: 'Police ID or passport',
+      },
+      icon: 'CreditCard',
+      order: 10,
+      contactTypes: ['individual'],
+    },
+
+    // ========================================================================
+    // Γ. Persona-specific (contactTypes: ['individual'] + personas)
+    // ========================================================================
+
+    // --- construction_worker ---
+    {
+      id: 'amka',
+      purpose: 'amka',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'ΑΜΚΑ', en: 'Social Security (AMKA)' },
+      description: {
+        el: 'Αριθμός Μητρώου Κοινωνικής Ασφάλισης',
+        en: 'Social Security Number (AMKA)',
+      },
+      icon: 'ShieldCheck',
+      order: 20,
+      contactTypes: ['individual'],
+      personas: ['construction_worker'],
+    },
+    {
+      id: 'ika-registration',
+      purpose: 'ika-registration',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Αρ. Μητρώου ΕΦΚΑ/ΙΚΑ', en: 'EFKA/IKA Registry Nr' },
+      description: {
+        el: 'Αριθμός μητρώου ασφαλιστικού φορέα',
+        en: 'Insurance registry number',
+      },
+      icon: 'ClipboardList',
+      order: 21,
+      contactTypes: ['individual'],
+      personas: ['construction_worker'],
+    },
+    {
+      id: 'health-certificate',
+      purpose: 'health-certificate',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Βεβαίωση Υγείας', en: 'Health Certificate' },
+      description: {
+        el: 'Ιατρική βεβαίωση καταλληλότητας εργασίας',
+        en: 'Medical fitness-for-work certificate',
+      },
+      icon: 'HeartPulse',
+      order: 22,
+      contactTypes: ['individual'],
+      personas: ['construction_worker'],
+    },
+    {
+      id: 'work-permit',
+      purpose: 'work-permit',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Άδεια Εργασίας', en: 'Work Permit' },
+      description: {
+        el: 'Άδεια εργασίας (για αλλοδαπούς εργαζόμενους)',
+        en: 'Work permit (for foreign workers)',
+      },
+      icon: 'BadgeCheck',
+      order: 23,
+      contactTypes: ['individual'],
+      personas: ['construction_worker'],
+    },
+    {
+      id: 'specialty-certification',
+      purpose: 'specialty-certification',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Πιστοποίηση Ειδικότητας', en: 'Specialty Certification' },
+      description: {
+        el: 'Πιστοποίηση επαγγελματικής ειδικότητας (ηλεκτρολόγος, υδραυλικός κτλ)',
+        en: 'Professional specialty certification (electrician, plumber etc)',
+      },
+      icon: 'Award',
+      order: 24,
+      contactTypes: ['individual'],
+      personas: ['construction_worker'],
+    },
+
+    // --- accountant ---
+    {
+      id: 'oee-certificate',
+      purpose: 'oee-certificate',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Βεβαίωση ΟΕΕ', en: 'OEE Certificate' },
+      description: {
+        el: 'Βεβαίωση εγγραφής στο Οικονομικό Επιμελητήριο',
+        en: 'Economic Chamber registration certificate',
+      },
+      icon: 'Calculator',
+      order: 30,
+      contactTypes: ['individual'],
+      personas: ['accountant'],
+    },
+    {
+      id: 'cooperation-contract',
+      purpose: 'cooperation-contract',
+      domain: 'legal',
+      category: 'contracts',
+      label: { el: 'Σύμβαση Συνεργασίας', en: 'Cooperation Contract' },
+      description: {
+        el: 'Σύμβαση παροχής λογιστικών υπηρεσιών',
+        en: 'Accounting services contract',
+      },
+      icon: 'FileSignature',
+      order: 31,
+      contactTypes: ['individual'],
+      personas: ['accountant'],
+    },
+
+    // --- lawyer ---
+    {
+      id: 'power-of-attorney',
+      purpose: 'power-of-attorney',
+      domain: 'legal',
+      category: 'contracts',
+      label: { el: 'Πληρεξούσιο', en: 'Power of Attorney' },
+      description: {
+        el: 'Πληρεξούσιο εκπροσώπησης',
+        en: 'Power of attorney document',
+      },
+      icon: 'Scale',
+      order: 40,
+      contactTypes: ['individual'],
+      personas: ['lawyer', 'client'],
+    },
+    {
+      id: 'authorization',
+      purpose: 'authorization',
+      domain: 'legal',
+      category: 'contracts',
+      label: { el: 'Εξουσιοδότηση', en: 'Authorization' },
+      description: {
+        el: 'Εξουσιοδότηση για νομικές ή διοικητικές ενέργειες',
+        en: 'Authorization for legal or administrative actions',
+      },
+      icon: 'FileCheck',
+      order: 41,
+      contactTypes: ['individual'],
+      personas: ['lawyer', 'client'],
+    },
+
+    // --- real_estate_agent ---
+    {
+      id: 'agent-license',
+      purpose: 'agent-license',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Άδεια Μεσίτη (ΓΕΜΗ)', en: 'Agent License (GEMI)' },
+      description: {
+        el: 'Άδεια άσκησης μεσιτικής δραστηριότητας',
+        en: 'Real estate agent license (GEMI)',
+      },
+      icon: 'Key',
+      order: 50,
+      contactTypes: ['individual'],
+      personas: ['real_estate_agent'],
+    },
+    {
+      id: 'mediation-contract',
+      purpose: 'mediation-contract',
+      domain: 'legal',
+      category: 'contracts',
+      label: { el: 'Σύμβαση Μεσιτείας', en: 'Mediation Contract' },
+      description: {
+        el: 'Σύμβαση μεσιτείας ακινήτου',
+        en: 'Real estate mediation contract',
+      },
+      icon: 'FileSignature',
+      order: 51,
+      contactTypes: ['individual'],
+      personas: ['real_estate_agent'],
+    },
+
+    // --- client ---
+    {
+      id: 'address-proof',
+      purpose: 'address',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Απόδειξη Διεύθυνσης', en: 'Address Proof' },
+      description: {
+        el: 'Λογαριασμός ΔΕΗ/ΕΥΔΑΠ ή άλλο έγγραφο με διεύθυνση',
+        en: 'Utility bill or other document with address',
+      },
+      icon: 'Home',
+      order: 42,
+      contactTypes: ['individual'],
+      personas: ['client'],
+    },
+
+    // ========================================================================
+    // Δ. Εταιρεία (contactTypes: ['company'])
+    // ========================================================================
+    {
+      id: 'articles-of-association',
+      purpose: 'articles-of-association',
+      domain: 'legal',
+      category: 'contracts',
+      label: { el: 'Καταστατικό', en: 'Articles of Association' },
+      description: {
+        el: 'Καταστατικό εταιρείας',
+        en: 'Company articles of association',
+      },
+      icon: 'ScrollText',
+      order: 60,
+      contactTypes: ['company'],
+    },
+    {
+      id: 'gemi-certificate',
+      purpose: 'gemi-certificate',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Πιστοποιητικό ΓΕΜΗ', en: 'GEMI Certificate' },
+      description: {
+        el: 'Πιστοποιητικό Γενικού Εμπορικού Μητρώου',
+        en: 'General Commercial Registry certificate',
+      },
+      icon: 'Award',
+      order: 61,
+      contactTypes: ['company'],
+    },
+    {
+      id: 'tax-clearance',
+      purpose: 'tax-clearance',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Φορολογική Ενημερότητα', en: 'Tax Clearance' },
+      description: {
+        el: 'Φορολογική ενημερότητα από ΑΑΔΕ',
+        en: 'Tax clearance certificate from AADE',
+      },
+      icon: 'FileCheck',
+      order: 62,
+      contactTypes: ['company'],
+    },
+    {
+      id: 'insurance-clearance',
+      purpose: 'insurance-clearance',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Ασφαλιστική Ενημερότητα', en: 'Insurance Clearance' },
+      description: {
+        el: 'Ασφαλιστική ενημερότητα από ΕΦΚΑ',
+        en: 'Insurance clearance from EFKA',
+      },
+      icon: 'Shield',
+      order: 63,
+      contactTypes: ['company'],
+    },
+    {
+      id: 'legal-representation',
+      purpose: 'legal-representation',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Νόμιμη Εκπροσώπηση', en: 'Legal Representation' },
+      description: {
+        el: 'Πιστοποιητικό νόμιμου εκπροσώπου',
+        en: 'Legal representative certificate',
+      },
+      icon: 'UserCheck',
+      order: 64,
+      contactTypes: ['company'],
+    },
+    {
+      id: 'site-insurance',
+      purpose: 'site-insurance',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Ασφαλιστήριο Εργοταξίου', en: 'Site Insurance (CAR/EAR)' },
+      description: {
+        el: 'Ασφαλιστήριο συμβόλαιο εργοταξίου (CAR/EAR)',
+        en: 'Construction All Risks / Erection All Risks insurance',
+      },
+      icon: 'ShieldCheck',
+      order: 65,
+      contactTypes: ['company'],
+    },
+
+    // ========================================================================
+    // Ε. Δημόσια Υπηρεσία (contactTypes: ['service'])
+    // ========================================================================
+    {
+      id: 'permit-certificate',
+      purpose: 'permit-certificate',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Άδεια / Πιστοποιητικό', en: 'Permit / Certificate' },
+      description: {
+        el: 'Άδεια ή πιστοποιητικό από δημόσια υπηρεσία',
+        en: 'Permit or certificate from public service',
+      },
+      icon: 'FileCheck',
+      order: 70,
+      contactTypes: ['service'],
+    },
+    {
+      id: 'official-correspondence',
+      purpose: 'official-correspondence',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Επίσημη Αλληλογραφία', en: 'Official Correspondence' },
+      description: {
+        el: 'Επίσημα έγγραφα αλληλογραφίας με δημόσια υπηρεσία',
+        en: 'Official correspondence documents with public service',
+      },
+      icon: 'Mail',
+      order: 71,
+      contactTypes: ['service'],
     },
   ],
 
@@ -1089,6 +1334,63 @@ export function getSortedEntryPoints(
 ): UploadEntryPoint[] {
   const entryPoints = getEntryPointsForEntity(entityType);
   return [...entryPoints].sort((a, b) => a.order - b.order);
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE: Contact-Specific Filtering (Persona-Aware)
+// ============================================================================
+
+/**
+ * Get filtered contact entry points based on contact type and active personas.
+ *
+ * Filtering rules:
+ * 1. No contactTypes → always visible (base entry for ALL)
+ * 2. contactTypes match → check personas:
+ *    a. No personas → always visible for that contact type (base entry)
+ *    b. personas match at least one active persona → visible
+ *    c. personas don't match → hidden
+ * 3. contactTypes don't match → hidden
+ *
+ * Dedup by ID (e.g., power-of-attorney shared between lawyer + client)
+ */
+export function getFilteredContactEntryPoints(
+  contactType: ContactType,
+  activePersonas?: PersonaType[]
+): UploadEntryPoint[] {
+  const allEntryPoints = getSortedEntryPoints('contact');
+  const seen = new Set<string>();
+
+  return allEntryPoints.filter((ep) => {
+    // Dedup by ID
+    if (seen.has(ep.id)) return false;
+
+    // Rule 1: No contactTypes restriction → visible to ALL
+    if (!ep.contactTypes || ep.contactTypes.length === 0) {
+      seen.add(ep.id);
+      return true;
+    }
+
+    // Rule 3: contactTypes don't match → hidden
+    if (!ep.contactTypes.includes(contactType)) {
+      return false;
+    }
+
+    // Rule 2a: contactTypes match + no personas restriction → base entry for type
+    if (!ep.personas || ep.personas.length === 0) {
+      seen.add(ep.id);
+      return true;
+    }
+
+    // Rule 2b/2c: Check if any active persona matches
+    const personas = activePersonas ?? [];
+    const hasMatchingPersona = ep.personas.some((p) => personas.includes(p));
+    if (hasMatchingPersona) {
+      seen.add(ep.id);
+      return true;
+    }
+
+    return false;
+  });
 }
 
 // ============================================================================

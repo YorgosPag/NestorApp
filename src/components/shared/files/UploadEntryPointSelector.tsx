@@ -27,8 +27,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EntityType, FileCategory } from '@/config/domain-constants';
+import type { ContactType } from '@/types/contacts';
+import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
-import { getSortedEntryPoints } from '@/config/upload-entry-points';
+import { getSortedEntryPoints, getFilteredContactEntryPoints } from '@/config/upload-entry-points';
 import * as LucideIcons from 'lucide-react';
 
 // ============================================================================
@@ -54,6 +56,10 @@ export interface UploadEntryPointSelectorProps {
   categoryFilter?: FileCategory;
   /** 🏢 ENTERPRISE: Exclude specific categories (e.g., ['photos', 'videos'] for DocumentsTab) */
   excludeCategories?: FileCategory[];
+  /** 🏢 ENTERPRISE: Contact type for persona-aware filtering (individual/company/service) */
+  contactType?: ContactType;
+  /** 🎭 ENTERPRISE: Active personas for individual contacts (ADR-121) */
+  activePersonas?: PersonaType[];
 }
 
 // ============================================================================
@@ -76,6 +82,8 @@ export function UploadEntryPointSelector({
   onCustomTitleChange,
   categoryFilter,
   excludeCategories,
+  contactType,
+  activePersonas,
 }: UploadEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
   const { t, i18n } = useTranslation('files');
@@ -84,18 +92,18 @@ export function UploadEntryPointSelector({
   // Fixes bug where cards showed Greek text even with English selected
   const currentLanguage = (language || i18n.language?.split('-')[0] || 'en') as 'el' | 'en';
 
-  // Get entry points for this entity type
-  const allEntryPoints = getSortedEntryPoints(entityType);
+  // 🏢 ENTERPRISE: Get entry points — persona-aware for contacts, standard for others
+  const baseEntryPoints = (entityType === 'contact' && contactType)
+    ? getFilteredContactEntryPoints(contactType, activePersonas)
+    : getSortedEntryPoints(entityType);
 
-  // 🏢 ENTERPRISE: Filter entry points by category
+  // 🏢 ENTERPRISE: Apply category filters on top of persona filtering
   // - categoryFilter: show ONLY entries with this category (e.g., 'photos' for PhotosTab)
   // - excludeCategories: hide entries with these categories (e.g., ['photos', 'videos'] for DocumentsTab)
-  const entryPoints = allEntryPoints.filter((ep) => {
-    // If categoryFilter is set, only show entries matching that category
+  const entryPoints = baseEntryPoints.filter((ep) => {
     if (categoryFilter && ep.category !== categoryFilter) {
       return false;
     }
-    // If excludeCategories is set, hide entries matching those categories
     if (excludeCategories && excludeCategories.includes(ep.category)) {
       return false;
     }

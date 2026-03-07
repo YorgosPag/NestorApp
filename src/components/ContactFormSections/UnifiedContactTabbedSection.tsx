@@ -676,7 +676,9 @@ export function UnifiedContactTabbedSection({
               category="documents"
               currentUserId={currentUserId}
               entityLabel={entityLabel}
-              companyName={companyDisplayName} // 🏢 ENTERPRISE: Pass company name from CompaniesService (ADR-031)
+              companyName={companyDisplayName}
+              contactType={contactType}
+              activePersonas={formData.activePersonas}
             />
           );
         },
