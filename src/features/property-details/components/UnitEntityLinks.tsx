@@ -76,7 +76,7 @@ export function UnitEntityLinks({
   }, [unitId]);
 
   return (
-    <section className="grid grid-cols-1 gap-2">
+    <section className="grid grid-cols-1 md:grid-cols-3 gap-2">
       <EntityLinkCard
         cardId="unit-company-link"
         icon={Building2}

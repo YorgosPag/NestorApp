@@ -600,5 +600,26 @@
       "success": "Unit linked to building!",
       "currentLabel": "Current building:"
     }
+  },
+  "navigation": {
+    "actions": {
+      "view": {
+        "label": "View"
+      },
+      "edit": {
+        "label": "Edit"
+      },
+      "newUnit": {
+        "label": "New Unit"
+      },
+      "delete": {
+        "label": "Delete",
+        "confirmTitle": "Confirm Deletion",
+        "confirmMessage": "Are you sure you want to delete the unit \"{name}\"?",
+        "confirmWarning": "This action cannot be undone.",
+        "success": "Unit deleted successfully",
+        "error": "Error deleting unit"
+      }
+    }
   }
 }

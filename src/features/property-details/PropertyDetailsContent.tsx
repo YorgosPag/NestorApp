@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 
 import { MultiLevelNavigation } from '@/components/property-viewer/details/MultiLevelNavigation';
 import { PropertyMeta } from '@/components/property-viewer/details/PropertyMeta';
-import { PropertyShareButton } from '@/components/ui/ShareButton';
 
 import { ReadOnlyBanner } from './components/ReadOnlyBanner';
 import { BuyerMismatchAlert } from './components/BuyerMismatchAlert';
@@ -25,7 +24,6 @@ import { UnitFieldsBlock } from './components/UnitFieldsBlock';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { resolveAttachments } from './utils/attachments';
 import { makeSafeUpdate } from './utils/safeUpdate';
-import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PropertyDetailsContent');
 
@@ -55,7 +53,6 @@ export function PropertyDetailsContent({
   onExitEditMode?: () => void;
 }) {
   const { t } = useTranslation(['common', 'properties']);
-  const notifications = useNotifications();
   const { quick } = useBorderTokens();
   const spacing = useSpacingTokens();
 
@@ -106,15 +103,6 @@ export function PropertyDetailsContent({
   // safe update (ίδια συμπεριφορά: no-op όταν read-only)
   const safeOnUpdateProperty = makeSafeUpdate(isReadOnly, onUpdateProperty || (() => {}));
 
-  // Share handlers - 🏢 ENTERPRISE: i18n-enabled notifications
-  const handleShareSuccess = () => {
-    notifications.success(`✅ ${t('share.shareSuccess', { ns: 'common' })}`);
-  };
-
-  const handleShareError = (errorMessage: string) => {
-    notifications.error(`❌ ${t('share.shareErrorSimple', { ns: 'common', error: errorMessage })}`);
-  };
-
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===
   // 🏢 ENTERPRISE: Internal padding (8px) - parent CardContent has p-0 for scrollbar alignment
   return (
@@ -159,22 +147,7 @@ export function PropertyDetailsContent({
         />
       )}
 
-      {/* Share Button - Always visible for easy sharing */}
-      <div className="flex justify-end">
-        <PropertyShareButton
-          propertyId={resolvedProperty.id}
-          propertyTitle={resolvedProperty.name}
-          propertyDescription={resolvedProperty.description}
-          propertyPrice={resolvedProperty.price}
-          propertyArea={resolvedProperty.area}
-          propertyLocation={`${resolvedProperty.building}, ${t('viewer.info.floor', { ns: 'properties' })} ${resolvedProperty.floor}`}
-          source="property_details"
-          variant="outline"
-          size="sm"
-          onShareSuccess={handleShareSuccess}
-          onShareError={handleShareError}
-        />
-      </div>
+      {/* Share Button removed per user request */}
 
       {/* Customer Information Card - Centralized System */}
       {resolvedProperty.soldTo && !isReadOnly && (

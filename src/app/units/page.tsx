@@ -126,6 +126,19 @@ function UnitsPageContent() {
   // 🏢 ENTERPRISE: Add Unit Dialog state
   const [showAddUnitDialog, setShowAddUnitDialog] = useState(false);
 
+  // 🏢 ENTERPRISE: Delete unit handler — Firestore + local state sync
+  const handleDeleteUnit = useCallback(async (unitId: string) => {
+    try {
+      const { deleteUnit } = await import('@/services/units.service');
+      await deleteUnit(unitId);
+      handleDelete(unitId);
+      // Deselect the deleted unit
+      handlePolygonSelect('__none__', false);
+    } catch {
+      // Error is logged in the service
+    }
+  }, [handleDelete, handlePolygonSelect]);
+
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
 
@@ -390,6 +403,8 @@ function UnitsPageContent() {
               floors={safeFloors}
               setShowHistoryPanel={setShowHistoryPanel}
               onAssignmentSuccess={handleAssignmentSuccess}
+              onNewUnit={() => setShowAddUnitDialog(true)}
+              onDeleteUnit={handleDeleteUnit}
             />
           ) : (
             // ✅ ENTERPRISE: Pass filtered properties + selection to grid (Single Source of Truth)

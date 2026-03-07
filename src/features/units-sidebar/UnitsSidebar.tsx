@@ -39,6 +39,8 @@ export function UnitsSidebar({
   onSelectUnit,
   selectedUnitIds,
   onAssignmentSuccess,
+  onNewUnit,
+  onDeleteUnit,
 }: UnitsSidebarProps) {
   // 🗨️ ENTERPRISE: Centralized systems
   const { t } = useTranslation('units');
@@ -66,6 +68,17 @@ export function UnitsSidebar({
   const handleToggleEditMode = useCallback(() => setIsEditMode(prev => !prev), []);
   const handleExitEditMode = useCallback(() => setIsEditMode(false), []);
 
+  // 🏢 ENTERPRISE: Delete handler with confirmation
+  const handleDeleteUnit = useCallback(() => {
+    if (!selectedUnit || !onDeleteUnit) return;
+    const confirmed = window.confirm(
+      t('navigation.actions.delete.confirmMessage', { name: selectedUnit.name })
+    );
+    if (confirmed) {
+      onDeleteUnit(selectedUnit.id);
+    }
+  }, [selectedUnit, onDeleteUnit, t]);
+
   // Get units tabs from centralized config
   const unitsTabs = getSortedUnitsTabs();
 
@@ -73,7 +86,7 @@ export function UnitsSidebar({
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedUnit}
-      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={isEditMode} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} />}
+      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={isEditMode} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewUnit={onNewUnit} onDeleteUnit={handleDeleteUnit} />}
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={unitsTabs.map(convertToUniversalConfig)}

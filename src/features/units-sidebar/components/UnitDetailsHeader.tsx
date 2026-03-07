@@ -3,7 +3,7 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Save, X } from 'lucide-react';
+import { Pencil, Save, X, Plus, Trash2 } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -20,6 +20,10 @@ interface UnitDetailsHeaderProps {
   onToggleEditMode?: () => void;
   /** 🏢 ENTERPRISE: Exit edit mode callback (cancel without save) */
   onExitEditMode?: () => void;
+  /** Callback for creating a new unit */
+  onNewUnit?: () => void;
+  /** Callback for deleting the current unit */
+  onDeleteUnit?: () => void;
 }
 
 export function UnitDetailsHeader({
@@ -27,6 +31,8 @@ export function UnitDetailsHeader({
   isEditMode = false,
   onToggleEditMode,
   onExitEditMode,
+  onNewUnit,
+  onDeleteUnit,
 }: UnitDetailsHeaderProps) {
   const { t } = useTranslation('units');
 
@@ -62,7 +68,7 @@ export function UnitDetailsHeader({
   }
 
   // 🏢 ENTERPRISE: Actions change based on edit mode
-  // Normal mode: "Επεξεργασία" button
+  // Normal mode: "Επεξεργασία" + "Νέα Μονάδα" + "Διαγραφή"
   // Edit mode: "Αποθήκευση" (green) + "Ακύρωση" (outline)
   const actions = isEditMode
     ? [
@@ -85,6 +91,19 @@ export function UnitDetailsHeader({
           onClick: () => onToggleEditMode?.(),
           icon: Pencil,
           className: `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`,
+        },
+        {
+          label: t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' }),
+          onClick: () => onNewUnit?.(),
+          icon: Plus,
+          variant: 'outline' as const,
+        },
+        {
+          label: t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }),
+          onClick: () => onDeleteUnit?.(),
+          icon: Trash2,
+          variant: 'outline' as const,
+          className: 'text-destructive border-destructive/50 hover:bg-destructive/10',
         },
       ];
 

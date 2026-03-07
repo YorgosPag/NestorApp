@@ -28,4 +28,8 @@ export interface UnitsSidebarProps {
   onSelectUnit: (id: string, isShift: boolean) => void;
   selectedUnitIds: string[];
   onAssignmentSuccess: () => void;
+  /** Callback to open the "New Unit" dialog */
+  onNewUnit?: () => void;
+  /** Callback to delete the selected unit */
+  onDeleteUnit?: (unitId: string) => void;
 }
