@@ -1,31 +1,57 @@
 'use client';
 
 import React from 'react';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, FolderPlus } from 'lucide-react';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Project } from '@/types/project';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('ProjectDetailsHeader');
 
 interface ProjectDetailsHeaderProps {
     project: Project;
+    isEditing?: boolean;
+    onStartEdit?: () => void;
+    onSaveEdit?: () => void;
+    onCancelEdit?: () => void;
+    onNewProject?: () => void;
+    onDeleteProject?: () => void;
+    hideEditControls?: boolean;
 }
 
-export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
-    // 🏢 ENTERPRISE: i18n hook
+export function ProjectDetailsHeader({
+    project,
+    isEditing,
+    onStartEdit,
+    onSaveEdit,
+    onCancelEdit,
+    onNewProject,
+    onDeleteProject,
+    hideEditControls = false
+}: ProjectDetailsHeaderProps) {
     const { t } = useTranslation('projects');
 
-    // 🏢 ENTERPRISE: Actions via centralized presets
     const actions = [
-        createEntityAction('view', t('detailsHeader.showProject'), () => logger.info('Show project details'))
+        // New Project button
+        ...(onNewProject ? [
+            createEntityAction('new', t('detailsHeader.actions.new'), () => onNewProject(), { icon: FolderPlus })
+        ] : []),
+        // Edit Mode Actions
+        ...(!hideEditControls ? (
+            !isEditing ? [
+                createEntityAction('edit', t('detailsHeader.actions.edit'), () => onStartEdit?.())
+            ] : [
+                createEntityAction('save', t('detailsHeader.actions.save'), () => onSaveEdit?.()),
+                createEntityAction('cancel', t('detailsHeader.actions.cancel'), () => onCancelEdit?.())
+            ]
+        ) : []),
+        // Delete Action
+        ...(!hideEditControls && onDeleteProject ? [
+            createEntityAction('delete', t('detailsHeader.actions.delete'), () => onDeleteProject())
+        ] : [])
     ];
 
     return (
         <>
-            {/* 🖥️ DESKTOP: Show full header with actions */}
+            {/* Desktop: Full header with CRUD actions */}
             <div className="hidden md:block">
                 <EntityDetailsHeader
                     icon={Briefcase}
@@ -35,7 +61,7 @@ export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
                 />
             </div>
 
-            {/* 📱 MOBILE: Hidden (no header duplication) */}
+            {/* Mobile: Hidden (no header duplication) */}
         </>
     );
 }

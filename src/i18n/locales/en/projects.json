@@ -187,7 +187,14 @@
   },
   "detailsHeader": {
     "showProject": "Show Project",
-    "progressComplete": "{progress}% complete"
+    "progressComplete": "{progress}% complete",
+    "actions": {
+      "new": "New Project",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    }
   },
   "listCard": {
     "progress": "Progress",

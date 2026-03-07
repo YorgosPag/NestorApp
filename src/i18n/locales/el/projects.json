@@ -187,7 +187,14 @@
   },
   "detailsHeader": {
     "showProject": "Επίδειξη Έργου",
-    "progressComplete": "{progress}% ολοκληρωμένο"
+    "progressComplete": "{progress}% ολοκληρωμένο",
+    "actions": {
+      "new": "Νέο Έργο",
+      "edit": "Επεξεργασία",
+      "save": "Αποθήκευση",
+      "cancel": "Ακύρωση",
+      "delete": "Διαγραφή"
+    }
   },
   "listCard": {
     "progress": "Πρόοδος",

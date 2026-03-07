@@ -41,8 +41,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectDetailsProps {
   project: Project & { companyName: string };
-  /** 🏢 ENTERPRISE: Deep-link initial tab — overrides default "general" tab */
+  /** Deep-link initial tab — overrides default "general" tab */
   initialTab?: string;
+  isEditing?: boolean;
+  onStartEdit?: () => void;
+  onSaveEdit?: () => void;
+  onCancelEdit?: () => void;
+  onNewProject?: () => void;
+  onDeleteProject?: () => void;
 }
 
 // ============================================================================
@@ -56,7 +62,16 @@ interface ProjectDetailsProps {
  * Floorplan tabs (ProjectFloorplanTab) are self-contained and handle
  * their own upload/display using centralized EntityFilesManager pattern.
  */
-export function ProjectDetails({ project, initialTab }: ProjectDetailsProps) {
+export function ProjectDetails({
+  project,
+  initialTab,
+  isEditing,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onNewProject,
+  onDeleteProject
+}: ProjectDetailsProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
 
@@ -66,7 +81,17 @@ export function ProjectDetails({ project, initialTab }: ProjectDetailsProps) {
   return (
     <DetailsContainer
       selectedItem={project}
-      header={<ProjectDetailsHeader project={project!} />}
+      header={
+        <ProjectDetailsHeader
+          project={project!}
+          isEditing={isEditing}
+          onStartEdit={onStartEdit}
+          onSaveEdit={onSaveEdit}
+          onCancelEdit={onCancelEdit}
+          onNewProject={onNewProject}
+          onDeleteProject={onDeleteProject}
+        />
+      }
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={projectTabs.map(convertToUniversalConfig)}

@@ -27,14 +27,15 @@ interface ProjectViewSwitchProps {
   selectedProject: Project | null;
   onSelectProject: (project: Project | null) => void;
   companies: NavigationCompany[];
-  // 🏢 ENTERPRISE: Added viewMode prop for grid/list switching (PR: Projects Grid View)
   viewMode?: ProjectsViewMode;
-  /** 🏢 ENTERPRISE: Deep-link initial tab — forwarded to ProjectDetails → UniversalTabsRenderer */
+  /** Deep-link initial tab — forwarded to ProjectDetails → UniversalTabsRenderer */
   initialTab?: string;
+  onNewProject?: () => void;
+  onDeleteProject?: (project: Project) => void;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -104,6 +105,8 @@ export function ProjectViewSwitch({
             <ProjectDetails
               project={getProjectWithCompanyName(selectedProject)}
               initialTab={initialTab}
+              onNewProject={onNewProject}
+              onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
             />
           )}
         </MobileDetailsSlideIn>
@@ -126,6 +129,8 @@ export function ProjectViewSwitch({
           <ProjectDetails
             project={getProjectWithCompanyName(selectedProject)}
             initialTab={initialTab}
+            onNewProject={onNewProject}
+            onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
           />
         )}
       </div>
@@ -159,6 +164,8 @@ export function ProjectViewSwitch({
           <ProjectDetails
             project={getProjectWithCompanyName(selectedProject)}
             initialTab={initialTab}
+            onNewProject={onNewProject}
+            onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
           />
         )}
       </MobileDetailsSlideIn>
