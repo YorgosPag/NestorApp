@@ -161,7 +161,7 @@
     "valueRange": "Αξία (€)",
     "unitsRange": "Αρ. Μονάδων",
     "yearRange": "Έτος Κατασκευής",
-    "hasParking": "Parking",
+    "hasParking": "Θέση Στάθμευσης",
     "hasElevator": "Ασανσέρ",
     "hasGarden": "Κήπος",
     "hasPool": "Πισίνα",
@@ -213,7 +213,7 @@
     "area301plus": "301+ τ.μ."
   },
   "features": {
-    "parking": "Parking",
+    "parking": "Θέση Στάθμευσης",
     "storage": "Αποθήκη",
     "fireplace": "Τζάκι",
     "view": "Θέα",

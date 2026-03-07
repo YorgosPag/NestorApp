@@ -1090,7 +1090,7 @@
     "stats": {
       "totalSpaces": "Total Spaces",
       "allPhysicalSpaces": "All physical spaces",
-      "apartments": "Apartments",
+      "apartments": "Units",
       "residentialSpaces": "Residential spaces",
       "storageUnits": "Storage Units",
       "storageSpaces": "Storage spaces",
@@ -1100,8 +1100,8 @@
     },
     "cards": {
       "apartments": {
-        "title": "Apartments",
-        "description": "Residential spaces in all buildings",
+        "title": "Units",
+        "description": "All units across all buildings",
         "details": "Apartments, maisonettes, studios"
       },
       "storage": {
@@ -1207,8 +1207,8 @@
     },
     "cards": {
       "apartments": {
-        "title": "Available Apartments",
-        "description": "Apartments, maisonettes and studios for sale"
+        "title": "Available Units",
+        "description": "Units, maisonettes and studios for sale"
       },
       "storage": {
         "title": "Available Storage",
@@ -1249,8 +1249,8 @@
       },
       "cards": {
         "apartments": {
-          "title": "Apartments",
-          "description": "Sold apartments & maisonettes"
+          "title": "Units",
+          "description": "Sold units & maisonettes"
         },
         "storage": {
           "title": "Storage",
@@ -1292,11 +1292,11 @@
       }
     },
     "available": {
-      "title": "Available Apartments",
-      "subtitle": "Apartments for sale - Active listings",
-      "overview": "Available Apartments - Overview",
+      "title": "Available Units",
+      "subtitle": "Units for sale - Active listings",
+      "overview": "Available Units - Overview",
       "stats": {
-        "availableApartments": "Available Apartments",
+        "availableApartments": "Available Units",
         "forSaleNow": "For sale now",
         "avgPrice": "Average Price",
         "avgPriceDesc": "Average price",
@@ -1341,8 +1341,8 @@
         "properties": "{count} properties"
       },
       "info": {
-        "title": "Available Apartments",
-        "description": "Here you see all apartments that are actively for sale. Includes prices, buyer interest and sales statistics."
+        "title": "Available Units",
+        "description": "Here you see all units that are actively for sale. Includes prices, buyer interest and sales statistics."
       }
     }
   },

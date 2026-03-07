@@ -153,7 +153,7 @@
       "propertyType": "Τύπος ακινήτου"
     },
     "checkboxes": {
-      "hasParking": "Parking",
+      "hasParking": "Θέση Στάθμευσης",
       "hasElevator": "Ανελκυστήρας",
       "hasGarden": "Κήπος",
       "hasPool": "Πισίνα",
@@ -280,7 +280,7 @@
       "g": "Η"
     },
     "advancedOptions": {
-      "parking": "Parking",
+      "parking": "Θέση Στάθμευσης",
       "storage": "Αποθήκη",
       "fireplace": "Τζάκι",
       "view": "Θέα",
@@ -693,14 +693,14 @@
       }
     },
     "parking": {
-      "pageLabel": "Διαχείριση Parking",
+      "pageLabel": "Διαχείριση Θέσεων Στάθμευσης",
       "loading": "Φόρτωση θέσεων στάθμευσης...",
       "error": {
         "title": "Σφάλμα φόρτωσης",
         "retry": "Επανάληψη"
       },
       "dashboard": {
-        "label": "Στατιστικά Parking",
+        "label": "Στατιστικά Θέσεων Στάθμευσης",
         "totalSpots": "Σύνολο Θέσεων",
         "totalArea": "Συνολική Επιφάνεια",
         "totalValue": "Συνολική Αξία",
@@ -709,7 +709,7 @@
         "typeDistribution": "Κατανομή Τύπων"
       },
       "filters": {
-        "label": "Φίλτρα Parking",
+        "label": "Φίλτρα Θέσεων Στάθμευσης",
         "mobileTitle": "Φίλτρα Θέσεων Στάθμευσης"
       },
       "toolbar": {
@@ -772,6 +772,7 @@
       "floors": "Όροφοι",
       "amenities": "Ανέσεις",
       "documents": "Έγγραφα",
+      "unitDocuments": "Έγγραφα Μονάδας",
       "banking": "Τραπεζικά",
       "notes": "Σημειώσεις",
       "history": "Ιστορικό",
@@ -1414,7 +1415,7 @@
           "title": "Συγκοινωνίες",
           "metro": "Μετρό Ευαγγελισμός",
           "busStop": "Στάση λεωφορείου",
-          "parking": "Πάρκινγκ"
+          "parking": "Θέση Στάθμευσης"
         },
         "services": {
           "title": "Υπηρεσίες",
@@ -1667,7 +1668,7 @@
     "noUnitsDescription": "Δεν υπάρχουν αποθήκες ή θέσεις στάθμευσης που να ταιριάζουν με τα κριτήρια αναζήτησης."
   },
   "storageMap": {
-    "title": "Χάρτης Αποθηκών & Parking",
+    "title": "Χάρτης Αποθηκών & Θέσεων Στάθμευσης",
     "description": "Χάρτης αποθηκών & θέσεων στάθμευσης",
     "comingSoon": "Θα αναπτυχθεί σύντομα"
   },

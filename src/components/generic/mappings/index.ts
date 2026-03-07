@@ -146,16 +146,13 @@ import { ParkingFloorplanTab } from '../../space-management/ParkingPage/ParkingD
 import { ParkingDocumentsTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingDocumentsTab';
 import { ParkingPhotosTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingPhotosTab';
 import { ParkingVideosTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingVideosTab';
-import { ParkingHistoryTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingHistoryTab';
 
 export const PARKING_COMPONENT_MAPPING = {
   'ParkingGeneralTab': ParkingGeneralTab,
   'ParkingFloorplanTab': ParkingFloorplanTab,
-  'ParkingStatsTab': PlaceholderTab,
   'ParkingDocumentsTab': ParkingDocumentsTab,
   'ParkingPhotosTab': ParkingPhotosTab,
   'ParkingVideosTab': ParkingVideosTab,
-  'ParkingHistoryTab': ParkingHistoryTab,
   'PlaceholderTab': PlaceholderTab,
 } as const;
 

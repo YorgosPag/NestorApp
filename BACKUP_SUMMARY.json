@@ -1,29 +1,46 @@
 {
-  "category": "FIX",
-  "shortDescription": "ADR-189 Guides: B6 Color fix + Y-axis bubbles/dimensions moved to right edge",
-  "problem": "B6 Color palette did not work (menu auto-closed), Y-axis bubbles and dimensions rendered on left side overlapping with ruler",
-  "cause": "Radix DropdownMenuItem auto-closes on click (needed onSelect+preventDefault). Y-axis rendering used left edge constants instead of right edge.",
+  "category": "FEATURE",
+  "shortDescription": "ADR-191: Parking Type Unification + Open Space Support",
+  "problem": "4 divergent ParkingSpot interfaces across the codebase (types/parking.ts, useFirestoreParkingSpots, API route, DXF Viewer). Hardcoded Greek labels in UI. buildingId was required, preventing open-space parking.",
+  "cause": "Organic growth without canonical type definition. Each layer defined its own ParkingSpot with different fields (code vs number, level vs floor, different type/status enums).",
   "filesChanged": [
-    "src/subapps/dxf-viewer/systems/guides/guide-renderer.ts",
-    "src/subapps/dxf-viewer/ui/components/GuideContextMenu.tsx"
+    "src/types/parking.ts",
+    "src/hooks/useFirestoreParkingSpots.ts",
+    "src/hooks/useParkingData.ts",
+    "src/hooks/useParkingStats.ts",
+    "src/hooks/useParkingPageState.ts",
+    "src/app/api/parking/route.ts",
+    "src/app/api/parking/[id]/route.ts",
+    "src/i18n/locales/el/parking.json",
+    "src/i18n/locales/en/parking.json",
+    "src/i18n/locales/el/building.json",
+    "src/i18n/locales/en/building.json",
+    "src/components/space-management/ParkingPage/AddParkingDialog.tsx",
+    "src/components/building-management/tabs/ParkingTabContent.tsx",
+    "src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingHistoryTab.tsx",
+    "src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx",
+    "src/components/projects/parking/data.ts",
+    "src/components/projects/parking/ParkingFilterPanel.tsx",
+    "src/components/projects/parking/ParkingSpotTableRow.tsx",
+    "src/components/projects/parking/ParkingStatsSummary.tsx",
+    "src/components/parking/parking-spot-table/hooks/useParkingSort.ts",
+    "src/components/projects/utils/parking-utils.ts",
+    "src/services/projects/contracts.ts",
+    "src/components/projects/structure-tab/parts/ParkingNode.tsx"
   ],
-  "solution": "3 fixes: (1) B6 Color palette — changed onClick to onSelect with preventDefault to keep menu open, (2) Y-axis dimension annotations moved from left to right edge (viewport.width - edge), (3) Y-axis bubbles (number circles 1,2,3) moved from left to right edge (viewport.width - BUBBLE_LEFT_X)",
-  "testing": "Pre-commit checks passed. Vercel auto-deployment triggered.",
-  "notes": "Y-axis bubbles and dimensions now render on the RIGHT side of the viewport, away from the vertical ruler on the left. X-axis elements remain at top (unchanged). Color palette now stays open when clicking the Color menu item.",
+  "solution": "Phase 1: Canonical type in src/types/parking.ts with buildingId optional, projectId support, new locationZone field. API updated for open-space. Phase 2: UI components updated to i18n + Radix Select + locationZone. Phase 3: Legacy files migrated to canonical types. Phase 4: DXF Viewer local ParkingSpot replaced with canonical import.",
+  "testing": "npx tsc --noEmit — 0 new errors in parking files. Vercel build triggered.",
+  "notes": "Compatible with LOCKED architecture decisions. No new hierarchy levels added. parking_spots collection unchanged. Backward compatible — existing documents work with optional buildingId.",
   "contributors": {
-    "user": "Γιώργος Παγώνης",
+    "user": "Giorgos",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-02-22"
+    "sessionDate": "2026-03-07"
   },
   "relatedBackups": [],
   "commits": [
     {
-      "hash": "f69f7813",
-      "message": "fix(guides): B6 color palette onSelect fix + Y-axis dimensions to right edge"
-    },
-    {
-      "hash": "efff6d92",
-      "message": "fix(guides): move Y-axis bubbles to right edge (away from ruler)"
+      "hash": "fca49061",
+      "message": "feat(parking): ADR-191 — canonical ParkingSpot type unification + open space support"
     }
   ]
 }

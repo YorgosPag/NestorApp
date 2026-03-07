@@ -328,20 +328,11 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'ParkingFloorplanTab'
           },
           {
-            id: 'statistics',
-            value: 'statistics',
-            icon: 'bar-chart-3',
-            description: 'Στατιστικά χρήσης θέσης στάθμευσης',
-            order: 3,
-            enabled: true,
-            component: 'ParkingStatsTab'
-          },
-          {
             id: 'documents',
             value: 'documents',
             icon: 'file-text',
             description: 'Διαχείριση εγγράφων θέσης στάθμευσης',
-            order: 4,
+            order: 3,
             enabled: true,
             component: 'ParkingDocumentsTab'
           },
@@ -350,7 +341,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'photos',
             icon: 'camera',
             description: 'Φωτογραφίες θέσης στάθμευσης',
-            order: 5,
+            order: 4,
             enabled: true,
             component: 'ParkingPhotosTab'
           },
@@ -359,18 +350,9 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'videos',
             icon: 'video',
             description: 'Βίντεο θέσης στάθμευσης',
-            order: 6,
+            order: 5,
             enabled: true,
             component: 'ParkingVideosTab'
-          },
-          {
-            id: 'history',
-            value: 'history',
-            icon: 'history',
-            description: 'Ιστορικό χρήσης θέσης στάθμευσης',
-            order: 7,
-            enabled: true,
-            component: 'ParkingHistoryTab'
           }
         ],
         defaultEnabled: true

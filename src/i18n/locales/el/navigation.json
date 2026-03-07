@@ -212,13 +212,13 @@
     "accounting": "Λογιστικό",
     "users": "Χρήστες",
     "debug": "Αποσφαλμάτωση",
-    "apartments": "Διαμερίσματα",
+    "apartments": "Μονάδες",
     "storage": "Αποθήκες",
-    "parking": "Parking",
+    "parking": "Θέσεις Στάθμευσης",
     "commonAreas": "Κοινόχρηστοι",
-    "availableApartments": "Διαθέσιμα Διαμερίσματα",
+    "availableApartments": "Διαθέσιμες Μονάδες",
     "availableStorage": "Διαθέσιμες Αποθήκες",
-    "availableParking": "Διαθέσιμες Θέσεις Parking",
+    "availableParking": "Διαθέσιμες Θέσεις Στάθμευσης",
     "soldProperties": "Πωληθέντα"
   },
   "pages": {
@@ -477,12 +477,12 @@
       "openTooltip": "Άνοιγμα στις Αποθήκες"
     },
     "parking": {
-      "title": "Θέσεις Πάρκινγκ",
+      "title": "Θέσεις Στάθμευσης",
       "listLabel": "Λίστα Θέσεων Στάθμευσης",
       "empty": "Δεν υπάρχουν θέσεις στάθμευσης",
       "spotTitle": "Θέση {number}",
-      "defaultSubtitle": "Πάρκινγκ",
-      "openTooltip": "Άνοιγμα στο Parking"
+      "defaultSubtitle": "Θέση Στάθμευσης",
+      "openTooltip": "Άνοιγμα στις Θέσεις Στάθμευσης"
     }
   },
   "filters": {

@@ -212,11 +212,11 @@
     "accounting": "Accounting",
     "users": "Users",
     "debug": "Debug",
-    "apartments": "Apartments",
+    "apartments": "Units",
     "storage": "Storage",
     "parking": "Parking",
     "commonAreas": "Common Areas",
-    "availableApartments": "Available Apartments",
+    "availableApartments": "Available Units",
     "availableStorage": "Available Storage",
     "availableParking": "Available Parking",
     "soldProperties": "Sold Properties"

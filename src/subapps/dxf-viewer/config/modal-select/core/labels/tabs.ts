@@ -130,11 +130,9 @@ export interface StorageTabLabelsConfig {
 export interface ParkingTabLabelsConfig {
   readonly general: string;
   readonly parkingFloorplan: string;
-  readonly statistics: string;
   readonly documents: string;
   readonly photos: string;
   readonly videos: string;
-  readonly history: string;
 }
 
 // ====================================================================
@@ -238,7 +236,7 @@ export const MODAL_SELECT_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
   // 🎯 Core unit tabs - matching unified-tabs-factory IDs
   info: "tabs.labels.basicInfo",
   'floor-plan': "tabs.labels.floorplans",
-  documents: "tabs.labels.documents",
+  documents: "tabs.labels.unitDocuments",
   photos: "tabs.labels.photos",
   videos: "tabs.labels.videos",
   // 🔧 Legacy keys for backward compatibility
@@ -274,11 +272,9 @@ export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
 export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
   general: "tabs.labels.general",
   parkingFloorplan: "tabs.labels.parkingFloorplan",
-  statistics: "tabs.labels.statistics",
   documents: "tabs.labels.documents",
   photos: "tabs.labels.photos",
-  videos: "tabs.labels.videos",
-  history: "tabs.labels.history"
+  videos: "tabs.labels.videos"
 } as const;
 
 // ====================================================================
