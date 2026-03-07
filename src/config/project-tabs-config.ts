@@ -173,18 +173,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 8. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ
+  // 8. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ — ΑΦΑΙΡΕΘΗΚΕ (ADR-191)
+  // Parking ανήκει στο Building level (ParkingTabContent), όχι στο Project.
+  // Cross-building view: /spaces/parking
   // -------------------------------------------------------------------------
-  {
-    id: 'parking',
-    label: PROJECT_TAB_LABELS.PARKING,
-    value: 'parking',
-    icon: 'car',
-    description: PROJECT_TAB_DESCRIPTIONS.PARKING,
-    order: 8,
-    enabled: true,
-    component: 'ParkingTab',
-  },
 
   // -------------------------------------------------------------------------
   // 9. ΣΥΝΤΕΛΕΣΤΕΣ

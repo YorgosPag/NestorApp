@@ -11,7 +11,7 @@
 
 import { GeneralProjectTab } from '../../projects/general-project-tab';
 import { BuildingDataTab } from '../../projects/BuildingDataTab';
-import { ParkingTab } from '../../projects/parking/ParkingTab';
+// ADR-191: ParkingTab removed — parking at Building level only
 import { ContributorsTab } from '../../projects/contributors-tab';
 import { DocumentsProjectTab } from '../../projects/documents-project-tab';
 import { IkaTab } from '../../projects/ika-tab';
@@ -25,7 +25,7 @@ import { FloorplanViewerTab } from '../../projects/tabs/FloorplanViewerTab';
 export const PROJECT_COMPONENT_MAPPING = {
   'GeneralProjectTab': GeneralProjectTab,
   'BuildingDataTab': BuildingDataTab,
-  'ParkingTab': ParkingTab,
+  // 'ParkingTab': removed (ADR-191)
   'ContributorsTab': ContributorsTab,
   'DocumentsProjectTab': DocumentsProjectTab,
   'IkaTab': IkaTab,
