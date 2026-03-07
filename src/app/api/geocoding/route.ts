@@ -270,16 +270,14 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
  * exists in multiple cities — adding "Ελευθέριο Κορδελιό" narrows it down).
  */
 function toOsmStyleQuery(params: GeocodingRequestBody): string {
-  const locality = params.neighborhood || params.city;
-  // Dehyphenate locality — Nominatim doesn't recognize "Ελευθέριο-Κορδελιό"
-  const cleanLocality = locality?.replace(/-/g, ' ');
-
   if (params.street) {
-    // Urban: "Σαμοθράκης 56334 Ελευθέριο Κορδελιό"
-    return [params.street, params.postalCode, cleanLocality].filter(Boolean).join(' ');
+    // Urban: "Σαμοθράκης 16 56334" — postal code disambiguates the city
+    // Adding city to free-form confuses Nominatim, so keep it simple
+    return [params.street, params.postalCode].filter(Boolean).join(' ');
   }
-  // Settlement/village: "Χωριό, ΤΚ" — keep it simple for OSM-style
-  // Municipality/county are used in structured search variants (2-5)
+  // Settlement/village without street: "Δορκάδα, 57017"
+  const locality = params.neighborhood || params.city;
+  const cleanLocality = locality?.replace(/-/g, ' ');
   return [cleanLocality, params.postalCode].filter(Boolean).join(', ');
 }
 
