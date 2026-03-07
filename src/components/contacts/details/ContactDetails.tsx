@@ -30,6 +30,8 @@ import { DetailsContainer } from '@/core/containers';
 import { ContactsService } from '@/services/contacts.service';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
+import type { PersonaType } from '@/types/contacts/personas';
+import { createDefaultPersonaData } from '@/types/contacts/personas';
 
 const logger = createModuleLogger('ContactDetails');
 
@@ -254,6 +256,57 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     }
   }, []);
 
+  // 🎭 ENTERPRISE: Persona toggle — works in BOTH view and edit mode (ADR-121)
+  // View mode: saves directly to Firestore (same pattern as banking subcollection)
+  // Edit mode: updates editedData (saved with the rest of the form on Save click)
+  const handlePersonaToggle = useCallback(async (personaType: PersonaType) => {
+    if (!contact?.id) return;
+
+    // Determine current source of truth
+    const currentFormData = isEditing ? editedData : enhancedFormData;
+    const currentActive = (currentFormData as ContactFormData).activePersonas ?? [];
+    const isActive = currentActive.includes(personaType);
+
+    let updatedActive: PersonaType[];
+    let updatedPersonaData = (currentFormData as ContactFormData).personaData ?? {};
+
+    if (isActive) {
+      updatedActive = currentActive.filter(p => p !== personaType);
+    } else {
+      updatedActive = [...currentActive, personaType];
+      if (!updatedPersonaData[personaType]) {
+        const defaultData = createDefaultPersonaData(personaType);
+        const { personaType: _pt, status: _s, activatedAt: _a, deactivatedAt: _d, notes: _n, ...defaultFields } = defaultData;
+        updatedPersonaData = {
+          ...updatedPersonaData,
+          [personaType]: defaultFields as Record<string, string | number | null>,
+        };
+      }
+    }
+
+    if (isEditing) {
+      // Edit mode: update local state (will be saved on explicit Save click)
+      setEditedData(prev => ({
+        ...prev,
+        activePersonas: updatedActive,
+        personaData: updatedPersonaData,
+      }));
+    } else {
+      // View mode: save directly to Firestore (subcollection-style immediate save)
+      try {
+        await ContactsService.updateContactFromForm(contact.id, {
+          activePersonas: updatedActive,
+          personaData: updatedPersonaData,
+        } as Partial<ContactFormData>);
+
+        logger.info('Persona toggled and saved', { personaType, isActive: !isActive });
+        onContactUpdated?.();
+      } catch (error) {
+        logger.error('Failed to toggle persona', { error, personaType });
+      }
+    }
+  }, [contact?.id, isEditing, editedData, enhancedFormData, onContactUpdated]);
+
   // 🖼️ Photo click handler για gallery preview
   const handlePhotoClick = React.useCallback((index: number) => {
     logger.info('Photo click triggered', {
@@ -342,6 +395,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           handleUploadedPhotoURL={isEditing ? handleUploadedPhotoURL : undefined}
           handleFileChange={isEditing ? handleFileChange : undefined}
           handleLogoChange={isEditing ? handleLogoChange : undefined}
+          onPersonaToggle={handlePersonaToggle}
         />
       </DetailsContainer>
 

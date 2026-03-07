@@ -110,6 +110,10 @@ interface UnifiedContactTabbedSectionProps {
 
   // 🏢 ENTERPRISE: Callback when active tab changes (for hiding save controls on subcollection tabs)
   onActiveTabChange?: (tabId: string) => void;
+
+  // 🎭 ENTERPRISE: Dedicated persona toggle callback (ADR-121)
+  // Works in both view and edit mode — in view mode, saves directly to Firestore
+  onPersonaToggle?: (personaType: PersonaType) => void;
 }
 
 // Configuration logic moved to ContactFormConfigProvider utility
@@ -133,6 +137,7 @@ export function UnifiedContactTabbedSection({
   onPhotoClick,
   canonicalUploadContext,
   onActiveTabChange,
+  onPersonaToggle,
 }: UnifiedContactTabbedSectionProps) {
 
   // 🏢 ENTERPRISE: i18n
@@ -687,6 +692,11 @@ export function UnifiedContactTabbedSection({
         // Toggle chips that activate conditional field sections
         personas: () => {
           const handlePersonaToggle = (personaType: PersonaType) => {
+            // Dedicated callback takes priority (works in both view + edit mode)
+            if (onPersonaToggle) {
+              onPersonaToggle(personaType);
+              return;
+            }
             if (!setFormData) return;
 
             const currentActive = formData.activePersonas ?? [];
@@ -721,7 +731,7 @@ export function UnifiedContactTabbedSection({
             <PersonaSelector
               activePersonas={formData.activePersonas ?? []}
               onToggle={handlePersonaToggle}
-              disabled={disabled}
+              disabled={false}
             />
           );
         },
