@@ -52,6 +52,8 @@ export interface GeocodingServiceResult {
   accuracy: 'exact' | 'interpolated' | 'approximate' | 'center';
   confidence: number;
   displayName: string;
+  /** City/town/village resolved by Nominatim — for auto-fill */
+  resolvedCity?: string;
 }
 
 /**

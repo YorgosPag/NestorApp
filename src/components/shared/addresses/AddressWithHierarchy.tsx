@@ -18,7 +18,7 @@
  * @module components/shared/addresses/AddressWithHierarchy
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import {
   type AdminLevel,
 } from '@/hooks/useAdministrativeHierarchy';
 import { ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+import { geocodeAddress } from '@/lib/geocoding/geocoding-service';
 
 // =============================================================================
 // TYPES
@@ -270,6 +271,51 @@ export function AddressWithHierarchy({
     },
     [current, onChange, resolvePath],
   );
+
+  // =========================================================================
+  // AUTO-FILL: Resolve city from street + postalCode via geocoding
+  // =========================================================================
+
+  const autoFillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Only auto-fill when: street + postalCode exist, but settlement is empty
+    const hasStreet = current.street.trim().length > 2;
+    const hasPostalCode = current.postalCode.trim().length === 5;
+    const hasSettlement = current.settlementName.trim().length > 0;
+
+    if (!hasStreet || !hasPostalCode || hasSettlement || disabled) {
+      return;
+    }
+
+    // Debounce 1.5s — don't call API while user is still typing
+    if (autoFillTimerRef.current) {
+      clearTimeout(autoFillTimerRef.current);
+    }
+
+    autoFillTimerRef.current = setTimeout(async () => {
+      try {
+        const streetWithNumber = [current.street, current.number].filter(Boolean).join(' ');
+        const result = await geocodeAddress({
+          street: streetWithNumber,
+          postalCode: current.postalCode,
+        });
+
+        if (result?.resolvedCity && !current.settlementName.trim()) {
+          // Auto-fill settlement name (user can still change it)
+          onChange({ ...current, settlementName: result.resolvedCity });
+        }
+      } catch {
+        // Silent fail — auto-fill is best-effort
+      }
+    }, 1500);
+
+    return () => {
+      if (autoFillTimerRef.current) {
+        clearTimeout(autoFillTimerRef.current);
+      }
+    };
+  }, [current.street, current.number, current.postalCode, current.settlementName, disabled, current, onChange]);
 
   // =========================================================================
   // RENDER

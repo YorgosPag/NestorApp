@@ -43,6 +43,21 @@ interface GeocodingRequestBody {
   country?: string;
 }
 
+interface NominatimAddress {
+  road?: string;
+  house_number?: string;
+  suburb?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  hamlet?: string;
+  municipality?: string;
+  county?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+}
+
 interface NominatimResult {
   lat: string;
   lon: string;
@@ -51,6 +66,7 @@ interface NominatimResult {
   class?: string;
   importance?: number;
   boundingbox?: string[];
+  address?: NominatimAddress;
 }
 
 interface GeocodingApiResponse {
@@ -59,6 +75,8 @@ interface GeocodingApiResponse {
   accuracy: 'exact' | 'interpolated' | 'approximate' | 'center';
   confidence: number;
   displayName: string;
+  /** City/town/village resolved by Nominatim — for auto-fill */
+  resolvedCity?: string;
 }
 
 // =============================================================================
@@ -83,6 +101,7 @@ const { GEOCODING } = GEOGRAPHIC_CONFIG;
 function buildStructuredUrl(params: GeocodingRequestBody): string {
   const searchParams = new URLSearchParams({
     format: 'json',
+    addressdetails: '1',
     limit: GEOCODING.NOMINATIM_RESULT_LIMIT,
     countrycodes: DEFAULT_COUNTRY_CODE,
     'accept-language': GEOCODING.ACCEPT_LANGUAGE,
@@ -123,6 +142,7 @@ function buildFreeformUrl(query: string): string {
   const searchParams = new URLSearchParams({
     q: query,
     format: 'json',
+    addressdetails: '1',
     limit: GEOCODING.NOMINATIM_RESULT_LIMIT,
     countrycodes: DEFAULT_COUNTRY_CODE,
     'accept-language': GEOCODING.ACCEPT_LANGUAGE,
@@ -378,12 +398,17 @@ async function geocode(params: GeocodingRequestBody): Promise<GeocodingApiRespon
 }
 
 function formatResult(result: NominatimResult, params: GeocodingRequestBody): GeocodingApiResponse {
+  // Extract city/town/village from Nominatim address details
+  const addr = result.address;
+  const resolvedCity = addr?.suburb || addr?.city || addr?.town || addr?.village || addr?.hamlet || undefined;
+
   return {
     lat: parseFloat(result.lat),
     lng: parseFloat(result.lon),
     accuracy: determineAccuracy(result),
     confidence: calculateConfidence(result, params),
     displayName: result.display_name,
+    resolvedCity,
   };
 }
 
