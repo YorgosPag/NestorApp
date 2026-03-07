@@ -821,6 +821,9 @@ export function UnifiedContactTabbedSection({
                   streetNumber={formData.streetNumber}
                   city={formData.city}
                   postalCode={formData.postalCode}
+                  municipality={formData.municipality as string}
+                  regionalUnit={formData.regionalUnit as string}
+                  region={formData.region as string}
                 />
               </aside>
             </div>
@@ -881,6 +884,9 @@ export function UnifiedContactTabbedSection({
                   streetNumber={formData.streetNumber}
                   city={formData.city}
                   postalCode={formData.postalCode}
+                  municipality={formData.municipality as string}
+                  regionalUnit={formData.regionalUnit as string}
+                  region={formData.region as string}
                 />
               </aside>
             </div>

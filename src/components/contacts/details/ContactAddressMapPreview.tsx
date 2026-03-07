@@ -13,6 +13,12 @@ interface ContactAddressMapPreviewProps {
   streetNumber?: string;
   city?: string;
   postalCode?: string;
+  /** Municipality name for geocoding disambiguation */
+  municipality?: string;
+  /** Regional unit name for geocoding disambiguation */
+  regionalUnit?: string;
+  /** Region name for geocoding disambiguation */
+  region?: string;
   /** Multi-address array for company contacts (HQ + branches) */
   companyAddresses?: CompanyAddress[];
   /** Map height preset override */
@@ -33,6 +39,9 @@ export function ContactAddressMapPreview({
   streetNumber,
   city,
   postalCode,
+  municipality,
+  regionalUnit,
+  region,
   companyAddresses,
   heightPreset,
   className,
@@ -45,7 +54,7 @@ export function ContactAddressMapPreview({
     // Multi-address mode: company contacts with HQ + branches
     if (companyAddresses && companyAddresses.length > 0) {
       return companyAddresses
-        .filter((addr) => addr.street.trim() && addr.city.trim())
+        .filter((addr) => addr.city.trim())
         .map((addr, index) => {
           const isHq = addr.type === 'headquarters';
           return createProjectAddress({
@@ -68,7 +77,7 @@ export function ContactAddressMapPreview({
     const trimmedStreetNumber = (streetNumber ?? '').trim();
     const trimmedPostalCode = (postalCode ?? '').trim();
 
-    if (!trimmedStreet || !trimmedCity) {
+    if (!trimmedCity) {
       return [];
     }
 
@@ -80,12 +89,15 @@ export function ContactAddressMapPreview({
         city: trimmedCity,
         number: trimmedStreetNumber || undefined,
         postalCode: trimmedPostalCode,
+        municipality: municipality?.trim() || undefined,
+        regionalUnit: regionalUnit?.trim() || undefined,
+        region: region?.trim() || undefined,
         type: 'legal',
         label: 'Διεύθυνση',
         isPrimary: true,
       }),
     ];
-  }, [city, contactId, postalCode, street, streetNumber, companyAddresses]);
+  }, [city, contactId, postalCode, street, streetNumber, municipality, regionalUnit, region, companyAddresses]);
 
   if (addresses.length === 0) {
     return null;
