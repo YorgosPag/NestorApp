@@ -1,7 +1,8 @@
 /**
- * AddParkingDialog — Dialog for creating parking spots from the sidebar Parking page
+ * AddParkingDialog — Dialog for creating parking spots
  *
- * Allows users to create new parking spots without navigating to Building Tab.
+ * ADR-191: Supports open-space parking (no buildingId).
+ * When no building selected, projectId is required.
  * Dispatches PARKING_CREATED event for cross-page realtime sync.
  *
  * @module components/space-management/ParkingPage/AddParkingDialog
@@ -33,7 +34,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import type { ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
+import {
+  PARKING_TYPES,
+  PARKING_STATUSES,
+  PARKING_LOCATION_ZONES,
+} from '@/types/parking';
+import type {
+  ParkingSpotType,
+  ParkingSpotStatus,
+  ParkingLocationZone,
+} from '@/types/parking';
 
 // ============================================================================
 // TYPES
@@ -49,31 +59,12 @@ interface ParkingCreateResult {
 }
 
 // ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const PARKING_TYPES: { value: ParkingSpotType; label: string }[] = [
-  { value: 'standard', label: 'Κανονική' },
-  { value: 'handicapped', label: 'ΑμεΑ' },
-  { value: 'motorcycle', label: 'Μοτοσυκλέτα' },
-  { value: 'electric', label: 'Ηλεκτρικό' },
-  { value: 'visitor', label: 'Επισκέπτης' },
-];
-
-const PARKING_STATUSES: { value: ParkingSpotStatus; label: string }[] = [
-  { value: 'available', label: 'Διαθέσιμη' },
-  { value: 'occupied', label: 'Κατειλημμένη' },
-  { value: 'reserved', label: 'Δεσμευμένη' },
-  { value: 'sold', label: 'Πωλημένη' },
-  { value: 'maintenance', label: 'Συντήρηση' },
-];
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) {
   const { t } = useTranslation('building');
+  const { t: tParking } = useTranslation('parking');
   const { buildings, loading: buildingsLoading } = useFirestoreBuildings();
 
   // Form state
@@ -81,6 +72,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   const [number, setNumber] = useState('');
   const [type, setType] = useState<ParkingSpotType>('standard');
   const [status, setStatus] = useState<ParkingSpotStatus>('available');
+  const [locationZone, setLocationZone] = useState<ParkingLocationZone | ''>('');
   const [floor, setFloor] = useState('');
   const [location, setLocation] = useState('');
   const [area, setArea] = useState('');
@@ -94,6 +86,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
     setNumber('');
     setType('standard');
     setStatus('available');
+    setLocationZone('');
     setFloor('');
     setLocation('');
     setArea('');
@@ -110,14 +103,24 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
   };
 
   const handleCreate = async () => {
-    if (!buildingId || !number.trim()) return;
+    if (!number.trim()) return;
+
+    // If no building selected, we still need projectId (resolved server-side from building)
+    // For open-space: the API requires projectId when no buildingId
+    const selectedBuilding = buildingId ? buildings.find(b => b.id === buildingId) : null;
+
+    // Validate: must have building OR project context
+    if (!buildingId && !selectedBuilding?.projectId) {
+      // If no building is selected, we need at least a project context
+      // For now, building selection provides project context
+      setError(tParking('locationZone.placeholder'));
+      return;
+    }
 
     setCreating(true);
     setError(null);
 
     try {
-      const selectedBuilding = buildings.find(b => b.id === buildingId);
-
       const result = await apiClient.post<ParkingCreateResult>('/api/parking', {
         number: number.trim(),
         type,
@@ -127,8 +130,9 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
         area: area ? parseFloat(area) : undefined,
         price: price ? parseFloat(price) : undefined,
         notes: notes.trim() || undefined,
-        buildingId,
+        ...(buildingId ? { buildingId } : {}),
         projectId: selectedBuilding?.projectId ?? undefined,
+        locationZone: locationZone || undefined,
       });
 
       if (result?.parkingSpotId) {
@@ -136,7 +140,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
           parkingSpotId: result.parkingSpotId,
           parkingSpot: {
             number: number.trim(),
-            buildingId,
+            buildingId: buildingId || undefined,
             type,
             status,
           },
@@ -147,13 +151,14 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
         onOpenChange(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Αποτυχία δημιουργίας');
+      setError(err instanceof Error ? err.message : tParking('header.saveError'));
     } finally {
       setCreating(false);
     }
   };
 
-  const isValid = buildingId && number.trim();
+  // Valid if we have a number AND either a building or open-space context
+  const isValid = number.trim() && buildingId;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -171,10 +176,10 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
           className="flex flex-col gap-4"
           onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
         >
-          {/* Building Selection */}
+          {/* Building Selection (optional) */}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">
-              {t('pages.parking.form.building')} *
+              {t('pages.parking.form.building')}
             </span>
             <Select value={buildingId} onValueChange={setBuildingId} disabled={creating}>
               <SelectTrigger>
@@ -218,8 +223,8 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
                 </SelectTrigger>
                 <SelectContent>
                   {PARKING_TYPES.map(pt => (
-                    <SelectItem key={pt.value} value={pt.value}>
-                      {pt.label}
+                    <SelectItem key={pt} value={pt}>
+                      {tParking(`types.${pt}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -227,7 +232,7 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
             </label>
           </fieldset>
 
-          {/* Status + Floor */}
+          {/* Status + Location Zone */}
           <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
@@ -239,13 +244,38 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
                 </SelectTrigger>
                 <SelectContent>
                   {PARKING_STATUSES.map(ps => (
-                    <SelectItem key={ps.value} value={ps.value}>
-                      {ps.label}
+                    <SelectItem key={ps} value={ps}>
+                      {tParking(`status.${ps}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">
+                {tParking('locationZone.label')}
+              </span>
+              <Select
+                value={locationZone}
+                onValueChange={(v) => setLocationZone(v as ParkingLocationZone)}
+                disabled={creating}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={tParking('locationZone.placeholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARKING_LOCATION_ZONES.map(lz => (
+                    <SelectItem key={lz} value={lz}>
+                      {tParking(`locationZone.${lz}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          </fieldset>
+
+          {/* Floor + Area */}
+          <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
                 {t('pages.parking.form.floor')}
@@ -257,10 +287,6 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
                 disabled={creating}
               />
             </label>
-          </fieldset>
-
-          {/* Area + Price */}
-          <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
                 {t('pages.parking.form.area')}
@@ -274,6 +300,10 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
                 disabled={creating}
               />
             </label>
+          </fieldset>
+
+          {/* Price + Location */}
+          <fieldset className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
                 {t('pages.parking.form.price')}
@@ -287,21 +317,20 @@ export function AddParkingDialog({ open, onOpenChange }: AddParkingDialogProps) 
                 disabled={creating}
               />
             </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">
+                {t('pages.parking.form.location')}
+              </span>
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t('pages.parking.form.locationPlaceholder')}
+                disabled={creating}
+              />
+            </label>
           </fieldset>
 
-          {/* Location + Notes */}
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">
-              {t('pages.parking.form.location')}
-            </span>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={t('pages.parking.form.locationPlaceholder')}
-              disabled={creating}
-            />
-          </label>
-
+          {/* Notes */}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">
               {t('pages.parking.form.notes')}

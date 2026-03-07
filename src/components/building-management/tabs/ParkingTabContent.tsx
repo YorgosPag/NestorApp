@@ -30,7 +30,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
-import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
+import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
+import { PARKING_TYPES, PARKING_STATUSES, PARKING_LOCATION_ZONES } from '@/types/parking';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
@@ -70,24 +71,7 @@ interface ParkingTabContentProps {
 // CONSTANTS
 // ============================================================================
 
-const PARKING_TYPES: ParkingSpotType[] = ['standard', 'handicapped', 'motorcycle', 'electric', 'visitor'];
-const PARKING_STATUSES: ParkingSpotStatus[] = ['available', 'occupied', 'reserved', 'sold', 'maintenance'];
-
-const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
-  standard: 'Κανονική',
-  handicapped: 'ΑμεΑ',
-  motorcycle: 'Μοτοσυκλέτα',
-  electric: 'Ηλεκτρικό',
-  visitor: 'Επισκέπτης',
-};
-
-const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
-  available: 'Διαθέσιμη',
-  occupied: 'Κατειλημμένη',
-  reserved: 'Δεσμευμένη',
-  sold: 'Πωλημένη',
-  maintenance: 'Συντήρηση',
-};
+// Types & statuses imported from @/types/parking (canonical SSoT)
 
 // ============================================================================
 // COMPONENT
@@ -112,6 +96,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   const [createArea, setCreateArea] = useState('');
   const [createPrice, setCreatePrice] = useState('');
   const [createNotes, setCreateNotes] = useState('');
+  const [createLocationZone, setCreateLocationZone] = useState<ParkingLocationZone | ''>('');
   const [creating, setCreating] = useState(false);
 
   // Edit state
@@ -193,6 +178,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     setCreateArea('');
     setCreatePrice('');
     setCreateNotes('');
+    setCreateLocationZone('');
   };
 
   const handleCreate = async () => {
@@ -208,6 +194,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
         area: createArea ? parseFloat(createArea) : undefined,
         price: createPrice ? parseFloat(createPrice) : undefined,
         notes: createNotes.trim() || undefined,
+        locationZone: createLocationZone || undefined,
         buildingId: building.id,
         projectId: building.projectId,
       });
@@ -356,7 +343,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
       .map((s) => ({
         id: s.id,
         label: s.number,
-        sublabel: `${PARKING_TYPE_LABELS[s.type || 'standard']} · ${s.floor || '—'}`,
+        sublabel: `${t(`types.${s.type || 'standard'}`)} · ${s.floor || '—'}`,
       }));
   }, []);
 
@@ -417,7 +404,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     };
     return (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorMap[s] || colorMap.available}`}>
-        {PARKING_STATUS_LABELS[s] || s}
+        {t(`status.${s}`)}
       </span>
     );
   };
@@ -427,20 +414,20 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
   // ============================================================================
 
   const parkingColumns: SpaceColumn<ParkingSpot>[] = useMemo(() => [
-    { key: 'number', label: 'Κωδικός', sortValue: (s) => s.number, render: (s) => <span className="font-mono font-medium">{s.number}</span> },
-    { key: 'type', label: 'Τύπος', width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className="text-muted-foreground">{PARKING_TYPE_LABELS[s.type || 'standard']}</span> },
-    { key: 'floor', label: 'Όροφος', width: 'w-20', sortValue: (s) => s.floor || '', render: (s) => <span className="text-muted-foreground">{s.floor || '—'}</span> },
+    { key: 'number', label: t('general.fields.spotCode'), sortValue: (s) => s.number, render: (s) => <span className="font-mono font-medium">{s.number}</span> },
+    { key: 'type', label: t('general.fields.type'), width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className="text-muted-foreground">{t(`types.${s.type || 'standard'}`)}</span> },
+    { key: 'floor', label: t('general.fields.floor'), width: 'w-20', sortValue: (s) => s.floor || '', render: (s) => <span className="text-muted-foreground">{s.floor || '—'}</span> },
     { key: 'area', label: 'm²', width: 'w-20', sortValue: (s) => s.area || 0, render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
-    { key: 'price', label: 'Τιμή', width: 'w-24', sortValue: (s) => s.price || 0, render: (s) => <span className="font-mono text-xs">{s.price ? `€${s.price.toLocaleString()}` : '—'}</span> },
-    { key: 'status', label: 'Κατάσταση', width: 'w-28', sortValue: (s) => s.status || '', render: (s) => getStatusBadge(s.status) },
-  ], []);
+    { key: 'price', label: t('general.fields.price'), width: 'w-24', sortValue: (s) => s.price || 0, render: (s) => <span className="font-mono text-xs">{s.price ? `€${s.price.toLocaleString()}` : '—'}</span> },
+    { key: 'status', label: t('general.fields.status'), width: 'w-28', sortValue: (s) => s.status || '', render: (s) => getStatusBadge(s.status) },
+  ], [t]);
 
   const parkingCardFields: SpaceCardField<ParkingSpot>[] = useMemo(() => [
-    { label: 'Τύπος', render: (s) => PARKING_TYPE_LABELS[s.type || 'standard'] },
-    { label: 'Όροφος', render: (s) => s.floor || '—' },
+    { label: t('general.fields.type'), render: (s) => t(`types.${s.type || 'standard'}`) },
+    { label: t('general.fields.floor'), render: (s) => s.floor || '—' },
     { label: 'm²', render: (s) => s.area || '—' },
-    { label: 'Τιμή', render: (s) => s.price ? `€${s.price.toLocaleString()}` : '—' },
-  ], []);
+    { label: t('general.fields.price'), render: (s) => s.price ? `€${s.price.toLocaleString()}` : '—' },
+  ], [t]);
 
   // ============================================================================
   // RENDER
@@ -519,7 +506,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
               <SelectContent>
                 <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
                 {PARKING_TYPES.map(pt => (
-                  <SelectItem key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</SelectItem>
+                  <SelectItem key={pt} value={pt}>{t(`types.${pt}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -531,7 +518,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
               <SelectContent>
                 <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
                 {PARKING_STATUSES.map(ps => (
-                  <SelectItem key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</SelectItem>
+                  <SelectItem key={ps} value={ps}>{t(`status.${ps}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -554,7 +541,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           <fieldset className="grid grid-cols-3 gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
-                Κωδικός *
+                {t('general.fields.spotCode')} *
               </span>
               <Input
                 value={createNumber}
@@ -567,58 +554,61 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
-                Τύπος
+                {t('general.fields.type')}
               </span>
-              <select
-                value={createType}
-                onChange={(e) => setCreateType(e.target.value as ParkingSpotType)}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                disabled={creating}
-              >
-                {PARKING_TYPES.map(pt => (
-                  <option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>
-                ))}
-              </select>
+              <Select value={createType} onValueChange={(v) => setCreateType(v as ParkingSpotType)} disabled={creating}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARKING_TYPES.map(pt => (
+                    <SelectItem key={pt} value={pt}>{t(`types.${pt}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
-                Κατάσταση
+                {t('general.fields.status')}
               </span>
-              <select
-                value={createStatus}
-                onChange={(e) => setCreateStatus(e.target.value as ParkingSpotStatus)}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                disabled={creating}
-              >
-                {PARKING_STATUSES.map(ps => (
-                  <option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>
-                ))}
-              </select>
+              <Select value={createStatus} onValueChange={(v) => setCreateStatus(v as ParkingSpotStatus)} disabled={creating}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARKING_STATUSES.map(ps => (
+                    <SelectItem key={ps} value={ps}>{t(`status.${ps}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
           </fieldset>
 
-          {/* Row 2: Floor, Location, Area, Price */}
+          {/* Row 2: Location Zone, Floor, Area, Price */}
           <fieldset className="grid grid-cols-4 gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
-                Όροφος
+                {t('locationZone.label')}
+              </span>
+              <Select value={createLocationZone} onValueChange={(v) => setCreateLocationZone(v as ParkingLocationZone)} disabled={creating}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={t('locationZone.placeholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARKING_LOCATION_ZONES.map(lz => (
+                    <SelectItem key={lz} value={lz}>{t(`locationZone.${lz}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t('general.fields.floor')}
               </span>
               <Input
                 value={createFloor}
                 onChange={(e) => setCreateFloor(e.target.value)}
                 placeholder="-1"
-                className="h-9"
-                disabled={creating}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                Τοποθεσία
-              </span>
-              <Input
-                value={createLocation}
-                onChange={(e) => setCreateLocation(e.target.value)}
-                placeholder="Πυλωτή, Υπόγειο Α"
                 className="h-9"
                 disabled={creating}
               />
@@ -639,7 +629,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
-                Τιμή (€)
+                {t('general.fields.price')} (€)
               </span>
               <Input
                 type="number"
@@ -656,12 +646,12 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           {/* Row 3: Notes */}
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted-foreground">
-              Σημειώσεις
+              {t('general.notes')}
             </span>
             <Textarea
               value={createNotes}
               onChange={(e) => setCreateNotes(e.target.value)}
-              placeholder="Σημειώσεις θέσης στάθμευσης..."
+              placeholder={t('general.notes')}
               className="h-16 resize-none"
               disabled={creating}
             />
@@ -677,7 +667,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
               disabled={creating}
             >
               <X className="mr-1 h-4 w-4" />
-              Ακύρωση
+              {t('header.cancel')}
             </Button>
             <Button
               type="submit"
@@ -685,7 +675,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
               disabled={!createNumber.trim() || creating}
             >
               {creating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
-              Αποθήκευση
+              {t('header.save')}
             </Button>
           </nav>
         </form>
@@ -694,14 +684,14 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
       {/* View Toggle */}
       <nav className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          {filteredSpots.length} αποτελέσματα
+          {filteredSpots.length} {tBuilding('parkingStats.results')}
         </span>
         <fieldset className="flex items-center gap-2">
           <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
-            <Layers className="mr-1 h-4 w-4" /> Κάρτες
+            <Layers className="mr-1 h-4 w-4" /> {tBuilding('parkingStats.cards')}
           </Button>
           <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
-            <TableIcon className="mr-1 h-4 w-4" /> Πίνακας
+            <TableIcon className="mr-1 h-4 w-4" /> {tBuilding('parkingStats.table')}
           </Button>
         </fieldset>
       </nav>
@@ -771,9 +761,14 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                   <Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} className="h-8" disabled={saving} />
                 </TableCell>
                 <TableCell>
-                  <select value={editType} onChange={(e) => setEditType(e.target.value as ParkingSpotType)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
-                    {PARKING_TYPES.map(pt => (<option key={pt} value={pt}>{PARKING_TYPE_LABELS[pt]}</option>))}
-                  </select>
+                  <Select value={editType} onValueChange={(v) => setEditType(v as ParkingSpotType)} disabled={saving}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PARKING_TYPES.map(pt => (<SelectItem key={pt} value={pt}>{t(`types.${pt}`)}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   <Input value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className="h-8 w-16" disabled={saving} />
@@ -785,9 +780,14 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
                   <Input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-20" disabled={saving} />
                 </TableCell>
                 <TableCell>
-                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as ParkingSpotStatus)} className="h-8 w-full rounded-md border border-input bg-background px-1 text-sm" disabled={saving}>
-                    {PARKING_STATUSES.map(ps => (<option key={ps} value={ps}>{PARKING_STATUS_LABELS[ps]}</option>))}
-                  </select>
+                  <Select value={editStatus} onValueChange={(v) => setEditStatus(v as ParkingSpotStatus)} disabled={saving}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PARKING_STATUSES.map(ps => (<SelectItem key={ps} value={ps}>{t(`status.${ps}`)}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   <nav className="flex justify-end gap-1">
@@ -805,7 +805,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
           <footer className="text-xs text-muted-foreground">
             {filteredSpots.length} {tBuilding('tabs.labels.parking')}
             {filteredSpots.length !== parkingSpots.length && (
-              <span className="ml-1">({parkingSpots.length} σύνολο)</span>
+              <span className="ml-1">({parkingSpots.length} {tBuilding('parkingStats.total_summary')})</span>
             )}
           </footer>
         </>

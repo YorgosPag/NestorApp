@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { UnitBadge } from '@/core/badges';
 import { Checkbox } from '@/components/ui/checkbox';
-// Enterprise styling through CSS modules - CLAUDE.md Protocol N.3 compliance
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +14,9 @@ import {
 import { Eye, Pencil, Trash2, MoreVertical, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ParkingSpot } from '@/types/parking';
-import { getParkingTypeLabel } from '../utils/parking-utils';
 import { formatNumber } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import styles from '@/components/ui/table/EnterpriseTable.module.css';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ParkingSpotTableRowProps {
@@ -41,14 +38,12 @@ export function ParkingSpotTableRow({
   onView,
   onViewFloorPlan,
 }: ParkingSpotTableRowProps) {
-  // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation('parking');
+  const { t: tProjects } = useTranslation('projects');
   const iconSizes = useIconSizes();
 
   const handleSelect = () => {
-      onSelectionChange(
-          isSelected ? [] : [spot.id] // Simplified for single row action
-      );
+    onSelectionChange(isSelected ? [] : [spot.id]);
   };
 
   return (
@@ -61,76 +56,59 @@ export function ParkingSpotTableRow({
       onClick={handleSelect}
       role="row"
       aria-selected={isSelected}
-      aria-label={`Parking spot ${spot.code}`}
+      aria-label={`Parking spot ${spot.number}`}
     >
-      {/* Checkbox Cell */}
+      {/* Checkbox */}
       <div className={cn(styles.tableColumn, styles.columnCheckbox)} role="gridcell" aria-label="Selection">
         <Checkbox
           checked={isSelected}
           onCheckedChange={handleSelect}
           className={styles.tableCheckbox}
-          aria-label={`Select parking spot ${spot.code}`}
+          aria-label={`Select parking spot ${spot.number}`}
         />
       </div>
 
-      {/* Content Cells */}
-      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Code">
-        {spot.code}
+      {/* Number (was code) */}
+      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Number">
+        {spot.number}
       </div>
 
+      {/* Type */}
       <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Type">
-        {getParkingTypeLabel(spot.type)}
+        {t(`types.${spot.type || 'standard'}`)}
       </div>
 
-      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Property Code">
-        {spot.propertyCode}
+      {/* Floor (was level) */}
+      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Floor">
+        {spot.floor || '—'}
       </div>
 
-      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Level">
-        {spot.level}
-      </div>
-
-      {/* Numeric Cells */}
+      {/* Area */}
       <div className={cn(styles.tableColumn, styles.columnNumber)} role="gridcell" aria-label="Area">
-        {formatNumber(spot.area)}
+        {formatNumber(spot.area ?? 0)}
       </div>
 
+      {/* Price */}
       <div className={cn(styles.tableColumn, styles.columnNumber)} role="gridcell" aria-label="Price">
-        {formatNumber(spot.price)}
+        {formatNumber(spot.price ?? 0)}
       </div>
 
-      <div className={cn(styles.tableColumn, styles.columnNumber)} role="gridcell" aria-label="Value">
-        {formatNumber(spot.value)}
-      </div>
-
-      <div className={cn(styles.tableColumn, styles.columnNumber)} role="gridcell" aria-label="Value with Syndicate">
-        {formatNumber(spot.valueWithSyndicate)}
-      </div>
-
-      {/* Status Cell */}
+      {/* Status */}
       <div className={cn(styles.tableColumn, styles.columnBadge)} role="gridcell" aria-label="Status">
         <UnitBadge
-          status={spot.status}
+          status={spot.status || 'available'}
           variant="outline"
           size="sm"
           className="text-xs"
         />
       </div>
 
-      {/* Additional Content Cells */}
-      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Owner">
-        {spot.owner}
+      {/* Location */}
+      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Location">
+        {spot.location || '—'}
       </div>
 
-      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Floor Plan">
-        {spot.floorPlan}
-      </div>
-
-      <div className={cn(styles.tableColumn, styles.columnText)} role="gridcell" aria-label="Constructed By">
-        {spot.constructedBy}
-      </div>
-
-      {/* Actions Cell */}
+      {/* Actions */}
       <div className={cn(styles.tableColumn, styles.columnActions)} role="gridcell" aria-label="Actions">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -138,7 +116,7 @@ export function ParkingSpotTableRow({
               variant="ghost"
               size="icon"
               className={cn(styles.actionButton, iconSizes.md)}
-              aria-label={`Actions for parking spot ${spot.code}`}
+              aria-label={`Actions for parking spot ${spot.number}`}
             >
               <MoreVertical className={iconSizes.xs} />
             </Button>
@@ -146,19 +124,19 @@ export function ParkingSpotTableRow({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onView(spot)}>
               <Eye className={`${iconSizes.sm} mr-2`} />
-              {t('parking.actions.view')}
+              {tProjects('parking.actions.view')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(spot)}>
               <Pencil className={`${iconSizes.sm} mr-2`} />
-              {t('parking.actions.edit')}
+              {tProjects('parking.actions.edit')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onViewFloorPlan(spot)}>
               <Map className={`${iconSizes.sm} mr-2`} />
-              {t('parking.actions.floorPlan')}
+              {tProjects('parking.actions.floorPlan')}
             </DropdownMenuItem>
             <DropdownMenuItem className="text-destructive">
               <Trash2 className={`${iconSizes.sm} mr-2`} />
-              {t('parking.actions.delete')}
+              {tProjects('parking.actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -166,27 +144,3 @@ export function ParkingSpotTableRow({
     </div>
   );
 }
-
-/**
- * ✅ ENTERPRISE TABLE ROW REFACTORING COMPLETE - CLAUDE.md PROTOCOL N.3 COMPLIANCE
- *
- * Changes Applied:
- * 1. ✅ Eliminated ALL 16 inline style violations (CLAUDE.md Protocol N.3)
- * 2. ✅ Replaced custom styling with centralized EnterpriseTable.module.css
- * 3. ✅ Full accessibility compliance with proper ARIA attributes
- * 4. ✅ Enterprise-grade semantic structure (role="gridcell", aria-labels)
- * 5. ✅ CSS Modules approach - NO inline styles whatsoever
- * 6. ✅ Professional component organization με clear semantics
- * 7. ✅ Type-safe column management without runtime style generation
- * 8. ✅ Performance optimization με CSS class-based styling
- * 9. ✅ Maintainable και scalable architecture
- * 10. ✅ 100% CLAUDE.md compliance - ΕΠΑΓΓΕΛΜΑΤΙΚΗ λύση
- *
- * Architecture:
- * - ParkingSpotTableRow.tsx: Pure logic component (ZERO inline styles)
- * - EnterpriseTable.module.css: Centralized styling system
- * - Full semantic HTML με accessibility support
- *
- * Result: Fortune 500-grade table row implementation
- * Standards: Microsoft/Google/Amazon enterprise compliance
- */

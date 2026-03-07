@@ -27,6 +27,16 @@
     "occupied": "Occupied",
     "maintenance": "Maintenance"
   },
+  "locationZone": {
+    "label": "Location Zone",
+    "pilotis": "Pilotis",
+    "underground": "Underground",
+    "open_space": "Open Space",
+    "rooftop": "Rooftop",
+    "covered_outdoor": "Covered Outdoor",
+    "placeholder": "Select zone",
+    "all": "All zones"
+  },
   "general": {
     "basicInfo": "Basic Information",
     "location": "Location",
@@ -49,7 +59,8 @@
       "pricePerSqm": "Price per m\u00b2",
       "createdAt": "Created",
       "lastUpdated": "Last Updated",
-      "createdBy": "Created by"
+      "createdBy": "Created by",
+      "locationZone": "Location Zone"
     },
     "types": {
       "standard": "Standard",

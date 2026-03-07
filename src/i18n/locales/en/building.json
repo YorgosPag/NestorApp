@@ -1759,7 +1759,11 @@
     "totalValue": "Total Value",
     "totalArea": "Total Area",
     "searchPlaceholder": "Search by code or description...",
-    "exportReport": "Export Report"
+    "exportReport": "Export Report",
+    "results": "results",
+    "cards": "Cards",
+    "table": "Table",
+    "total_summary": "total"
   },
   "unitStats": {
     "total": "Units",

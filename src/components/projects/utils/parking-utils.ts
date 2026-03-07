@@ -1,61 +1,55 @@
 'use client';
 
+/**
+ * Parking utility functions — ADR-191 updated to canonical types.
+ * Label maps re-exported from @/types/parking for backward compatibility.
+ */
+
 import type { ParkingSpotType, ParkingSpotStatus } from '@/types/parking';
+import {
+  PARKING_TYPE_LABELS,
+  PARKING_STATUS_LABELS,
+} from '@/types/parking';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-export const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
-  underground: 'parking.types.underground',
-  covered: 'parking.types.covered',
-  open: 'parking.types.open'
-};
+// Re-export canonical label maps
+export { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS };
 
-export const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
-  sold: 'parking.status.sold',
-  owner: 'parking.status.owner',
-  available: 'parking.status.available',
-  reserved: 'parking.status.reserved'
-};
-
-// Enterprise function for parking status colors
 export const getParkingStatusColors = (colors?: ReturnType<typeof useSemanticColors>): Record<ParkingSpotStatus, string> => {
   if (!colors) {
-    // Enterprise fallback
     return {
-      sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-      owner: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
       available: `${hardcodedColorValues.background.gray[100]} text-slate-800 dark:bg-slate-900 dark:text-slate-300`,
-      reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+      occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+      reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+      sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+      maintenance: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
     };
   }
 
   return {
-    sold: `${colors.bg.successSubtle} ${colors.text.success}`,
-    owner: `${colors.bg.infoSubtle} ${colors.text.info}`,
     available: `${colors.bg.muted} ${colors.text.muted}`,
-    reserved: `${colors.bg.warningSubtle} ${colors.text.warning}`
+    occupied: `${colors.bg.infoSubtle} ${colors.text.info}`,
+    reserved: `${colors.bg.warningSubtle} ${colors.text.warning}`,
+    sold: `${colors.bg.successSubtle} ${colors.text.success}`,
+    maintenance: `${colors.bg.errorSubtle} ${colors.text.error}`,
   };
 };
 
-// Legacy export for backward compatibility
 export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
-  sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  owner: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   available: 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300',
-  reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+  occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+  sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+  maintenance: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
 };
 
-export const getParkingTypeLabel = (type: ParkingSpotType) => PARKING_TYPE_LABELS[type] || type;
-export const getParkingStatusLabel = (status: ParkingSpotStatus) => PARKING_STATUS_LABELS[status] || status;
+export const getParkingTypeLabel = (type: ParkingSpotType | undefined) => PARKING_TYPE_LABELS[type || 'standard'] || type;
+export const getParkingStatusLabel = (status: ParkingSpotStatus | undefined) => PARKING_STATUS_LABELS[status || 'available'] || status;
 
-// Enhanced function with semantic colors support
 export const getParkingStatusColor = (status: ParkingSpotStatus, colors?: ReturnType<typeof useSemanticColors>) => {
   const colorMap = getParkingStatusColors(colors);
   return colorMap[status] || (colors ? `${colors.bg.muted} ${colors.text.muted}` : `${hardcodedColorValues.background.gray[100]} text-slate-800`);
 };
 
-// Legacy function for backward compatibility
 export const getLegacyParkingStatusColor = (status: ParkingSpotStatus) => PARKING_STATUS_COLORS[status] || '';
-
-

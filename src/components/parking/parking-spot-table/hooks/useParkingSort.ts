@@ -18,9 +18,9 @@ export function useParkingSort(spots: ParkingSpot[]) {
     if (!sortConfig) return spots;
     const { key, direction } = sortConfig;
     return [...spots].sort((a: ParkingSpot, b: ParkingSpot) => {
-      const av = a[key as keyof ParkingSpot];
-      const bv = b[key as keyof ParkingSpot];
-      if (av === undefined || bv === undefined) return 0;
+      const av = a[key as keyof ParkingSpot] ?? null;
+      const bv = b[key as keyof ParkingSpot] ?? null;
+      if (av === null || bv === null) return 0;
       if (av < bv) return direction === "asc" ? -1 : 1;
       if (av > bv) return direction === "asc" ? 1 : -1;
       return 0;

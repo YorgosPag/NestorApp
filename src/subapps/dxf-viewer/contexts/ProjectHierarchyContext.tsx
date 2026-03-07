@@ -14,6 +14,7 @@ import type { CompanyContact } from '../../../types/contacts';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 
 // Mock function για getBuildingsByProjectId (προσωρινά)
 const getBuildingsByProjectId = async (projectId: string) => {
@@ -58,13 +59,8 @@ export interface Project {
   parkingSpots?: ParkingSpot[];
 }
 
-export interface ParkingSpot {
-  id: string;
-  number: string;
-  type: 'standard' | 'disabled' | 'electric';
-  status: 'owner' | 'sold' | 'forRent' | 'forSale' | 'reserved';
-  location: 'ground' | 'basement' | 'pilotis';
-}
+// ADR-191: Re-export canonical ParkingSpot (was local divergent type)
+export type ParkingSpot = CanonicalParkingSpot;
 
 export interface ProjectHierarchy {
   companies: CompanyContact[];

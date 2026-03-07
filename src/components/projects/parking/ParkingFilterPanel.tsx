@@ -77,30 +77,21 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
           </div>
 
           <div className={spacing.spaceBetween.sm}>
-            <Label htmlFor="level-filter" className="text-xs font-medium">{t('parking.levelLabel')}</Label>
-            <Select value={filters.level} onValueChange={(value) => onFiltersChange({ level: value })}>
-              <SelectTrigger id="level-filter" className="h-9">
+            <Label htmlFor="zone-filter" className="text-xs font-medium">{t('parking.levelLabel')}</Label>
+            <Select value={filters.locationZone} onValueChange={(value) => onFiltersChange({ locationZone: value })}>
+              <SelectTrigger id="zone-filter" className="h-9">
                 <SelectValue placeholder={t('allLevels', { ns: 'filters' })} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('allLevels', { ns: 'filters' })}</SelectItem>
-                <SelectItem value="basement">{t('parking.levels.basement')}</SelectItem>
-                <SelectItem value="ground">{t('parking.levels.ground')}</SelectItem>
-                <SelectItem value="first">{t('parking.levels.first')}</SelectItem>
+                <SelectItem value="underground">{t('parking.levels.basement')}</SelectItem>
+                <SelectItem value="pilotis">{t('parking.levels.ground')}</SelectItem>
+                <SelectItem value="open_space">{t('parking.levels.first')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className={spacing.spaceBetween.sm}>
-            <Label htmlFor="owner-filter" className="text-xs font-medium">{t('parking.ownerLabel')}</Label>
-            <Input
-              id="owner-filter"
-              placeholder={t('parking.ownerFilterPlaceholder')}
-              value={filters.owner}
-              onChange={(e) => onFiltersChange({ owner: e.target.value })}
-              className="h-9"
-            />
-          </div>
+          {/* Owner filter removed — ADR-191: canonical ParkingFilters no longer has owner field */}
         </div>
     );
 }

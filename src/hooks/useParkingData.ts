@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * @deprecated Legacy hook using mock data. Prefer useFirestoreParkingSpots for production.
+ * ADR-191: Updated to canonical types.
+ */
+
 import { useState, useMemo } from 'react';
 import type { ParkingSpot, ParkingFilters, ParkingStats } from '@/types/parking';
 import { parkingSpots as mockParkingSpots } from '@/components/projects/parking/data';
@@ -14,70 +19,81 @@ export function useParkingData(initialSpots: ParkingSpot[] = mockParkingSpots) {
     searchTerm: '',
     type: 'all',
     status: 'all',
-    level: 'all',
-    owner: '',
+    floor: 'all',
+    locationZone: 'all',
     minArea: null,
     maxArea: null,
     minPrice: null,
-    maxPrice: null
+    maxPrice: null,
   });
 
   const stats: ParkingStats = useMemo(() => {
     const totalSpots = parkingSpots.length;
     const soldSpots = parkingSpots.filter(spot => spot.status === 'sold').length;
-    const ownerSpots = parkingSpots.filter(spot => spot.status === 'owner').length;
+    const occupiedSpots = parkingSpots.filter(spot => spot.status === 'occupied').length;
     const availableSpots = parkingSpots.filter(spot => spot.status === 'available').length;
     const reservedSpots = parkingSpots.filter(spot => spot.status === 'reserved').length;
-    
-    const totalValue = parkingSpots.reduce((sum, spot) => sum + spot.value, 0);
-    const totalArea = parkingSpots.reduce((sum, spot) => sum + spot.area, 0);
-    const averagePrice = totalSpots > 0 ? parkingSpots.reduce((sum, spot) => sum + spot.price, 0) / totalSpots : 0;
+    const maintenanceSpots = parkingSpots.filter(spot => spot.status === 'maintenance').length;
+
+    const totalValue = parkingSpots.reduce((sum, spot) => sum + (spot.price || 0), 0);
+    const totalArea = parkingSpots.reduce((sum, spot) => sum + (spot.area || 0), 0);
+    const averagePrice = totalSpots > 0 ? parkingSpots.reduce((sum, spot) => sum + (spot.price || 0), 0) / totalSpots : 0;
 
     const spotsByType = parkingSpots.reduce((acc, spot) => {
-      acc[spot.type] = (acc[spot.type] || 0) + 1;
+      const t = spot.type || 'standard';
+      acc[t] = (acc[t] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const spotsByLevel = parkingSpots.reduce((acc, spot) => {
-      acc[spot.level] = (acc[spot.level] || 0) + 1;
+    const spotsByFloor = parkingSpots.reduce((acc, spot) => {
+      const f = spot.floor || 'unknown';
+      acc[f] = (acc[f] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     const spotsByStatus = parkingSpots.reduce((acc, spot) => {
-      acc[spot.status] = (acc[spot.status] || 0) + 1;
+      const s = spot.status || 'available';
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const spotsByLocationZone = parkingSpots.reduce((acc, spot) => {
+      const lz = spot.locationZone || 'unknown';
+      acc[lz] = (acc[lz] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     return {
       totalSpots,
       soldSpots,
-      ownerSpots,
+      occupiedSpots,
       availableSpots,
       reservedSpots,
+      maintenanceSpots,
       totalValue,
       totalArea,
       averagePrice,
       spotsByType,
-      spotsByLevel,
-      spotsByStatus
+      spotsByFloor,
+      spotsByStatus,
+      spotsByLocationZone,
     };
   }, [parkingSpots]);
-  
+
   const filteredSpots = useMemo(() => {
     return parkingSpots.filter(spot => {
-        const searchLower = filters.searchTerm.toLowerCase();
+      const searchLower = filters.searchTerm.toLowerCase();
 
-        const matchesSearch = filters.searchTerm.trim() === '' ||
-            spot.code.toLowerCase().includes(searchLower) ||
-            spot.owner.toLowerCase().includes(searchLower) ||
-            spot.propertyCode.toLowerCase().includes(searchLower);
+      const matchesSearch = filters.searchTerm.trim() === '' ||
+        (spot.number || '').toLowerCase().includes(searchLower) ||
+        (spot.location || '').toLowerCase().includes(searchLower) ||
+        (spot.notes || '').toLowerCase().includes(searchLower);
 
-        const matchesType = filters.type === 'all' || spot.type === filters.type;
-        const matchesStatus = filters.status === 'all' || spot.status === filters.status;
-        const matchesLevel = filters.level === 'all' || spot.level === filters.level;
-        const matchesOwner = filters.owner.trim() === '' || spot.owner.toLowerCase().includes(filters.owner.toLowerCase());
+      const matchesType = filters.type === 'all' || spot.type === filters.type;
+      const matchesStatus = filters.status === 'all' || spot.status === filters.status;
+      const matchesFloor = filters.floor === 'all' || spot.floor === filters.floor;
 
-        return matchesSearch && matchesType && matchesStatus && matchesLevel && matchesOwner;
+      return matchesSearch && matchesType && matchesStatus && matchesFloor;
     });
   }, [parkingSpots, filters]);
 
@@ -94,22 +110,22 @@ export function useParkingData(initialSpots: ParkingSpot[] = mockParkingSpots) {
   const handleEdit = (spot: ParkingSpot) => logger.info('Editing spot', { spotId: spot.id });
   const handleView = (spot: ParkingSpot) => logger.info('Viewing spot', { spotId: spot.id });
   const handleViewFloorPlan = (spot: ParkingSpot) => logger.info('Viewing floor plan for spot', { spotId: spot.id });
-  
+
   return {
-      parkingSpots: filteredSpots,
-      selectedSpots,
-      setSelectedSpots,
-      filters,
-      handleFiltersChange,
-      stats,
-      handleExport,
-      handleImport,
-      handleAdd,
-      handleDelete,
-      handleSave,
-      handleRefresh,
-      handleEdit,
-      handleView,
-      handleViewFloorPlan
+    parkingSpots: filteredSpots,
+    selectedSpots,
+    setSelectedSpots,
+    filters,
+    handleFiltersChange,
+    stats,
+    handleExport,
+    handleImport,
+    handleAdd,
+    handleDelete,
+    handleSave,
+    handleRefresh,
+    handleEdit,
+    handleView,
+    handleViewFloorPlan,
   };
 }

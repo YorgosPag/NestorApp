@@ -29,45 +29,13 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import type { ParkingSpot } from '@/types/parking';
 
 // =============================================================================
-// 🅿️ TYPE DEFINITIONS
+// 🅿️ TYPE RE-EXPORTS — Canonical SSoT from @/types/parking (ADR-191)
 // =============================================================================
 
-/**
- * Parking spot type options
- */
-export type ParkingSpotType = 'standard' | 'handicapped' | 'motorcycle' | 'electric' | 'visitor';
-
-/**
- * Parking spot status options
- */
-export type ParkingSpotStatus = 'available' | 'occupied' | 'reserved' | 'sold' | 'maintenance';
-
-/**
- * Enterprise parking spot interface
- * Matches Firestore document structure
- */
-export interface ParkingSpot {
-  id: string;
-  number: string;
-  buildingId: string;
-  type?: ParkingSpotType;
-  status?: ParkingSpotStatus;
-  floor?: string;
-  location?: string;
-  area?: number;
-  notes?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-  // 🏢 ENTERPRISE: Extended properties for ParkingGeneralTab (2026-01-19)
-  /** Price in euros */
-  price?: number;
-  /** Project ID reference */
-  projectId?: string;
-  /** User who created this record */
-  createdBy?: string;
-}
+export type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 
 /**
  * Hook options

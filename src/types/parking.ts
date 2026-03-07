@@ -1,96 +1,172 @@
+/**
+ * Canonical Parking Spot Types — Single Source of Truth
+ *
+ * ADR-191: All layers (API, hooks, UI, DXF Viewer) MUST use these types.
+ * No local ParkingSpot interfaces allowed elsewhere.
+ *
+ * @module types/parking
+ */
+
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
+// =============================================================================
+// ENUMS (string unions for Firestore compatibility)
+// =============================================================================
+
+/** Physical type of parking spot */
+export type ParkingSpotType =
+  | 'standard'
+  | 'handicapped'
+  | 'motorcycle'
+  | 'electric'
+  | 'visitor';
+
+/** Current status of parking spot */
+export type ParkingSpotStatus =
+  | 'available'
+  | 'occupied'
+  | 'reserved'
+  | 'sold'
+  | 'maintenance';
+
+/** Location zone — where the parking spot is physically situated */
+export type ParkingLocationZone =
+  | 'pilotis'
+  | 'underground'
+  | 'open_space'
+  | 'rooftop'
+  | 'covered_outdoor';
+
+// =============================================================================
+// CANONICAL INTERFACE — SSoT
+// =============================================================================
+
+/**
+ * Canonical ParkingSpot interface.
+ *
+ * - `projectId` is REQUIRED (every spot belongs to a project)
+ * - `buildingId` is OPTIONAL (null = open space / unlinked)
+ * - `locationZone` describes physical placement
+ */
 export interface ParkingSpot {
-    id: string;
-    code: string;
-    type: 'underground' | 'covered' | 'open';
-    propertyCode: string;
-    level: string;
-    area: number;
-    price: number;
-    value: number;
-    valueWithSyndicate: number;
-    status: 'sold' | 'owner' | 'available' | 'reserved';
-    owner: string;
-    floorPlan: string;
-    constructedBy: string;
-    projectId: number;
-    buildingId?: string;
-    notes?: string;
-    saleDate?: string;
-    createdAt: string;
-    updatedAt: string;
-  }
-  
-  export interface ParkingStats {
-    totalSpots: number;
-    soldSpots: number;
-    availableSpots: number;
-    ownerSpots: number;
-    reservedSpots: number;
-    totalValue: number;
-    totalArea: number;
-    averagePrice: number;
-    spotsByType: Record<string, number>;
-    spotsByLevel: Record<string, number>;
-    spotsByStatus: Record<string, number>;
-  }
-  
-  export interface ParkingFilters {
-    searchTerm: string;
-    type: string;
-    status: string;
-    level: string;
-    owner: string;
-    minArea: number | null;
-    maxArea: number | null;
-    minPrice: number | null;
-    maxPrice: number | null;
-  }
-  
-  export type ParkingSpotType = 'underground' | 'covered' | 'open';
-  export type ParkingSpotStatus = 'sold' | 'owner' | 'available' | 'reserved';
-  
-  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-  export const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
-    underground: 'parking.types.underground',
-    covered: 'parking.types.covered',
-    open: 'parking.types.open'
-  };
+  id: string;
+  /** Display code, e.g. "P-001" */
+  number: string;
+  /** Project this spot belongs to (required) */
+  projectId?: string;
+  /** Building this spot is linked to (null = open space) */
+  buildingId?: string | null;
+  /** Physical location zone */
+  locationZone?: ParkingLocationZone | null;
+  /** Spot type */
+  type?: ParkingSpotType;
+  /** Current status */
+  status?: ParkingSpotStatus;
+  /** Floor/level identifier, e.g. "-1", "0", "pilotis" */
+  floor?: string;
+  /** Freeform location description */
+  location?: string;
+  /** Area in m^2 */
+  area?: number;
+  /** Price in euros */
+  price?: number;
+  /** Freeform notes */
+  notes?: string;
+  /** Tenant company ID (server-injected) */
+  companyId?: string;
+  /** User who created this record */
+  createdBy?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
-  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-  export const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
-    sold: 'parking.status.sold',
-    owner: 'parking.status.owner',
-    available: 'parking.status.available',
-    reserved: 'parking.status.reserved'
-  };
+// =============================================================================
+// STATS & FILTERS
+// =============================================================================
 
-  // 🗑️ REMOVED: PARKING_FILTER_LABELS - Use @/constants/property-statuses-enterprise
-  //
-  // Migration completed to centralized system.
-  // All imports should use: import { PARKING_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
-  
-  /**
-   * ✅ ENTERPRISE: DEPRECATED - Use useSemanticColors().getParkingStatusClass() instead
-   *
-   * Migration path:
-   * ```typescript
-   * // OLD (DEPRECATED):
-   * className={PARKING_STATUS_COLORS[status]}
-   *
-   * // NEW (CENTRALIZED):
-   * import { useSemanticColors } from '@/hooks/useSemanticColors';
-   * const colors = useSemanticColors();
-   * className={colors.getParkingStatusClass(status)}
-   * ```
-   *
-   * @deprecated Use colors.getParkingStatusClass(status) from useSemanticColors hook
-   */
-  // ✅ ENTERPRISE: Semantic color mapping for parking statuses
-  export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
-    sold: `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,     // Green -> Success semantic
-    owner: `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,          // Blue -> Info semantic
-    available: `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`, // Slate -> Neutral semantic
-    reserved: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`   // Yellow -> Warning semantic
-  };
+export interface ParkingStats {
+  totalSpots: number;
+  soldSpots: number;
+  availableSpots: number;
+  occupiedSpots: number;
+  reservedSpots: number;
+  maintenanceSpots: number;
+  totalValue: number;
+  totalArea: number;
+  averagePrice: number;
+  spotsByType: Record<string, number>;
+  spotsByFloor: Record<string, number>;
+  spotsByStatus: Record<string, number>;
+  spotsByLocationZone: Record<string, number>;
+}
+
+export interface ParkingFilters {
+  searchTerm: string;
+  type: string;
+  status: string;
+  floor: string;
+  locationZone: string;
+  minArea: number | null;
+  maxArea: number | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+}
+
+// =============================================================================
+// I18N LABEL MAPS (values are i18n keys)
+// =============================================================================
+
+export const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
+  standard: 'parking.types.standard',
+  handicapped: 'parking.types.handicapped',
+  motorcycle: 'parking.types.motorcycle',
+  electric: 'parking.types.electric',
+  visitor: 'parking.types.visitor',
+};
+
+export const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
+  available: 'parking.status.available',
+  occupied: 'parking.status.occupied',
+  reserved: 'parking.status.reserved',
+  sold: 'parking.status.sold',
+  maintenance: 'parking.status.maintenance',
+};
+
+export const PARKING_LOCATION_ZONE_LABELS: Record<ParkingLocationZone, string> = {
+  pilotis: 'parking.locationZone.pilotis',
+  underground: 'parking.locationZone.underground',
+  open_space: 'parking.locationZone.open_space',
+  rooftop: 'parking.locationZone.rooftop',
+  covered_outdoor: 'parking.locationZone.covered_outdoor',
+};
+
+// =============================================================================
+// SEMANTIC COLORS (deprecated — use useSemanticColors().getParkingStatusClass())
+// =============================================================================
+
+/**
+ * @deprecated Use colors.getParkingStatusClass(status) from useSemanticColors hook
+ */
+export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
+  sold: `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,
+  available: `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`,
+  occupied: `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,
+  reserved: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`,
+  maintenance: `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,
+};
+
+// =============================================================================
+// CANONICAL ARRAYS (for iteration in UI)
+// =============================================================================
+
+export const PARKING_TYPES: ParkingSpotType[] = [
+  'standard', 'handicapped', 'motorcycle', 'electric', 'visitor',
+];
+
+export const PARKING_STATUSES: ParkingSpotStatus[] = [
+  'available', 'occupied', 'reserved', 'sold', 'maintenance',
+];
+
+export const PARKING_LOCATION_ZONES: ParkingLocationZone[] = [
+  'pilotis', 'underground', 'open_space', 'rooftop', 'covered_outdoor',
+];

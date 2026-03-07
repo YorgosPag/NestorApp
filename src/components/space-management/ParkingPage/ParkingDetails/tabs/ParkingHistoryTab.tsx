@@ -118,7 +118,7 @@ export function ParkingHistoryTab({ parking }: ParkingHistoryTabProps) {
       description: `Η θέση ${parking.number} δημιουργήθηκε στο σύστημα.`,
       date: parking.createdAt
         ? (typeof parking.createdAt === 'object' && 'toDate' in parking.createdAt
-            ? parking.createdAt.toDate()
+            ? (parking.createdAt as { toDate: () => Date }).toDate()
             : new Date(parking.createdAt))
         : new Date(Date.now() - 180 * 24 * 60 * 60 * 1000),
       actor: 'Διαχείριση κτιρίου',
@@ -169,7 +169,7 @@ export function ParkingHistoryTab({ parking }: ParkingHistoryTabProps) {
       description: `Η τρέχουσα κατάσταση είναι "${statusLabel}".`,
       date: parking.updatedAt
         ? (typeof parking.updatedAt === 'object' && 'toDate' in parking.updatedAt
-            ? parking.updatedAt.toDate()
+            ? (parking.updatedAt as { toDate: () => Date }).toDate()
             : new Date(parking.updatedAt))
         : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       actor: 'Σύστημα',

@@ -20,7 +20,7 @@ export type ProjectStorage = Pick<Storage, 'id' | 'name' | 'type' | 'status' | '
 /**
  * 🏢 ENTERPRISE: Parking summary for project structure (minimal fields)
  */
-export type ProjectParking = Pick<ParkingSpot, 'id' | 'code' | 'type' | 'status' | 'level' | 'area'>;
+export type ProjectParking = Pick<ParkingSpot, 'id' | 'number' | 'type' | 'status' | 'floor' | 'area'>;
 
 /**
  * 🏢 ENTERPRISE: Building with full hierarchy (Units, Storage, Parking)

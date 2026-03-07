@@ -1759,7 +1759,11 @@
     "totalValue": "Συνολική Αξία",
     "totalArea": "Συν. Εμβαδόν",
     "searchPlaceholder": "Αναζήτηση κωδικού ή περιγραφής...",
-    "exportReport": "Εξαγωγή Αναφοράς"
+    "exportReport": "Εξαγωγή Αναφοράς",
+    "results": "αποτελέσματα",
+    "cards": "Κάρτες",
+    "table": "Πίνακας",
+    "total_summary": "σύνολο"
   },
   "unitStats": {
     "total": "Μονάδες",

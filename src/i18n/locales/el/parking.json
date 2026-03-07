@@ -27,6 +27,16 @@
     "occupied": "Κατειλημμένη",
     "maintenance": "Συντήρηση"
   },
+  "locationZone": {
+    "label": "Ζώνη Τοποθεσίας",
+    "pilotis": "Πυλωτή",
+    "underground": "Υπόγειο",
+    "open_space": "Ακάλυπτος Χώρος",
+    "rooftop": "Δώμα",
+    "covered_outdoor": "Στεγασμένος Εξωτερικός",
+    "placeholder": "Επιλέξτε ζώνη",
+    "all": "Όλες οι ζώνες"
+  },
   "general": {
     "basicInfo": "Βασικές Πληροφορίες",
     "location": "Τοποθεσία",
@@ -49,7 +59,8 @@
       "pricePerSqm": "Τιμή ανά m²",
       "createdAt": "Δημιουργήθηκε",
       "lastUpdated": "Τελευταία Ενημέρωση",
-      "createdBy": "Δημιουργήθηκε από"
+      "createdBy": "Δημιουργήθηκε από",
+      "locationZone": "Ζώνη Τοποθεσίας"
     },
     "types": {
       "standard": "Κανονική",

@@ -50,9 +50,11 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
 
   // Type labels
   const typeLabels: Record<string, string> = {
-    underground: t('parking.types.underground', 'Υπόγεια'),
-    covered: t('parking.types.covered', 'Καλυμμένη'),
-    open: t('parking.types.open', 'Ανοιχτή')
+    standard: t('parking.types.standard', 'Κανονική'),
+    handicapped: t('parking.types.handicapped', 'ΑμεΑ'),
+    motorcycle: t('parking.types.motorcycle', 'Μοτοσυκλέτα'),
+    electric: t('parking.types.electric', 'Ηλεκτρικό'),
+    visitor: t('parking.types.visitor', 'Επισκεπτών'),
   };
 
   return (
@@ -70,11 +72,11 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
       />
       <div className="flex-1 min-w-0">
         <div className={cn(typography.label.sm, colors.text.foreground, "truncate")}>
-          {t('structure.parkingSpot', 'Θέση')} {parking.code}
+          {t('structure.parkingSpot', 'Θέση')} {parking.number}
         </div>
         <div className={cn(typography.body.xs, colors.text.muted)}>
           {parking.type && <span>{typeLabels[parking.type] || parking.type}</span>}
-          {parking.level && <span> • {t('structure.level', 'Επίπεδο')}: {parking.level}</span>}
+          {parking.floor && <span> • {t('structure.level', 'Επίπεδο')}: {parking.floor}</span>}
           {parking.area && <span> • {parking.area} m²</span>}
         </div>
       </div>

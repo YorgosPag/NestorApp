@@ -31,8 +31,8 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             color: 'green',
         },
         {
-            title: t('parking.stats.landowner'),
-            value: stats.ownerSpots,
+            title: t('parking.stats.occupied'),
+            value: stats.occupiedSpots,
             icon: Users,
             color: 'cyan',
         },

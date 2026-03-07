@@ -41,33 +41,19 @@ const logger = createModuleLogger('ParkingRoute');
 //
 // ============================================================================
 
-/**
- * 🅿️ Enterprise Parking Spot interface
- * Type-safe interface για Firestore documents
- */
-interface FirestoreParkingSpot {
-  id: string;
-  number: string;
-  buildingId: string;
-  type?: 'standard' | 'handicapped' | 'motorcycle' | 'electric' | 'visitor';
-  status?: 'available' | 'occupied' | 'reserved' | 'sold' | 'maintenance';
-  floor?: string;
-  location?: string;
-  area?: number;
-  notes?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+// ADR-191: Import canonical types — single source of truth
+import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 
 /**
  * 🅿️ API Response interface - CANONICAL FORMAT
  * Required by enterprise-api-client for proper response handling
  */
 interface ParkingData {
-  parkingSpots: FirestoreParkingSpot[];
+  parkingSpots: CanonicalParkingSpot[];
   count: number;
   cached: boolean;
   buildingId?: string;
+  projectId?: string;
 }
 
 interface ParkingAPIResponse {
@@ -109,15 +95,18 @@ export const GET = withStandardRateLimit(getHandler);
 
 interface ParkingCreatePayload {
   number: string;
-  buildingId: string;
-  type?: FirestoreParkingSpot['type'];
-  status?: FirestoreParkingSpot['status'];
+  /** Optional — null means open space / unlinked */
+  buildingId?: string;
+  /** Required when buildingId is absent; auto-resolved from building otherwise */
+  projectId?: string;
+  type?: CanonicalParkingSpot['type'];
+  status?: CanonicalParkingSpot['status'];
+  locationZone?: CanonicalParkingSpot['locationZone'];
   floor?: string;
   location?: string;
   area?: number;
   price?: number;
   notes?: string;
-  projectId?: string;
 }
 
 interface ParkingCreateResponse {
@@ -139,28 +128,53 @@ export const POST = withStandardRateLimit(
         if (!body.number?.trim()) {
           throw new ApiError(400, 'Parking spot number is required');
         }
-        if (!body.buildingId?.trim()) {
-          throw new ApiError(400, 'Building ID is required');
-        }
 
-        // Tenant isolation — verify building belongs to user's company
-        try {
-          await requireBuildingInTenant({
-            ctx,
-            buildingId: body.buildingId,
-            path: '/api/parking (POST)',
-          });
-        } catch (err) {
-          if (err instanceof TenantIsolationError) {
-            throw new ApiError(err.status, err.message);
+        // ADR-191: buildingId is optional (open space support)
+        // If buildingId provided → tenant-verify it and resolve projectId from building
+        // If no buildingId → projectId is required, verify project belongs to tenant
+        let resolvedProjectId = body.projectId?.trim() || null;
+
+        if (body.buildingId?.trim()) {
+          // Tenant isolation — verify building belongs to user's company
+          try {
+            await requireBuildingInTenant({
+              ctx,
+              buildingId: body.buildingId,
+              path: '/api/parking (POST)',
+            });
+          } catch (err) {
+            if (err instanceof TenantIsolationError) {
+              throw new ApiError(err.status, err.message);
+            }
+            throw err;
           }
-          throw err;
+
+          // Auto-resolve projectId from building if not explicitly provided
+          if (!resolvedProjectId) {
+            const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+            const buildingData = buildingDoc.data() as Record<string, unknown> | undefined;
+            resolvedProjectId = (buildingData?.projectId as string) || null;
+          }
+        } else {
+          // No building — projectId is mandatory for open space parking
+          if (!resolvedProjectId) {
+            throw new ApiError(400, 'projectId is required when no buildingId is provided');
+          }
+          // Verify project belongs to tenant company
+          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
+          if (!projectDoc.exists) {
+            throw new ApiError(404, 'Project not found');
+          }
+          const projectData = projectDoc.data() as Record<string, unknown>;
+          if (projectData.companyId !== ctx.companyId) {
+            throw new ApiError(403, 'Project does not belong to your company');
+          }
         }
 
         // Sanitize data — force companyId from auth context
         const cleanData: Record<string, unknown> = {
           number: body.number.trim(),
-          buildingId: body.buildingId,
+          buildingId: body.buildingId?.trim() || null,
           type: body.type || 'standard',
           status: body.status || 'available',
           companyId: ctx.companyId,
@@ -169,13 +183,16 @@ export const POST = withStandardRateLimit(
           createdBy: ctx.uid,
         };
 
+        // projectId
+        if (resolvedProjectId) cleanData.projectId = resolvedProjectId;
+
         // Optional fields — only include if provided (Firestore rejects undefined)
+        if (body.locationZone) cleanData.locationZone = body.locationZone;
         if (body.floor?.trim()) cleanData.floor = body.floor.trim();
         if (body.location?.trim()) cleanData.location = body.location.trim();
         if (typeof body.area === 'number' && body.area > 0) cleanData.area = body.area;
         if (typeof body.price === 'number' && body.price >= 0) cleanData.price = body.price;
         if (body.notes?.trim()) cleanData.notes = body.notes.trim();
-        if (body.projectId?.trim()) cleanData.projectId = body.projectId.trim();
 
         logger.info('Creating parking spot', { number: body.number, buildingId: body.buildingId, companyId: ctx.companyId });
 
@@ -211,6 +228,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
   try {
     const { searchParams } = new URL(request.url);
     const requestedBuildingId = searchParams.get('buildingId');
+    const requestedProjectId = searchParams.get('projectId');
 
     // =========================================================================
     // TENANT ISOLATION — Enterprise Pattern (O(1) direct verification)
@@ -258,7 +276,37 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     }
 
     // =========================================================================
-    // NO buildingId — Return all parking for company's buildings
+    // ADR-191: projectId filter — return all parking for a specific project
+    // =========================================================================
+
+    if (requestedProjectId) {
+      // Verify project belongs to tenant
+      const projectDoc = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(requestedProjectId).get();
+      if (!projectDoc.exists) {
+        return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
+      }
+      const projectData = projectDoc.data() as Record<string, unknown>;
+      if (projectData.companyId !== ctx.companyId) {
+        return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
+      }
+
+      // Get all parking with this projectId
+      const snapshot = await getAdminFirestore()
+        .collection(COLLECTIONS.PARKING_SPACES)
+        .where('projectId', '==', requestedProjectId)
+        .get();
+
+      const parkingSpots = mapParkingDocs(snapshot.docs);
+      logger.info('Found parking spots for project', { projectId: requestedProjectId, count: parkingSpots.length });
+
+      return NextResponse.json({
+        success: true,
+        data: { parkingSpots, count: parkingSpots.length, cached: false, projectId: requestedProjectId }
+      });
+    }
+
+    // =========================================================================
+    // NO filters — Return all parking for company (buildings + open space)
     // =========================================================================
 
     // Get all buildings belonging to this company
@@ -270,25 +318,14 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
     logger.info('Found authorized buildings', { buildingCount: authorizedBuildingIds.size, companyId: ctx.companyId });
 
-    if (authorizedBuildingIds.size === 0) {
-      return NextResponse.json({
-        success: true,
-        data: { parkingSpots: [], count: 0, cached: false }
-      });
-    }
-
-    // Fetch all parking spots and filter by authorized buildings
+    // Fetch all parking for this company (includes open-space spots via companyId)
     const snapshot = await getAdminFirestore()
       .collection(COLLECTIONS.PARKING_SPACES)
+      .where('companyId', '==', ctx.companyId)
       .get();
 
-    const allSpots = mapParkingDocs(snapshot.docs);
-    // Include unlinked spots (buildingId = null) + spots linked to authorized buildings
-    const parkingSpots = allSpots.filter(spot =>
-      !spot.buildingId || authorizedBuildingIds.has(spot.buildingId)
-    );
-
-    logger.info('Found parking spots for company', { total: allSpots.length, authorized: parkingSpots.length });
+    const parkingSpots = mapParkingDocs(snapshot.docs);
+    logger.info('Found parking spots for company', { count: parkingSpots.length });
 
     return NextResponse.json({
       success: true,
@@ -310,21 +347,27 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
 // DATA MAPPER — Firestore docs to typed parking spots
 // ============================================================================
 
-function mapParkingDocs(docs: FirebaseFirestore.QueryDocumentSnapshot[]): FirestoreParkingSpot[] {
+function mapParkingDocs(docs: FirebaseFirestore.QueryDocumentSnapshot[]): CanonicalParkingSpot[] {
   return docs.map(doc => {
     const data = doc.data() as Record<string, unknown>;
-    return {
+    const spot: CanonicalParkingSpot = {
       id: doc.id,
       number: (data.number as string) || (data.code as string) || `P-${doc.id.slice(0, 4)}`,
-      buildingId: (data.buildingId as string) || '',
-      type: data.type as FirestoreParkingSpot['type'],
-      status: data.status as FirestoreParkingSpot['status'],
+      buildingId: (data.buildingId as string) || null,
+      projectId: (data.projectId as string) || undefined,
+      locationZone: (data.locationZone as CanonicalParkingSpot['locationZone']) || null,
+      type: data.type as CanonicalParkingSpot['type'],
+      status: data.status as CanonicalParkingSpot['status'],
       floor: data.floor as string | undefined,
       location: data.location as string | undefined,
       area: data.area as number | undefined,
+      price: data.price as number | undefined,
       notes: data.notes as string | undefined,
+      companyId: data.companyId as string | undefined,
+      createdBy: data.createdBy as string | undefined,
       createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || data.createdAt as Date | undefined,
-      updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || data.updatedAt as Date | undefined
+      updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || data.updatedAt as Date | undefined,
     };
+    return spot;
   });
 }

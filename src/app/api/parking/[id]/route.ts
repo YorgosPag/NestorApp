@@ -23,10 +23,13 @@ const logger = createModuleLogger('ParkingIdRoute');
 // TYPES
 // ============================================================================
 
+import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
+
 interface ParkingPatchPayload {
   number?: string;
-  type?: 'standard' | 'handicapped' | 'motorcycle' | 'electric' | 'visitor';
-  status?: 'available' | 'occupied' | 'reserved' | 'sold' | 'maintenance';
+  type?: ParkingSpotType;
+  status?: ParkingSpotStatus;
+  locationZone?: ParkingLocationZone | null;
   floor?: string;
   location?: string;
   area?: number;
@@ -34,6 +37,7 @@ interface ParkingPatchPayload {
   notes?: string;
   /** Set to null to unlink from building, or string to link */
   buildingId?: string | null;
+  projectId?: string;
 }
 
 interface ParkingMutationResult {
@@ -82,6 +86,8 @@ export const PATCH = withStandardRateLimit(
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
         if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
         if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
+        if (body.locationZone !== undefined) updateData.locationZone = body.locationZone ?? null;
+        if (body.projectId?.trim()) updateData.projectId = body.projectId.trim();
 
         await docRef.update(updateData);
 
