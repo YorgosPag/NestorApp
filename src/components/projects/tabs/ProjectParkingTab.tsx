@@ -111,7 +111,7 @@ interface ParkingSpotsListProps {
   parkingSpots: ReturnType<typeof useFirestoreParkingSpots>['parkingSpots'];
   loading: boolean;
   error: string | null;
-  t: (key: string, fallback?: string) => string;
+  t: ReturnType<typeof useTranslation>['t'];
   colors: ReturnType<typeof useSemanticColors>;
   quick: ReturnType<typeof useBorderTokens>['quick'];
   iconSizes: ReturnType<typeof useIconSizes>;
@@ -199,7 +199,7 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
                   </span>
                 </td>
                 <td className="p-3">
-                  <ParkingStatusBadge status={spot.status} colors={colors} />
+                  <ParkingStatusBadge status={spot.status || 'available'} colors={colors} />
                 </td>
                 <td className="p-3">{spot.floor || '—'}</td>
                 <td className="p-3">
