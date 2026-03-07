@@ -145,7 +145,7 @@ export function AddressWithHierarchy({
   hierarchyLevels = [7, 6, 5, 4, 3],
   defaultExpanded = false,
 }: AddressWithHierarchyProps) {
-  const { isLoading, findById, resolvePath, searchOptions, levelOptions } = useAdministrativeHierarchy();
+  const { isLoading, findById, resolvePath, getByLevel, searchOptions, levelOptions } = useAdministrativeHierarchy();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(defaultExpanded);
 
   const current = useMemo(
@@ -326,67 +326,81 @@ export function AddressWithHierarchy({
     // Only trigger when: settlement name exists, no ID (set externally), data loaded
     if (isLoading || !current.settlementName.trim() || current.settlementId) return;
 
-    // Normalize for matching: strip accents, hyphens, lowercase
+    // Normalize: strip accents, hyphens, lowercase
     const normalize = (s: string) =>
       s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[-]/g, ' ').toLowerCase().trim();
 
-    // Clean the input (strip hyphens)
     const cleanedName = current.settlementName.trim().replace(/-/g, ' ');
     const normalizedTarget = normalize(cleanedName);
+    const postalCode = current.postalCode.trim();
 
-    // Search hierarchy data (level 8 = settlement) — use first word for broader search
-    const firstWord = cleanedName.split(/\s+/)[0];
-    const matches = searchOptions(firstWord, 8, 50);
-    if (matches.length === 0) return;
-
-    // Helper: check if option matches (exact or fuzzy prefix)
-    const isMatch = (opt: ComboboxOption): boolean => {
-      const normalizedOpt = normalize(opt.label);
-      // Exact match
-      if (normalizedOpt === normalizedTarget) return true;
-      // Fuzzy: prefix-based word matching (handles genitive → nominative)
+    // Helper: fuzzy name match (exact or prefix-based for genitive handling)
+    const nameMatches = (entityName: string): boolean => {
+      const normalizedEntity = normalize(entityName);
+      if (normalizedEntity === normalizedTarget) return true;
       if (normalizedTarget.length >= 4) {
         const targetWords = normalizedTarget.split(/\s+/);
-        const optWords = normalizedOpt.split(/\s+/);
-        if (optWords.length === targetWords.length) {
+        const entityWords = normalizedEntity.split(/\s+/);
+        if (entityWords.length === targetWords.length) {
           return targetWords.every((tw, i) => {
-            const prefixLen = Math.min(5, Math.min(tw.length, optWords[i].length));
-            return tw.substring(0, prefixLen) === optWords[i].substring(0, prefixLen);
+            const prefixLen = Math.min(5, Math.min(tw.length, entityWords[i].length));
+            return tw.substring(0, prefixLen) === entityWords[i].substring(0, prefixLen);
           });
         }
       }
       return false;
     };
 
-    // Filter all matching settlements
-    const candidates = matches.filter(isMatch);
-    if (candidates.length === 0) return;
+    // =====================================================================
+    // STRATEGY: Postal-code-first disambiguation
+    // Step 1: If we have a postal code, find settlements in same postal zone
+    // Step 2: Match by name among postal zone candidates
+    // Step 3: Fallback to name-only search if no postal match
+    // =====================================================================
 
-    let bestMatch: ComboboxOption;
+    let bestMatch: { id: string; name: string } | null = null;
 
-    if (candidates.length === 1) {
-      // Unique match — use it directly
-      bestMatch = candidates[0];
-    } else {
-      // Multiple homonymous settlements — disambiguate by postal code
-      const postalCode = current.postalCode.trim();
-      if (postalCode.length === 5) {
-        const postalMatch = candidates.find(opt => {
-          const entity = findById(opt.value);
-          return entity?.postalCode === postalCode;
-        });
-        bestMatch = postalMatch ?? candidates[0];
-      } else {
-        // No postal code available — use first match
-        bestMatch = candidates[0];
+    if (postalCode.length === 5) {
+      const postalZone = postalCode.substring(0, 3); // e.g. "118" for Athens center
+      const allSettlements = getByLevel(8);
+
+      // Step 1: Exact postal code + name match
+      bestMatch = allSettlements.find(
+        e => e.postalCode === postalCode && nameMatches(e.name)
+      ) ?? null;
+
+      // Step 2: Same postal zone (first 3 digits) + name match
+      if (!bestMatch) {
+        bestMatch = allSettlements.find(
+          e => e.postalCode?.startsWith(postalZone) && nameMatches(e.name)
+        ) ?? null;
+      }
+
+      // Step 3: Same broad zone (first 2 digits) + name match
+      if (!bestMatch) {
+        const broadZone = postalCode.substring(0, 2);
+        bestMatch = allSettlements.find(
+          e => e.postalCode?.startsWith(broadZone) && nameMatches(e.name)
+        ) ?? null;
       }
     }
 
+    // Step 4: Fallback — name-only search (no postal code or no postal match)
+    if (!bestMatch) {
+      const firstWord = cleanedName.split(/\s+/)[0];
+      const nameMatched = searchOptions(firstWord, 8, 50);
+      const candidate = nameMatched.find(opt => nameMatches(opt.label));
+      if (candidate) {
+        bestMatch = { id: candidate.value, name: candidate.label };
+      }
+    }
+
+    if (!bestMatch) return;
+
     // Resolve full hierarchy from matched settlement
-    const path = resolvePath(bestMatch.value);
+    const path = resolvePath(bestMatch.id);
     const updated = { ...current };
-    // Use canonical settlement name from hierarchy data
-    updated.settlementName = bestMatch.label;
+    updated.settlementName = bestMatch.name;
     for (const mapping of PATH_TO_VALUE) {
       const entity = path[mapping.pathKey];
       if (entity) {
@@ -397,7 +411,7 @@ export function AddressWithHierarchy({
 
     onChange(updated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current.settlementName, current.settlementId, isLoading]);
+  }, [current.settlementName, current.settlementId, current.postalCode, isLoading]);
 
   // =========================================================================
   // RENDER
