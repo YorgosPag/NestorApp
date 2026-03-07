@@ -908,8 +908,8 @@
         "description": "Manage relationships with other contacts"
       },
       "files": {
-        "title": "Files",
-        "description": "Manage contact files and documents"
+        "title": "Contact Documents",
+        "description": "Manage contact documents"
       },
       "banking": {
         "title": "Banking",
@@ -1157,5 +1157,13 @@
         "other": "Other"
       }
     }
+  },
+  "sections": {
+    "files": "Contact Documents",
+    "banking": "Banking"
+  },
+  "sectionDescriptions": {
+    "files": "Manage contact documents",
+    "banking": "Contact bank accounts"
   }
 }
