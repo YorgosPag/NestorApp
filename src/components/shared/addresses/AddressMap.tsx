@@ -213,6 +213,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
 
   const mapRef = useRef<MapInstance | null>(null);
+  // Track if map has ever rendered successfully (prevents unmount during re-geocoding)
+  const hasEverRenderedRef = useRef(false);
 
   // ===========================================================================
   // USER LOCATION ERROR TOAST
@@ -521,8 +523,13 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // For draggable mode: Always render map immediately (skip loading/error early returns)
   const isDraggableMode = draggableMarkers;
 
-  // Loading state (skip for draggable mode — map must always be visible)
-  if (geocodingStatus === 'loading' && !isDraggableMode) {
+  // Update "ever rendered" tracker
+  if (geocodingStatus === 'success' || geocodingStatus === 'partial') {
+    hasEverRenderedRef.current = true;
+  }
+
+  // Loading state — only show spinner on FIRST load (before map has ever rendered)
+  if (geocodingStatus === 'loading' && !isDraggableMode && !hasEverRenderedRef.current) {
     return (
       <div
         className={`flex items-center justify-center bg-muted rounded-lg ${heightClass} ${className}`}
@@ -538,7 +545,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }
 
   // Error state (skip for draggable mode — show map with default pin position)
-  if (geocodingStatus === 'error' && !isDraggableMode) {
+  if (geocodingStatus === 'error' && !isDraggableMode && !hasEverRenderedRef.current) {
     return (
       <Alert variant="destructive" className={className}>
         <AlertTriangle className="h-4 w-4" />
@@ -549,18 +556,12 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     );
   }
 
-  // Track if map has ever rendered (prevents unmount during re-geocoding)
-  const hasEverRenderedRef = useRef(false);
-  if (geocodingStatus === 'success' || geocodingStatus === 'partial') {
-    hasEverRenderedRef.current = true;
-  }
-
-  // Determine if map should render — stay visible once rendered (no unmount/remount cycle)
+  // Determine if map should render
   const shouldRenderMap =
     isDraggableMode ||
     geocodingStatus === 'success' ||
     geocodingStatus === 'partial' ||
-    (hasEverRenderedRef.current && geocodingStatus === 'loading');
+    hasEverRenderedRef.current;
 
   // Default position for new address draggable pin (center of Greece)
   const defaultDragPosition = dragMarkerPosition ?? {
