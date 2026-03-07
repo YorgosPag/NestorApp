@@ -263,17 +263,23 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
 
 /**
  * Build OSM-style free-form query.
- * With street: "street number postalcode" (most reliable for urban addresses)
+ * With street: "street postalcode city" (most reliable for urban addresses)
  * Without street: "city/settlement, municipality, postalcode" (for villages/settlements)
+ *
+ * Including the city/settlement improves disambiguation (e.g. "Σαμοθράκης 56334"
+ * exists in multiple cities — adding "Ελευθέριο Κορδελιό" narrows it down).
  */
 function toOsmStyleQuery(params: GeocodingRequestBody): string {
+  const locality = params.neighborhood || params.city;
+  // Dehyphenate locality — Nominatim doesn't recognize "Ελευθέριο-Κορδελιό"
+  const cleanLocality = locality?.replace(/-/g, ' ');
+
   if (params.street) {
-    // Urban: "Αχιλλέως 17 56224"
-    return [params.street, params.postalCode].filter(Boolean).join(' ');
+    // Urban: "Σαμοθράκης 56334 Ελευθέριο Κορδελιό"
+    return [params.street, params.postalCode, cleanLocality].filter(Boolean).join(' ');
   }
   // Settlement/village: "Χωριό, Δήμος, ΤΚ"
-  const locality = params.neighborhood || params.city;
-  return [locality, params.municipality, params.postalCode].filter(Boolean).join(', ');
+  return [cleanLocality, params.municipality, params.postalCode].filter(Boolean).join(', ');
 }
 
 /**
