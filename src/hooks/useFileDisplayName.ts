@@ -27,6 +27,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
+import { STUDY_ENTRIES } from '@/config/upload-entry-points/entries-studies';
 
 /**
  * 🏢 ENTERPRISE: Add file extension to display name
@@ -46,6 +47,11 @@ function addExtension(displayName: string, ext?: string): string {
   return `${displayName}${normalizedExt}`;
 }
 
+// 🏢 ADR-191: Purpose → entry point label map (built once at module init)
+const purposeToLabelMap = new Map<string, { el: string; en: string }>(
+  STUDY_ENTRIES.map((e) => [e.purpose, e.label])
+);
+
 /**
  * 🏢 ENTERPRISE: Hook for runtime display name translation
  *
@@ -53,7 +59,7 @@ function addExtension(displayName: string, ext?: string): string {
  * based on the current i18n language context.
  *
  * TRANSLATION LOGIC:
- * 1. Files with full metadata (category + purpose) → Translate both
+ * 1. Study files (purpose maps to STUDY_ENTRIES) → Use entry point label
  * 2. Files with category only → Translate category, keep rest
  * 3. Legacy files (no metadata) → Return stored displayName AS-IS
  *
@@ -94,21 +100,27 @@ export function useFileDisplayName() {
         return addExtension(translatedParts.join(' - '), fileRecord.ext);
       }
 
-      // CASE 3: Has full metadata (category + purpose) → translate both (ENTERPRISE!)
+      // CASE 3: Has full metadata (category + purpose)
       const parts = fileRecord.displayName.split(' - ');
 
       if (parts.length === 0) {
         return addExtension(fileRecord.displayName, fileRecord.ext);
       }
 
-      // Translate category and purpose
+      // 🏢 ADR-191: Study entry points get their label from STUDY_ENTRIES config
+      const entryPointLabel = purposeToLabelMap.get(fileRecord.purpose);
+      if (entryPointLabel) {
+        // Use entry point label in current language (e.g., "Αίτηση Οικοδομικής Άδειας")
+        const lang = i18n.language as 'el' | 'en';
+        const firstPart = lang === 'en' ? entryPointLabel.en : entryPointLabel.el;
+        const translatedParts = [firstPart, ...parts.slice(1)];
+        return addExtension(translatedParts.join(' - '), fileRecord.ext);
+      }
+
+      // Non-study files: translate category + purpose via i18n
       const categoryLabel = t(`categories.${fileRecord.category}`, { defaultValue: fileRecord.category });
       const purposeLabel = t(`purposes.${fileRecord.purpose}`, { defaultValue: fileRecord.purpose });
-
-      // Rebuild first part: "Category Purpose"
       const firstPart = `${categoryLabel} ${purposeLabel}`;
-
-      // Replace first part, keep rest as-is (entity labels, dates, etc.)
       const translatedParts = [firstPart, ...parts.slice(1)];
 
       // 🏢 ENTERPRISE: Add file extension for clarity (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
