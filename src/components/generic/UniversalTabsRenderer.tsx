@@ -313,9 +313,11 @@ export function UniversalTabsRenderer<TData = unknown>({
       onTabChange={handleTabChange}
       theme={theme === 'destructive' || theme === 'accent' ? 'default' : theme} // 🏢 ENTERPRISE: Map unsupported theme values
     >
-      {/* 🏢 ENTERPRISE: Lazy render TabsContent - only render when tab becomes active */}
+      {/* 🏢 ENTERPRISE: forceMount keeps tabs in DOM so local state persists across tab switches.
+          LazyTabContent prevents premature rendering until first activation.
+          data-[state=inactive]:hidden (from TabsContent) hides inactive tabs via CSS. */}
       {tabDefinitions.map((tabDef) => (
-        <TabsContent key={tabDef.id} value={tabDef.id}>
+        <TabsContent key={tabDef.id} value={tabDef.id} forceMount>
           <LazyTabContent tabId={tabDef.id} activeTab={activeTab}>
             {tabDef.content}
           </LazyTabContent>
