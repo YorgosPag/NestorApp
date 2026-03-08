@@ -23,9 +23,11 @@ interface BasicProjectInfoTabProps {
     isEditing: boolean;
     projectId: string;
     companyId?: string;
+    /** 🏢 ENTERPRISE: Create mode — save company locally, no PATCH API call */
+    isCreateMode?: boolean;
 }
 
-export function BasicProjectInfoTab({ data, setData, isEditing, projectId, companyId }: BasicProjectInfoTabProps) {
+export function BasicProjectInfoTab({ data, setData, isEditing, projectId, companyId, isCreateMode }: BasicProjectInfoTabProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
@@ -43,13 +45,18 @@ export function BasicProjectInfoTab({ data, setData, isEditing, projectId, compa
     }, []);
 
     const saveCompany = useCallback(async (newId: string | null, name: string) => {
+        if (isCreateMode) {
+            // 🏢 ENTERPRISE: Create mode — save locally only, no API call
+            setData(prev => ({ ...prev, companyId: newId || '', companyName: name || '' }));
+            return { success: true };
+        }
+
         try {
             await apiClient.patch(`/api/projects/${projectId}`, {
                 companyId: newId,
                 company: name || null,
             });
-            // Update local state to reflect change
-            setData(prev => ({ ...prev, companyName: name || '' }));
+            setData(prev => ({ ...prev, companyId: newId || '', companyName: name || '' }));
             return { success: true };
         } catch (error) {
             return {
@@ -57,7 +64,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing, projectId, compa
                 error: error instanceof Error ? error.message : 'Failed to update',
             };
         }
-    }, [projectId, setData]);
+    }, [projectId, setData, isCreateMode]);
 
     return (
         <Card>

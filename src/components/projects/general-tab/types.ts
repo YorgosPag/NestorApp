@@ -23,6 +23,8 @@ export interface ProjectFormData {
   issueDate: string;
   status: ProjectStatus;
   companyName: string;
+  /** Company ID — used in create mode to link project to company */
+  companyId?: string;
   // Λεπτομέρειες (inline editing — moved from modal)
   type: ProjectType | '';
   priority: ProjectPriority | '';

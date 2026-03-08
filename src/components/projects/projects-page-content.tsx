@@ -94,14 +94,13 @@ export function ProjectsPageContent() {
   const isCreateMode = selectedProject?.id === TEMP_PROJECT_ID;
 
   const handleNewProject = useCallback(() => {
-    const defaultCompanyId = companies[0]?.id || '';
     const tempProject: Project = {
       id: TEMP_PROJECT_ID,
       name: '',
       title: '',
       description: '',
       status: 'planning',
-      companyId: defaultCompanyId,
+      companyId: '',
       company: '',
       address: '',
       city: '',

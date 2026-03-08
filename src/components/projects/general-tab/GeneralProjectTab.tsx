@@ -57,6 +57,7 @@ export function GeneralProjectTab({
     issueDate: '',
     status: project.status,
     companyName: project.companyName,
+    companyId: project.companyId || '',
     type: project.type || '',
     priority: project.priority || '',
     riskLevel: project.riskLevel || '',
@@ -85,6 +86,7 @@ export function GeneralProjectTab({
       licenseTitle: project.title,
       status: project.status,
       companyName: project.companyName,
+      companyId: project.companyId || '',
       description: project.description || prev.description,
       type: project.type || '',
       priority: project.priority || '',
@@ -118,7 +120,7 @@ export function GeneralProjectTab({
           title: projectData.licenseTitle,
           description: projectData.description,
           status: projectData.status || 'planning',
-          companyId: project.companyId || '',
+          companyId: projectData.companyId || '',
         });
 
         if (!result.success || !result.projectId) {
@@ -205,7 +207,8 @@ export function GeneralProjectTab({
           setData={setProjectData}
           isEditing={isEditing}
           projectId={project.id}
-          companyId={project.companyId}
+          companyId={projectData.companyId || project.companyId}
+          isCreateMode={isCreateMode}
         />
 
         <PermitsAndStatusTab
