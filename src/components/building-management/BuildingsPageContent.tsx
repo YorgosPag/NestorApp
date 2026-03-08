@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useTransition } from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -68,6 +68,9 @@ export function BuildingsPageContent() {
 
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
+
+  // ✅ PERF: startTransition defers the expensive details panel re-render
+  const [, startTransition] = useTransition();
 
   // 🏢 ENTERPRISE: Lifted edit state for CompactToolbar ↔ BuildingDetails sync
   const [isEditingBuilding, setIsEditingBuilding] = useState(false);
@@ -328,8 +331,10 @@ export function BuildingsPageContent() {
                   buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
-                    setSelectedBuilding(building);
-                    setStartInEditMode(false);
+                    startTransition(() => {
+                      setSelectedBuilding(building);
+                      setStartInEditMode(false);
+                    });
                   }}
                   onNewBuilding={handleNewBuilding}
                   onEditBuilding={selectedBuilding ? handleEditBuilding : undefined}
@@ -354,8 +359,10 @@ export function BuildingsPageContent() {
                   buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={(building) => {
-                    setSelectedBuilding(building);
-                    setStartInEditMode(false);
+                    startTransition(() => {
+                      setSelectedBuilding(building);
+                      setStartInEditMode(false);
+                    });
                   }}
                   onNewBuilding={handleNewBuilding}
                   onEditBuilding={selectedBuilding ? handleEditBuilding : undefined}
