@@ -92,17 +92,19 @@ function toHierarchyValue(addr: Partial<ProjectAddress>): Partial<AddressWithHie
   };
 }
 
-/** Convert AddressWithHierarchyValue → partial ProjectAddress fields */
+/** Convert AddressWithHierarchyValue → partial ProjectAddress fields
+ *  🏢 ENTERPRISE: Uses conditional spread to avoid undefined values (Firestore rejects undefined) */
 function fromHierarchyValue(val: AddressWithHierarchyValue): Partial<ProjectAddress> {
   return {
-    street: val.street,
-    number: val.number || undefined,
-    city: val.settlementName || val.municipalityName,
-    postalCode: val.postalCode,
-    neighborhood: val.communityName || undefined,
-    municipality: val.municipalityName || undefined,
-    regionalUnit: val.regionalUnitName || undefined,
-    region: val.regionName || undefined,
+    street: val.street || '',
+    city: val.settlementName || val.municipalityName || '',
+    postalCode: val.postalCode || '',
+    // Optional fields: only include if non-empty
+    ...(val.number ? { number: val.number } : {}),
+    ...(val.communityName ? { neighborhood: val.communityName } : {}),
+    ...(val.municipalityName ? { municipality: val.municipalityName } : {}),
+    ...(val.regionalUnitName ? { regionalUnit: val.regionalUnitName } : {}),
+    ...(val.regionName ? { region: val.regionName } : {}),
   };
 }
 
@@ -262,7 +264,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         setLocalAddresses(newAddresses);
         toast.success('Η κύρια διεύθυνση ενημερώθηκε επιτυχώς!');
         // Reload to refresh UI
-        setTimeout(() => window.location.reload(), 500);
+        // Local state is already updated — no need to reload
       } else {
         toast.error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
       }
@@ -321,7 +323,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         setLocalAddresses(newAddresses);
         toast.success('Η διεύθυνση διαγράφηκε επιτυχώς!');
         // Reload to refresh UI
-        setTimeout(() => window.location.reload(), 500);
+        // Local state is already updated — no need to reload
       } else {
         toast.error(result.error || 'Σφάλμα διαγραφής διεύθυνσης');
       }
@@ -342,14 +344,14 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
     setIsSaving(true);
     try {
-      const blockSideValue = addBlockSide === SELECT_CLEAR_VALUE ? undefined : addBlockSide as BlockSideDirection;
+      // 🏢 ENTERPRISE: Avoid undefined values — Firestore rejects them
       const newAddress = createProjectAddress({
         ...addressFields,
         city: addressFields.city,
         type: addType,
-        blockSide: blockSideValue,
-        label: addLabel || undefined,
         isPrimary: localAddresses.length === 0 || addIsPrimary,
+        ...(addBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: addBlockSide as BlockSideDirection } : {}),
+        ...(addLabel ? { label: addLabel } : {}),
       });
 
       const newAddresses = [...localAddresses, newAddress];
@@ -365,7 +367,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         setLocalAddresses(newAddresses);
         handleCancelAdd();
         toast.success('Η διεύθυνση προστέθηκε επιτυχώς!');
-        setTimeout(() => window.location.reload(), 500);
+        // Local state is already updated — no need to reload
       } else {
         toast.error(result.error || 'Σφάλμα αποθήκευσης διεύθυνσης');
       }
@@ -405,20 +407,21 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
     setIsSaving(true);
     try {
-      const blockSideValue = editBlockSide === SELECT_CLEAR_VALUE ? undefined : editBlockSide as BlockSideDirection;
-      const newAddresses = localAddresses.map((addr, i) =>
-        i === editingIndex
-          ? {
-              ...addr,
-              ...addressFields,
-              city: addressFields.city!,
-              type: editType,
-              blockSide: blockSideValue,
-              label: editLabel || undefined,
-              isPrimary: editIsPrimary,
-            }
-          : addr
-      );
+      // 🏢 ENTERPRISE: Avoid undefined values — Firestore rejects them
+      const newAddresses = localAddresses.map((addr, i) => {
+        if (i !== editingIndex) return addr;
+        // Remove old optional fields, then spread new values
+        const { blockSide: _bs, label: _lb, ...rest } = addr;
+        return {
+          ...rest,
+          ...addressFields,
+          city: addressFields.city!,
+          type: editType,
+          isPrimary: editIsPrimary,
+          ...(editBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: editBlockSide as BlockSideDirection } : {}),
+          ...(editLabel ? { label: editLabel } : {}),
+        };
+      });
 
       const legacy = extractLegacyFields(newAddresses);
       const result = await updateProjectClient(project.id!, {
@@ -431,7 +434,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         setLocalAddresses(newAddresses);
         handleCancelEdit();
         toast.success('Η διεύθυνση ενημερώθηκε επιτυχώς!');
-        setTimeout(() => window.location.reload(), 500);
+        // Local state is already updated — no need to reload
       } else {
         toast.error(result.error || 'Σφάλμα ενημέρωσης διεύθυνσης');
       }
@@ -635,13 +638,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             <div className={cn("text-center border-2 border-dashed rounded-lg", spacing.padding.y["2xl"])}>
               <MapPin className={cn(iconSizes.xl, "mx-auto", colors.text.muted, spacing.margin.bottom.md)} />
               <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>Δεν υπάρχουν διευθύνσεις</h3>
-              <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.bottom.md)}>
-                Προσθέστε τουλάχιστον μία διεύθυνση για το έργο
+              <p className={cn(typography.body.sm, colors.text.muted)}>
+                Χρησιμοποιήστε το κουμπί «Νέα Διεύθυνση» για να προσθέσετε διεύθυνση
               </p>
-              <Button onClick={() => setIsAddFormOpen(true)}>
-                <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-                Προσθήκη Πρώτης Διεύθυνσης
-              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

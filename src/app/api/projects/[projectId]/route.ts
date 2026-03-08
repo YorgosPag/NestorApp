@@ -90,6 +90,36 @@ interface ProjectDeleteResponse {
 
 const CACHE_KEY_PREFIX = 'api:projects:list';
 
+/**
+ * 🏢 ENTERPRISE: Recursively remove undefined values from objects/arrays
+ * Firestore rejects undefined at ANY depth — this ensures clean data
+ */
+function removeUndefinedDeep(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      result[key] = value.map(item =>
+        item !== null && typeof item === 'object' && !Array.isArray(item)
+          ? removeUndefinedDeep(item as Record<string, unknown>)
+          : item
+      );
+    } else if (isPlainObject(value)) {
+      result[key] = removeUndefinedDeep(value as Record<string, unknown>);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/** Check if value is a plain object (not Date, FieldValue, Timestamp, etc.) */
+function isPlainObject(value: unknown): boolean {
+  if (value === null || typeof value !== 'object') return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
 // =============================================================================
 // FORCE DYNAMIC
 // =============================================================================
@@ -251,10 +281,8 @@ async function handleUpdateProject(
     updatedBy: ctx.uid,
   };
 
-  // 🏢 ENTERPRISE: Remove undefined fields (Firestore doesn't accept undefined)
-  const cleanData = Object.fromEntries(
-    Object.entries(updateData).filter(([, value]) => value !== undefined)
-  );
+  // 🏢 ENTERPRISE: Remove undefined fields RECURSIVELY (Firestore rejects undefined at any depth)
+  const cleanData = removeUndefinedDeep(updateData);
 
   logger.info('[Projects/Update] Updating fields', { fieldsCount: Object.keys(cleanData).length });
 

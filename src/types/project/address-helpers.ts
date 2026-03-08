@@ -161,25 +161,28 @@ export function formatAddressType(
 export function createProjectAddress(
   data: Partial<ProjectAddress> & { city: string }
 ): ProjectAddress {
+  // 🏢 ENTERPRISE: Use conditional spread to avoid undefined values
+  // Firestore REJECTS undefined — omit optional fields entirely if not provided
   return {
     id: data.id || crypto.randomUUID(),
     street: data.street || '',
-    number: data.number,
     city: data.city,
     postalCode: data.postalCode || '',
-    region: data.region,
-    regionalUnit: data.regionalUnit,
     country: data.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
     type: data.type || 'site',
     isPrimary: data.isPrimary ?? false,
-    label: data.label,
-    blockSide: data.blockSide,
-    blockSideDescription: data.blockSideDescription,
-    cadastralCode: data.cadastralCode,
-    municipality: data.municipality,
-    neighborhood: data.neighborhood,
-    coordinates: data.coordinates,
-    sortOrder: data.sortOrder ?? 0
+    sortOrder: data.sortOrder ?? 0,
+    // Optional fields: only include if defined (Firestore rejects undefined)
+    ...(data.number ? { number: data.number } : {}),
+    ...(data.region ? { region: data.region } : {}),
+    ...(data.regionalUnit ? { regionalUnit: data.regionalUnit } : {}),
+    ...(data.label ? { label: data.label } : {}),
+    ...(data.blockSide ? { blockSide: data.blockSide } : {}),
+    ...(data.blockSideDescription ? { blockSideDescription: data.blockSideDescription } : {}),
+    ...(data.cadastralCode ? { cadastralCode: data.cadastralCode } : {}),
+    ...(data.municipality ? { municipality: data.municipality } : {}),
+    ...(data.neighborhood ? { neighborhood: data.neighborhood } : {}),
+    ...(data.coordinates ? { coordinates: data.coordinates } : {}),
   };
 }
 
