@@ -87,6 +87,7 @@ export function DocumentsProjectTab({ project, data, onNavigateToTab }: Document
       domain="construction"
       category="documents"
       purpose="document"
+      fetchAllDomains
       entryPointExcludeCategories={['photos', 'videos']}
       enableBuildingLink
       onNavigateToFloors={onNavigateToTab ? () => onNavigateToTab('structure') : undefined}

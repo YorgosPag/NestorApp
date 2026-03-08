@@ -119,6 +119,8 @@ export interface EntityFilesManagerProps {
   onNavigateToFloors?: () => void;
   /** Override the link text for the navigate-to-floors action (e.g. "Go to Buildings" at project level) */
   navigateToFloorsLabel?: string;
+  /** 🏢 ENTERPRISE: Fetch ALL files regardless of domain/category (for Documents tab that shows all file types) */
+  fetchAllDomains?: boolean;
 }
 
 // ============================================================================
@@ -157,6 +159,7 @@ export function EntityFilesManager({
   enableBuildingLink = false,
   onNavigateToFloors,
   navigateToFloorsLabel,
+  fetchAllDomains,
 }: EntityFilesManagerProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -208,8 +211,8 @@ export function EntityFilesManager({
     entityType,
     entityId,
     companyId, // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
-    domain,
-    category,
+    domain: fetchAllDomains ? undefined : domain,
+    category: fetchAllDomains ? undefined : category,
     purpose, // 🏢 ENTERPRISE: Filter by purpose for separate tabs (project-floorplan vs parking-floorplan)
     autoFetch: true,
   });
@@ -304,11 +307,12 @@ export function EntityFilesManager({
     setUploading(true);
 
     try {
-      // 🏢 ENTERPRISE: Use entry point purpose for naming, but KEEP same domain/category
-      // CRITICAL: Domain/category must match props, otherwise refetch() won't find uploaded files!
-      const uploadDomain = domain; // Always use props domain (NOT entry point)
-      const uploadCategory = category; // Always use props category (NOT entry point)
-      const uploadPurpose = purpose || selectedEntryPoint?.purpose; // 🏢 ENTERPRISE: Tab purpose has priority over entry point (for Floorplan tab separation)
+      // 🏢 ENTERPRISE: Use entry point's domain/category for correct tree folder structure
+      // Entry points define where the file belongs (e.g., admin/permits for "Οικοδομική Άδεια")
+      // Fallback to props domain/category when no entry point is selected
+      const uploadDomain = selectedEntryPoint?.domain || domain;
+      const uploadCategory = selectedEntryPoint?.category || category;
+      const uploadPurpose = purpose || selectedEntryPoint?.purpose;
 
       logger.info(`[EntityFilesManager] Starting upload of ${selectedFiles.length} files`);
 
