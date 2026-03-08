@@ -338,7 +338,9 @@ export function EntityFilesManager({
             ext,
             contentType: file.type,
             createdBy: currentUserId,
-            customTitle: selectedEntryPoint?.requiresCustomTitle ? customTitle : undefined, // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+            customTitle: selectedEntryPoint?.requiresCustomTitle
+              ? customTitle
+              : selectedEntryPoint?.label?.el, // 🏢 ENTERPRISE: Entry point label as display name (e.g., "Οικοδομική Άδεια")
           });
           logger.info(`[EntityFilesManager] Created FileRecord: ${fileId}`);
 
