@@ -23,6 +23,12 @@ interface BuildingDetailsProps {
   isEditing?: boolean;
   /** Callback to update lifted edit state */
   onSetEditing?: (editing: boolean) => void;
+  /** 🏢 ENTERPRISE: "Fill then Create" — form is in create mode, building not yet in Firestore */
+  isCreateMode?: boolean;
+  /** Callback after successful creation — receives real Firestore building ID */
+  onBuildingCreated?: (buildingId: string) => void;
+  /** Callback to cancel create mode — deselects the temp building */
+  onCancelCreate?: () => void;
 }
 
 export const BuildingDetails = React.memo(function BuildingDetails({
@@ -32,6 +38,9 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   startInEditMode,
   isEditing: externalIsEditing,
   onSetEditing,
+  isCreateMode,
+  onBuildingCreated,
+  onCancelCreate,
 }: BuildingDetailsProps) {
   // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
@@ -60,8 +69,13 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   }, []);
 
   const handleCancel = useCallback(() => {
-    setIsEditing(false);
-  }, []);
+    if (isCreateMode) {
+      // 🏢 ENTERPRISE: Cancel in create mode — discard temp building entirely
+      onCancelCreate?.();
+    } else {
+      setIsEditing(false);
+    }
+  }, [isCreateMode, onCancelCreate]);
 
   // Reset or activate edit mode when building selection changes
   React.useEffect(() => {
@@ -89,6 +103,8 @@ export const BuildingDetails = React.memo(function BuildingDetails({
           isEditing={isEditing}
           onEditingChange={setIsEditing}
           saveRef={saveRef}
+          isCreateMode={isCreateMode}
+          onBuildingCreated={onBuildingCreated}
         />
       }
       emptyStateProps={{
@@ -98,7 +114,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
     />
   );
 }, (prev, next) => {
-  // [PERF] Only re-render when building identity changes — avoids
-  // re-rendering the heavy BuildingTabs panel on unrelated parent updates.
-  return prev.building?.id === next.building?.id;
+  // [PERF] Only re-render when building identity or create mode changes
+  return prev.building?.id === next.building?.id
+    && prev.isCreateMode === next.isCreateMode;
 });

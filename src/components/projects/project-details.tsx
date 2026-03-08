@@ -41,6 +41,12 @@ interface ProjectDetailsProps {
   isEditing?: boolean;
   /** Callback to update lifted edit state */
   onSetEditing?: (editing: boolean) => void;
+  /** 🏢 ENTERPRISE: "Fill then Create" — project not yet in Firestore */
+  isCreateMode?: boolean;
+  /** Callback after successful creation — receives real Firestore project ID */
+  onProjectCreated?: (projectId: string) => void;
+  /** Callback to cancel create mode */
+  onCancelCreate?: () => void;
 }
 
 // ============================================================================
@@ -54,6 +60,9 @@ export function ProjectDetails({
   onDeleteProject,
   isEditing: externalIsEditing,
   onSetEditing,
+  isCreateMode,
+  onProjectCreated,
+  onCancelCreate,
 }: ProjectDetailsProps) {
   const { t } = useTranslation('projects');
 
@@ -70,8 +79,12 @@ export function ProjectDetails({
   }, [setIsEditing]);
 
   const handleCancelEdit = useCallback(() => {
-    setIsEditing(false);
-  }, [setIsEditing]);
+    if (isCreateMode) {
+      onCancelCreate?.();
+    } else {
+      setIsEditing(false);
+    }
+  }, [setIsEditing, isCreateMode, onCancelCreate]);
 
   const handleSaveEdit = useCallback(() => {
     // Delegate to the tab's save function if registered
@@ -115,6 +128,8 @@ export function ProjectDetails({
             isEditing,
             onSetEditing: setIsEditing,
             registerSaveCallback,
+            isCreateMode,
+            onProjectCreated,
           }}
         />
       }

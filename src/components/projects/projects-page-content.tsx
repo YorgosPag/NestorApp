@@ -29,7 +29,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createProject, deleteProject } from '@/services/projects-client.service';
+import { deleteProject } from '@/services/projects-client.service';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -87,55 +87,50 @@ export function ProjectsPageContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 🏢 ENTERPRISE: Inline project creation — creates project and opens in edit mode
+  // 🏢 ENTERPRISE: "Fill then Create" pattern (Salesforce/Procore/SAP)
+  // No API call on "New" — open empty form, create on Save
+  const TEMP_PROJECT_ID = '__new__';
   const [startInEditMode, setStartInEditMode] = useState(false);
-  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const isCreateMode = selectedProject?.id === TEMP_PROJECT_ID;
 
-  const handleNewProject = useCallback(async () => {
-    if (isCreatingProject) return;
-    setIsCreatingProject(true);
-
-    // 🏢 ENTERPRISE: companyId is required for tenant isolation
-    // Server forces ctx.companyId regardless — send it to satisfy API
-    const defaultCompanyId = companies[0]?.id;
-    if (!defaultCompanyId) {
-      logger.error('No company available for project creation');
-      setIsCreatingProject(false);
-      return;
-    }
-
-    const result = await createProject({
-      name: t('page.newProject'),
-      companyId: defaultCompanyId,
+  const handleNewProject = useCallback(() => {
+    const defaultCompanyId = companies[0]?.id || '';
+    const tempProject: Project = {
+      id: TEMP_PROJECT_ID,
+      name: '',
+      title: '',
+      description: '',
       status: 'planning',
-    });
+      companyId: defaultCompanyId,
+      company: '',
+      address: '',
+      city: '',
+      location: '',
+      projectCode: '',
+      progress: 0,
+      totalValue: 0,
+      totalArea: 0,
+      lastUpdate: new Date().toISOString(),
+    };
+    setSelectedProject(tempProject);
+    setStartInEditMode(true);
+    logger.info('New project form opened (Fill then Create)');
+  }, [companies, setSelectedProject]);
 
-    if (result.success && result.projectId) {
-      logger.info('Project created inline', { projectId: result.projectId });
-      // 🏢 ENTERPRISE: Create local project object for immediate display
-      // Company field left empty — user selects it in edit mode
-      const newProject: Project = {
-        id: result.projectId,
-        name: t('page.newProject'),
-        title: '',
-        description: '',
-        status: 'planning',
-        companyId: defaultCompanyId,
-        company: '',
-        address: '',
-        city: '',
-        location: '',
-        projectCode: '',
-        progress: 0,
-        totalValue: 0,
-        totalArea: 0,
-        lastUpdate: new Date().toISOString(),
-      };
-      setSelectedProject(newProject);
-      setStartInEditMode(true);
+  // 🏢 ENTERPRISE: After successful creation, replace temp project with real one
+  const handleProjectCreated = useCallback((realProjectId: string) => {
+    if (selectedProject && selectedProject.id === TEMP_PROJECT_ID) {
+      setSelectedProject({ ...selectedProject, id: realProjectId });
+      setStartInEditMode(false);
     }
-    setIsCreatingProject(false);
-  }, [companies, setSelectedProject, isCreatingProject, t]);
+  }, [selectedProject, setSelectedProject]);
+
+  // 🏢 ENTERPRISE: Cancel create mode — deselect project
+  const handleCancelCreate = useCallback(() => {
+    if (isCreateMode) {
+      setSelectedProject(null);
+    }
+  }, [isCreateMode, setSelectedProject]);
 
   // 🏢 ENTERPRISE: Delete project — centralized DeleteConfirmDialog (not browser confirm)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -311,6 +306,9 @@ export function ProjectsPageContent() {
             onNewProject={handleNewProject}
             onDeleteProject={handleDeleteProject}
             startInEditMode={startInEditMode}
+            isCreateMode={isCreateMode}
+            onProjectCreated={handleProjectCreated}
+            onCancelCreate={handleCancelCreate}
           />
         </ListContainer>
 

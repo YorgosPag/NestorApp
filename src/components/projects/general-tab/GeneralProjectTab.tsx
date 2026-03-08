@@ -12,6 +12,7 @@ import { useAutosave } from './hooks/useAutosave';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { updateProject } from '@/services/projects.service';
+import { createProject } from '@/services/projects-client.service';
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('GeneralProjectTab');
@@ -23,6 +24,10 @@ interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
   onSetEditing?: (editing: boolean) => void;
   /** Register save callback with parent for header Save button */
   registerSaveCallback?: (saveFn: () => void) => void;
+  /** 🏢 ENTERPRISE: "Fill then Create" — project not yet in Firestore */
+  isCreateMode?: boolean;
+  /** Callback after successful creation — receives real Firestore project ID */
+  onProjectCreated?: (projectId: string) => void;
 }
 
 export function GeneralProjectTab({
@@ -30,6 +35,8 @@ export function GeneralProjectTab({
   isEditing: externalIsEditing,
   onSetEditing,
   registerSaveCallback,
+  isCreateMode,
+  onProjectCreated,
 }: ExtendedGeneralProjectTabProps) {
   const { t } = useTranslation('projects');
   const spacing = useSpacingTokens();
@@ -101,45 +108,69 @@ export function GeneralProjectTab({
     try {
       setIsSaving(true);
       setSaveError(null);
-      logger.info('Saving project via Server Action...', { data: projectData });
 
-      const updatePayload: Parameters<typeof updateProject>[1] = {
-        name: projectData.name,
-        title: projectData.licenseTitle,
-        status: projectData.status,
-        description: projectData.description,
-        client: projectData.client || undefined,
-        location: projectData.location || undefined,
-        type: projectData.type || undefined,
-        priority: projectData.priority || undefined,
-        riskLevel: projectData.riskLevel || undefined,
-        complexity: projectData.complexity || undefined,
-        budget: typeof projectData.budget === 'number' ? projectData.budget : undefined,
-        totalValue: typeof projectData.totalValue === 'number' ? projectData.totalValue : undefined,
-        totalArea: typeof projectData.totalArea === 'number' ? projectData.totalArea : undefined,
-        duration: typeof projectData.duration === 'number' ? projectData.duration : undefined,
-        startDate: projectData.startDate || undefined,
-        completionDate: projectData.completionDate || undefined,
-      };
+      if (isCreateMode) {
+        // 🏢 ENTERPRISE: "Fill then Create" — first save creates the project
+        logger.info('Creating new project...', { data: projectData });
 
-      const result = await updateProject(project.id, updatePayload);
+        const result = await createProject({
+          name: projectData.name || 'Νέο Έργο',
+          title: projectData.licenseTitle,
+          description: projectData.description,
+          status: projectData.status || 'planning',
+          companyId: project.companyId || '',
+        });
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to save project');
-      }
+        if (!result.success || !result.projectId) {
+          throw new Error(result.error || 'Failed to create project');
+        }
 
-      logger.info('Project saved successfully via Server Action');
-      setIsEditing(false);
+        logger.info('Project created successfully', { projectId: result.projectId });
+        setIsEditing(false);
+        onProjectCreated?.(result.projectId);
 
-      RealtimeService.dispatch('PROJECT_UPDATED', {
-        projectId: project.id,
-        updates: {
+      } else {
+        // 🏢 ENTERPRISE: Standard update flow (PATCH)
+        logger.info('Updating project...', { data: projectData });
+
+        const updatePayload: Parameters<typeof updateProject>[1] = {
           name: projectData.name,
           title: projectData.licenseTitle,
           status: projectData.status,
-        },
-        timestamp: Date.now()
-      });
+          description: projectData.description,
+          client: projectData.client || undefined,
+          location: projectData.location || undefined,
+          type: projectData.type || undefined,
+          priority: projectData.priority || undefined,
+          riskLevel: projectData.riskLevel || undefined,
+          complexity: projectData.complexity || undefined,
+          budget: typeof projectData.budget === 'number' ? projectData.budget : undefined,
+          totalValue: typeof projectData.totalValue === 'number' ? projectData.totalValue : undefined,
+          totalArea: typeof projectData.totalArea === 'number' ? projectData.totalArea : undefined,
+          duration: typeof projectData.duration === 'number' ? projectData.duration : undefined,
+          startDate: projectData.startDate || undefined,
+          completionDate: projectData.completionDate || undefined,
+        };
+
+        const result = await updateProject(project.id, updatePayload);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save project');
+        }
+
+        logger.info('Project updated successfully');
+        setIsEditing(false);
+
+        RealtimeService.dispatch('PROJECT_UPDATED', {
+          projectId: project.id,
+          updates: {
+            name: projectData.name,
+            title: projectData.licenseTitle,
+            status: projectData.status,
+          },
+          timestamp: Date.now()
+        });
+      }
 
     } catch (error) {
       logger.error('Error saving project:', { error: error });
@@ -147,7 +178,7 @@ export function GeneralProjectTab({
     } finally {
       setIsSaving(false);
     }
-  }, [projectData, project.id, setIsEditing]);
+  }, [projectData, project.id, project.companyId, setIsEditing, isCreateMode, onProjectCreated]);
 
   // Register save callback with parent so header Save button works
   useEffect(() => {

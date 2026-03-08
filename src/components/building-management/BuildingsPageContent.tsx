@@ -76,54 +76,52 @@ export function BuildingsPageContent() {
     setIsEditingBuilding(true);
   }, []);
 
-  // 🏢 ENTERPRISE: Inline building creation (same pattern as Projects)
+  // 🏢 ENTERPRISE: "Fill then Create" pattern (Salesforce/Procore/SAP)
+  // No API call on "New" — open empty form, create on Save
+  const TEMP_BUILDING_ID = '__new__';
   const [startInEditMode, setStartInEditMode] = useState(false);
-  const [isCreatingBuilding, setIsCreatingBuilding] = useState(false);
+  const isCreateMode = selectedBuilding?.id === TEMP_BUILDING_ID;
 
-  const handleNewBuilding = useCallback(async () => {
-    if (isCreatingBuilding) return;
-    setIsCreatingBuilding(true);
-
-    const defaultCompanyId = companies[0]?.id;
-    if (!defaultCompanyId) {
-      logger.error('No company available for building creation');
-      setIsCreatingBuilding(false);
-      return;
-    }
-
-    const result = await createBuilding({
+  const handleNewBuilding = useCallback(() => {
+    const defaultCompanyId = companies[0]?.id || '';
+    const tempBuilding = {
+      id: TEMP_BUILDING_ID,
       name: '',
-      companyId: defaultCompanyId,
-      company: companies[0]?.companyName || '',
+      description: '',
       status: 'planning',
-    });
+      companyId: defaultCompanyId,
+      company: '',
+      address: '',
+      city: '',
+      location: '',
+      totalArea: 0,
+      builtArea: 0,
+      floors: 0,
+      units: 0,
+      totalValue: 0,
+      progress: 0,
+      projectId: null,
+      createdAt: new Date().toISOString(),
+    } as BuildingType;
+    setSelectedBuilding(tempBuilding);
+    setStartInEditMode(true);
+    logger.info('New building form opened (Fill then Create)');
+  }, [companies, setSelectedBuilding]);
 
-    if (result.success && result.buildingId) {
-      logger.info('Building created inline', { buildingId: result.buildingId });
-      const newBuilding = {
-        id: result.buildingId,
-        name: '',
-        description: '',
-        status: 'planning',
-        companyId: defaultCompanyId,
-        company: companies[0]?.companyName || '',
-        address: '',
-        city: '',
-        location: '',
-        totalArea: 0,
-        builtArea: 0,
-        floors: 0,
-        units: 0,
-        totalValue: 0,
-        progress: 0,
-        projectId: null,
-        createdAt: new Date().toISOString(),
-      } as BuildingType;
-      setSelectedBuilding(newBuilding);
-      setStartInEditMode(true);
+  // 🏢 ENTERPRISE: After successful creation, replace temp building with real one
+  const handleBuildingCreated = useCallback((realBuildingId: string) => {
+    if (selectedBuilding && selectedBuilding.id === TEMP_BUILDING_ID) {
+      setSelectedBuilding({ ...selectedBuilding, id: realBuildingId } as BuildingType);
+      setStartInEditMode(false);
     }
-    setIsCreatingBuilding(false);
-  }, [companies, setSelectedBuilding, isCreatingBuilding]);
+  }, [selectedBuilding, setSelectedBuilding]);
+
+  // 🏢 ENTERPRISE: Cancel create mode — deselect building
+  const handleCancelCreate = useCallback(() => {
+    if (isCreateMode) {
+      setSelectedBuilding(null);
+    }
+  }, [isCreateMode, setSelectedBuilding]);
 
   // 🏢 ENTERPRISE: Delete building — centralized DeleteConfirmDialog (ADR-003)
   const [buildingToDelete, setBuildingToDelete] = useState<BuildingType | null>(null);
@@ -344,6 +342,9 @@ export function BuildingsPageContent() {
                   startInEditMode={startInEditMode}
                   isEditing={isEditingBuilding}
                   onSetEditing={setIsEditingBuilding}
+                  isCreateMode={isCreateMode}
+                  onBuildingCreated={handleBuildingCreated}
+                  onCancelCreate={handleCancelCreate}
                 />
               </section>
 
@@ -390,6 +391,9 @@ export function BuildingsPageContent() {
                     startInEditMode={startInEditMode}
                     isEditing={isEditingBuilding}
                     onSetEditing={setIsEditingBuilding}
+                    isCreateMode={isCreateMode}
+                    onBuildingCreated={handleBuildingCreated}
+                    onCancelCreate={handleCancelCreate}
                   />
                 )}
               </MobileDetailsSlideIn>

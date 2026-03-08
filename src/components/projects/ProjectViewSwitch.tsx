@@ -34,10 +34,16 @@ interface ProjectViewSwitchProps {
   onDeleteProject?: (project: Project) => void;
   /** Start in edit mode (for inline project creation) */
   startInEditMode?: boolean;
+  /** 🏢 ENTERPRISE: "Fill then Create" — form is in create mode */
+  isCreateMode?: boolean;
+  /** Callback after successful creation — receives real Firestore project ID */
+  onProjectCreated?: (projectId: string) => void;
+  /** Callback to cancel create mode */
+  onCancelCreate?: () => void;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -123,6 +129,9 @@ export function ProjectViewSwitch({
               onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
               isEditing={isEditingProject}
             onSetEditing={setIsEditingProject}
+            isCreateMode={isCreateMode}
+            onProjectCreated={onProjectCreated}
+            onCancelCreate={onCancelCreate}
             />
           )}
         </MobileDetailsSlideIn>
@@ -152,6 +161,9 @@ export function ProjectViewSwitch({
             onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
             isEditing={isEditingProject}
             onSetEditing={setIsEditingProject}
+            isCreateMode={isCreateMode}
+            onProjectCreated={onProjectCreated}
+            onCancelCreate={onCancelCreate}
           />
         )}
       </div>
@@ -192,6 +204,9 @@ export function ProjectViewSwitch({
             onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
             isEditing={isEditingProject}
             onSetEditing={setIsEditingProject}
+            isCreateMode={isCreateMode}
+            onProjectCreated={onProjectCreated}
+            onCancelCreate={onCancelCreate}
           />
         )}
       </MobileDetailsSlideIn>

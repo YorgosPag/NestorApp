@@ -29,9 +29,13 @@ interface BuildingTabsProps {
     onEditingChange?: (editing: boolean) => void;
     /** Ref for save delegation — GeneralTabContent registers its save here */
     saveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
+    /** 🏢 ENTERPRISE: "Fill then Create" — building not yet in Firestore */
+    isCreateMode?: boolean;
+    /** Callback after successful creation — receives real Firestore building ID */
+    onBuildingCreated?: (buildingId: string) => void;
 }
 
-export function BuildingTabs({ building, isEditing, onEditingChange, saveRef }: BuildingTabsProps) {
+export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated }: BuildingTabsProps) {
     // Load building floorplans from Firestore
     const {
         buildingFloorplan,
@@ -103,6 +107,8 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef }: 
                 isEditing,
                 onEditingChange,
                 onSaveRef: saveRef,
+                isCreateMode,
+                onBuildingCreated,
             }}
         />
     );

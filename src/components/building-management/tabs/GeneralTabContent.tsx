@@ -11,8 +11,8 @@ import { BuildingAddressesCard } from './GeneralTabContent/BuildingAddressesCard
 import type { Building } from '../BuildingsPageContent';
 import { validateForm } from './GeneralTabContent/utils';
 import { BuildingStats } from './BuildingStats';
-// ENTERPRISE: Firestore persistence for building updates
-import { updateBuilding } from '../building-services';
+// ENTERPRISE: Firestore persistence for building CRUD
+import { updateBuilding, createBuilding } from '../building-services';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('GeneralTabContent');
@@ -42,13 +42,19 @@ interface GeneralTabContentProps {
   onEditingChange?: (editing: boolean) => void;
   /** Ref where this component registers its save function for parent delegation */
   onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
+  /** 🏢 ENTERPRISE: "Fill then Create" — building not yet in Firestore */
+  isCreateMode?: boolean;
+  /** Callback after successful creation — receives real Firestore building ID */
+  onBuildingCreated?: (buildingId: string) => void;
 }
 
 export function GeneralTabContent({
   building,
   isEditing: externalIsEditing,
   onEditingChange,
-  onSaveRef
+  onSaveRef,
+  isCreateMode,
+  onBuildingCreated,
 }: GeneralTabContentProps) {
   // Internal editing state (used when no parent controls editing)
   const [internalIsEditing, setInternalIsEditing] = useState(false);
@@ -110,7 +116,8 @@ export function GeneralTabContent({
   }, [formData, effectiveIsEditing]);
 
   /**
-   * ENTERPRISE: Handle building save using Firestore
+   * 🏢 ENTERPRISE: Handle building save using Firestore
+   * Supports both "Create" (POST) and "Update" (PATCH) modes
    * Returns true on success, false on failure
    */
   const handleSave = useCallback(async (): Promise<boolean> => {
@@ -121,10 +128,8 @@ export function GeneralTabContent({
     try {
       setIsSaving(true);
       setSaveError(null);
-      logger.info('Saving building to Firestore', { formData });
 
-      // ENTERPRISE: Call Firestore update function
-      const result = await updateBuilding(String(building.id), {
+      const payload = {
         name: formData.name,
         description: formData.description,
         totalArea: formData.totalArea,
@@ -136,17 +141,44 @@ export function GeneralTabContent({
         completionDate: formData.completionDate,
         address: formData.address,
         city: formData.city,
-      });
+      };
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to save building');
+      if (isCreateMode) {
+        // 🏢 ENTERPRISE: "Fill then Create" — first save creates the building
+        logger.info('Creating new building in Firestore', { formData });
+        const result = await createBuilding({
+          ...payload,
+          companyId: building.companyId || '',
+          status: 'planning',
+        });
+
+        if (!result.success || !result.buildingId) {
+          throw new Error(result.error || 'Failed to create building');
+        }
+
+        logger.info('Building created successfully', { buildingId: result.buildingId });
+        didSaveRef.current = true;
+        setEffectiveEditing(false);
+        setLastSaved(new Date());
+        // Notify parent — replaces temp ID with real Firestore ID
+        onBuildingCreated?.(result.buildingId);
+        return true;
+
+      } else {
+        // 🏢 ENTERPRISE: Standard update flow (PATCH)
+        logger.info('Updating building in Firestore', { buildingId: building.id });
+        const result = await updateBuilding(String(building.id), payload);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save building');
+        }
+
+        logger.info('Building updated successfully');
+        didSaveRef.current = true;
+        setEffectiveEditing(false);
+        setLastSaved(new Date());
+        return true;
       }
-
-      logger.info('Building saved successfully to Firestore');
-      didSaveRef.current = true;
-      setEffectiveEditing(false);
-      setLastSaved(new Date());
-      return true;
 
     } catch (error) {
       logger.error('Error saving building', { error });
@@ -155,7 +187,7 @@ export function GeneralTabContent({
     } finally {
       setIsSaving(false);
     }
-  }, [building.id, formData, setEffectiveEditing]);
+  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated]);
 
   // Register save function for parent header delegation
   useEffect(() => {
@@ -203,40 +235,45 @@ export function GeneralTabContent({
           <span>{saveError}</span>
         </aside>
       )}
-      <BuildingStats buildingId={String(building.id)} />
+      {!isCreateMode && <BuildingStats buildingId={String(building.id)} />}
       <BasicInfoCard
         formData={formData}
         updateField={updateField}
         isEditing={effectiveIsEditing}
         errors={errors}
       />
-      {/* ENTERPRISE: Company + Project selectors side-by-side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <CompanySelectorCard
+      {/* ENTERPRISE: Company + Project selectors — disabled in create mode
+          (building must exist in Firestore before linking to company/project) */}
+      {!isCreateMode && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <CompanySelectorCard
+            buildingId={String(building.id)}
+            currentCompanyId={building.companyId}
+            isEditing={effectiveIsEditing}
+            onCompanyChanged={(newCompanyId, companyName) => {
+              logger.info('Building linked to company', { buildingId: building.id, companyName, newCompanyId });
+            }}
+          />
+          <ProjectSelectorCard
+            buildingId={String(building.id)}
+            currentProjectId={building.projectId}
+            isEditing={effectiveIsEditing}
+            onProjectChanged={(newProjectId) => {
+              logger.info('Building linked to project', { buildingId: building.id, newProjectId });
+            }}
+          />
+        </div>
+      )}
+      {/* ENTERPRISE: Multi-address management (ADR-167) — available after first save */}
+      {!isCreateMode && (
+        <BuildingAddressesCard
           buildingId={String(building.id)}
-          currentCompanyId={building.companyId}
-          isEditing={effectiveIsEditing}
-          onCompanyChanged={(newCompanyId, companyName) => {
-            logger.info('Building linked to company', { buildingId: building.id, companyName, newCompanyId });
-          }}
+          projectId={building.projectId}
+          addresses={building.addresses}
+          legacyAddress={building.address}
+          legacyCity={building.city}
         />
-        <ProjectSelectorCard
-          buildingId={String(building.id)}
-          currentProjectId={building.projectId}
-          isEditing={effectiveIsEditing}
-          onProjectChanged={(newProjectId) => {
-            logger.info('Building linked to project', { buildingId: building.id, newProjectId });
-          }}
-        />
-      </div>
-      {/* ENTERPRISE: Multi-address management (ADR-167) */}
-      <BuildingAddressesCard
-        buildingId={String(building.id)}
-        projectId={building.projectId}
-        addresses={building.addresses}
-        legacyAddress={building.address}
-        legacyCity={building.city}
-      />
+      )}
       <TechnicalSpecsCard
         formData={formData}
         updateField={updateField}
