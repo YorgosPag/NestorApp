@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -92,7 +93,8 @@ export const GET = withStandardRateLimit(async function GET(
         }
 
         const projectData = projectDoc.data();
-        if (projectData?.companyId !== ctx.companyId) {
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
+        if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
           logger.warn('TENANT ISOLATION VIOLATION: attempted to access project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
           return NextResponse.json({
             success: false,
