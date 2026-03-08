@@ -24,10 +24,9 @@ interface BuildingDeleteResponse {
 export const DELETE = withStandardRateLimit(
   withAuth<ApiSuccessResponse<BuildingDeleteResponse>>(
     async (
-      _request: NextRequest,
+      request: NextRequest,
       ctx: AuthContext,
       _cache: PermissionCache,
-      segmentData?: { params: Promise<{ buildingId: string }> }
     ) => {
       const adminDb = getAdminFirestore();
       if (!adminDb) {
@@ -35,8 +34,10 @@ export const DELETE = withStandardRateLimit(
         throw new ApiError(503, 'Database unavailable');
       }
 
-      const params = await segmentData?.params;
-      const buildingId = params?.buildingId;
+      // Extract buildingId from URL path: /api/buildings/[buildingId]
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const buildingId = pathParts[pathParts.length - 1];
 
       if (!buildingId) {
         throw new ApiError(400, 'Building ID is required');
