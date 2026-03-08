@@ -8,9 +8,6 @@
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
@@ -162,17 +159,21 @@ export async function createBuilding(
 }
 
 /**
- * 🏗️ ENTERPRISE: Διαγραφή κτιρίου από το Firebase
- * Διαγράφει τα δεδομένα από τη βάση και ενημερώνει το real-time service
+ * 🏗️ ENTERPRISE: Διαγραφή κτιρίου μέσω API (Admin SDK)
+ *
+ * 🔒 SECURITY: Firestore rules απαγορεύουν client-side writes (allow write: if false)
+ *              Χρησιμοποιούμε API endpoint που τρέχει με Admin SDK
+ *
+ * @see src/app/api/buildings/[buildingId]/route.ts (DELETE handler)
  */
 export async function deleteBuilding(
   buildingId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    logger.info('Deleting building', { buildingId });
+    logger.info('Deleting building via API', { buildingId });
 
-    const buildingRef = doc(db, COLLECTIONS.BUILDINGS, buildingId);
-    await deleteDoc(buildingRef);
+    // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
+    await apiClient.delete(`/api/buildings/${buildingId}`);
 
     logger.info('Building deleted successfully', { buildingId });
 

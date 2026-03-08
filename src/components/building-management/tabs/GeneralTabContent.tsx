@@ -5,7 +5,6 @@ import { Header } from './GeneralTabContent/Header';
 import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 import { TechnicalSpecsCard } from './GeneralTabContent/TechnicalSpecsCard';
 import { ProgressCard } from './GeneralTabContent/ProgressCard';
-import { FilesCard } from './GeneralTabContent/FilesCard';
 import { CompanySelectorCard } from './GeneralTabContent/CompanySelectorCard';
 import { ProjectSelectorCard } from './GeneralTabContent/ProjectSelectorCard';
 import { BuildingAddressesCard } from './GeneralTabContent/BuildingAddressesCard';
@@ -245,7 +244,6 @@ export function GeneralTabContent({
         errors={errors}
       />
       <ProgressCard progress={building.progress} />
-      <FilesCard />
     </div>
   );
 }
