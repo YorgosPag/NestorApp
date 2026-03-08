@@ -2041,6 +2041,7 @@
     "adding": "Προσθήκη...",
     "remove": "Αφαίρεση",
     "loading": "Φόρτωση...",
+    "inheritedFromProject": "Από το Έργο",
     "roles": {
       "engineer": "Μηχανικός",
       "contractor": "Εργολάβος",

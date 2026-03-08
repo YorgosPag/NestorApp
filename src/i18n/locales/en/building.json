@@ -2041,6 +2041,7 @@
     "adding": "Adding...",
     "remove": "Remove",
     "loading": "Loading...",
+    "inheritedFromProject": "From Project",
     "roles": {
       "engineer": "Engineer",
       "contractor": "Contractor",
