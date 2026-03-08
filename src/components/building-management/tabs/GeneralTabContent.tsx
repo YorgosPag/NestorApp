@@ -3,11 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './GeneralTabContent/Header';
 import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
-import { TechnicalSpecsCard } from './GeneralTabContent/TechnicalSpecsCard';
 // BuildingStats → moved to "Αναλυτικά" tab (AnalyticsTabContent)
 // ProgressCard → moved to "Χρονοδιάγραμμα" tab (TimelineTabContent)
 import type { Building } from '../BuildingsPageContent';
-import { validateForm } from './GeneralTabContent/utils';
 // ENTERPRISE: Firestore persistence for building CRUD
 import { updateBuilding, createBuilding, getProjectsList } from '../building-services';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -26,11 +24,6 @@ function buildFormData(building: Building) {
   return {
     name: building.name,
     description: building.description || '',
-    totalArea: building.totalArea,
-    builtArea: building.builtArea ?? 0,
-    floors: building.floors,
-    units: building.units ?? 0,
-    totalValue: building.totalValue ?? 0,
     startDate: building.startDate || '',
     completionDate: building.completionDate || '',
     address: building.address || '',
@@ -127,7 +120,13 @@ export function GeneralTabContent({
    * Returns true on success, false on failure
    */
   const handleSave = useCallback(async (): Promise<boolean> => {
-    if (!validateForm(formData, setErrors)) {
+    // Validation: only name is required
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) {
+      newErrors.name = t('validation.nameRequired', { defaultValue: 'Name is required' });
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return false;
     }
 
@@ -138,11 +137,6 @@ export function GeneralTabContent({
       const payload = {
         name: formData.name,
         description: formData.description,
-        totalArea: formData.totalArea,
-        builtArea: formData.builtArea,
-        floors: formData.floors,
-        units: formData.units,
-        totalValue: formData.totalValue,
         startDate: formData.startDate,
         completionDate: formData.completionDate,
         address: formData.address,
@@ -190,7 +184,7 @@ export function GeneralTabContent({
     } finally {
       setIsSaving(false);
     }
-  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated]);
+  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, t]);
 
   // Register save function for parent header delegation
   useEffect(() => {
@@ -205,16 +199,7 @@ export function GeneralTabContent({
   }, [handleSave, onSaveRef]);
 
   const updateField = (field: string, value: string | number) => {
-    setFormData(prev => {
-        const newState = { ...prev, [field]: value };
-        // ENTERPRISE: Safe numeric check for auto-calculation
-        const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
-        if (field === 'totalArea' && numericValue > 0 && prev.builtArea === 0) {
-            return { ...newState, builtArea: Math.round(numericValue * 0.8) };
-        }
-        return newState;
-    });
-
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -348,12 +333,6 @@ export function GeneralTabContent({
           />
         </div>
       )}
-      <TechnicalSpecsCard
-        formData={formData}
-        updateField={updateField}
-        isEditing={effectiveIsEditing}
-        errors={errors}
-      />
     </section>
   );
 }
