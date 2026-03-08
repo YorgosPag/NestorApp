@@ -7,6 +7,8 @@ import AnalyticsOverview from './AnalyticsTabContent/AnalyticsOverview';
 import AnalyticsFinancial from './AnalyticsTabContent/AnalyticsFinancial';
 import AnalyticsProgress from './AnalyticsTabContent/AnalyticsProgress';
 import AnalyticsComparison from './AnalyticsTabContent/AnalyticsComparison';
+// BuildingStats moved here from GeneralTabContent (consistency refactor)
+import { BuildingStats } from './BuildingStats';
 import type { Building } from '../BuildingsPageContent';
 
 interface AnalyticsTabContentProps {
@@ -19,6 +21,9 @@ export default function AnalyticsTabContent({ building }: AnalyticsTabContentPro
 
   return (
     <section className="space-y-2">
+      {/* Building Stats — aggregated unit/sales data */}
+      <BuildingStats buildingId={String(building.id)} />
+
       <Header
         timeRange={timeRange}
         setTimeRange={setTimeRange}

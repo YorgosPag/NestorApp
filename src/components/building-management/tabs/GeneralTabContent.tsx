@@ -1,19 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './GeneralTabContent/Header';
 import { BasicInfoCard } from './GeneralTabContent/BasicInfoCard';
 import { TechnicalSpecsCard } from './GeneralTabContent/TechnicalSpecsCard';
-import { ProgressCard } from './GeneralTabContent/ProgressCard';
-import { CompanySelectorCard } from './GeneralTabContent/CompanySelectorCard';
-import { ProjectSelectorCard } from './GeneralTabContent/ProjectSelectorCard';
-// BuildingAddressesCard moved to separate "Τοποθεσίες" tab (BuildingLocationsTab)
+// BuildingStats → moved to "Αναλυτικά" tab (AnalyticsTabContent)
+// ProgressCard → moved to "Χρονοδιάγραμμα" tab (TimelineTabContent)
 import type { Building } from '../BuildingsPageContent';
 import { validateForm } from './GeneralTabContent/utils';
-import { BuildingStats } from './BuildingStats';
 // ENTERPRISE: Firestore persistence for building CRUD
-import { updateBuilding, createBuilding } from '../building-services';
+import { updateBuilding, createBuilding, getProjectsList } from '../building-services';
 import { createModuleLogger } from '@/lib/telemetry';
+// ENTERPRISE: Centralized EntityLinkCard (replaces CompanySelectorCard + ProjectSelectorCard)
+import { Building2, FolderKanban } from 'lucide-react';
+import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
+import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
+import { getAllActiveCompanies } from '@/services/companies.service';
+import { RealtimeService } from '@/services/realtime';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -56,6 +60,8 @@ export function GeneralTabContent({
   isCreateMode,
   onBuildingCreated,
 }: GeneralTabContentProps) {
+  const { t } = useTranslation('building');
+
   // Internal editing state (used when no parent controls editing)
   const [internalIsEditing, setInternalIsEditing] = useState(false);
 
@@ -79,8 +85,8 @@ export function GeneralTabContent({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Track cancel vs save transitions for form reset
-  const didSaveRef = useRef(false);
-  const prevEditingRef = useRef(effectiveIsEditing);
+  const didSaveRef = React.useRef(false);
+  const prevEditingRef = React.useRef(effectiveIsEditing);
 
   // Reset form data on cancel (editing → not editing, without a save)
   useEffect(() => {
@@ -116,7 +122,7 @@ export function GeneralTabContent({
   }, [formData, effectiveIsEditing]);
 
   /**
-   * 🏢 ENTERPRISE: Handle building save using Firestore
+   * Handle building save using Firestore
    * Supports both "Create" (POST) and "Update" (PATCH) modes
    * Returns true on success, false on failure
    */
@@ -144,7 +150,6 @@ export function GeneralTabContent({
       };
 
       if (isCreateMode) {
-        // 🏢 ENTERPRISE: "Fill then Create" — first save creates the building
         logger.info('Creating new building in Firestore', { formData });
         const result = await createBuilding({
           ...payload,
@@ -160,12 +165,10 @@ export function GeneralTabContent({
         didSaveRef.current = true;
         setEffectiveEditing(false);
         setLastSaved(new Date());
-        // Notify parent — replaces temp ID with real Firestore ID
         onBuildingCreated?.(result.buildingId);
         return true;
 
       } else {
-        // 🏢 ENTERPRISE: Standard update flow (PATCH)
         logger.info('Updating building in Firestore', { buildingId: building.id });
         const result = await updateBuilding(String(building.id), payload);
 
@@ -217,8 +220,66 @@ export function GeneralTabContent({
     }
   };
 
+  // =========================================================================
+  // EntityLinkCard callbacks — Company
+  // =========================================================================
+
+  const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
+    const companies = await getAllActiveCompanies();
+    return companies
+      .filter(c => c.id)
+      .map(c => ({ id: c.id!, name: c.companyName || '' }));
+  }, []);
+
+  const saveCompany = useCallback(async (newId: string | null, name: string) => {
+    try {
+      const result = await updateBuilding(String(building.id), {
+        companyId: newId,
+        company: name || null,
+      });
+      if (result.success) {
+        logger.info('Building linked to company', { buildingId: building.id, companyName: name });
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Failed to update' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
+    }
+  }, [building.id]);
+
+  // =========================================================================
+  // EntityLinkCard callbacks — Project
+  // =========================================================================
+
+  const loadProjects = useCallback(async (): Promise<EntityLinkOption[]> => {
+    const projects = await getProjectsList();
+    return projects.map(p => ({ id: p.id, name: p.name }));
+  }, []);
+
+  const saveProject = useCallback(async (newId: string | null) => {
+    try {
+      const result = await updateBuilding(String(building.id), {
+        projectId: newId,
+      });
+      if (result.success) {
+        logger.info('Building linked to project', { buildingId: building.id, projectId: newId });
+        // Dispatch real-time event for Navigation updates
+        RealtimeService.dispatchBuildingProjectLinked({
+          buildingId: String(building.id),
+          previousProjectId: building.projectId || null,
+          newProjectId: newId,
+          timestamp: Date.now(),
+        });
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Failed to update' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
+    }
+  }, [building.id, building.projectId]);
+
   return (
-    <div className="space-y-2">
+    <section className="space-y-2">
       <Header
         building={building}
         isEditing={effectiveIsEditing}
@@ -235,43 +296,64 @@ export function GeneralTabContent({
           <span>{saveError}</span>
         </aside>
       )}
-      {!isCreateMode && <BuildingStats buildingId={String(building.id)} />}
       <BasicInfoCard
         formData={formData}
         updateField={updateField}
         isEditing={effectiveIsEditing}
         errors={errors}
       />
-      {/* ENTERPRISE: Company + Project selectors — disabled in create mode
-          (building must exist in Firestore before linking to company/project) */}
+      {/* ENTERPRISE: Company + Project linking — EntityLinkCard (centralized)
+          Disabled in create mode (building must exist in Firestore before linking) */}
       {!isCreateMode && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <CompanySelectorCard
-            buildingId={String(building.id)}
-            currentCompanyId={building.companyId}
+          <EntityLinkCard
+            cardId="building-company-link"
+            icon={Building2}
+            currentValue={building.companyId}
+            loadOptions={loadCompanies}
+            onSave={saveCompany}
             isEditing={effectiveIsEditing}
-            onCompanyChanged={(newCompanyId, companyName) => {
-              logger.info('Building linked to company', { buildingId: building.id, companyName, newCompanyId });
+            labels={{
+              title: t('companySelector.title'),
+              label: t('companySelector.label'),
+              placeholder: t('companySelector.placeholder'),
+              noSelection: t('companySelector.noCompany'),
+              loading: t('companySelector.loading'),
+              save: t('companySelector.save'),
+              saving: t('companySelector.saving'),
+              success: t('companySelector.success'),
+              error: t('companySelector.error'),
+              currentLabel: t('companySelector.currentCompany'),
             }}
           />
-          <ProjectSelectorCard
-            buildingId={String(building.id)}
-            currentProjectId={building.projectId}
+          <EntityLinkCard
+            cardId="building-project-link"
+            icon={FolderKanban}
+            currentValue={building.projectId}
+            loadOptions={loadProjects}
+            onSave={saveProject}
             isEditing={effectiveIsEditing}
-            onProjectChanged={(newProjectId) => {
-              logger.info('Building linked to project', { buildingId: building.id, newProjectId });
+            labels={{
+              title: t('projectSelector.title'),
+              label: t('projectSelector.label'),
+              placeholder: t('projectSelector.placeholder'),
+              noSelection: t('projectSelector.noProject'),
+              loading: t('projectSelector.loading'),
+              save: t('projectSelector.save'),
+              saving: t('projectSelector.saving'),
+              success: t('projectSelector.success'),
+              error: t('projectSelector.error'),
+              currentLabel: t('projectSelector.currentProject'),
             }}
           />
         </div>
       )}
-      {/* BuildingAddressesCard moved to "Τοποθεσίες" tab (BuildingLocationsTab) */}
       <TechnicalSpecsCard
         formData={formData}
         updateField={updateField}
         isEditing={effectiveIsEditing}
         errors={errors}
       />
-      <ProgressCard progress={building.progress} />
-    </div>
+    </section>
   );
 }

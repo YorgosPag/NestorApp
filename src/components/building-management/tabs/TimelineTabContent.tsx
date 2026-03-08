@@ -13,6 +13,8 @@ import type { TimelineView } from './TimelineTabContent/TimelineViewToggle';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '../BuildingsPageContent';
+// ProgressCard moved here from GeneralTabContent (consistency refactor)
+import { ProgressCard } from './GeneralTabContent/ProgressCard';
 // 🏢 ENTERPRISE: Milestone Export — PDF & Excel (ADR-034)
 import { Download, FileText, Table2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -128,6 +130,9 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
     <section className="space-y-2">
       {/* View Toggle: Milestones | Gantt (ADR-034) */}
       <TimelineViewToggle activeView={activeView} onViewChange={setActiveView} />
+
+      {/* Construction Phase Progress — moved from Γενικά for consistency */}
+      <ProgressCard progress={(building.progress as number) ?? 0} />
 
       {/* Milestones View (existing) */}
       {activeView === 'milestones' && (
