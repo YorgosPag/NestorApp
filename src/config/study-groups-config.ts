@@ -68,7 +68,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'architectural',
-    entityLevels: ['building', 'project'],
+    entityLevels: ['project'],
     label: { el: 'Αρχιτεκτονικά / Πολεοδομικά', en: 'Architectural / Urban Planning' },
     description: {
       el: 'Κατόψεις, τομές, όψεις, τοπογραφικό, κάλυψη, δόμηση',
@@ -83,7 +83,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'structural',
-    entityLevels: ['building'],
+    entityLevels: ['project'],
     label: { el: 'Στατικά', en: 'Structural' },
     description: {
       el: 'Στατική μελέτη, σχέδια ξυλοτύπων, φέρουσα κατασκευή',
@@ -98,7 +98,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'mechanical',
-    entityLevels: ['building'],
+    entityLevels: ['project'],
     label: { el: 'Ηλεκτρομηχανολογικά (Η/Μ)', en: 'Mechanical / Electrical (MEP)' },
     description: {
       el: 'Ύδρευση, αποχέτευση, θέρμανση, κλιματισμός, ηλεκτρολογικά',
