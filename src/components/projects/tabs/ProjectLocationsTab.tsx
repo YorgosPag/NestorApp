@@ -25,7 +25,7 @@
  * @updated 2026-02-02 - Refactored to inline editing (Procore pattern)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { Project } from '@/types/project';
 import type { ProjectAddress, ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
 import { AddressCard } from '@/components/shared/addresses';
@@ -211,13 +211,23 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
 
-  // State management
-  const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(
+  // State management — derive addresses from project prop
+  const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(() =>
     project.addresses ||
       (project.address && project.city
         ? migrateLegacyAddress(project.address, project.city)
         : [])
   );
+
+  // 🏢 ENTERPRISE: Sync localAddresses when project changes (forceMount keeps component alive)
+  // Without this, switching projects shows stale addresses from the previous project
+  useEffect(() => {
+    const addresses = project.addresses ||
+      (project.address && project.city
+        ? migrateLegacyAddress(project.address, project.city)
+        : []);
+    setLocalAddresses(addresses);
+  }, [project.id]);
 
   // Inline form state
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);

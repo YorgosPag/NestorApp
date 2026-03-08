@@ -3,6 +3,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload, type ProjectDeletedPayload } from '@/services/realtime';
+import type { ProjectAddress } from '@/types/project/addresses';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFirestoreProjects');
@@ -27,6 +28,8 @@ export interface FirestoreProject {
   companyId: string;
   address: string;
   city: string;
+  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  addresses?: ProjectAddress[];
   progress: number;
   totalValue: number;
   startDate: string;
