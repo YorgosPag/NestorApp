@@ -73,6 +73,10 @@ class BOQService implements IBOQService {
     return this.repository.getByBuilding(buildingId);
   }
 
+  getByProject(projectId: string): Promise<BOQItem[]> {
+    return this.repository.getByProject(projectId);
+  }
+
   getById(id: string): Promise<BOQItem | null> {
     return this.repository.getById(id);
   }

@@ -207,7 +207,21 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 10. ΕΓΓΡΑΦΑ ΕΡΓΟΥ
+  // 10. ΕΠΙΜΕΤΡΗΣΕΙΣ ΕΡΓΟΥ (Aggregation — read-only, data entry at building level)
+  // -------------------------------------------------------------------------
+  {
+    id: 'measurements',
+    label: 'tabs.labels.measurements',
+    value: 'measurements',
+    icon: 'ruler',
+    description: 'Συγκεντρωτικές επιμετρήσεις από όλα τα κτίρια του έργου',
+    order: 10,
+    enabled: true,
+    component: 'ProjectMeasurementsTab',
+  },
+
+  // -------------------------------------------------------------------------
+  // 11. ΕΓΓΡΑΦΑ ΕΡΓΟΥ
   // -------------------------------------------------------------------------
   {
     id: 'documents',
@@ -215,13 +229,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'documents',
     icon: 'file-text',
     description: PROJECT_TAB_DESCRIPTIONS.DOCUMENTS,
-    order: 10,
+    order: 11,
     enabled: true,
     component: 'DocumentsProjectTab',
   },
 
   // -------------------------------------------------------------------------
-  // 11. ΦΩΤΟΓΡΑΦΙΕΣ
+  // 12. ΦΩΤΟΓΡΑΦΙΕΣ
   // -------------------------------------------------------------------------
   {
     id: 'photos',
@@ -229,13 +243,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'photos',
     icon: 'camera',
     description: PROJECT_TAB_DESCRIPTIONS.PHOTOS,
-    order: 11,
+    order: 12,
     enabled: true,
     component: 'PhotosTab',
   },
 
   // -------------------------------------------------------------------------
-  // 12. ΒΙΝΤΕΟ
+  // 13. ΒΙΝΤΕΟ
   // -------------------------------------------------------------------------
   {
     id: 'videos',
@@ -243,7 +257,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'videos',
     icon: 'video',
     description: PROJECT_TAB_DESCRIPTIONS.VIDEOS,
-    order: 12,
+    order: 13,
     enabled: true,
     component: 'VideosTab',
   },

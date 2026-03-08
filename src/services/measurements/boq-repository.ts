@@ -172,6 +172,24 @@ export class FirestoreBOQRepository implements IBOQRepository {
     }
   }
 
+  async getByProject(projectId: string): Promise<BOQItem[]> {
+    try {
+      const boqQuery = query(
+        collection(db, COLLECTIONS.BOQ_ITEMS),
+        where('projectId', '==', projectId),
+        orderBy('categoryCode', 'asc')
+      );
+
+      const snapshot = await getDocs(boqQuery);
+      return snapshot.docs
+        .map((document) => normalizeBOQItemSafe(document.id, document.data() as Record<string, unknown>))
+        .filter((item): item is BOQItem => item !== null);
+    } catch (error) {
+      logger.error('Error fetching BOQ items by project', { error, projectId });
+      return [];
+    }
+  }
+
   async getById(id: string): Promise<BOQItem | null> {
     try {
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);

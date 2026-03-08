@@ -36,6 +36,8 @@ import { ProjectFloorplanTab } from '@/components/projects/tabs/ProjectFloorplan
 import { ProjectParkingTab } from '@/components/projects/tabs/ProjectParkingTab';
 // 🏢 ENTERPRISE: Multi-address locations tab (ADR-167)
 import { ProjectLocationsTab } from '@/components/projects/tabs/ProjectLocationsTab';
+// 🏢 ENTERPRISE: Project-level measurements aggregation (read-only, data from buildings)
+import { ProjectMeasurementsTab } from '@/components/projects/tabs/ProjectMeasurementsTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -63,6 +65,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'FloorplanViewerTab': FloorplanViewerTab,
   // 🏢 ENTERPRISE: Multi-address locations management tab (ADR-167)
   'ProjectLocationsTab': ProjectLocationsTab,
+  // 🏢 ENTERPRISE: Project-level measurements aggregation (read-only)
+  'ProjectMeasurementsTab': ProjectMeasurementsTab,
 } as const;
 
 // ============================================================================

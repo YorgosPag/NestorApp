@@ -46,6 +46,9 @@ export interface IBOQRepository {
   /** Λήψη όλων των items ανά building */
   getByBuilding(buildingId: string): Promise<BOQItem[]>;
 
+  /** Λήψη όλων των items ανά project (aggregation across buildings) */
+  getByProject(projectId: string): Promise<BOQItem[]>;
+
   /** Λήψη ενός item βάσει ID */
   getById(id: string): Promise<BOQItem | null>;
 
@@ -84,6 +87,9 @@ export interface IBOQRepository {
 export interface IBOQService {
   /** Λήψη items ανά building */
   getByBuilding(buildingId: string): Promise<BOQItem[]>;
+
+  /** Λήψη items ανά project (aggregation across all buildings) */
+  getByProject(projectId: string): Promise<BOQItem[]>;
 
   /** Λήψη ενός item */
   getById(id: string): Promise<BOQItem | null>;
