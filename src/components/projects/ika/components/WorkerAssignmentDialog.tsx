@@ -3,6 +3,7 @@
 /**
  * Dialog for assigning an existing contact (worker) to a project.
  * Uses AssociationService.linkContactToEntity() — no new collection.
+ * 🔒 SECURITY: Search via Admin SDK API (not client-side Firestore)
  */
 
 import React, { useState, useCallback } from 'react';
@@ -23,10 +24,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { AssociationService } from '@/services/association.service';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import type { IndividualContact } from '@/types/contacts/contracts';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('WorkerAssignmentDialog');
@@ -64,47 +62,53 @@ export function WorkerAssignmentDialog({
   const [isSearching, setIsSearching] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [selectedContact, setSelectedContact] = useState<SearchResult | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
+  /** 🔒 SECURITY: Search via Admin SDK API (tenant-scoped) */
   const handleSearch = useCallback(async () => {
     if (searchTerm.trim().length < 2) return;
 
     try {
       setIsSearching(true);
       setResults([]);
+      setSearchError(null);
 
-      // Search individual contacts
-      const contactsRef = collection(db, COLLECTIONS.CONTACTS);
-      const q = query(contactsRef, where('type', '==', 'individual'));
-      const snapshot = await getDocs(q);
+      const excludeParam = excludeContactIds.length > 0
+        ? `&exclude=${excludeContactIds.join(',')}`
+        : '';
 
-      const term = searchTerm.toLowerCase();
-      const filtered: SearchResult[] = [];
+      interface SearchApiResponse {
+        success: boolean;
+        contacts: Array<{
+          id: string;
+          firstName: string;
+          lastName: string;
+          specialty: string | null;
+          amka: string | null;
+        }>;
+        error?: string;
+      }
 
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data() as IndividualContact;
+      const response = await apiClient.get<SearchApiResponse>(
+        `/api/contacts/search-individuals?q=${encodeURIComponent(searchTerm.trim())}${excludeParam}`
+      );
 
-        // Skip already assigned
-        if (excludeContactIds.includes(docSnap.id)) return;
+      if (!response?.success) {
+        setSearchError(response?.error || 'Αποτυχία αναζήτησης');
+        return;
+      }
 
-        const firstName = (data.firstName ?? '').toLowerCase();
-        const lastName = (data.lastName ?? '').toLowerCase();
-        const fullName = `${firstName} ${lastName}`;
-        const specialty = (data.specialty ?? '').toLowerCase();
-        const amka = data.amka ?? '';
+      const mapped: SearchResult[] = (response.contacts || []).map(c => ({
+        id: c.id,
+        name: `${c.firstName} ${c.lastName}`.trim() || 'Χωρίς Όνομα',
+        specialty: c.specialty,
+        amka: c.amka,
+      }));
 
-        if (fullName.includes(term) || specialty.includes(term) || amka.includes(term)) {
-          filtered.push({
-            id: docSnap.id,
-            name: `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'Χωρίς Όνομα',
-            specialty: data.specialty ?? null,
-            amka: data.amka ?? null,
-          });
-        }
-      });
-
-      setResults(filtered);
+      setResults(mapped);
     } catch (err) {
       logger.error('Worker search failed', { error: err });
+      setSearchError('Σφάλμα κατά την αναζήτηση');
     } finally {
       setIsSearching(false);
     }
@@ -214,7 +218,13 @@ export function WorkerAssignmentDialog({
             </ul>
           )}
 
-          {results.length === 0 && searchTerm.trim().length >= 2 && !isSearching && (
+          {searchError && (
+            <p className="text-sm text-destructive text-center py-4">
+              {searchError}
+            </p>
+          )}
+
+          {results.length === 0 && searchTerm.trim().length >= 2 && !isSearching && !searchError && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Δεν βρέθηκαν αποτελέσματα
             </p>
