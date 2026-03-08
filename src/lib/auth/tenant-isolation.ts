@@ -12,6 +12,7 @@
 // Direct imports to avoid circular dependency with @/lib/auth barrel
 import type { AuthContext } from './types';
 import { logAuditEvent } from './audit';
+import { isRoleBypass } from './roles';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -100,8 +101,11 @@ export async function requireProjectInTenant(params: {
 
   const data = doc.data() as TenantProject | undefined;
 
-  // Verify tenant isolation
-  if (!data?.companyId || data.companyId !== ctx.companyId) {
+  // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+  // Verify tenant isolation (skip for super admin)
+  if (!isSuperAdmin && (!data?.companyId || data.companyId !== ctx.companyId)) {
     // Audit the tenant isolation violation
     await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
       metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
@@ -110,7 +114,7 @@ export async function requireProjectInTenant(params: {
   }
 
   // Success - return validated project data
-  return data;
+  return data!;
 }
 
 /**
@@ -163,8 +167,11 @@ export async function requireBuildingInTenant(params: {
 
   const data = doc.data() as TenantBuilding | undefined;
 
-  // Verify tenant isolation
-  if (!data?.companyId || data.companyId !== ctx.companyId) {
+  // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+  // Verify tenant isolation (skip for super admin)
+  if (!isSuperAdmin && (!data?.companyId || data.companyId !== ctx.companyId)) {
     // Audit the tenant isolation violation
     await logAuditEvent(ctx, 'access_denied', buildingId, 'building', {
       metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
@@ -173,5 +180,5 @@ export async function requireBuildingInTenant(params: {
   }
 
   // Success - return validated building data
-  return data;
+  return data!;
 }
