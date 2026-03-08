@@ -84,7 +84,7 @@ export function BuildingsPageContent() {
 
   const handleNewBuilding = useCallback(() => {
     const defaultCompanyId = companies[0]?.id || '';
-    const tempBuilding = {
+    const tempBuilding: BuildingType = {
       id: TEMP_BUILDING_ID,
       name: '',
       description: '',
@@ -100,9 +100,9 @@ export function BuildingsPageContent() {
       units: 0,
       totalValue: 0,
       progress: 0,
-      projectId: null,
+      projectId: '',
       createdAt: new Date().toISOString(),
-    } as BuildingType;
+    };
     setSelectedBuilding(tempBuilding);
     setStartInEditMode(true);
     logger.info('New building form opened (Fill then Create)');
