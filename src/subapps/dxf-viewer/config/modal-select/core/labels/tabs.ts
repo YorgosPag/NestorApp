@@ -27,6 +27,7 @@ export interface BuildingTabLabelsConfig {
   readonly protocols: string;
   readonly photos: string;
   readonly customers: string;
+  readonly contacts: string;
   readonly videos: string;
   readonly measurements: string;
 
@@ -157,6 +158,7 @@ export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
   protocols: "tabs.labels.protocols",
   photos: "tabs.labels.photos",
   customers: "tabs.labels.customers",
+  contacts: "tabs.labels.buildingContacts",
   videos: "tabs.labels.videos",
   measurements: "tabs.labels.measurements",
 

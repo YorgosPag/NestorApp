@@ -22,7 +22,8 @@
 import { GeneralProjectTab } from '@/components/projects/general-project-tab';
 import { BuildingDataTab } from '@/components/projects/BuildingDataTab';
 // ADR-191: ParkingTab removed from project level — parking belongs to Building tabs
-import { ContributorsTab } from '@/components/projects/contributors-tab';
+// Entity Associations replaces legacy ContributorsTab (stub)
+import { ProjectAssociationsTab } from '@/components/projects/tabs/ProjectAssociationsTab';
 import { DocumentsProjectTab } from '@/components/projects/documents-project-tab';
 import { IkaTab } from '@/components/projects/ika-tab';
 import { PhotosTab } from '@/components/projects/PhotosTab';
@@ -44,7 +45,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'GeneralProjectTab': GeneralProjectTab,
   'BuildingDataTab': BuildingDataTab,
   // 'ParkingTab': removed (ADR-191 — parking at Building level only)
-  'ContributorsTab': ContributorsTab,
+  // Entity Associations replaces legacy ContributorsTab (stub)
+  'ProjectAssociationsTab': ProjectAssociationsTab,
   'DocumentsProjectTab': DocumentsProjectTab,
   'IkaTab': IkaTab,
   'PhotosTab': PhotosTab,

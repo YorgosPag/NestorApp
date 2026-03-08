@@ -183,7 +183,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
-  // 9. ΣΥΝΤΕΛΕΣΤΕΣ
+  // 9. ΣΥΝΕΡΓΑΤΕΣ & ΕΠΑΦΕΣ (αντικατέστησε τον stub ContributorsTab)
   // -------------------------------------------------------------------------
   {
     id: 'contributors',
@@ -193,7 +193,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     description: PROJECT_TAB_DESCRIPTIONS.CONTRIBUTORS,
     order: 9,
     enabled: true,
-    component: 'ContributorsTab',
+    component: 'ProjectAssociationsTab',
   },
 
   // -------------------------------------------------------------------------

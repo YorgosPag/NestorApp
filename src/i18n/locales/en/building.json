@@ -803,7 +803,8 @@
       "projectDocuments": "Project Documents",
       "ika": "IKA",
       "measurements": "Measurements",
-      "floorsManagement": "Floors"
+      "floorsManagement": "Floors",
+      "buildingContacts": "Contacts & Associates"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -2024,6 +2025,43 @@
       "uniqueIds": "Address IDs must be unique",
       "noDuplicateRefs": "Duplicate address references are not allowed",
       "projectAddressIdRequired": "Project address ID is required when inheriting from project"
+    }
+  },
+  "associations": {
+    "title": "Contacts & Associates",
+    "description": "Link contacts and associates with a role",
+    "addContact": "Add Contact",
+    "noAssociations": "No linked contacts",
+    "selectContact": "Select Contact",
+    "selectRole": "Select Role",
+    "removeTitle": "Remove Link",
+    "removeConfirm": "Are you sure you want to remove this link?",
+    "cancel": "Cancel",
+    "add": "Add",
+    "adding": "Adding...",
+    "remove": "Remove",
+    "loading": "Loading...",
+    "roles": {
+      "engineer": "Engineer",
+      "contractor": "Contractor",
+      "supervisor": "Supervisor",
+      "land_owner": "Land Owner",
+      "buyer": "Buyer",
+      "owner": "Owner",
+      "tenant": "Tenant",
+      "manager": "Manager",
+      "lawyer": "Lawyer",
+      "notary": "Notary",
+      "realtor": "Realtor",
+      "accountant": "Accountant"
+    },
+    "entityLinks": {
+      "title": "Entity Links",
+      "description": "Projects, Buildings and Units this Contact is linked to",
+      "noLinks": "No links found",
+      "projects": "Projects",
+      "buildings": "Buildings",
+      "units": "Units"
     }
   },
   "error": {

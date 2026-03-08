@@ -47,10 +47,12 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,
   query,
   where,
   orderBy,
   limit as firestoreLimit,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -88,7 +90,7 @@ export class AssociationService {
    */
   static async linkContactToEntity(input: CreateContactLinkInput): Promise<LinkResult> {
     try {
-      const { sourceWorkspaceId, sourceContactId, targetEntityType, targetEntityId, targetWorkspaceId, reason, createdBy, metadata } = input;
+      const { sourceWorkspaceId, sourceContactId, targetEntityType, targetEntityId, targetWorkspaceId, reason, role, createdBy, metadata } = input;
 
       if (!targetEntityType || !targetEntityId) {
         return {
@@ -121,6 +123,7 @@ export class AssociationService {
         targetEntityType,
         targetEntityId,
         reason,
+        role,
         status: 'active',
         createdAt: new Date().toISOString(),
         createdBy,
@@ -431,6 +434,102 @@ export class AssociationService {
       sourceWorkspaceId: links[0].sourceWorkspaceId,
       linkedTo,
     };
+  }
+
+  // ==========================================================================
+  // CONTACT LINKS - UPDATE / DEACTIVATE
+  // ==========================================================================
+
+  /**
+   * Soft-delete (deactivate) a contact link
+   *
+   * @param linkId - Link ID to deactivate
+   * @param updatedBy - User performing the action
+   * @returns Link result
+   */
+  static async unlinkContact(linkId: string, updatedBy: string): Promise<LinkResult> {
+    try {
+      const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, linkId);
+      const snapshot = await getDoc(linkRef);
+
+      if (!snapshot.exists()) {
+        return {
+          success: false,
+          error: 'Contact link not found',
+          errorCode: 'LINK_NOT_FOUND',
+        };
+      }
+
+      await updateDoc(linkRef, {
+        status: 'inactive',
+        updatedBy,
+        updatedAt: serverTimestamp(),
+      });
+
+      logger.info(`[AssociationService] Deactivated contact link: ${linkId}`);
+
+      RealtimeService.dispatch('CONTACT_LINK_REMOVED', {
+        linkId,
+        timestamp: Date.now(),
+      });
+
+      return {
+        success: true,
+        linkId,
+        message: 'Contact link deactivated',
+      };
+    } catch (error) {
+      logger.error('[AssociationService] Failed to unlink contact:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorCode: 'UNLINK_CONTACT_FAILED',
+      };
+    }
+  }
+
+  /**
+   * Update the role of a contact link
+   *
+   * @param linkId - Link ID to update
+   * @param role - New role value
+   * @param updatedBy - User performing the action
+   * @returns Link result
+   */
+  static async updateContactLinkRole(linkId: string, role: string, updatedBy: string): Promise<LinkResult> {
+    try {
+      const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, linkId);
+      const snapshot = await getDoc(linkRef);
+
+      if (!snapshot.exists()) {
+        return {
+          success: false,
+          error: 'Contact link not found',
+          errorCode: 'LINK_NOT_FOUND',
+        };
+      }
+
+      await updateDoc(linkRef, {
+        role,
+        updatedBy,
+        updatedAt: serverTimestamp(),
+      });
+
+      logger.info(`[AssociationService] Updated role for link ${linkId} → ${role}`);
+
+      return {
+        success: true,
+        linkId,
+        message: 'Role updated successfully',
+      };
+    } catch (error) {
+      logger.error('[AssociationService] Failed to update role:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorCode: 'UPDATE_ROLE_FAILED',
+      };
+    }
   }
 
   // ==========================================================================

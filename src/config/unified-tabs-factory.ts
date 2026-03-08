@@ -479,6 +479,15 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'BuildingCustomersTab'
           },
           {
+            id: 'contacts',
+            value: 'contacts',
+            icon: 'contact',
+            description: 'Επαφές και συνεργάτες που σχετίζονται με το κτίριο',
+            order: 12.5,
+            enabled: true,
+            component: 'BuildingContactsTab'
+          },
+          {
             id: 'videos',
             value: 'videos',
             icon: 'play-circle',

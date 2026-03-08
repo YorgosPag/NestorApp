@@ -12,7 +12,8 @@
 import { GeneralProjectTab } from '../../projects/general-project-tab';
 import { BuildingDataTab } from '../../projects/BuildingDataTab';
 // ADR-191: ParkingTab removed — parking at Building level only
-import { ContributorsTab } from '../../projects/contributors-tab';
+// Entity Associations replaces legacy ContributorsTab (stub)
+import { ProjectAssociationsTab } from '../../projects/tabs/ProjectAssociationsTab';
 import { DocumentsProjectTab } from '../../projects/documents-project-tab';
 import { IkaTab } from '../../projects/ika-tab';
 import { PhotosTab } from '../../projects/PhotosTab';
@@ -26,7 +27,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'GeneralProjectTab': GeneralProjectTab,
   'BuildingDataTab': BuildingDataTab,
   // 'ParkingTab': removed (ADR-191)
-  'ContributorsTab': ContributorsTab,
+  // Entity Associations replaces legacy ContributorsTab (stub)
+  'ProjectAssociationsTab': ProjectAssociationsTab,
   'DocumentsProjectTab': DocumentsProjectTab,
   'IkaTab': IkaTab,
   'PhotosTab': PhotosTab,
@@ -50,6 +52,7 @@ import PlaceholderTab from '../../building-management/tabs/PlaceholderTab';
 import { FloorplanViewerTab as BuildingFloorplanViewerTab } from '../../projects/tabs/FloorplanViewerTab';
 import { StorageTab } from '../../building-management/StorageTab';
 import { BuildingCustomersTab } from '../../building-management/tabs/BuildingCustomersTab';
+import { BuildingContactsTab } from '../../building-management/tabs/BuildingContactsTab';
 
 export const BUILDING_COMPONENT_MAPPING = {
   'GeneralTabContent': GeneralTabContent,
@@ -61,6 +64,7 @@ export const BUILDING_COMPONENT_MAPPING = {
   'FloorplanViewerTab': BuildingFloorplanViewerTab,
   'StorageTab': StorageTab,
   'BuildingCustomersTab': BuildingCustomersTab,
+  'BuildingContactsTab': BuildingContactsTab,
 
   // 🏢 ENTERPRISE: Unified Factory aliases - same components, different names
   'BuildingGeneralTab': GeneralTabContent,

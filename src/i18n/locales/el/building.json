@@ -803,7 +803,8 @@
       "projectDocuments": "Έγγραφα Έργου",
       "ika": "IKA",
       "measurements": "Επιμετρήσεις",
-      "floorsManagement": "Όροφοι"
+      "floorsManagement": "Όροφοι",
+      "buildingContacts": "Επαφές & Συνεργάτες"
     },
     "descriptions": {
       "projectGeneral": "Βασικές πληροφορίες και στοιχεία του έργου",
@@ -2024,6 +2025,43 @@
       "uniqueIds": "Οι κωδικοί διευθύνσεων πρέπει να είναι μοναδικοί",
       "noDuplicateRefs": "Δεν επιτρέπονται διπλότυπες αναφορές διευθύνσεων",
       "projectAddressIdRequired": "Το ID διεύθυνσης έργου είναι υποχρεωτικό όταν κληρονομείται από το έργο"
+    }
+  },
+  "associations": {
+    "title": "Επαφές & Συνεργάτες",
+    "description": "Σύνδεση επαφών και συνεργατών με ρόλο",
+    "addContact": "Προσθήκη Επαφής",
+    "noAssociations": "Δεν υπάρχουν συνδεδεμένες επαφές",
+    "selectContact": "Επιλογή Επαφής",
+    "selectRole": "Επιλογή Ρόλου",
+    "removeTitle": "Αφαίρεση Σύνδεσης",
+    "removeConfirm": "Θέλετε να αφαιρέσετε αυτή τη σύνδεση;",
+    "cancel": "Ακύρωση",
+    "add": "Προσθήκη",
+    "adding": "Προσθήκη...",
+    "remove": "Αφαίρεση",
+    "loading": "Φόρτωση...",
+    "roles": {
+      "engineer": "Μηχανικός",
+      "contractor": "Εργολάβος",
+      "supervisor": "Επιβλέπων",
+      "land_owner": "Ιδιοκτήτης Γης",
+      "buyer": "Αγοραστής",
+      "owner": "Ιδιοκτήτης",
+      "tenant": "Ενοικιαστής",
+      "manager": "Διαχειριστής",
+      "lawyer": "Δικηγόρος",
+      "notary": "Συμβολαιογράφος",
+      "realtor": "Μεσίτης",
+      "accountant": "Λογιστής"
+    },
+    "entityLinks": {
+      "title": "Συνδέσεις με Entities",
+      "description": "Έργα, Κτίρια και Μονάδες στα οποία συμμετέχει αυτή η Επαφή",
+      "noLinks": "Δεν υπάρχουν συνδέσεις",
+      "projects": "Έργα",
+      "buildings": "Κτίρια",
+      "units": "Μονάδες"
     }
   },
   "error": {

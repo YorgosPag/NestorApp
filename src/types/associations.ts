@@ -65,6 +65,9 @@ export interface ContactLink {
   /** Reason for the link (for audit trail) */
   reason?: string;
 
+  /** Association role (e.g. engineer, contractor, owner) */
+  role?: string;
+
   /** Link status */
   status: 'active' | 'inactive';
 
@@ -95,6 +98,7 @@ export interface ContactLinkFirestoreDoc {
   targetEntityType?: EntityType;
   targetEntityId?: string;
   reason?: string;
+  role?: string;
   status: 'active' | 'inactive';
   createdAt: Timestamp;
   createdBy: string;
@@ -113,6 +117,7 @@ export interface CreateContactLinkInput {
   targetEntityType?: EntityType;
   targetEntityId?: string;
   reason?: string;
+  role?: string;
   createdBy: string;
   metadata?: Record<string, unknown>;
 }

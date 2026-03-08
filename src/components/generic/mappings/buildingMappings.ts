@@ -27,6 +27,8 @@ import TimelineTabContent from '@/components/building-management/tabs/TimelineTa
 import AnalyticsTabContent from '@/components/building-management/tabs/AnalyticsTabContent';
 import { StorageTab } from '@/components/building-management/StorageTab';
 import { BuildingCustomersTab } from '@/components/building-management/tabs/BuildingCustomersTab';
+// Entity Associations — contacts & collaborators linked to building
+import { BuildingContactsTab } from '@/components/building-management/tabs/BuildingContactsTab';
 
 // ============================================================================
 // 🏢 ENTERPRISE: EntityFilesManager-based tabs (ADR-031)
@@ -77,6 +79,7 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'FloorplanViewerTab': BuildingFloorplanTab as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Uses EntityFilesManager
   'StorageTab': StorageTab as ComponentType<TabComponentProps>,
   'BuildingCustomersTab': BuildingCustomersTab as unknown as ComponentType<TabComponentProps>,
+  'BuildingContactsTab': BuildingContactsTab as unknown as ComponentType<TabComponentProps>,
 
   'MeasurementsTabContent': MeasurementsTabContent as ComponentType<TabComponentProps>,
   'FloorsTabContent': FloorsTabContent as ComponentType<TabComponentProps>,
