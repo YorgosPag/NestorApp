@@ -56,7 +56,7 @@ export function useProjectCustomers(
 
   // 🏢 ENTERPRISE: Extracted fetch logic for reusability
   const fetchCustomers = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId || projectId === '__new__') return;
 
     setLoading(true);
     setError(null);

@@ -57,7 +57,7 @@ export function useProjectStructure(
 
   // 🏢 ENTERPRISE: Extracted fetch logic for reusability
   const fetchStructure = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId || projectId === '__new__') return;
 
     setLoading(true);
     setError(null);
