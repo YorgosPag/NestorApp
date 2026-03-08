@@ -193,7 +193,8 @@
       "edit": "Edit",
       "save": "Save",
       "cancel": "Cancel",
-      "delete": "Delete"
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete the project \"{{name}}\"?"
     }
   },
   "listCard": {

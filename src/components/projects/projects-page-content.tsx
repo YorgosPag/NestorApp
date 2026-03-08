@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 
+import type { Project } from '@/types/project';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
@@ -30,6 +31,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: AddProjectDialog for creating new projects (ADR-087)
 import { AddProjectDialog } from './dialogs/AddProjectDialog';
+import { deleteProject } from '@/services/projects-client.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectsPageContent');
@@ -93,6 +95,20 @@ export function ProjectsPageContent() {
   const handleProjectAdded = React.useCallback(() => {
     window.location.reload();
   }, []);
+
+  // 🏢 ENTERPRISE: Delete project handler
+  const handleDeleteProject = React.useCallback(async (project: Project) => {
+    if (!confirm(t('detailsHeader.actions.confirmDelete', { name: project.name }))) return;
+
+    const result = await deleteProject(project.id);
+    if (result.success) {
+      logger.info('Project deleted', { projectId: project.id });
+      setSelectedProject(null);
+      window.location.reload();
+    } else {
+      logger.error('Failed to delete project', { error: result.error });
+    }
+  }, [t, setSelectedProject]);
 
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
@@ -254,6 +270,7 @@ export function ProjectsPageContent() {
             viewMode={viewMode}
             initialTab={tabFromUrl || undefined}
             onNewProject={() => setIsAddProjectDialogOpen(true)}
+            onDeleteProject={handleDeleteProject}
           />
         </ListContainer>
       </PageContainer>

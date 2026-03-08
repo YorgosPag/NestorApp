@@ -26,6 +26,9 @@ interface ProjectsListProps {
   selectedProject: Project | null;
   onSelectProject?: (project: Project) => void;
   companies: NavigationCompany[];
+  onNewProject?: () => void;
+  onEditProject?: () => void;
+  onDeleteProject?: () => void;
 }
 
 export function ProjectsList({
@@ -33,6 +36,9 @@ export function ProjectsList({
   selectedProject,
   onSelectProject,
   companies,
+  onNewProject,
+  onEditProject,
+  onDeleteProject,
 }: ProjectsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
@@ -105,9 +111,13 @@ export function ProjectsList({
       <div className="hidden md:block">
         <CompactToolbar
           config={projectsConfig}
+          selectedItems={selectedProject ? [selectedProject.id] : []}
           sortBy={sortBy}
           onFiltersChange={() => {}}
           onSortChange={handleSortChange}
+          onNewItem={onNewProject}
+          onEditItem={onEditProject ? (_id: string) => onEditProject() : undefined}
+          onDeleteItems={onDeleteProject ? (_ids: string[]) => onDeleteProject() : undefined}
         />
       </div>
 
@@ -116,9 +126,13 @@ export function ProjectsList({
         {showToolbar && (
           <CompactToolbar
             config={projectsConfig}
+            selectedItems={selectedProject ? [selectedProject.id] : []}
             sortBy={sortBy}
             onFiltersChange={() => {}}
             onSortChange={handleSortChange}
+            onNewItem={onNewProject}
+            onEditItem={onEditProject ? (_id: string) => onEditProject() : undefined}
+            onDeleteItems={onDeleteProject ? (_ids: string[]) => onDeleteProject() : undefined}
           />
         )}
       </div>

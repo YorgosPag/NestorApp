@@ -124,6 +124,9 @@ export function ProjectViewSwitch({
             selectedProject={selectedProject}
             onSelectProject={onSelectProject}
             companies={companies}
+            onNewProject={onNewProject}
+            onEditProject={selectedProject ? () => {/* Edit triggers via header */} : undefined}
+            onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
         />
         {selectedProject && (
           <ProjectDetails
@@ -142,6 +145,9 @@ export function ProjectViewSwitch({
             selectedProject={selectedProject}
             onSelectProject={onSelectProject}
             companies={companies}
+            onNewProject={onNewProject}
+            onEditProject={selectedProject ? () => {/* Edit triggers via header */} : undefined}
+            onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
         />
       </div>
 
