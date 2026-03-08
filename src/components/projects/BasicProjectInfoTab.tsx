@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import type { ProjectFormData } from './general-tab/types';
 
 interface CompanyOption {
@@ -71,10 +72,8 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
 
-    const NONE_VALUE = '__none__';
-
     const handleCompanySelect = (selectedId: string) => {
-        if (selectedId === NONE_VALUE) {
+        if (isSelectClearValue(selectedId)) {
             setData(prev => ({ ...prev, companyId: '', companyName: '' }));
             return;
         }
@@ -126,7 +125,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
                         </div>
                     ) : (
                         <Select
-                            value={currentCompanyId || NONE_VALUE}
+                            value={currentCompanyId || SELECT_CLEAR_VALUE}
                             onValueChange={handleCompanySelect}
                             disabled={!isEditing}
                         >
@@ -135,8 +134,8 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem
-                                    value={NONE_VALUE}
-                                    className="text-muted-foreground"
+                                    value={SELECT_CLEAR_VALUE}
+                                    className="text-popover-foreground italic"
                                 >
                                     {t('basicInfo.companyLink.noSelection')}
                                 </SelectItem>
