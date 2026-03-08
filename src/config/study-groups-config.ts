@@ -68,7 +68,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'architectural',
-    entityLevels: ['building'],
+    entityLevels: ['building', 'project'],
     label: { el: 'Αρχιτεκτονικά / Πολεοδομικά', en: 'Architectural / Urban Planning' },
     description: {
       el: 'Κατόψεις, τομές, όψεις, τοπογραφικό, κάλυψη, δόμηση',
