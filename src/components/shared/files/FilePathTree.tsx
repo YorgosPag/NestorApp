@@ -223,26 +223,29 @@ export function FilePathTree({
 
   // Build tree structure from files
   // 🏢 ENTERPRISE: Study group tree groups by purpose → StudyGroup (ADR-191)
+  // Business view ALWAYS uses study group tree for meaningful folder names
+  const useStudyGroups = groupByStudyGroup || viewMode === 'business';
+
   const initialTree = useMemo(() => {
-    if (groupByStudyGroup) {
+    if (useStudyGroups) {
       return buildStudyGroupTree(files);
     }
     const fullTree = buildFilePathTree(files);
     return filterTreeToContextLevel(fullTree, contextLevel);
-  }, [files, contextLevel, groupByStudyGroup]);
+  }, [files, contextLevel, useStudyGroups]);
 
   // Tree state (for expand/collapse)
   const [tree, setTree] = useState<TreeNode>(initialTree);
 
   // Update tree when files change
   React.useEffect(() => {
-    if (groupByStudyGroup) {
+    if (useStudyGroups) {
       setTree(buildStudyGroupTree(files));
     } else {
       const fullTree = buildFilePathTree(files);
       setTree(filterTreeToContextLevel(fullTree, contextLevel));
     }
-  }, [files, contextLevel, groupByStudyGroup]);
+  }, [files, contextLevel, useStudyGroups]);
 
   // =========================================================================
   // HANDLERS
