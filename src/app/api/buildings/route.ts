@@ -200,6 +200,10 @@ interface BuildingUpdatePayload {
   completionDate?: string;
   status?: string;
   projectId?: string | null;
+  // 🏢 ENTERPRISE: Company association (separate from tenant companyId)
+  linkedCompanyId?: string | null;
+  linkedCompanyName?: string | null;
+  company?: string | null;  // Legacy display name
   addresses?: Record<string, unknown>[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 }
 
@@ -250,9 +254,14 @@ export const PATCH = withStandardRateLimit(
         throw new ApiError(403, 'Unauthorized: Building belongs to different company');
       }
 
-      // 🔒 SECURITY: Sanitize - remove undefined fields
+      // 🔒 SECURITY: Sanitize - remove undefined fields AND protect tenant isolation fields
+      // companyId is the TENANT key (set at creation, immutable by client)
+      // Use linkedCompanyId/linkedCompanyName for company association changes
+      const IMMUTABLE_FIELDS = ['companyId'];
       const cleanUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([, value]) => value !== undefined)
+        Object.entries(updates).filter(([key, value]) =>
+          value !== undefined && !IMMUTABLE_FIELDS.includes(key)
+        )
       );
 
       logger.info('[Buildings] Updating building for tenant', { buildingId, companyId: ctx.companyId });

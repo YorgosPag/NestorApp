@@ -218,8 +218,10 @@ export function GeneralTabContent({
 
   const saveCompany = useCallback(async (newId: string | null, name: string) => {
     try {
+      // 🔒 SECURITY: Use linkedCompanyId (NOT companyId which is the tenant isolation key)
       const result = await updateBuilding(String(building.id), {
-        companyId: newId,
+        linkedCompanyId: newId,
+        linkedCompanyName: name || null,
         company: name || null,
       });
       if (result.success) {
@@ -294,7 +296,7 @@ export function GeneralTabContent({
           <EntityLinkCard
             cardId="building-company-link"
             icon={Building2}
-            currentValue={building.companyId}
+            currentValue={building.linkedCompanyId || building.companyId}
             loadOptions={loadCompanies}
             onSave={saveCompany}
             isEditing={effectiveIsEditing}

@@ -35,10 +35,12 @@ export interface BuildingUpdatePayload {
   address?: string;
   city?: string;
   status?: string;
-  projectId?: string | null;  // 🏢 ENTERPRISE: Link building to project
-  companyId?: string | null;  // 🏢 ENTERPRISE: Link building to company
-  company?: string;           // 🏢 ENTERPRISE: Company display name
-  addresses?: ProjectAddress[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  projectId?: string | null;      // 🏢 ENTERPRISE: Link building to project
+  // 🔒 SECURITY: companyId is TENANT field (immutable) — use linkedCompanyId for association
+  linkedCompanyId?: string | null; // 🏢 ENTERPRISE: Company association (contact ID)
+  linkedCompanyName?: string | null; // 🏢 ENTERPRISE: Company display name
+  company?: string | null;         // 🏢 ENTERPRISE: Legacy company display name
+  addresses?: ProjectAddress[];    // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 }
 
 /**
@@ -63,17 +65,16 @@ export async function updateBuilding(
     logger.info('Building updated successfully', { buildingId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    // Dispatch event for all components to update their local state
+    // Dispatch ALL changed fields so components update their local state
+    const dispatchUpdates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        dispatchUpdates[key] = value;
+      }
+    }
     RealtimeService.dispatch('BUILDING_UPDATED', {
       buildingId,
-      updates: {
-        name: updates.name,
-        address: updates.address,
-        city: updates.city,
-        status: updates.status,
-        totalArea: updates.totalArea,
-        floors: updates.floors,
-      },
+      updates: dispatchUpdates,
       timestamp: Date.now()
     });
 

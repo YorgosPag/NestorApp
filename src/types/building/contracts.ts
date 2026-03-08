@@ -70,6 +70,9 @@ export interface Contact {
     totalValue?: number;
     company?: string;
     companyId?: string;
+    /** 🏢 ENTERPRISE: Company association (contact ID) — separate from tenant companyId */
+    linkedCompanyId?: string;
+    linkedCompanyName?: string;
     project?: string;
     category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
     // 🏢 ENTERPRISE: Type-safe building features (keys, not strings)
