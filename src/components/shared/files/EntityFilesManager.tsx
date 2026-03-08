@@ -213,7 +213,7 @@ export function EntityFilesManager({
     companyId, // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
     domain: fetchAllDomains ? undefined : domain,
     category: fetchAllDomains ? undefined : category,
-    purpose, // 🏢 ENTERPRISE: Filter by purpose for separate tabs (project-floorplan vs parking-floorplan)
+    purpose: fetchAllDomains ? undefined : purpose, // 🏢 ENTERPRISE: Skip purpose filter when fetching all domains (Documents tab)
     autoFetch: true,
   });
 
