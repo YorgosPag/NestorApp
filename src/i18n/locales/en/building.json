@@ -725,6 +725,10 @@
         "help": "Help",
         "selectedCount": "{count} selected"
       },
+      "deleteDialog": {
+        "title": "Delete Parking Spot",
+        "description": "Are you sure you want to delete spot \"{number}\"? This action cannot be undone."
+      },
       "addSpot": "New Parking Spot",
       "addSpotDescription": "Fill in the details for the new parking spot.",
       "form": {

@@ -14,7 +14,7 @@
  * 🔧 Next.js 15: useParkingPageState uses useSearchParams, requires Suspense
  */
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useCallback, useState } from 'react';
 
 import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -48,9 +48,16 @@ import {
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AddParkingDialog } from '@/components/space-management/ParkingPage/AddParkingDialog';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ParkingPage');
+
+interface ParkingDeleteResult {
+  id: string;
+}
 
 function ParkingPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -112,6 +119,32 @@ function ParkingPageContent() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
   const [showAddDialog, setShowAddDialog] = React.useState(false);
+
+  // 🅿️ Delete parking state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteParking = useCallback(async () => {
+    if (!selectedParking) return;
+    setIsDeleting(true);
+    try {
+      const result = await apiClient.delete<ParkingDeleteResult>(
+        `/api/parking/${selectedParking.id}`
+      );
+      if (result?.id) {
+        RealtimeService.dispatch('PARKING_DELETED', {
+          parkingSpotId: selectedParking.id,
+          timestamp: Date.now(),
+        });
+        setSelectedParking(null);
+      }
+    } catch (err) {
+      logger.error('Failed to delete parking spot', { error: err });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  }, [selectedParking, setSelectedParking]);
 
   // Dashboard stats from real data
   const dashboardStats: DashboardStat[] = [
@@ -268,7 +301,7 @@ function ParkingPageContent() {
               <ParkingDetails
                 parking={selectedParking}
                 onNewParking={() => setShowAddDialog(true)}
-                onDelete={() => logger.info('Delete parking', { parkingId: selectedParking?.id })}
+                onDelete={() => setShowDeleteDialog(true)}
               />
             </>
           )}
@@ -291,6 +324,16 @@ function ParkingPageContent() {
         <AddParkingDialog
           open={showAddDialog}
           onOpenChange={setShowAddDialog}
+        />
+
+        {/* Delete Parking Confirmation */}
+        <DeleteConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title={t('pages.parking.deleteDialog.title')}
+          description={t('pages.parking.deleteDialog.description', { number: selectedParking?.number ?? '' })}
+          onConfirm={handleDeleteParking}
+          loading={isDeleting}
         />
       </PageContainer>
   );
