@@ -112,6 +112,7 @@ export function ProjectsList({
         <CompactToolbar
           config={projectsConfig}
           selectedItems={selectedProject ? [selectedProject.id] : []}
+          hasSelectedContact={!!selectedProject}
           sortBy={sortBy}
           onFiltersChange={() => {}}
           onSortChange={handleSortChange}
@@ -127,6 +128,7 @@ export function ProjectsList({
           <CompactToolbar
             config={projectsConfig}
             selectedItems={selectedProject ? [selectedProject.id] : []}
+            hasSelectedContact={!!selectedProject}
             sortBy={sortBy}
             onFiltersChange={() => {}}
             onSortChange={handleSortChange}
