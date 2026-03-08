@@ -59,10 +59,19 @@ export const BUILDING_TABS: BuildingTabConfig[] = createTabsConfig('building') a
  */
 
 /**
+ * ✅ PERF: Module-level cache — building tabs config is static, no need to regenerate
+ */
+let _cachedSortedBuildingTabs: BuildingTabConfig[] | null = null;
+
+/**
  * Επιστρέφει όλες τις ενεργές καρτέλες ταξινομημένες κατά order
+ * ✅ PERF: Cached at module level — same reference every call
  */
 export function getSortedBuildingTabs(): BuildingTabConfig[] {
-  return getSortedTabs('building') as BuildingTabConfig[];
+  if (!_cachedSortedBuildingTabs) {
+    _cachedSortedBuildingTabs = getSortedTabs('building') as BuildingTabConfig[];
+  }
+  return _cachedSortedBuildingTabs;
 }
 
 /**

@@ -159,13 +159,16 @@ export function UniversalTabsRenderer<TData = unknown>({
   // currentLanguage is needed in useMemo dependencies for reactivity on language change
   const { t, currentLanguage } = useTranslation(translationNamespace);
 
-  // Φιλτράρισμα enabled tabs
-  const enabledTabs = tabs.filter(tab => tab.enabled);
+  // ✅ PERF: Memoize filtered+sorted tabs — only recalculates when tabs array changes
+  const sortedTabs = useMemo(() => {
+    return tabs
+      .filter(tab => tab.enabled)
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  }, [tabs]);
 
   // 🏢 ENTERPRISE: Track active tab for lazy rendering
-  const computedDefaultTab = defaultTab || enabledTabs[0]?.value;
+  const computedDefaultTab = defaultTab || sortedTabs[0]?.value;
   const [activeTab, setActiveTab] = useState(computedDefaultTab);
-
 
   // 🏢 ENTERPRISE: Sync activeTab when defaultTab prop changes (deep-link navigation)
   // Only triggers when defaultTab actually changes value, NOT on user tab clicks
@@ -176,13 +179,6 @@ export function UniversalTabsRenderer<TData = unknown>({
       setActiveTab(defaultTab);
     }
   }, [defaultTab]);
-
-  // Sort by order
-  const sortedTabs = enabledTabs.sort((a, b) => {
-    const orderA = a.order ?? 999;
-    const orderB = b.order ?? 999;
-    return orderA - orderB;
-  });
 
   // 🏢 ENTERPRISE: Memoize tab definitions
   const tabDefinitions: TabDefinition[] = useMemo(() => sortedTabs.map(tabConfig => {
