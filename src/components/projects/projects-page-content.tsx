@@ -95,7 +95,8 @@ export function ProjectsPageContent() {
     if (isCreatingProject) return;
     setIsCreatingProject(true);
 
-    // Get first company as default (user's company)
+    // 🏢 ENTERPRISE: companyId is required for tenant isolation
+    // Server forces ctx.companyId regardless — send it to satisfy API
     const defaultCompanyId = companies[0]?.id;
     if (!defaultCompanyId) {
       logger.error('No company available for project creation');
@@ -104,23 +105,23 @@ export function ProjectsPageContent() {
     }
 
     const result = await createProject({
-      name: '',
+      name: t('page.newProject'),
       companyId: defaultCompanyId,
-      company: companies[0]?.companyName || '',
       status: 'planning',
     });
 
     if (result.success && result.projectId) {
       logger.info('Project created inline', { projectId: result.projectId });
-      // Set as selected and enable edit mode — empty fields, user fills them
+      // 🏢 ENTERPRISE: Create local project object for immediate display
+      // Company field left empty — user selects it in edit mode
       const newProject: Project = {
         id: result.projectId,
-        name: '',
+        name: t('page.newProject'),
         title: '',
         description: '',
         status: 'planning',
         companyId: defaultCompanyId,
-        company: companies[0]?.companyName || '',
+        company: '',
         address: '',
         city: '',
         location: '',
@@ -134,7 +135,7 @@ export function ProjectsPageContent() {
       setStartInEditMode(true);
     }
     setIsCreatingProject(false);
-  }, [companies, setSelectedProject, isCreatingProject]);
+  }, [companies, setSelectedProject, isCreatingProject, t]);
 
   // 🏢 ENTERPRISE: Delete project — centralized DeleteConfirmDialog (not browser confirm)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);

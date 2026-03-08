@@ -170,7 +170,8 @@
     "filters": {
       "desktop": "Φίλτρα Έργων",
       "mobile": "Φίλτρα Έργων Mobile"
-    }
+    },
+    "newProject": "Νέο Έργο"
   },
   "list": {
     "ariaLabel": "Λίστα Έργων",

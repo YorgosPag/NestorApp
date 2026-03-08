@@ -68,6 +68,8 @@ export function useFirestoreProjects() {
   const [error, setError] = useState<string | null>(null);
   // 🏢 ENTERPRISE: Trigger for manual refetch
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // 🏢 ENTERPRISE: Track initial load vs refetch — only show loading spinner on first load
+  const hasLoadedOnceRef = useRef(false);
 
   // 🏢 ENTERPRISE: AbortController ref για proper cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -140,7 +142,11 @@ export function useFirestoreProjects() {
       abortControllerRef.current = controller;
 
       try {
-        setLoading(true);
+        // 🏢 ENTERPRISE: Only show full loading spinner on initial load
+        // Refetches (PROJECT_CREATED, etc.) update data silently without flashing the spinner
+        if (!hasLoadedOnceRef.current) {
+          setLoading(true);
+        }
         setError(null);
 
         logger.info('Fetching from /api/projects/list');
@@ -163,6 +169,7 @@ export function useFirestoreProjects() {
         logger.info('Loaded projects', { count: result.count, source: result.source });
 
         setProjects(result.projects);
+        hasLoadedOnceRef.current = true;
 
       } catch (err) {
         // Ignore abort errors

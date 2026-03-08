@@ -170,7 +170,8 @@
     "filters": {
       "desktop": "Project Filters",
       "mobile": "Project Filters Mobile"
-    }
+    },
+    "newProject": "New Project"
   },
   "list": {
     "ariaLabel": "Projects List",
