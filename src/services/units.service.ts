@@ -7,7 +7,6 @@ import {
   getDocs,
   doc,
   updateDoc,
-  deleteDoc,
   writeBatch,
   query,
   where,
@@ -249,21 +248,19 @@ export async function updateMultipleUnitsOwner(unitIds: string[], contactId: str
 }
 
 
-// Delete a unit
+// 🔒 SECURITY: Delete unit via Admin SDK API (client-side Firestore deletes are blocked)
 export async function deleteUnit(unitId: string): Promise<{ success: boolean }> {
   try {
-    await deleteDoc(doc(db, UNITS_COLLECTION, unitId));
+    await apiClient.delete(`/api/units/${unitId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    // Dispatch event for all components to remove the unit from their local state
-    RealtimeService.dispatch('UNIT_DELETED',{
+    RealtimeService.dispatch('UNIT_DELETED', {
       unitId,
       timestamp: Date.now()
     });
 
     return { success: true };
   } catch (error) {
-    // Error logging removed
     throw error;
   }
 }
