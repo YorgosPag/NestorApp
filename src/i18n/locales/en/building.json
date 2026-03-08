@@ -1044,7 +1044,7 @@
         "floors": "{count} floors"
       },
       "progress": {
-        "title": "Project Progress",
+        "title": "Building Progress",
         "completionPercentage": "Completion Percentage",
         "completed": "{percent}% Completed",
         "phases": {
@@ -1092,7 +1092,7 @@
     },
     "timeline": {
       "header": {
-        "title": "Project Timeline",
+        "title": "Building Timeline",
         "subtitle": "Progress tracking and milestones",
         "completedCount": "{completed} / {total} completed"
       },

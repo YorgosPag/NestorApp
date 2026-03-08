@@ -1044,7 +1044,7 @@
         "floors": "{count} όροφοι"
       },
       "progress": {
-        "title": "Πρόοδος Έργου",
+        "title": "Πρόοδος Κτιρίου",
         "completionPercentage": "Ποσοστό Ολοκλήρωσης",
         "completed": "{percent}% Ολοκληρωμένο",
         "phases": {
@@ -1092,7 +1092,7 @@
     },
     "timeline": {
       "header": {
-        "title": "Χρονοδιάγραμμα Έργου",
+        "title": "Χρονοδιάγραμμα Κτιρίου",
         "subtitle": "Παρακολούθηση προόδου και milestones",
         "completedCount": "{completed} / {total} ολοκληρώθηκαν"
       },
