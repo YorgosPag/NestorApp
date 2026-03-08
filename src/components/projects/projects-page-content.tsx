@@ -29,9 +29,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🏢 ENTERPRISE: AddProjectDialog for creating new projects (ADR-087)
-import { AddProjectDialog } from './dialogs/AddProjectDialog';
-import { deleteProject } from '@/services/projects-client.service';
+import { createProject, deleteProject } from '@/services/projects-client.service';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -89,18 +87,54 @@ export function ProjectsPageContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 🏢 ENTERPRISE: AddProjectDialog state (CREATE-ONLY — edit happens inline in GeneralProjectTab)
-  const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
+  // 🏢 ENTERPRISE: Inline project creation — creates project and opens in edit mode
+  const [startInEditMode, setStartInEditMode] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
 
-  // 🏢 ENTERPRISE: Stable callbacks (INP optimization — avoids re-render cascade)
-  const handleOpenAddDialog = useCallback(() => {
-    logger.info('Opening add project dialog');
-    setIsAddProjectDialogOpen(true);
-  }, []);
+  const handleNewProject = useCallback(async () => {
+    if (isCreatingProject) return;
+    setIsCreatingProject(true);
 
-  const handleProjectAdded = useCallback(() => {
-    window.location.reload();
-  }, []);
+    // Get first company as default (user's company)
+    const defaultCompanyId = companies[0]?.id;
+    if (!defaultCompanyId) {
+      logger.error('No company available for project creation');
+      setIsCreatingProject(false);
+      return;
+    }
+
+    const result = await createProject({
+      name: t('dialog.fields.namePlaceholder'),
+      companyId: defaultCompanyId,
+      company: companies[0]?.companyName || '',
+      status: 'planning',
+    });
+
+    if (result.success && result.projectId) {
+      logger.info('Project created inline', { projectId: result.projectId });
+      // Set as selected and enable edit mode
+      const newProject: Project = {
+        id: result.projectId,
+        name: t('dialog.fields.namePlaceholder'),
+        title: '',
+        description: '',
+        status: 'planning',
+        companyId: defaultCompanyId,
+        company: companies[0]?.companyName || '',
+        address: '',
+        city: '',
+        location: '',
+        projectCode: '',
+        progress: 0,
+        totalValue: 0,
+        totalArea: 0,
+        lastUpdate: new Date().toISOString(),
+      };
+      setSelectedProject(newProject);
+      setStartInEditMode(true);
+    }
+    setIsCreatingProject(false);
+  }, [companies, t, setSelectedProject, isCreatingProject]);
 
   // 🏢 ENTERPRISE: Delete project — centralized DeleteConfirmDialog (not browser confirm)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -227,17 +261,10 @@ export function ProjectsPageContent() {
             setViewMode={setViewMode}
             showDashboard={showDashboard}
             setShowDashboard={setShowDashboard}
-            onNewProject={handleOpenAddDialog}
+            onNewProject={handleNewProject}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
             projectCount={projectsStats.totalProjects}
-        />
-
-        {/* 🏢 ENTERPRISE: AddProjectDialog — CREATE-ONLY (edit happens inline) */}
-        <AddProjectDialog
-          open={isAddProjectDialogOpen}
-          onOpenChange={setIsAddProjectDialogOpen}
-          onProjectAdded={handleProjectAdded}
         />
 
         {showDashboard && (
@@ -272,12 +299,16 @@ export function ProjectsPageContent() {
           <ProjectViewSwitch
             projects={filteredProjects}
             selectedProject={selectedProject}
-            onSelectProject={setSelectedProject}
+            onSelectProject={(project) => {
+              setSelectedProject(project);
+              setStartInEditMode(false);
+            }}
             companies={companies}
             viewMode={viewMode}
             initialTab={tabFromUrl || undefined}
-            onNewProject={handleOpenAddDialog}
+            onNewProject={handleNewProject}
             onDeleteProject={handleDeleteProject}
+            startInEditMode={startInEditMode}
           />
         </ListContainer>
 

@@ -32,10 +32,12 @@ interface ProjectViewSwitchProps {
   initialTab?: string;
   onNewProject?: () => void;
   onDeleteProject?: (project: Project) => void;
+  /** Start in edit mode (for inline project creation) */
+  startInEditMode?: boolean;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -50,10 +52,10 @@ export function ProjectViewSwitch({
     setIsEditingProject(true);
   }, []);
 
-  // Reset edit mode when selected project changes
+  // Reset or activate edit mode when selected project changes
   React.useEffect(() => {
-    setIsEditingProject(false);
-  }, [selectedProject?.id]);
+    setIsEditingProject(!!startInEditMode);
+  }, [selectedProject?.id, startInEditMode]);
 
   // 🏢 ENTERPRISE: Favorites state for grid view (PR: Projects Grid View)
   const [favorites, setFavorites] = useState<string[]>([]);
