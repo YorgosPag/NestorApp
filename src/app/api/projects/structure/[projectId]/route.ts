@@ -110,23 +110,27 @@ export const GET = withStandardRateLimit(async function GET(
         // STEP 2: GET BUILDINGS (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        logger.info('Fetching buildings for project', { projectId });
+        logger.info('Fetching buildings for project', { projectId, isSuperAdmin });
 
-        // Try with string projectId first
-        let buildingsSnapshot = await getAdminFirestore()
+        // 🏢 ENTERPRISE: Super Admin skips companyId filter (cross-tenant)
+        let buildingsQuery = getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
-          .where('projectId', '==', projectId)
-          .where('companyId', '==', ctx.companyId)
-          .get();
+          .where('projectId', '==', projectId);
+        if (!isSuperAdmin) {
+          buildingsQuery = buildingsQuery.where('companyId', '==', ctx.companyId);
+        }
+        let buildingsSnapshot = await buildingsQuery.get();
 
         // If no results, try with number projectId
         if (buildingsSnapshot.docs.length === 0) {
           logger.info('Trying numeric projectId', { numericProjectId: parseInt(projectId) });
-          buildingsSnapshot = await getAdminFirestore()
+          let numericQuery = getAdminFirestore()
             .collection(COLLECTIONS.BUILDINGS)
-            .where('projectId', '==', parseInt(projectId))
-            .where('companyId', '==', ctx.companyId)
-            .get();
+            .where('projectId', '==', parseInt(projectId));
+          if (!isSuperAdmin) {
+            numericQuery = numericQuery.where('companyId', '==', ctx.companyId);
+          }
+          buildingsSnapshot = await numericQuery.get();
         }
 
         logger.info('Found buildings (tenant-scoped)', { count: buildingsSnapshot.docs.length });
@@ -142,11 +146,13 @@ export const GET = withStandardRateLimit(async function GET(
 
           // 🏠 UNITS
           logger.info('Fetching units for building', { buildingId: building.id });
-          const unitsSnapshot = await getAdminFirestore()
+          let unitsQuery = getAdminFirestore()
             .collection(COLLECTIONS.UNITS)
-            .where('buildingId', '==', building.id)
-            .where('companyId', '==', ctx.companyId)
-            .get();
+            .where('buildingId', '==', building.id);
+          if (!isSuperAdmin) {
+            unitsQuery = unitsQuery.where('companyId', '==', ctx.companyId);
+          }
+          const unitsSnapshot = await unitsQuery.get();
 
           const units = unitsSnapshot.docs.map(unitDoc => ({
             id: unitDoc.id,
