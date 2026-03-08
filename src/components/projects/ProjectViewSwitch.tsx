@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Project } from '@/types/project';
 import type { NavigationCompany } from '@/components/navigation/core/types';
 import { Trash2 } from 'lucide-react';
@@ -43,12 +43,17 @@ export function ProjectViewSwitch({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
   const colors = useSemanticColors();
-  // 🏢 ENTERPRISE: Ref for triggering edit mode in ProjectDetails from CompactToolbar
-  const editTriggerRef = useRef<(() => void) | null>(null);
+  // 🏢 ENTERPRISE: Lifted edit state — shared between CompactToolbar and ProjectDetails
+  const [isEditingProject, setIsEditingProject] = useState(false);
 
   const handleEditProject = useCallback(() => {
-    editTriggerRef.current?.();
+    setIsEditingProject(true);
   }, []);
+
+  // Reset edit mode when selected project changes
+  React.useEffect(() => {
+    setIsEditingProject(false);
+  }, [selectedProject?.id]);
 
   // 🏢 ENTERPRISE: Favorites state for grid view (PR: Projects Grid View)
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -114,7 +119,8 @@ export function ProjectViewSwitch({
               initialTab={initialTab}
               onNewProject={onNewProject}
               onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-              editTriggerRef={editTriggerRef}
+              isEditing={isEditingProject}
+            onSetEditing={setIsEditingProject}
             />
           )}
         </MobileDetailsSlideIn>
@@ -142,7 +148,8 @@ export function ProjectViewSwitch({
             initialTab={initialTab}
             onNewProject={onNewProject}
             onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-            editTriggerRef={editTriggerRef}
+            isEditing={isEditingProject}
+            onSetEditing={setIsEditingProject}
           />
         )}
       </div>
@@ -181,7 +188,8 @@ export function ProjectViewSwitch({
             initialTab={initialTab}
             onNewProject={onNewProject}
             onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-            editTriggerRef={editTriggerRef}
+            isEditing={isEditingProject}
+            onSetEditing={setIsEditingProject}
           />
         )}
       </MobileDetailsSlideIn>

@@ -32,6 +32,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: AddProjectDialog for creating new projects (ADR-087)
 import { AddProjectDialog } from './dialogs/AddProjectDialog';
 import { deleteProject } from '@/services/projects-client.service';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectsPageContent');
@@ -96,19 +97,28 @@ export function ProjectsPageContent() {
     window.location.reload();
   }, []);
 
-  // 🏢 ENTERPRISE: Delete project handler
-  const handleDeleteProject = React.useCallback(async (project: Project) => {
-    if (!confirm(t('detailsHeader.actions.confirmDelete', { name: project.name }))) return;
+  // 🏢 ENTERPRISE: Delete project — centralized DeleteConfirmDialog (not browser confirm)
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    const result = await deleteProject(project.id);
+  const handleDeleteProject = React.useCallback((project: Project) => {
+    setProjectToDelete(project);
+  }, []);
+
+  const handleConfirmDelete = React.useCallback(async () => {
+    if (!projectToDelete) return;
+    setIsDeleting(true);
+    const result = await deleteProject(projectToDelete.id);
     if (result.success) {
-      logger.info('Project deleted', { projectId: project.id });
+      logger.info('Project deleted', { projectId: projectToDelete.id });
       setSelectedProject(null);
+      setProjectToDelete(null);
       window.location.reload();
     } else {
       logger.error('Failed to delete project', { error: result.error });
+      setIsDeleting(false);
     }
-  }, [t, setSelectedProject]);
+  }, [projectToDelete, setSelectedProject]);
 
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
@@ -273,6 +283,16 @@ export function ProjectsPageContent() {
             onDeleteProject={handleDeleteProject}
           />
         </ListContainer>
+
+        {/* 🏢 ENTERPRISE: Centralized delete confirmation (ADR-003) */}
+        <DeleteConfirmDialog
+          open={!!projectToDelete}
+          onOpenChange={(open) => { if (!open) setProjectToDelete(null); }}
+          title={t('detailsHeader.actions.delete')}
+          description={t('detailsHeader.actions.confirmDelete', { name: projectToDelete?.name ?? '' })}
+          onConfirm={handleConfirmDelete}
+          loading={isDeleting}
+        />
       </PageContainer>
   );
 }

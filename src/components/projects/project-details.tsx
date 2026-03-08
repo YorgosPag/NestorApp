@@ -37,8 +37,10 @@ interface ProjectDetailsProps {
   initialTab?: string;
   onNewProject?: () => void;
   onDeleteProject?: () => void;
-  /** Ref that parent can use to trigger edit mode externally (e.g., from CompactToolbar) */
-  editTriggerRef?: React.MutableRefObject<(() => void) | null>;
+  /** Lifted edit state from parent (e.g., CompactToolbar triggers edit) */
+  isEditing?: boolean;
+  /** Callback to update lifted edit state */
+  onSetEditing?: (editing: boolean) => void;
 }
 
 // ============================================================================
@@ -50,35 +52,26 @@ export function ProjectDetails({
   initialTab,
   onNewProject,
   onDeleteProject,
-  editTriggerRef
+  isEditing: externalIsEditing,
+  onSetEditing,
 }: ProjectDetailsProps) {
   const { t } = useTranslation('projects');
 
-  // Lifted edit state — shared between header buttons and GeneralProjectTab
-  const [isEditing, setIsEditing] = useState(false);
+  // Use lifted state if available, otherwise fallback to local state
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+  const isEditing = externalIsEditing ?? localIsEditing;
+  const setIsEditing = onSetEditing ?? setLocalIsEditing;
 
   // Ref for save callback registered by GeneralProjectTab
   const saveCallbackRef = useRef<(() => void) | null>(null);
 
   const handleStartEdit = useCallback(() => {
     setIsEditing(true);
-  }, []);
-
-  // Expose handleStartEdit to parent via editTriggerRef
-  React.useEffect(() => {
-    if (editTriggerRef) {
-      editTriggerRef.current = handleStartEdit;
-    }
-    return () => {
-      if (editTriggerRef) {
-        editTriggerRef.current = null;
-      }
-    };
-  }, [editTriggerRef, handleStartEdit]);
+  }, [setIsEditing]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
-  }, []);
+  }, [setIsEditing]);
 
   const handleSaveEdit = useCallback(() => {
     // Delegate to the tab's save function if registered
