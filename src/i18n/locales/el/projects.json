@@ -37,9 +37,8 @@
     "title": "Timeline Έργου: {name}",
     "totalProgress": "Συνολική Πρόοδος Έργου",
     "buildingProgress": "Πρόοδος ανά Κτίριο",
-    "buildingA": "Κτίριο Α",
-    "buildingB": "Κτίριο Β",
-    "buildingC": "Κτίριο Γ"
+    "loading": "Φόρτωση κτιρίων...",
+    "noBuildings": "Δεν υπάρχουν κτίρια σε αυτό το έργο."
   },
   "toolbar": {
     "new": "Νέο Έργο",

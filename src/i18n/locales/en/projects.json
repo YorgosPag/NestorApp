@@ -37,9 +37,8 @@
     "title": "Project Timeline: {name}",
     "totalProgress": "Total Project Progress",
     "buildingProgress": "Progress per Building",
-    "buildingA": "Building A",
-    "buildingB": "Building B",
-    "buildingC": "Building C"
+    "loading": "Loading buildings...",
+    "noBuildings": "No buildings in this project."
   },
   "toolbar": {
     "new": "New Project",
