@@ -18,8 +18,26 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
-    const lastMilestone = milestones[milestones.length - 1];
+    const lastMilestone = milestones.length > 0 ? milestones[milestones.length - 1] : undefined;
     const delayDays = 5; // Mock data for delay
+
+    if (!lastMilestone) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className={`${iconSizes.md} text-green-500`} />
+                        {t('tabs.timeline.forecast.title')}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                        {t('tabs.timeline.forecast.noData', { defaultValue: 'Δεν υπάρχουν ορόσημα για πρόβλεψη.' })}
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>
