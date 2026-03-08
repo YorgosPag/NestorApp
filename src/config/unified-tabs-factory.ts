@@ -361,6 +361,9 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
     case 'building':
       return {
         baseTabs: [
+          // ===============================================================
+          // ΤΑΥΤΟΤΗΤΑ — Τι είναι αυτό το Κτίριο
+          // ===============================================================
           {
             id: 'general',
             value: 'general',
@@ -370,6 +373,9 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             enabled: true,
             component: 'GeneralTabContent'
           },
+          // ===============================================================
+          // ΔΟΜΗ — Τι περιέχει το Κτίριο
+          // ===============================================================
           {
             id: 'floors',
             value: 'floors',
@@ -380,43 +386,20 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'FloorsTabContent'
           },
           {
-            id: 'floorplan',
-            value: 'floorplan',
-            // 🏢 ENTERPRISE: Primary concept = Κάτοψη (floor plan), NOT building context
-            icon: 'layout-grid',
-            description: 'tabs.floorplan.description',
+            id: 'units',
+            value: 'units',
+            icon: 'home',
+            description: 'Μονάδες (διαμερίσματα, καταστήματα, γραφεία) του κτιρίου',
             order: 3,
             enabled: true,
-            component: 'FloorplanViewerTab',
-            componentProps: {
-              title: 'tabs.labels.floorplan',
-              floorplanType: 'building'
-            }
-          },
-          {
-            id: 'timeline',
-            value: 'timeline',
-            icon: 'calendar',
-            description: 'Χρονοδιάγραμμα και ιστορικό κτιρίου',
-            order: 4,
-            enabled: true,
-            component: 'TimelineTabContent'
-          },
-          {
-            id: 'analytics',
-            value: 'analytics',
-            icon: 'bar-chart-3',
-            description: 'Αναλυτικά στοιχεία και στατιστικά',
-            order: 5,
-            enabled: true,
-            component: 'AnalyticsTabContent'
+            component: 'UnitsTabContent'
           },
           {
             id: 'storage',
             value: 'storage',
             icon: 'warehouse',
             description: 'Διαχείριση αποθηκών και αποθεματικών',
-            order: 6,
+            order: 4,
             enabled: true,
             component: 'StorageTab'
           },
@@ -425,25 +408,83 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'parking',
             icon: 'car',
             description: 'Διαχείριση θέσεων στάθμευσης κτιρίου',
-            order: 7,
+            order: 5,
             enabled: true,
             component: 'ParkingTabContent'
           },
+          // ===============================================================
+          // ΑΝΘΡΩΠΟΙ — Ποιος εμπλέκεται
+          // ===============================================================
           {
-            id: 'units',
-            value: 'units',
-            icon: 'home',
-            description: 'Μονάδες (διαμερίσματα, καταστήματα, γραφεία) του κτιρίου',
+            id: 'contacts',
+            value: 'contacts',
+            icon: 'handshake',
+            description: 'Συνεργάτες και επαφές που σχετίζονται με το κτίριο',
+            order: 6,
+            enabled: true,
+            component: 'BuildingContactsTab'
+          },
+          {
+            id: 'customers',
+            value: 'customers',
+            icon: 'users',
+            description: 'Πελάτες που έχουν αγοράσει μονάδες σε αυτό το κτίριο',
+            order: 7,
+            enabled: true,
+            component: 'BuildingCustomersTab'
+          },
+          // ===============================================================
+          // ΕΡΓΑΣΙΑ — Timeline, Analytics, Επιμετρήσεις
+          // ===============================================================
+          {
+            id: 'timeline',
+            value: 'timeline',
+            icon: 'calendar',
+            description: 'Χρονοδιάγραμμα και ιστορικό κτιρίου',
             order: 8,
             enabled: true,
-            component: 'UnitsTabContent'
+            component: 'TimelineTabContent'
+          },
+          {
+            id: 'analytics',
+            value: 'analytics',
+            icon: 'bar-chart-3',
+            description: 'Αναλυτικά στοιχεία και στατιστικά',
+            order: 9,
+            enabled: true,
+            component: 'AnalyticsTabContent'
+          },
+          {
+            id: 'measurements',
+            value: 'measurements',
+            icon: 'ruler',
+            description: 'Επιμετρήσεις εργασιών και κοστολόγηση',
+            order: 10,
+            enabled: true,
+            component: 'MeasurementsTabContent'
+          },
+          // ===============================================================
+          // ΑΡΧΕΙΑ — Κατόψεις, Έγγραφα, Media
+          // ===============================================================
+          {
+            id: 'floorplan',
+            value: 'floorplan',
+            icon: 'layout-grid',
+            description: 'tabs.floorplan.description',
+            order: 11,
+            enabled: true,
+            component: 'FloorplanViewerTab',
+            componentProps: {
+              title: 'tabs.labels.floorplan',
+              floorplanType: 'building'
+            }
           },
           {
             id: 'contracts',
             value: 'contracts',
             icon: 'file-text',
             description: 'Έγγραφα κτιρίου (συμβόλαια, άδειες, μελέτες κ.λπ.)',
-            order: 9,
+            order: 12,
             enabled: true,
             component: 'BuildingDocumentsTab'
           },
@@ -452,7 +493,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'protocols',
             icon: 'clipboard-check',
             description: 'tabs.protocols.description',
-            order: 10,
+            order: 13,
             enabled: true,
             component: 'PlaceholderTab',
             componentProps: {
@@ -465,45 +506,18 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'photos',
             icon: 'camera',
             description: 'Φωτογραφίες κτιρίου και εργασιών',
-            order: 11,
+            order: 14,
             enabled: true,
             component: 'PhotosTabContent'
-          },
-          {
-            id: 'customers',
-            value: 'customers',
-            icon: 'users',
-            description: 'Πελάτες που έχουν αγοράσει μονάδες σε αυτό το κτίριο',
-            order: 12,
-            enabled: true,
-            component: 'BuildingCustomersTab'
-          },
-          {
-            id: 'contacts',
-            value: 'contacts',
-            icon: 'contact',
-            description: 'Επαφές και συνεργάτες που σχετίζονται με το κτίριο',
-            order: 12.5,
-            enabled: true,
-            component: 'BuildingContactsTab'
           },
           {
             id: 'videos',
             value: 'videos',
             icon: 'play-circle',
             description: 'Videos κτιρίου και εργασιών',
-            order: 13,
+            order: 15,
             enabled: true,
             component: 'VideosTabContent'
-          },
-          {
-            id: 'measurements',
-            value: 'measurements',
-            icon: 'ruler',
-            description: 'Επιμετρήσεις εργασιών και κοστολόγηση',
-            order: 14,
-            enabled: true,
-            component: 'MeasurementsTabContent'
           }
         ],
         defaultEnabled: true

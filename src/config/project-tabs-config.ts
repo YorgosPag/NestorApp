@@ -52,6 +52,10 @@ export interface ProjectTabConfig {
 // ============================================================================
 
 export const PROJECT_TABS: ProjectTabConfig[] = [
+  // =========================================================================
+  // ΤΑΥΤΟΤΗΤΑ — Τι είναι αυτό το Έργο
+  // =========================================================================
+
   // -------------------------------------------------------------------------
   // 1. ΓΕΝΙΚΑ ΕΡΓΟΥ
   // -------------------------------------------------------------------------
@@ -67,7 +71,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 1.5. ΤΟΠΟΘΕΣΙΕΣ & ΔΙΕΥΘΥΝΣΕΙΣ - 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  // 2. ΤΟΠΟΘΕΣΙΕΣ & ΔΙΕΥΘΥΝΣΕΙΣ (ADR-167)
   // -------------------------------------------------------------------------
   {
     id: 'locations',
@@ -75,13 +79,99 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'locations',
     icon: 'map-pin',
     description: 'Διαχείριση διευθύνσεων και τοποθεσιών του έργου',
-    order: 1.5,
+    order: 2,
     enabled: true,
     component: 'ProjectLocationsTab',
   },
 
+  // =========================================================================
+  // ΔΟΜΗ — Τι περιέχει το Έργο
+  // =========================================================================
+
   // -------------------------------------------------------------------------
-  // 2. ΚΑΤΟΨΗ ΕΡΓΟΥ - 🏢 ENTERPRISE: Uses centralized file storage (ADR-033)
+  // 3. ΔΟΜΗ ΕΡΓΟΥ (Κτίρια → Μονάδες/Αποθήκες/Parking)
+  // -------------------------------------------------------------------------
+  {
+    id: 'structure',
+    label: PROJECT_TAB_LABELS.STRUCTURE,
+    value: 'structure',
+    icon: 'building',
+    description: PROJECT_TAB_DESCRIPTIONS.STRUCTURE,
+    order: 3,
+    enabled: true,
+    component: 'ProjectStructureTab',
+  },
+
+  // =========================================================================
+  // ΑΝΘΡΩΠΟΙ — Ποιος εμπλέκεται
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // 4. ΣΥΝΕΡΓΑΤΕΣ & ΕΠΑΦΕΣ (αντικατέστησε τον stub ContributorsTab)
+  // -------------------------------------------------------------------------
+  {
+    id: 'contributors',
+    label: PROJECT_TAB_LABELS.CONTRIBUTORS,
+    value: 'contributors',
+    icon: 'handshake',
+    description: PROJECT_TAB_DESCRIPTIONS.CONTRIBUTORS,
+    order: 4,
+    enabled: true,
+    component: 'ProjectAssociationsTab',
+  },
+
+  // -------------------------------------------------------------------------
+  // 5. ΠΕΛΑΤΕΣ
+  // -------------------------------------------------------------------------
+  {
+    id: 'customers',
+    label: PROJECT_TAB_LABELS.CUSTOMERS,
+    value: 'customers',
+    icon: 'users',
+    description: PROJECT_TAB_DESCRIPTIONS.CUSTOMERS,
+    order: 5,
+    enabled: true,
+    component: 'ProjectCustomersTab',
+  },
+
+  // =========================================================================
+  // ΕΡΓΑΣΙΑ — Τι γίνεται / Χρονοδιάγραμμα
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // 6. TIMELINE
+  // -------------------------------------------------------------------------
+  {
+    id: 'timeline',
+    label: PROJECT_TAB_LABELS.TIMELINE,
+    value: 'timeline',
+    icon: 'calendar',
+    description: PROJECT_TAB_DESCRIPTIONS.TIMELINE,
+    order: 6,
+    enabled: true,
+    component: 'ProjectTimelineTab',
+  },
+
+  // -------------------------------------------------------------------------
+  // 7. ΙΚΑ
+  // -------------------------------------------------------------------------
+  {
+    id: 'ika',
+    label: PROJECT_TAB_LABELS.IKA,
+    value: 'ika',
+    icon: 'landmark',
+    description: PROJECT_TAB_DESCRIPTIONS.IKA,
+    order: 7,
+    enabled: true,
+    component: 'IkaTab',
+  },
+
+  // =========================================================================
+  // ΑΡΧΕΙΑ — Τεκμηρίωση & Media
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // 8. ΚΑΤΟΨΗ ΕΡΓΟΥ (ADR-033)
   // -------------------------------------------------------------------------
   {
     id: 'floorplan',
@@ -89,7 +179,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'floorplan',
     icon: 'ruler',
     description: PROJECT_TAB_DESCRIPTIONS.FLOORPLAN,
-    order: 2,
+    order: 8,
     enabled: true,
     component: 'ProjectFloorplanTab',
     componentProps: {
@@ -99,7 +189,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 3. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ — Κατόψεις + Λίστα (ADR-191)
+  // 9. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ — Κατόψεις + Λίστα (ADR-191)
   // -------------------------------------------------------------------------
   {
     id: 'parking-floorplan',
@@ -107,93 +197,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'parking-floorplan',
     icon: 'car',
     description: PROJECT_TAB_DESCRIPTIONS.PARKING_FLOORPLAN,
-    order: 3,
+    order: 9,
     enabled: true,
     component: 'ProjectParkingTab',
     componentProps: {
       title: PROJECT_COMPONENT_LABELS.PARKING_FLOORPLAN_TITLE,
       floorplanType: 'parking'
     }
-  },
-
-  // -------------------------------------------------------------------------
-  // 4. ΔΟΜΗ ΕΡΓΟΥ
-  // -------------------------------------------------------------------------
-  {
-    id: 'structure',
-    label: PROJECT_TAB_LABELS.STRUCTURE,
-    value: 'structure',
-    icon: 'building',
-    description: PROJECT_TAB_DESCRIPTIONS.STRUCTURE,
-    order: 4,
-    enabled: true,
-    component: 'ProjectStructureTab',
-  },
-
-  // -------------------------------------------------------------------------
-  // 5. TIMELINE
-  // -------------------------------------------------------------------------
-  {
-    id: 'timeline',
-    label: PROJECT_TAB_LABELS.TIMELINE,
-    value: 'timeline',
-    icon: 'calendar',
-    description: PROJECT_TAB_DESCRIPTIONS.TIMELINE,
-    order: 5,
-    enabled: true,
-    component: 'ProjectTimelineTab',
-  },
-
-  // -------------------------------------------------------------------------
-  // 6. ΠΕΛΑΤΕΣ
-  // -------------------------------------------------------------------------
-  {
-    id: 'customers',
-    label: PROJECT_TAB_LABELS.CUSTOMERS,
-    value: 'customers',
-    icon: 'users',
-    description: PROJECT_TAB_DESCRIPTIONS.CUSTOMERS,
-    order: 6,
-    enabled: true,
-    component: 'ProjectCustomersTab',
-  },
-
-  // -------------------------------------------------------------------------
-  // 7. ΣΤΟΙΧΕΙΑ ΔΟΜΗΣΗΣ — ΠΑΓΩΜΕΝΟ (2026-03-07)
-  // Ο Γιώργος ζήτησε να μην εμφανίζεται η καρτέλα "Στοιχεία Δόμησης"
-  // (Όροι Δόμησης Οικοπέδου, Επιτρεπόμενα, Πραγματοποιούμενα, Λοιπά Στοιχεία).
-  // Ο κώδικας παραμένει στο codebase — ενδέχεται να επαναχρησιμοποιηθεί αργότερα.
-  // Για επανενεργοποίηση: enabled: true
-  // -------------------------------------------------------------------------
-  {
-    id: 'building-data',
-    label: PROJECT_TAB_LABELS.BUILDING_DATA,
-    value: 'building-data',
-    icon: 'bar-chart',
-    description: PROJECT_TAB_DESCRIPTIONS.BUILDING_DATA,
-    order: 7,
-    enabled: false,
-    component: 'BuildingDataTab',
-  },
-
-  // -------------------------------------------------------------------------
-  // 8. ΘΕΣΕΙΣ ΣΤΑΘΜΕΥΣΗΣ — ΑΦΑΙΡΕΘΗΚΕ (ADR-191)
-  // Parking ανήκει στο Building level (ParkingTabContent), όχι στο Project.
-  // Cross-building view: /spaces/parking
-  // -------------------------------------------------------------------------
-
-  // -------------------------------------------------------------------------
-  // 9. ΣΥΝΕΡΓΑΤΕΣ & ΕΠΑΦΕΣ (αντικατέστησε τον stub ContributorsTab)
-  // -------------------------------------------------------------------------
-  {
-    id: 'contributors',
-    label: PROJECT_TAB_LABELS.CONTRIBUTORS,
-    value: 'contributors',
-    icon: 'handshake',
-    description: PROJECT_TAB_DESCRIPTIONS.CONTRIBUTORS,
-    order: 9,
-    enabled: true,
-    component: 'ProjectAssociationsTab',
   },
 
   // -------------------------------------------------------------------------
@@ -211,21 +221,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 11. ΙΚΑ
-  // -------------------------------------------------------------------------
-  {
-    id: 'ika',
-    label: PROJECT_TAB_LABELS.IKA,
-    value: 'ika',
-    icon: 'landmark',
-    description: PROJECT_TAB_DESCRIPTIONS.IKA,
-    order: 11,
-    enabled: true,
-    component: 'IkaTab',
-  },
-
-  // -------------------------------------------------------------------------
-  // 12. ΦΩΤΟΓΡΑΦΙΕΣ
+  // 11. ΦΩΤΟΓΡΑΦΙΕΣ
   // -------------------------------------------------------------------------
   {
     id: 'photos',
@@ -233,13 +229,13 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'photos',
     icon: 'camera',
     description: PROJECT_TAB_DESCRIPTIONS.PHOTOS,
-    order: 12,
+    order: 11,
     enabled: true,
     component: 'PhotosTab',
   },
 
   // -------------------------------------------------------------------------
-  // 13. ΒΙΝΤΕΟ
+  // 12. ΒΙΝΤΕΟ
   // -------------------------------------------------------------------------
   {
     id: 'videos',
@@ -247,9 +243,29 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     value: 'videos',
     icon: 'video',
     description: PROJECT_TAB_DESCRIPTIONS.VIDEOS,
-    order: 13,
+    order: 12,
     enabled: true,
     component: 'VideosTab',
+  },
+
+  // =========================================================================
+  // ΠΑΓΩΜΕΝΑ — Disabled tabs (κρυφά, ενεργοποίηση μελλοντικά)
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // ΣΤΟΙΧΕΙΑ ΔΟΜΗΣΗΣ — ΠΑΓΩΜΕΝΟ (2026-03-07)
+  // Ο Γιώργος ζήτησε να μην εμφανίζεται.
+  // Για επανενεργοποίηση: enabled: true
+  // -------------------------------------------------------------------------
+  {
+    id: 'building-data',
+    label: PROJECT_TAB_LABELS.BUILDING_DATA,
+    value: 'building-data',
+    icon: 'bar-chart',
+    description: PROJECT_TAB_DESCRIPTIONS.BUILDING_DATA,
+    order: 99,
+    enabled: false,
+    component: 'BuildingDataTab',
   },
 ];
 
