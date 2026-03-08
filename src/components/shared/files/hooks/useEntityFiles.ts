@@ -57,11 +57,20 @@ export interface UseEntityFilesParams {
 }
 
 /**
+ * 🔗 ENTERPRISE: FileRecord extended with link status
+ * Indicates whether a file is linked (referenced) vs owned by the current entity
+ */
+export interface FileRecordWithLinkStatus extends FileRecord {
+  /** true if this file is linked from another entity (not directly owned) */
+  isLinkedFile?: boolean;
+}
+
+/**
  * Hook return value
  */
 export interface UseEntityFilesReturn {
-  /** Array of FileRecords */
-  files: FileRecord[];
+  /** Array of FileRecords (may include linked files with isLinkedFile flag) */
+  files: FileRecordWithLinkStatus[];
   /** Loading state */
   loading: boolean;
   /** Error state */
@@ -106,7 +115,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   } = params;
 
   // State
-  const [files, setFiles] = useState<FileRecord[]>([]);
+  const [files, setFiles] = useState<FileRecordWithLinkStatus[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -116,6 +125,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
 
   /**
    * Fetch files from Firestore using FileRecordService
+   * 🔗 ENTERPRISE: Dual-query — owned files + linked files (merged + deduplicated)
    */
   const fetchFiles = useCallback(async () => {
     try {
@@ -130,48 +140,58 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
         purpose,
       });
 
-      // Use FileRecordService to fetch files
-      // 🏢 ENTERPRISE: Don't filter by purpose in query - do client-side filtering
-      // This allows legacy files (without purpose) to still appear
-      const fetchedFiles = await FileRecordService.getFilesByEntity(
-        entityType,
-        entityId,
-        {
-          companyId, // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
-          domain,
-          category,
-          // NOTE: purpose filtering is done client-side below for backward compatibility
-          includeDeleted: false, // Don't include soft-deleted files
-        }
-      );
+      // 🔗 ENTERPRISE: Parallel queries for owned + linked files
+      const [fetchedFiles, linkedFiles] = await Promise.all([
+        // Query 1: Files directly owned by this entity
+        FileRecordService.getFilesByEntity(
+          entityType,
+          entityId,
+          {
+            companyId,
+            domain,
+            category,
+            includeDeleted: false,
+          }
+        ),
+        // Query 2: Files linked to this entity from other entities
+        companyId
+          ? FileRecordService.getLinkedFiles(entityType, entityId, companyId)
+          : Promise.resolve([]),
+      ]);
 
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
-      // - Files with matching purpose → show
-      // - Files without purpose (legacy) → show in all tabs
-      // - Files with 'floorplan' purpose (legacy) → show in project-floorplan tab only
-      // - Files with different purpose → hide
-      const filteredByPurpose = purpose
-        ? fetchedFiles.filter(file => {
-            // No purpose = legacy, show everywhere
-            if (!file.purpose) return true;
-            // Exact match
-            if (file.purpose === purpose) return true;
-            // Legacy 'floorplan' purpose → show in project-floorplan tab (primary tab)
-            if (file.purpose === 'floorplan' && purpose === 'project-floorplan') return true;
-            // Hide files with different purpose
-            return false;
-          })
-        : fetchedFiles;
+      const filterByPurpose = (file: FileRecord): boolean => {
+        if (!purpose) return true;
+        if (!file.purpose) return true;
+        if (file.purpose === purpose) return true;
+        if (file.purpose === 'floorplan' && purpose === 'project-floorplan') return true;
+        return false;
+      };
+
+      const filteredOwned = fetchedFiles.filter(filterByPurpose);
+
+      // 🔗 ENTERPRISE: Mark linked files and merge with owned files
+      const ownedIds = new Set(filteredOwned.map(f => f.id));
+      const uniqueLinked: FileRecordWithLinkStatus[] = linkedFiles
+        .filter(f => !ownedIds.has(f.id)) // Deduplicate
+        .filter(filterByPurpose)
+        .map(f => ({ ...f, isLinkedFile: true }));
+
+      const mergedFiles: FileRecordWithLinkStatus[] = [
+        ...filteredOwned,
+        ...uniqueLinked,
+      ];
 
       logger.info('Files fetched successfully', {
-        count: filteredByPurpose.length,
-        totalFetched: fetchedFiles.length,
+        count: mergedFiles.length,
+        owned: filteredOwned.length,
+        linked: uniqueLinked.length,
         entityType,
         entityId,
         purposeFilter: purpose || 'none',
       });
 
-      setFiles(filteredByPurpose);
+      setFiles(mergedFiles);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error fetching files');
       logger.error('Failed to fetch files', {

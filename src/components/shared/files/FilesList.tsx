@@ -14,8 +14,9 @@
 
 import React, { useCallback, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { FileText, Download, Eye, Trash2, Calendar, HardDrive } from 'lucide-react';
+import { FileText, Download, Eye, Trash2, Calendar, HardDrive, Link2, Unlink } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
+import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -40,8 +41,8 @@ const logger = createModuleLogger('FilesList');
 // ============================================================================
 
 export interface FilesListProps {
-  /** Array of FileRecords to display */
-  files: FileRecord[];
+  /** Array of FileRecords to display (may include linked files) */
+  files: FileRecordWithLinkStatus[];
   /** Loading state */
   loading?: boolean;
   /** Delete handler */
@@ -54,6 +55,12 @@ export interface FilesListProps {
   onRename?: (fileId: string, newDisplayName: string) => void;
   /** Current user ID (για delete authorization) */
   currentUserId?: string;
+  /** 🔗 Link to building handler (shown for project files) */
+  onLink?: (file: FileRecord) => void;
+  /** 🔗 Unlink handler (shown for linked files) */
+  onUnlink?: (fileId: string) => Promise<void>;
+  /** Show link action button */
+  showLinkAction?: boolean;
 }
 
 // ============================================================================
@@ -99,6 +106,9 @@ export function FilesList({
   onView,
   onDownload,
   currentUserId,
+  onLink,
+  onUnlink,
+  showLinkAction = false,
 }: FilesListProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
@@ -113,6 +123,13 @@ export function FilesList({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // =========================================================================
+  // 🔗 UNLINK CONFIRMATION STATE
+  // =========================================================================
+  const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false);
+  const [fileToUnlink, setFileToUnlink] = useState<string | null>(null);
+  const [unlinkLoading, setUnlinkLoading] = useState(false);
 
   // =========================================================================
   // HANDLERS
@@ -149,6 +166,45 @@ export function FilesList({
       setDeleteLoading(false);
     }
   }, [fileToDelete, onDelete, t, success, error]);
+
+  /**
+   * 🔗 Opens unlink confirmation modal
+   */
+  const handleUnlinkClick = useCallback((fileId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!onUnlink) return;
+
+    setFileToUnlink(fileId);
+    setUnlinkConfirmOpen(true);
+  }, [onUnlink]);
+
+  /**
+   * 🔗 Executes unlink after user confirms
+   */
+  const handleUnlinkConfirm = useCallback(async () => {
+    if (!fileToUnlink || !onUnlink) return;
+
+    setUnlinkLoading(true);
+    try {
+      await onUnlink(fileToUnlink);
+      success(t('list.unlinkSuccess'));
+      setUnlinkConfirmOpen(false);
+      setFileToUnlink(null);
+    } catch (err) {
+      error(t('list.unlinkError'));
+      logger.error('Unlink failed', { error: err });
+    } finally {
+      setUnlinkLoading(false);
+    }
+  }, [fileToUnlink, onUnlink, t, success, error]);
+
+  /**
+   * 🔗 Link button handler
+   */
+  const handleLinkClick = useCallback((file: FileRecord, event: React.MouseEvent) => {
+    event.stopPropagation();
+    onLink?.(file);
+  }, [onLink]);
 
   const handleView = useCallback((file: FileRecord, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -268,6 +324,14 @@ export function FilesList({
 
                   {/* Extension */}
                   <span className="uppercase">.{file.ext}</span>
+
+                  {/* 🔗 Linked file indicator */}
+                  {file.isLinkedFile && (
+                    <span className="flex items-center gap-1 text-blue-500" title={t('list.linkedFromProject')}>
+                      <Link2 className={iconSizes.xs} aria-hidden="true" />
+                      {t('list.linkedFromProject')}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -310,8 +374,44 @@ export function FilesList({
                 </Tooltip>
               )}
 
-              {/* Delete */}
-              {onDelete && currentUserId && (
+              {/* 🔗 Link to building (only for owned, non-linked files) */}
+              {showLinkAction && onLink && !file.isLinkedFile && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleLinkClick(file, e)}
+                      className="text-blue-500"
+                      aria-label={t('list.linkFile')}
+                    >
+                      <Link2 className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.linkFile')}</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* 🔗 Unlink (only for linked files) */}
+              {file.isLinkedFile && onUnlink && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleUnlinkClick(file.id, e)}
+                      className="text-orange-500"
+                      aria-label={t('list.unlinkFile')}
+                    >
+                      <Unlink className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.unlinkFile')}</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Delete (only for owned files, not linked) */}
+              {onDelete && currentUserId && !file.isLinkedFile && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -342,6 +442,18 @@ export function FilesList({
         confirmText={t('list.delete')}
         cancelText={t('list.cancel')}
         loading={deleteLoading}
+      />
+
+      {/* 🔗 Unlink Confirmation Modal */}
+      <DeleteConfirmDialog
+        open={unlinkConfirmOpen}
+        onOpenChange={setUnlinkConfirmOpen}
+        title={t('list.unlinkFile')}
+        description={t('list.unlinkConfirm')}
+        onConfirm={handleUnlinkConfirm}
+        confirmText={t('list.unlink')}
+        cancelText={t('list.cancel')}
+        loading={unlinkLoading}
       />
     </section>
   );

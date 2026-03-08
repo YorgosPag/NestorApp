@@ -25,6 +25,8 @@ import {
   where,
   getDocs,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
   type Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -783,6 +785,124 @@ export class FileRecordService {
     });
 
     logger.info('Hold released on FileRecord', { fileId });
+  }
+
+  // ==========================================================================
+  // 🔗 ENTITY LINKING OPERATIONS — Cross-entity file references
+  // ==========================================================================
+  // Ένα αρχείο ανεβαίνει σε μία οντότητα (π.χ. Project) και εμφανίζεται
+  // σε πολλαπλές οντότητες (π.χ. Buildings) μέσω linkedTo array.
+  // Firestore array-contains query για αναζήτηση linked αρχείων.
+  // ==========================================================================
+
+  /**
+   * 🔗 Link file to another entity (e.g. Project file → Building)
+   *
+   * Adds '{entityType}:{entityId}' to the linkedTo array using arrayUnion.
+   * Idempotent — calling twice with same params has no effect.
+   */
+  static async linkFileToEntity(
+    fileId: string,
+    targetEntityType: EntityType,
+    targetEntityId: string
+  ): Promise<void> {
+    const linkTag = `${targetEntityType}:${targetEntityId}`;
+
+    logger.info('Linking file to entity', { fileId, linkTag });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    await updateDoc(docRef, {
+      linkedTo: arrayUnion(linkTag),
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('File linked to entity', { fileId, linkTag });
+
+    RealtimeService.dispatch('FILE_UPDATED', {
+      fileId,
+      updates: { linkedTo: linkTag, action: 'link' },
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * 🔗 Unlink file from an entity
+   *
+   * Removes '{entityType}:{entityId}' from the linkedTo array using arrayRemove.
+   * Idempotent — calling twice with same params has no effect.
+   */
+  static async unlinkFileFromEntity(
+    fileId: string,
+    targetEntityType: EntityType,
+    targetEntityId: string
+  ): Promise<void> {
+    const linkTag = `${targetEntityType}:${targetEntityId}`;
+
+    logger.info('Unlinking file from entity', { fileId, linkTag });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    await updateDoc(docRef, {
+      linkedTo: arrayRemove(linkTag),
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('File unlinked from entity', { fileId, linkTag });
+
+    RealtimeService.dispatch('FILE_UPDATED', {
+      fileId,
+      updates: { linkedTo: linkTag, action: 'unlink' },
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * 🔗 Get files linked to a specific entity
+   *
+   * Uses Firestore array-contains query on linkedTo field.
+   * Returns files from ANY entity that have been linked to the target.
+   */
+  static async getLinkedFiles(
+    targetEntityType: EntityType,
+    targetEntityId: string,
+    companyId: string
+  ): Promise<FileRecord[]> {
+    const linkTag = `${targetEntityType}:${targetEntityId}`;
+
+    const constraints = [
+      where('companyId', '==', companyId),
+      where('linkedTo', 'array-contains', linkTag),
+      where('status', '==', FILE_STATUS.READY),
+      where('isDeleted', '!=', true),
+    ];
+
+    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
+    const querySnapshot = await getDocs(q);
+
+    const validRecords: FileRecord[] = [];
+    for (const docSnap of querySnapshot.docs) {
+      const data = docSnap.data();
+      const record = {
+        ...data,
+        id: docSnap.id,
+        createdAt: data.createdAt instanceof Object && 'toDate' in data.createdAt
+          ? (data.createdAt as Timestamp).toDate().toISOString()
+          : data.createdAt,
+        updatedAt: data.updatedAt instanceof Object && 'toDate' in data.updatedAt
+          ? (data.updatedAt as Timestamp).toDate().toISOString()
+          : data.updatedAt,
+      };
+
+      if (isFileRecord(record)) {
+        validRecords.push(record);
+      } else {
+        logger.warn('Skipping invalid FileRecord in getLinkedFiles', { docId: docSnap.id });
+      }
+    }
+
+    logger.info('Fetched linked files', { linkTag, count: validRecords.length });
+    return validRecords;
   }
 
   // ==========================================================================

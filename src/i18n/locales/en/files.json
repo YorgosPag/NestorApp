@@ -189,7 +189,27 @@
     "loadingFiles": "Loading files...",
     "noFiles": "No files",
     "noFilesDescription": "Add files using the Add Files button",
-    "fileActions": "File actions"
+    "fileActions": "File actions",
+    "link": "Link",
+    "unlink": "Unlink",
+    "linkFile": "Link file to building",
+    "unlinkFile": "Unlink file from building",
+    "linkedFromProject": "Linked from Project",
+    "unlinkConfirm": "Do you want to unlink this file? It will no longer appear here, but remains in the Project.",
+    "unlinkSuccess": "File unlinked successfully",
+    "unlinkError": "Failed to unlink file"
+  },
+  "linkModal": {
+    "title": "Link file to Buildings",
+    "description": "Select the buildings where you want this file to appear.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "noBuildings": "No buildings found in this Project",
+    "loadingBuildings": "Loading buildings...",
+    "loadError": "Failed to load buildings",
+    "saveSuccess": "Links updated successfully",
+    "saveError": "Failed to save links"
   },
   "trash": {
     "title": "Trash",

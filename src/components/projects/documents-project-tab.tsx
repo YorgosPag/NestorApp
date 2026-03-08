@@ -84,6 +84,7 @@ export function DocumentsProjectTab({ project, data }: DocumentsProjectTabProps)
       category="documents"
       purpose="document"
       entryPointExcludeCategories={['photos', 'videos']}
+      enableBuildingLink
     />
   );
 }

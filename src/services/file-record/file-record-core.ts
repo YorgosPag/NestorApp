@@ -151,6 +151,9 @@ export interface FileRecordBase {
   isDeleted?: boolean;
   createdBy: string;
 
+  // Entity linking — cross-entity file references
+  linkedTo?: string[];
+
   // Optional naming metadata
   purpose?: string;
   entityLabel?: string;

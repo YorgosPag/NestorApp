@@ -456,6 +456,21 @@ export interface FileRecord {
   processedData?: FloorplanProcessedData;
 
   // =========================================================================
+  // 🔗 ENTITY LINKING - Cross-entity file references (ADR file-linking)
+  // =========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Entity linking — ένα αρχείο εμφανίζεται σε πολλαπλές οντότητες
+   * χωρίς duplicate στο storage. Format: '{entityType}:{entityId}'
+   *
+   * Παράδειγμα: Αρχείο ανεβασμένο στο Project, εμφανίζεται και στα Buildings:
+   * linkedTo: ['building:bld_A', 'building:bld_B']
+   *
+   * Query: Firestore array-contains για αναζήτηση linked αρχείων
+   */
+  linkedTo?: string[];
+
+  // =========================================================================
   // 🗑️ ENTERPRISE TRASH SYSTEM - LIFECYCLE FIELDS
   // =========================================================================
   // 3-tier lifecycle: Active → Trashed → Archived → Purged

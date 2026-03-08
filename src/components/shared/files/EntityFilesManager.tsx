@@ -44,6 +44,7 @@ import { TrashView } from './TrashView'; // 🗑️ ENTERPRISE: Trash System (AD
 import { SearchInput } from '@/components/ui/search'; // 🔍 ENTERPRISE: Centralized Search System
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized Toast System
 import { FileRecordService } from '@/services/file-record.service';
+import type { FileRecord } from '@/types/file-record';
 import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint, CaptureMetadata, FloorInfo } from '@/config/upload-entry-points';
@@ -57,6 +58,7 @@ import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-con
 import { createModuleLogger } from '@/lib/telemetry';
 import { MediaGallery } from './media'; // 🏢 ENTERPRISE: Media Gallery for photos/videos (Procore/BIM360 pattern)
 import { FloorplanGallery } from './media/FloorplanGallery'; // 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern)
+import { LinkToBuildingModal } from './LinkToBuildingModal'; // 🔗 ENTERPRISE: File → Building linking
 
 // ============================================================================
 // MODULE LOGGER
@@ -110,6 +112,8 @@ export interface EntityFilesManagerProps {
   activePersonas?: PersonaType[];
   /** 🏢 ADR-191: Floor data for per-floor entry point expansion (building entity) */
   floors?: FloorInfo[];
+  /** 🔗 ENTERPRISE: Enable linking files to project buildings */
+  enableBuildingLink?: boolean;
 }
 
 // ============================================================================
@@ -145,6 +149,7 @@ export function EntityFilesManager({
   contactType,
   activePersonas,
   floors,
+  enableBuildingLink = false,
 }: EntityFilesManagerProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -167,6 +172,7 @@ export function EntityFilesManager({
   const [selectedEntryPoint, setSelectedEntryPoint] = useState<UploadEntryPoint | null>(null);
   const [customTitle, setCustomTitle] = useState(''); // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
   const [searchTerm, setSearchTerm] = useState(''); // 🔍 ENTERPRISE: File search (Google Drive/Dropbox pattern)
+  const [linkModalFile, setLinkModalFile] = useState<FileRecord | null>(null); // 🔗 ENTERPRISE: File to link to buildings
 
   // 🏢 ENTERPRISE: Reset custom title when entry point changes
   React.useEffect(() => {
@@ -434,6 +440,19 @@ export function EntityFilesManager({
   const handleDelete = useCallback(async (fileId: string) => {
     await deleteFile(fileId, currentUserId);
   }, [deleteFile, currentUserId]);
+
+  // =========================================================================
+  // 🔗 LINK/UNLINK HANDLERS
+  // =========================================================================
+
+  const handleLinkClick = useCallback((file: FileRecord) => {
+    setLinkModalFile(file);
+  }, []);
+
+  const handleUnlink = useCallback(async (fileId: string) => {
+    await FileRecordService.unlinkFileFromEntity(fileId, entityType, entityId);
+    await refetch();
+  }, [entityType, entityId, refetch]);
 
   // =========================================================================
   // VIEW/DOWNLOAD HANDLERS
@@ -882,6 +901,9 @@ export function EntityFilesManager({
                 onView={handleView}
                 onDownload={handleDownload}
                 currentUserId={currentUserId}
+                onLink={enableBuildingLink ? handleLinkClick : undefined}
+                onUnlink={handleUnlink}
+                showLinkAction={enableBuildingLink}
               />
             ) : (
               <FilePathTree
@@ -914,6 +936,20 @@ export function EntityFilesManager({
           />
         )}
       </CardContent>
+
+      {/* 🔗 ENTERPRISE: Link to Building Modal */}
+      {enableBuildingLink && linkModalFile && entityId && (
+        <LinkToBuildingModal
+          open={!!linkModalFile}
+          onOpenChange={(open) => { if (!open) setLinkModalFile(null); }}
+          file={linkModalFile}
+          projectId={entityId}
+          onSaved={() => {
+            setLinkModalFile(null);
+            refetch();
+          }}
+        />
+      )}
     </Card>
   );
 }
