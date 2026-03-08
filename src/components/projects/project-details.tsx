@@ -37,6 +37,8 @@ interface ProjectDetailsProps {
   initialTab?: string;
   onNewProject?: () => void;
   onDeleteProject?: () => void;
+  /** Ref that parent can use to trigger edit mode externally (e.g., from CompactToolbar) */
+  editTriggerRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 // ============================================================================
@@ -47,7 +49,8 @@ export function ProjectDetails({
   project,
   initialTab,
   onNewProject,
-  onDeleteProject
+  onDeleteProject,
+  editTriggerRef
 }: ProjectDetailsProps) {
   const { t } = useTranslation('projects');
 
@@ -60,6 +63,18 @@ export function ProjectDetails({
   const handleStartEdit = useCallback(() => {
     setIsEditing(true);
   }, []);
+
+  // Expose handleStartEdit to parent via editTriggerRef
+  React.useEffect(() => {
+    if (editTriggerRef) {
+      editTriggerRef.current = handleStartEdit;
+    }
+    return () => {
+      if (editTriggerRef) {
+        editTriggerRef.current = null;
+      }
+    };
+  }, [editTriggerRef, handleStartEdit]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);

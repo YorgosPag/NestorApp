@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import type { Project } from '@/types/project';
 import type { NavigationCompany } from '@/components/navigation/core/types';
 import { Trash2 } from 'lucide-react';
@@ -43,6 +43,13 @@ export function ProjectViewSwitch({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: Ref for triggering edit mode in ProjectDetails from CompactToolbar
+  const editTriggerRef = useRef<(() => void) | null>(null);
+
+  const handleEditProject = useCallback(() => {
+    editTriggerRef.current?.();
+  }, []);
+
   // 🏢 ENTERPRISE: Favorites state for grid view (PR: Projects Grid View)
   const [favorites, setFavorites] = useState<string[]>([]);
 
@@ -93,7 +100,7 @@ export function ProjectViewSwitch({
           title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
           actionButtons={
             <button
-              onClick={() => {/* TODO: Delete project handler */}}
+              onClick={() => selectedProject && onDeleteProject?.(selectedProject)}
               className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
               aria-label={t('viewSwitch.deleteLabel')}
             >
@@ -107,6 +114,7 @@ export function ProjectViewSwitch({
               initialTab={initialTab}
               onNewProject={onNewProject}
               onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
+              editTriggerRef={editTriggerRef}
             />
           )}
         </MobileDetailsSlideIn>
@@ -125,7 +133,7 @@ export function ProjectViewSwitch({
             onSelectProject={onSelectProject}
             companies={companies}
             onNewProject={onNewProject}
-            onEditProject={selectedProject ? () => {/* Edit triggers via header */} : undefined}
+            onEditProject={selectedProject ? handleEditProject : undefined}
             onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
         />
         {selectedProject && (
@@ -134,6 +142,7 @@ export function ProjectViewSwitch({
             initialTab={initialTab}
             onNewProject={onNewProject}
             onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
+            editTriggerRef={editTriggerRef}
           />
         )}
       </div>
@@ -146,7 +155,7 @@ export function ProjectViewSwitch({
             onSelectProject={onSelectProject}
             companies={companies}
             onNewProject={onNewProject}
-            onEditProject={selectedProject ? () => {/* Edit triggers via header */} : undefined}
+            onEditProject={selectedProject ? handleEditProject : undefined}
             onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
         />
       </div>
@@ -158,7 +167,7 @@ export function ProjectViewSwitch({
         title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
         actionButtons={
           <button
-            onClick={() => {/* TODO: Delete project handler */}}
+            onClick={() => selectedProject && onDeleteProject?.(selectedProject)}
             className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
             aria-label={t('viewSwitch.deleteLabel')}
           >
@@ -172,6 +181,7 @@ export function ProjectViewSwitch({
             initialTab={initialTab}
             onNewProject={onNewProject}
             onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
+            editTriggerRef={editTriggerRef}
           />
         )}
       </MobileDetailsSlideIn>
