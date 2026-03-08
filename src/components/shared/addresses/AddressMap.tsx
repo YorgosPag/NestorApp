@@ -25,12 +25,12 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Source, Layer, Marker } from 'react-map-gl/maplibre';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { Marker } from 'react-map-gl/maplibre';
 import { Loader2, AlertTriangle, MapPin, Locate } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LngLatBounds, Marker as MapLibreMarker } from 'maplibre-gl';
-import type * as GeoJSON from 'geojson';
+
 
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
@@ -81,12 +81,6 @@ const AUTO_PAN = {
   PAN_SPEED: 8,         // pixels per pan step
 } as const;
 
-/** Map text layer colors — SSoT: design-tokens */
-const MAP_TEXT_COLORS = {
-  label: colors.blue['700'],         // #1d4ed8 — blue-700, matches pin branding
-  halo: colors.background.primary,   // white
-} as const;
-
 // =============================================================================
 // COMPONENT INTERFACE
 // =============================================================================
@@ -125,14 +119,6 @@ export interface AddressMapProps {
   /** Additional CSS classes */
   className?: string;
 }
-
-type AddressFeatureProperties = {
-  id?: string;
-  street?: string;
-  city?: string;
-  isPrimary?: boolean;
-  label: string;
-};
 
 // =============================================================================
 // DRAGGABLE MARKER PIN — Inline SVG component (same design as symbol layer pin)
@@ -459,47 +445,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [geocodedAddresses, mapReady, draggableMarkers, dragPositions, addresses]);
 
   // ===========================================================================
-  // GEOJSON DATA (for read-only Source+Layer mode)
-  // ===========================================================================
-
-  /**
-   * Create GeoJSON FeatureCollection from geocoded addresses
-   * Used ONLY when draggableMarkers=false (performance optimization)
-   */
-  const markersGeoJSON = useMemo(() => {
-    if (draggableMarkers) return null;
-
-    const features = addresses
-      .map((address): GeoJSON.Feature<GeoJSON.Point, AddressFeatureProperties> | null => {
-        const geocoded = geocodedAddresses.get(address.id);
-        if (!geocoded) return null;
-
-        const translatedLabel = address.label || t(`types.${address.type}`);
-
-        return {
-          type: 'Feature' as const,
-          geometry: {
-            type: 'Point' as const,
-            coordinates: [geocoded.lng, geocoded.lat]
-          },
-          properties: {
-            id: address.id,
-            street: address.street,
-            city: address.city,
-            isPrimary: address.isPrimary,
-            label: translatedLabel
-          }
-        };
-      })
-      .filter((feature): feature is GeoJSON.Feature<GeoJSON.Point, AddressFeatureProperties> => feature !== null);
-
-    return {
-      type: 'FeatureCollection' as const,
-      features
-    };
-  }, [addresses, geocodedAddresses, t, draggableMarkers]);
-
-  // ===========================================================================
   // EVENT HANDLERS
   // ===========================================================================
 
@@ -528,6 +473,11 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       if (!map.hasImage('address-pin')) {
         map.addImage('address-pin', pinImage);
       }
+      setMapLoaded(true);
+    };
+    pinImage.onerror = () => {
+      // Fallback: even if pin image fails, mark as loaded so Marker components can render
+      logger.warn('Pin SVG image failed to load, using Marker component fallback');
       setMapLoaded(true);
     };
     pinImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(pinSVG)}`;
@@ -765,35 +715,28 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                 </Marker>
               )}
 
-              {/* Read-only Mode — Source+Layer for performance */}
-              {!draggableMarkers && mapLoaded && markersGeoJSON && markersGeoJSON.features.length > 0 && (
-                <Source
-                  id="address-markers"
-                  type="geojson"
-                  data={markersGeoJSON}
-                >
-                  <Layer
-                    id="address-markers-symbols"
-                    type="symbol"
-                    layout={{
-                      'icon-image': 'address-pin',
-                      'icon-size': 1,
-                      'icon-anchor': 'bottom',
-                      'icon-allow-overlap': true,
-                      'text-field': ['get', 'label'],
-                      'text-size': 12,
-                      'text-anchor': 'top',
-                      'text-offset': [0, 0.5],
-                      'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
-                    }}
-                    paint={{
-                      'text-color': MAP_TEXT_COLORS.label,
-                      'text-halo-color': MAP_TEXT_COLORS.halo,
-                      'text-halo-width': 2
-                    }}
-                  />
-                </Source>
-              )}
+              {/* Read-only Mode — Marker components (reliable, same visual as draggable) */}
+              {!draggableMarkers && mapLoaded && addresses.map((addr, index) => {
+                const geocoded = geocodedAddresses.get(addr.id);
+                if (!geocoded) return null;
+
+                const translatedLabel = addr.label || t(`types.${addr.type}`);
+
+                return (
+                  <Marker
+                    key={addr.id}
+                    longitude={geocoded.lng}
+                    latitude={geocoded.lat}
+                    anchor="bottom"
+                    onClick={() => handleMarkerClick(addr, index)}
+                  >
+                    <DraggableMarkerPin
+                      isPrimary={addr.isPrimary}
+                      label={translatedLabel}
+                    />
+                  </Marker>
+                );
+              })}
 
               {/* User location marker rendered via native MapLibre (useEffect above) */}
             </InteractiveMap>
