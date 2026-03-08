@@ -488,13 +488,15 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             enabled: true,
             component: 'BuildingDocumentsTab'
           },
+          // ΠΑΓΩΜΕΝΟ (2026-03-08): Πρωτόκολλα — ήταν placeholder, αφαιρέθηκε κατ' αίτηση Γιώργου
+          // Για επανενεργοποίηση: enabled: true
           {
             id: 'protocols',
             value: 'protocols',
             icon: 'clipboard-check',
             description: 'tabs.protocols.description',
             order: 13,
-            enabled: true,
+            enabled: false,
             component: 'PlaceholderTab',
             componentProps: {
               title: 'tabs.labels.protocols',
