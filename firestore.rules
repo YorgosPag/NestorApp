@@ -405,6 +405,25 @@ service cloud.firestore {
                     && request.resource.data.storagePath == resource.data.storagePath
                     && request.resource.data.status == resource.data.status;
 
+      // 🔗 LINK/UNLINK: Company members can update linkedTo on ready files
+      // 🏢 ENTERPRISE: Entity linking — one file in storage, multiple display points
+      // Only allows modifying linkedTo field (and updatedAt), preserves all immutable fields
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.companyId == getUserCompanyId()
+                         || isSuperAdminOnly()
+                       )
+                    // Only for ready, non-deleted files
+                    && resource.data.status == 'ready'
+                    && resource.data.isDeleted != true
+                    // Preserve immutable fields
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath
+                    && request.resource.data.status == resource.data.status
+                    && request.resource.data.isDeleted == resource.data.isDeleted;
+
       // 🗑️ HARD DELETE: Only creator or company admin
       allow delete: if isAuthenticated()
                     && resource.data.companyId == getUserCompanyId()
