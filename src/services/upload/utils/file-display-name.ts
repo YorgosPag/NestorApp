@@ -33,8 +33,19 @@ import {
   FILE_CATEGORIES,
 } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { STUDY_ENTRIES } from '@/config/upload-entry-points/entries-studies';
 
 const logger = createModuleLogger('FileDisplayName');
+
+// ============================================================================
+// 🏢 ENTERPRISE: PURPOSE → ENTRY POINT LABEL MAP (ADR-191)
+// ============================================================================
+// Built once at module init. Maps study purposes to their i18n labels.
+// Used as fallback when customTitle is not provided.
+
+const purposeToLabelMap = new Map<string, { el: string; en: string }>(
+  STUDY_ENTRIES.map((e) => [e.purpose, e.label])
+);
 
 // ============================================================================
 // 🏢 ENTERPRISE: SERVER-SAFE I18N INTEGRATION
@@ -329,15 +340,25 @@ export function buildFileDisplayName(input: FileDisplayNameInput): FileDisplayNa
     // Use custom title as the first part
     parts.push(input.customTitle.trim());
   } else {
-    // 1. Category label (always first)
-    const categoryLabel = getCategoryLabel(input.category, language);
-    parts.push(categoryLabel);
+    // 🏢 ADR-191: Try entry point label from purpose → STUDY_ENTRIES map
+    // This is the most reliable way to get the correct label for study files
+    const entryPointLabel = input.purpose
+      ? purposeToLabelMap.get(input.purpose)
+      : undefined;
 
-    // 2. Purpose/descriptor if provided
-    if (input.purpose) {
-      // 🏢 ENTERPRISE: Use i18n for purpose labels (not raw purpose string)
-      const purposeLabel = getPurposeLabel(input.purpose, language);
-      parts[0] = `${categoryLabel} ${purposeLabel}`;
+    if (entryPointLabel) {
+      // Use study entry point label (e.g., "Αίτηση Οικοδομικής Άδειας")
+      const label = language === 'en' ? entryPointLabel.en : entryPointLabel.el;
+      parts.push(label);
+    } else {
+      // Fallback: Category + purpose label for non-study files
+      const categoryLabel = getCategoryLabel(input.category, language);
+      parts.push(categoryLabel);
+
+      if (input.purpose) {
+        const purposeLabel = getPurposeLabel(input.purpose, language);
+        parts[0] = `${categoryLabel} ${purposeLabel}`;
+      }
     }
   }
 
