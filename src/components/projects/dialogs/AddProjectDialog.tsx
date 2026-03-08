@@ -39,7 +39,6 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
@@ -59,13 +58,7 @@ import { useProjectForm } from '@/hooks/useProjectForm';
 // 🏢 ENTERPRISE: Companies service for dropdown
 import { getAllActiveCompanies } from '@/services/companies.service';
 import type { CompanyContact } from '@/types/contacts';
-import type {
-  ProjectStatus,
-  ProjectType,
-  ProjectPriority,
-  ProjectRiskLevel,
-  ProjectComplexity,
-} from '@/types/project';
+import type { ProjectStatus } from '@/types/project';
 // 🏢 ENTERPRISE: Address system (ADR-167)
 import type { ProjectAddress } from '@/types/project/addresses';
 import { AddressFormSection, AddressCard } from '@/components/shared/addresses';
@@ -95,26 +88,6 @@ const PROJECT_STATUS_OPTIONS: ProjectStatus[] = [
   'cancelled',
 ];
 
-const PROJECT_TYPE_OPTIONS: ProjectType[] = [
-  'residential',
-  'commercial',
-  'industrial',
-  'mixed',
-  'infrastructure',
-  'renovation',
-];
-
-const PRIORITY_OPTIONS: ProjectPriority[] = ['low', 'medium', 'high', 'critical'];
-
-const RISK_LEVEL_OPTIONS: ProjectRiskLevel[] = ['low', 'medium', 'high', 'critical'];
-
-const COMPLEXITY_OPTIONS: ProjectComplexity[] = [
-  'simple',
-  'moderate',
-  'complex',
-  'highly_complex',
-];
-
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -139,8 +112,6 @@ export function AddProjectDialog({
     handleSubmit,
     handleChange,
     handleSelectChange,
-    handleCheckboxChange,
-    handleNumberChange,
     resetForm,
     // 🏢 ENTERPRISE: Address handlers (ADR-167)
     handleAddAddress,
@@ -209,10 +180,8 @@ export function AddProjectDialog({
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="basic">{t('dialog.tabs.basic')}</TabsTrigger>
-              <TabsTrigger value="details">{t('dialog.tabs.details')}</TabsTrigger>
-              <TabsTrigger value="features">{t('dialog.tabs.features')}</TabsTrigger>
               <TabsTrigger value="addresses">Διευθύνσεις</TabsTrigger>
             </TabsList>
 
@@ -367,303 +336,6 @@ export function AddProjectDialog({
                   </FormInput>
                 </FormField>
               </FormGrid>
-            </TabsContent>
-
-            {/* ================================================================
-                TAB 2: ΛΕΠΤΟΜΕΡΕΙΕΣ
-            ================================================================ */}
-            <TabsContent value="details" className={spacing.margin.top.md}>
-              <FormGrid>
-                {/* Πελάτης */}
-                <FormField label={t('dialog.fields.client')} htmlFor="client">
-                  <FormInput>
-                    <Input
-                      id="client"
-                      name="client"
-                      value={formData.client}
-                      onChange={handleChange}
-                      placeholder={t('dialog.fields.clientPlaceholder')}
-                      disabled={loading}
-                    />
-                  </FormInput>
-                </FormField>
-
-                {/* Τύπος Έργου */}
-                <FormField label={t('dialog.fields.type')} htmlFor="type">
-                  <FormInput>
-                    <Select
-                      value={formData.type}
-                      onValueChange={(value) => handleSelectChange('type', value)}
-                      disabled={loading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('dialog.fields.typePlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PROJECT_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {t(`projectType.${type}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormInput>
-                </FormField>
-
-                {/* Προτεραιότητα */}
-                <FormField label={t('dialog.fields.priority')} htmlFor="priority">
-                  <FormInput>
-                    <Select
-                      value={formData.priority}
-                      onValueChange={(value) => handleSelectChange('priority', value)}
-                      disabled={loading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('dialog.fields.priorityPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRIORITY_OPTIONS.map((priority) => (
-                          <SelectItem key={priority} value={priority}>
-                            {t(`priority.${priority}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormInput>
-                </FormField>
-
-                {/* Επίπεδο Κινδύνου */}
-                <FormField label={t('dialog.fields.riskLevel')} htmlFor="riskLevel">
-                  <FormInput>
-                    <Select
-                      value={formData.riskLevel}
-                      onValueChange={(value) => handleSelectChange('riskLevel', value)}
-                      disabled={loading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('dialog.fields.riskLevelPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {RISK_LEVEL_OPTIONS.map((level) => (
-                          <SelectItem key={level} value={level}>
-                            {t(`riskLevel.${level}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormInput>
-                </FormField>
-
-                {/* Πολυπλοκότητα */}
-                <FormField label={t('dialog.fields.complexity')} htmlFor="complexity">
-                  <FormInput>
-                    <Select
-                      value={formData.complexity}
-                      onValueChange={(value) => handleSelectChange('complexity', value)}
-                      disabled={loading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('dialog.fields.complexityPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COMPLEXITY_OPTIONS.map((complexity) => (
-                          <SelectItem key={complexity} value={complexity}>
-                            {t(`complexity.${complexity}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormInput>
-                </FormField>
-
-                {/* Προϋπολογισμός */}
-                <FormField label={t('dialog.fields.budget')} htmlFor="budget">
-                  <FormInput>
-                    <Input
-                      id="budget"
-                      name="budget"
-                      type="number"
-                      value={formData.budget}
-                      onChange={(e) => handleNumberChange('budget', e.target.value)}
-                      placeholder={t('dialog.fields.budgetPlaceholder')}
-                      disabled={loading}
-                    />
-                  </FormInput>
-                </FormField>
-
-                {/* Συνολική Αξία */}
-                <FormField label={t('dialog.fields.totalValue')} htmlFor="totalValue">
-                  <FormInput>
-                    <Input
-                      id="totalValue"
-                      name="totalValue"
-                      type="number"
-                      value={formData.totalValue}
-                      onChange={(e) => handleNumberChange('totalValue', e.target.value)}
-                      placeholder={t('dialog.fields.totalValuePlaceholder')}
-                      disabled={loading}
-                    />
-                  </FormInput>
-                </FormField>
-
-                {/* Συνολικό Εμβαδόν */}
-                <FormField label={t('dialog.fields.totalArea')} htmlFor="totalArea">
-                  <FormInput>
-                    <Input
-                      id="totalArea"
-                      name="totalArea"
-                      type="number"
-                      value={formData.totalArea}
-                      onChange={(e) => handleNumberChange('totalArea', e.target.value)}
-                      placeholder={t('dialog.fields.totalAreaPlaceholder')}
-                      disabled={loading}
-                    />
-                  </FormInput>
-                </FormField>
-
-                {/* Διάρκεια */}
-                <FormField label={t('dialog.fields.duration')} htmlFor="duration">
-                  <FormInput>
-                    <Input
-                      id="duration"
-                      name="duration"
-                      type="number"
-                      value={formData.duration}
-                      onChange={(e) => handleNumberChange('duration', e.target.value)}
-                      placeholder={t('dialog.fields.durationPlaceholder')}
-                      disabled={loading}
-                    />
-                  </FormInput>
-                </FormField>
-
-                {/* Ημερομηνία Έναρξης */}
-                <FormField label={t('dialog.fields.startDate')} htmlFor="startDate">
-                  <FormInput>
-                    <Input
-                      id="startDate"
-                      name="startDate"
-                      type="date"
-                      value={formData.startDate}
-                      onChange={handleChange}
-                      disabled={loading}
-                    />
-                  </FormInput>
-                </FormField>
-
-                {/* Ημερομηνία Ολοκλήρωσης */}
-                <FormField
-                  label={t('dialog.fields.completionDate')}
-                  htmlFor="completionDate"
-                >
-                  <FormInput>
-                    <Input
-                      id="completionDate"
-                      name="completionDate"
-                      type="date"
-                      value={formData.completionDate}
-                      onChange={handleChange}
-                      disabled={loading}
-                    />
-                  </FormInput>
-                </FormField>
-              </FormGrid>
-            </TabsContent>
-
-            {/* ================================================================
-                TAB 3: ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ (Checkboxes)
-            ================================================================ */}
-            <TabsContent value="features" className={spacing.margin.top.md}>
-              <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Έχει Άδειες */}
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="hasPermits"
-                    checked={formData.hasPermits}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange('hasPermits', checked as boolean)
-                    }
-                    disabled={loading}
-                  />
-                  <Label htmlFor="hasPermits" className="text-sm font-medium">
-                    {t('dialog.fields.hasPermits')}
-                  </Label>
-                </div>
-
-                {/* Έχει Χρηματοδότηση */}
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="hasFinancing"
-                    checked={formData.hasFinancing}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange('hasFinancing', checked as boolean)
-                    }
-                    disabled={loading}
-                  />
-                  <Label htmlFor="hasFinancing" className="text-sm font-medium">
-                    {t('dialog.fields.hasFinancing')}
-                  </Label>
-                </div>
-
-                {/* Οικολογικό Έργο */}
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="isEcological"
-                    checked={formData.isEcological}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange('isEcological', checked as boolean)
-                    }
-                    disabled={loading}
-                  />
-                  <Label htmlFor="isEcological" className="text-sm font-medium">
-                    {t('dialog.fields.isEcological')}
-                  </Label>
-                </div>
-
-                {/* Χρησιμοποιεί Υπεργολάβους */}
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="hasSubcontractors"
-                    checked={formData.hasSubcontractors}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange('hasSubcontractors', checked as boolean)
-                    }
-                    disabled={loading}
-                  />
-                  <Label htmlFor="hasSubcontractors" className="text-sm font-medium">
-                    {t('dialog.fields.hasSubcontractors')}
-                  </Label>
-                </div>
-
-                {/* Ενεργό */}
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange('isActive', checked as boolean)
-                    }
-                    disabled={loading}
-                  />
-                  <Label htmlFor="isActive" className="text-sm font-medium">
-                    {t('dialog.fields.isActive')}
-                  </Label>
-                </div>
-
-                {/* Έχει Προβλήματα */}
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="hasIssues"
-                    checked={formData.hasIssues}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange('hasIssues', checked as boolean)
-                    }
-                    disabled={loading}
-                  />
-                  <Label htmlFor="hasIssues" className="text-sm font-medium">
-                    {t('dialog.fields.hasIssues')}
-                  </Label>
-                </div>
-              </section>
             </TabsContent>
 
             {/* ================================================================
