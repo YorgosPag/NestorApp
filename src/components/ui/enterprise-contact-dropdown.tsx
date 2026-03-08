@@ -25,6 +25,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // ============================================================================
 // TYPES
@@ -364,10 +365,10 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
             </div>
           </div>
 
-          {/* Results - Scrollable Area */}
+          {/* Results - Scrollable Area (ScrollArea for proper wheel events inside Popover) */}
+          <ScrollArea className="max-h-[300px]">
           <div
             ref={resultsRef}
-            className="max-h-[300px] overflow-y-auto overflow-x-hidden"
             role="listbox"
           >
             {isSearching ? (
@@ -393,6 +394,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               </div>
             )}
           </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
 
