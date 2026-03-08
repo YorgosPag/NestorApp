@@ -220,13 +220,19 @@ export const GET = withHighRateLimit(
           .get();
       }
 
-      logger.info('[Projects/List] Found projects', { count: projectsSnapshot.docs.length });
+      logger.info('[Projects/List] Found projects', { total: projectsSnapshot.docs.length });
 
   // ============================================================================
   // 3. MAP TO ProjectListItem (type-safe)
   // ============================================================================
 
-  const projects: ProjectListItem[] = projectsSnapshot.docs.map(doc => {
+  // 🏢 ENTERPRISE: Filter out archived/deleted projects (soft-delete support)
+  const activeDocs = projectsSnapshot.docs.filter(doc => {
+    const status = doc.data().status;
+    return status !== 'archived' && status !== 'deleted';
+  });
+
+  const projects: ProjectListItem[] = activeDocs.map(doc => {
     const data = doc.data() as Record<string, unknown>;
 
     return {
