@@ -156,3 +156,88 @@ export function getStudyGroupMeta(group: StudyGroup): StudyGroupMeta | undefined
 export function getStudyGroupsForEntity(entityLevel: EntityLevel): readonly StudyGroupMeta[] {
   return STUDY_GROUPS.filter((g) => g.entityLevels.includes(entityLevel));
 }
+
+// ─── Purpose → Group Reverse Lookup ─────────────────────────────────────────
+
+import { STUDY_ENTRIES } from './upload-entry-points/entries-studies';
+
+/**
+ * Reverse map: purpose → StudyGroup.
+ * Built once at module init from STUDY_ENTRIES.
+ *
+ * No circular dependency: entries-studies.ts → types.ts → `import type` from this file.
+ * Type-only imports are erased at runtime.
+ */
+const purposeToGroupMap = new Map<string, StudyGroup>(
+  STUDY_ENTRIES
+    .filter((e): e is typeof e & { group: StudyGroup } => e.group != null)
+    .map((e) => [e.purpose, e.group])
+);
+
+/**
+ * Resolve a file's `purpose` field to its StudyGroup.
+ * Returns null if the purpose is unknown or has no group.
+ */
+export function getGroupForPurpose(purpose: string | undefined): StudyGroup | null {
+  if (!purpose) return null;
+  return purposeToGroupMap.get(purpose) ?? null;
+}
+
+// ─── File Grouping ──────────────────────────────────────────────────────────
+
+/**
+ * A group of files sharing the same study category.
+ * `meta` is null for ungrouped files ("Γενικά Έγγραφα").
+ */
+export interface FileGroup<T extends { purpose?: string }> {
+  readonly meta: StudyGroupMeta | null;
+  readonly files: T[];
+}
+
+/**
+ * Group files by study category based on their `purpose` field.
+ *
+ * - Files whose purpose maps to a StudyGroup are bucketed accordingly.
+ * - Files without a purpose or with an unmapped purpose go to the fallback group (meta: null).
+ * - Groups are sorted by StudyGroupMeta.order; fallback group comes last.
+ * - Empty groups are omitted.
+ */
+export function groupFilesByStudyGroup<T extends { purpose?: string }>(
+  files: readonly T[]
+): FileGroup<T>[] {
+  const buckets = new Map<StudyGroup | 'general', T[]>();
+
+  for (const file of files) {
+    const group = getGroupForPurpose(file.purpose);
+    const key = group ?? 'general';
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.push(file);
+    } else {
+      buckets.set(key, [file]);
+    }
+  }
+
+  // Build sorted result: study groups first (by order), then fallback
+  const result: FileGroup<T>[] = [];
+
+  // Study groups sorted by order
+  const sortedGroups = STUDY_GROUPS
+    .filter((g) => buckets.has(g.group))
+    .sort((a, b) => a.order - b.order);
+
+  for (const meta of sortedGroups) {
+    const groupFiles = buckets.get(meta.group);
+    if (groupFiles && groupFiles.length > 0) {
+      result.push({ meta, files: groupFiles });
+    }
+  }
+
+  // Fallback group (no study category)
+  const generalFiles = buckets.get('general');
+  if (generalFiles && generalFiles.length > 0) {
+    result.push({ meta: null, files: generalFiles });
+  }
+
+  return result;
+}

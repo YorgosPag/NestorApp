@@ -36,6 +36,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: 
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { useEntityFiles } from './hooks/useEntityFiles';
 import { FilesList } from './FilesList';
+import { GroupedFilesList } from './GroupedFilesList';
 import { FileUploadZone } from './FileUploadZone';
 import { FilePathTree } from './FilePathTree';
 import { UploadEntryPointSelector } from './UploadEntryPointSelector';
@@ -894,17 +895,31 @@ export function EntityFilesManager({
                 />
               )
             ) : viewMode === 'list' ? (
-              <FilesList
-                files={filteredFiles}
-                loading={loading}
-                onDelete={handleDelete}
-                onView={handleView}
-                onDownload={handleDownload}
-                currentUserId={currentUserId}
-                onLink={enableBuildingLink ? handleLinkClick : undefined}
-                onUnlink={handleUnlink}
-                showLinkAction={enableBuildingLink}
-              />
+              getAvailableGroups(entityType).length > 0 ? (
+                <GroupedFilesList
+                  files={filteredFiles}
+                  loading={loading}
+                  onDelete={handleDelete}
+                  onView={handleView}
+                  onDownload={handleDownload}
+                  currentUserId={currentUserId}
+                  onLink={enableBuildingLink ? handleLinkClick : undefined}
+                  onUnlink={handleUnlink}
+                  showLinkAction={enableBuildingLink}
+                />
+              ) : (
+                <FilesList
+                  files={filteredFiles}
+                  loading={loading}
+                  onDelete={handleDelete}
+                  onView={handleView}
+                  onDownload={handleDownload}
+                  currentUserId={currentUserId}
+                  onLink={enableBuildingLink ? handleLinkClick : undefined}
+                  onUnlink={handleUnlink}
+                  showLinkAction={enableBuildingLink}
+                />
+              )
             ) : (
               <FilePathTree
                 files={filteredFiles}
