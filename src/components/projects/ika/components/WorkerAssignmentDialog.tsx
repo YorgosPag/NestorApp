@@ -77,8 +77,8 @@ export function WorkerAssignmentDialog({
         ? `&exclude=${excludeContactIds.join(',')}`
         : '';
 
-      interface SearchApiResponse {
-        success: boolean;
+      // apiClient with apiSuccess() unwraps canonical { success, data } → returns data directly
+      interface SearchData {
         contacts: Array<{
           id: string;
           firstName: string;
@@ -86,19 +86,14 @@ export function WorkerAssignmentDialog({
           specialty: string | null;
           amka: string | null;
         }>;
-        error?: string;
+        count: number;
       }
 
-      const response = await apiClient.get<SearchApiResponse>(
+      const data = await apiClient.get<SearchData>(
         `/api/contacts/search-individuals?q=${encodeURIComponent(searchTerm.trim())}${excludeParam}`
       );
 
-      if (!response?.success) {
-        setSearchError(response?.error || 'Αποτυχία αναζήτησης');
-        return;
-      }
-
-      const mapped: SearchResult[] = (response.contacts || []).map(c => ({
+      const mapped: SearchResult[] = (data?.contacts || []).map(c => ({
         id: c.id,
         name: `${c.firstName} ${c.lastName}`.trim() || 'Χωρίς Όνομα',
         specialty: c.specialty,
