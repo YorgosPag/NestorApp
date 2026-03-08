@@ -80,6 +80,12 @@ export interface EntityAssociationLink {
   role: string;
   /** When the link was created */
   createdAt: string;
+  /** Whether this link is inherited from a parent entity (e.g. Project → Building) */
+  inherited?: boolean;
+  /** Source entity type from which this link is inherited */
+  inheritedFromType?: EntityType;
+  /** Source entity ID from which this link is inherited */
+  inheritedFromId?: string;
 }
 
 /**

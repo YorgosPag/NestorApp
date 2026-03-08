@@ -13,7 +13,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { Plus, Trash2, Users, ArrowUpFromLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +58,8 @@ import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown
 export interface EntityAssociationsManagerProps {
   entityType: EntityType;
   entityId: string;
+  /** Parent project ID — enables inheritance (Project contacts appear in Building) */
+  parentProjectId?: string;
 }
 
 // ============================================================================
@@ -67,11 +69,16 @@ export interface EntityAssociationsManagerProps {
 export function EntityAssociationsManager({
   entityType,
   entityId,
+  parentProjectId,
 }: EntityAssociationsManagerProps) {
   const { t } = useTranslation('building');
   const spacing = useSpacingTokens();
   const typography = useTypography();
-  const { links, isLoading, addLink, removeLink } = useEntityContactLinks(entityType, entityId);
+  const { links, isLoading, addLink, removeLink } = useEntityContactLinks(
+    entityType,
+    entityId,
+    parentProjectId ? { parentProjectId } : undefined
+  );
 
   // Dialog state
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -89,6 +96,7 @@ export function EntityAssociationsManager({
   );
 
   // IDs of already-linked contacts (to exclude from search)
+  // Include both direct and inherited — no need to add a contact already visible
   const excludeContactIds = useMemo(
     () => links.map((l) => l.contactId),
     [links]
@@ -165,8 +173,11 @@ export function EntityAssociationsManager({
           <ul className={cn('space-y-2')}>
             {links.map((link) => (
               <li
-                key={link.linkId}
-                className="flex items-center justify-between rounded-lg border px-4 py-3"
+                key={link.inherited ? `inherited-${link.linkId}` : link.linkId}
+                className={cn(
+                  "flex items-center justify-between rounded-lg border px-4 py-3",
+                  link.inherited && "border-dashed bg-muted/30"
+                )}
               >
                 <div className="flex items-center gap-3">
                   <span className="font-medium text-sm">
@@ -177,18 +188,26 @@ export function EntityAssociationsManager({
                       {getRoleLabel(link.role)}
                     </Badge>
                   )}
+                  {link.inherited && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <ArrowUpFromLine className="h-3 w-3" />
+                      {t('associations.inheritedFromProject')}
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground capitalize">
                     {link.contactType}
                   </span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setRemoveLinkId(link.linkId)}
-                  aria-label={t('associations.removeConfirm')}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                {!link.inherited && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRemoveLinkId(link.linkId)}
+                    aria-label={t('associations.removeConfirm')}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

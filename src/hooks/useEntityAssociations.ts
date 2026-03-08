@@ -39,11 +39,23 @@ interface UseEntityContactLinksReturn {
 }
 
 /**
+ * Options for useEntityContactLinks hook
+ */
+interface UseEntityContactLinksOptions {
+  /** Parent project ID for inheritance (Building → gets Project contacts) */
+  parentProjectId?: string;
+}
+
+/**
  * Hook for entity-side: "Ποιες επαφές είναι συνδεδεμένες σε αυτό το entity;"
+ *
+ * When parentProjectId is provided, also fetches contacts linked to the
+ * parent project and marks them as inherited (SAP/Procore pattern).
  */
 export function useEntityContactLinks(
   entityType: EntityType,
-  entityId: string | undefined
+  entityId: string | undefined,
+  options?: UseEntityContactLinksOptions
 ): UseEntityContactLinksReturn {
   const { user } = useAuth();
   const [links, setLinks] = useState<EntityAssociationLink[]>([]);
@@ -51,9 +63,11 @@ export function useEntityContactLinks(
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const parentProjectId = options?.parentProjectId;
+
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-  // Fetch links + resolve contact names
+  // Fetch links + resolve contact names (+ inherited from parent project)
   useEffect(() => {
     if (!entityId || !user) {
       setLinks([]);
@@ -68,45 +82,46 @@ export function useEntityContactLinks(
       setError(null);
 
       try {
-        const rawLinks = await AssociationService.listContactLinks({
+        // Fetch direct links for this entity
+        const directLinksPromise = AssociationService.listContactLinks({
           targetEntityType: entityType,
           targetEntityId: entityId,
           status: 'active',
         });
 
+        // Fetch inherited links from parent project (if applicable)
+        const inheritedLinksPromise = parentProjectId
+          ? AssociationService.listContactLinks({
+              targetEntityType: 'project' as EntityType,
+              targetEntityId: parentProjectId,
+              status: 'active',
+            })
+          : Promise.resolve([]);
+
+        const [directRawLinks, inheritedRawLinks] = await Promise.all([
+          directLinksPromise,
+          inheritedLinksPromise,
+        ]);
+
         if (cancelled) return;
 
-        // Resolve contact names in parallel
-        const resolved = await Promise.all(
-          rawLinks.map(async (link) => {
-            let contactName = link.sourceContactId;
-            let contactType = 'individual';
+        // Resolve direct contact names
+        const directResolved = await resolveContactLinks(directRawLinks, false);
 
-            try {
-              const contact = await ContactsService.getContact(link.sourceContactId);
-              if (contact) {
-                const nameResult = ContactNameResolver.resolveContactDisplayName(contact);
-                contactName = nameResult.displayName;
-                contactType = contact.type || 'individual';
-              }
-            } catch {
-              logger.warn(`Could not resolve contact name for ${link.sourceContactId}`);
-            }
-
-            const enriched: EntityAssociationLink = {
-              linkId: link.id,
-              contactId: link.sourceContactId,
-              contactName,
-              contactType,
-              role: link.role || '',
-              createdAt: typeof link.createdAt === 'string' ? link.createdAt : '',
-            };
-            return enriched;
-          })
+        // Resolve inherited contact names — exclude contacts already directly linked
+        const directContactIds = new Set(directRawLinks.map((l) => l.sourceContactId));
+        const uniqueInheritedRaw = inheritedRawLinks.filter(
+          (l) => !directContactIds.has(l.sourceContactId)
+        );
+        const inheritedResolved = await resolveContactLinks(
+          uniqueInheritedRaw,
+          true,
+          parentProjectId
         );
 
         if (!cancelled) {
-          setLinks(resolved);
+          // Direct links first, then inherited
+          setLinks([...directResolved, ...inheritedResolved]);
         }
       } catch (err) {
         if (!cancelled) {
@@ -121,7 +136,7 @@ export function useEntityContactLinks(
 
     fetchLinks();
     return () => { cancelled = true; };
-  }, [entityType, entityId, user, refreshKey]);
+  }, [entityType, entityId, parentProjectId, user, refreshKey]);
 
   // Add a new contact link
   const addLink = useCallback(async (contactId: string, role: string): Promise<boolean> => {
@@ -269,7 +284,56 @@ export function useContactEntityLinks(
 }
 
 // ============================================================================
-// HELPERS
+// HELPERS — Contact Resolution
+// ============================================================================
+
+/**
+ * Resolves contact names for a list of raw contact links.
+ * Optionally marks them as inherited from a parent entity.
+ */
+async function resolveContactLinks(
+  rawLinks: ContactLink[],
+  inherited: boolean,
+  inheritedFromId?: string
+): Promise<EntityAssociationLink[]> {
+  return Promise.all(
+    rawLinks.map(async (link) => {
+      let contactName = link.sourceContactId;
+      let contactType = 'individual';
+
+      try {
+        const contact = await ContactsService.getContact(link.sourceContactId);
+        if (contact) {
+          const nameResult = ContactNameResolver.resolveContactDisplayName(contact);
+          contactName = nameResult.displayName;
+          contactType = contact.type || 'individual';
+        }
+      } catch {
+        logger.warn(`Could not resolve contact name for ${link.sourceContactId}`);
+      }
+
+      const enriched: EntityAssociationLink = {
+        linkId: link.id,
+        contactId: link.sourceContactId,
+        contactName,
+        contactType,
+        role: link.role || '',
+        createdAt: typeof link.createdAt === 'string' ? link.createdAt : '',
+        ...(inherited
+          ? {
+              inherited: true,
+              inheritedFromType: 'project' as EntityType,
+              inheritedFromId,
+            }
+          : {}),
+      };
+      return enriched;
+    })
+  );
+}
+
+// ============================================================================
+// HELPERS — Contact Entity Link Mapping
 // ============================================================================
 
 function mapToContactEntityLink(link: ContactLink): ContactEntityLink | null {
