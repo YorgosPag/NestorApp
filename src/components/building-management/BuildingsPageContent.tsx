@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -18,7 +18,6 @@ import {
   BarChart3,
   MapPin,
   Calendar,
-  Edit,
   Trash2
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -29,13 +28,13 @@ import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-// [ENTERPRISE] building-services removed - using NavigationContext for companies/projects
+import { createBuilding, deleteBuilding } from './building-services';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// [ENTERPRISE] Add Building Dialog
-import { AddBuildingDialog } from './dialogs/AddBuildingDialog';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import type { Building as BuildingType } from '@/types/building/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BuildingsPageContent');
@@ -70,12 +69,88 @@ export function BuildingsPageContent() {
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
 
-  // [ENTERPRISE] Add Building Dialog state (create-only, not for editing)
-  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+  // 🏢 ENTERPRISE: Lifted edit state for CompactToolbar ↔ BuildingDetails sync
+  const [isEditingBuilding, setIsEditingBuilding] = useState(false);
+
+  const handleEditBuilding = useCallback(() => {
+    setIsEditingBuilding(true);
+  }, []);
+
+  // 🏢 ENTERPRISE: Inline building creation (same pattern as Projects)
+  const [startInEditMode, setStartInEditMode] = useState(false);
+  const [isCreatingBuilding, setIsCreatingBuilding] = useState(false);
+
+  const handleNewBuilding = useCallback(async () => {
+    if (isCreatingBuilding) return;
+    setIsCreatingBuilding(true);
+
+    const defaultCompanyId = companies[0]?.id;
+    if (!defaultCompanyId) {
+      logger.error('No company available for building creation');
+      setIsCreatingBuilding(false);
+      return;
+    }
+
+    const result = await createBuilding({
+      name: '',
+      companyId: defaultCompanyId,
+      company: companies[0]?.companyName || '',
+      status: 'planning',
+    });
+
+    if (result.success && result.buildingId) {
+      logger.info('Building created inline', { buildingId: result.buildingId });
+      const newBuilding = {
+        id: result.buildingId,
+        name: '',
+        description: '',
+        status: 'planning',
+        companyId: defaultCompanyId,
+        company: companies[0]?.companyName || '',
+        address: '',
+        city: '',
+        location: '',
+        totalArea: 0,
+        builtArea: 0,
+        floors: 0,
+        units: 0,
+        totalValue: 0,
+        progress: 0,
+        projectId: null,
+        createdAt: new Date().toISOString(),
+      } as BuildingType;
+      setSelectedBuilding(newBuilding);
+      setStartInEditMode(true);
+    }
+    setIsCreatingBuilding(false);
+  }, [companies, setSelectedBuilding, isCreatingBuilding]);
+
+  // 🏢 ENTERPRISE: Delete building — centralized DeleteConfirmDialog (ADR-003)
+  const [buildingToDelete, setBuildingToDelete] = useState<BuildingType | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteBuilding = useCallback(() => {
+    if (selectedBuilding) {
+      setBuildingToDelete(selectedBuilding as BuildingType);
+    }
+  }, [selectedBuilding]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!buildingToDelete) return;
+    setIsDeleting(true);
+    const result = await deleteBuilding(buildingToDelete.id);
+    if (result.success) {
+      logger.info('Building deleted', { buildingId: buildingToDelete.id });
+      setSelectedBuilding(null);
+      setBuildingToDelete(null);
+    } else {
+      logger.error('Failed to delete building', { error: result.error });
+    }
+    setIsDeleting(false);
+  }, [buildingToDelete, setSelectedBuilding]);
 
   // [PERF] Stable callback refs to prevent child re-renders
-  const handleOpenAddDialog = React.useCallback(() => setIsAddDialogOpen(true), []);
-  const handleCloseMobileDetails = React.useCallback(() => setSelectedBuilding(null), [setSelectedBuilding]);
+  const handleCloseMobileDetails = useCallback(() => setSelectedBuilding(null), [setSelectedBuilding]);
 
   // [ENTERPRISE] Sync selectedBuilding with NavigationContext for breadcrumb display
   React.useEffect(() => {
@@ -216,7 +291,7 @@ export function BuildingsPageContent() {
           setShowDashboard={setShowDashboard}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          onNewBuilding={handleOpenAddDialog}
+          onNewBuilding={handleNewBuilding}
         />
 
         {showDashboard && (
@@ -254,9 +329,22 @@ export function BuildingsPageContent() {
                 <BuildingsList
                   buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
-                  onSelectBuilding={setSelectedBuilding}
+                  onSelectBuilding={(building) => {
+                    setSelectedBuilding(building);
+                    setStartInEditMode(false);
+                  }}
+                  onNewBuilding={handleNewBuilding}
+                  onEditBuilding={selectedBuilding ? handleEditBuilding : undefined}
+                  onDeleteBuilding={selectedBuilding ? handleDeleteBuilding : undefined}
                 />
-                <BuildingDetails building={selectedBuilding!} />
+                <BuildingDetails
+                  building={selectedBuilding!}
+                  onNewBuilding={handleNewBuilding}
+                  onDeleteBuilding={handleDeleteBuilding}
+                  startInEditMode={startInEditMode}
+                  isEditing={isEditingBuilding}
+                  onSetEditing={setIsEditingBuilding}
+                />
               </section>
 
               {/* [MOBILE] Show only BuildingsList when no building is selected */}
@@ -264,7 +352,13 @@ export function BuildingsPageContent() {
                 <BuildingsList
                   buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
-                  onSelectBuilding={setSelectedBuilding}
+                  onSelectBuilding={(building) => {
+                    setSelectedBuilding(building);
+                    setStartInEditMode(false);
+                  }}
+                  onNewBuilding={handleNewBuilding}
+                  onEditBuilding={selectedBuilding ? handleEditBuilding : undefined}
+                  onDeleteBuilding={selectedBuilding ? handleDeleteBuilding : undefined}
                 />
               </section>
 
@@ -274,33 +368,30 @@ export function BuildingsPageContent() {
                 onClose={handleCloseMobileDetails}
                 title={selectedBuilding?.name || t('pages.buildings.details.title')}
                 actionButtons={
-                  <>
-                    <button
-                      onClick={() => {/* TODO: Edit building handler */}}
-                      className={cn(
-                        `p-2 rounded-md border ${colors.bg.primary} border-border`,
-                        INTERACTIVE_PATTERNS.ACCENT_HOVER,
-                        TRANSITION_PRESETS.STANDARD_COLORS
-                      )}
-                      aria-label={t('pages.buildings.details.editBuilding')}
-                    >
-                      <Edit className={iconSizes.sm} />
-                    </button>
-                    <button
-                      onClick={() => {/* TODO: Delete building handler */}}
-                      className={cn(
-                        `p-2 rounded-md border ${colors.bg.primary} border-border text-destructive`,
-                        INTERACTIVE_PATTERNS.ACCENT_HOVER,
-                        TRANSITION_PRESETS.STANDARD_COLORS
-                      )}
-                      aria-label={t('pages.buildings.details.deleteBuilding')}
-                    >
-                      <Trash2 className={iconSizes.sm} />
-                    </button>
-                  </>
+                  <button
+                    onClick={handleDeleteBuilding}
+                    className={cn(
+                      "p-2 rounded-md border border-border text-destructive",
+                      colors.bg.primary,
+                      INTERACTIVE_PATTERNS.ACCENT_HOVER,
+                      TRANSITION_PRESETS.STANDARD_COLORS
+                    )}
+                    aria-label={t('details.deleteBuilding')}
+                  >
+                    <Trash2 className={iconSizes.sm} />
+                  </button>
                 }
               >
-                {selectedBuilding && <BuildingDetails building={selectedBuilding} />}
+                {selectedBuilding && (
+                  <BuildingDetails
+                    building={selectedBuilding}
+                    onNewBuilding={handleNewBuilding}
+                    onDeleteBuilding={handleDeleteBuilding}
+                    startInEditMode={startInEditMode}
+                    isEditing={isEditingBuilding}
+                    onSetEditing={setIsEditingBuilding}
+                  />
+                )}
               </MobileDetailsSlideIn>
             </>
           ) : (
@@ -313,15 +404,14 @@ export function BuildingsPageContent() {
           )}
         </ListContainer>
 
-        {/* [ENTERPRISE] Add Building Dialog (create-only, editing is inline) */}
-        <AddBuildingDialog
-          open={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
-          onBuildingAdded={() => {
-            // Refresh will happen automatically via useFirestoreBuildings
-          }}
-          companyId={companies[0]?.id || ''}
-          companyName={companies[0]?.companyName}
+        {/* 🏢 ENTERPRISE: Centralized delete confirmation (ADR-003) */}
+        <DeleteConfirmDialog
+          open={!!buildingToDelete}
+          onOpenChange={(open) => { if (!open) setBuildingToDelete(null); }}
+          title={t('details.deleteBuilding')}
+          description={t('details.confirmDelete', { name: buildingToDelete?.name ?? '' })}
+          onConfirm={handleConfirmDelete}
+          loading={isDeleting}
         />
       </PageContainer>
   );

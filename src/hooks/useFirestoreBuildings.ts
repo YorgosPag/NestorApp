@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Building } from '@/types/building/contracts';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type BuildingUpdatedPayload, type BuildingCreatedPayload, type BuildingDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFirestoreBuildings');
@@ -34,6 +36,39 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 🏢 ENTERPRISE: Real-time handlers for BUILDING_UPDATED/CREATED/DELETED
+  useEffect(() => {
+    const handleBuildingUpdate = (payload: BuildingUpdatedPayload) => {
+      logger.info('Applying update for building', { buildingId: payload.buildingId });
+      setBuildings(prev => prev.map(building =>
+        building.id === payload.buildingId
+          ? { ...building, ...payload.updates }
+          : building
+      ));
+    };
+
+    const handleBuildingCreated = (_payload: BuildingCreatedPayload) => {
+      logger.info('Building created, triggering refetch');
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    const handleBuildingDeleted = (payload: BuildingDeletedPayload) => {
+      logger.info('Removing deleted building from list', { buildingId: payload.buildingId });
+      setBuildings(prev => prev.filter(building => building.id !== payload.buildingId));
+    };
+
+    const unsubUpdate = RealtimeService.subscribe('BUILDING_UPDATED', handleBuildingUpdate);
+    const unsubCreate = RealtimeService.subscribe('BUILDING_CREATED', handleBuildingCreated);
+    const unsubDelete = RealtimeService.subscribe('BUILDING_DELETED', handleBuildingDeleted);
+
+    return () => {
+      unsubUpdate();
+      unsubCreate();
+      unsubDelete();
+    };
+  }, []);
 
   const fetchBuildings = async () => {
     try {
@@ -77,12 +112,12 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
     }
   };
 
-  // Fetch buildings when auth is ready
+  // Fetch buildings when auth is ready or manual refresh triggered
   useEffect(() => {
     if (!authLoading && user) {
       fetchBuildings();
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, refreshTrigger]);
 
   return {
     buildings,

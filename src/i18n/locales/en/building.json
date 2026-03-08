@@ -615,8 +615,11 @@
     }
   },
   "details": {
+    "newBuilding": "New Building",
     "viewBuilding": "View Building",
     "editBuilding": "Edit",
+    "deleteBuilding": "Delete",
+    "confirmDelete": "Are you sure you want to delete the building \"{name}\"?",
     "saveBuilding": "Save",
     "cancelEdit": "Cancel",
     "saving": "Saving...",

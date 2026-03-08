@@ -23,12 +23,21 @@ interface BuildingsListProps {
   buildings: Building[];
   selectedBuilding: Building | null;
   onSelectBuilding?: (building: Building) => void;
+  /** Callback for new building (inline creation) */
+  onNewBuilding?: () => void;
+  /** Callback for edit building */
+  onEditBuilding?: () => void;
+  /** Callback for delete building */
+  onDeleteBuilding?: () => void;
 }
 
 export const BuildingsList = React.memo(function BuildingsList({
   buildings,
   selectedBuilding,
   onSelectBuilding,
+  onNewBuilding,
+  onEditBuilding,
+  onDeleteBuilding,
 }: BuildingsListProps) {
   // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation('building');
@@ -135,9 +144,10 @@ export const BuildingsList = React.memo(function BuildingsList({
             setSortBy(newSortBy);
             setSortOrder(newSortOrder);
           }}
-          onNewItem={() => {}}
-          onEditItem={(id) => {}}
-          onDeleteItems={(ids) => {}}
+          hasSelectedContact={!!selectedBuilding}
+          onNewItem={onNewBuilding ? () => onNewBuilding() : undefined}
+          onEditItem={onEditBuilding ? () => onEditBuilding() : undefined}
+          onDeleteItems={onDeleteBuilding ? () => onDeleteBuilding() : undefined}
           onExport={() => logger.info('Export buildings')}
           onRefresh={() => logger.info('Refresh buildings')}
         />
@@ -159,9 +169,10 @@ export const BuildingsList = React.memo(function BuildingsList({
               setSortBy(newSortBy);
               setSortOrder(newSortOrder);
             }}
-            onNewItem={() => {}}
-            onEditItem={(id) => {}}
-            onDeleteItems={(ids) => {}}
+            hasSelectedContact={!!selectedBuilding}
+            onNewItem={onNewBuilding ? () => onNewBuilding() : undefined}
+            onEditItem={onEditBuilding ? () => onEditBuilding() : undefined}
+            onDeleteItems={onDeleteBuilding ? () => onDeleteBuilding() : undefined}
             onExport={() => logger.info('Export buildings')}
             onRefresh={() => logger.info('Refresh buildings')}
           />

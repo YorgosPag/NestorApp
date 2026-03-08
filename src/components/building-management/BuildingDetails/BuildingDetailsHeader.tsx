@@ -24,6 +24,10 @@ interface BuildingDetailsHeaderProps {
     onSave: () => void;
     /** Cancel editing and revert changes */
     onCancel: () => void;
+    /** Create a new building (inline) */
+    onNewBuilding?: () => void;
+    /** Delete the current building */
+    onDeleteBuilding?: () => void;
 }
 
 export function BuildingDetailsHeader({
@@ -32,14 +36,16 @@ export function BuildingDetailsHeader({
     isSaving,
     onStartEdit,
     onSave,
-    onCancel
+    onCancel,
+    onNewBuilding,
+    onDeleteBuilding,
 }: BuildingDetailsHeaderProps) {
     // ENTERPRISE: i18n hook for translations with namespace readiness check
     const { t, isNamespaceReady } = useTranslation('building');
 
     // 🏢 ENTERPRISE: Actions via centralized presets
     // Edit mode: Save (🟢), Cancel (⚪)
-    // Normal mode: Edit (🔵), View (🔵 primary)
+    // Normal mode: New, Edit, Delete
     const actions = isEditing
         ? [
             createEntityAction(
@@ -56,16 +62,21 @@ export function BuildingDetailsHeader({
             ),
         ]
         : [
+            ...(onNewBuilding ? [createEntityAction(
+                'new',
+                isNamespaceReady ? t('details.newBuilding') : 'New',
+                onNewBuilding
+            )] : []),
             createEntityAction(
                 'edit',
                 isNamespaceReady ? t('details.editBuilding') : 'Edit',
                 onStartEdit
             ),
-            createEntityAction(
-                'view',
-                isNamespaceReady ? t('details.viewBuilding') : 'View Building',
-                () => logger.info('Show building details')
-            ),
+            ...(onDeleteBuilding ? [createEntityAction(
+                'delete',
+                isNamespaceReady ? t('details.deleteBuilding') : 'Delete',
+                onDeleteBuilding
+            )] : []),
         ];
 
     return (

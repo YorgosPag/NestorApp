@@ -13,14 +13,33 @@ import { DetailsContainer } from '@/core/containers';
 
 interface BuildingDetailsProps {
   building: Building | null;
+  /** Callback to create a new building */
+  onNewBuilding?: () => void;
+  /** Callback to delete the current building */
+  onDeleteBuilding?: () => void;
+  /** Start in edit mode (for inline creation) */
+  startInEditMode?: boolean;
+  /** Lifted edit state from parent */
+  isEditing?: boolean;
+  /** Callback to update lifted edit state */
+  onSetEditing?: (editing: boolean) => void;
 }
 
-export const BuildingDetails = React.memo(function BuildingDetails({ building }: BuildingDetailsProps) {
+export const BuildingDetails = React.memo(function BuildingDetails({
+  building,
+  onNewBuilding,
+  onDeleteBuilding,
+  startInEditMode,
+  isEditing: externalIsEditing,
+  onSetEditing,
+}: BuildingDetailsProps) {
   // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
 
-  // Inline editing state (lifted from GeneralTabContent for header coordination)
-  const [isEditing, setIsEditing] = useState(false);
+  // Inline editing state — use lifted state if available, otherwise local
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+  const isEditing = externalIsEditing ?? localIsEditing;
+  const setIsEditing = onSetEditing ?? setLocalIsEditing;
   const [isSaving, setIsSaving] = useState(false);
 
   // Save delegation ref — GeneralTabContent registers its handleSave here
@@ -44,10 +63,10 @@ export const BuildingDetails = React.memo(function BuildingDetails({ building }:
     setIsEditing(false);
   }, []);
 
-  // Reset editing state when building selection changes
+  // Reset or activate edit mode when building selection changes
   React.useEffect(() => {
-    setIsEditing(false);
-  }, [building?.id]);
+    setIsEditing(!!startInEditMode);
+  }, [building?.id, startInEditMode]);
 
   return (
     <DetailsContainer
@@ -60,6 +79,8 @@ export const BuildingDetails = React.memo(function BuildingDetails({ building }:
           onStartEdit={handleStartEdit}
           onSave={handleSave}
           onCancel={handleCancel}
+          onNewBuilding={onNewBuilding}
+          onDeleteBuilding={onDeleteBuilding}
         />
       }
       tabsRenderer={

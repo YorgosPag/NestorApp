@@ -615,8 +615,11 @@
     }
   },
   "details": {
+    "newBuilding": "Νέο Κτίριο",
     "viewBuilding": "Προβολή Κτιρίου",
     "editBuilding": "Επεξεργασία",
+    "deleteBuilding": "Διαγραφή",
+    "confirmDelete": "Είστε σίγουροι ότι θέλετε να διαγράψετε το κτίριο «{name}»;",
     "saveBuilding": "Αποθήκευση",
     "cancelEdit": "Ακύρωση",
     "saving": "Αποθηκεύεται...",
