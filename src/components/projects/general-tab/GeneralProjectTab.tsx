@@ -42,7 +42,7 @@ export function GeneralProjectTab({
   const [projectData, setProjectData] = useState<ProjectFormData>({
     name: project.name,
     licenseTitle: project.title,
-    description: project.description || t('generalTab.defaultDescription'),
+    description: project.description || '',
     buildingBlock: '10',
     protocolNumber: '',
     licenseNumber: '5142/24-10-2001',

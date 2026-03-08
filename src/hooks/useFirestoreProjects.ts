@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
-import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
+import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload, type ProjectDeletedPayload } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFirestoreProjects');
@@ -79,11 +79,10 @@ export function useFirestoreProjects() {
   };
 
   // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
-  // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+  // Handles PROJECT_UPDATED, PROJECT_CREATED, PROJECT_DELETED for cross-page sync
   useEffect(() => {
     const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
       logger.info('Applying update for project', { projectId: payload.projectId });
-
       setProjects(prev => prev.map(project =>
         project.id === payload.projectId
           ? { ...project, ...payload.updates }
@@ -91,10 +90,26 @@ export function useFirestoreProjects() {
       ));
     };
 
-    // Subscribe to project updates (same-page + cross-page)
-    const unsubscribe = RealtimeService.subscribe('PROJECT_UPDATED', handleProjectUpdate);
+    const handleProjectCreated = (_payload: ProjectCreatedPayload) => {
+      logger.info('Project created, triggering refetch');
+      // Refetch full list to get complete project data from server
+      setRefreshTrigger(prev => prev + 1);
+    };
 
-    return unsubscribe;
+    const handleProjectDeleted = (payload: ProjectDeletedPayload) => {
+      logger.info('Removing deleted project from list', { projectId: payload.projectId });
+      setProjects(prev => prev.filter(project => project.id !== payload.projectId));
+    };
+
+    const unsubUpdate = RealtimeService.subscribe('PROJECT_UPDATED', handleProjectUpdate);
+    const unsubCreate = RealtimeService.subscribe('PROJECT_CREATED', handleProjectCreated);
+    const unsubDelete = RealtimeService.subscribe('PROJECT_DELETED', handleProjectDeleted);
+
+    return () => {
+      unsubUpdate();
+      unsubCreate();
+      unsubDelete();
+    };
   }, []);
 
   useEffect(() => {

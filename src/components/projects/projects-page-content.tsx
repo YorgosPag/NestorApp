@@ -104,7 +104,7 @@ export function ProjectsPageContent() {
     }
 
     const result = await createProject({
-      name: t('dialog.fields.namePlaceholder'),
+      name: '',
       companyId: defaultCompanyId,
       company: companies[0]?.companyName || '',
       status: 'planning',
@@ -112,10 +112,10 @@ export function ProjectsPageContent() {
 
     if (result.success && result.projectId) {
       logger.info('Project created inline', { projectId: result.projectId });
-      // Set as selected and enable edit mode
+      // Set as selected and enable edit mode — empty fields, user fills them
       const newProject: Project = {
         id: result.projectId,
-        name: t('dialog.fields.namePlaceholder'),
+        name: '',
         title: '',
         description: '',
         status: 'planning',
@@ -134,7 +134,7 @@ export function ProjectsPageContent() {
       setStartInEditMode(true);
     }
     setIsCreatingProject(false);
-  }, [companies, t, setSelectedProject, isCreatingProject]);
+  }, [companies, setSelectedProject, isCreatingProject]);
 
   // 🏢 ENTERPRISE: Delete project — centralized DeleteConfirmDialog (not browser confirm)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -150,13 +150,14 @@ export function ProjectsPageContent() {
     const result = await deleteProject(projectToDelete.id);
     if (result.success) {
       logger.info('Project deleted', { projectId: projectToDelete.id });
+      // 🏢 ENTERPRISE: Real-time update — RealtimeService dispatches PROJECT_DELETED
+      // from deleteProject(), useFirestoreProjects listens and removes from list
       setSelectedProject(null);
       setProjectToDelete(null);
-      window.location.reload();
     } else {
       logger.error('Failed to delete project', { error: result.error });
-      setIsDeleting(false);
     }
+    setIsDeleting(false);
   }, [projectToDelete, setSelectedProject]);
 
   // 🏢 ENTERPRISE: Memoized dashboard stats — avoids array recreation on every render (INP optimization)
