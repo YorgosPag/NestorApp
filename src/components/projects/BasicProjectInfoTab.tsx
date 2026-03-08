@@ -71,7 +71,13 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
 
+    const NONE_VALUE = '__none__';
+
     const handleCompanySelect = (selectedId: string) => {
+        if (selectedId === NONE_VALUE) {
+            setData(prev => ({ ...prev, companyId: '', companyName: '' }));
+            return;
+        }
         const selected = companies.find(c => c.id === selectedId);
         setData(prev => ({
             ...prev,
@@ -120,7 +126,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
                         </div>
                     ) : (
                         <Select
-                            value={currentCompanyId}
+                            value={currentCompanyId || NONE_VALUE}
                             onValueChange={handleCompanySelect}
                             disabled={!isEditing}
                         >
@@ -128,6 +134,12 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
                                 <SelectValue placeholder={t('basicInfo.companyLink.placeholder')} />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem
+                                    value={NONE_VALUE}
+                                    className="text-muted-foreground"
+                                >
+                                    {t('basicInfo.companyLink.noSelection')}
+                                </SelectItem>
                                 {companies.map(company => (
                                     <SelectItem
                                         key={company.id}

@@ -108,6 +108,9 @@ export type ProjectSortKey = 'name' | 'progress' | 'totalValue' | 'status' | 'ar
  */
 export type ProjectUpdatePayload = Partial<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>> & {
   updatedAt?: unknown; // FieldValue from Firestore
+  /** Allow null to unlink company from project */
+  companyId?: string | null;
+  company?: string | null;
 };
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {

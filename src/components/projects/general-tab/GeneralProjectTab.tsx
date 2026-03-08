@@ -140,7 +140,7 @@ export function GeneralProjectTab({
           title: projectData.licenseTitle,
           status: projectData.status,
           description: projectData.description,
-          companyId: projectData.companyId || undefined,
+          companyId: projectData.companyId || null,
           company: projectData.companyName || null,
           client: projectData.client || undefined,
           location: projectData.location || undefined,
