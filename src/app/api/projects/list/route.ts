@@ -231,8 +231,9 @@ export const GET = withHighRateLimit(
         });
 
         if (navContactIds.length === 0) {
-          logger.warn('[Projects/List] No navigation companies found');
-          projectsSnapshot = { docs: [] };
+          // 🏢 FALLBACK: No navigation companies → fetch ALL projects
+          logger.warn('[Projects/List] No navigation companies found — fallback to all projects');
+          projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
         } else if (navContactIds.length <= FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS) {
           projectsSnapshot = await adminDb
             .collection(COLLECTIONS.PROJECTS)
@@ -402,6 +403,24 @@ export const POST = withHighRateLimit(
           },
           metadata: { reason: 'Project created' },
         });
+
+        // 🏢 AUTO-REGISTER: Ensure company exists in navigation_companies
+        const adminDb = getAdminFirestore();
+        const navQuery = await adminDb
+          .collection(COLLECTIONS.NAVIGATION)
+          .where('contactId', '==', ctx.companyId)
+          .limit(1)
+          .get();
+
+        if (navQuery.empty) {
+          await adminDb.collection(COLLECTIONS.NAVIGATION).add({
+            contactId: ctx.companyId,
+            addedAt: FieldValue.serverTimestamp(),
+            addedBy: ctx.uid,
+            source: 'auto_project_create',
+          });
+          logger.info('[Projects] Auto-registered company in navigation', { companyId: ctx.companyId });
+        }
 
         // 🔄 Invalidate cache for this tenant
         const cache = EnterpriseAPICache.getInstance();
