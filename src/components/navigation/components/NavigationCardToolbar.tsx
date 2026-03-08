@@ -31,13 +31,13 @@ type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'unit
  */
 const getLevelTitle = (level: NavigationLevel, t: TranslationFn): string => {
   switch (level) {
-    case 'companies': return t('entities.company.title');
-    case 'projects': return t('entities.project.title');
-    case 'buildings': return t('entities.building.title');
-    case 'floors': return t('entities.floor.title');
-    case 'units': return t('entities.unit.title');
-    case 'storage': return t('entities.storage.title');
-    case 'parking': return t('entities.parking.title');
+    case 'companies': return t('entities.company.plural');
+    case 'projects': return t('entities.project.plural');
+    case 'buildings': return t('entities.building.plural');
+    case 'floors': return t('entities.floor.plural');
+    case 'units': return t('entities.unit.plural');
+    case 'storage': return t('entities.storage.plural');
+    case 'parking': return t('entities.parking.plural');
     default: return '';
   }
 };

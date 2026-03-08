@@ -756,7 +756,7 @@ export function DesktopMultiColumn({
                     isSelected={selectedCompany?.id === company.id}
                     variant="compact"
                     badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
-                    badgeText={!projectsLoading && !hasProjects ? getNavigationFilterCategories().company_without_projects : undefined}
+                    badgeText={!projectsLoading && !hasProjects ? t(getNavigationFilterCategories().company_without_projects) : undefined}
                     // 🔗 ENTERPRISE: Navigation to Contacts page
                     navigationHref={ContextualNavigationService.generateRoute('company', company.id, { action: 'select' })}
                     navigationTooltip={t('columns.companies.openTooltip')}
@@ -819,7 +819,7 @@ export function DesktopMultiColumn({
                       isSelected={selectedProject?.id === project.id}
                       variant="compact"
                       badgeStatus={!hasBuildings ? 'no_projects' : undefined}
-                      badgeText={!hasBuildings ? getNavigationFilterCategories().project_without_buildings : undefined}
+                      badgeText={!hasBuildings ? t(getNavigationFilterCategories().project_without_buildings) : undefined}
                       // 🔗 ENTERPRISE: Navigation to Audit page (Projects page)
                       navigationHref={ContextualNavigationService.generateRoute('project', project.id, { action: 'select' })}
                       navigationTooltip={t('columns.projects.openTooltip')}
@@ -882,7 +882,7 @@ export function DesktopMultiColumn({
                       isSelected={selectedBuilding?.id === building.id}
                       variant="compact"
                       badgeStatus={!hasUnits ? 'no_projects' : undefined}
-                      badgeText={!hasUnits ? getNavigationFilterCategories().building_without_units : undefined}
+                      badgeText={!hasUnits ? t(getNavigationFilterCategories().building_without_units) : undefined}
                       // 🔗 ENTERPRISE: Navigation to Buildings page
                       navigationHref={ContextualNavigationService.generateRoute('building', building.id, { action: 'select' })}
                       navigationTooltip={t('columns.buildings.openTooltip')}
