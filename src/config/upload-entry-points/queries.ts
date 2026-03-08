@@ -13,13 +13,35 @@
 import type { EntityType } from '../domain-constants';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { ContactType } from '@/types/contacts';
-import type { StudyGroup } from '../study-groups-config';
+import type { EntityLevel, StudyGroup } from '../study-groups-config';
+import { getStudyGroupMeta } from '../study-groups-config';
 import type { UploadEntryPoint, UploadEntryPointsConfig, FloorInfo } from './types';
 
 import { CONTACT_ENTRY_POINTS } from './entries-contact';
 import { BUILDING_ENTRY_POINTS } from './entries-building';
 import { UNIT_ENTRY_POINTS } from './entries-unit';
 import { PROJECT_ENTRY_POINTS } from './entries-project';
+import { STUDY_ENTRIES } from './entries-studies';
+
+// ============================================================================
+// Study Entry Assembly (ADR-191 — shared visibility)
+// ============================================================================
+
+/**
+ * Filter study entries by entity level.
+ * Resolution order:
+ *   1. Entry-level override: entry.visibleIn (if defined)
+ *   2. Group-level default: StudyGroupMeta.entityLevels
+ */
+function getStudyEntriesForEntityLevel(level: EntityLevel): UploadEntryPoint[] {
+  return STUDY_ENTRIES.filter((entry) => {
+    // Entry-level override takes priority
+    if (entry.visibleIn) return entry.visibleIn.includes(level);
+    // Fall back to group-level entityLevels
+    const meta = entry.group ? getStudyGroupMeta(entry.group) : undefined;
+    return meta?.entityLevels.includes(level) ?? false;
+  });
+}
 
 // ============================================================================
 // Master Assembly
@@ -27,13 +49,13 @@ import { PROJECT_ENTRY_POINTS } from './entries-project';
 
 /**
  * Centralized Upload Entry Points.
- * Assembled from domain-specific entry files.
+ * Non-study entries come from domain files; study entries are merged dynamically.
  */
 export const UPLOAD_ENTRY_POINTS: UploadEntryPointsConfig = {
   contact: CONTACT_ENTRY_POINTS,
-  building: BUILDING_ENTRY_POINTS,
+  building: [...BUILDING_ENTRY_POINTS, ...getStudyEntriesForEntityLevel('building')],
   unit: UNIT_ENTRY_POINTS,
-  project: PROJECT_ENTRY_POINTS,
+  project: [...PROJECT_ENTRY_POINTS, ...getStudyEntriesForEntityLevel('project')],
 };
 
 // ============================================================================

@@ -22,7 +22,7 @@ export type EntityLevel = 'project' | 'building';
 
 export interface StudyGroupMeta {
   readonly group: StudyGroup;
-  readonly entityLevel: EntityLevel;
+  readonly entityLevels: readonly EntityLevel[];
   readonly label: { readonly el: string; readonly en: string };
   readonly description: { readonly el: string; readonly en: string };
   readonly icon: string;
@@ -38,7 +38,7 @@ export interface StudyGroupMeta {
 export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   {
     group: 'administrative',
-    entityLevel: 'project',
+    entityLevels: ['project'],
     label: { el: 'Διοικητικά / Νομικά', en: 'Administrative / Legal' },
     description: {
       el: 'Αίτηση, τίτλοι ιδιοκτησίας, κτηματογράφηση, εγκρίσεις',
@@ -53,7 +53,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'fiscal',
-    entityLevel: 'project',
+    entityLevels: ['project'],
     label: { el: 'Φορολογικά / Ασφαλιστικά', en: 'Fiscal / Insurance' },
     description: {
       el: 'Εισφορές ΕΦΚΑ, αμοιβές μηχανικών, ΦΕΜ, κρατήσεις',
@@ -68,7 +68,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'architectural',
-    entityLevel: 'building',
+    entityLevels: ['building'],
     label: { el: 'Αρχιτεκτονικά / Πολεοδομικά', en: 'Architectural / Urban Planning' },
     description: {
       el: 'Κατόψεις, τομές, όψεις, τοπογραφικό, κάλυψη, δόμηση',
@@ -83,7 +83,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'structural',
-    entityLevel: 'building',
+    entityLevels: ['building'],
     label: { el: 'Στατικά', en: 'Structural' },
     description: {
       el: 'Στατική μελέτη, σχέδια ξυλοτύπων, φέρουσα κατασκευή',
@@ -98,7 +98,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'mechanical',
-    entityLevel: 'building',
+    entityLevels: ['building'],
     label: { el: 'Ηλεκτρομηχανολογικά (Η/Μ)', en: 'Mechanical / Electrical (MEP)' },
     description: {
       el: 'Ύδρευση, αποχέτευση, θέρμανση, κλιματισμός, ηλεκτρολογικά',
@@ -113,7 +113,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'energy',
-    entityLevel: 'project',
+    entityLevels: ['project'],
     label: { el: 'Ενεργειακά', en: 'Energy' },
     description: {
       el: 'ΜΕΑ/ΚΕΝΑΚ, ενεργειακό πιστοποιητικό, μόνωση',
@@ -128,7 +128,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
   },
   {
     group: 'site',
-    entityLevel: 'project',
+    entityLevels: ['project'],
     label: { el: 'Εργοταξιακά / Περιβαλλοντικά', en: 'Site / Environmental' },
     description: {
       el: 'ΣΑΥ-ΦΑΥ, ΣΔΑ, χρονοδιάγραμμα, περιβαλλοντικοί όροι',
@@ -154,5 +154,5 @@ export function getStudyGroupMeta(group: StudyGroup): StudyGroupMeta | undefined
 }
 
 export function getStudyGroupsForEntity(entityLevel: EntityLevel): readonly StudyGroupMeta[] {
-  return STUDY_GROUPS.filter((g) => g.entityLevel === entityLevel);
+  return STUDY_GROUPS.filter((g) => g.entityLevels.includes(entityLevel));
 }

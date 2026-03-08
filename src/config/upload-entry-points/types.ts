@@ -10,7 +10,7 @@
 import type { EntityType, FileDomain, FileCategory } from '../domain-constants';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { ContactType } from '@/types/contacts';
-import type { StudyGroup } from '../study-groups-config';
+import type { StudyGroup, EntityLevel } from '../study-groups-config';
 
 // ============================================================================
 // Floor Info (ADR-191)
@@ -114,6 +114,13 @@ export interface UploadEntryPoint {
    * expandFloorEntryPoints() clones this entry N times (one per floor).
    */
   perFloor?: boolean;
+  /**
+   * Override group-level visibility for this specific entry.
+   * If omitted, inherits from the group's entityLevels.
+   * Example: visibleIn: ['building'] → only shown at building level,
+   * even if the group targets both building + project.
+   */
+  visibleIn?: EntityLevel[];
 }
 
 /**
