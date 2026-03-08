@@ -821,7 +821,7 @@ export class FileRecordService {
 
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId,
-      updates: { linkedTo: linkTag, action: 'link' },
+      updates: { status: 'ready' },
       timestamp: Date.now(),
     });
   }
@@ -852,7 +852,7 @@ export class FileRecordService {
 
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId,
-      updates: { linkedTo: linkTag, action: 'unlink' },
+      updates: { status: 'ready' },
       timestamp: Date.now(),
     });
   }
