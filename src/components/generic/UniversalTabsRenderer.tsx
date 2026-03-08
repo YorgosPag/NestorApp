@@ -89,6 +89,8 @@ export interface TabComponentProps {
   unit?: unknown;
   selectedUnit?: unknown;
   icon?: React.ComponentType | null;
+  /** Injected by UniversalTabsRenderer — navigate to a sibling tab by ID */
+  onNavigateToTab?: (tabId: string) => void;
   [key: string]: unknown;
 }
 
@@ -287,6 +289,8 @@ export function UniversalTabsRenderer<TData = unknown>({
           selectedUnit={data} // For backward compatibility με unit components
           // For PlaceholderTab compatibility
           icon={getIconComponent(tabConfig.icon ?? '')}
+          // 🏢 ENTERPRISE: Inject tab navigation — lets any child switch sibling tabs
+          onNavigateToTab={setActiveTab}
           {...additionalData}
           {...getFloorplanProps()} // ✅ ENTERPRISE: FloorplanViewerTab special props
           {...globalProps}
@@ -294,7 +298,7 @@ export function UniversalTabsRenderer<TData = unknown>({
         />
       )
     };
-  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, t, currentLanguage]);
+  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, setActiveTab, t, currentLanguage]);
 
   // 🏢 ENTERPRISE: Handle tab change for controlled mode
   const handleTabChange = useCallback((tabId: string) => {

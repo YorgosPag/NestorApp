@@ -115,6 +115,8 @@ export interface EntityFilesManagerProps {
   floors?: FloorInfo[];
   /** 🔗 ENTERPRISE: Enable linking files to project buildings */
   enableBuildingLink?: boolean;
+  /** Navigate to the Floors tab (for "create floors first" warning link) */
+  onNavigateToFloors?: () => void;
 }
 
 // ============================================================================
@@ -151,6 +153,7 @@ export function EntityFilesManager({
   activePersonas,
   floors,
   enableBuildingLink = false,
+  onNavigateToFloors,
 }: EntityFilesManagerProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -788,6 +791,7 @@ export function EntityFilesManager({
                 categoryFilter={entryPointCategoryFilter}
                 excludeCategories={entryPointExcludeCategories}
                 floors={floors}
+                onNavigateToFloors={onNavigateToFloors}
               />
             ) : (
               <UploadEntryPointSelector

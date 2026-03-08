@@ -55,6 +55,8 @@ export interface HierarchicalEntryPointSelectorProps {
   categoryFilter?: FileCategory;
   excludeCategories?: FileCategory[];
   floors?: FloorInfo[];
+  /** Callback to navigate to the Floors tab (makes the no-floors warning clickable) */
+  onNavigateToFloors?: () => void;
 }
 
 // ============================================================================
@@ -83,6 +85,7 @@ export function HierarchicalEntryPointSelector({
   categoryFilter,
   excludeCategories,
   floors = [],
+  onNavigateToFloors,
 }: HierarchicalEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
   const { t, i18n } = useTranslation('files');
@@ -439,6 +442,19 @@ export function HierarchicalEntryPointSelector({
               <LucideIcons.AlertTriangle className={cn(iconSizes.sm, 'text-yellow-600 mt-0.5 flex-shrink-0')} aria-hidden="true" />
               <p className="text-xs text-yellow-800 dark:text-yellow-300">
                 {t('studies.noFloorsWarning')}
+                {onNavigateToFloors && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      onClick={onNavigateToFloors}
+                      className="inline-flex items-center gap-1 font-semibold text-yellow-700 underline underline-offset-2 hover:text-yellow-900 dark:text-yellow-200 dark:hover:text-yellow-100 transition-colors"
+                    >
+                      {t('studies.goToFloors')}
+                      <LucideIcons.ArrowRight className="inline h-3 w-3" aria-hidden="true" />
+                    </button>
+                  </>
+                )}
               </p>
             </div>
           )}

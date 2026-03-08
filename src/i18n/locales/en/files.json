@@ -439,6 +439,7 @@
     "generalDocumentsDescription": "Basic documents without study category",
     "perFloorLabel": "per floor",
     "studyCategories": "Study Categories",
-    "searchResults": "Search results"
+    "searchResults": "Search results",
+    "goToFloors": "Go to Floors"
   }
 }

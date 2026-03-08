@@ -439,6 +439,7 @@
     "generalDocumentsDescription": "Βασικά έγγραφα χωρίς κατηγορία μελέτης",
     "perFloorLabel": "ανά όροφο",
     "studyCategories": "Κατηγορίες Μελετών",
-    "searchResults": "Αποτελέσματα αναζήτησης"
+    "searchResults": "Αποτελέσματα αναζήτησης",
+    "goToFloors": "Μετάβαση στους Ορόφους"
   }
 }

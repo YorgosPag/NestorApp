@@ -38,6 +38,8 @@ interface BuildingContractsTabProps {
   data?: Building;
   /** Title for the tab */
   title?: string;
+  /** Injected by UniversalTabsRenderer — navigate to sibling tab */
+  onNavigateToTab?: (tabId: string) => void;
 }
 
 // =============================================================================
@@ -58,6 +60,7 @@ interface BuildingContractsTabProps {
 export function BuildingContractsTab({
   building,
   data,
+  onNavigateToTab,
 }: BuildingContractsTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('building');
@@ -114,6 +117,7 @@ export function BuildingContractsTab({
       purpose="document"
       entryPointExcludeCategories={['photos', 'videos']}
       floors={floors}
+      onNavigateToFloors={onNavigateToTab ? () => onNavigateToTab('floors') : undefined}
     />
   );
 }
