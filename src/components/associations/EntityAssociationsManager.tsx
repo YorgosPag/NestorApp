@@ -208,7 +208,9 @@ export function EntityAssociationsManager({
               selectedContactId={selectedContact?.id || ''}
               onContactSelect={setSelectedContact}
               excludeContactIds={excludeContactIds}
+              allowedContactTypes={['individual', 'company', 'service']}
               label={t('associations.selectContact')}
+              searchConfig={{ maxResults: 200 }}
             />
 
             {/* Role Select (Radix — ADR-001) */}
