@@ -114,8 +114,8 @@ export const BuildingDetails = React.memo(function BuildingDetails({
     />
   );
 }, (prev, next) => {
-  // [PERF] Only re-render when building identity, edit state, or create mode changes
-  return prev.building?.id === next.building?.id
+  // [PERF] Re-render when building changes (including entity links), edit state, or create mode
+  return prev.building === next.building
     && prev.isEditing === next.isEditing
     && prev.isCreateMode === next.isCreateMode;
 });

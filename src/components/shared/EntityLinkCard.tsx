@@ -113,6 +113,10 @@ export function EntityLinkCard({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Track the last successfully saved value locally
+  // This solves stale props: parent may not re-render with updated building data
+  const [savedValue, setSavedValue] = useState<string | undefined>(undefined);
+
   // Load options on mount
   useEffect(() => {
     let cancelled = false;
@@ -131,12 +135,12 @@ export function EntityLinkCard({
     return () => { cancelled = true; };
   }, [loadOptions]);
 
-  // Sync with external value changes
+  // Sync with external value changes (but not if we have a local override from save)
   useEffect(() => {
-    if (currentValue !== undefined) {
+    if (currentValue !== undefined && savedValue === undefined) {
       setSelectedId(currentValue || NONE_VALUE);
     }
-  }, [currentValue]);
+  }, [currentValue, savedValue]);
 
   const handleChange = useCallback((value: string) => {
     setSelectedId(value);
@@ -156,8 +160,10 @@ export function EntityLinkCard({
 
       if (result.success) {
         setSaveStatus('success');
-        if (onChanged && idToSave) {
-          onChanged(idToSave, name);
+        // Track saved value locally so UI reflects the save even if parent doesn't re-render
+        setSavedValue(idToSave ?? undefined);
+        if (onChanged) {
+          onChanged(idToSave ?? '', name);
         }
         setTimeout(() => setSaveStatus('idle'), STATUS_RESET_MS);
       } else {
@@ -170,8 +176,10 @@ export function EntityLinkCard({
     }
   }, [selectedId, options, onSave, onChanged]);
 
-  const hasChanges = selectedId !== (currentValue || NONE_VALUE);
-  const currentName = options.find(o => o.id === currentValue)?.name;
+  // Use saved value if available, otherwise fall back to prop
+  const effectiveCurrentValue = savedValue !== undefined ? (savedValue || NONE_VALUE) : (currentValue || NONE_VALUE);
+  const hasChanges = selectedId !== effectiveCurrentValue;
+  const currentName = options.find(o => o.id === (savedValue ?? currentValue))?.name;
   const selectedName = options.find(o => o.id === selectedId)?.name;
 
   // Searchable mode: filtered options based on search query
