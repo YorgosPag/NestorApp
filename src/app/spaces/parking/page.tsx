@@ -48,6 +48,9 @@ import {
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AddParkingDialog } from '@/components/space-management/ParkingPage/AddParkingDialog';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ParkingPage');
 
 function ParkingPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -190,7 +193,6 @@ function ParkingPageContent() {
             setShowDashboard={setShowDashboard}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            onNewParking={() => setShowAddDialog(true)}
             showFilters={showMobileFilters}
             setShowFilters={setShowMobileFilters}
           />
@@ -263,7 +265,11 @@ function ParkingPageContent() {
                 selectedParking={selectedParking}
                 onSelectParking={setSelectedParking}
               />
-              <ParkingDetails parking={selectedParking} />
+              <ParkingDetails
+                parking={selectedParking}
+                onNewParking={() => setShowAddDialog(true)}
+                onDelete={() => logger.info('Delete parking', { parkingId: selectedParking?.id })}
+              />
             </>
           )}
         </ListContainer>

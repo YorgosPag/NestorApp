@@ -30,6 +30,10 @@ interface ParkingDetailsHeaderProps {
   onSave: () => void;
   /** Cancel editing and revert changes */
   onCancel: () => void;
+  /** Open the Add Parking dialog */
+  onNewParking?: () => void;
+  /** Delete the current parking spot */
+  onDelete?: () => void;
 }
 
 export function ParkingDetailsHeader({
@@ -39,21 +43,23 @@ export function ParkingDetailsHeader({
   onStartEdit,
   onSave,
   onCancel,
+  onNewParking,
+  onDelete,
 }: ParkingDetailsHeaderProps) {
   const { t } = useTranslation('parking');
 
   // 🏢 ENTERPRISE: Actions via centralized presets
   // Edit mode: Save (🟢), Cancel (⚪)
-  // Normal mode: View (🔵 primary), Edit (🔵), Print (⚪)
+  // Normal mode: New (🟢), Edit (🔵), Delete (🔴)
   const actions: EntityHeaderAction[] = isEditing
     ? [
         createEntityAction('save', isSaving ? t('header.saving') : t('header.save'), isSaving ? () => {} : onSave),
         createEntityAction('cancel', t('header.cancel'), onCancel),
       ]
     : [
-        createEntityAction('view', t('header.viewParking'), () => logger.info('Show parking details')),
+        createEntityAction('new', t('header.newParking'), () => onNewParking?.()),
         createEntityAction('edit', t('header.edit'), onStartEdit),
-        createEntityAction('print', t('header.print'), () => logger.info('Print parking details')),
+        createEntityAction('delete', t('header.delete'), () => onDelete?.()),
       ];
 
   return (

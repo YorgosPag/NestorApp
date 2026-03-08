@@ -18,9 +18,13 @@ import { DetailsContainer } from '@/core/containers';
 
 interface ParkingDetailsProps {
   parking: ParkingSpot | null;
+  /** Open the Add Parking dialog */
+  onNewParking?: () => void;
+  /** Delete the current parking spot */
+  onDelete?: () => void;
 }
 
-export function ParkingDetails({ parking }: ParkingDetailsProps) {
+export function ParkingDetails({ parking, onNewParking, onDelete }: ParkingDetailsProps) {
   const emptyStateMessages = useEmptyStateMessages();
 
   // Custom empty state message for parking
@@ -71,6 +75,8 @@ export function ParkingDetails({ parking }: ParkingDetailsProps) {
             onStartEdit={handleStartEdit}
             onSave={handleSave}
             onCancel={handleCancel}
+            onNewParking={onNewParking}
+            onDelete={onDelete}
           />
         ) : null
       }

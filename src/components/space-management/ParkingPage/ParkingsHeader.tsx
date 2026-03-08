@@ -24,10 +24,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('ParkingsHeader');
-
 // 🏢 ENTERPRISE: Type for Parkings view modes (avoids `as any`)
 type ParkingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
@@ -38,7 +34,6 @@ interface ParkingsHeaderProps {
   setShowDashboard: (show: boolean) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  onNewParking?: () => void;
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
 }
@@ -50,7 +45,6 @@ export function ParkingsHeader({
   setShowDashboard,
   searchTerm,
   setSearchTerm,
-  onNewParking,
   showFilters,
   setShowFilters,
 }: ParkingsHeaderProps) {
@@ -82,10 +76,6 @@ export function ParkingsHeader({
         viewMode: viewMode as ViewMode,
         onViewModeChange: (mode) => setViewMode(mode as ParkingsViewMode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
-        addButton: {
-          label: t('parkings.header.newParking'),
-          onClick: () => onNewParking?.() || logger.info('Add parking')
-        },
         customActions: setShowFilters ? [
           <button
             key="mobile-filter"

@@ -90,7 +90,8 @@
     "save": "Save",
     "saving": "Saving...",
     "cancel": "Cancel",
-    "print": "Print",
+    "newParking": "New Spot",
+    "delete": "Delete",
     "ownerLabel": "Owner:",
     "saveSuccess": "Parking spot updated",
     "saveError": "Failed to save"
