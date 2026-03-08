@@ -49,7 +49,7 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
                 <div className={cn("grid grid-cols-1 md:grid-cols-5", spacing.gap.md)}>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="buildingBlock" className={typography.label.sm}>{t('permitsTab.buildingBlock')}</Label>
-                        <Input id="buildingBlock" name="buildingBlock" value={data.buildingBlock} onChange={handleChange} disabled={!isEditing} className="h-10" />
+                        <Input id="buildingBlock" name="buildingBlock" value={data.buildingBlock} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.buildingBlockPlaceholder')} className="h-10" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="protocolNumber" className={typography.label.sm}>{t('permitsTab.protocolNumber')}</Label>

@@ -97,11 +97,11 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
                 <div className={cn("grid grid-cols-1 lg:grid-cols-2", spacing.gap.md)}>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="name" className="text-sm font-medium">{t('basicInfo.projectTitle')}</Label>
-                        <Input id="name" name="name" value={data.name} onChange={handleChange} disabled={!isEditing} className="h-10" />
+                        <Input id="name" name="name" value={data.name} onChange={handleChange} disabled={!isEditing} placeholder={t('basicInfo.projectTitlePlaceholder')} className="h-10" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="licenseTitle" className="text-sm font-medium">{t('basicInfo.licenseTitle')}</Label>
-                        <Input id="licenseTitle" name="licenseTitle" value={data.licenseTitle} onChange={handleChange} disabled={!isEditing} className="h-10" />
+                        <Input id="licenseTitle" name="licenseTitle" value={data.licenseTitle} onChange={handleChange} disabled={!isEditing} placeholder={t('basicInfo.licenseTitlePlaceholder')} className="h-10" />
                     </div>
                 </div>
 
@@ -152,6 +152,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
                         value={data.description}
                         onChange={handleChange}
                         disabled={!isEditing}
+                        placeholder={t('basicInfo.descriptionPlaceholder')}
                     />
                 </div>
             </CardContent>

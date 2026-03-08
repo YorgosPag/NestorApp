@@ -703,7 +703,8 @@
   "permits": {
     "protocolPlaceholder": "Εισάγετε αριθμό...",
     "licensePlaceholder": "Εισάγετε αριθμό αδείας...",
-    "authorityPlaceholder": "Εισάγετε αρχή..."
+    "authorityPlaceholder": "Εισάγετε αρχή...",
+    "buildingBlockPlaceholder": "Εισάγετε Ο.Τ...."
   },
   "plotZoning": {
     "maxRoofHeight": "Μέγιστο Ύψος Στέγης",
@@ -723,8 +724,11 @@
     "title": "Βασικές Πληροφορίες Έργου",
     "description": "Γενικά στοιχεία και περιγραφή του έργου",
     "projectTitle": "Τίτλος Έργου",
+    "projectTitlePlaceholder": "Εισάγετε τίτλο έργου...",
     "licenseTitle": "Τίτλος Άδειας",
+    "licenseTitlePlaceholder": "Εισάγετε τίτλο άδειας...",
     "projectDescription": "Περιγραφή Έργου",
+    "descriptionPlaceholder": "Εισάγετε περιγραφή έργου...",
     "companyLink": {
       "title": "Σύνδεση με Εταιρεία",
       "label": "Ανήκει σε Εταιρεία",

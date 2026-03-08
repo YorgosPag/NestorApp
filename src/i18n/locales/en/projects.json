@@ -703,7 +703,8 @@
   "permits": {
     "protocolPlaceholder": "Enter number...",
     "licensePlaceholder": "Enter license number...",
-    "authorityPlaceholder": "Enter authority..."
+    "authorityPlaceholder": "Enter authority...",
+    "buildingBlockPlaceholder": "Enter block..."
   },
   "plotZoning": {
     "maxRoofHeight": "Max Roof Height",
@@ -723,8 +724,11 @@
     "title": "Basic Project Information",
     "description": "General details and project description",
     "projectTitle": "Project Title",
+    "projectTitlePlaceholder": "Enter project title...",
     "licenseTitle": "License Title",
+    "licenseTitlePlaceholder": "Enter license title...",
     "projectDescription": "Project Description",
+    "descriptionPlaceholder": "Enter project description...",
     "companyLink": {
       "title": "Link to Company",
       "label": "Belongs to Company",
