@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
-import { getAllActiveCompanies } from '@/services/companies.service';
+import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectFormData } from './general-tab/types';
 
@@ -38,7 +38,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing, projectId, compa
     };
 
     const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
-        const companies = await getAllActiveCompanies();
+        const companies = await getAllCompaniesForSelect();
         return companies
             .filter(c => c.id)
             .map(c => ({ id: c.id!, name: c.companyName || '' }));
@@ -97,6 +97,8 @@ export function BasicProjectInfoTab({ data, setData, isEditing, projectId, compa
                     loadOptions={loadCompanies}
                     onSave={saveCompany}
                     isEditing={isEditing}
+                    searchable
+                    searchPlaceholder="Αναζήτηση εταιρείας..."
                     labels={{
                         title: t('basicInfo.companyLink.title'),
                         label: t('basicInfo.companyLink.label'),

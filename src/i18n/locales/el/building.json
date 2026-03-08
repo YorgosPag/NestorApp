@@ -1132,6 +1132,32 @@
         "excel": "Excel (Δεδομένα)",
         "exporting": "Εξαγωγή..."
       },
+      "milestoneDialog": {
+        "addTitle": "Νέο Ορόσημο",
+        "editTitle": "Επεξεργασία Ορόσημου",
+        "addButton": "Προσθήκη",
+        "fields": {
+          "title": "Τίτλος",
+          "titlePlaceholder": "π.χ. Θεμελίωση",
+          "type": "Τύπος",
+          "date": "Ημερομηνία",
+          "status": "Κατάσταση",
+          "progress": "Πρόοδος",
+          "description": "Περιγραφή",
+          "descriptionPlaceholder": "Προαιρετική περιγραφή..."
+        },
+        "types": {
+          "start": "Εκκίνηση",
+          "construction": "Κατασκευή",
+          "systems": "Η/Μ Εγκαταστάσεις",
+          "finishing": "Τελειώματα",
+          "delivery": "Παράδοση"
+        },
+        "validation": {
+          "titleRequired": "Ο τίτλος είναι υποχρεωτικός",
+          "dateRequired": "Η ημερομηνία είναι υποχρεωτική"
+        }
+      },
       "status": {
         "completed": "Ολοκληρώθηκε",
         "inProgress": "Σε εξέλιξη",

@@ -165,7 +165,7 @@ export default function NewObligationPage() {
       setLoadingCompanies(true);
       try {
         const companiesService = new CompaniesService();
-        const companyContacts = await companiesService.getAllActiveCompanies();
+        const companyContacts = await companiesService.getAllCompaniesForSelect();
         setCompanies(companyContacts);
 
         // 🔗 ENTERPRISE: Build mapping από contacts.id → navigation_companies.contactId

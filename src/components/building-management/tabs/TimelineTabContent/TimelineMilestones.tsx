@@ -15,9 +15,11 @@ interface TimelineMilestonesProps {
     getStatusColor: (status: string) => string;
     getStatusText: (status: string) => string;
     getTypeIcon: (type: string) => LucideIconType;
+    onEditMilestone?: (milestone: Milestone) => void;
+    onDeleteMilestone?: (milestone: Milestone) => void;
 }
 
-export function TimelineMilestones({ milestones, getStatusColor, getStatusText, getTypeIcon }: TimelineMilestonesProps) {
+export function TimelineMilestones({ milestones, getStatusColor, getStatusText, getTypeIcon, onEditMilestone, onDeleteMilestone }: TimelineMilestonesProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
     const colors = useSemanticColors();
@@ -39,6 +41,8 @@ export function TimelineMilestones({ milestones, getStatusColor, getStatusText, 
                                 getStatusColor={getStatusColor}
                                 getStatusText={getStatusText}
                                 getTypeIcon={getTypeIcon}
+                                onEdit={onEditMilestone ? () => onEditMilestone(milestone) : undefined}
+                                onDelete={onDeleteMilestone ? () => onDeleteMilestone(milestone) : undefined}
                             />
                         ))}
                     </div>

@@ -300,6 +300,35 @@ export class CompaniesService {
     }
   }
 
+  /**
+   * 🏢 ENTERPRISE: Επιστρέφει ΟΛΕΣ τις ενεργές εταιρείες χωρίς φίλτρο
+   *
+   * Χρήση: Select/Combobox dropdowns όπου ο χρήστης πρέπει να βλέπει
+   * ΟΛΕΣ τις εταιρείες, όχι μόνο αυτές με projects ή στο navigation.
+   *
+   * Διαφορά από getAllActiveCompanies():
+   * - getAllActiveCompanies() → μόνο navigation + with-projects
+   * - getAllCompaniesForSelect() → ΟΛΕΣ οι ενεργές (type=company, status=active)
+   */
+  async getAllCompaniesForSelect(): Promise<CompanyContact[]> {
+    try {
+      const companiesQuery = query(
+        collection(db, CONTACTS_COLLECTION).withConverter(contactConverter),
+        where('type', '==', 'company'),
+        where('status', '==', 'active')
+      );
+
+      const snapshot = await getDocs(companiesQuery);
+      return snapshot.docs
+        .map(doc => doc.data())
+        .filter((contact): contact is CompanyContact => contact.type === 'company')
+        .sort((a, b) => (a.companyName || '').localeCompare(b.companyName || '', 'el'));
+    } catch (error) {
+      logger.error('Error fetching all companies for select', error);
+      return [];
+    }
+  }
+
 }
 
 // Singleton instance
@@ -307,5 +336,6 @@ export const companiesService = new CompaniesService();
 
 // Helper functions για εύκολη χρήση
 export const getAllActiveCompanies = () => companiesService.getAllActiveCompanies();
+export const getAllCompaniesForSelect = () => companiesService.getAllCompaniesForSelect();
 export const getCompanyById = (companyId: string) => companiesService.getCompanyById(companyId);
 export const getCompanyByName = (companyName: string) => companiesService.getCompanyByName(companyName);

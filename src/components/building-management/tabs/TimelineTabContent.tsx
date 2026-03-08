@@ -7,7 +7,7 @@ import { OverallProgressCard } from './TimelineTabContent/OverallProgressCard';
 import { TimelineMilestones } from './TimelineTabContent/TimelineMilestones';
 import { CriticalPathCard } from './TimelineTabContent/CriticalPathCard';
 import { CompletionForecastCard } from './TimelineTabContent/CompletionForecastCard';
-import { getStatusColor, getStatusText, getTypeIcon, getMilestones } from './TimelineTabContent/utils';
+import { getStatusColor, getStatusText, getTypeIcon } from './TimelineTabContent/utils';
 import { TimelineViewToggle } from './TimelineTabContent/TimelineViewToggle';
 import type { TimelineView } from './TimelineTabContent/TimelineViewToggle';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -30,6 +30,12 @@ import { exportMilestonesToPDF, exportMilestonesToExcel } from '@/services/miles
 import type { MilestoneExportFormat } from '@/services/milestone-export';
 // 🏢 ENTERPRISE: NavigationContext for company/project name lookup
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
+// 🏢 ENTERPRISE: Building Milestones CRUD
+import { useBuildingMilestones } from '@/hooks/useBuildingMilestones';
+import { MilestoneDialog } from './TimelineTabContent/MilestoneDialog';
+import type { Milestone } from './TimelineTabContent/MilestoneItem';
+import type { BuildingMilestone } from '@/types/building/milestone';
+import { Plus } from 'lucide-react';
 
 // Lazy load GanttView (ADR-034) — only loaded when user switches to Gantt view
 const LazyGanttView = lazy(() =>
@@ -64,8 +70,56 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
     };
   }, [building.projectId, building.company, building.project, companies, projects]);
 
-  // Get i18n-enabled milestones
-  const milestones = getMilestones(t);
+  // 🏢 ENTERPRISE: Building milestones from Firestore
+  const {
+    milestones: firestoreMilestones,
+    loading: milestonesLoading,
+    createMilestone: handleCreateMilestone,
+    updateMilestone: handleUpdateMilestone,
+    deleteMilestone: handleDeleteMilestone,
+  } = useBuildingMilestones(building.id as string);
+
+  // Convert BuildingMilestone[] to Milestone[] for existing components
+  const milestones: Milestone[] = useMemo(() =>
+    firestoreMilestones.map((m) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      date: m.date,
+      status: m.status,
+      progress: m.progress,
+      type: m.type,
+    })),
+    [firestoreMilestones]
+  );
+
+  // 🏢 ENTERPRISE: Milestone dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<BuildingMilestone | undefined>();
+
+  const handleOpenCreate = useCallback(() => {
+    setEditingMilestone(undefined);
+    setDialogOpen(true);
+  }, []);
+
+  const handleEditMilestone = useCallback((milestone: Milestone) => {
+    const full = firestoreMilestones.find((m) => m.id === milestone.id);
+    if (full) {
+      setEditingMilestone(full);
+      setDialogOpen(true);
+    }
+  }, [firestoreMilestones]);
+
+  const handleDeleteMilestoneConfirm = useCallback(async (milestone: Milestone) => {
+    if (typeof milestone.id === 'string') {
+      await handleDeleteMilestone(milestone.id);
+    }
+  }, [handleDeleteMilestone]);
+
+  const handleDialogClose = useCallback(() => {
+    setDialogOpen(false);
+    setEditingMilestone(undefined);
+  }, []);
 
   // 🏢 ENTERPRISE: Milestone export state
   const [isExporting, setIsExporting] = useState(false);
@@ -139,6 +193,11 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
         <>
           <div className="flex items-center justify-between">
             <TimelineHeader milestones={milestones} />
+            <div className="flex items-center gap-2">
+              <Button variant="default" size="sm" onClick={handleOpenCreate}>
+                <Plus className={cn(iconSizes.sm, 'mr-1.5')} />
+                {t('tabs.timeline.milestoneDialog.addButton')}
+              </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={isExporting}>
@@ -157,14 +216,23 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </div>
           <OverallProgressCard building={building} milestones={milestones} />
-          <TimelineMilestones
-            milestones={milestones}
-            getStatusColor={wrappedGetStatusColor}
-            getStatusText={wrappedGetStatusText}
-            getTypeIcon={getTypeIcon}
-          />
+          {milestonesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : (
+            <TimelineMilestones
+              milestones={milestones}
+              getStatusColor={wrappedGetStatusColor}
+              getStatusText={wrappedGetStatusText}
+              getTypeIcon={getTypeIcon}
+              onEditMilestone={handleEditMilestone}
+              onDeleteMilestone={handleDeleteMilestoneConfirm}
+            />
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <CriticalPathCard />
             <CompletionForecastCard milestones={milestones} />
@@ -184,6 +252,15 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
           <LazyGanttView building={building} />
         </Suspense>
       )}
+      {/* 🏢 ENTERPRISE: Milestone CRUD Dialog */}
+      <MilestoneDialog
+        open={dialogOpen}
+        milestone={editingMilestone}
+        onClose={handleDialogClose}
+        onSave={handleCreateMilestone}
+        onUpdate={handleUpdateMilestone}
+        onDelete={handleDeleteMilestone}
+      />
     </section>
   );
 };

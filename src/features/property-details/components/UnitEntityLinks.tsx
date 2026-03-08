@@ -13,7 +13,7 @@ import React, { useCallback } from 'react';
 import { Building2, FolderKanban, Building } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
-import { getAllActiveCompanies } from '@/services/companies.service';
+import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { getProjectsList } from '@/components/building-management/building-services';
 import { updateUnitLink, getBuildingsList } from '@/services/units.service';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +39,7 @@ export function UnitEntityLinks({
 
   // Load functions (stable references via useCallback)
   const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
-    const companies = await getAllActiveCompanies();
+    const companies = await getAllCompaniesForSelect();
     return companies
       .filter(c => c.id)
       .map(c => ({ id: c.id!, name: c.companyName || '' }));
@@ -85,6 +85,8 @@ export function UnitEntityLinks({
         onSave={saveCompany}
         onChanged={onLinkChanged ? () => onLinkChanged() : undefined}
         isEditing={isEditing}
+        searchable
+        searchPlaceholder="Αναζήτηση εταιρείας..."
         labels={{
           title: t('entityLinks.company.title'),
           label: t('entityLinks.company.label'),

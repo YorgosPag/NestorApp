@@ -1132,6 +1132,32 @@
         "excel": "Excel (Data)",
         "exporting": "Exporting..."
       },
+      "milestoneDialog": {
+        "addTitle": "New Milestone",
+        "editTitle": "Edit Milestone",
+        "addButton": "Add",
+        "fields": {
+          "title": "Title",
+          "titlePlaceholder": "e.g. Foundation",
+          "type": "Type",
+          "date": "Date",
+          "status": "Status",
+          "progress": "Progress",
+          "description": "Description",
+          "descriptionPlaceholder": "Optional description..."
+        },
+        "types": {
+          "start": "Start",
+          "construction": "Construction",
+          "systems": "M&E Installations",
+          "finishing": "Finishing",
+          "delivery": "Delivery"
+        },
+        "validation": {
+          "titleRequired": "Title is required",
+          "dateRequired": "Date is required"
+        }
+      },
       "status": {
         "completed": "Completed",
         "inProgress": "In progress",

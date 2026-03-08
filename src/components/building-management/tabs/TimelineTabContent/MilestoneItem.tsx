@@ -3,7 +3,8 @@
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
-import { CheckCircle, Clock } from 'lucide-react';
+import { CheckCircle, Clock, Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -31,16 +32,18 @@ interface MilestoneItemProps {
     getStatusColor: (status: string) => string;
     getStatusText: (status: string) => string;
     getTypeIcon: (type: string) => LucideIconType;
+    onEdit?: () => void;
+    onDelete?: () => void;
 }
 
-export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon }: MilestoneItemProps) {
+export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon, onEdit, onDelete }: MilestoneItemProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     const { quick, getStatusBorder } = useBorderTokens();
     const colors = useSemanticColors();
     return (
-        <div className="relative flex items-start gap-2">
+        <div className="group relative flex items-start gap-2">
             <div className={cn(
                 "relative z-10 flex h-12 w-12 items-center justify-center shadow-sm rounded-full",
                 quick.card, // Using centralized border system
@@ -60,6 +63,20 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                         {milestone.title}
                     </h4>
                     <div className="flex items-center gap-2">
+                        {(onEdit || onDelete) && (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {onEdit && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+                                        <Pencil className={iconSizes.sm} />
+                                    </Button>
+                                )}
+                                {onDelete && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onDelete}>
+                                        <Trash2 className={iconSizes.sm} />
+                                    </Button>
+                                )}
+                            </div>
+                        )}
                         <CommonBadge
                           status="company"
                           customLabel={getStatusText(milestone.status)}

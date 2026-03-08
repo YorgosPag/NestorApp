@@ -59,7 +59,7 @@ const logger = createModuleLogger('AddBuildingDialog');
 // ENTERPRISE: Projects service for dropdown (with company info)
 import { getProjectsList, type ProjectListItem } from '../building-services';
 // ENTERPRISE: Companies service for dropdown (same pattern as AddProjectDialog)
-import { getAllActiveCompanies } from '@/services/companies.service';
+import { getAllCompaniesForSelect } from '@/services/companies.service';
 import type { CompanyContact } from '@/types/contacts';
 import type { Building, BuildingType, BuildingPriority, EnergyClass } from '@/types/building/contracts';
 
@@ -195,7 +195,7 @@ export function AddBuildingDialog({
         .catch((error: unknown) => logger.error('Failed to load projects', { error }))
         .finally(() => setProjectsLoading(false));
 
-      getAllActiveCompanies()
+      getAllCompaniesForSelect()
         .then(setCompanies)
         .catch((error: unknown) => logger.error('Failed to load companies', { error }))
         .finally(() => setCompaniesLoading(false));

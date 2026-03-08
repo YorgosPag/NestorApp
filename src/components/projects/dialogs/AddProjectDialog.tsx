@@ -56,7 +56,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Form state management hook
 import { useProjectForm } from '@/hooks/useProjectForm';
 // 🏢 ENTERPRISE: Companies service for dropdown
-import { getAllActiveCompanies } from '@/services/companies.service';
+import { getAllCompaniesForSelect } from '@/services/companies.service';
 import type { CompanyContact } from '@/types/contacts';
 import type { ProjectStatus } from '@/types/project';
 // 🏢 ENTERPRISE: Address system (ADR-167)
@@ -133,7 +133,7 @@ export function AddProjectDialog({
   useEffect(() => {
     if (open) {
       setCompaniesLoading(true);
-      getAllActiveCompanies()
+      getAllCompaniesForSelect()
         .then(setCompanies)
         .catch((error: unknown) => logger.error('Failed to load companies', { error }))
         .finally(() => setCompaniesLoading(false));

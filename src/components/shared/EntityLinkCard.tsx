@@ -6,11 +6,15 @@
  * Generic card for linking entities (company, project, building).
  * Used in: Building details, Unit details, Project details.
  *
+ * Supports two modes:
+ * - Standard: Radix Select dropdown (ADR-001 canonical)
+ * - Searchable: Popover with typeahead filter + scrollable list
+ *
  * @module components/shared/EntityLinkCard
  * @see CompanySelectorCard (building) — original pattern
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,8 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Loader2, CheckCircle, AlertCircle, ChevronsUpDown, Check, Search } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -68,6 +74,10 @@ export interface EntityLinkCardProps {
   onChanged?: (newId: string, name: string) => void;
   /** Edit mode toggle */
   isEditing?: boolean;
+  /** Enable searchable mode with typeahead filter (for large lists) */
+  searchable?: boolean;
+  /** Placeholder for search input (only when searchable=true) */
+  searchPlaceholder?: string;
 }
 
 // =============================================================================
@@ -86,6 +96,8 @@ export function EntityLinkCard({
   onSave,
   onChanged,
   isEditing = true,
+  searchable = false,
+  searchPlaceholder = 'Αναζήτηση...',
 }: EntityLinkCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
@@ -97,6 +109,9 @@ export function EntityLinkCard({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Load options on mount
   useEffect(() => {
@@ -157,6 +172,146 @@ export function EntityLinkCard({
 
   const hasChanges = selectedId !== (currentValue || NONE_VALUE);
   const currentName = options.find(o => o.id === currentValue)?.name;
+  const selectedName = options.find(o => o.id === selectedId)?.name;
+
+  // Searchable mode: filtered options based on search query
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchQuery.trim()) return options;
+    const query = searchQuery.toLowerCase();
+    return options.filter(o => o.name.toLowerCase().includes(query));
+  }, [options, searchQuery, searchable]);
+
+  // ==========================================================================
+  // SEARCHABLE SELECT (Popover + Input + scrollable list)
+  // ==========================================================================
+
+  const renderSearchableSelect = () => (
+    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={popoverOpen}
+          disabled={!isEditing}
+          className={cn(
+            'w-full justify-between font-normal h-10',
+            !isEditing && 'bg-muted',
+            !selectedName && selectedId === NONE_VALUE && 'text-muted-foreground',
+            saveStatus === 'success' && getStatusBorder('success'),
+            saveStatus === 'error' && getStatusBorder('error')
+          )}
+        >
+          <span className="truncate">
+            {selectedId === NONE_VALUE
+              ? labels.placeholder
+              : selectedName || labels.placeholder
+            }
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        {/* Search input */}
+        <fieldset className="flex items-center border-b px-3 py-2">
+          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+          <Input
+            ref={searchInputRef}
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+          />
+        </fieldset>
+
+        {/* Options list */}
+        <ul
+          role="listbox"
+          className="max-h-60 overflow-y-auto p-1"
+        >
+          {/* None option */}
+          <li
+            role="option"
+            aria-selected={selectedId === NONE_VALUE}
+            className={cn(
+              'flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
+              selectedId === NONE_VALUE && 'bg-accent'
+            )}
+            onClick={() => {
+              handleChange(NONE_VALUE);
+              setPopoverOpen(false);
+              setSearchQuery('');
+            }}
+          >
+            <Check className={cn('mr-2 h-4 w-4', selectedId === NONE_VALUE ? 'opacity-100' : 'opacity-0')} />
+            <span className="text-muted-foreground">{labels.noSelection}</span>
+          </li>
+
+          {filteredOptions.map((option) => (
+            <li
+              key={option.id}
+              role="option"
+              aria-selected={selectedId === option.id}
+              className={cn(
+                'flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
+                selectedId === option.id && 'bg-accent'
+              )}
+              onClick={() => {
+                handleChange(option.id);
+                setPopoverOpen(false);
+                setSearchQuery('');
+              }}
+            >
+              <Check className={cn('mr-2 h-4 w-4', selectedId === option.id ? 'opacity-100' : 'opacity-0')} />
+              {option.name}
+            </li>
+          ))}
+
+          {filteredOptions.length === 0 && searchQuery.trim() && (
+            <li className="px-2 py-4 text-center text-sm text-muted-foreground">
+              Δεν βρέθηκαν αποτελέσματα
+            </li>
+          )}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+
+  // ==========================================================================
+  // STANDARD SELECT (Radix — ADR-001 canonical)
+  // ==========================================================================
+
+  const renderStandardSelect = () => (
+    <Select
+      value={selectedId}
+      onValueChange={handleChange}
+      disabled={!isEditing}
+    >
+      <SelectTrigger
+        id={cardId}
+        className={cn(
+          !isEditing && 'bg-muted',
+          saveStatus === 'success' && getStatusBorder('success'),
+          saveStatus === 'error' && getStatusBorder('error')
+        )}
+      >
+        <SelectValue placeholder={labels.placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE_VALUE}>
+          {labels.noSelection}
+        </SelectItem>
+        {options.map((option) => (
+          <SelectItem key={option.id} value={option.id}>
+            {option.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  // ==========================================================================
+  // RENDER
+  // ==========================================================================
 
   return (
     <Card>
@@ -176,32 +331,7 @@ export function EntityLinkCard({
               <span>{labels.loading}</span>
             </section>
           ) : (
-            <Select
-              value={selectedId}
-              onValueChange={handleChange}
-              disabled={!isEditing}
-            >
-              <SelectTrigger
-                id={cardId}
-                className={cn(
-                  !isEditing && 'bg-muted',
-                  saveStatus === 'success' && getStatusBorder('success'),
-                  saveStatus === 'error' && getStatusBorder('error')
-                )}
-              >
-                <SelectValue placeholder={labels.placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_VALUE}>
-                  {labels.noSelection}
-                </SelectItem>
-                {options.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            searchable ? renderSearchableSelect() : renderStandardSelect()
           )}
         </fieldset>
 

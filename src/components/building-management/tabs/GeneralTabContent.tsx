@@ -13,7 +13,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { Building2, FolderKanban } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
-import { getAllActiveCompanies } from '@/services/companies.service';
+import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { RealtimeService } from '@/services/realtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -210,7 +210,7 @@ export function GeneralTabContent({
   // =========================================================================
 
   const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
-    const companies = await getAllActiveCompanies();
+    const companies = await getAllCompaniesForSelect();
     return companies
       .filter(c => c.id)
       .map(c => ({ id: c.id!, name: c.companyName || '' }));
@@ -298,6 +298,8 @@ export function GeneralTabContent({
             loadOptions={loadCompanies}
             onSave={saveCompany}
             isEditing={effectiveIsEditing}
+            searchable
+            searchPlaceholder="Αναζήτηση εταιρείας..."
             labels={{
               title: t('companySelector.title'),
               label: t('companySelector.label'),
