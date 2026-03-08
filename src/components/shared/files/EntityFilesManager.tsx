@@ -312,7 +312,10 @@ export function EntityFilesManager({
       // Fallback to props domain/category when no entry point is selected
       const uploadDomain = selectedEntryPoint?.domain || domain;
       const uploadCategory = selectedEntryPoint?.category || category;
-      const uploadPurpose = purpose || selectedEntryPoint?.purpose;
+      // 🏢 ENTERPRISE: Entry point purpose takes priority over props purpose
+      // Entry point purpose (e.g., "study-application") maps to study group for tree structure
+      // Props purpose (e.g., "document") is only a fallback
+      const uploadPurpose = selectedEntryPoint?.purpose || purpose;
 
       logger.info(`[EntityFilesManager] Starting upload of ${selectedFiles.length} files`);
 
@@ -941,6 +944,7 @@ export function EntityFilesManager({
                 contextLevel="full" // 🏢 ENTERPRISE: Full hierarchy - Show complete path with user-friendly labels
                 companyName={companyName}
                 viewMode={treeViewMode} // 🏢 ENTERPRISE: Business View (default) vs Technical View toggle
+                groupByStudyGroup={fetchAllDomains && treeViewMode === 'business'} // 🏢 ADR-191: Study group tree for Documents tab
               />
             )}
 

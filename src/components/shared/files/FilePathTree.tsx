@@ -38,6 +38,7 @@ import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPR
 import type { FileRecord } from '@/types/file-record';
 import {
   buildFilePathTree,
+  buildStudyGroupTree,
   toggleFolderExpansion,
   type TreeNode,
   type FolderNode,
@@ -136,6 +137,13 @@ export interface FilePathTreeProps {
    * @default 'business'
    */
   viewMode?: 'business' | 'technical';
+  /**
+   * 🏢 ENTERPRISE: Group files by study category (ADR-191)
+   * When enabled, tree shows study group folders (Διοικητικά/Νομικά, Αρχιτεκτονικά, etc.)
+   * instead of domain/category folders from storagePath.
+   * @default false
+   */
+  groupByStudyGroup?: boolean;
 }
 
 // ============================================================================
@@ -203,6 +211,7 @@ export function FilePathTree({
   contextLevel = 'full',
   companyName,
   viewMode = 'business', // 🏢 ENTERPRISE: Default is Business View (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+  groupByStudyGroup = false,
 }: FilePathTreeProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -213,19 +222,27 @@ export function FilePathTree({
   const [inspectedFile, setInspectedFile] = useState<FileRecord | null>(null);
 
   // Build tree structure from files
+  // 🏢 ENTERPRISE: Study group tree groups by purpose → StudyGroup (ADR-191)
   const initialTree = useMemo(() => {
+    if (groupByStudyGroup) {
+      return buildStudyGroupTree(files);
+    }
     const fullTree = buildFilePathTree(files);
     return filterTreeToContextLevel(fullTree, contextLevel);
-  }, [files, contextLevel]);
+  }, [files, contextLevel, groupByStudyGroup]);
 
   // Tree state (for expand/collapse)
   const [tree, setTree] = useState<TreeNode>(initialTree);
 
   // Update tree when files change
   React.useEffect(() => {
-    const fullTree = buildFilePathTree(files);
-    setTree(filterTreeToContextLevel(fullTree, contextLevel));
-  }, [files, contextLevel]);
+    if (groupByStudyGroup) {
+      setTree(buildStudyGroupTree(files));
+    } else {
+      const fullTree = buildFilePathTree(files);
+      setTree(filterTreeToContextLevel(fullTree, contextLevel));
+    }
+  }, [files, contextLevel, groupByStudyGroup]);
 
   // =========================================================================
   // HANDLERS
@@ -311,6 +328,12 @@ export function FilePathTree({
    */
   const getSegmentLabel = useCallback(
     (segment: string, value?: string): string => {
+      // 🏢 STUDY GROUP: Use label set by buildStudyGroupTree (ADR-191)
+      // Labels come from StudyGroupMeta.label.el, already set on the node
+      if (segment === 'study-group') {
+        return ''; // Signal to use node.label directly
+      }
+
       // 🏢 BUSINESS VIEW: Skip technical segments (they won't be rendered)
       if (viewMode === 'business') {
         // Only show business-relevant segments: domains and categories VALUES
@@ -369,7 +392,9 @@ export function FilePathTree({
     (node: FolderNode, depth: number): React.ReactNode => {
       const isExpanded = node.isExpanded || false;
       const hasChildren = node.children.length > 0;
-      const label = getSegmentLabel(node.segment, node.value);
+      // 🏢 ENTERPRISE: Study group segments use their built-in label from config
+      const translatedLabel = getSegmentLabel(node.segment, node.value);
+      const label = (node.segment === 'study-group') ? node.label : translatedLabel;
 
       // 🏢 BUSINESS VIEW: Skip rendering technical segments
       if (viewMode === 'business' && (node.segment === 'companies' || node.segment === 'entities' || node.segment === 'files')) {

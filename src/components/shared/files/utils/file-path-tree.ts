@@ -35,6 +35,8 @@
 import type { FileRecord } from '@/types/file-record';
 import { parseStoragePath } from '@/services/upload/utils/storage-path';
 import { STORAGE_PATH_SEGMENTS } from '@/config/domain-constants';
+import { getGroupForPurpose, getStudyGroupMeta, STUDY_GROUPS } from '@/config/study-groups-config';
+import type { StudyGroup } from '@/config/study-groups-config';
 
 // ============================================================================
 // TYPES
@@ -307,4 +309,106 @@ export function countFiles(root: TreeNode): number {
   }
 
   return 0;
+}
+
+// ============================================================================
+// STUDY GROUP TREE BUILDER (ADR-191)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Builds a tree grouped by study categories (ADR-191)
+ *
+ * Instead of domain/category hierarchy from storagePath, groups files
+ * by their study group (Διοικητικά/Νομικά, Αρχιτεκτονικά, Στατικά, etc.)
+ * using the FileRecord.purpose field → StudyGroup mapping.
+ *
+ * Tree Structure:
+ * Root
+ * ├── Διοικητικά / Νομικά (study group folder)
+ * │   ├── Αίτηση Οικοδομικής Άδειας.pdf
+ * │   └── Τίτλος Ιδιοκτησίας.pdf
+ * ├── Αρχιτεκτονικά / Πολεοδομικά
+ * │   └── Διάγραμμα Κάλυψης.pdf
+ * └── Γενικά Έγγραφα (ungrouped files)
+ *     └── some_file.pdf
+ */
+export function buildStudyGroupTree(fileRecords: FileRecord[]): RootNode {
+  const root: RootNode = {
+    id: 'root',
+    type: 'root',
+    label: 'Root',
+    path: [],
+    children: [],
+  };
+
+  if (fileRecords.length === 0) return root;
+
+  // Bucket files by study group
+  const buckets = new Map<StudyGroup | '__general__', FileRecord[]>();
+
+  for (const file of fileRecords) {
+    const group = getGroupForPurpose(file.purpose);
+    const key: StudyGroup | '__general__' = group ?? '__general__';
+
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.push(file);
+    } else {
+      buckets.set(key, [file]);
+    }
+  }
+
+  // Build folders: study groups sorted by order first, then general
+  const sortedGroups = STUDY_GROUPS
+    .filter((g) => buckets.has(g.group))
+    .sort((a, b) => a.order - b.order);
+
+  for (const meta of sortedGroups) {
+    const files = buckets.get(meta.group);
+    if (!files || files.length === 0) continue;
+
+    const folder: FolderNode = {
+      id: `study-group-${meta.group}`,
+      type: 'folder',
+      segment: 'study-group',
+      value: meta.group,
+      label: meta.label.el, // Greek label from config (runtime translation in UI)
+      path: [meta.group],
+      children: files.map((f) => ({
+        id: f.id,
+        type: 'file' as const,
+        label: f.displayName,
+        path: [meta.group, f.id],
+        fileRecord: f,
+      })),
+      isExpanded: true,
+    };
+
+    root.children.push(folder);
+  }
+
+  // Fallback group for files without a study group
+  const generalFiles = buckets.get('__general__');
+  if (generalFiles && generalFiles.length > 0) {
+    const folder: FolderNode = {
+      id: 'study-group-general',
+      type: 'folder',
+      segment: 'study-group',
+      value: '__general__',
+      label: 'Γενικά Έγγραφα',
+      path: ['__general__'],
+      children: generalFiles.map((f) => ({
+        id: f.id,
+        type: 'file' as const,
+        label: f.displayName,
+        path: ['__general__', f.id],
+        fileRecord: f,
+      })),
+      isExpanded: true,
+    };
+
+    root.children.push(folder);
+  }
+
+  return root;
 }

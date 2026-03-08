@@ -270,6 +270,9 @@
     "categories": "Categories",
     "files": "Files"
   },
+  "studyGroups": {
+    "general": "General Documents"
+  },
   "tree": {
     "title": "File Structure",
     "expand": "Expand folder",
