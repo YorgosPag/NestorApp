@@ -237,7 +237,7 @@ export const GET = withHighRateLimit(
     return {
       id: doc.id,
       name: getString(data, 'name', 'Unnamed Project'),
-      title: getString(data, 'name') || getString(data, 'title', 'Unnamed Project'),
+      title: getString(data, 'title'),
       status: normalizeStatus(getString(data, 'status')),
       company: getString(data, 'company'),
       companyId: getString(data, 'companyId'),
