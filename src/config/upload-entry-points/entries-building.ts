@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * Upload Entry Points — Building Entries (13 non-study entries)
+ * Upload Entry Points — Building Entries (photos, videos, generic doc)
  * =============================================================================
  *
  * Study entries (ADR-191) are now in entries-studies.ts (single source of truth).
@@ -16,30 +16,6 @@ import type { UploadEntryPoint } from './types';
  * Study entries merged at assembly time from entries-studies.ts.
  */
 export const BUILDING_ENTRY_POINTS: UploadEntryPoint[] = [
-    {
-      id: 'building-permit',
-      purpose: 'permit',
-      domain: 'construction',
-      category: 'permits',
-      label: {
-        el: 'Οικοδομική Άδεια',
-        en: 'Building Permit',
-      },
-      icon: 'FileCheck',
-      order: 1,
-    },
-    {
-      id: 'floor-plan',
-      purpose: 'floorplan',
-      domain: 'construction',
-      category: 'floorplans',
-      label: {
-        el: 'Κάτοψη',
-        en: 'Floor Plan',
-      },
-      icon: 'LayoutGrid',
-      order: 2,
-    },
     {
       id: 'exterior-photo',
       purpose: 'exterior',
@@ -129,45 +105,6 @@ export const BUILDING_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'Video',
       order: 12,
-    },
-    // ------------------------------------------------------------------------
-    // ΣΥΜΒΟΛΑΙΑ ΚΤΙΡΙΟΥ (Contracts)
-    // ------------------------------------------------------------------------
-    {
-      id: 'building-contract',
-      purpose: 'contract',
-      domain: 'legal',
-      category: 'contracts',
-      label: {
-        el: 'Συμβόλαιο Κτιρίου',
-        en: 'Building Contract',
-      },
-      icon: 'FileSignature',
-      order: 20,
-    },
-    {
-      id: 'building-lease-agreement',
-      purpose: 'lease',
-      domain: 'legal',
-      category: 'contracts',
-      label: {
-        el: 'Μισθωτήριο',
-        en: 'Lease Agreement',
-      },
-      icon: 'FileSignature',
-      order: 21,
-    },
-    {
-      id: 'building-insurance',
-      purpose: 'insurance',
-      domain: 'legal',
-      category: 'contracts',
-      label: {
-        el: 'Ασφάλεια Κτιρίου',
-        en: 'Building Insurance',
-      },
-      icon: 'Shield',
-      order: 22,
     },
     {
       id: 'generic-building-doc',
