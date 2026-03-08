@@ -804,7 +804,8 @@
       "ika": "IKA",
       "measurements": "Επιμετρήσεις",
       "floorsManagement": "Όροφοι",
-      "buildingContacts": "Συνεργάτες"
+      "buildingContacts": "Συνεργάτες",
+      "buildingLocations": "Τοποθεσίες"
     },
     "descriptions": {
       "projectGeneral": "Βασικές πληροφορίες και στοιχεία του έργου",

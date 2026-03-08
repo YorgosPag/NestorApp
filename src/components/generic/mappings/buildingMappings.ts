@@ -29,6 +29,8 @@ import { StorageTab } from '@/components/building-management/StorageTab';
 import { BuildingCustomersTab } from '@/components/building-management/tabs/BuildingCustomersTab';
 // Entity Associations — contacts & collaborators linked to building
 import { BuildingContactsTab } from '@/components/building-management/tabs/BuildingContactsTab';
+// Locations — addresses & geolocation (moved from GeneralTabContent)
+import { BuildingLocationsTab } from '@/components/building-management/tabs/BuildingLocationsTab';
 
 // ============================================================================
 // 🏢 ENTERPRISE: EntityFilesManager-based tabs (ADR-031)
@@ -80,6 +82,7 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'StorageTab': StorageTab as ComponentType<TabComponentProps>,
   'BuildingCustomersTab': BuildingCustomersTab as unknown as ComponentType<TabComponentProps>,
   'BuildingContactsTab': BuildingContactsTab as unknown as ComponentType<TabComponentProps>,
+  'BuildingLocationsTab': BuildingLocationsTab as unknown as ComponentType<TabComponentProps>,
 
   'MeasurementsTabContent': MeasurementsTabContent as ComponentType<TabComponentProps>,
   'FloorsTabContent': FloorsTabContent as ComponentType<TabComponentProps>,

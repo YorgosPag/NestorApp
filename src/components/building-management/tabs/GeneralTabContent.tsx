@@ -7,7 +7,7 @@ import { TechnicalSpecsCard } from './GeneralTabContent/TechnicalSpecsCard';
 import { ProgressCard } from './GeneralTabContent/ProgressCard';
 import { CompanySelectorCard } from './GeneralTabContent/CompanySelectorCard';
 import { ProjectSelectorCard } from './GeneralTabContent/ProjectSelectorCard';
-import { BuildingAddressesCard } from './GeneralTabContent/BuildingAddressesCard';
+// BuildingAddressesCard moved to separate "Τοποθεσίες" tab (BuildingLocationsTab)
 import type { Building } from '../BuildingsPageContent';
 import { validateForm } from './GeneralTabContent/utils';
 import { BuildingStats } from './BuildingStats';
@@ -264,16 +264,7 @@ export function GeneralTabContent({
           />
         </div>
       )}
-      {/* ENTERPRISE: Multi-address management (ADR-167) — available after first save */}
-      {!isCreateMode && (
-        <BuildingAddressesCard
-          buildingId={String(building.id)}
-          projectId={building.projectId}
-          addresses={building.addresses}
-          legacyAddress={building.address}
-          legacyCity={building.city}
-        />
-      )}
+      {/* BuildingAddressesCard moved to "Τοποθεσίες" tab (BuildingLocationsTab) */}
       <TechnicalSpecsCard
         formData={formData}
         updateField={updateField}

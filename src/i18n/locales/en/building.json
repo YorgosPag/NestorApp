@@ -804,7 +804,8 @@
       "ika": "IKA",
       "measurements": "Measurements",
       "floorsManagement": "Floors",
-      "buildingContacts": "Associates"
+      "buildingContacts": "Associates",
+      "buildingLocations": "Locations"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",

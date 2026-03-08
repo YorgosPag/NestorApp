@@ -374,6 +374,18 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'GeneralTabContent'
           },
           // ===============================================================
+          // ΤΟΠΟΘΕΣΙΑ — Διευθύνσεις Κτιρίου (ίδιο pattern με Έργο)
+          // ===============================================================
+          {
+            id: 'locations',
+            value: 'locations',
+            icon: 'map-pin',
+            description: 'Διαχείριση διευθύνσεων και τοποθεσιών του κτιρίου',
+            order: 1.5,
+            enabled: true,
+            component: 'BuildingLocationsTab'
+          },
+          // ===============================================================
           // ΔΟΜΗ — Τι περιέχει το Κτίριο
           // ===============================================================
           {

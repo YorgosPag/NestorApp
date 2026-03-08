@@ -18,6 +18,7 @@
 export interface BuildingTabLabelsConfig {
   // Core Sections
   readonly general: string;
+  readonly locations: string;
   readonly floorplan: string;
   readonly timeline: string;
   readonly analytics: string;
@@ -149,6 +150,7 @@ export interface ParkingTabLabelsConfig {
 export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
   // ✅ ENTERPRISE: i18n keys for building tabs
   general: "tabs.labels.general",
+  locations: "tabs.labels.buildingLocations",
   floorplan: "tabs.labels.floorplan",
   timeline: "tabs.labels.timeline",
   analytics: "tabs.labels.analytics",
