@@ -805,7 +805,7 @@
       "measurements": "Measurements",
       "floorsManagement": "Floors",
       "buildingContacts": "Associates",
-      "buildingLocations": "Locations"
+      "buildingLocations": "Addresses"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
