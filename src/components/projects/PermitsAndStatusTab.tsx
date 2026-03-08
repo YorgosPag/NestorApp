@@ -57,7 +57,7 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="licenseNumber" className={typography.label.sm}>{t('permitsTab.licenseNumber')}</Label>
-                        <Input id="licenseNumber" name="licenseNumber" value={data.licenseNumber} onChange={handleChange} disabled={!isEditing} className="h-10 text-primary font-medium" />
+                        <Input id="licenseNumber" name="licenseNumber" value={data.licenseNumber} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.licensePlaceholder')} className="h-10" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="issuingAuthority" className={typography.label.sm}>{t('permitsTab.issuingAuthority')}</Label>

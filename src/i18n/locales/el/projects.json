@@ -702,6 +702,7 @@
   },
   "permits": {
     "protocolPlaceholder": "Εισάγετε αριθμό...",
+    "licensePlaceholder": "Εισάγετε αριθμό αδείας...",
     "authorityPlaceholder": "Εισάγετε αρχή..."
   },
   "plotZoning": {

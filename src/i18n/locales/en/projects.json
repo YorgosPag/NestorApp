@@ -702,6 +702,7 @@
   },
   "permits": {
     "protocolPlaceholder": "Enter number...",
+    "licensePlaceholder": "Enter license number...",
     "authorityPlaceholder": "Enter authority..."
   },
   "plotZoning": {
