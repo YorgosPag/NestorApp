@@ -1,21 +1,30 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase, Building2 } from "lucide-react";
+import { Briefcase, Building2, Loader2 } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
-import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getAllCompaniesForSelect } from '@/services/companies.service';
-import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectFormData } from './general-tab/types';
+
+interface CompanyOption {
+    id: string;
+    name: string;
+}
 
 interface BasicProjectInfoTabProps {
     data: ProjectFormData;
@@ -27,44 +36,51 @@ interface BasicProjectInfoTabProps {
     isCreateMode?: boolean;
 }
 
-export function BasicProjectInfoTab({ data, setData, isEditing, projectId, companyId, isCreateMode }: BasicProjectInfoTabProps) {
+export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: BasicProjectInfoTabProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
     const spacing = useSpacingTokens();
 
+    const [companies, setCompanies] = useState<CompanyOption[]>([]);
+    const [loadingCompanies, setLoadingCompanies] = useState(false);
+
+    // Load companies on mount
+    useEffect(() => {
+        let cancelled = false;
+        setLoadingCompanies(true);
+
+        getAllCompaniesForSelect()
+            .then(result => {
+                if (!cancelled) {
+                    setCompanies(
+                        result
+                            .filter(c => c.id)
+                            .map(c => ({ id: c.id!, name: c.companyName || '' }))
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingCompanies(false);
+            });
+
+        return () => { cancelled = true; };
+    }, []);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
 
-    const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
-        const companies = await getAllCompaniesForSelect();
-        return companies
-            .filter(c => c.id)
-            .map(c => ({ id: c.id!, name: c.companyName || '' }));
-    }, []);
+    const handleCompanySelect = (selectedId: string) => {
+        const selected = companies.find(c => c.id === selectedId);
+        setData(prev => ({
+            ...prev,
+            companyId: selectedId,
+            companyName: selected?.name || '',
+        }));
+    };
 
-    const saveCompany = useCallback(async (newId: string | null, name: string) => {
-        if (isCreateMode) {
-            // 🏢 ENTERPRISE: Create mode — save locally only, no API call
-            setData(prev => ({ ...prev, companyId: newId || '', companyName: name || '' }));
-            return { success: true };
-        }
-
-        try {
-            await apiClient.patch(`/api/projects/${projectId}`, {
-                companyId: newId,
-                company: name || null,
-            });
-            setData(prev => ({ ...prev, companyId: newId || '', companyName: name || '' }));
-            return { success: true };
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to update',
-            };
-        }
-    }, [projectId, setData, isCreateMode]);
+    const currentCompanyId = data.companyId || companyId || '';
 
     return (
         <Card>
@@ -89,29 +105,42 @@ export function BasicProjectInfoTab({ data, setData, isEditing, projectId, compa
                     </div>
                 </div>
 
-                {/* Company Link — EntityLinkCard (centralized) */}
-                <EntityLinkCard
-                    cardId="project-company-link"
-                    icon={Building2}
-                    currentValue={companyId}
-                    loadOptions={loadCompanies}
-                    onSave={saveCompany}
-                    isEditing={isEditing}
-                    searchable
-                    searchPlaceholder="Αναζήτηση εταιρείας..."
-                    labels={{
-                        title: t('basicInfo.companyLink.title'),
-                        label: t('basicInfo.companyLink.label'),
-                        placeholder: t('basicInfo.companyLink.placeholder'),
-                        noSelection: t('basicInfo.companyLink.noSelection'),
-                        loading: t('basicInfo.companyLink.loading'),
-                        save: t('basicInfo.companyLink.save'),
-                        saving: t('basicInfo.companyLink.saving'),
-                        success: t('basicInfo.companyLink.success'),
-                        error: t('basicInfo.companyLink.error'),
-                        currentLabel: t('basicInfo.companyLink.currentLabel'),
-                    }}
-                />
+                {/* Company Selection — Radix Select (ADR-001) */}
+                <div className={spacing.spaceBetween.sm}>
+                    <Label className="text-sm font-medium">
+                        <span className={cn("inline-flex items-center", spacing.gap.sm)}>
+                            <Building2 className={iconSizes.sm} />
+                            {t('basicInfo.companyLink.label')}
+                        </span>
+                    </Label>
+                    {loadingCompanies ? (
+                        <div className={cn("flex items-center", spacing.gap.sm, "h-10 text-muted-foreground text-sm")}>
+                            <Loader2 className={cn(iconSizes.sm, "animate-spin")} />
+                            {t('basicInfo.companyLink.loading')}
+                        </div>
+                    ) : (
+                        <Select
+                            value={currentCompanyId}
+                            onValueChange={handleCompanySelect}
+                            disabled={!isEditing}
+                        >
+                            <SelectTrigger className="h-10">
+                                <SelectValue placeholder={t('basicInfo.companyLink.placeholder')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {companies.map(company => (
+                                    <SelectItem
+                                        key={company.id}
+                                        value={company.id}
+                                        className="text-popover-foreground"
+                                    >
+                                        {company.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
 
                 <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="description" className="text-sm font-medium">{t('basicInfo.projectDescription')}</Label>

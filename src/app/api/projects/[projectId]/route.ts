@@ -61,6 +61,9 @@ interface ProjectUpdatePayload {
   title?: string;
   description?: string;
   status?: string;
+  // Company link fields
+  companyId?: string;
+  company?: string | null;
   // Legacy fields (backward compatible)
   address?: string;
   city?: string;
