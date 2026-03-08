@@ -57,6 +57,8 @@ export interface HierarchicalEntryPointSelectorProps {
   floors?: FloorInfo[];
   /** Callback to navigate to the Floors tab (makes the no-floors warning clickable) */
   onNavigateToFloors?: () => void;
+  /** Override link text (default: studies.goToFloors from i18n) */
+  navigateToFloorsLabel?: string;
 }
 
 // ============================================================================
@@ -86,6 +88,7 @@ export function HierarchicalEntryPointSelector({
   excludeCategories,
   floors = [],
   onNavigateToFloors,
+  navigateToFloorsLabel,
 }: HierarchicalEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
   const { t, i18n } = useTranslation('files');
@@ -450,7 +453,7 @@ export function HierarchicalEntryPointSelector({
                       onClick={onNavigateToFloors}
                       className="inline-flex items-center gap-1 font-semibold text-yellow-700 underline underline-offset-2 hover:text-yellow-900 dark:text-yellow-200 dark:hover:text-yellow-100 transition-colors"
                     >
-                      {t('studies.goToFloors')}
+                      {navigateToFloorsLabel || t('studies.goToFloors')}
                       <LucideIcons.ArrowRight className="inline h-3 w-3" aria-hidden="true" />
                     </button>
                   </>

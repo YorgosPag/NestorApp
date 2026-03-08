@@ -440,6 +440,7 @@
     "perFloorLabel": "ανά όροφο",
     "studyCategories": "Κατηγορίες Μελετών",
     "searchResults": "Αποτελέσματα αναζήτησης",
-    "goToFloors": "Μετάβαση στους Ορόφους"
+    "goToFloors": "Μετάβαση στους Ορόφους",
+    "goToBuildings": "Μετάβαση στα Κτίρια"
   }
 }

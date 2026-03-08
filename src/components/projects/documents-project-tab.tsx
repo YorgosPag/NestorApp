@@ -21,6 +21,7 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,8 @@ interface DocumentsProjectTabProps {
   project?: Project;
   /** Alternative data prop */
   data?: Project;
+  /** Injected by UniversalTabsRenderer — navigate to sibling tab */
+  onNavigateToTab?: (tabId: string) => void;
 }
 
 // =============================================================================
@@ -52,8 +55,9 @@ interface DocumentsProjectTabProps {
  * This tab handles: contracts, permits, invoices, reports, delivery notes, etc.
  * Photos and Videos have their own dedicated tabs for better preview experience.
  */
-export function DocumentsProjectTab({ project, data }: DocumentsProjectTabProps) {
+export function DocumentsProjectTab({ project, data, onNavigateToTab }: DocumentsProjectTabProps) {
   const { user } = useAuth();
+  const { t } = useTranslation('files');
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
 
@@ -85,6 +89,8 @@ export function DocumentsProjectTab({ project, data }: DocumentsProjectTabProps)
       purpose="document"
       entryPointExcludeCategories={['photos', 'videos']}
       enableBuildingLink
+      onNavigateToFloors={onNavigateToTab ? () => onNavigateToTab('structure') : undefined}
+      navigateToFloorsLabel={t('studies.goToBuildings')}
     />
   );
 }

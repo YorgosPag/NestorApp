@@ -117,6 +117,8 @@ export interface EntityFilesManagerProps {
   enableBuildingLink?: boolean;
   /** Navigate to the Floors tab (for "create floors first" warning link) */
   onNavigateToFloors?: () => void;
+  /** Override the link text for the navigate-to-floors action (e.g. "Go to Buildings" at project level) */
+  navigateToFloorsLabel?: string;
 }
 
 // ============================================================================
@@ -154,6 +156,7 @@ export function EntityFilesManager({
   floors,
   enableBuildingLink = false,
   onNavigateToFloors,
+  navigateToFloorsLabel,
 }: EntityFilesManagerProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -792,6 +795,7 @@ export function EntityFilesManager({
                 excludeCategories={entryPointExcludeCategories}
                 floors={floors}
                 onNavigateToFloors={onNavigateToFloors}
+                navigateToFloorsLabel={navigateToFloorsLabel}
               />
             ) : (
               <UploadEntryPointSelector

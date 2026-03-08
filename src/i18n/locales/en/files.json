@@ -440,6 +440,7 @@
     "perFloorLabel": "per floor",
     "studyCategories": "Study Categories",
     "searchResults": "Search results",
-    "goToFloors": "Go to Floors"
+    "goToFloors": "Go to Floors",
+    "goToBuildings": "Go to Buildings"
   }
 }
