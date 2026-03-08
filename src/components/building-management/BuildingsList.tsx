@@ -81,8 +81,8 @@ export const BuildingsList = React.memo(function BuildingsList({
 
       switch (sortBy) {
         case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
+          aValue = (a.name || '').toLowerCase();
+          bValue = (b.name || '').toLowerCase();
           break;
         case 'progress':
           aValue = a.progress;
