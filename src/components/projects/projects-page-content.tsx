@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, startTransition } from 'react';
 
 import type { Project } from '@/types/project';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -92,8 +92,13 @@ export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: AddProjectDialog state (CREATE-ONLY — edit happens inline in GeneralProjectTab)
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
 
-  // 🏢 ENTERPRISE: Handler για refresh μετά τη δημιουργία έργου
-  const handleProjectAdded = React.useCallback(() => {
+  // 🏢 ENTERPRISE: Stable callbacks (INP optimization — avoids re-render cascade)
+  const handleOpenAddDialog = useCallback(() => {
+    logger.info('Opening add project dialog');
+    setIsAddProjectDialogOpen(true);
+  }, []);
+
+  const handleProjectAdded = useCallback(() => {
     window.location.reload();
   }, []);
 
@@ -120,8 +125,8 @@ export function ProjectsPageContent() {
     }
   }, [projectToDelete, setSelectedProject]);
 
-  // Transform stats to UnifiedDashboard format
-  const dashboardStats: DashboardStat[] = [
+  // 🏢 ENTERPRISE: Memoized dashboard stats — avoids array recreation on every render (INP optimization)
+  const dashboardStats = useMemo<DashboardStat[]>(() => [
     {
       title: t('page.dashboard.totalProjects'),
       value: projectsStats.totalProjects,
@@ -152,44 +157,39 @@ export function ProjectsPageContent() {
       icon: Calendar,
       color: "cyan"
     }
-  ];
+  ], [t, projectsStats]);
 
-  // 🔥 NEW: Handle dashboard card clicks για filtering
-  const handleCardClick = (stat: DashboardStat, index: number) => {
+  // 🏢 ENTERPRISE: Memoized card click handler (INP optimization)
+  const handleCardClick = useCallback((stat: DashboardStat, _index: number) => {
     const cardTitle = stat.title;
     const totalProjectsTitle = t('page.dashboard.totalProjects');
     const activeProjectsTitle = t('page.dashboard.activeProjects');
 
-    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
-    if (activeCardFilter === cardTitle) {
-      setActiveCardFilter(null);
-      // Reset filters to show all projects
-      setFilters({ ...filters, status: [] });
-    } else {
-      setActiveCardFilter(cardTitle);
+    // Use startTransition — filtering is non-urgent, don't block UI
+    startTransition(() => {
+      // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
+      if (activeCardFilter === cardTitle) {
+        setActiveCardFilter(null);
+        setFilters({ ...filters, status: [] });
+      } else {
+        setActiveCardFilter(cardTitle);
 
-      // Apply filter based on card type
-      switch (cardTitle) {
-        case totalProjectsTitle:
-          // Show all projects - reset filters
-          setFilters({ ...filters, status: [] });
-          break;
-        case activeProjectsTitle:
-          // Filter only active projects (in_progress)
-          setFilters({ ...filters, status: ['in_progress'] });
-          break;
-        // Note: Other cards (Total Value, Total Area, Average Progress)
-        // are informational and don't apply specific filters
-        default:
-          // For other stats, just clear active filter without changing data
-          setActiveCardFilter(null);
-          break;
+        switch (cardTitle) {
+          case totalProjectsTitle:
+            setFilters({ ...filters, status: [] });
+            break;
+          case activeProjectsTitle:
+            setFilters({ ...filters, status: ['in_progress'] });
+            break;
+          default:
+            setActiveCardFilter(null);
+            break;
+        }
+
+        setSelectedProject(null);
       }
-
-      // Clear selected project when filtering changes
-      setSelectedProject(null);
-    }
-  };
+    });
+  }, [t, activeCardFilter, filters, setFilters, setSelectedProject]);
 
   // Εμφάνιση loading state
   if (loading) {
@@ -227,13 +227,10 @@ export function ProjectsPageContent() {
             setViewMode={setViewMode}
             showDashboard={showDashboard}
             setShowDashboard={setShowDashboard}
-            onNewProject={() => {
-              logger.info('Opening add project dialog');
-              setIsAddProjectDialogOpen(true);
-            }}
+            onNewProject={handleOpenAddDialog}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
-            projectCount={projectsStats.totalProjects} // 🏢 Enterprise count display
+            projectCount={projectsStats.totalProjects}
         />
 
         {/* 🏢 ENTERPRISE: AddProjectDialog — CREATE-ONLY (edit happens inline) */}
@@ -279,7 +276,7 @@ export function ProjectsPageContent() {
             companies={companies}
             viewMode={viewMode}
             initialTab={tabFromUrl || undefined}
-            onNewProject={() => setIsAddProjectDialogOpen(true)}
+            onNewProject={handleOpenAddDialog}
             onDeleteProject={handleDeleteProject}
           />
         </ListContainer>
