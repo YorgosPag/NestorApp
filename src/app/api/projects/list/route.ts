@@ -26,11 +26,20 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+
+// 🏢 ENTERPRISE: Helper to chunk arrays for Firestore 'in' query limit
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
 
 const logger = createModuleLogger('ProjectsListRoute');
 
@@ -207,11 +216,41 @@ export const GET = withHighRateLimit(
 
       let projectsSnapshot;
       if (isSuperAdmin) {
-        // 🏢 Super Admin: Fetch ALL projects across all companies
-        logger.info('[Projects/List] Super Admin - Fetching ALL projects');
-        projectsSnapshot = await getAdminFirestore()
-          .collection(COLLECTIONS.PROJECTS)
-          .get();
+        // 🏢 Super Admin: Fetch projects scoped to navigation_companies
+        // Prevents showing orphan projects from non-navigation companies
+        logger.info('[Projects/List] Super Admin - Fetching projects for navigation companies');
+
+        const adminDb = getAdminFirestore();
+        const navSnapshot = await adminDb.collection(COLLECTIONS.NAVIGATION).get();
+        const navContactIds: string[] = [];
+        navSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.contactId) {
+            navContactIds.push(data.contactId);
+          }
+        });
+
+        if (navContactIds.length === 0) {
+          logger.warn('[Projects/List] No navigation companies found');
+          projectsSnapshot = { docs: [] };
+        } else if (navContactIds.length <= FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS) {
+          projectsSnapshot = await adminDb
+            .collection(COLLECTIONS.PROJECTS)
+            .where('companyId', 'in', navContactIds)
+            .get();
+        } else {
+          // Chunked queries for >10 companies
+          const chunks = chunkArray(navContactIds, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
+          const allDocs = await Promise.all(
+            chunks.map(chunk =>
+              adminDb.collection(COLLECTIONS.PROJECTS)
+                .where('companyId', 'in', chunk)
+                .get()
+                .then(snap => snap.docs)
+            )
+          );
+          projectsSnapshot = { docs: allDocs.flat() };
+        }
       } else {
         // 🔒 Regular user: Tenant-scoped (only their company)
         projectsSnapshot = await getAdminFirestore()
