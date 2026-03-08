@@ -27,7 +27,6 @@ import { useRouter } from 'next/navigation';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { AddressCard, AddressFormSection } from '@/components/shared/addresses';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -315,158 +314,275 @@ export function BuildingAddressesCard({
   // ============================================================
 
   const selectedCount = localAddresses.length;
+  const isInlineFormActive = isAddFormOpen || editingIndex !== null;
+
+  // Addresses that have coordinates (for map display)
+  const addressesForMap = hasProject ? localAddresses : localAddresses;
 
   return (
-    <Card>
-      <CardHeader className="p-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <MapPin className={iconSizes.md} />
+    <section className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h2 className={cn('flex items-center gap-2', typography.heading.lg)}>
+            <MapPin className={iconSizes.lg} />
             {t('address.labels.title')}
             {selectedCount > 0 && (
               <Badge variant="secondary">{selectedCount}</Badge>
             )}
-          </CardTitle>
-
-          {/* Add button only in Mode 2 (no project) */}
-          {!hasProject && !isAddFormOpen && editingIndex === null && (
-            <Button onClick={() => setIsAddFormOpen(true)} variant="default" size="sm">
-              <Plus className={`${iconSizes.sm} mr-2`} />
-              {t('address.labels.addAddress')}
-            </Button>
+          </h2>
+          {hasProject && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('address.labels.selectFromProject')}
+            </p>
           )}
         </div>
-      </CardHeader>
 
-      <CardContent className="p-2 pt-0 space-y-2">
+        {/* Add button only in Mode 2 (no project) */}
+        {!hasProject && !isAddFormOpen && editingIndex === null && (
+          <Button onClick={() => setIsAddFormOpen(true)} variant="default" size="sm">
+            <Plus className={`${iconSizes.sm} mr-2`} />
+            {t('address.labels.addAddress')}
+          </Button>
+        )}
+      </header>
 
-        {/* ============================================================ */}
-        {/* MODE 1: Building WITH project — Select from project addresses */}
-        {/* ============================================================ */}
-        {hasProject && (
-          <>
-            {loadingProject ? (
-              <section className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
-                <Loader2 className={cn(iconSizes.md, 'animate-spin')} />
-                <span>{t('address.labels.loadingProjectAddresses')}</span>
-              </section>
-            ) : projectAddresses.length === 0 ? (
-              /* Project has no addresses registered */
-              <section className="text-center py-2 border-2 border-dashed rounded-lg">
-                <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} />
-                <h3 className="text-lg font-semibold mb-2">
-                  {t('address.labels.projectNoAddresses')}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {t('address.labels.projectNoAddressesHint')}
-                </p>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => router.push(`/audit?projectId=${projectId}&tab=locations`)}
-                >
-                  <ExternalLink className={`${iconSizes.sm} mr-2`} />
-                  {t('address.labels.goToProjectAddresses')}
+      {/* ============================================================ */}
+      {/* INLINE ADD FORM (Mode 2 — no project)                       */}
+      {/* ============================================================ */}
+      {isAddFormOpen && (
+        <div className="border-2 border-primary rounded-lg p-2 bg-card space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Plus className={iconSizes.md} />
+              {t('address.labels.addAddress')}
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => { setIsAddFormOpen(false); setTempAddress(null); }}>
+              <X className={iconSizes.sm} />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <AddressFormSection
+                onChange={setTempAddress}
+                externalValues={dragUpdatedAddress}
+              />
+              <div className="flex gap-2 justify-end pt-2 border-t">
+                <Button variant="outline" onClick={() => { setIsAddFormOpen(false); setTempAddress(null); setDragUpdatedAddress(null); }} disabled={isSaving}>
+                  {t('tabs.general.header.cancel')}
                 </Button>
-              </section>
-            ) : (
-              /* Show project addresses as selectable cards */
-              <>
-                <p className="text-sm text-muted-foreground">
-                  {t('address.labels.selectFromProject')}
-                </p>
+                <Button onClick={handleSaveNewAddress} disabled={isSaving}>
+                  {isSaving ? t('tabs.general.header.saving') : t('tabs.general.header.save')}
+                </Button>
+              </div>
+            </div>
 
-                <div className="space-y-2">
-                  {projectAddresses.map((projAddr) => {
-                    const selected = isAddressSelected(projAddr);
-                    const isPrimaryInBuilding = localAddresses.find(
-                      la => la.id === projAddr.id
-                    )?.isPrimary;
+            <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-12rem)]">
+              <AddressMap
+                addresses={[]}
+                draggableMarkers
+                onAddressDragUpdate={setDragUpdatedAddress}
+                heightPreset="viewerFullscreen"
+                className="rounded-lg border shadow-sm !h-full"
+              />
+            </aside>
+          </div>
+        </div>
+      )}
 
-                    return (
-                      <div
-                        key={projAddr.id}
-                        id={`building-address-card-${projAddr.id}`}
-                        className={cn(
-                          'relative border-2 rounded-lg p-2 transition-all cursor-pointer',
+      {/* ============================================================ */}
+      {/* INLINE EDIT FORM (Mode 2 — no project)                      */}
+      {/* ============================================================ */}
+      {editingIndex !== null && !isAddFormOpen && (
+        <div className="border-2 border-primary rounded-lg p-2 bg-card space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Pencil className={iconSizes.md} />
+              {t('address.labels.editAddress')}
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => { setEditingIndex(null); setEditedAddress(null); }}>
+              <X className={iconSizes.sm} />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <AddressFormSection
+                onChange={setEditedAddress}
+                initialValues={localAddresses[editingIndex]}
+                externalValues={editDragAddress}
+              />
+              <div className="flex gap-2 justify-end pt-2 border-t">
+                <Button variant="outline" onClick={() => { setEditingIndex(null); setEditedAddress(null); setEditDragAddress(null); }} disabled={isSaving}>
+                  {t('tabs.general.header.cancel')}
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={isSaving}>
+                  {isSaving ? t('tabs.general.header.saving') : t('tabs.general.header.save')}
+                </Button>
+              </div>
+            </div>
+
+            <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-12rem)]">
+              <AddressMap
+                addresses={[localAddresses[editingIndex]]}
+                draggableMarkers
+                onAddressDragUpdate={setEditDragAddress}
+                heightPreset="viewerFullscreen"
+                className="rounded-lg border shadow-sm !h-full"
+              />
+            </aside>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* VIEW MODE: 2-Column Layout (addresses LEFT, map RIGHT)      */}
+      {/* Same pattern as ProjectLocationsTab                          */}
+      {/* ============================================================ */}
+      {!isInlineFormActive && (
+        <>
+          {/* MODE 1: Building WITH project — loading/empty states */}
+          {hasProject && loadingProject && (
+            <section className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
+              <Loader2 className={cn(iconSizes.md, 'animate-spin')} />
+              <span>{t('address.labels.loadingProjectAddresses')}</span>
+            </section>
+          )}
+
+          {hasProject && !loadingProject && projectAddresses.length === 0 && (
+            <section className="text-center py-2 border-2 border-dashed rounded-lg">
+              <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} />
+              <h3 className="text-lg font-semibold mb-2">
+                {t('address.labels.projectNoAddresses')}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                {t('address.labels.projectNoAddressesHint')}
+              </p>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => router.push(`/audit?projectId=${projectId}&tab=locations`)}
+              >
+                <ExternalLink className={`${iconSizes.sm} mr-2`} />
+                {t('address.labels.goToProjectAddresses')}
+              </Button>
+            </section>
+          )}
+
+          {/* MODE 2: No project — empty state */}
+          {!hasProject && localAddresses.length === 0 && (
+            <section className="text-center py-2 border-2 border-dashed rounded-lg">
+              <MapPin className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
+              <h3 className="text-lg font-semibold mb-2">{t('address.labels.noAddresses')}</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                {t('address.labels.addFirstAddress')}
+              </p>
+              <Button onClick={() => setIsAddFormOpen(true)}>
+                <Plus className={`${iconSizes.sm} mr-2`} />
+                {t('address.labels.addAddress')}
+              </Button>
+            </section>
+          )}
+
+          {/* ======================================================== */}
+          {/* 2-COLUMN LAYOUT: Cards LEFT, Sticky Map RIGHT            */}
+          {/* ======================================================== */}
+
+          {/* MODE 1: Project addresses to select from */}
+          {hasProject && !loadingProject && projectAddresses.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* LEFT COLUMN: Selectable address cards */}
+              <div className="space-y-2">
+                {projectAddresses.map((projAddr) => {
+                  const selected = isAddressSelected(projAddr);
+                  const isPrimaryInBuilding = localAddresses.find(
+                    la => la.id === projAddr.id
+                  )?.isPrimary;
+
+                  return (
+                    <article
+                      key={projAddr.id}
+                      id={`building-address-card-${projAddr.id}`}
+                      className={cn(
+                        'relative border-2 rounded-lg p-2 transition-all cursor-pointer',
+                        selected
+                          ? 'border-primary bg-primary/5 shadow-sm'
+                          : 'border-muted hover:border-muted-foreground/30'
+                      )}
+                      onClick={() => !isSaving && handleToggleProjectAddress(projAddr)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          if (!isSaving) handleToggleProjectAddress(projAddr);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start gap-2">
+                        {/* Selection indicator */}
+                        <div className={cn(
+                          'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
                           selected
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-muted hover:border-muted-foreground/30'
-                        )}
-                        onClick={() => !isSaving && handleToggleProjectAddress(projAddr)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            if (!isSaving) handleToggleProjectAddress(projAddr);
-                          }
-                        }}
-                      >
-                        <div className="flex items-start gap-2">
-                          {/* Selection indicator */}
-                          <div className={cn(
-                            'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
-                            selected
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'border-muted-foreground/30'
-                          )}>
-                            {selected && <Check className="h-3 w-3" />}
-                          </div>
-
-                          {/* Address content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">
-                                {formatAddressLine(projAddr)}
-                              </span>
-                              {projAddr.isPrimary && (
-                                <Badge variant="outline" className="text-xs">
-                                  {t('address.labels.projectPrimary')}
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                              {projAddr.type && (
-                                <span>{t(`address.types.${projAddr.type}`)}</span>
-                              )}
-                              {projAddr.blockSide && (
-                                <span>{t(`address.blockSides.${projAddr.blockSide}`)}</span>
-                              )}
-                              {projAddr.label && (
-                                <span>{projAddr.label}</span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Action buttons (only when selected) */}
-                          {selected && (
-                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              {isPrimaryInBuilding ? (
-                                <Badge variant="default" className="flex items-center gap-1 text-xs">
-                                  <Star className="h-3 w-3 fill-current" />
-                                  {t('address.labels.primary')}
-                                </Badge>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleSetPrimaryFromProject(projAddr)}
-                                  title={t('address.labels.setPrimary')}
-                                  className="h-7 text-xs"
-                                >
-                                  <Star className="h-3 w-3 mr-1" />
-                                  {t('address.labels.setPrimary')}
-                                </Button>
-                              )}
-                            </div>
-                          )}
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-muted-foreground/30'
+                        )}>
+                          {selected && <Check className="h-3 w-3" />}
                         </div>
+
+                        {/* Address content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">
+                              {formatAddressLine(projAddr)}
+                            </span>
+                            {projAddr.isPrimary && (
+                              <Badge variant="outline" className="text-xs">
+                                {t('address.labels.projectPrimary')}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            {projAddr.type && (
+                              <span>{t(`address.types.${projAddr.type}`)}</span>
+                            )}
+                            {projAddr.blockSide && (
+                              <span>{t(`address.blockSides.${projAddr.blockSide}`)}</span>
+                            )}
+                            {projAddr.label && (
+                              <span>{projAddr.label}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action buttons (only when selected) */}
+                        {selected && (
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            {isPrimaryInBuilding ? (
+                              <Badge variant="default" className="flex items-center gap-1 text-xs">
+                                <Star className="h-3 w-3 fill-current" />
+                                {t('address.labels.primary')}
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSetPrimaryFromProject(projAddr)}
+                                title={t('address.labels.setPrimary')}
+                                className="h-7 text-xs"
+                              >
+                                <Star className="h-3 w-3 mr-1" />
+                                {t('address.labels.setPrimary')}
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
+                    </article>
+                  );
+                })}
 
                 {/* Warning: no address selected */}
                 {selectedCount === 0 && (
@@ -477,173 +593,113 @@ export function BuildingAddressesCard({
                     </p>
                   </section>
                 )}
+              </div>
 
-                {/* Map for selected addresses */}
-                {selectedCount > 0 && (
+              {/* RIGHT COLUMN: Sticky map — fills to bottom of viewport */}
+              {selectedCount > 0 && (
+                <>
+                  <aside className="hidden lg:block">
+                    <div className="sticky top-0 h-[calc(100vh-12rem)]">
+                      <AddressMap
+                        addresses={localAddresses}
+                        highlightPrimary
+                        showGeocodingStatus
+                        enableClickToFocus
+                        onMarkerClick={handleMarkerClick}
+                        heightPreset="viewerFullscreen"
+                        className="rounded-lg border shadow-sm !h-full"
+                      />
+                    </div>
+                  </aside>
+                  {/* Mobile: Map below addresses */}
+                  <div className="lg:hidden">
+                    <AddressMap
+                      addresses={localAddresses}
+                      highlightPrimary
+                      showGeocodingStatus
+                      enableClickToFocus
+                      onMarkerClick={handleMarkerClick}
+                      heightPreset="viewerStandard"
+                      className="rounded-lg border shadow-sm"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* MODE 2: Manual addresses (no project) — 2-column layout */}
+          {!hasProject && localAddresses.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* LEFT COLUMN: Address cards */}
+              <div className="space-y-2">
+                {localAddresses.map((address, index) => (
+                  <article
+                    key={address.id}
+                    id={`building-address-card-${address.id}`}
+                    className="relative border rounded-lg p-2 hover:shadow-md transition-shadow"
+                  >
+                    <AddressCard address={address} />
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      {address.isPrimary ? (
+                        <Badge variant="default" className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-current" />
+                          {t('address.labels.primary')}
+                        </Badge>
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => handleSetPrimary(index)} title={t('address.labels.setPrimary')}>
+                          <Star className={iconSizes.sm} />
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => handleStartEdit(index)} title={t('address.labels.editAddress')}>
+                        <Pencil className={iconSizes.sm} />
+                      </Button>
+                      {localAddresses.length > 1 && (
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteAddress(index)} title={t('address.labels.removeAddress')}>
+                          <Trash2 className={iconSizes.sm} />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                      <span>ID: {address.id.slice(0, 8)}...</span>
+                      {address.blockSide && <span className="ml-2">{t(`address.blockSides.${address.blockSide}`)}</span>}
+                      {address.type && <span className="ml-2">{t(`address.types.${address.type}`)}</span>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              {/* RIGHT COLUMN: Sticky map — fills to bottom of viewport */}
+              <aside className="hidden lg:block">
+                <div className="sticky top-0 h-[calc(100vh-12rem)]">
                   <AddressMap
                     addresses={localAddresses}
                     highlightPrimary
                     showGeocodingStatus
                     enableClickToFocus
                     onMarkerClick={handleMarkerClick}
-                    heightPreset="viewerCompact"
-                    className="rounded-lg border shadow-sm"
+                    heightPreset="viewerFullscreen"
+                    className="rounded-lg border shadow-sm !h-full"
                   />
-                )}
-              </>
-            )}
-          </>
-        )}
-
-        {/* ============================================================ */}
-        {/* MODE 2: Building WITHOUT project — Manual entry              */}
-        {/* ============================================================ */}
-        {!hasProject && (
-          <>
-            {/* Map */}
-            {localAddresses.length > 0 && !isAddFormOpen && editingIndex === null && (
-              <AddressMap
-                addresses={localAddresses}
-                highlightPrimary
-                showGeocodingStatus
-                enableClickToFocus
-                onMarkerClick={handleMarkerClick}
-                heightPreset="viewerCompact"
-                className="rounded-lg border shadow-sm"
-              />
-            )}
-
-            {/* Inline Add Form */}
-            {isAddFormOpen && (
-              <div className="border-2 border-primary rounded-lg p-2 bg-card space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Plus className={iconSizes.md} />
-                    {t('address.labels.addAddress')}
-                  </h3>
-                  <Button variant="ghost" size="sm" onClick={() => { setIsAddFormOpen(false); setTempAddress(null); }}>
-                    <X className={iconSizes.sm} />
-                  </Button>
                 </div>
-                {/* 🗺️ Draggable map for new address */}
+              </aside>
+
+              {/* Mobile: Map below addresses */}
+              <div className="lg:hidden">
                 <AddressMap
-                  addresses={[]}
-                  draggableMarkers
-                  onAddressDragUpdate={setDragUpdatedAddress}
-                  heightPreset="viewerCompact"
+                  addresses={localAddresses}
+                  highlightPrimary
+                  showGeocodingStatus
+                  enableClickToFocus
+                  onMarkerClick={handleMarkerClick}
+                  heightPreset="viewerStandard"
                   className="rounded-lg border shadow-sm"
                 />
-
-                <AddressFormSection
-                  onChange={setTempAddress}
-                  externalValues={dragUpdatedAddress}
-                />
-                <div className="flex gap-2 justify-end pt-2 border-t">
-                  <Button variant="outline" onClick={() => { setIsAddFormOpen(false); setTempAddress(null); setDragUpdatedAddress(null); }} disabled={isSaving}>
-                    {t('tabs.general.header.cancel')}
-                  </Button>
-                  <Button onClick={handleSaveNewAddress} disabled={isSaving}>
-                    {isSaving ? t('tabs.general.header.saving') : t('tabs.general.header.save')}
-                  </Button>
-                </div>
               </div>
-            )}
-
-            {/* Empty state */}
-            {localAddresses.length === 0 && !isAddFormOpen && (
-              <section className="text-center py-2 border-2 border-dashed rounded-lg">
-                <MapPin className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
-                <h3 className="text-lg font-semibold mb-2">{t('address.labels.noAddresses')}</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {t('address.labels.addFirstAddress')}
-                </p>
-                <Button onClick={() => setIsAddFormOpen(true)}>
-                  <Plus className={`${iconSizes.sm} mr-2`} />
-                  {t('address.labels.addAddress')}
-                </Button>
-              </section>
-            )}
-
-            {/* Address list (manual mode) */}
-            {localAddresses.length > 0 && !isAddFormOpen && (
-              <div className="space-y-2">
-                {localAddresses.map((address, index) => (
-                  <div
-                    key={address.id}
-                    id={`building-address-card-${address.id}`}
-                    className="relative border rounded-lg p-2 hover:shadow-md transition-shadow"
-                  >
-                    {editingIndex === index ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-lg font-semibold flex items-center gap-2">
-                            <Pencil className={iconSizes.md} />
-                            {t('address.labels.editAddress')}
-                          </h4>
-                          <Button variant="ghost" size="sm" onClick={() => { setEditingIndex(null); setEditedAddress(null); }}>
-                            <X className={iconSizes.sm} />
-                          </Button>
-                        </div>
-                        {/* 🗺️ Draggable map for edit mode */}
-                        <AddressMap
-                          addresses={[address]}
-                          draggableMarkers
-                          onAddressDragUpdate={setEditDragAddress}
-                          heightPreset="viewerCompact"
-                          className="rounded-lg border shadow-sm"
-                        />
-
-                        <AddressFormSection
-                          onChange={setEditedAddress}
-                          initialValues={address}
-                          externalValues={editDragAddress}
-                        />
-                        <div className="flex gap-2 justify-end pt-2 border-t">
-                          <Button variant="outline" onClick={() => { setEditingIndex(null); setEditedAddress(null); setEditDragAddress(null); }} disabled={isSaving}>
-                            {t('tabs.general.header.cancel')}
-                          </Button>
-                          <Button onClick={handleSaveEdit} disabled={isSaving}>
-                            {isSaving ? t('tabs.general.header.saving') : t('tabs.general.header.save')}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <AddressCard address={address} />
-                        <div className="absolute top-4 right-4 flex gap-2">
-                          {address.isPrimary ? (
-                            <Badge variant="default" className="flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-current" />
-                              {t('address.labels.primary')}
-                            </Badge>
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleSetPrimary(index)} title={t('address.labels.setPrimary')}>
-                              <Star className={iconSizes.sm} />
-                            </Button>
-                          )}
-                          <Button variant="outline" size="sm" onClick={() => handleStartEdit(index)} title={t('address.labels.editAddress')}>
-                            <Pencil className={iconSizes.sm} />
-                          </Button>
-                          {localAddresses.length > 1 && (
-                            <Button variant="destructive" size="sm" onClick={() => handleDeleteAddress(index)} title={t('address.labels.removeAddress')}>
-                              <Trash2 className={iconSizes.sm} />
-                            </Button>
-                          )}
-                        </div>
-                        <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
-                          <span>ID: {address.id.slice(0, 8)}...</span>
-                          {address.blockSide && <span className="ml-2">{t(`address.blockSides.${address.blockSide}`)}</span>}
-                          {address.type && <span className="ml-2">{t(`address.types.${address.type}`)}</span>}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
