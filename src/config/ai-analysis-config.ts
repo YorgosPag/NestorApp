@@ -147,7 +147,7 @@ RULES:
 - Extract as many entities as possible from the command`,
 
   DOCUMENT_CLASSIFY_SYSTEM:
-    'You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals.',
+    'You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals. Write a short description (1-2 sentences) in Greek about what this document is and its key content. The description should be helpful for someone browsing a file list.',
 } as const;
 
 const intentOptions = IntentType.options;
@@ -368,6 +368,7 @@ export const AI_DOCUMENT_CLASSIFY_SCHEMA = {
       'extractedEntities',
       'documentType',
       'signals',
+      'description',
     ],
     additionalProperties: false,
     properties: {
@@ -379,6 +380,7 @@ export const AI_DOCUMENT_CLASSIFY_SCHEMA = {
       extractedEntities: EXTRACTED_ENTITIES_SCHEMA,
       documentType: { type: 'string', enum: documentOptions },
       signals: { type: 'array', items: { type: 'string' } },
+      description: { type: 'string', description: 'Short description in Greek (1-2 sentences) about the document content' },
     },
   },
 } as const satisfies Record<string, unknown>;

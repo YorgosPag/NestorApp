@@ -218,6 +218,9 @@ export const DocumentClassifyAnalysisSchema = AnalysisBaseSchema.extend({
 
   /** Detection signals (e.g., ['has-vat-number', 'has-date', 'has-amount']) */
   signals: z.array(z.string()).optional(),
+
+  /** AI-generated description in Greek (1-2 sentences) about the document content */
+  description: z.string().optional(),
 });
 
 export type DocumentClassifyAnalysis = z.infer<typeof DocumentClassifyAnalysisSchema>;

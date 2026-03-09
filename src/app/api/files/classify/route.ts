@@ -181,6 +181,10 @@ async function handlePost(
     }
 
     // 4. Update FileRecord in Firestore
+    const aiDescription = ('description' in result && typeof result.description === 'string')
+      ? result.description
+      : null;
+
     const updateData: Record<string, unknown> = {
       'ingestion.analysis': {
         kind: result.kind,
@@ -189,10 +193,17 @@ async function handlePost(
         signals: result.signals ?? [],
         aiModel: result.aiModel ?? null,
         analysisTimestamp: result.analysisTimestamp ?? new Date().toISOString(),
+        description: aiDescription,
       },
       'ingestion.state': 'classified',
       updatedAt: new Date().toISOString(),
     };
+
+    // 🏢 ADR-191: Write AI description to FileRecord.description (only if empty)
+    const currentDescription = fileData.description as string | undefined;
+    if (aiDescription && !currentDescription) {
+      updateData.description = aiDescription;
+    }
 
     await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).update(updateData);
 
