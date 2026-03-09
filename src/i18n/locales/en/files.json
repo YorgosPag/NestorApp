@@ -460,6 +460,7 @@
     "close": "Close",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "rotate": "Rotate"
+    "rotate": "Rotate",
+    "fitToWidth": "Fit to width"
   }
 }

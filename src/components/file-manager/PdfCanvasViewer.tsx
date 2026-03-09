@@ -6,6 +6,8 @@
  * Renders PDF pages to canvas with custom controls that respect the app theme.
  * Replaces browser iframe PDF viewer for consistent dark/light mode UX.
  *
+ * Features: wheel zoom, click-drag pan, fit-to-width, page nav, rotation.
+ *
  * Uses pdfjs-dist@4.5.136 (same version as DXF viewer PdfRenderer).
  * Worker: self-hosted /public/pdf.worker.min.mjs
  *
@@ -23,6 +25,7 @@ import {
   ZoomOut,
   RotateCw,
   Maximize,
+  Minimize2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -73,9 +76,9 @@ interface PdfPageProxy {
 // CONSTANTS
 // ============================================================================
 
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 4;
-const SCALE_STEP = 0.25;
+const MIN_SCALE = 0.25;
+const MAX_SCALE = 5;
+const WHEEL_ZOOM_FACTOR = 1.1;
 const WORKER_URL = '/pdf.worker.min.mjs';
 
 // ============================================================================
@@ -91,7 +94,6 @@ let pdfjsLib: {
 
 async function loadPdfJs() {
   if (pdfjsLib) return pdfjsLib;
-  // Dynamic import for client-side only
   const lib = await import('pdfjs-dist');
   lib.GlobalWorkerOptions.workerSrc = WORKER_URL;
   pdfjsLib = lib as unknown as typeof pdfjsLib;
@@ -108,6 +110,12 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
   const containerRef = useRef<HTMLDivElement>(null);
   const docRef = useRef<PdfDocProxy | null>(null);
   const renderTaskRef = useRef<{ cancel(): void } | null>(null);
+  const fitScaleRef = useRef<number>(1);
+
+  // Pan state refs (not in React state to avoid re-renders during drag)
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0 });
+  const scrollStartRef = useRef({ x: 0, y: 0 });
 
   const [state, setState] = useState<PdfState>({
     numPages: 0,
@@ -129,7 +137,6 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         const lib = await loadPdfJs();
         if (cancelled) return;
 
-        // Cleanup previous document
         if (docRef.current) {
           await docRef.current.destroy();
           docRef.current = null;
@@ -184,7 +191,6 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
     const container = containerRef.current;
     if (!doc || !canvas || !container || state.loading) return;
 
-    // Cancel any in-flight render before starting a new one
     if (renderTaskRef.current) {
       renderTaskRef.current.cancel();
       renderTaskRef.current = null;
@@ -202,7 +208,6 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
           rotation: state.rotation,
         });
 
-        // Set canvas size (use devicePixelRatio for sharp rendering)
         const dpr = window.devicePixelRatio || 1;
         canvas!.width = viewport.width * dpr;
         canvas!.height = viewport.height * dpr;
@@ -219,7 +224,6 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         await task.promise;
         renderTaskRef.current = null;
       } catch (err) {
-        // Ignore cancellation errors from pdfjs
         if (cancelled || (err instanceof Error && err.message.includes('Rendering cancelled'))) return;
         setState((s) => ({
           ...s,
@@ -247,13 +251,78 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
     async function fitToWidth() {
       const page = await doc!.getPage(1);
       const viewport = page.getViewport({ scale: 1 });
-      const containerWidth = container!.clientWidth - 32; // 16px padding each side
+      const containerWidth = container!.clientWidth - 32;
       const fitScale = Math.min(containerWidth / viewport.width, 2);
-      setState((s) => ({ ...s, scale: Math.round(fitScale * 100) / 100 }));
+      const rounded = Math.round(fitScale * 100) / 100;
+      fitScaleRef.current = rounded;
+      setState((s) => ({ ...s, scale: rounded }));
     }
 
     fitToWidth();
   }, [state.loading, state.numPages]);
+
+  // ── Wheel zoom ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    function handleWheel(e: WheelEvent) {
+      e.preventDefault();
+      const direction = e.deltaY < 0 ? 1 : -1;
+      setState((s) => {
+        const factor = direction > 0 ? WHEEL_ZOOM_FACTOR : 1 / WHEEL_ZOOM_FACTOR;
+        const newScale = Math.round(Math.min(MAX_SCALE, Math.max(MIN_SCALE, s.scale * factor)) * 100) / 100;
+        return { ...s, scale: newScale };
+      });
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  // ── Pan (click & drag) ─────────────────────────────────────────────────
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    function handlePointerDown(e: PointerEvent) {
+      // Only left-click pan
+      if (e.button !== 0) return;
+      isPanningRef.current = true;
+      panStartRef.current = { x: e.clientX, y: e.clientY };
+      scrollStartRef.current = { x: container!.scrollLeft, y: container!.scrollTop };
+      container!.setPointerCapture(e.pointerId);
+      container!.style.cursor = 'grabbing';
+    }
+
+    function handlePointerMove(e: PointerEvent) {
+      if (!isPanningRef.current) return;
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      container!.scrollLeft = scrollStartRef.current.x - dx;
+      container!.scrollTop = scrollStartRef.current.y - dy;
+    }
+
+    function handlePointerUp(e: PointerEvent) {
+      if (!isPanningRef.current) return;
+      isPanningRef.current = false;
+      container!.releasePointerCapture(e.pointerId);
+      container!.style.cursor = 'grab';
+    }
+
+    container.style.cursor = 'grab';
+    container.addEventListener('pointerdown', handlePointerDown);
+    container.addEventListener('pointermove', handlePointerMove);
+    container.addEventListener('pointerup', handlePointerUp);
+    container.addEventListener('pointercancel', handlePointerUp);
+
+    return () => {
+      container.removeEventListener('pointerdown', handlePointerDown);
+      container.removeEventListener('pointermove', handlePointerMove);
+      container.removeEventListener('pointerup', handlePointerUp);
+      container.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, []);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
@@ -268,11 +337,21 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
   }, []);
 
   const zoomIn = useCallback(() => {
-    setState((s) => ({ ...s, scale: Math.min(MAX_SCALE, s.scale + SCALE_STEP) }));
+    setState((s) => ({
+      ...s,
+      scale: Math.round(Math.min(MAX_SCALE, s.scale * WHEEL_ZOOM_FACTOR) * 100) / 100,
+    }));
   }, []);
 
   const zoomOut = useCallback(() => {
-    setState((s) => ({ ...s, scale: Math.max(MIN_SCALE, s.scale - SCALE_STEP) }));
+    setState((s) => ({
+      ...s,
+      scale: Math.round(Math.max(MIN_SCALE, s.scale / WHEEL_ZOOM_FACTOR) * 100) / 100,
+    }));
+  }, []);
+
+  const fitToWidth = useCallback(() => {
+    setState((s) => ({ ...s, scale: fitScaleRef.current }));
   }, []);
 
   const rotate = useCallback(() => {
@@ -290,11 +369,12 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
       else if (e.key === 'ArrowRight') goToNext();
       else if (e.key === '+' || e.key === '=') zoomIn();
       else if (e.key === '-') zoomOut();
+      else if (e.key === '0') fitToWidth();
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrev, goToNext, zoomIn, zoomOut]);
+  }, [goToPrev, goToNext, zoomIn, zoomOut, fitToWidth]);
 
   // Loading state
   if (state.loading) {
@@ -318,7 +398,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
 
   return (
     <section className={cn('flex flex-col h-full', className)}>
-      {/* Toolbar — theme-aware */}
+      {/* Toolbar */}
       <nav className="flex items-center justify-between px-3 py-1.5 border-b bg-muted/50 gap-2">
         {/* Page navigation */}
         <div className="flex items-center gap-1">
@@ -357,7 +437,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
           </Tooltip>
         </div>
 
-        {/* Zoom + rotation */}
+        {/* Zoom + tools */}
         <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -393,6 +473,16 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
             <TooltipContent>{t('preview.zoomIn', 'Μεγέθυνση')}</TooltipContent>
           </Tooltip>
 
+          {/* Fit to width */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" onClick={fitToWidth} className="h-7 w-7 p-0">
+                <Minimize2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('preview.fitToWidth', 'Προσαρμογή στο πλάτος')}</TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="sm" onClick={rotate} className="h-7 w-7 p-0">
@@ -413,10 +503,10 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         </div>
       </nav>
 
-      {/* Canvas area — scrollable, theme background */}
+      {/* Canvas area — scrollable, pan-enabled */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto flex items-start justify-center p-4 bg-muted/20"
+        className="flex-1 overflow-auto flex items-start justify-center p-4 bg-muted/20 select-none"
       >
         <canvas
           ref={canvasRef}
