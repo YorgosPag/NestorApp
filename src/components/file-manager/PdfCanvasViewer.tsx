@@ -83,7 +83,7 @@ const WORKER_URL = '/pdf.worker.min.mjs';
 // ============================================================================
 
 let pdfjsLib: {
-  getDocument(params: { url: string; cMapUrl?: string; cMapPacked?: boolean }): {
+  getDocument(params: { url?: string; data?: Uint8Array; cMapUrl?: string; cMapPacked?: boolean }): {
     promise: Promise<PdfDocProxy>;
   };
   GlobalWorkerOptions: { workerSrc: string };
@@ -134,7 +134,13 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
           docRef.current = null;
         }
 
-        const doc = await lib.getDocument({ url }).promise;
+        // Fetch PDF as ArrayBuffer to avoid CORS issues with Firebase Storage URLs
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = new Uint8Array(await response.arrayBuffer());
+        if (cancelled) return;
+
+        const doc = await lib.getDocument({ data }).promise;
         if (cancelled) {
           await doc.destroy();
           return;
