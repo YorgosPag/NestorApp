@@ -45,7 +45,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
-import { MapPin, Plus, Star, Trash2, X, Pencil } from 'lucide-react';
+import { MapPin, Plus, Star, Trash2, X, Pencil, Eraser } from 'lucide-react';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   getPrimaryAddress,
   migrateLegacyAddress,
@@ -240,6 +241,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const [addLabel, setAddLabel] = useState('');
   const [addIsPrimary, setAddIsPrimary] = useState(false);
 
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetIndex, setDeleteTargetIndex] = useState<number | null>(null);
+
   // Edit mode state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editHierarchy, setEditHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
@@ -301,17 +306,19 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   }, []);
 
   /**
-   * Delete address
+   * Request address deletion — opens confirmation dialog
    */
-  const handleDeleteAddress = async (index: number) => {
-    if (localAddresses.length === 1) {
-      toast.error('Δεν μπορείτε να διαγράψετε την τελευταία διεύθυνση!');
-      return;
-    }
+  const handleRequestDelete = (index: number) => {
+    setDeleteTargetIndex(index);
+    setDeleteDialogOpen(true);
+  };
 
-    if (!confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη διεύθυνση;')) {
-      return;
-    }
+  /**
+   * Confirm address deletion (called from DeleteConfirmDialog)
+   */
+  const handleConfirmDelete = async () => {
+    if (deleteTargetIndex === null) return;
+    const index = deleteTargetIndex;
 
     const newAddresses = localAddresses.filter((_, i) => i !== index);
 
@@ -332,13 +339,48 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       if (result.success) {
         setLocalAddresses(newAddresses);
         toast.success('Η διεύθυνση διαγράφηκε επιτυχώς!');
-        // Reload to refresh UI
-        // Local state is already updated — no need to reload
       } else {
         toast.error(result.error || 'Σφάλμα διαγραφής διεύθυνσης');
       }
-    } catch (error) {
+    } catch {
       toast.error('Σφάλμα διαγραφής διεύθυνσης');
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeleteTargetIndex(null);
+    }
+  };
+
+  /**
+   * Clear primary address — empties all fields but keeps the address entry
+   */
+  const handleClearPrimaryAddress = async () => {
+    const clearedAddress = createProjectAddress({
+      city: '',
+      street: '',
+      type: localAddresses[0]?.type || 'site',
+      isPrimary: true,
+    });
+    // Preserve the original ID
+    clearedAddress.id = localAddresses[0].id;
+
+    const newAddresses = [clearedAddress, ...localAddresses.slice(1)];
+    const legacy = extractLegacyFields(newAddresses);
+
+    try {
+      const result = await updateProjectClient(project.id!, {
+        addresses: newAddresses,
+        address: legacy.address,
+        city: legacy.city,
+      });
+
+      if (result.success) {
+        setLocalAddresses(newAddresses);
+        toast.success('Η διεύθυνση καθαρίστηκε επιτυχώς!');
+      } else {
+        toast.error(result.error || 'Σφάλμα καθαρισμού διεύθυνσης');
+      }
+    } catch {
+      toast.error('Σφάλμα καθαρισμού διεύθυνσης');
     }
   };
 
@@ -696,14 +738,25 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                         <Pencil className={iconSizes.sm} />
                       </Button>
 
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteAddress(index)}
-                        title="Διαγραφή διεύθυνσης"
-                      >
-                        <Trash2 className={iconSizes.sm} />
-                      </Button>
+                      {index === 0 ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearPrimaryAddress}
+                          title="Καθαρισμός διεύθυνσης"
+                        >
+                          <Eraser className={iconSizes.sm} />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRequestDelete(index)}
+                          title="Διαγραφή διεύθυνσης"
+                        >
+                          <Trash2 className={iconSizes.sm} />
+                        </Button>
+                      )}
                     </div>
 
                     <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
@@ -746,6 +799,16 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           )}
         </>
       )}
+      {/* Delete Confirmation Dialog — centralized component (ADR-003) */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Διαγραφή Διεύθυνσης"
+        description="Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη διεύθυνση;"
+        onConfirm={handleConfirmDelete}
+        confirmText="Διαγραφή"
+        cancelText="Ακύρωση"
+      />
     </section>
   );
 }
