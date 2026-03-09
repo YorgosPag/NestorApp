@@ -27,7 +27,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Save, Loader2, CheckCircle, AlertCircle, ChevronsUpDown, Check, Search } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ChevronsUpDown, Check, Search } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -142,25 +142,23 @@ export function EntityLinkCard({
     }
   }, [currentValue, savedValue]);
 
-  const handleChange = useCallback((value: string) => {
-    setSelectedId(value);
-    setSaveStatus('idle');
-  }, []);
-
-  const handleSave = useCallback(async () => {
+  // 🏢 ENTERPRISE: Auto-save on selection change
+  // Saves immediately when user picks a value — no separate save button needed.
+  // This matches user expectations (single "Αποθήκευση" in the header for form data,
+  // entity links save independently on selection).
+  const performSave = useCallback(async (valueToSave: string) => {
     setSaving(true);
     setSaveStatus('idle');
 
     try {
-      const idToSave = selectedId === NONE_VALUE ? null : selectedId;
-      const selectedOption = options.find(o => o.id === selectedId);
+      const idToSave = valueToSave === NONE_VALUE ? null : valueToSave;
+      const selectedOption = options.find(o => o.id === valueToSave);
       const name = selectedOption?.name || '';
 
       const result = await onSave(idToSave, name);
 
       if (result.success) {
         setSaveStatus('success');
-        // Track saved value locally so UI reflects the save even if parent doesn't re-render
         setSavedValue(idToSave ?? undefined);
         if (onChanged) {
           onChanged(idToSave ?? '', name);
@@ -168,17 +166,27 @@ export function EntityLinkCard({
         setTimeout(() => setSaveStatus('idle'), STATUS_RESET_MS);
       } else {
         setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), STATUS_RESET_MS);
       }
     } catch {
       setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), STATUS_RESET_MS);
     } finally {
       setSaving(false);
     }
-  }, [selectedId, options, onSave, onChanged]);
+  }, [options, onSave, onChanged]);
 
-  // Use saved value if available, otherwise fall back to prop
-  const effectiveCurrentValue = savedValue !== undefined ? (savedValue || NONE_VALUE) : (currentValue || NONE_VALUE);
-  const hasChanges = selectedId !== effectiveCurrentValue;
+  const handleChange = useCallback((value: string) => {
+    setSelectedId(value);
+    setSaveStatus('idle');
+
+    // Auto-save: only if value actually changed from current
+    const effective = savedValue !== undefined ? (savedValue || NONE_VALUE) : (currentValue || NONE_VALUE);
+    if (value !== effective) {
+      performSave(value);
+    }
+  }, [savedValue, currentValue, performSave]);
+
   const currentName = options.find(o => o.id === (savedValue ?? currentValue))?.name;
   const selectedName = options.find(o => o.id === selectedId)?.name;
 
@@ -349,40 +357,24 @@ export function EntityLinkCard({
           </p>
         )}
 
-        {isEditing && (
-          <footer className="flex items-center justify-between pt-2">
-            <Button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
-              variant={hasChanges ? 'default' : 'outline'}
-              size="sm"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className={cn(iconSizes.sm, 'mr-2 animate-spin')} />
-                  {labels.saving}
-                </>
-              ) : (
-                <>
-                  <Save className={cn(iconSizes.sm, 'mr-2')} />
-                  {labels.save}
-                </>
-              )}
-            </Button>
-
-            {saveStatus === 'success' && (
-              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
-                <CheckCircle className={iconSizes.sm} />
-                {labels.success}
-              </span>
-            )}
-            {saveStatus === 'error' && (
-              <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
-                <AlertCircle className={iconSizes.sm} />
-                {labels.error}
-              </span>
-            )}
-          </footer>
+        {/* Auto-save status indicators */}
+        {saving && (
+          <p className="flex items-center gap-1 text-sm text-muted-foreground pt-1">
+            <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+            {labels.saving}
+          </p>
+        )}
+        {saveStatus === 'success' && (
+          <p className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 pt-1">
+            <CheckCircle className={iconSizes.sm} />
+            {labels.success}
+          </p>
+        )}
+        {saveStatus === 'error' && (
+          <p className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400 pt-1">
+            <AlertCircle className={iconSizes.sm} />
+            {labels.error}
+          </p>
         )}
       </CardContent>
     </Card>
