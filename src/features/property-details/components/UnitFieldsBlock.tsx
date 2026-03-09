@@ -326,278 +326,127 @@ export function UnitFieldsBlock({
         </CardContent>
       </Card>
 
-      {/* ─── Layout Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Bed className={cn(iconSizes.md, 'text-violet-500')} />
-            {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid grid-cols-3 ${spacing.gap.sm}`}>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Bed className={cn(iconSizes.xs, 'text-violet-600')} />
-                {t('card.stats.bedrooms')}
-              </Label>
-              {isEditing ? (
-                <Input type="number" min={0} max={20} value={formData.bedrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
-                  className={cn('h-8 text-xs', quick.input)} />
-              ) : (
-                <p className="text-sm font-medium">{displayNum(property.layout?.bedrooms ?? 0)}</p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Bath className={cn(iconSizes.xs, 'text-cyan-600')} />
-                {t('card.stats.bathrooms')}
-              </Label>
-              {isEditing ? (
-                <Input type="number" min={0} max={10} value={formData.bathrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: parseInt(e.target.value) || 0 }))}
-                  className={cn('h-8 text-xs', quick.input)} />
-              ) : (
-                <p className="text-sm font-medium">{displayNum(property.layout?.bathrooms ?? 0)}</p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Bath className={cn(iconSizes.xs, 'text-sky-500')} />
-                {t('fields.layout.wc')}
-              </Label>
-              {isEditing ? (
-                <Input type="number" min={0} max={5} value={formData.wc}
-                  onChange={(e) => setFormData(prev => ({ ...prev, wc: parseInt(e.target.value) || 0 }))}
-                  className={cn('h-8 text-xs', quick.input)} />
-              ) : (
-                <p className="text-sm font-medium">{displayNum(property.layout?.wc ?? 0)}</p>
-              )}
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── Areas Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Ruler className={cn(iconSizes.md, NAVIGATION_ENTITIES.area.color)} />
-            {t('fields.areas.sectionTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid grid-cols-5 ${spacing.gap.sm}`}>
-            {([
-              ['areaGross', 'fields.areas.gross', property.areas?.gross],
-              ['areaNet', 'fields.areas.net', property.areas?.net],
-              ['areaBalcony', 'fields.areas.balcony', property.areas?.balcony],
-              ['areaTerrace', 'fields.areas.terrace', property.areas?.terrace],
-              ['areaGarden', 'fields.areas.garden', property.areas?.garden],
-            ] as const).map(([field, labelKey, viewValue]) => (
-              <fieldset key={field} className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">{t(labelKey)}</Label>
+      {/* ═══════════════════════════════════════════════════════════════
+          ROW 1: Διάταξη, Εμβαδά, Προσανατολισμός, Κατάσταση/Ενέργεια, Συστήματα
+      ═══════════════════════════════════════════════════════════════ */}
+      <section className="grid grid-cols-5 gap-3">
+        {/* ─── Layout Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Bed className={cn(iconSizes.sm, 'text-violet-500')} />
+              {t('fields.layout.sectionTitle', { defaultValue: 'Διάταξη' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0">
+            <div className="space-y-2">
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Bed className={cn(iconSizes.xs, 'text-violet-600')} />
+                  {t('card.stats.bedrooms')}
+                </Label>
                 {isEditing ? (
-                  <Input
-                    type="number" min={0} step={0.1}
-                    value={formData[field]}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [field]: parseFloat(e.target.value) || 0 }))}
-                    className={cn('h-8 text-xs', quick.input)}
-                  />
+                  <Input type="number" min={0} max={20} value={formData.bedrooms}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
+                    className={cn('h-7 text-xs', quick.input)} />
                 ) : (
-                  <p className="text-sm font-medium">{displayArea(viewValue ?? 0)}</p>
+                  <p className="text-sm font-medium">{displayNum(property.layout?.bedrooms ?? 0)}</p>
                 )}
               </fieldset>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── Orientation Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Compass className={cn(iconSizes.md, 'text-amber-500')} />
-            {t('orientation.sectionTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-              {ORIENTATION_OPTIONS.map((orientation) => {
-                const isSelected = formData.orientations.includes(orientation);
-                return (
-                  <Button key={orientation} type="button"
-                    variant={isSelected ? 'default' : 'outline'} size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => toggleArrayItem('orientations', orientation)}>
-                    {t(`orientation.short.${orientation}`)}
-                  </Button>
-                );
-              })}
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Bath className={cn(iconSizes.xs, 'text-cyan-600')} />
+                  {t('card.stats.bathrooms')}
+                </Label>
+                {isEditing ? (
+                  <Input type="number" min={0} max={10} value={formData.bathrooms}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: parseInt(e.target.value) || 0 }))}
+                    className={cn('h-7 text-xs', quick.input)} />
+                ) : (
+                  <p className="text-sm font-medium">{displayNum(property.layout?.bathrooms ?? 0)}</p>
+                )}
+              </fieldset>
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Bath className={cn(iconSizes.xs, 'text-sky-500')} />
+                  {t('fields.layout.wc')}
+                </Label>
+                {isEditing ? (
+                  <Input type="number" min={0} max={5} value={formData.wc}
+                    onChange={(e) => setFormData(prev => ({ ...prev, wc: parseInt(e.target.value) || 0 }))}
+                    className={cn('h-7 text-xs', quick.input)} />
+                ) : (
+                  <p className="text-sm font-medium">{displayNum(property.layout?.wc ?? 0)}</p>
+                )}
+              </fieldset>
             </div>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {(property.orientations?.length ?? 0) > 0 ? (
-                property.orientations!.map((o) => (
-                  <Badge key={o} variant="secondary" className="text-xs">
-                    {t(`orientation.short.${o}`)}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">—</p>
-              )}
+          </CardContent>
+        </Card>
+
+        {/* ─── Areas Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Ruler className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)} />
+              {t('fields.areas.sectionTitle')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0">
+            <div className="space-y-2">
+              {([
+                ['areaGross', 'fields.areas.gross', property.areas?.gross],
+                ['areaNet', 'fields.areas.net', property.areas?.net],
+                ['areaBalcony', 'fields.areas.balcony', property.areas?.balcony],
+                ['areaTerrace', 'fields.areas.terrace', property.areas?.terrace],
+                ['areaGarden', 'fields.areas.garden', property.areas?.garden],
+              ] as const).map(([field, labelKey, viewValue]) => (
+                <fieldset key={field} className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">{t(labelKey)}</Label>
+                  {isEditing ? (
+                    <Input
+                      type="number" min={0} step={0.1}
+                      value={formData[field]}
+                      onChange={(e) => setFormData(prev => ({ ...prev, [field]: parseFloat(e.target.value) || 0 }))}
+                      className={cn('h-7 text-xs', quick.input)}
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">{displayArea(viewValue ?? 0)}</p>
+                  )}
+                </fieldset>
+              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* ─── Condition & Energy Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Wrench className={cn(iconSizes.md, 'text-orange-500')} />
-            {t('condition.sectionTitle')}
-            <span className="text-muted-foreground">&</span>
-            <Zap className={cn(iconSizes.md, 'text-green-500')} />
-            {t('energy.class')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
-                {t('condition.sectionTitle')}
-              </Label>
-              {isEditing ? (
-                <Select value={formData.condition}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('condition.sectionTitle')} /></SelectTrigger>
-                  <SelectContent>
-                    {CONDITION_OPTIONS.map((c) => (
-                      <SelectItem key={c} value={c} className="text-xs">{t(`condition.${c}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">
-                  {property.condition ? t(`condition.${property.condition}`) : '—'}
-                </p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Zap className={cn(iconSizes.xs, 'text-green-600')} />
-                {t('energy.class')}
-              </Label>
-              {isEditing ? (
-                <Select value={formData.energyClass}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('energy.class')} /></SelectTrigger>
-                  <SelectContent>
-                    {ENERGY_CLASS_OPTIONS.map((e) => (
-                      <SelectItem key={e} value={e} className="text-xs">{e}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">{property.energy?.class || '—'}</p>
-              )}
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── Systems Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Thermometer className={cn(iconSizes.md, 'text-red-500')} />
-            {t('systems.sectionTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
-                {t('systems.heating.label')}
-              </Label>
-              {isEditing ? (
-                <Select value={formData.heatingType}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('systems.heating.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {HEATING_OPTIONS.map((h) => (
-                      <SelectItem key={h} value={h} className="text-xs">{t(`systems.heating.${h}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">
-                  {property.systemsOverride?.heatingType ? t(`systems.heating.${property.systemsOverride.heatingType}`) : '—'}
-                </p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
-                {t('systems.cooling.label')}
-              </Label>
-              {isEditing ? (
-                <Select value={formData.coolingType}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('systems.cooling.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {COOLING_OPTIONS.map((c) => (
-                      <SelectItem key={c} value={c} className="text-xs">{t(`systems.cooling.${c}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">
-                  {property.systemsOverride?.coolingType ? t(`systems.cooling.${property.systemsOverride.coolingType}`) : '—'}
-                </p>
-              )}
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── Finishes Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Home className={cn(iconSizes.md, 'text-teal-500')} />
-            {t('finishes.sectionTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Flooring */}
-          <fieldset className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">{t('finishes.flooring.label')}</Label>
+        {/* ─── Orientation Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Compass className={cn(iconSizes.sm, 'text-amber-500')} />
+              {t('orientation.sectionTitle')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0">
             {isEditing ? (
-              <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-                {FLOORING_OPTIONS.map((floor) => {
-                  const isSelected = formData.flooring.includes(floor);
+              <div className="flex flex-wrap gap-1">
+                {ORIENTATION_OPTIONS.map((orientation) => {
+                  const isSelected = formData.orientations.includes(orientation);
                   return (
-                    <Button key={floor} type="button"
+                    <Button key={orientation} type="button"
                       variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => toggleArrayItem('flooring', floor)}>
-                      {t(`finishes.flooring.${floor}`)}
+                      className="h-6 px-1.5 text-xs"
+                      onClick={() => toggleArrayItem('orientations', orientation)}>
+                      {t(`orientation.short.${orientation}`)}
                     </Button>
                   );
                 })}
               </div>
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {(property.finishes?.flooring?.length ?? 0) > 0 ? (
-                  property.finishes!.flooring!.map((f) => (
-                    <Badge key={f} variant="secondary" className="text-xs">
-                      {t(`finishes.flooring.${f}`)}
+              <div className="flex flex-wrap gap-1">
+                {(property.orientations?.length ?? 0) > 0 ? (
+                  property.orientations!.map((o) => (
+                    <Badge key={o} variant="secondary" className="text-xs">
+                      {t(`orientation.short.${o}`)}
                     </Badge>
                   ))
                 ) : (
@@ -605,124 +454,283 @@ export function UnitFieldsBlock({
                 )}
               </div>
             )}
-          </fieldset>
+          </CardContent>
+        </Card>
 
-          {/* Frames & Glazing */}
-          <div className={`grid grid-cols-2 ${spacing.gap.sm}`}>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">{t('finishes.frames.label')}</Label>
+        {/* ─── Condition & Energy Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Wrench className={cn(iconSizes.sm, 'text-orange-500')} />
+              {t('condition.sectionTitle')}
+              <Zap className={cn(iconSizes.sm, 'text-green-500')} />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0">
+            <div className="space-y-2">
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
+                  {t('condition.sectionTitle')}
+                </Label>
+                {isEditing ? (
+                  <Select value={formData.condition}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('condition.sectionTitle')} /></SelectTrigger>
+                    <SelectContent>
+                      {CONDITION_OPTIONS.map((c) => (
+                        <SelectItem key={c} value={c} className="text-xs">{t(`condition.${c}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium">
+                    {property.condition ? t(`condition.${property.condition}`) : '—'}
+                  </p>
+                )}
+              </fieldset>
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Zap className={cn(iconSizes.xs, 'text-green-600')} />
+                  {t('energy.class')}
+                </Label>
+                {isEditing ? (
+                  <Select value={formData.energyClass}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('energy.class')} /></SelectTrigger>
+                    <SelectContent>
+                      {ENERGY_CLASS_OPTIONS.map((e) => (
+                        <SelectItem key={e} value={e} className="text-xs">{e}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium">{property.energy?.class || '—'}</p>
+                )}
+              </fieldset>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ─── Systems Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Thermometer className={cn(iconSizes.sm, 'text-red-500')} />
+              {t('systems.sectionTitle')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0">
+            <div className="space-y-2">
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
+                  {t('systems.heating.label')}
+                </Label>
+                {isEditing ? (
+                  <Select value={formData.heatingType}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('systems.heating.label')} /></SelectTrigger>
+                    <SelectContent>
+                      {HEATING_OPTIONS.map((h) => (
+                        <SelectItem key={h} value={h} className="text-xs">{t(`systems.heating.${h}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium">
+                    {property.systemsOverride?.heatingType ? t(`systems.heating.${property.systemsOverride.heatingType}`) : '—'}
+                  </p>
+                )}
+              </fieldset>
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
+                  {t('systems.cooling.label')}
+                </Label>
+                {isEditing ? (
+                  <Select value={formData.coolingType}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('systems.cooling.label')} /></SelectTrigger>
+                    <SelectContent>
+                      {COOLING_OPTIONS.map((c) => (
+                        <SelectItem key={c} value={c} className="text-xs">{t(`systems.cooling.${c}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium">
+                    {property.systemsOverride?.coolingType ? t(`systems.cooling.${property.systemsOverride.coolingType}`) : '—'}
+                  </p>
+                )}
+              </fieldset>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          ROW 2: Φινιρίσματα, Χαρακτηριστικά
+      ═══════════════════════════════════════════════════════════════ */}
+      <section className="grid grid-cols-2 gap-3">
+        {/* ─── Finishes Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Home className={cn(iconSizes.sm, 'text-teal-500')} />
+              {t('finishes.sectionTitle')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0 space-y-2">
+            {/* Flooring */}
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{t('finishes.flooring.label')}</Label>
               {isEditing ? (
-                <Select value={formData.windowFrames}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, windowFrames: value }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {FRAME_OPTIONS.map((f) => (
-                      <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-1">
+                  {FLOORING_OPTIONS.map((floor) => {
+                    const isSelected = formData.flooring.includes(floor);
+                    return (
+                      <Button key={floor} type="button"
+                        variant={isSelected ? 'default' : 'outline'} size="sm"
+                        className="h-6 px-1.5 text-xs"
+                        onClick={() => toggleArrayItem('flooring', floor)}>
+                        {t(`finishes.flooring.${floor}`)}
+                      </Button>
+                    );
+                  })}
+                </div>
               ) : (
-                <p className="text-sm font-medium">
-                  {property.finishes?.windowFrames ? t(`finishes.frames.${property.finishes.windowFrames}`) : '—'}
-                </p>
+                <div className="flex flex-wrap gap-1">
+                  {(property.finishes?.flooring?.length ?? 0) > 0 ? (
+                    property.finishes!.flooring!.map((f) => (
+                      <Badge key={f} variant="secondary" className="text-xs">
+                        {t(`finishes.flooring.${f}`)}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">—</p>
+                  )}
+                </div>
               )}
             </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">{t('finishes.glazing.label')}</Label>
+
+            {/* Frames & Glazing */}
+            <div className="grid grid-cols-2 gap-2">
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t('finishes.frames.label')}</Label>
+                {isEditing ? (
+                  <Select value={formData.windowFrames}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, windowFrames: value }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.frames.label')} /></SelectTrigger>
+                    <SelectContent>
+                      {FRAME_OPTIONS.map((f) => (
+                        <SelectItem key={f} value={f} className="text-xs">{t(`finishes.frames.${f}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium">
+                    {property.finishes?.windowFrames ? t(`finishes.frames.${property.finishes.windowFrames}`) : '—'}
+                  </p>
+                )}
+              </fieldset>
+              <fieldset className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t('finishes.glazing.label')}</Label>
+                {isEditing ? (
+                  <Select value={formData.glazing}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, glazing: value }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
+                    <SelectContent>
+                      {GLAZING_OPTIONS.map((g) => (
+                        <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium">
+                    {property.finishes?.glazing ? t(`finishes.glazing.${property.finishes.glazing}`) : '—'}
+                  </p>
+                )}
+              </fieldset>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ─── Features Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <Shield className={cn(iconSizes.sm, 'text-purple-500')} />
+              {t('features.sectionTitle')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0 space-y-2">
+            {/* Interior Features */}
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{t('features.interior.label')}</Label>
               {isEditing ? (
-                <Select value={formData.glazing}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, glazing: value }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('finishes.glazing.label')} /></SelectTrigger>
-                  <SelectContent>
-                    {GLAZING_OPTIONS.map((g) => (
-                      <SelectItem key={g} value={g} className="text-xs">{t(`finishes.glazing.${g}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-1">
+                  {INTERIOR_FEATURE_OPTIONS.map((feature) => {
+                    const isSelected = formData.interiorFeatures.includes(feature);
+                    return (
+                      <Button key={feature} type="button"
+                        variant={isSelected ? 'default' : 'outline'} size="sm"
+                        className="h-6 px-1.5 text-xs"
+                        onClick={() => toggleArrayItem('interiorFeatures', feature)}>
+                        {t(`features.interior.${feature}`)}
+                      </Button>
+                    );
+                  })}
+                </div>
               ) : (
-                <p className="text-sm font-medium">
-                  {property.finishes?.glazing ? t(`finishes.glazing.${property.finishes.glazing}`) : '—'}
-                </p>
+                <div className="flex flex-wrap gap-1">
+                  {(property.interiorFeatures?.length ?? 0) > 0 ? (
+                    property.interiorFeatures!.map((f) => (
+                      <Badge key={f} variant="secondary" className="text-xs">
+                        {t(`features.interior.${f}`)}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">—</p>
+                  )}
+                </div>
               )}
             </fieldset>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* ─── Features Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Shield className={cn(iconSizes.md, 'text-purple-500')} />
-            {t('features.sectionTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Interior Features */}
-          <fieldset className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">{t('features.interior.label')}</Label>
-            {isEditing ? (
-              <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-                {INTERIOR_FEATURE_OPTIONS.map((feature) => {
-                  const isSelected = formData.interiorFeatures.includes(feature);
-                  return (
-                    <Button key={feature} type="button"
-                      variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => toggleArrayItem('interiorFeatures', feature)}>
-                      {t(`features.interior.${feature}`)}
-                    </Button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {(property.interiorFeatures?.length ?? 0) > 0 ? (
-                  property.interiorFeatures!.map((f) => (
-                    <Badge key={f} variant="secondary" className="text-xs">
-                      {t(`features.interior.${f}`)}
-                    </Badge>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">—</p>
-                )}
-              </div>
-            )}
-          </fieldset>
-
-          {/* Security Features */}
-          <fieldset className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">{t('features.security.label')}</Label>
-            {isEditing ? (
-              <div className={`flex flex-wrap ${spacing.gap.sm}`}>
-                {SECURITY_FEATURE_OPTIONS.map((feature) => {
-                  const isSelected = formData.securityFeatures.includes(feature);
-                  return (
-                    <Button key={feature} type="button"
-                      variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => toggleArrayItem('securityFeatures', feature)}>
-                      {t(`features.security.${feature}`)}
-                    </Button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {(property.securityFeatures?.length ?? 0) > 0 ? (
-                  property.securityFeatures!.map((f) => (
-                    <Badge key={f} variant="secondary" className="text-xs">
-                      {t(`features.security.${f}`)}
-                    </Badge>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">—</p>
-                )}
-              </div>
-            )}
-          </fieldset>
-        </CardContent>
-      </Card>
+            {/* Security Features */}
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{t('features.security.label')}</Label>
+              {isEditing ? (
+                <div className="flex flex-wrap gap-1">
+                  {SECURITY_FEATURE_OPTIONS.map((feature) => {
+                    const isSelected = formData.securityFeatures.includes(feature);
+                    return (
+                      <Button key={feature} type="button"
+                        variant={isSelected ? 'default' : 'outline'} size="sm"
+                        className="h-6 px-1.5 text-xs"
+                        onClick={() => toggleArrayItem('securityFeatures', feature)}>
+                        {t(`features.security.${feature}`)}
+                      </Button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {(property.securityFeatures?.length ?? 0) > 0 ? (
+                    property.securityFeatures!.map((f) => (
+                      <Badge key={f} variant="secondary" className="text-xs">
+                        {t(`features.security.${f}`)}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">—</p>
+                  )}
+                </div>
+              )}
+            </fieldset>
+          </CardContent>
+        </Card>
+      </section>
     </form>
   );
 }
