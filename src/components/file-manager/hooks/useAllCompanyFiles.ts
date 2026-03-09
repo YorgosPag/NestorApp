@@ -40,7 +40,7 @@ import { FILE_STATUS } from '@/config/domain-constants';
 /**
  * Supported entity types for file stats
  */
-type FileEntityType = 'project' | 'building' | 'unit' | 'contact';
+type FileEntityType = 'project' | 'building' | 'unit' | 'contact' | 'company';
 
 /**
  * Common file categories for grouping
@@ -77,6 +77,7 @@ export interface FilesByEntity {
   buildings: Record<string, FileRecord[]>;
   units: Record<string, FileRecord[]>;
   contacts: Record<string, FileRecord[]>;
+  companies: Record<string, FileRecord[]>;
 }
 
 /**
@@ -150,6 +151,7 @@ function groupFilesByEntity(files: FileRecord[]): FilesByEntity {
     buildings: {},
     units: {},
     contacts: {},
+    companies: {},
   };
 
   for (const file of files) {
@@ -170,6 +172,9 @@ function groupFilesByEntity(files: FileRecord[]): FilesByEntity {
         break;
       case 'contact':
         targetGroup = grouped.contacts;
+        break;
+      case 'company':
+        targetGroup = grouped.companies;
         break;
       default:
         // Skip unknown entity types
@@ -239,6 +244,7 @@ function calculateStats(files: FileRecord[]): FileStats {
       building: 0,
       unit: 0,
       contact: 0,
+      company: 0,
     },
     byCategory: {
       photos: 0,
@@ -250,7 +256,7 @@ function calculateStats(files: FileRecord[]): FileStats {
     },
   };
 
-  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
+  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
   const supportedCategories: FileGroupCategory[] = ['photos', 'videos', 'documents', 'contracts', 'floorplans'];
 
   for (const file of files) {

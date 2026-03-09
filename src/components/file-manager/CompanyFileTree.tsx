@@ -53,7 +53,7 @@ import {
  * Supported entity types for file tree grouping
  * Subset of EntityType that makes sense for file management
  */
-type FileEntityType = 'project' | 'building' | 'unit' | 'contact';
+type FileEntityType = 'project' | 'building' | 'unit' | 'contact' | 'company';
 
 export type GroupingMode = 'entity' | 'category';
 export type ViewMode = 'business' | 'technical';
@@ -97,6 +97,7 @@ const ENTITY_ICONS: Record<FileEntityType, React.ReactNode> = {
   building: <Building className="h-4 w-4 text-orange-500" />,
   unit: <Home className="h-4 w-4 text-green-500" />,
   contact: <Users className="h-4 w-4 text-purple-500" />,
+  company: <Building className="h-4 w-4 text-indigo-500" />,
 };
 
 /**
@@ -133,6 +134,7 @@ const ENTITY_LABELS: Record<FileEntityType, string> = {
   building: 'files.entities.buildings',
   unit: 'files.entities.units',
   contact: 'files.entities.contacts',
+  company: 'files.entities.company',
 };
 
 const CATEGORY_LABELS: Partial<Record<FileCategory | 'other', string>> = {
@@ -331,9 +333,10 @@ function buildTreeByEntity(
     building: {},
     unit: {},
     contact: {},
+    company: {},
   };
 
-  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
+  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
 
   for (const file of files) {
     const entityType = file.entityType as string;
@@ -355,7 +358,7 @@ function buildTreeByEntity(
   }
 
   // Build tree
-  const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
+  const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
   const entityChildren: TreeNodeData[] = [];
 
   for (const entityType of entityTypes) {
@@ -464,7 +467,7 @@ function buildTreeByCategory(
     { meta: StudyGroupMeta | null; entities: Record<FileEntityType, FileRecord[]> }
   >();
 
-  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
+  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
 
   for (const file of files) {
     const group = getGroupForPurpose(file.purpose);
@@ -482,7 +485,7 @@ function buildTreeByCategory(
         : null;
       groupedByStudyGroup.set(key, {
         meta,
-        entities: { project: [], building: [], unit: [], contact: [] },
+        entities: { project: [], building: [], unit: [], contact: [], company: [] },
       });
     }
     groupedByStudyGroup.get(key)!.entities[entityType as FileEntityType].push(file);
@@ -499,7 +502,7 @@ function buildTreeByCategory(
   const categoryChildren: TreeNodeData[] = [];
 
   for (const [key, { meta, entities }] of sortedGroups) {
-    const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
+    const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact', 'company'];
     const entityFolders: TreeNodeData[] = [];
 
     for (const entityType of entityTypes) {
