@@ -318,7 +318,7 @@ export function FileManagerPageContent() {
   const [triggerError, setTriggerError] = useState(false);
 
   // State
-  const [viewMode, setViewMode] = useState<ViewMode>('tree');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [treeViewMode, setTreeViewMode] = useState<TreeViewMode>('business');
   const [groupingMode, setGroupingMode] = useState<GroupingMode>('entity');
   const [activeTab, setActiveTab] = useState<ActiveTab>('files');
