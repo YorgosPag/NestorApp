@@ -95,20 +95,17 @@ import { CompanyFileTree, type GroupingMode, type ViewMode as TreeViewMode } fro
 import { FilesList } from '@/components/shared/files/FilesList';
 import { TrashView } from '@/components/shared/files/TrashView';
 import { InboxView } from '@/components/shared/files/InboxView';
-import { formatFileSize } from '@/utils/file-validation';
+import { formatFileSize, getFileExtension } from '@/utils/file-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileRecordService } from '@/services/file-record.service';
 import { BatchActionsBar } from './BatchActionsBar';
 import { useFileClassification, isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
 import { FolderManager } from '@/components/shared/files/FolderManager';
 import { FileFolderService } from '@/services/file-folder.service';
-import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage, auth } from '@/lib/firebase';
+import { generateUploadThumbnail, buildThumbnailPath } from '@/components/shared/files/utils/generate-upload-thumbnail';
+import { useNotifications } from '@/components/ui/notification-toast';
 
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
@@ -371,8 +368,10 @@ export function FileManagerPageContent() {
     document.addEventListener('mouseup', onMouseUp);
   }, []);
 
-  // 🏢 ENTERPRISE: Upload dialog state
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  // 🏢 ENTERPRISE: Upload via hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const { success: showSuccess, error: showError } = useNotifications();
 
   // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
   const { classifyBatch, classifyingIds } = useFileClassification();
@@ -649,6 +648,90 @@ export function FileManagerPageContent() {
     setSelectedIds(new Set());
     refetch();
   }, [user?.uid, refetch]);
+
+  // 🏢 ENTERPRISE: Direct file upload (ADR-031 canonical pipeline)
+  const handleFileUpload = useCallback(async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0 || !companyId || !user?.uid) return;
+    setUploading(true);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      try {
+        const ext = getFileExtension(file.name);
+
+        // Step A: Create pending FileRecord
+        const { fileId, storagePath } = await FileRecordService.createPendingFileRecord({
+          companyId,
+          entityType: 'company',
+          entityId: companyId,
+          domain: 'admin',
+          category: 'documents',
+          originalFilename: file.name,
+          ext,
+          contentType: file.type,
+          createdBy: user.uid,
+        });
+
+        // Firestore propagation wait
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Step B: Upload binary to Storage
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, file);
+        const downloadUrl = await getDownloadURL(storageRef);
+
+        // ADR-191: Generate thumbnail
+        let thumbnailUrl: string | undefined;
+        try {
+          const thumbBlob = await generateUploadThumbnail(file, file.type);
+          if (thumbBlob) {
+            const thumbPath = buildThumbnailPath(storagePath);
+            const thumbRef = ref(storage, thumbPath);
+            await uploadBytes(thumbRef, thumbBlob, { contentType: 'image/webp' });
+            thumbnailUrl = await getDownloadURL(thumbRef);
+          }
+        } catch {
+          // Non-blocking
+        }
+
+        // Step C: Finalize FileRecord
+        await FileRecordService.finalizeFileRecord({
+          fileId,
+          sizeBytes: file.size,
+          downloadUrl,
+          thumbnailUrl,
+        });
+
+        // ADR-191: AI auto-classify (fire-and-forget)
+        if (isAIClassifiable(file.type)) {
+          fetch('/api/files/classify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileId }),
+          }).catch(() => { /* non-blocking */ });
+        }
+
+        successCount++;
+      } catch (err) {
+        failCount++;
+        logger.error('Upload failed', { file: file.name, error: String(err) });
+      }
+    }
+
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (successCount > 0) {
+      showSuccess(`${successCount} αρχεί${successCount === 1 ? 'ο' : 'α'} ανέβηκ${successCount === 1 ? 'ε' : 'αν'}`);
+      refetch();
+    }
+    if (failCount > 0) {
+      showError(`${failCount} αρχεί${failCount === 1 ? 'ο' : 'α'} απέτυχ${failCount === 1 ? 'ε' : 'αν'}`);
+    }
+  }, [companyId, user?.uid, refetch, showSuccess, showError]);
 
   // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
   const handleAIClassify = useCallback(async () => {
@@ -952,11 +1035,12 @@ export function FileManagerPageContent() {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() => setShowUploadDialog(true)}
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploading}
                               aria-label={t('manager.addFiles')}
                             >
                               <Upload className={`${iconSizes.sm} mr-2`} />
-                              {t('manager.addFiles')}
+                              {uploading ? 'Ανέβασμα...' : t('manager.addFiles')}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{t('manager.addFilesTooltip')}</TooltipContent>
@@ -1184,26 +1268,15 @@ export function FileManagerPageContent() {
         </section>
       </main>
 
-      {/* 🏢 ENTERPRISE: Upload Dialog — reuses EntityFilesManager (ADR-031 canonical pipeline) */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('manager.addFiles')}</DialogTitle>
-          </DialogHeader>
-          {showUploadDialog && companyId && user?.uid && (
-            <EntityFilesManager
-              entityType="company"
-              entityId={companyId}
-              companyId={companyId}
-              domain="admin"
-              category="documents"
-              currentUserId={user.uid}
-              companyName={activeWorkspace?.displayName}
-              fetchAllDomains
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* 🏢 ENTERPRISE: Hidden file input for direct upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => handleFileUpload(e.target.files)}
+        accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.dwg,.dxf"
+      />
     </>
   );
 }
