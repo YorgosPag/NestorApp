@@ -35,6 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
+import { PdfCanvasViewer } from './PdfCanvasViewer';
 import type { FileRecord } from '@/types/file-record';
 
 // ============================================================================
@@ -77,16 +78,9 @@ function getPreviewIcon(previewType: PreviewType) {
 // SUB-COMPONENTS
 // ============================================================================
 
-/** PDF preview via iframe */
+/** PDF preview via pdfjs-dist canvas (theme-aware) */
 function PdfPreview({ url, title }: { url: string; title: string }) {
-  return (
-    <iframe
-      src={url}
-      title={title}
-      className="w-full h-full border-0 rounded-b-lg"
-      loading="lazy"
-    />
-  );
+  return <PdfCanvasViewer url={url} title={title} className="flex-1" />;
 }
 
 /** Image preview with zoom/rotate */
