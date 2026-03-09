@@ -420,7 +420,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
       >
         <canvas
           ref={canvasRef}
-          className="shadow-md rounded"
+          className="shadow-md rounded bg-white"
           aria-label={title}
         />
       </div>
