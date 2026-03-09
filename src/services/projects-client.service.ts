@@ -136,13 +136,16 @@ export async function updateProjectClient(
     logger.info('Project updated successfully', { projectId });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Dynamic dispatch: only include non-undefined fields to avoid overwriting existing values
+    const dispatchUpdates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        dispatchUpdates[key] = value;
+      }
+    }
     RealtimeService.dispatch('PROJECT_UPDATED', {
       projectId,
-      updates: {
-        name: updates.name,
-        title: updates.title,
-        status: updates.status,
-      },
+      updates: dispatchUpdates,
       timestamp: Date.now()
     });
 
