@@ -66,7 +66,7 @@ interface PdfPageProxy {
   render(params: {
     canvasContext: CanvasRenderingContext2D;
     viewport: { width: number; height: number };
-  }): { promise: Promise<void> };
+  }): { promise: Promise<void>; cancel(): void };
 }
 
 // ============================================================================
@@ -107,6 +107,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const docRef = useRef<PdfDocProxy | null>(null);
+  const renderTaskRef = useRef<{ cancel(): void } | null>(null);
 
   const [state, setState] = useState<PdfState>({
     numPages: 0,
@@ -183,6 +184,12 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
     const container = containerRef.current;
     if (!doc || !canvas || !container || state.loading) return;
 
+    // Cancel any in-flight render before starting a new one
+    if (renderTaskRef.current) {
+      renderTaskRef.current.cancel();
+      renderTaskRef.current = null;
+    }
+
     let cancelled = false;
 
     async function renderPage() {
@@ -207,22 +214,28 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        await page.render({
-          canvasContext: ctx,
-          viewport,
-        }).promise;
+        const task = page.render({ canvasContext: ctx, viewport });
+        renderTaskRef.current = task;
+        await task.promise;
+        renderTaskRef.current = null;
       } catch (err) {
-        if (!cancelled) {
-          setState((s) => ({
-            ...s,
-            error: err instanceof Error ? err.message : 'Render error',
-          }));
-        }
+        // Ignore cancellation errors from pdfjs
+        if (cancelled || (err instanceof Error && err.message.includes('Rendering cancelled'))) return;
+        setState((s) => ({
+          ...s,
+          error: err instanceof Error ? err.message : 'Render error',
+        }));
       }
     }
 
     renderPage();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
+      }
+    };
   }, [state.currentPage, state.scale, state.rotation, state.loading]);
 
   // Fit to container width on first load
