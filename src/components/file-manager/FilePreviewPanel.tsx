@@ -79,8 +79,8 @@ function getPreviewIcon(previewType: PreviewType) {
 // ============================================================================
 
 /** PDF preview via pdfjs-dist canvas (theme-aware) */
-function PdfPreview({ url, storagePath, title }: { url: string; storagePath: string; title: string }) {
-  return <PdfCanvasViewer url={url} storagePath={storagePath} title={title} className="flex-1" />;
+function PdfPreview({ url, title }: { url: string; title: string }) {
+  return <PdfCanvasViewer url={url} title={title} className="flex-1" />;
 }
 
 /** Image preview with zoom/rotate */
@@ -302,8 +302,8 @@ export function FilePreviewPanel({ file, onClose, className }: FilePreviewPanelP
       </div>
 
       {/* Preview area */}
-      {previewType === 'pdf' && file.downloadUrl && file.storagePath && (
-        <PdfPreview url={file.downloadUrl} storagePath={file.storagePath} title={displayName} />
+      {previewType === 'pdf' && file.downloadUrl && (
+        <PdfPreview url={file.downloadUrl} title={displayName} />
       )}
       {previewType === 'image' && file.downloadUrl && (
         <ImagePreview url={file.downloadUrl} title={displayName} />

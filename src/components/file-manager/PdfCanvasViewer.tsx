@@ -26,20 +26,16 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ref, getBytes } from 'firebase/storage';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { storage } from '@/lib/firebase';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 interface PdfCanvasViewerProps {
-  /** PDF download URL (used for "open in new tab") */
+  /** PDF download URL (Firebase Storage) */
   url: string;
-  /** Firebase Storage path (used to fetch PDF bytes directly, bypassing CORS) */
-  storagePath: string;
   /** Accessible title */
   title: string;
   /** Optional className */
@@ -106,7 +102,7 @@ async function loadPdfJs() {
 // COMPONENT
 // ============================================================================
 
-export function PdfCanvasViewer({ url, storagePath, title, className }: PdfCanvasViewerProps) {
+export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps) {
   const { t } = useTranslation('files');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -129,9 +125,7 @@ export function PdfCanvasViewer({ url, storagePath, title, className }: PdfCanva
       setState((s) => ({ ...s, loading: true, error: null }));
 
       try {
-        console.log('[PdfCanvasViewer] Loading pdfjs-dist...');
         const lib = await loadPdfJs();
-        console.log('[PdfCanvasViewer] pdfjs-dist loaded');
         if (cancelled) return;
 
         // Cleanup previous document
@@ -140,17 +134,14 @@ export function PdfCanvasViewer({ url, storagePath, title, className }: PdfCanva
           docRef.current = null;
         }
 
-        // Use Firebase Storage SDK directly — bypasses CORS restrictions
-        console.log('[PdfCanvasViewer] Fetching bytes from:', storagePath);
-        const storageRef = ref(storage, storagePath);
-        const bytes = await getBytes(storageRef);
-        console.log('[PdfCanvasViewer] Got bytes:', bytes.byteLength);
-        const data = new Uint8Array(bytes);
+        // Proxy through /api/download to bypass CORS on Firebase Storage URLs
+        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=preview.pdf`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`Download proxy: HTTP ${response.status}`);
+        const data = new Uint8Array(await response.arrayBuffer());
         if (cancelled) return;
 
-        console.log('[PdfCanvasViewer] Loading PDF document...');
         const doc = await lib.getDocument({ data }).promise;
-        console.log('[PdfCanvasViewer] PDF loaded, pages:', doc.numPages);
         if (cancelled) {
           await doc.destroy();
           return;
@@ -183,7 +174,7 @@ export function PdfCanvasViewer({ url, storagePath, title, className }: PdfCanva
         docRef.current = null;
       }
     };
-  }, [storagePath]);
+  }, [url]);
 
   // Render current page
   useEffect(() => {
