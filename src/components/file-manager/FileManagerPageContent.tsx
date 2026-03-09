@@ -662,7 +662,9 @@ export function FileManagerPageContent() {
         successCount++;
       } catch (err) {
         failCount++;
-        logger.error('Upload failed', { file: file.name, error: String(err) });
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.error('Upload failed', { file: file.name, error: msg });
+        console.error('[FileManager] Upload error:', err);
       }
     }
 
