@@ -2307,6 +2307,19 @@ service cloud.firestore {
       allow write: if false; // Server-side only
     }
 
+    // =========================================================================
+    // 📄 FILE_AUDIT_LOG - ENTERPRISE FILE AUDIT TRAIL (ADR-191 Phase 3.1)
+    // =========================================================================
+    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 🏢 ENTERPRISE: Records every file operation for compliance traceability
+    // 🔒 READ: Authenticated users (own company files)
+    // ✏️ WRITE: Authenticated users (audit entries created client-side)
+    match /file_audit_log/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Audit logs are immutable
+    }
+
     match /system_audit_logs/{logId} {
       allow read: if isAuthenticated();
       allow write: if false; // Server-side only
