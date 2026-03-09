@@ -36,6 +36,7 @@ export interface UnitFormData {
   code: string;
   type: UnitType | '';
   buildingId: string;
+  floorId: string;
   floor: number | '';
   operationalStatus: OperationalStatus;
   // Tab 2: Details
@@ -51,6 +52,7 @@ const INITIAL_FORM_DATA: UnitFormData = {
   code: '',
   type: '',
   buildingId: '',
+  floorId: '',
   floor: '',
   operationalStatus: 'draft',
   // Tab 2: Details
@@ -125,7 +127,7 @@ export function useUnitForm({
           buildingId: formData.buildingId,
           building: '',
           floor: formData.floor !== '' ? formData.floor : 0,
-          floorId: '',
+          floorId: formData.floorId || '',
           project: '',
           status: 'for-sale',
           operationalStatus: formData.operationalStatus,

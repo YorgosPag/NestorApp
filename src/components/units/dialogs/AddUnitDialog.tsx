@@ -22,7 +22,7 @@
  * @see ADR-034
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
-import { Home, ClipboardList } from 'lucide-react';
+import { Home, ClipboardList, Loader2 } from 'lucide-react';
 // ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
 import { cn } from '@/lib/utils';
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
@@ -54,6 +54,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ENTERPRISE: Form state management hook
 import { useUnitForm } from '../hooks/useUnitForm';
+// ENTERPRISE: API client for floor fetching
+import { apiClient } from '@/lib/api/enterprise-api-client';
 // ENTERPRISE: Navigation entities for icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { UnitType, OperationalStatus } from '@/types/unit';
@@ -125,6 +127,47 @@ export function AddUnitDialog({
     handleNumberChange,
     resetForm,
   } = useUnitForm({ onUnitAdded, onOpenChange });
+
+  // ENTERPRISE: Floor options loaded from API based on selected building
+  const [floorOptions, setFloorOptions] = useState<Array<{ id: string; number: number; name: string }>>([]);
+  const [floorsLoading, setFloorsLoading] = useState(false);
+
+  // Fetch floors when buildingId changes
+  const fetchFloorsForBuilding = useCallback(async (buildingId: string) => {
+    if (!buildingId) {
+      setFloorOptions([]);
+      return;
+    }
+    setFloorsLoading(true);
+    try {
+      interface FloorsApiResult {
+        success: boolean;
+        floors: Array<{ id: string; number: number; name: string }>;
+      }
+      const result = await apiClient.get<FloorsApiResult>(
+        `/api/floors?buildingId=${buildingId}`
+      );
+      if (result?.floors) {
+        const sorted = [...result.floors].sort((a, b) => a.number - b.number);
+        setFloorOptions(sorted);
+      } else {
+        setFloorOptions([]);
+      }
+    } catch {
+      setFloorOptions([]);
+    } finally {
+      setFloorsLoading(false);
+    }
+  }, []);
+
+  // Watch buildingId changes to reload floors
+  useEffect(() => {
+    if (formData.buildingId) {
+      fetchFloorsForBuilding(formData.buildingId);
+    } else {
+      setFloorOptions([]);
+    }
+  }, [formData.buildingId, fetchFloorsForBuilding]);
 
   // ENTERPRISE: Active tab state
   const [activeTab, setActiveTab] = useState('basic');
@@ -261,7 +304,12 @@ export function AddUnitDialog({
                   <FormInput>
                     <Select
                       value={formData.buildingId}
-                      onValueChange={(value) => handleSelectChange('buildingId', value)}
+                      onValueChange={(value) => {
+                        handleSelectChange('buildingId', value);
+                        // Reset floor selection when building changes
+                        handleSelectChange('floorId', '');
+                        handleNumberChange('floor', '');
+                      }}
                       disabled={loading || buildingsLoading}
                     >
                       <SelectTrigger className={errors.buildingId ? 'border-destructive' : ''}>
@@ -281,21 +329,54 @@ export function AddUnitDialog({
                   </FormInput>
                 </FormField>
 
-                {/* Floor */}
+                {/* Floor — populated from registered floors of selected building */}
                 <FormField
                   label={t('dialog.addUnit.fields.floor')}
-                  htmlFor="floor"
+                  htmlFor="floorId"
                 >
                   <FormInput>
-                    <Input
-                      id="floor"
-                      name="floor"
-                      type="number"
-                      value={formData.floor}
-                      onChange={(e) => handleNumberChange('floor', e.target.value)}
-                      placeholder={t('dialog.addUnit.placeholders.floor')}
-                      disabled={loading}
-                    />
+                    {floorsLoading ? (
+                      <section className="flex items-center gap-2 h-10 text-muted-foreground text-sm">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>{t('dialog.addUnit.loadingFloors')}</span>
+                      </section>
+                    ) : floorOptions.length > 0 ? (
+                      <Select
+                        value={formData.floorId}
+                        onValueChange={(value) => {
+                          const selectedFloor = floorOptions.find(f => f.id === value);
+                          handleSelectChange('floorId', value);
+                          if (selectedFloor) {
+                            handleNumberChange('floor', String(selectedFloor.number));
+                          }
+                        }}
+                        disabled={loading || !formData.buildingId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('dialog.addUnit.placeholders.floor')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {floorOptions.map((floor) => (
+                            <SelectItem key={floor.id} value={floor.id}>
+                              {floor.name} ({t('dialog.addUnit.floorLevel')} {floor.number})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="floor"
+                        name="floor"
+                        type="number"
+                        value={formData.floor}
+                        onChange={(e) => handleNumberChange('floor', e.target.value)}
+                        placeholder={formData.buildingId
+                          ? t('dialog.addUnit.noFloors')
+                          : t('dialog.addUnit.placeholders.floor')
+                        }
+                        disabled={loading}
+                      />
+                    )}
                   </FormInput>
                 </FormField>
 

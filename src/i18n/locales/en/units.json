@@ -391,7 +391,10 @@
       "messages": {
         "success": "Unit created successfully!",
         "error": "Error creating unit"
-      }
+      },
+      "loadingFloors": "Loading floors...",
+      "noFloors": "No registered floors",
+      "floorLevel": "Level"
     },
     "deleteConfirmation": {
       "title": "Delete Confirmation",
