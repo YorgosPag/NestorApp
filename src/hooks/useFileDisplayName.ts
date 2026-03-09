@@ -47,10 +47,15 @@ function addExtension(displayName: string, ext?: string): string {
   return `${displayName}${normalizedExt}`;
 }
 
-// 🏢 ADR-191: Purpose → entry point label map (built once at module init)
-const purposeToLabelMap = new Map<string, { el: string; en: string }>(
-  STUDY_ENTRIES.map((e) => [e.purpose, e.label])
-);
+// 🏢 ADR-191: Purpose → entry point label map
+// Lazy-initialized to prevent TDZ issues with Webpack module concatenation + Terser
+let _purposeToLabelMap: Map<string, { el: string; en: string }> | null = null;
+function getPurposeToLabelMap(): Map<string, { el: string; en: string }> {
+  if (!_purposeToLabelMap) {
+    _purposeToLabelMap = new Map(STUDY_ENTRIES.map((e) => [e.purpose, e.label]));
+  }
+  return _purposeToLabelMap;
+}
 
 /**
  * 🏢 ENTERPRISE: Hook for runtime display name translation
@@ -108,7 +113,7 @@ export function useFileDisplayName() {
       }
 
       // 🏢 ADR-191: Study entry points get their label from STUDY_ENTRIES config
-      const entryPointLabel = purposeToLabelMap.get(fileRecord.purpose);
+      const entryPointLabel = getPurposeToLabelMap().get(fileRecord.purpose);
       if (entryPointLabel) {
         // Use entry point label in current language (e.g., "Αίτηση Οικοδομικής Άδειας")
         const lang = i18n.language as 'el' | 'en';

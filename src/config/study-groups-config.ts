@@ -145,12 +145,17 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
 
 // ─── Lookup Helpers ──────────────────────────────────────────────────────────
 
-const groupMetaMap = new Map<StudyGroup, StudyGroupMeta>(
-  STUDY_GROUPS.map((g) => [g.group, g])
-);
+// Lazy-initialized to prevent TDZ issues with Webpack module concatenation + Terser
+let _groupMetaMap: Map<StudyGroup, StudyGroupMeta> | null = null;
+function getGroupMetaMap(): Map<StudyGroup, StudyGroupMeta> {
+  if (!_groupMetaMap) {
+    _groupMetaMap = new Map(STUDY_GROUPS.map((g) => [g.group, g]));
+  }
+  return _groupMetaMap;
+}
 
 export function getStudyGroupMeta(group: StudyGroup): StudyGroupMeta | undefined {
-  return groupMetaMap.get(group);
+  return getGroupMetaMap().get(group);
 }
 
 export function getStudyGroupsForEntity(entityLevel: EntityLevel): readonly StudyGroupMeta[] {
@@ -163,16 +168,22 @@ import { STUDY_ENTRIES } from './upload-entry-points/entries-studies';
 
 /**
  * Reverse map: purpose → StudyGroup.
- * Built once at module init from STUDY_ENTRIES.
+ * Lazy-initialized to prevent TDZ issues with Webpack module concatenation + Terser.
  *
  * No circular dependency: entries-studies.ts → types.ts → `import type` from this file.
  * Type-only imports are erased at runtime.
  */
-const purposeToGroupMap = new Map<string, StudyGroup>(
-  STUDY_ENTRIES
-    .filter((e): e is typeof e & { group: StudyGroup } => e.group != null)
-    .map((e) => [e.purpose, e.group])
-);
+let _purposeToGroupMap: Map<string, StudyGroup> | null = null;
+function getPurposeToGroupMap(): Map<string, StudyGroup> {
+  if (!_purposeToGroupMap) {
+    _purposeToGroupMap = new Map(
+      STUDY_ENTRIES
+        .filter((e): e is typeof e & { group: StudyGroup } => e.group != null)
+        .map((e) => [e.purpose, e.group])
+    );
+  }
+  return _purposeToGroupMap;
+}
 
 /**
  * Resolve a file's `purpose` field to its StudyGroup.
@@ -180,7 +191,7 @@ const purposeToGroupMap = new Map<string, StudyGroup>(
  */
 export function getGroupForPurpose(purpose: string | undefined): StudyGroup | null {
   if (!purpose) return null;
-  return purposeToGroupMap.get(purpose) ?? null;
+  return getPurposeToGroupMap().get(purpose) ?? null;
 }
 
 // ─── File Grouping ──────────────────────────────────────────────────────────
