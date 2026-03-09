@@ -116,6 +116,7 @@ export function BuildingContractsTab({
       category="documents"
       purpose="document"
       entryPointExcludeCategories={['photos', 'videos']}
+      fetchAllDomains
       floors={floors}
       onNavigateToFloors={onNavigateToTab ? () => onNavigateToTab('floors') : undefined}
     />
