@@ -91,7 +91,8 @@ import { CompanyFileTree, type GroupingMode, type ViewMode as TreeViewMode } fro
 import { FilesList } from '@/components/shared/files/FilesList';
 import { TrashView } from '@/components/shared/files/TrashView';
 import { InboxView } from '@/components/shared/files/InboxView';
-import { formatFileSize, getFileExtension } from '@/utils/file-validation';
+import { formatFileSize } from '@/utils/file-validation';
+import { getFileExtension } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileRecordService } from '@/services/file-record.service';
 import { BatchActionsBar } from './BatchActionsBar';
