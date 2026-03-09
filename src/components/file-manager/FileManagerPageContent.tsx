@@ -40,6 +40,9 @@ import {
   Video,
   Upload,
   Inbox,
+  FolderOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -327,6 +330,7 @@ export function FileManagerPageContent() {
 
   // 📁 ENTERPRISE: Virtual folder selection (ADR-191 Phase 4.4)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [showFolders, setShowFolders] = useState(false);
 
   // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
   const { classifyBatch, classifyingIds } = useFileClassification();
@@ -786,6 +790,25 @@ export function FileManagerPageContent() {
                   {/* View mode toggles - Only show on files tab */}
                   {activeTab === 'files' && (
                     <>
+                      {/* Folder panel toggle */}
+                      <li>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={showFolders ? 'default' : 'ghost'}
+                              size="sm"
+                              onClick={() => setShowFolders((prev) => !prev)}
+                              aria-label={t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}
+                              aria-pressed={showFolders}
+                              className={cn('px-2', showFolders && 'bg-primary text-primary-foreground')}
+                            >
+                              {showFolders ? <PanelLeftClose className={iconSizes.sm} /> : <FolderOpen className={iconSizes.sm} />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}</TooltipContent>
+                        </Tooltip>
+                      </li>
+
                       <li className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
                         {/* Gallery View */}
                         <Tooltip>
@@ -986,21 +1009,25 @@ export function FileManagerPageContent() {
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
                 <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
-                  {/* 📁 Folder sidebar (ADR-191 Phase 4.4) */}
-                  <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="overflow-hidden">
-                    <FolderManager
-                      companyId={companyId}
-                      currentUserId={user?.uid || ''}
-                      selectedFolderId={selectedFolderId}
-                      onFolderSelect={setSelectedFolderId}
-                      onFilesDropped={handleFilesDropped}
-                      className="h-full"
-                    />
-                  </ResizablePanel>
-                  <ResizableHandle />
+                  {/* 📁 Folder sidebar — collapsible (ADR-191 Phase 4.4) */}
+                  {showFolders && (
+                    <>
+                      <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="overflow-hidden">
+                        <FolderManager
+                          companyId={companyId}
+                          currentUserId={user?.uid || ''}
+                          selectedFolderId={selectedFolderId}
+                          onFolderSelect={setSelectedFolderId}
+                          onFilesDropped={handleFilesDropped}
+                          className="h-full"
+                        />
+                      </ResizablePanel>
+                      <ResizableHandle />
+                    </>
+                  )}
 
                   {/* Left-center panel: file browser */}
-                  <ResizablePanel defaultSize={30} minSize={15} className="overflow-auto">
+                  <ResizablePanel defaultSize={showFolders ? 30 : 45} minSize={15} className="overflow-auto">
                     {filteredFiles.length === 0 ? (
                       <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
                         <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
