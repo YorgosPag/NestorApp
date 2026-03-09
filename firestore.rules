@@ -2320,6 +2320,20 @@ service cloud.firestore {
       allow update, delete: if false; // Audit logs are immutable
     }
 
+    // =========================================================================
+    // 🔗 FILE_SHARES - ENTERPRISE SHAREABLE LINKS (ADR-191 Phase 4.2)
+    // =========================================================================
+    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 🏢 ENTERPRISE: Shareable file links with expiration and password
+    // 🔒 READ: Public (for share validation) + Authenticated (management)
+    // ✏️ WRITE: Authenticated users can create, update download count
+    match /file_shares/{shareId} {
+      allow read: if true; // Public read for share validation
+      allow create: if isAuthenticated();
+      allow update: if true; // Allow download count increment from public page
+      allow delete: if isAuthenticated();
+    }
+
     match /system_audit_logs/{logId} {
       allow read: if isAuthenticated();
       allow write: if false; // Server-side only

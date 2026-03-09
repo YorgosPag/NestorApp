@@ -36,6 +36,9 @@ export { VersionHistory } from './VersionHistory';
 // Audit log (ADR-191 Phase 3.1)
 export { AuditLogPanel } from './AuditLogPanel';
 
+// Share dialog (ADR-191 Phase 4.2)
+export { ShareDialog } from './ShareDialog';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {

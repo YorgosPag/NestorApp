@@ -211,6 +211,9 @@ export const COLLECTIONS = {
   // 📄 FILE AUDIT LOG (ADR-191: Enterprise Document Management — Phase 3.1)
   FILE_AUDIT_LOG: process.env.NEXT_PUBLIC_FILE_AUDIT_LOG_COLLECTION || 'file_audit_log',
 
+  // 🔗 FILE SHARES (ADR-191: Enterprise Document Management — Phase 4.2)
+  FILE_SHARES: process.env.NEXT_PUBLIC_FILE_SHARES_COLLECTION || 'file_shares',
+
   // 📐 BOQ / QUANTITY SURVEYING (ADR-175: Σύστημα Επιμετρήσεων)
   BOQ_ITEMS: process.env.NEXT_PUBLIC_BOQ_ITEMS_COLLECTION || 'boq_items',
   BOQ_CATEGORIES: process.env.NEXT_PUBLIC_BOQ_CATEGORIES_COLLECTION || 'boq_categories',

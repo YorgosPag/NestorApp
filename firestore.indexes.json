@@ -1305,6 +1305,34 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "file_shares",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "token",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "file_shares",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "fileId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
