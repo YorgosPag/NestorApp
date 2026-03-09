@@ -1008,87 +1008,87 @@ export function FileManagerPageContent() {
             {/* Content — Split panel: file list (left) + preview (right) */}
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
-                <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
+                <section className="flex h-full min-h-[500px]">
                   {/* 📁 Folder sidebar — collapsible (ADR-191 Phase 4.4) */}
                   {showFolders && (
-                    <>
-                      <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="overflow-hidden">
-                        <FolderManager
-                          companyId={companyId}
-                          currentUserId={user?.uid || ''}
-                          selectedFolderId={selectedFolderId}
-                          onFolderSelect={setSelectedFolderId}
-                          onFilesDropped={handleFilesDropped}
-                          className="h-full"
-                        />
-                      </ResizablePanel>
-                      <ResizableHandle />
-                    </>
-                  )}
-
-                  {/* Left-center panel: file browser */}
-                  <ResizablePanel defaultSize={showFolders ? 30 : 45} minSize={15} className="overflow-auto">
-                    {filteredFiles.length === 0 ? (
-                      <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
-                        <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-                        <p className="text-muted-foreground text-center">
-                          {searchTerm || filters.category !== 'all' || filters.entityType !== 'all'
-                            ? t('manager.noSearchResults')
-                            : t('manager.noFiles')}
-                        </p>
-                      </section>
-                    ) : viewMode === 'gallery' ? (
-                      /* Card/Gallery View */
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
-                        {filteredFiles.map((file) => (
-                          <FileCard
-                            key={file.id}
-                            file={file}
-                            onClick={handleFileClick}
-                            onDoubleClick={handleFileDoubleClick}
-                          />
-                        ))}
-                      </div>
-                    ) : viewMode === 'tree' ? (
-                      /* Tree View */
-                      <CompanyFileTree
-                        files={filteredFiles}
-                        companyName={activeWorkspace?.displayName || 'Company'}
-                        groupingMode={groupingMode}
-                        viewMode={treeViewMode}
-                        onFileClick={handleFileClick}
-                        onFileDoubleClick={handleFileDoubleClick}
-                        onRename={handleRename}
+                    <aside className="w-[200px] min-w-[160px] max-w-[280px] border-r overflow-auto flex-shrink-0">
+                      <FolderManager
+                        companyId={companyId}
+                        currentUserId={user?.uid || ''}
+                        selectedFolderId={selectedFolderId}
+                        onFolderSelect={setSelectedFolderId}
+                        onFilesDropped={handleFilesDropped}
                         className="h-full"
                       />
-                    ) : (
-                      /* List View */
-                      <FilesList
-                        files={filteredFiles}
-                        onView={handleFileClick}
-                        onRename={handleRename}
-                        onDescriptionUpdate={handleDescriptionUpdate}
+                    </aside>
+                  )}
+
+                  {/* Main content: file list + preview (resizable) */}
+                  <ResizablePanelGroup direction="horizontal" className="flex-1">
+                    {/* File browser panel */}
+                    <ResizablePanel defaultSize={40} minSize={20} className="overflow-auto">
+                      {filteredFiles.length === 0 ? (
+                        <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
+                          <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
+                          <p className="text-muted-foreground text-center">
+                            {searchTerm || filters.category !== 'all' || filters.entityType !== 'all'
+                              ? t('manager.noSearchResults')
+                              : t('manager.noFiles')}
+                          </p>
+                        </section>
+                      ) : viewMode === 'gallery' ? (
+                        /* Card/Gallery View */
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
+                          {filteredFiles.map((file) => (
+                            <FileCard
+                              key={file.id}
+                              file={file}
+                              onClick={handleFileClick}
+                              onDoubleClick={handleFileDoubleClick}
+                            />
+                          ))}
+                        </div>
+                      ) : viewMode === 'tree' ? (
+                        /* Tree View */
+                        <CompanyFileTree
+                          files={filteredFiles}
+                          companyName={activeWorkspace?.displayName || 'Company'}
+                          groupingMode={groupingMode}
+                          viewMode={treeViewMode}
+                          onFileClick={handleFileClick}
+                          onFileDoubleClick={handleFileDoubleClick}
+                          onRename={handleRename}
+                          className="h-full"
+                        />
+                      ) : (
+                        /* List View */
+                        <FilesList
+                          files={filteredFiles}
+                          onView={handleFileClick}
+                          onRename={handleRename}
+                          onDescriptionUpdate={handleDescriptionUpdate}
+                          currentUserId={user?.uid}
+                          selectedIds={selectedIds}
+                          onToggleSelect={toggleSelect}
+                        />
+                      )}
+                    </ResizablePanel>
+
+                    {/* Resize handle */}
+                    <ResizableHandle withHandle />
+
+                    {/* Right panel: preview (always visible) */}
+                    <ResizablePanel defaultSize={60} minSize={25} className="overflow-hidden">
+                      <FilePreviewPanel
+                        file={selectedFile}
+                        onClose={() => setSelectedFile(null)}
                         currentUserId={user?.uid}
-                        selectedIds={selectedIds}
-                        onToggleSelect={toggleSelect}
+                        currentUserName={user?.displayName || undefined}
+                        onRefresh={refetch}
                       />
-                    )}
-                  </ResizablePanel>
-
-                  {/* Resize handle */}
-                  <ResizableHandle withHandle />
-
-                  {/* Right panel: preview (always visible) */}
-                  <ResizablePanel defaultSize={55} minSize={25} className="overflow-hidden">
-                    <FilePreviewPanel
-                      file={selectedFile}
-                      onClose={() => setSelectedFile(null)}
-                      currentUserId={user?.uid}
-                      currentUserName={user?.displayName || undefined}
-                      onRefresh={refetch}
-                    />
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                </section>
               ) : activeTab === 'inbox' ? (
                 /* 📥 ENTERPRISE: Inbox View - ADR-055 Attachment Ingestion */
                 /* 🏢 Wrapped in EnterpriseErrorBoundary for FULL error UI (Email, Admin, Tour) */
