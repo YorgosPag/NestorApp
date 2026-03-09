@@ -2,7 +2,7 @@
  * UnitsTabContent — Building Units Management Tab
  *
  * Lists building units (apartments, shops, offices, etc.) filtered by buildingId.
- * Uses the same AddUnitDialog as the /units page for consistent create experience.
+ * Inline create/edit forms — same pattern as ParkingTabContent & StorageTab.
  *
  * @module components/building-management/tabs/UnitsTabContent
  * @see ADR-184 (Building Spaces Tabs)
@@ -13,8 +13,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createUnit } from '@/services/units.service';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -23,13 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2 } from 'lucide-react';
+import { TableCell } from '@/components/ui/table';
+import { Home, Plus, Loader2, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
-import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 
@@ -99,8 +102,47 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // AddUnitDialog state
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  // Create form state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createCode, setCreateCode] = useState('');
+  const [createType, setCreateType] = useState<UnitType | ''>('apartment');
+  const [createFloor, setCreateFloor] = useState('');
+  const [createArea, setCreateArea] = useState('');
+  const [createBedrooms, setCreateBedrooms] = useState('');
+  const [createBathrooms, setCreateBathrooms] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState<UnitType | ''>('apartment');
+  const [editFloor, setEditFloor] = useState('');
+  const [editArea, setEditArea] = useState('');
+  const [editStatus, setEditStatus] = useState('for-sale');
+  const [saving, setSaving] = useState(false);
+
+  // Delete & Unlink state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<UnitConfirmAction | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // Link dialog state
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+
+  // Expand state (for inline floorplans)
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const toggleExpand = useCallback(
+    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
+    []
+  );
+
+  // Auto-collapse expanded row when editing starts
+  useEffect(() => {
+    if (editingId) setExpandedId(null);
+  }, [editingId]);
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,25 +150,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  // Action state
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<UnitConfirmAction | null>(null);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [showLinkDialog, setShowLinkDialog] = useState(false);
-
-  // Expand state (for inline floorplans)
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const toggleExpand = useCallback(
-    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
-    []
-  );
-
   const iconSizes = useIconSizes();
-
-  // Pre-build the buildings array for AddUnitDialog (single building, pre-selected)
-  const buildingsForDialog = useMemo(() => [building], [building]);
 
   // ============================================================================
   // FETCH UNITS
@@ -184,7 +208,108 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   ], [stats, t]);
 
   // ============================================================================
-  // CRUD HANDLERS
+  // CREATE — Inline form
+  // ============================================================================
+
+  const resetCreateForm = () => {
+    setShowCreateForm(false);
+    setCreateName('');
+    setCreateCode('');
+    setCreateType('apartment');
+    setCreateFloor('');
+    setCreateArea('');
+    setCreateBedrooms('');
+    setCreateBathrooms('');
+    setCreateDescription('');
+  };
+
+  const handleCreate = async () => {
+    if (!createName.trim()) {
+      toast.error('Το όνομα είναι υποχρεωτικό');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const unitData: Record<string, unknown> = {
+        name: createName.trim(),
+        type: createType || 'apartment',
+        buildingId: building.id,
+        building: building.name || '',
+        floor: createFloor ? parseInt(createFloor, 10) : 0,
+        project: '',
+        status: 'for-sale',
+        operationalStatus: 'draft',
+        vertices: [],
+      };
+
+      if (createCode.trim()) unitData.code = createCode.trim();
+      if (createArea) unitData.area = parseFloat(createArea);
+      if (createDescription.trim()) unitData.description = createDescription.trim();
+
+      const layout: Record<string, number> = {};
+      if (createBedrooms) layout.bedrooms = parseInt(createBedrooms, 10);
+      if (createBathrooms) layout.bathrooms = parseInt(createBathrooms, 10);
+      if (Object.keys(layout).length > 0) unitData.layout = layout;
+
+      const result = await createUnit(unitData);
+
+      if (result.success) {
+        toast.success('Η μονάδα δημιουργήθηκε');
+        resetCreateForm();
+        await fetchUnits();
+      } else {
+        toast.error(result.error || 'Σφάλμα δημιουργίας');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Σφάλμα δημιουργίας';
+      toast.error(msg);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // ============================================================================
+  // EDIT — Inline table row editing
+  // ============================================================================
+
+  const startEdit = (unit: Unit) => {
+    setEditingId(unit.id);
+    setEditName(unit.name || '');
+    setEditType(unit.type || 'apartment');
+    setEditFloor(unit.floor ? String(unit.floor) : '');
+    setEditArea(unit.area ? String(unit.area) : '');
+    setEditStatus(unit.status || 'for-sale');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editName.trim()) return;
+    setSaving(true);
+    try {
+      await apiClient.patch(`/api/units/${editingId}`, {
+        name: editName.trim(),
+        type: editType || undefined,
+        floor: editFloor ? parseInt(editFloor, 10) : undefined,
+        area: editArea ? parseFloat(editArea) : undefined,
+        status: editStatus || undefined,
+      });
+      toast.success('Η μονάδα ενημερώθηκε');
+      setEditingId(null);
+      await fetchUnits();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης';
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ============================================================================
+  // DELETE & UNLINK
   // ============================================================================
 
   const handleDeleteClick = (unit: Unit) => {
@@ -205,13 +330,16 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       if (type === 'delete') {
         setDeletingId(item.id);
         await apiClient.delete(`/api/units/${item.id}`);
+        toast.success('Η μονάδα διαγράφηκε');
       } else {
         setUnlinkingId(item.id);
         await apiClient.patch(`/api/units/${item.id}`, { buildingId: null });
+        toast.success('Η μονάδα αποσυνδέθηκε');
       }
       await fetchUnits();
     } catch (err) {
-      console.error(`[UnitsTab] ${type} error:`, err);
+      const msg = err instanceof Error ? err.message : 'Σφάλμα';
+      toast.error(msg);
     } finally {
       setConfirmLoading(false);
       setConfirmAction(null);
@@ -238,6 +366,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   const handleLinkUnit = useCallback(async (itemId: string) => {
     await apiClient.patch(`/api/units/${itemId}`, { buildingId: building.id });
+    toast.success('Η μονάδα συνδέθηκε');
     await fetchUnits();
   }, [building.id, fetchUnits]);
 
@@ -249,13 +378,16 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     const colorMap: Record<string, string> = {
       available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
       'for-sale': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      'for-rent': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
       sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
       reserved: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-      under_construction: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      rented: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      'under-negotiation': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+      unavailable: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
     };
     return (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorMap[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'}`}>
-        {status}
+        {UNIT_STATUS_LABELS[status] || status}
       </span>
     );
   };
@@ -316,19 +448,11 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
           <span className="text-sm font-normal text-muted-foreground">({units.length})</span>
         </h2>
         <nav className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowLinkDialog(true)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)}>
             <Link2 className="mr-1 h-4 w-4" />
             {t('spaceLink.linkExisting')}
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => setShowAddDialog(true)}
-          >
+          <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
             <Plus className="mr-1 h-4 w-4" />
             {t('tabs.labels.units')}
           </Button>
@@ -384,6 +508,151 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         </CardContent>
       </Card>
 
+      {/* Inline Create Form */}
+      {showCreateForm && (
+        <form
+          className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2"
+          onSubmit={(e) => { e.preventDefault(); handleCreate(); }}
+        >
+          {/* Row 1: Name, Code, Type */}
+          <fieldset className="grid grid-cols-3 gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Όνομα *
+              </span>
+              <Input
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="Διαμέρισμα Α1"
+                className="h-9"
+                disabled={creating}
+                autoFocus
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Κωδικός
+              </span>
+              <Input
+                value={createCode}
+                onChange={(e) => setCreateCode(e.target.value)}
+                placeholder="A-101"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Τύπος
+              </span>
+              <Select value={createType || 'apartment'} onValueChange={(v) => setCreateType(v as UnitType)} disabled={creating}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_TYPES_FOR_FILTER.map(ut => (
+                    <SelectItem key={ut} value={ut}>{UNIT_TYPE_LABELS[ut] || ut}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          </fieldset>
+
+          {/* Row 2: Floor, Area, Bedrooms, Bathrooms */}
+          <fieldset className="grid grid-cols-4 gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Όροφος
+              </span>
+              <Input
+                type="number"
+                value={createFloor}
+                onChange={(e) => setCreateFloor(e.target.value)}
+                placeholder="1"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                m²
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                value={createArea}
+                onChange={(e) => setCreateArea(e.target.value)}
+                placeholder="85"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Υ/Δ
+              </span>
+              <Input
+                type="number"
+                value={createBedrooms}
+                onChange={(e) => setCreateBedrooms(e.target.value)}
+                placeholder="2"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Μπάνια
+              </span>
+              <Input
+                type="number"
+                value={createBathrooms}
+                onChange={(e) => setCreateBathrooms(e.target.value)}
+                placeholder="1"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+          </fieldset>
+
+          {/* Row 3: Description */}
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              Περιγραφή
+            </span>
+            <Textarea
+              value={createDescription}
+              onChange={(e) => setCreateDescription(e.target.value)}
+              placeholder="Περιγραφή μονάδας..."
+              className="h-16 resize-none"
+              disabled={creating}
+            />
+          </label>
+
+          {/* Actions */}
+          <nav className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resetCreateForm}
+              disabled={creating}
+            >
+              <X className="mr-1 h-4 w-4" />
+              Ακύρωση
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!createName.trim() || creating}
+            >
+              {creating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+              Αποθήκευση
+            </Button>
+          </nav>
+        </form>
+      )}
+
       {/* View Toggle */}
       <nav className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
@@ -414,7 +683,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             fields={unitCardFields}
             actions={{
               onView: () => {},
-              onEdit: () => setShowAddDialog(true),
+              onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
@@ -442,11 +711,12 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             getKey={(u) => u.id}
             actions={{
               onView: () => {},
-              onEdit: () => setShowAddDialog(true),
+              onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
+            editingId={editingId}
             expandedId={expandedId}
             onToggleExpand={toggleExpand}
             renderExpandedContent={(u) => (
@@ -457,11 +727,54 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                 projectId={building.projectId}
               />
             )}
+            renderEditRow={() => (
+              <>
+                <TableCell>
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" disabled={saving} />
+                </TableCell>
+                <TableCell>
+                  <Select value={editType || 'apartment'} onValueChange={(v) => setEditType(v as UnitType)} disabled={saving}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIT_TYPES_FOR_FILTER.map(ut => (<SelectItem key={ut} value={ut}>{UNIT_TYPE_LABELS[ut] || ut}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <Input type="number" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className="h-8 w-16" disabled={saving} />
+                </TableCell>
+                <TableCell>
+                  <Input type="number" step="0.01" value={editArea} onChange={(e) => setEditArea(e.target.value)} className="h-8 w-16" disabled={saving} />
+                </TableCell>
+                <TableCell>
+                  <Select value={editStatus} onValueChange={setEditStatus} disabled={saving}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIT_STATUSES_FOR_FILTER.map(us => (<SelectItem key={us} value={us}>{UNIT_STATUS_LABELS[us] || us}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <nav className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
+                      {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </nav>
+                </TableCell>
+              </>
+            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.units')}
             {filteredUnits.length !== units.length && (
-              <span className="ml-1">({units.length} {t('allStatuses', { ns: 'filters' }).toLowerCase()})</span>
+              <span className="ml-1">({units.length} σύνολο)</span>
             )}
           </footer>
         </>
@@ -475,15 +788,6 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
         description={t('spaceLink.linkUnitDesc')}
         fetchUnlinked={fetchUnlinkedUnits}
         onLink={handleLinkUnit}
-      />
-
-      {/* Enterprise AddUnitDialog — Same modal as /units page */}
-      <AddUnitDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onUnitAdded={fetchUnits}
-        buildings={buildingsForDialog}
-        buildingsLoading={false}
       />
 
       {/* Centralized Confirm Dialog (delete / unlink) */}
