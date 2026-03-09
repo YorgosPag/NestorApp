@@ -54,7 +54,7 @@ function buildZip(entries: ZipEntry[]): Uint8Array {
     const lv = new DataView(local);
     lv.setUint32(0, 0x04034b50, true);   // Signature
     lv.setUint16(4, 20, true);            // Version needed (2.0)
-    lv.setUint16(6, 0, true);             // Flags
+    lv.setUint16(6, 0x0800, true);        // Flags: bit 11 = UTF-8 filenames
     lv.setUint16(8, 8, true);             // Compression: deflate
     lv.setUint16(10, 0, true);            // Mod time
     lv.setUint16(12, 0, true);            // Mod date
@@ -71,7 +71,7 @@ function buildZip(entries: ZipEntry[]): Uint8Array {
     cv.setUint32(0, 0x02014b50, true);    // Signature
     cv.setUint16(4, 20, true);            // Version made by
     cv.setUint16(6, 20, true);            // Version needed
-    cv.setUint16(8, 0, true);             // Flags
+    cv.setUint16(8, 0x0800, true);        // Flags: bit 11 = UTF-8 filenames
     cv.setUint16(10, 8, true);            // Compression: deflate
     cv.setUint16(12, 0, true);            // Mod time
     cv.setUint16(14, 0, true);            // Mod date
