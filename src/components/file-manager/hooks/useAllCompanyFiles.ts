@@ -347,9 +347,20 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
           } else {
             logger.warn('Skipping invalid FileRecord in onSnapshot', {
               docId: docSnap.id,
-              hasEntityType: typeof data.entityType,
-              hasStatus: typeof data.status,
-              hasDisplayName: typeof data.displayName,
+              fields: {
+                id: typeof record.id,
+                entityType: typeof data.entityType,
+                entityId: typeof data.entityId,
+                domain: typeof data.domain,
+                category: typeof data.category,
+                storagePath: typeof data.storagePath,
+                displayName: typeof data.displayName,
+                originalFilename: typeof data.originalFilename,
+                ext: typeof data.ext,
+                contentType: typeof data.contentType,
+                status: typeof data.status,
+                createdBy: typeof data.createdBy,
+              },
             });
           }
         }
