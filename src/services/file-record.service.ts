@@ -64,6 +64,8 @@ import {
 import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+// 🏢 ENTERPRISE: Audit trail for file operations (ADR-191 Phase 3.1)
+import { FileAuditService } from '@/services/file-audit.service';
 
 // ============================================================================
 // MODULE LOGGER
@@ -580,6 +582,9 @@ export class FileRecordService {
       purgeAt: purgeDate.toISOString(),
       timestamp: Date.now(),
     });
+
+    // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
+    FileAuditService.log(fileId, 'delete', trashedBy).catch(() => {});
   }
 
   /**
@@ -637,6 +642,9 @@ export class FileRecordService {
       restoredBy,
       timestamp: Date.now(),
     });
+
+    // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
+    FileAuditService.log(fileId, 'restore', restoredBy).catch(() => {});
   }
 
   /**
@@ -766,6 +774,9 @@ export class FileRecordService {
     });
 
     logger.info('Hold placed on FileRecord', { fileId, holdType });
+
+    // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
+    FileAuditService.log(fileId, 'hold_place', placedBy, undefined, { holdType, reason }).catch(() => {});
   }
 
   /**
@@ -785,6 +796,9 @@ export class FileRecordService {
     });
 
     logger.info('Hold released on FileRecord', { fileId });
+
+    // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
+    FileAuditService.log(fileId, 'hold_release', releasedBy).catch(() => {});
   }
 
   // ==========================================================================
@@ -944,6 +958,9 @@ export class FileRecordService {
       updates: { displayName: newDisplayName.trim() },
       timestamp: Date.now(),
     });
+
+    // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
+    FileAuditService.log(fileId, 'rename', renamedBy, undefined, { newDisplayName: newDisplayName.trim() }).catch(() => {});
   }
 
   /**

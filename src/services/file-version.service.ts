@@ -30,6 +30,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import { FileAuditService } from '@/services/file-audit.service';
 
 const logger = createModuleLogger('FileVersionService');
 
@@ -175,6 +176,12 @@ export class FileVersionService {
 
     logger.info('FileRecord updated to new version', { fileId, newRevision });
 
+    // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
+    FileAuditService.log(fileId, 'version_create', input.createdBy, undefined, {
+      newRevision,
+      originalFilename: input.originalFilename,
+    }).catch(() => {});
+
     return newRevision;
   }
 
@@ -278,6 +285,12 @@ export class FileVersionService {
       newRevision: rollbackRevision,
       performedBy,
     });
+
+    // 🏢 ENTERPRISE: Audit trail (ADR-191 Phase 3.1)
+    FileAuditService.log(fileId, 'version_rollback', performedBy, undefined, {
+      targetVersion: targetVersionNumber,
+      newRevision: rollbackRevision,
+    }).catch(() => {});
 
     return rollbackRevision;
   }
