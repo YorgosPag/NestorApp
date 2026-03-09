@@ -300,7 +300,7 @@ export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, clas
             </Tooltip>
           )}
           {/* Share link */}
-          {currentUserId && file.downloadUrl && (
+          {currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

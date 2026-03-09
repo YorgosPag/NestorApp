@@ -356,8 +356,12 @@ export function FilesList({
         return (
           <article
             key={file.id}
-            className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+            className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer`}
             aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
+            onClick={() => onView?.(file)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView?.(file); } }}
           >
             {/* Checkbox for multi-select */}
             {onToggleSelect && (

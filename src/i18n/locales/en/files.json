@@ -465,7 +465,7 @@
   },
   "batch": {
     "toolbar": "Batch actions",
-    "selected": "{{count}} / {{total}} selected",
+    "selected": "{{num}} / {{of}} selected",
     "selectAll": "Select all",
     "deselectAll": "Deselect all",
     "delete": "Delete",

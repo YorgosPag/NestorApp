@@ -465,7 +465,7 @@
   },
   "batch": {
     "toolbar": "Μαζικές ενέργειες",
-    "selected": "{{count}} / {{total}} επιλεγμένα",
+    "selected": "{{num}} / {{of}} επιλεγμένα",
     "selectAll": "Επιλογή όλων",
     "deselectAll": "Αποεπιλογή",
     "delete": "Διαγραφή",

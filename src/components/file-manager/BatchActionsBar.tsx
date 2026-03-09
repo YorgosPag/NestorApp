@@ -126,7 +126,7 @@ export function BatchActionsBar({
     >
       {/* Selection info */}
       <span className="text-sm font-medium tabular-nums">
-        {t('batch.selected', { count: selectedCount, total: totalCount })}
+        {t('batch.selected', { num: selectedCount, of: totalCount })}
       </span>
 
       {/* Select all / Clear */}
