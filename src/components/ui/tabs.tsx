@@ -4,7 +4,6 @@ import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
-import { useIconSizes } from "@/hooks/useIconSizes"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -16,7 +15,6 @@ const TabsList = React.forwardRef<
   React.ComponentRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => {
-  const iconSizes = useIconSizes()
   const spacing = useSpacingTokens()
   // 🏢 ENTERPRISE: Semantic colors for consistent theming with cards
   const colors = useSemanticColors()
@@ -24,8 +22,8 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      // 🏢 ENTERPRISE: bg-muted → colors.bg.card for consistency with ListCard backgrounds
-      `inline-flex ${iconSizes.xl2} items-center justify-center rounded-md ${colors.bg.card} ${spacing.padding.sm} text-muted-foreground`,
+      // 🏢 ENTERPRISE: flex-wrap ensures tabs wrap to next line instead of overflowing
+      `flex flex-wrap items-center gap-1 rounded-md ${colors.bg.card} ${spacing.padding.sm} text-muted-foreground`,
       className
     )}
     {...props}
@@ -45,7 +43,7 @@ const TabsTrigger = React.forwardRef<
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
-        `inline-flex items-center justify-center whitespace-nowrap rounded-sm ${spacing.padding.sm} text-sm font-medium ring-offset-background ${TRANSITION_PRESETS.STANDARD_COLORS} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:${colors.bg.primary} data-[state=active]:text-foreground data-[state=active]:shadow-sm`,
+        `inline-flex flex-shrink-0 items-center justify-center whitespace-nowrap rounded-sm ${spacing.padding.sm} text-sm font-medium ring-offset-background ${TRANSITION_PRESETS.STANDARD_COLORS} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:${colors.bg.primary} data-[state=active]:text-foreground data-[state=active]:shadow-sm`,
         className
       )}
       {...props}

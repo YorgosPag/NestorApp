@@ -13,7 +13,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized tabs styling using the theme system (8px spacing)
 export const TABS_STYLES = {
   container: "w-full",
-  list: "flex flex-wrap gap-2 w-full h-auto min-h-fit",  // gap-2 = 8px ✅
+  list: "flex flex-wrap gap-1 w-full h-auto min-h-fit",  // flex-wrap: tabs wrap to next row instead of overflowing
   content: "mt-2",  // mt-2 = 8px (centralized spacing)
   contentWrapper: "flex flex-wrap gap-2"  // gap-2 = 8px ✅
 } as const;
@@ -84,8 +84,6 @@ export function TabsContainer({
   // Get theme configuration with fallback
   const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
 
-  // Use flexible layout that allows proper wrapping with vertical spacing and auto height
-  const flexWrapStyles = "flex flex-wrap gap-2 h-auto min-h-fit";
 
   return (
     <div className={cn(themeConfig?.container, className)}>
@@ -215,8 +213,6 @@ export function TabsOnlyTriggers({
   // Get theme configuration with fallback
   const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
 
-  // Use flexible layout that allows proper wrapping with vertical spacing and auto height
-  const flexWrapStyles = "flex flex-wrap gap-2 h-auto min-h-fit";
 
   return (
     <div className={cn(themeConfig?.container, 'flex-1 flex flex-col min-h-0', className)}>
