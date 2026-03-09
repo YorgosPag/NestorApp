@@ -150,6 +150,7 @@
     "react-i18next": "^15.7.1",
     "react-map-gl": "^8.1.0",
     "react-modern-gantt": "0.6.1",
+    "react-resizable-panels": "4.7.2",
     "react-window": "^1.8.10",
     "recharts": "^2.15.1",
     "resend": "^6.6.0",

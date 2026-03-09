@@ -451,5 +451,15 @@
     "searchResults": "Search results",
     "goToFloors": "Go to Floors",
     "goToBuildings": "Go to Buildings"
+  },
+  "preview": {
+    "title": "Preview",
+    "unsupported": "Preview is not supported for this file type.",
+    "openInNewTab": "Open in new tab",
+    "download": "Download",
+    "close": "Close",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "rotate": "Rotate"
   }
 }
