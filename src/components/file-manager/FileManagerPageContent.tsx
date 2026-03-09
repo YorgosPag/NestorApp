@@ -483,19 +483,36 @@ export function FileManagerPageContent() {
   }, [selectedIds, user?.uid, refetch]);
 
   const handleBatchDownload = useCallback(async () => {
-    // Download each file individually via download proxy
     const selected = filteredFiles.filter(f => selectedIds.has(f.id) && f.downloadUrl);
-    for (const file of selected) {
-      const proxyUrl = `/api/download?url=${encodeURIComponent(file.downloadUrl!)}&filename=${encodeURIComponent(file.displayName || file.originalFilename)}`;
-      const link = document.createElement('a');
-      link.href = proxyUrl;
-      link.download = file.displayName || file.originalFilename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      // Small delay between downloads to avoid browser blocking
-      await new Promise(r => setTimeout(r, 300));
+    if (selected.length === 0) return;
+
+    // Server-side ZIP via /api/files/batch-download
+    const response = await fetch('/api/files/batch-download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        files: selected.map(f => ({
+          url: f.downloadUrl,
+          filename: `${f.displayName || f.originalFilename}.${f.ext}`,
+        })),
+      }),
+    });
+
+    if (!response.ok) {
+      logger.error('Batch download failed', { status: response.status });
+      return;
     }
+
+    // Trigger download of the ZIP blob
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `files_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
   }, [selectedIds, filteredFiles]);
 
   const handleBatchClassify = useCallback(async (classification: FileClassification) => {
