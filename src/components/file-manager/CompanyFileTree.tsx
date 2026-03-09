@@ -31,7 +31,7 @@ import {
   Home,
   Camera,
   Film,
-  Map,
+  Map as MapIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -109,7 +109,7 @@ const CATEGORY_ICONS: Partial<Record<FileCategory | 'other', React.ReactNode>> =
   videos: <Film className="h-4 w-4 text-red-500" />,
   documents: <FileText className="h-4 w-4 text-blue-500" />,
   contracts: <FileSignature className="h-4 w-4 text-amber-500" />,
-  floorplans: <Map className="h-4 w-4 text-teal-500" />,
+  floorplans: <MapIcon className="h-4 w-4 text-teal-500" />,
   other: <File className="h-4 w-4 text-gray-500" />,
 };
 
