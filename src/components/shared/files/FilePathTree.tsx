@@ -39,7 +39,6 @@ import type { FileRecord } from '@/types/file-record';
 import {
   buildFilePathTree,
   buildStudyGroupTree,
-  toggleFolderExpansion,
   type TreeNode,
   type FolderNode,
   type FileNode,
@@ -226,7 +225,9 @@ export function FilePathTree({
   // Business view ALWAYS uses study group tree for meaningful folder names
   const useStudyGroups = groupByStudyGroup || viewMode === 'business';
 
-  const initialTree = useMemo(() => {
+  // 🏢 ENTERPRISE: Tree data computed via useMemo (same pattern as CompanyFileTree)
+  // Expansion state managed separately — no stale useState/useEffect issues
+  const tree = useMemo(() => {
     if (useStudyGroups) {
       return buildStudyGroupTree(files);
     }
@@ -234,28 +235,31 @@ export function FilePathTree({
     return filterTreeToContextLevel(fullTree, contextLevel);
   }, [files, contextLevel, useStudyGroups]);
 
-  // Tree state (for expand/collapse)
-  const [tree, setTree] = useState<TreeNode>(initialTree);
+  // Expansion state: Set of expanded folder IDs (default: all expanded)
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
 
-  // Update tree when files change
+  // Reset collapsed state when tree structure changes (viewMode switch, files change)
   React.useEffect(() => {
-    if (useStudyGroups) {
-      setTree(buildStudyGroupTree(files));
-    } else {
-      const fullTree = buildFilePathTree(files);
-      setTree(filterTreeToContextLevel(fullTree, contextLevel));
-    }
-  }, [files, contextLevel, useStudyGroups]);
+    setCollapsedNodes(new Set());
+  }, [useStudyGroups, files]);
 
   // =========================================================================
   // HANDLERS
   // =========================================================================
 
   /**
-   * Toggle folder expansion
+   * Toggle folder expansion (tracks collapsed nodes — default is expanded)
    */
   const handleFolderToggle = useCallback((folderId: string) => {
-    setTree((prevTree) => toggleFolderExpansion(prevTree, folderId));
+    setCollapsedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
   }, []);
 
   /**
@@ -393,7 +397,7 @@ export function FilePathTree({
    */
   const renderFolderNode = useCallback(
     (node: FolderNode, depth: number): React.ReactNode => {
-      const isExpanded = node.isExpanded || false;
+      const isExpanded = !collapsedNodes.has(node.id); // Default: expanded
       const hasChildren = node.children.length > 0;
       // 🏢 ENTERPRISE: Study group segments use their built-in label from config
       const translatedLabel = getSegmentLabel(node.segment, node.value);
@@ -475,7 +479,7 @@ export function FilePathTree({
         </li>
       );
     },
-    [iconSizes, t, getSegmentLabel, handleFolderToggle, viewMode]
+    [iconSizes, t, getSegmentLabel, handleFolderToggle, viewMode, collapsedNodes]
   );
 
   /**
