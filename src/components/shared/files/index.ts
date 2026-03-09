@@ -38,6 +38,7 @@ export type {
 } from './hooks/useEntityFiles';
 
 export { usePdfThumbnail } from './hooks/usePdfThumbnail';
+export { useFileClassification, isAIClassifiable } from './hooks/useFileClassification';
 
 // Utilities
 export {

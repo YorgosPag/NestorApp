@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -52,8 +53,12 @@ interface BatchActionsBarProps {
   onBatchDelete: () => Promise<void>;
   /** Batch download as ZIP */
   onBatchDownload: () => Promise<void>;
-  /** Batch classify */
+  /** Batch classify (manual data classification) */
   onBatchClassify: (classification: FileClassification) => Promise<void>;
+  /** AI auto-classify (ADR-191 Phase 2.2) */
+  onAIClassify?: () => Promise<void>;
+  /** Whether AI classification is in progress */
+  aiClassifying?: boolean;
 }
 
 // ============================================================================
@@ -78,6 +83,8 @@ export function BatchActionsBar({
   onBatchDelete,
   onBatchDownload,
   onBatchClassify,
+  onAIClassify,
+  aiClassifying = false,
 }: BatchActionsBarProps) {
   const { t } = useTranslation('files');
   const [deleting, setDeleting] = useState(false);
@@ -155,6 +162,31 @@ export function BatchActionsBar({
           ))}
         </SelectContent>
       </Select>
+
+      {/* AI Auto-Classify (ADR-191 Phase 2.2) */}
+      {onAIClassify && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAIClassify}
+              disabled={aiClassifying}
+              className="h-7 px-2 text-xs text-violet-600 hover:text-violet-700"
+            >
+              {aiClassifying ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+              )}
+              {t('batch.aiClassify', 'AI Ταξινόμηση')}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('batch.aiClassifyTooltip', 'Αυτόματη αναγνώριση τύπου εγγράφου με AI')}</TooltipContent>
+        </Tooltip>
+      )}
+
+      <span className="w-px h-5 bg-border" aria-hidden="true" />
 
       {/* Batch download */}
       <Tooltip>

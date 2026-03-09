@@ -454,6 +454,13 @@ export function FilesList({
                     </span>
                   )}
 
+                  {/* AI document type badge (ADR-191 Phase 2.2) */}
+                  {file.ingestion?.analysis?.documentType && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-violet-500/15 text-violet-700 dark:text-violet-400">
+                      {t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}
+                    </span>
+                  )}
+
                   {/* 🔗 Linked file indicator */}
                   {file.isLinkedFile && (
                     <span className="flex items-center gap-1 text-blue-500" title={t('list.linkedFromProject')}>

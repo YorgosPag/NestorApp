@@ -95,6 +95,7 @@ import { formatFileSize } from '@/utils/file-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileRecordService } from '@/services/file-record.service';
 import { BatchActionsBar } from './BatchActionsBar';
+import { useFileClassification, isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
 
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
@@ -322,6 +323,9 @@ export function FileManagerPageContent() {
   // 🏢 ENTERPRISE: Batch selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
+  const { classifyBatch, classifyingIds } = useFileClassification();
+
   const toggleSelect = useCallback((fileId: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -510,6 +514,18 @@ export function FileManagerPageContent() {
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, refetch]);
+
+  // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
+  const handleAIClassify = useCallback(async () => {
+    const classifiableIds = filteredFiles
+      .filter(f => selectedIds.has(f.id) && isAIClassifiable(f.contentType))
+      .map(f => f.id);
+
+    if (classifiableIds.length === 0) return;
+
+    await classifyBatch(classifiableIds);
+    refetch();
+  }, [selectedIds, filteredFiles, classifyBatch, refetch]);
 
   // 🏢 ENTERPRISE: Dashboard card click handler
   const handleCardClick = useCallback((stat: DashboardStat) => {
@@ -870,6 +886,8 @@ export function FileManagerPageContent() {
                   onBatchDelete={handleBatchDelete}
                   onBatchDownload={handleBatchDownload}
                   onBatchClassify={handleBatchClassify}
+                  onAIClassify={handleAIClassify}
+                  aiClassifying={classifyingIds.size > 0}
                 />
               </div>
             )}
