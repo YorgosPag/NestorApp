@@ -201,7 +201,7 @@ async function handlePost(
       await getAdminFirestore().collection(COLLECTIONS.FILE_AUDIT_LOG).add({
         fileId,
         action: 'ai_classify',
-        performedBy: _ctx.userId,
+        performedBy: _ctx.uid,
         timestamp: new Date().toISOString(),
         metadata: {
           documentType: result.documentType,
