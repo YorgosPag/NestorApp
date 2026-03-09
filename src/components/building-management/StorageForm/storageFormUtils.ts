@@ -19,13 +19,14 @@ export const calculatePrice = (area: number, floor: string, type: StorageType): 
 };
 
 // Zod schema for storage unit validation
+// 🏢 ENTERPRISE: code & description are optional — API auto-generates name when code is empty
 export const storageUnitSchema = z.object({
-  code: validationRules.required(),
-  area: validationRules.area(),
-  price: validationRules.price(),
-  description: validationRules.required(),
-  type: validationRules.selection(['storage', 'parking']),
-  status: validationRules.selection(['available', 'reserved', 'sold', 'owner']),
+  code: z.string().optional().default(''),
+  area: z.number().nonnegative().optional().default(0),
+  price: z.number().nonnegative().optional().default(0),
+  description: z.string().optional().default(''),
+  type: validationRules.selection(['storage', 'parking', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse']),
+  status: validationRules.selection(['available', 'reserved', 'sold', 'owner', 'occupied', 'maintenance', 'unavailable']),
   floor: z.string().optional(),
   buildingId: z.string().optional(),
   coordinates: z.object({
