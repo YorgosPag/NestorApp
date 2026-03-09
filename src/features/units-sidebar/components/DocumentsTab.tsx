@@ -142,6 +142,7 @@ export function DocumentsTab({
       category="documents"
       purpose="document"
       entryPointExcludeCategories={['photos', 'videos', 'floorplans']}
+      fetchAllDomains
       companyName={companyDisplayName}
     />
   );
