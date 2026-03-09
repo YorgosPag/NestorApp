@@ -494,6 +494,40 @@
     "hoursAgo": "hours ago",
     "daysAgo": "days ago"
   },
+  "approvals": {
+    "title": "Approvals",
+    "request": "Request",
+    "newRequest": "New approval request",
+    "approverName": "Approver name",
+    "note": "Note (optional)",
+    "send": "Send",
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancel": "Cancel",
+    "rejectReason": "Reason...",
+    "by": "by",
+    "empty": "No approval requests."
+  },
+  "templates": {
+    "title": "Document templates",
+    "create": "New template",
+    "namePlaceholder": "Template name",
+    "contentPlaceholder": "HTML content with {{variables}}...",
+    "save": "Save",
+    "variables": "Variables",
+    "preview": "Preview",
+    "copy": "Copy",
+    "selectTemplate": "Select a template to start.",
+    "empty": "No templates available.",
+    "generatePdf": "Generate PDF"
+  },
+  "gdpr": {
+    "export": "Export data (GDPR)",
+    "delete": "Delete data (GDPR)",
+    "exportDescription": "Download all your data in JSON format.",
+    "deleteDescription": "Permanently delete all your files and data.",
+    "deleteConfirm": "This action is irreversible. Are you sure?"
+  },
   "folders": {
     "title": "Folders",
     "allFiles": "All files",

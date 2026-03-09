@@ -32,6 +32,7 @@ import {
   ScrollText,
   Share2,
   MessageSquare,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ import { VersionHistory } from '@/components/shared/files/VersionHistory';
 import { AuditLogPanel } from '@/components/shared/files/AuditLogPanel';
 import { ShareDialog } from '@/components/shared/files/ShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
+import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
 import type { FileRecord } from '@/types/file-record';
 
 // ============================================================================
@@ -214,6 +216,7 @@ export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName
   const [showAudit, setShowAudit] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showApprovals, setShowApprovals] = useState(false);
   const translateDisplayName = useFileDisplayName();
 
   const previewType = useMemo(
@@ -340,6 +343,24 @@ export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName
               </TooltipContent>
             </Tooltip>
           )}
+          {/* Approvals toggle (ADR-191 Phase 3.3) */}
+          {currentUserId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showApprovals ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowApprovals(!showApprovals)}
+                  className="h-7 w-7 p-0"
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('approvals.title', 'Εγκρίσεις')}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {/* Audit log toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -413,6 +434,17 @@ export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName
       {showComments && currentUserId && (
         <div className="border-b">
           <CommentsPanel
+            fileId={file.id}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName || 'User'}
+          />
+        </div>
+      )}
+
+      {/* Approvals panel (collapsible — ADR-191 Phase 3.3) */}
+      {showApprovals && currentUserId && (
+        <div className="border-b max-h-[300px] overflow-y-auto">
+          <ApprovalPanel
             fileId={file.id}
             currentUserId={currentUserId}
             currentUserName={currentUserName || 'User'}

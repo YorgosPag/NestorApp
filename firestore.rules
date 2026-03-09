@@ -2350,6 +2350,42 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // ✅ FILE_APPROVALS - DOCUMENT APPROVAL WORKFLOWS (ADR-191 Phase 3.3)
+    // =========================================================================
+    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 🏢 ENTERPRISE: Multi-step approval chains for documents
+    // 🔒 READ/WRITE: Authenticated users only
+    match /file_approvals/{approvalId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false; // Approvals are immutable records
+    }
+
+    // =========================================================================
+    // 📦 DOCUMENT_TEMPLATES - REUSABLE TEMPLATES (ADR-191 Phase 4.1)
+    // =========================================================================
+    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 🏢 ENTERPRISE: Document templates with variable interpolation
+    // 🔒 READ/WRITE: Authenticated users only
+    match /document_templates/{templateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🔔 FILE_WEBHOOKS - WEBHOOK REGISTRATIONS (ADR-191 Phase 5.4)
+    // =========================================================================
+    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 🏢 ENTERPRISE: Webhook subscriptions for document events
+    // 🔒 Server-side only (managed via API routes)
+    match /file_webhooks/{webhookId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
+    // =========================================================================
     // 📁 FILE_FOLDERS - VIRTUAL FOLDER STRUCTURE (ADR-191 Phase 4.4)
     // =========================================================================
     // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)

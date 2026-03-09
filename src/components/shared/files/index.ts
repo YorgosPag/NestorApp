@@ -45,6 +45,12 @@ export { CommentsPanel } from './CommentsPanel';
 // Folder manager (ADR-191 Phase 4.4)
 export { FolderManager } from './FolderManager';
 
+// Approval panel (ADR-191 Phase 3.3)
+export { ApprovalPanel } from './ApprovalPanel';
+
+// Document templates (ADR-191 Phase 4.1)
+export { DocumentTemplatePanel } from './DocumentTemplatePanel';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {
