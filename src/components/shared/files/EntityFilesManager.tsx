@@ -642,7 +642,7 @@ export function EntityFilesManager({
   // =========================================================================
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
         <nav className="flex items-center justify-between" role="toolbar" aria-label={t('manager.fileManagementTools')}>
           <div className="flex flex-col gap-1">
