@@ -107,6 +107,7 @@ export function FilesList({
   onDelete,
   onView,
   onDownload,
+  onRename,
   onDescriptionUpdate,
   currentUserId,
   onLink,
