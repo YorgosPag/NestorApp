@@ -294,7 +294,9 @@ export function FilePreviewPanel({ file, onClose, className }: FilePreviewPanelP
             {new Date(
               typeof file.createdAt === 'string'
                 ? file.createdAt
-                : (file.createdAt as { toDate: () => Date }).toDate()
+                : file.createdAt instanceof Date
+                  ? file.createdAt
+                  : (file.createdAt as unknown as { toDate: () => Date }).toDate()
             ).toLocaleDateString('el-GR')}
           </span>
         )}
