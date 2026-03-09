@@ -953,6 +953,8 @@ export function FileManagerPageContent() {
                     <FilePreviewPanel
                       file={selectedFile}
                       onClose={() => setSelectedFile(null)}
+                      currentUserId={user?.uid}
+                      onRefresh={refetch}
                     />
                   </ResizablePanel>
                 </ResizablePanelGroup>

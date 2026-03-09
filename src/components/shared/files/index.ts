@@ -30,6 +30,9 @@ export type { AddCaptureMenuProps } from './AddCaptureMenu';
 // Thumbnail component (ADR-191: Document Intelligence)
 export { FileThumbnail } from './FileThumbnail';
 
+// Version history (ADR-191 Phase 2.3)
+export { VersionHistory } from './VersionHistory';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {

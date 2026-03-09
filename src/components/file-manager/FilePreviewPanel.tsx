@@ -28,6 +28,7 @@ import {
   RotateCw,
   File,
   Eye,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { PdfCanvasViewer } from './PdfCanvasViewer';
+import { VersionHistory } from '@/components/shared/files/VersionHistory';
 import type { FileRecord } from '@/types/file-record';
 
 // ============================================================================
@@ -47,6 +49,10 @@ interface FilePreviewPanelProps {
   file: FileRecord | null;
   /** Close preview */
   onClose: () => void;
+  /** Current user ID (for version rollback) */
+  currentUserId?: string;
+  /** Callback after version rollback */
+  onRefresh?: () => void;
   /** Optional class */
   className?: string;
 }
@@ -194,8 +200,9 @@ function UnsupportedPreview({
 // MAIN COMPONENT
 // ============================================================================
 
-export function FilePreviewPanel({ file, onClose, className }: FilePreviewPanelProps) {
+export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, className }: FilePreviewPanelProps) {
   const { t } = useTranslation('files');
+  const [showVersions, setShowVersions] = useState(false);
   const translateDisplayName = useFileDisplayName();
 
   const previewType = useMemo(
@@ -268,6 +275,24 @@ export function FilePreviewPanel({ file, onClose, className }: FilePreviewPanelP
               </Tooltip>
             </>
           )}
+          {/* Version history toggle */}
+          {file.revision && file.revision > 1 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showVersions ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowVersions(!showVersions)}
+                  className="h-7 w-7 p-0"
+                >
+                  <History className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('versions.title', 'Ιστορικό εκδόσεων')} (v{file.revision})
+              </TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
@@ -300,6 +325,19 @@ export function FilePreviewPanel({ file, onClose, className }: FilePreviewPanelP
           </span>
         )}
       </div>
+
+      {/* Version history panel (collapsible) */}
+      {showVersions && (
+        <div className="border-b max-h-[250px] overflow-y-auto">
+          <VersionHistory
+            fileId={file.id}
+            currentRevision={file.revision}
+            currentUserId={currentUserId}
+            onRollback={onRefresh}
+            className="p-2"
+          />
+        </div>
+      )}
 
       {/* Preview area */}
       {previewType === 'pdf' && file.downloadUrl && (
