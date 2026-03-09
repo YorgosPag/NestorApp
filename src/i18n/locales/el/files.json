@@ -462,5 +462,20 @@
     "zoomOut": "Σμίκρυνση",
     "rotate": "Περιστροφή",
     "fitToWidth": "Προσαρμογή στο πλάτος"
+  },
+  "batch": {
+    "toolbar": "Μαζικές ενέργειες",
+    "selected": "{{count}} / {{total}} επιλεγμένα",
+    "selectAll": "Επιλογή όλων",
+    "deselectAll": "Αποεπιλογή",
+    "delete": "Διαγραφή",
+    "downloadZip": "Λήψη",
+    "classify": "Ταξινόμηση",
+    "clearSelection": "Κλείσιμο επιλογής",
+    "classification": {
+      "public": "Δημόσιο",
+      "internal": "Εσωτερικό",
+      "confidential": "Εμπιστευτικό"
+    }
   }
 }

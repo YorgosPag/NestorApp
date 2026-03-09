@@ -23,6 +23,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
+import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
 import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
@@ -63,6 +64,10 @@ export interface FilesListProps {
   onUnlink?: (fileId: string) => Promise<void>;
   /** Show link action button */
   showLinkAction?: boolean;
+  /** Multi-select: set of selected file IDs */
+  selectedIds?: Set<string>;
+  /** Multi-select: toggle selection handler */
+  onToggleSelect?: (fileId: string) => void;
 }
 
 // ============================================================================
@@ -113,6 +118,8 @@ export function FilesList({
   onLink,
   onUnlink,
   showLinkAction = false,
+  selectedIds,
+  onToggleSelect,
 }: FilesListProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
@@ -360,6 +367,19 @@ export function FilesList({
             className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
           >
+            {/* Checkbox for multi-select */}
+            {onToggleSelect && (
+              <label className="flex-shrink-0 flex items-center justify-center w-6 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedIds?.has(file.id) ?? false}
+                  onChange={() => onToggleSelect(file.id)}
+                  className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                  aria-label={`Select ${translateDisplayName(file)}`}
+                />
+              </label>
+            )}
+
             {/* File info */}
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               {/* Thumbnail preview or fallback icon */}
@@ -436,6 +456,17 @@ export function FilesList({
 
                   {/* Extension */}
                   <span className="uppercase">.{file.ext}</span>
+
+                  {/* Classification badge */}
+                  {file.classification && file.classification !== 'internal' && (
+                    <span className={cn(
+                      'px-1.5 py-0.5 rounded text-[10px] font-medium leading-none',
+                      file.classification === 'confidential' && 'bg-destructive/15 text-destructive',
+                      file.classification === 'public' && 'bg-green-500/15 text-green-700 dark:text-green-400',
+                    )}>
+                      {t(`batch.classification.${file.classification}`)}
+                    </span>
+                  )}
 
                   {/* 🔗 Linked file indicator */}
                   {file.isLinkedFile && (

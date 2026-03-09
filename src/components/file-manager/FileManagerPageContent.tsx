@@ -93,9 +93,11 @@ import { InboxView } from '@/components/shared/files/InboxView';
 import { formatFileSize } from '@/utils/file-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileRecordService } from '@/services/file-record.service';
+import { BatchActionsBar } from './BatchActionsBar';
 
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
+import type { FileClassification } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES
@@ -332,6 +334,18 @@ export function FileManagerPageContent() {
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // 🏢 ENTERPRISE: Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = useCallback((fileId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
+      return next;
+    });
+  }, []);
+
   // 🏢 ENTERPRISE: Dashboard toggle state
   const [showDashboard, setShowDashboard] = useState(true);
 
@@ -458,6 +472,42 @@ export function FileManagerPageContent() {
       logger.error('Description update failed', { fileId, error: err });
     }
   }, [refetch]);
+
+  // 🏢 ENTERPRISE: Batch operations
+  const handleBatchDelete = useCallback(async () => {
+    if (!user?.uid) return;
+    const ids = Array.from(selectedIds);
+    await Promise.all(ids.map(id => FileRecordService.moveToTrash(id, user.uid)));
+    setSelectedIds(new Set());
+    refetch();
+  }, [selectedIds, user?.uid, refetch]);
+
+  const handleBatchDownload = useCallback(async () => {
+    // Download each file individually via download proxy
+    const selected = filteredFiles.filter(f => selectedIds.has(f.id) && f.downloadUrl);
+    for (const file of selected) {
+      const proxyUrl = `/api/download?url=${encodeURIComponent(file.downloadUrl!)}&filename=${encodeURIComponent(file.displayName || file.originalFilename)}`;
+      const link = document.createElement('a');
+      link.href = proxyUrl;
+      link.download = file.displayName || file.originalFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      // Small delay between downloads to avoid browser blocking
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }, [selectedIds, filteredFiles]);
+
+  const handleBatchClassify = useCallback(async (classification: FileClassification) => {
+    const ids = Array.from(selectedIds);
+    const { doc, updateDoc } = await import('firebase/firestore');
+    const { db } = await import('@/lib/firebase');
+    await Promise.all(ids.map(id =>
+      updateDoc(doc(db, 'files', id), { classification })
+    ));
+    setSelectedIds(new Set());
+    refetch();
+  }, [selectedIds, refetch]);
 
   // 🏢 ENTERPRISE: Dashboard card click handler
   const handleCardClick = useCallback((stat: DashboardStat) => {
@@ -807,6 +857,21 @@ export function FileManagerPageContent() {
               )}
             </CardHeader>
 
+            {/* Batch actions bar */}
+            {selectedIds.size > 0 && activeTab === 'files' && (
+              <div className="px-4 pb-2">
+                <BatchActionsBar
+                  selectedCount={selectedIds.size}
+                  totalCount={filteredFiles.length}
+                  onSelectAll={() => setSelectedIds(new Set(filteredFiles.map(f => f.id)))}
+                  onClearSelection={() => setSelectedIds(new Set())}
+                  onBatchDelete={handleBatchDelete}
+                  onBatchDownload={handleBatchDownload}
+                  onBatchClassify={handleBatchClassify}
+                />
+              </div>
+            )}
+
             {/* Content — Split panel: file list (left) + preview (right) */}
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
@@ -854,6 +919,8 @@ export function FileManagerPageContent() {
                         onRename={handleRename}
                         onDescriptionUpdate={handleDescriptionUpdate}
                         currentUserId={user?.uid}
+                        selectedIds={selectedIds}
+                        onToggleSelect={toggleSelect}
                       />
                     )}
                   </ResizablePanel>

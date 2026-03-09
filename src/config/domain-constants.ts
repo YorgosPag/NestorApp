@@ -186,6 +186,23 @@ export const FILE_STATUS = {
 
 export type FileStatus = typeof FILE_STATUS[keyof typeof FILE_STATUS];
 
+/**
+ * 🏢 ENTERPRISE: File sensitivity classifications
+ * @enterprise Data governance — SAP/Google Drive pattern
+ *
+ * Levels:
+ * - PUBLIC: Can be shared externally (e.g. marketing photos)
+ * - INTERNAL: Default — visible within the company only
+ * - CONFIDENTIAL: Restricted — legal, financial, sensitive contracts
+ */
+export const FILE_CLASSIFICATIONS = {
+  PUBLIC: 'public',
+  INTERNAL: 'internal',
+  CONFIDENTIAL: 'confidential',
+} as const;
+
+export type FileClassification = typeof FILE_CLASSIFICATIONS[keyof typeof FILE_CLASSIFICATIONS];
+
 // ============================================================================
 // 🗑️ ENTERPRISE TRASH SYSTEM - LIFECYCLE MANAGEMENT
 // ============================================================================

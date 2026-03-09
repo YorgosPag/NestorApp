@@ -462,5 +462,20 @@
     "zoomOut": "Zoom out",
     "rotate": "Rotate",
     "fitToWidth": "Fit to width"
+  },
+  "batch": {
+    "toolbar": "Batch actions",
+    "selected": "{{count}} / {{total}} selected",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "delete": "Delete",
+    "downloadZip": "Download",
+    "classify": "Classify",
+    "clearSelection": "Clear selection",
+    "classification": {
+      "public": "Public",
+      "internal": "Internal",
+      "confidential": "Confidential"
+    }
   }
 }

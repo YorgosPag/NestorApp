@@ -19,6 +19,7 @@ import type {
   EntityType,
   FileDomain,
   FileCategory,
+  FileClassification,
   FileStatus,
   FileLifecycleState,
   HoldType,
@@ -251,6 +252,13 @@ export interface FileRecord {
    * @see FILE_CATEGORIES in domain-constants.ts
    */
   category: FileCategory;
+
+  /**
+   * Sensitivity classification (public, internal, confidential)
+   * Used for access control and data governance.
+   * @default 'internal'
+   */
+  classification?: FileClassification;
 
   // =========================================================================
   // STORAGE REFERENCE
