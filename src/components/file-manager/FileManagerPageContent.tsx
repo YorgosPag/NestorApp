@@ -43,6 +43,7 @@ import {
   FolderOpen,
   PanelLeftClose,
   PanelLeftOpen,
+  GripVertical,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -86,7 +87,6 @@ import {
 
 // Split-panel layout
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Panel as RawPanel, usePanelRef } from 'react-resizable-panels';
 import { FilePreviewPanel } from './FilePreviewPanel';
 
 // Local components
@@ -339,15 +339,36 @@ export function FileManagerPageContent() {
   // 📁 ENTERPRISE: Virtual folder selection (ADR-191 Phase 4.4)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showFolders, setShowFolders] = useState(false);
-  const showFoldersRef = useRef(false);
-  const folderPanelRef = usePanelRef();
+  const [folderWidth, setFolderWidth] = useState(250);
+  const folderWidthRef = useRef(250);
+  const isDraggingRef = useRef(false);
 
-  const handleFolderPanelResize = useCallback((size: number) => {
-    const visible = size >= 3;
-    if (visible !== showFoldersRef.current) {
-      showFoldersRef.current = visible;
-      setShowFolders(visible);
-    }
+  /** Native mouse-based resize — VS Code / JetBrains pattern */
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const startX = e.clientX;
+    const startWidth = folderWidthRef.current;
+
+    const onMouseMove = (moveEvt: MouseEvent) => {
+      const delta = moveEvt.clientX - startX;
+      const clamped = Math.max(150, Math.min(500, startWidth + delta));
+      folderWidthRef.current = clamped;
+      setFolderWidth(clamped);
+    };
+
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   }, []);
 
   // 🏢 ENTERPRISE: Upload dialog state
@@ -819,12 +840,7 @@ export function FileManagerPageContent() {
                             <Button
                               variant={showFolders ? 'default' : 'ghost'}
                               size="sm"
-                              onClick={() => {
-                                const next = !showFoldersRef.current;
-                                showFoldersRef.current = next;
-                                setShowFolders(next);
-                                folderPanelRef.current?.resize(next ? 20 : 0);
-                              }}
+                              onClick={() => setShowFolders(prev => !prev)}
                               aria-label={t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}
                               aria-pressed={showFolders}
                               className={cn('px-2', showFolders && 'bg-primary text-primary-foreground')}
@@ -1032,95 +1048,108 @@ export function FileManagerPageContent() {
               </div>
             )}
 
-            {/* Content — Split panel: file list (left) + preview (right) */}
+            {/* Content — Split layout: folders (optional) | file list | preview */}
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
-                <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
-                  {/* 📁 Folder sidebar — draggable (ADR-191 Phase 4.4) */}
-                  <RawPanel
-                    panelRef={folderPanelRef}
-                    defaultSize={0}
-                    minSize={0}
-                    maxSize={40}
-                    className="overflow-hidden"
-                    onResize={handleFolderPanelResize}
-                  >
-                    {showFolders && (
-                      <FolderManager
-                        companyId={companyId}
-                        currentUserId={user?.uid || ''}
-                        selectedFolderId={selectedFolderId}
-                        onFolderSelect={setSelectedFolderId}
-                        onFilesDropped={handleFilesDropped}
-                        className="h-full"
-                      />
-                    )}
-                  </RawPanel>
-                  <ResizableHandle withHandle />
-
-                  {/* File browser panel */}
-                  <ResizablePanel defaultSize={40} minSize={15} className="overflow-auto">
-                    {filteredFiles.length === 0 ? (
-                      <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
-                        <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-                        <p className="text-muted-foreground text-center">
-                          {searchTerm || filters.category !== 'all' || filters.entityType !== 'all'
-                            ? t('manager.noSearchResults')
-                            : t('manager.noFiles')}
-                        </p>
-                      </section>
-                    ) : viewMode === 'gallery' ? (
-                      /* Card/Gallery View */
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
-                        {filteredFiles.map((file) => (
-                          <FileCard
-                            key={file.id}
-                            file={file}
-                            onClick={handleFileClick}
-                            onDoubleClick={handleFileDoubleClick}
-                          />
-                        ))}
+                <div className="flex h-full min-h-[500px]">
+                  {/* 📁 Folder sidebar — native CSS resize (VS Code / JetBrains pattern) */}
+                  {showFolders && (
+                    <>
+                      <aside
+                        style={{ width: folderWidth, minWidth: 150, maxWidth: 500 }}
+                        className="h-full overflow-auto shrink-0 border-r"
+                      >
+                        <FolderManager
+                          companyId={companyId}
+                          currentUserId={user?.uid || ''}
+                          selectedFolderId={selectedFolderId}
+                          onFolderSelect={setSelectedFolderId}
+                          onFilesDropped={handleFilesDropped}
+                          className="h-full"
+                        />
+                      </aside>
+                      {/* Drag divider — identical visual style to ResizableHandle withHandle */}
+                      <div
+                        role="separator"
+                        aria-orientation="vertical"
+                        className="relative flex w-px shrink-0 items-center justify-center bg-border cursor-col-resize
+                          hover:bg-primary/50 active:bg-primary
+                          after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2"
+                        onMouseDown={handleDividerMouseDown}
+                      >
+                        <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
+                          <GripVertical className="h-2.5 w-2.5" />
+                        </div>
                       </div>
-                    ) : viewMode === 'tree' ? (
-                      /* Tree View */
-                      <CompanyFileTree
-                        files={filteredFiles}
-                        companyName={activeWorkspace?.displayName || 'Company'}
-                        groupingMode={groupingMode}
-                        viewMode={treeViewMode}
-                        onFileClick={handleFileClick}
-                        onFileDoubleClick={handleFileDoubleClick}
-                        onRename={handleRename}
-                        className="h-full"
-                      />
-                    ) : (
-                      /* List View */
-                      <FilesList
-                        files={filteredFiles}
-                        onView={handleFileClick}
-                        onRename={handleRename}
-                        onDescriptionUpdate={handleDescriptionUpdate}
+                    </>
+                  )}
+
+                  {/* File list + Preview — standard ResizablePanelGroup */}
+                  <ResizablePanelGroup direction="horizontal" className="flex-1">
+                    {/* File browser panel */}
+                    <ResizablePanel defaultSize={40} minSize={15} className="overflow-auto">
+                      {filteredFiles.length === 0 ? (
+                        <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
+                          <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
+                          <p className="text-muted-foreground text-center">
+                            {searchTerm || filters.category !== 'all' || filters.entityType !== 'all'
+                              ? t('manager.noSearchResults')
+                              : t('manager.noFiles')}
+                          </p>
+                        </section>
+                      ) : viewMode === 'gallery' ? (
+                        /* Card/Gallery View */
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
+                          {filteredFiles.map((file) => (
+                            <FileCard
+                              key={file.id}
+                              file={file}
+                              onClick={handleFileClick}
+                              onDoubleClick={handleFileDoubleClick}
+                            />
+                          ))}
+                        </div>
+                      ) : viewMode === 'tree' ? (
+                        /* Tree View */
+                        <CompanyFileTree
+                          files={filteredFiles}
+                          companyName={activeWorkspace?.displayName || 'Company'}
+                          groupingMode={groupingMode}
+                          viewMode={treeViewMode}
+                          onFileClick={handleFileClick}
+                          onFileDoubleClick={handleFileDoubleClick}
+                          onRename={handleRename}
+                          className="h-full"
+                        />
+                      ) : (
+                        /* List View */
+                        <FilesList
+                          files={filteredFiles}
+                          onView={handleFileClick}
+                          onRename={handleRename}
+                          onDescriptionUpdate={handleDescriptionUpdate}
+                          currentUserId={user?.uid}
+                          selectedIds={selectedIds}
+                          onToggleSelect={toggleSelect}
+                        />
+                      )}
+                    </ResizablePanel>
+
+                    {/* Resize handle */}
+                    <ResizableHandle withHandle />
+
+                    {/* Right panel: preview (always visible) */}
+                    <ResizablePanel defaultSize={60} minSize={25} className="overflow-hidden">
+                      <FilePreviewPanel
+                        file={selectedFile}
+                        onClose={() => setSelectedFile(null)}
                         currentUserId={user?.uid}
-                        selectedIds={selectedIds}
-                        onToggleSelect={toggleSelect}
+                        currentUserName={user?.displayName || undefined}
+                        onRefresh={refetch}
                       />
-                    )}
-                  </ResizablePanel>
-
-                  {/* Resize handle */}
-                  <ResizableHandle withHandle />
-
-                  {/* Right panel: preview (always visible) */}
-                  <ResizablePanel defaultSize={60} minSize={25} className="overflow-hidden">
-                    <FilePreviewPanel
-                      file={selectedFile}
-                      onClose={() => setSelectedFile(null)}
-                      currentUserId={user?.uid}
-                      currentUserName={user?.displayName || undefined}
-                      onRefresh={refetch}
-                    />
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                </div>
               ) : activeTab === 'inbox' ? (
                 /* 📥 ENTERPRISE: Inbox View - ADR-055 Attachment Ingestion */
                 /* 🏢 Wrapped in EnterpriseErrorBoundary for FULL error UI (Email, Admin, Tour) */
