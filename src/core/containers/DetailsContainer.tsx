@@ -90,10 +90,10 @@ export function DetailsContainer({
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
         {/* Tabs Section (if provided) - flex-1 allows tabs to expand to full height */}
         {tabsRenderer && (
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
             {tabsRenderer}
           </div>
         )}
