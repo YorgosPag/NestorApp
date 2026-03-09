@@ -21,7 +21,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   FolderTree,
   List,
@@ -339,7 +339,16 @@ export function FileManagerPageContent() {
   // 📁 ENTERPRISE: Virtual folder selection (ADR-191 Phase 4.4)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showFolders, setShowFolders] = useState(false);
+  const showFoldersRef = useRef(false);
   const folderPanelRef = usePanelRef();
+
+  const handleFolderPanelResize = useCallback((size: number) => {
+    const visible = size >= 3;
+    if (visible !== showFoldersRef.current) {
+      showFoldersRef.current = visible;
+      setShowFolders(visible);
+    }
+  }, []);
 
   // 🏢 ENTERPRISE: Upload dialog state
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -811,11 +820,10 @@ export function FileManagerPageContent() {
                               variant={showFolders ? 'default' : 'ghost'}
                               size="sm"
                               onClick={() => {
-                                if (showFolders) {
-                                  folderPanelRef.current?.resize(0);
-                                } else {
-                                  folderPanelRef.current?.resize(20);
-                                }
+                                const next = !showFoldersRef.current;
+                                showFoldersRef.current = next;
+                                setShowFolders(next);
+                                folderPanelRef.current?.resize(next ? 20 : 0);
                               }}
                               aria-label={t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}
                               aria-pressed={showFolders}
@@ -1031,14 +1039,11 @@ export function FileManagerPageContent() {
                   {/* 📁 Folder sidebar — draggable (ADR-191 Phase 4.4) */}
                   <RawPanel
                     panelRef={folderPanelRef}
-                    defaultSize={showFolders ? 20 : 0}
+                    defaultSize={0}
                     minSize={0}
                     maxSize={40}
                     className="overflow-hidden"
-                    onResize={(size) => {
-                      if (size < 3 && showFolders) setShowFolders(false);
-                      if (size >= 3 && !showFolders) setShowFolders(true);
-                    }}
+                    onResize={handleFolderPanelResize}
                   >
                     {showFolders && (
                       <FolderManager
