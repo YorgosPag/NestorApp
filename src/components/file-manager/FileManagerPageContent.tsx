@@ -101,6 +101,13 @@ import { BatchActionsBar } from './BatchActionsBar';
 import { useFileClassification, isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
 import { FolderManager } from '@/components/shared/files/FolderManager';
 import { FileFolderService } from '@/services/file-folder.service';
+import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
@@ -331,6 +338,9 @@ export function FileManagerPageContent() {
   // 📁 ENTERPRISE: Virtual folder selection (ADR-191 Phase 4.4)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showFolders, setShowFolders] = useState(false);
+
+  // 🏢 ENTERPRISE: Upload dialog state
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
   const { classifyBatch, classifyingIds } = useFileClassification();
@@ -909,7 +919,7 @@ export function FileManagerPageContent() {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() => logger.info('Upload files - TODO')}
+                              onClick={() => setShowUploadDialog(true)}
                               aria-label={t('manager.addFiles')}
                             >
                               <Upload className={`${iconSizes.sm} mr-2`} />
@@ -1129,6 +1139,27 @@ export function FileManagerPageContent() {
           </Card>
         </section>
       </main>
+
+      {/* 🏢 ENTERPRISE: Upload Dialog — reuses EntityFilesManager (ADR-031 canonical pipeline) */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('manager.addFiles')}</DialogTitle>
+          </DialogHeader>
+          {showUploadDialog && companyId && user?.uid && (
+            <EntityFilesManager
+              entityType="company"
+              entityId={companyId}
+              companyId={companyId}
+              domain="admin"
+              category="documents"
+              currentUserId={user.uid}
+              companyName={activeWorkspace?.displayName}
+              fetchAllDomains
+            />
+          )}
+        </DialogContent>
+      </Dialog>
   );
 }
 
