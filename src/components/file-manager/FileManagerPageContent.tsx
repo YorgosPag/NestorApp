@@ -40,10 +40,6 @@ import {
   Video,
   Upload,
   Inbox,
-  FolderOpen,
-  PanelLeftClose,
-  PanelLeftOpen,
-  GripVertical,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -100,8 +96,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { FileRecordService } from '@/services/file-record.service';
 import { BatchActionsBar } from './BatchActionsBar';
 import { useFileClassification, isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
-import { FolderManager } from '@/components/shared/files/FolderManager';
-import { FileFolderService } from '@/services/file-folder.service';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
 import { generateUploadThumbnail, buildThumbnailPath } from '@/components/shared/files/utils/generate-upload-thumbnail';
@@ -333,41 +327,6 @@ export function FileManagerPageContent() {
   // 🏢 ENTERPRISE: Batch selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // 📁 ENTERPRISE: Virtual folder selection (ADR-191 Phase 4.4)
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [showFolders, setShowFolders] = useState(false);
-  const [folderWidth, setFolderWidth] = useState(250);
-  const folderWidthRef = useRef(250);
-  const isDraggingRef = useRef(false);
-
-  /** Native mouse-based resize — VS Code / JetBrains pattern */
-  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDraggingRef.current = true;
-    const startX = e.clientX;
-    const startWidth = folderWidthRef.current;
-
-    const onMouseMove = (moveEvt: MouseEvent) => {
-      const delta = moveEvt.clientX - startX;
-      const clamped = Math.max(150, Math.min(500, startWidth + delta));
-      folderWidthRef.current = clamped;
-      setFolderWidth(clamped);
-    };
-
-    const onMouseUp = () => {
-      isDraggingRef.current = false;
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  }, []);
-
   // 🏢 ENTERPRISE: Upload via hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -411,13 +370,6 @@ export function FileManagerPageContent() {
   // 🏢 ENTERPRISE: Filtered files based on search and filters
   const filteredFiles = useMemo(() => {
     let result = files;
-
-    // Folder filter (ADR-191 Phase 4.4)
-    if (selectedFolderId) {
-      result = result.filter(
-        (file) => (file as Record<string, unknown>).folderId === selectedFolderId
-      );
-    }
 
     // Search term filter — accent & case insensitive (Greek support)
     if (searchTerm.trim()) {
@@ -502,7 +454,7 @@ export function FileManagerPageContent() {
     }
 
     return result;
-  }, [files, searchTerm, filters, selectedFolderId]);
+  }, [files, searchTerm, filters]);
 
   // 🏢 ENTERPRISE: Dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => [
@@ -642,13 +594,6 @@ export function FileManagerPageContent() {
   }, [selectedIds, refetch]);
 
   // 📁 ENTERPRISE: Move files to folder (ADR-191 Phase 4.4)
-  const handleFilesDropped = useCallback(async (folderId: string | null, fileIds: string[]) => {
-    if (!user?.uid) return;
-    await FileFolderService.moveFilesToFolder(fileIds, folderId, user.uid);
-    setSelectedIds(new Set());
-    refetch();
-  }, [user?.uid, refetch]);
-
   // 🏢 ENTERPRISE: Direct file upload (ADR-031 canonical pipeline)
   const handleFileUpload = useCallback(async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0 || !companyId || !user?.uid) return;
@@ -916,25 +861,6 @@ export function FileManagerPageContent() {
                   {/* View mode toggles - Only show on files tab */}
                   {activeTab === 'files' && (
                     <>
-                      {/* Folder panel toggle */}
-                      <li>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant={showFolders ? 'default' : 'ghost'}
-                              size="sm"
-                              onClick={() => setShowFolders(prev => !prev)}
-                              aria-label={t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}
-                              aria-pressed={showFolders}
-                              className={cn('px-2', showFolders && 'bg-primary text-primary-foreground')}
-                            >
-                              {showFolders ? <PanelLeftClose className={iconSizes.sm} /> : <FolderOpen className={iconSizes.sm} />}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}</TooltipContent>
-                        </Tooltip>
-                      </li>
-
                       <li className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
                         {/* Gallery View */}
                         <Tooltip>
@@ -1132,44 +1058,10 @@ export function FileManagerPageContent() {
               </div>
             )}
 
-            {/* Content — Split layout: folders (optional) | file list | preview */}
+            {/* Content — Split panel: file list + preview */}
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
-                <div className="flex h-full min-h-[500px]">
-                  {/* 📁 Folder sidebar — native CSS resize (VS Code / JetBrains pattern) */}
-                  {showFolders && (
-                    <>
-                      <aside
-                        style={{ width: folderWidth, minWidth: 150, maxWidth: 500 }}
-                        className="h-full overflow-auto shrink-0 border-r"
-                      >
-                        <FolderManager
-                          companyId={companyId}
-                          currentUserId={user?.uid || ''}
-                          selectedFolderId={selectedFolderId}
-                          onFolderSelect={setSelectedFolderId}
-                          onFilesDropped={handleFilesDropped}
-                          className="h-full"
-                        />
-                      </aside>
-                      {/* Drag divider — identical visual style to ResizableHandle withHandle */}
-                      <div
-                        role="separator"
-                        aria-orientation="vertical"
-                        className="relative flex w-px shrink-0 items-center justify-center bg-border cursor-col-resize
-                          hover:bg-primary/50 active:bg-primary
-                          after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2"
-                        onMouseDown={handleDividerMouseDown}
-                      >
-                        <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
-                          <GripVertical className="h-2.5 w-2.5" />
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* File list + Preview — standard ResizablePanelGroup */}
-                  <ResizablePanelGroup direction="horizontal" className="flex-1">
+                <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
                     {/* File browser panel */}
                     <ResizablePanel defaultSize={40} minSize={15} className="overflow-auto">
                       {filteredFiles.length === 0 ? (
@@ -1232,8 +1124,7 @@ export function FileManagerPageContent() {
                         onRefresh={refetch}
                       />
                     </ResizablePanel>
-                  </ResizablePanelGroup>
-                </div>
+                </ResizablePanelGroup>
               ) : activeTab === 'inbox' ? (
                 /* 📥 ENTERPRISE: Inbox View - ADR-055 Attachment Ingestion */
                 /* 🏢 Wrapped in EnterpriseErrorBoundary for FULL error UI (Email, Admin, Tour) */
