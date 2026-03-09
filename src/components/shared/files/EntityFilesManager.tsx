@@ -63,6 +63,12 @@ import { MediaGallery } from './media'; // 🏢 ENTERPRISE: Media Gallery for ph
 import { FloorplanGallery } from './media/FloorplanGallery'; // 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern)
 import { LinkToBuildingModal } from './LinkToBuildingModal'; // 🔗 ENTERPRISE: File → Building linking
 
+// 🏢 ENTERPRISE: Split-panel preview + Batch operations (reuse central File Manager components)
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { FilePreviewPanel } from '@/components/file-manager/FilePreviewPanel';
+import { BatchActionsBar } from '@/components/file-manager/BatchActionsBar';
+import { useBatchFileOperations } from './hooks/useBatchFileOperations';
+
 // ============================================================================
 // MODULE LOGGER
 // ============================================================================
@@ -185,6 +191,7 @@ export function EntityFilesManager({
   const [customTitle, setCustomTitle] = useState(''); // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
   const [searchTerm, setSearchTerm] = useState(''); // 🔍 ENTERPRISE: File search (Google Drive/Dropbox pattern)
   const [linkModalFile, setLinkModalFile] = useState<FileRecord | null>(null); // 🔗 ENTERPRISE: File to link to buildings
+  const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null); // 🏢 ENTERPRISE: Inline preview (split-panel)
 
   // 🏢 ENTERPRISE: Reset custom title when entry point changes
   React.useEffect(() => {
@@ -519,10 +526,37 @@ export function EntityFilesManager({
   }, [entityType, entityId, refetch]);
 
   // =========================================================================
+  // 🏢 ENTERPRISE: BATCH OPERATIONS (shared hook - reuse central File Manager logic)
+  // =========================================================================
+
+  const {
+    selectedIds,
+    toggleSelect,
+    selectAll,
+    clearSelection,
+    handleBatchDelete,
+    handleBatchDownload,
+    handleBatchClassify,
+    handleBatchArchive,
+    handleAIClassify,
+    aiClassifying,
+  } = useBatchFileOperations({
+    files: filteredFiles,
+    currentUserId,
+    refetch,
+  });
+
+  // =========================================================================
   // VIEW/DOWNLOAD HANDLERS
   // =========================================================================
 
-  const handleView = useCallback((file: { downloadUrl?: string }) => {
+  /** 🏢 ENTERPRISE: Single-click → inline preview panel (split-panel) */
+  const handleView = useCallback((file: FileRecord) => {
+    setSelectedFile(file);
+  }, []);
+
+  /** 🏢 ENTERPRISE: Double-click → open in new browser tab (legacy behavior) */
+  const handleOpenInNewTab = useCallback((file: { downloadUrl?: string }) => {
     if (file.downloadUrl) {
       // 🔒 OWASP: Use noopener,noreferrer to prevent reverse tabnabbing
       const newWindow = window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
@@ -836,6 +870,24 @@ export function EntityFilesManager({
         </nav>
       </CardHeader>
 
+      {/* 🏢 ENTERPRISE: Batch Actions Bar (appears when files are selected) */}
+      {selectedIds.size > 0 && activeTab === 'files' && (
+        <div className="px-6 pb-2">
+          <BatchActionsBar
+            selectedCount={selectedIds.size}
+            totalCount={filteredFiles.length}
+            onSelectAll={selectAll}
+            onClearSelection={clearSelection}
+            onBatchDelete={handleBatchDelete}
+            onBatchDownload={handleBatchDownload}
+            onBatchClassify={handleBatchClassify}
+            onAIClassify={handleAIClassify}
+            aiClassifying={aiClassifying}
+            onBatchArchive={handleBatchArchive}
+          />
+        </div>
+      )}
+
       <CardContent className="space-y-2">
         {/* Upload Pipeline (conditional) - Only show on files tab */}
         {activeTab === 'files' && showUploadZone && (
@@ -930,75 +982,99 @@ export function EntityFilesManager({
               </div>
             )}
 
-            {/* Files display (gallery, list, or tree) - Based on viewMode state */}
-            {viewMode === 'gallery' ? (
-              displayStyle === 'floorplan-gallery' ? (
-                /* 🏢 ENTERPRISE: Floorplan Gallery View (Bentley/Autodesk pattern) */
-                <FloorplanGallery
-                  files={filteredFiles}
-                  onDelete={async (file) => {
-                    await handleDelete(file.id);
-                  }}
-                  onDownload={handleDownload}
-                  onRefresh={() => refetch()} // 🏢 ENTERPRISE: Refetch after DXF processing completes
-                  emptyMessage={t('floorplan.noFloorplans')}
-                />
-              ) : (
-                /* 🏢 ENTERPRISE: Media Gallery View (Procore/BIM360/Autodesk pattern) */
-                <MediaGallery
-                  files={filteredFiles}
-                  initialViewMode="grid"
-                  showToolbar={false}
-                  enableSelection
-                  cardSize="md"
-                  onDelete={async (filesToDelete) => {
-                    for (const file of filesToDelete) {
-                      await handleDelete(file.id);
-                    }
-                  }}
-                  emptyMessage={t('media.noMedia')}
-                />
-              )
-            ) : viewMode === 'list' ? (
-              getAvailableGroups(entityType).length > 0 ? (
-                <GroupedFilesList
-                  files={filteredFiles}
-                  loading={loading}
-                  onDelete={handleDelete}
-                  onRename={handleRename}
-                  onDescriptionUpdate={handleDescriptionUpdate}
-                  onView={handleView}
-                  onDownload={handleDownload}
-                  currentUserId={currentUserId}
-                  onLink={enableBuildingLink ? handleLinkClick : undefined}
-                  onUnlink={handleUnlink}
-                  showLinkAction={enableBuildingLink}
-                />
-              ) : (
-                <FilesList
-                  files={filteredFiles}
-                  loading={loading}
-                  onDelete={handleDelete}
-                  onRename={handleRename}
-                  onDescriptionUpdate={handleDescriptionUpdate}
-                  onView={handleView}
-                  onDownload={handleDownload}
-                  currentUserId={currentUserId}
-                  onLink={enableBuildingLink ? handleLinkClick : undefined}
-                  onUnlink={handleUnlink}
-                  showLinkAction={enableBuildingLink}
-                />
-              )
-            ) : (
-              <FilePathTree
-                files={filteredFiles}
-                onFileSelect={handleView}
-                contextLevel="full" // 🏢 ENTERPRISE: Full hierarchy - Show complete path with user-friendly labels
-                companyName={companyName}
-                viewMode={treeViewMode} // 🏢 ENTERPRISE: Business View (default) vs Technical View toggle
-                groupByStudyGroup={fetchAllDomains && treeViewMode === 'business'} // 🏢 ADR-191: Study group tree for Documents tab
-              />
-            )}
+            {/* 🏢 ENTERPRISE: Split-panel layout — file list + inline preview (Google Drive/Procore pattern) */}
+            <ResizablePanelGroup direction="horizontal" className="min-h-[400px] rounded-lg">
+              <ResizablePanel defaultSize={selectedFile ? 45 : 100} minSize={30}>
+                {/* Files display (gallery, list, or tree) - Based on viewMode state */}
+                {viewMode === 'gallery' ? (
+                  displayStyle === 'floorplan-gallery' ? (
+                    /* 🏢 ENTERPRISE: Floorplan Gallery View (Bentley/Autodesk pattern) */
+                    <FloorplanGallery
+                      files={filteredFiles}
+                      onDelete={async (file) => {
+                        await handleDelete(file.id);
+                      }}
+                      onDownload={handleDownload}
+                      onRefresh={() => refetch()}
+                      emptyMessage={t('floorplan.noFloorplans')}
+                    />
+                  ) : (
+                    /* 🏢 ENTERPRISE: Media Gallery View (Procore/BIM360/Autodesk pattern) */
+                    <MediaGallery
+                      files={filteredFiles}
+                      initialViewMode="grid"
+                      showToolbar={false}
+                      enableSelection
+                      cardSize="md"
+                      onDelete={async (filesToDelete) => {
+                        for (const file of filesToDelete) {
+                          await handleDelete(file.id);
+                        }
+                      }}
+                      emptyMessage={t('media.noMedia')}
+                    />
+                  )
+                ) : viewMode === 'list' ? (
+                  getAvailableGroups(entityType).length > 0 ? (
+                    <GroupedFilesList
+                      files={filteredFiles}
+                      loading={loading}
+                      onDelete={handleDelete}
+                      onRename={handleRename}
+                      onDescriptionUpdate={handleDescriptionUpdate}
+                      onView={handleView}
+                      onDownload={handleDownload}
+                      currentUserId={currentUserId}
+                      onLink={enableBuildingLink ? handleLinkClick : undefined}
+                      onUnlink={handleUnlink}
+                      showLinkAction={enableBuildingLink}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelect}
+                    />
+                  ) : (
+                    <FilesList
+                      files={filteredFiles}
+                      loading={loading}
+                      onDelete={handleDelete}
+                      onRename={handleRename}
+                      onDescriptionUpdate={handleDescriptionUpdate}
+                      onView={handleView}
+                      onDownload={handleDownload}
+                      currentUserId={currentUserId}
+                      onLink={enableBuildingLink ? handleLinkClick : undefined}
+                      onUnlink={handleUnlink}
+                      showLinkAction={enableBuildingLink}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelect}
+                    />
+                  )
+                ) : (
+                  <FilePathTree
+                    files={filteredFiles}
+                    onFileSelect={handleView}
+                    contextLevel="full"
+                    companyName={companyName}
+                    viewMode={treeViewMode}
+                    groupByStudyGroup={fetchAllDomains && treeViewMode === 'business'}
+                  />
+                )}
+              </ResizablePanel>
+
+              {/* 🏢 ENTERPRISE: Inline Preview Panel (split-panel right side) */}
+              {selectedFile && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={55} minSize={30}>
+                    <FilePreviewPanel
+                      file={selectedFile}
+                      onClose={() => setSelectedFile(null)}
+                      currentUserId={currentUserId}
+                      onRefresh={refetch}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
 
             {/* Storage info */}
             {totalStorageBytes > 0 && (
@@ -1015,7 +1091,6 @@ export function EntityFilesManager({
             entityType={entityType}
             entityId={entityId}
             onRestore={() => {
-              // Refetch files when restored
               refetch();
             }}
           />
