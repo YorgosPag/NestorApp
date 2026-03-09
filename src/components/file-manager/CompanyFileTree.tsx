@@ -21,8 +21,6 @@ import {
   Folder,
   FolderOpen,
   File,
-  Image,
-  Video,
   FileText,
   FileSignature,
   Building,
@@ -40,6 +38,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import type { FileRecord } from '@/types/file-record';
 import type { FileCategory } from '@/config/domain-constants';
+import { getFileIconInfo } from '@/components/shared/files/utils/file-icons';
 import {
   getGroupForPurpose,
   STUDY_GROUPS,
@@ -121,19 +120,8 @@ function getCategoryIcon(category: string): React.ReactNode {
 }
 
 function getFileIcon(file: FileRecord): React.ReactNode {
-  const contentType = file.contentType || '';
-
-  if (contentType.startsWith('image/')) {
-    return <Image className="h-4 w-4 text-pink-500" />;
-  }
-  if (contentType.startsWith('video/')) {
-    return <Video className="h-4 w-4 text-red-500" />;
-  }
-  if (contentType === 'application/pdf') {
-    return <FileText className="h-4 w-4 text-red-600" />;
-  }
-
-  return <File className="h-4 w-4 text-gray-500" />;
+  const { icon: Icon, colorClass } = getFileIconInfo(file.ext, file.contentType);
+  return <Icon className={`h-4 w-4 ${colorClass}`} />;
 }
 
 // ============================================================================
