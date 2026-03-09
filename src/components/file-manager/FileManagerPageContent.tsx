@@ -366,7 +366,8 @@ export function FileManagerPageContent() {
         file.displayName?.toLowerCase().includes(query) ||
         file.originalFilename?.toLowerCase().includes(query) ||
         (file as { entityLabel?: string }).entityLabel?.toLowerCase().includes(query) ||
-        file.category?.toLowerCase().includes(query)
+        file.category?.toLowerCase().includes(query) ||
+        file.description?.toLowerCase().includes(query)
       );
     }
 

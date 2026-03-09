@@ -241,6 +241,7 @@ export function EntityFilesManager({
         file.category,
         file.domain,
         file.purpose,
+        file.description,
       ].filter(Boolean);
 
       return searchableFields.some((field) =>
