@@ -364,6 +364,13 @@ export interface FileRecord {
    */
   thumbnailUrl?: string;
 
+  /**
+   * 🏢 ENTERPRISE: Virtual folder ID (ADR-191 Phase 4.4)
+   * References a document in file_folders collection.
+   * null = root level (no folder assigned)
+   */
+  folderId?: string | null;
+
   // =========================================================================
   // 🏢 ENTERPRISE: INGESTION SOURCE TRACKING (ADR-055)
   // =========================================================================

@@ -477,5 +477,32 @@
       "internal": "Εσωτερικό",
       "confidential": "Εμπιστευτικό"
     }
+  },
+  "comments": {
+    "title": "Σχόλια",
+    "loading": "Φόρτωση σχολίων...",
+    "empty": "Δεν υπάρχουν σχόλια. Γράψε το πρώτο!",
+    "placeholder": "Γράψε ένα σχόλιο... (Ctrl+Enter για αποστολή)",
+    "reply": "Απάντηση",
+    "replyingTo": "Απάντηση σε",
+    "editing": "Επεξεργασία σχολίου",
+    "edited": "επεξεργασμένο",
+    "resolve": "Επίλυση",
+    "reopen": "Ξαναάνοιγμα",
+    "justNow": "μόλις τώρα",
+    "minutesAgo": "λεπτά πριν",
+    "hoursAgo": "ώρες πριν",
+    "daysAgo": "ημέρες πριν"
+  },
+  "folders": {
+    "title": "Φάκελοι",
+    "allFiles": "Όλα τα αρχεία",
+    "create": "Νέος φάκελος",
+    "addSubfolder": "Νέος υποφάκελος",
+    "rename": "Μετονομασία",
+    "delete": "Διαγραφή φακέλου",
+    "namePlaceholder": "Όνομα φακέλου",
+    "moveToFolder": "Μετακίνηση σε φάκελο",
+    "removeFromFolder": "Αφαίρεση από φάκελο"
   }
 }

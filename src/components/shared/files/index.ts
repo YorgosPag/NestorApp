@@ -39,6 +39,12 @@ export { AuditLogPanel } from './AuditLogPanel';
 // Share dialog (ADR-191 Phase 4.2)
 export { ShareDialog } from './ShareDialog';
 
+// Comments panel (ADR-191 Phase 4.3)
+export { CommentsPanel } from './CommentsPanel';
+
+// Folder manager (ADR-191 Phase 4.4)
+export { FolderManager } from './FolderManager';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {

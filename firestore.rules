@@ -2334,6 +2334,34 @@ service cloud.firestore {
       allow delete: if isAuthenticated();
     }
 
+    // =========================================================================
+    // 💬 FILE_COMMENTS - INLINE COMMENTS (ADR-191 Phase 4.3)
+    // =========================================================================
+    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 🏢 ENTERPRISE: Threaded comments on file documents
+    // 🔒 READ/WRITE: Authenticated users only
+    match /file_comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated()
+        && request.resource.data.authorId == resource.data.authorId; // Only author can edit
+      allow delete: if isAuthenticated()
+        && resource.data.authorId == request.auth.uid; // Only author can delete
+    }
+
+    // =========================================================================
+    // 📁 FILE_FOLDERS - VIRTUAL FOLDER STRUCTURE (ADR-191 Phase 4.4)
+    // =========================================================================
+    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
+    // 🏢 ENTERPRISE: Virtual folders for file organization
+    // 🔒 READ/WRITE: Authenticated users only
+    match /file_folders/{folderId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
     match /system_audit_logs/{logId} {
       allow read: if isAuthenticated();
       allow write: if false; // Server-side only

@@ -31,6 +31,7 @@ import {
   History,
   ScrollText,
   Share2,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ import { PdfCanvasViewer } from './PdfCanvasViewer';
 import { VersionHistory } from '@/components/shared/files/VersionHistory';
 import { AuditLogPanel } from '@/components/shared/files/AuditLogPanel';
 import { ShareDialog } from '@/components/shared/files/ShareDialog';
+import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import type { FileRecord } from '@/types/file-record';
 
 // ============================================================================
@@ -55,6 +57,8 @@ interface FilePreviewPanelProps {
   onClose: () => void;
   /** Current user ID (for version rollback) */
   currentUserId?: string;
+  /** Current user display name (for comments) */
+  currentUserName?: string;
   /** Callback after version rollback */
   onRefresh?: () => void;
   /** Optional class */
@@ -204,11 +208,12 @@ function UnsupportedPreview({
 // MAIN COMPONENT
 // ============================================================================
 
-export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, className }: FilePreviewPanelProps) {
+export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName, onRefresh, className }: FilePreviewPanelProps) {
   const { t } = useTranslation('files');
   const [showVersions, setShowVersions] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const translateDisplayName = useFileDisplayName();
 
   const previewType = useMemo(
@@ -317,6 +322,24 @@ export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, clas
               </TooltipContent>
             </Tooltip>
           )}
+          {/* Comments toggle (ADR-191 Phase 4.3) */}
+          {currentUserId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showComments ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowComments(!showComments)}
+                  className="h-7 w-7 p-0"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('comments.title', 'Σχόλια')}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {/* Audit log toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -383,6 +406,17 @@ export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, clas
       {showAudit && (
         <div className="border-b max-h-[250px] overflow-y-auto">
           <AuditLogPanel fileId={file.id} className="p-2" />
+        </div>
+      )}
+
+      {/* Comments panel (collapsible — ADR-191 Phase 4.3) */}
+      {showComments && currentUserId && (
+        <div className="border-b">
+          <CommentsPanel
+            fileId={file.id}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName || 'User'}
+          />
         </div>
       )}
 

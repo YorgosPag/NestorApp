@@ -214,6 +214,12 @@ export const COLLECTIONS = {
   // 🔗 FILE SHARES (ADR-191: Enterprise Document Management — Phase 4.2)
   FILE_SHARES: process.env.NEXT_PUBLIC_FILE_SHARES_COLLECTION || 'file_shares',
 
+  // 💬 FILE COMMENTS (ADR-191: Enterprise Document Management — Phase 4.3)
+  FILE_COMMENTS: process.env.NEXT_PUBLIC_FILE_COMMENTS_COLLECTION || 'file_comments',
+
+  // 📁 FILE FOLDERS (ADR-191: Enterprise Document Management — Phase 4.4)
+  FILE_FOLDERS: process.env.NEXT_PUBLIC_FILE_FOLDERS_COLLECTION || 'file_folders',
+
   // 📐 BOQ / QUANTITY SURVEYING (ADR-175: Σύστημα Επιμετρήσεων)
   BOQ_ITEMS: process.env.NEXT_PUBLIC_BOQ_ITEMS_COLLECTION || 'boq_items',
   BOQ_CATEGORIES: process.env.NEXT_PUBLIC_BOQ_CATEGORIES_COLLECTION || 'boq_categories',

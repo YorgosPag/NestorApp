@@ -96,6 +96,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { FileRecordService } from '@/services/file-record.service';
 import { BatchActionsBar } from './BatchActionsBar';
 import { useFileClassification, isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
+import { FolderManager } from '@/components/shared/files/FolderManager';
+import { FileFolderService } from '@/services/file-folder.service';
 
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
@@ -323,6 +325,9 @@ export function FileManagerPageContent() {
   // 🏢 ENTERPRISE: Batch selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // 📁 ENTERPRISE: Virtual folder selection (ADR-191 Phase 4.4)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
   // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
   const { classifyBatch, classifyingIds } = useFileClassification();
 
@@ -361,6 +366,13 @@ export function FileManagerPageContent() {
   // 🏢 ENTERPRISE: Filtered files based on search and filters
   const filteredFiles = useMemo(() => {
     let result = files;
+
+    // Folder filter (ADR-191 Phase 4.4)
+    if (selectedFolderId) {
+      result = result.filter(
+        (file) => (file as Record<string, unknown>).folderId === selectedFolderId
+      );
+    }
 
     // Search term filter — accent & case insensitive (Greek support)
     if (searchTerm.trim()) {
@@ -445,7 +457,7 @@ export function FileManagerPageContent() {
     }
 
     return result;
-  }, [files, searchTerm, filters]);
+  }, [files, searchTerm, filters, selectedFolderId]);
 
   // 🏢 ENTERPRISE: Dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => [
@@ -583,6 +595,14 @@ export function FileManagerPageContent() {
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, refetch]);
+
+  // 📁 ENTERPRISE: Move files to folder (ADR-191 Phase 4.4)
+  const handleFilesDropped = useCallback(async (folderId: string | null, fileIds: string[]) => {
+    if (!user?.uid) return;
+    await FileFolderService.moveFilesToFolder(fileIds, folderId, user.uid);
+    setSelectedIds(new Set());
+    refetch();
+  }, [user?.uid, refetch]);
 
   // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
   const handleAIClassify = useCallback(async () => {
@@ -966,8 +986,21 @@ export function FileManagerPageContent() {
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
                 <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
-                  {/* Left panel: file browser */}
-                  <ResizablePanel defaultSize={35} minSize={20} className="overflow-auto">
+                  {/* 📁 Folder sidebar (ADR-191 Phase 4.4) */}
+                  <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="overflow-hidden">
+                    <FolderManager
+                      companyId={companyId}
+                      currentUserId={user?.uid || ''}
+                      selectedFolderId={selectedFolderId}
+                      onFolderSelect={setSelectedFolderId}
+                      onFilesDropped={handleFilesDropped}
+                      className="h-full"
+                    />
+                  </ResizablePanel>
+                  <ResizableHandle />
+
+                  {/* Left-center panel: file browser */}
+                  <ResizablePanel defaultSize={30} minSize={15} className="overflow-auto">
                     {filteredFiles.length === 0 ? (
                       <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
                         <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
@@ -1019,11 +1052,12 @@ export function FileManagerPageContent() {
                   <ResizableHandle withHandle />
 
                   {/* Right panel: preview (always visible) */}
-                  <ResizablePanel defaultSize={65} minSize={25} className="overflow-hidden">
+                  <ResizablePanel defaultSize={55} minSize={25} className="overflow-hidden">
                     <FilePreviewPanel
                       file={selectedFile}
                       onClose={() => setSelectedFile(null)}
                       currentUserId={user?.uid}
+                      currentUserName={user?.displayName || undefined}
                       onRefresh={refetch}
                     />
                   </ResizablePanel>

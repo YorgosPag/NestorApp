@@ -477,5 +477,32 @@
       "internal": "Internal",
       "confidential": "Confidential"
     }
+  },
+  "comments": {
+    "title": "Comments",
+    "loading": "Loading comments...",
+    "empty": "No comments yet. Write the first one!",
+    "placeholder": "Write a comment... (Ctrl+Enter to send)",
+    "reply": "Reply",
+    "replyingTo": "Replying to",
+    "editing": "Editing comment",
+    "edited": "edited",
+    "resolve": "Resolve",
+    "reopen": "Reopen",
+    "justNow": "just now",
+    "minutesAgo": "minutes ago",
+    "hoursAgo": "hours ago",
+    "daysAgo": "days ago"
+  },
+  "folders": {
+    "title": "Folders",
+    "allFiles": "All files",
+    "create": "New folder",
+    "addSubfolder": "New subfolder",
+    "rename": "Rename",
+    "delete": "Delete folder",
+    "namePlaceholder": "Folder name",
+    "moveToFolder": "Move to folder",
+    "removeFromFolder": "Remove from folder"
   }
 }
