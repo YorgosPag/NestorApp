@@ -85,7 +85,8 @@ import {
 } from '@/components/core/AdvancedFilters';
 
 // Split-panel layout
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef } from '@/components/ui/resizable';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { Panel as RawPanel, usePanelRef } from 'react-resizable-panels';
 import { FilePreviewPanel } from './FilePreviewPanel';
 
 // Local components
@@ -1028,7 +1029,7 @@ export function FileManagerPageContent() {
               {activeTab === 'files' ? (
                 <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
                   {/* 📁 Folder sidebar — collapsible + draggable (ADR-191 Phase 4.4) */}
-                  <ResizablePanel
+                  <RawPanel
                     panelRef={folderPanelRef}
                     defaultSize={0}
                     minSize={10}
@@ -1047,7 +1048,7 @@ export function FileManagerPageContent() {
                       onFilesDropped={handleFilesDropped}
                       className="h-full"
                     />
-                  </ResizablePanel>
+                  </RawPanel>
                   <ResizableHandle withHandle />
 
                   {/* File browser panel */}
