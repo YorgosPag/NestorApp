@@ -93,7 +93,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
 
   return (
     <div className={cn(
-      "border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-t-lg",
+      "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-t-lg",
       variantClasses[variant],
       className
     )}>
