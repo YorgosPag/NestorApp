@@ -807,14 +807,9 @@ export function FileManagerPageContent() {
             {/* Content — Split panel: file list (left) + preview (right) */}
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
-                <ResizablePanelGroup direction="horizontal" className="h-full">
+                <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
                   {/* Left panel: file browser */}
-                  <ResizablePanel
-                    defaultSize={selectedFile ? 35 : 100}
-                    minSize={25}
-                    maxSize={selectedFile ? 75 : 100}
-                    className="overflow-auto"
-                  >
+                  <ResizablePanel defaultSize={35} minSize={20} className="overflow-auto">
                     {filteredFiles.length === 0 ? (
                       <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
                         <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
@@ -826,7 +821,7 @@ export function FileManagerPageContent() {
                       </section>
                     ) : viewMode === 'gallery' ? (
                       /* Card/Gallery View */
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
                         {filteredFiles.map((file) => (
                           <FileCard
                             key={file.id}
@@ -860,18 +855,16 @@ export function FileManagerPageContent() {
                     )}
                   </ResizablePanel>
 
-                  {/* Resize handle + Right panel: preview (only when file selected) */}
-                  {selectedFile && (
-                    <>
-                      <ResizableHandle withHandle />
-                      <ResizablePanel defaultSize={65} minSize={30} className="overflow-hidden">
-                        <FilePreviewPanel
-                          file={selectedFile}
-                          onClose={() => setSelectedFile(null)}
-                        />
-                      </ResizablePanel>
-                    </>
-                  )}
+                  {/* Resize handle */}
+                  <ResizableHandle withHandle />
+
+                  {/* Right panel: preview (always visible) */}
+                  <ResizablePanel defaultSize={65} minSize={25} className="overflow-hidden">
+                    <FilePreviewPanel
+                      file={selectedFile}
+                      onClose={() => setSelectedFile(null)}
+                    />
+                  </ResizablePanel>
                 </ResizablePanelGroup>
               ) : activeTab === 'inbox' ? (
                 /* 📥 ENTERPRISE: Inbox View - ADR-055 Attachment Ingestion */
