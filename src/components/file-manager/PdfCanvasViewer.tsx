@@ -26,16 +26,20 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ref, getBytes } from 'firebase/storage';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { storage } from '@/lib/firebase';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 interface PdfCanvasViewerProps {
-  /** PDF download URL */
+  /** PDF download URL (used for "open in new tab") */
   url: string;
+  /** Firebase Storage path (used to fetch PDF bytes directly, bypassing CORS) */
+  storagePath: string;
   /** Accessible title */
   title: string;
   /** Optional className */
@@ -102,7 +106,7 @@ async function loadPdfJs() {
 // COMPONENT
 // ============================================================================
 
-export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps) {
+export function PdfCanvasViewer({ url, storagePath, title, className }: PdfCanvasViewerProps) {
   const { t } = useTranslation('files');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -134,10 +138,10 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
           docRef.current = null;
         }
 
-        // Fetch PDF as ArrayBuffer to avoid CORS issues with Firebase Storage URLs
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = new Uint8Array(await response.arrayBuffer());
+        // Use Firebase Storage SDK directly — bypasses CORS restrictions
+        const storageRef = ref(storage, storagePath);
+        const bytes = await getBytes(storageRef);
+        const data = new Uint8Array(bytes);
         if (cancelled) return;
 
         const doc = await lib.getDocument({ data }).promise;
@@ -173,7 +177,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         docRef.current = null;
       }
     };
-  }, [url]);
+  }, [storagePath]);
 
   // Render current page
   useEffect(() => {
