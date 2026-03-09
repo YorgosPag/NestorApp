@@ -57,6 +57,8 @@ import app from '@/lib/firebase'; // 🏢 ENTERPRISE: For diagnostic logging
 import { getFileExtension } from '@/services/upload';
 import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { generateUploadThumbnail, buildThumbnailPath } from './utils/generate-upload-thumbnail';
+import { isAIClassifiable } from './hooks/useFileClassification';
 import { MediaGallery } from './media'; // 🏢 ENTERPRISE: Media Gallery for photos/videos (Procore/BIM360 pattern)
 import { FloorplanGallery } from './media/FloorplanGallery'; // 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern)
 import { LinkToBuildingModal } from './LinkToBuildingModal'; // 🔗 ENTERPRISE: File → Building linking
@@ -380,14 +382,46 @@ export function EntityFilesManager({
           const downloadUrl = await getDownloadURL(storageRef);
           logger.info(`[EntityFilesManager] Got download URL: ${downloadUrl.substring(0, 50)}...`);
 
+          // 🏢 ADR-191 Phase 2.1: Generate persistent thumbnail before finalize
+          let thumbnailUrl: string | undefined;
+          try {
+            const thumbBlob = await generateUploadThumbnail(file, file.type);
+            if (thumbBlob) {
+              const thumbPath = buildThumbnailPath(storagePath);
+              const thumbRef = ref(storage, thumbPath);
+              await uploadBytes(thumbRef, thumbBlob, { contentType: 'image/webp' });
+              thumbnailUrl = await getDownloadURL(thumbRef);
+              logger.info('[EntityFilesManager] Thumbnail generated and uploaded', { fileId, thumbPath });
+            }
+          } catch (thumbErr) {
+            // Non-blocking: thumbnail failure never stops the upload
+            logger.warn('[EntityFilesManager] Thumbnail generation failed (non-blocking)', { error: String(thumbErr) });
+          }
+
           // 🏢 STEP C: Finalize FileRecord
           logger.info(`[EntityFilesManager] STEP C: Finalizing FileRecord`);
           await FileRecordService.finalizeFileRecord({
             fileId,
             sizeBytes: file.size,
             downloadUrl,
+            thumbnailUrl,
           });
           logger.info(`[EntityFilesManager] Finalized FileRecord: ${fileId}`);
+
+          // 🏢 ADR-191 Phase 2.2: Auto-classify via AI (fire-and-forget)
+          if (isAIClassifiable(file.type)) {
+            fetch('/api/files/classify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileId }),
+            }).then((res) => {
+              if (res.ok) {
+                logger.info('[EntityFilesManager] AI auto-classify triggered', { fileId });
+              }
+            }).catch((err) => {
+              logger.warn('[EntityFilesManager] AI auto-classify failed (non-blocking)', { error: String(err) });
+            });
+          }
 
           successCount++;
 
