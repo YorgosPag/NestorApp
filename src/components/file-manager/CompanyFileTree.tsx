@@ -37,8 +37,14 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import type { FileRecord } from '@/types/file-record';
 import type { FileCategory } from '@/config/domain-constants';
+import {
+  getGroupForPurpose,
+  STUDY_GROUPS,
+  type StudyGroupMeta,
+} from '@/config/study-groups-config';
 
 // ============================================================================
 // TYPES
@@ -282,7 +288,15 @@ function TreeNode({
 // TREE BUILDING FUNCTIONS
 // ============================================================================
 
-function buildTreeByEntity(files: FileRecord[], companyName: string): TreeNodeData {
+/** Translator function type from useFileDisplayName */
+type DisplayNameTranslator = (file: FileRecord) => string;
+
+function buildTreeByEntity(
+  files: FileRecord[],
+  companyName: string,
+  translateDisplayName?: DisplayNameTranslator,
+  lang: string = 'el',
+): TreeNodeData {
   // Group files by entity type -> entity ID
   const groupedByType: Record<FileEntityType, Record<string, FileRecord[]>> = {
     project: {},
@@ -330,31 +344,54 @@ function buildTreeByEntity(files: FileRecord[], companyName: string): TreeNodeDa
       const firstFile = entityFiles[0];
       const entityLabel = (firstFile as { entityLabel?: string })?.entityLabel || entityId;
 
-      // Group by category within entity
-      const categoryGroups: Record<string, FileRecord[]> = {};
+      // Group by study group within entity (ADR-191)
+      const studyGroupBuckets = new Map<string, { meta: StudyGroupMeta | null; files: FileRecord[] }>();
+
       for (const file of entityFiles) {
-        const category = file.category || 'other';
-        if (!categoryGroups[category]) {
-          categoryGroups[category] = [];
+        const group = getGroupForPurpose(file.purpose);
+        const key = group ?? '__general__';
+
+        if (!studyGroupBuckets.has(key)) {
+          const meta = group
+            ? STUDY_GROUPS.find((sg) => sg.group === group) ?? null
+            : null;
+          studyGroupBuckets.set(key, { meta, files: [] });
         }
-        categoryGroups[category].push(file);
+        studyGroupBuckets.get(key)!.files.push(file);
       }
 
-      const categoryFolders: TreeNodeData[] = Object.entries(categoryGroups).map(([category, catFiles]) => ({
-        id: `${entityType}-${entityId}-${category}`,
-        label: category,
-        type: 'folder' as const,
-        icon: CATEGORY_ICONS[category as FileCategory] || CATEGORY_ICONS.other,
-        path: [companyName, entityType, entityId, category],
-        children: catFiles.map(file => ({
-          id: file.id,
-          label: file.displayName || file.originalFilename,
-          type: 'file' as const,
-          icon: getFileIcon(file),
-          path: [companyName, entityType, entityId, category, file.displayName],
-          file,
-        })),
-      }));
+      // Sort: study groups by order first, then general
+      const sortedBuckets = [...studyGroupBuckets.entries()].sort((a, b) => {
+        const orderA = a[1].meta?.order ?? 999;
+        const orderB = b[1].meta?.order ?? 999;
+        return orderA - orderB;
+      });
+
+      const categoryFolders: TreeNodeData[] = sortedBuckets.map(([key, bucket]) => {
+        const folderLabel = bucket.meta
+          ? (lang === 'en' ? bucket.meta.label.en : bucket.meta.label.el)
+          : (lang === 'en' ? 'General Documents' : 'Γενικά Έγγραφα');
+
+        return {
+          id: `${entityType}-${entityId}-${key}`,
+          label: folderLabel,
+          type: 'folder' as const,
+          icon: bucket.meta
+            ? getCategoryIcon(bucket.meta.group)
+            : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />),
+          path: [companyName, entityType, entityId, key],
+          children: bucket.files.map(file => ({
+            id: file.id,
+            label: translateDisplayName
+              ? translateDisplayName(file)
+              : (file.displayName || file.originalFilename),
+            type: 'file' as const,
+            icon: getFileIcon(file),
+            path: [companyName, entityType, entityId, key, file.displayName],
+            file,
+          })),
+        };
+      });
 
       return {
         id: `${entityType}-${entityId}`,
@@ -387,14 +424,23 @@ function buildTreeByEntity(files: FileRecord[], companyName: string): TreeNodeDa
   };
 }
 
-function buildTreeByCategory(files: FileRecord[], companyName: string): TreeNodeData {
-  // Group files by category -> entity type
-  const groupedByCategory: Record<string, Record<FileEntityType, FileRecord[]>> = {};
+function buildTreeByCategory(
+  files: FileRecord[],
+  companyName: string,
+  translateDisplayName?: DisplayNameTranslator,
+  lang: string = 'el',
+): TreeNodeData {
+  // Group files by study group -> entity type (ADR-191)
+  const groupedByStudyGroup = new Map<
+    string,
+    { meta: StudyGroupMeta | null; entities: Record<FileEntityType, FileRecord[]> }
+  >();
 
   const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
 
   for (const file of files) {
-    const category = file.category || 'other';
+    const group = getGroupForPurpose(file.purpose);
+    const key = group ?? '__general__';
     const entityType = file.entityType as string;
 
     // Skip unsupported entity types
@@ -402,55 +448,68 @@ function buildTreeByCategory(files: FileRecord[], companyName: string): TreeNode
       continue;
     }
 
-    if (!groupedByCategory[category]) {
-      groupedByCategory[category] = {
-        project: [],
-        building: [],
-        unit: [],
-        contact: [],
-      };
+    if (!groupedByStudyGroup.has(key)) {
+      const meta = group
+        ? STUDY_GROUPS.find((sg) => sg.group === group) ?? null
+        : null;
+      groupedByStudyGroup.set(key, {
+        meta,
+        entities: { project: [], building: [], unit: [], contact: [] },
+      });
     }
-    groupedByCategory[category][entityType as FileEntityType].push(file);
+    groupedByStudyGroup.get(key)!.entities[entityType as FileEntityType].push(file);
   }
 
+  // Sort: study groups by order first, then general
+  const sortedGroups = [...groupedByStudyGroup.entries()].sort((a, b) => {
+    const orderA = a[1].meta?.order ?? 999;
+    const orderB = b[1].meta?.order ?? 999;
+    return orderA - orderB;
+  });
+
   // Build tree
-  const categories = Object.keys(groupedByCategory);
   const categoryChildren: TreeNodeData[] = [];
 
-  for (const category of categories) {
-    const entityGroups = groupedByCategory[category];
+  for (const [key, { meta, entities }] of sortedGroups) {
     const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
-
     const entityFolders: TreeNodeData[] = [];
 
     for (const entityType of entityTypes) {
-      const entityFiles = entityGroups[entityType];
+      const entityFiles = entities[entityType];
       if (entityFiles.length === 0) continue;
 
       entityFolders.push({
-        id: `${category}-${entityType}`,
+        id: `${key}-${entityType}`,
         label: entityType,
         type: 'folder' as const,
         icon: ENTITY_ICONS[entityType],
-        path: [companyName, category, entityType],
+        path: [companyName, key, entityType],
         children: entityFiles.map(file => ({
           id: file.id,
-          label: file.displayName || file.originalFilename,
+          label: translateDisplayName
+            ? translateDisplayName(file)
+            : (file.displayName || file.originalFilename),
           type: 'file' as const,
           icon: getFileIcon(file),
-          path: [companyName, category, entityType, file.displayName],
+          path: [companyName, key, entityType, file.displayName],
           file,
         })),
       });
     }
 
     if (entityFolders.length > 0) {
+      const folderLabel = meta
+        ? (lang === 'en' ? meta.label.en : meta.label.el)
+        : (lang === 'en' ? 'General Documents' : 'Γενικά Έγγραφα');
+
       categoryChildren.push({
-        id: `category-${category}`,
-        label: category,
+        id: `category-${key}`,
+        label: folderLabel,
         type: 'folder' as const,
-        icon: CATEGORY_ICONS[category as FileCategory] || CATEGORY_ICONS.other,
-        path: [companyName, category],
+        icon: meta
+          ? getCategoryIcon(meta.group)
+          : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />),
+        path: [companyName, key],
         children: entityFolders,
       });
     }
@@ -479,16 +538,18 @@ export function CompanyFileTree({
   onFileDoubleClick,
   className,
 }: CompanyFileTreeProps) {
-  const { t } = useTranslation('files');
+  const { t, i18n } = useTranslation('files');
+  const translateDisplayName = useFileDisplayName();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
+  const lang = i18n.language;
 
   // Build tree based on grouping mode
   const treeData = useMemo(() => {
     if (groupingMode === 'entity') {
-      return buildTreeByEntity(files, companyName);
+      return buildTreeByEntity(files, companyName, translateDisplayName, lang);
     }
-    return buildTreeByCategory(files, companyName);
-  }, [files, companyName, groupingMode]);
+    return buildTreeByCategory(files, companyName, translateDisplayName, lang);
+  }, [files, companyName, groupingMode, translateDisplayName, lang]);
 
   // Toggle node expansion
   const toggleNode = useCallback((nodeId: string) => {
