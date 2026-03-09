@@ -32,6 +32,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileRecordService } from '@/services/file-record.service';
+import { isFileRecord } from '@/types/file-record';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_STATUS } from '@/config/domain-constants';
@@ -131,24 +132,13 @@ export interface UseAllCompanyFilesReturn {
 // ============================================================================
 
 /**
- * Type guard: check if a Firestore document has a toDate() method (Timestamp)
+ * Convert Firestore Timestamp to ISO string, or passthrough string values
  */
 function toISOStringOrPassthrough(value: unknown): string | undefined {
   if (value instanceof Object && 'toDate' in value) {
     return (value as Timestamp).toDate().toISOString();
   }
   return value as string | undefined;
-}
-
-/**
- * Type guard: basic validation that data looks like a FileRecord
- */
-function isValidFileRecord(data: Record<string, unknown>): boolean {
-  return (
-    typeof data.id === 'string' &&
-    typeof data.companyId === 'string' &&
-    typeof data.fileName === 'string'
-  );
 }
 
 /**
@@ -350,12 +340,17 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
             id: docSnap.id,
             createdAt: toISOStringOrPassthrough(data.createdAt),
             updatedAt: toISOStringOrPassthrough(data.updatedAt),
-          } as Record<string, unknown>;
+          };
 
-          if (isValidFileRecord(record)) {
-            activeFiles.push(record as unknown as FileRecord);
+          if (isFileRecord(record)) {
+            activeFiles.push(record);
           } else {
-            logger.warn('Skipping invalid FileRecord in onSnapshot', { docId: docSnap.id });
+            logger.warn('Skipping invalid FileRecord in onSnapshot', {
+              docId: docSnap.id,
+              hasEntityType: typeof data.entityType,
+              hasStatus: typeof data.status,
+              hasDisplayName: typeof data.displayName,
+            });
           }
         }
 
