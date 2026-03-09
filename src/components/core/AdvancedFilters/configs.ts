@@ -1623,6 +1623,36 @@ export const fileFiltersConfig: FilterPanelConfig = {
       id: 'files-details',
       fields: [
         {
+          id: 'classification',
+          type: 'select',
+          label: 'filters.classification',
+          placeholder: 'filters.placeholders.selectClassification',
+          ariaLabel: 'Classification filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allClassifications' },
+            { value: 'public', label: 'batch.classification.public' },
+            { value: 'internal', label: 'batch.classification.internal' },
+            { value: 'confidential', label: 'batch.classification.confidential' }
+          ]
+        },
+        {
+          id: 'fileType',
+          type: 'select',
+          label: 'filters.fileType',
+          placeholder: 'filters.placeholders.selectFileType',
+          ariaLabel: 'File type filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allFileTypes' },
+            { value: 'image', label: 'filters.fileTypes.images' },
+            { value: 'pdf', label: 'filters.fileTypes.pdf' },
+            { value: 'video', label: 'filters.fileTypes.video' },
+            { value: 'spreadsheet', label: 'filters.fileTypes.spreadsheet' },
+            { value: 'document', label: 'filters.fileTypes.document' }
+          ]
+        },
+        {
           id: 'sizeRange',
           type: 'range',
           label: 'filters.fileSize',
@@ -1636,7 +1666,7 @@ export const fileFiltersConfig: FilterPanelConfig = {
           type: 'daterange',
           label: 'filters.uploadDate',
           ariaLabel: 'Upload date range filter',
-          width: 2
+          width: 1
         }
       ]
     }
@@ -1649,6 +1679,8 @@ export interface FileFilterState {
   searchTerm: string;
   category: string;
   entityType: string;
+  classification: string;
+  fileType: string;
   sizeRange: { min?: number; max?: number };
   dateRange: { from?: Date; to?: Date };
 }
@@ -1658,6 +1690,8 @@ export const defaultFileFilters: FileFilterState = {
   searchTerm: '',
   category: 'all',
   entityType: 'all',
+  classification: 'all',
+  fileType: 'all',
   sizeRange: { min: undefined, max: undefined },
   dateRange: { from: undefined, to: undefined }
 };

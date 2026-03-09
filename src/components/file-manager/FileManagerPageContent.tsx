@@ -395,6 +395,55 @@ export function FileManagerPageContent() {
       result = result.filter(file => file.entityType === filters.entityType);
     }
 
+    // Classification filter (ADR-191 Phase 4)
+    if (filters.classification && filters.classification !== 'all') {
+      result = result.filter(file => file.classification === filters.classification);
+    }
+
+    // File type filter (ADR-191 Phase 4)
+    if (filters.fileType && filters.fileType !== 'all') {
+      const typeMap: Record<string, (ct: string) => boolean> = {
+        image: (ct) => ct.startsWith('image/'),
+        pdf: (ct) => ct === 'application/pdf',
+        video: (ct) => ct.startsWith('video/'),
+        spreadsheet: (ct) => ct.includes('spreadsheet') || ct.includes('excel') || ct === 'text/csv',
+        document: (ct) => ct.includes('word') || ct.includes('document') || ct === 'text/plain',
+      };
+      const matcher = typeMap[filters.fileType];
+      if (matcher) {
+        result = result.filter(file => file.contentType && matcher(file.contentType));
+      }
+    }
+
+    // Size range filter (ADR-191 Phase 4)
+    const sizeRange = filters.sizeRange as { min?: number; max?: number } | undefined;
+    if (sizeRange?.min !== undefined && sizeRange.min > 0) {
+      const minBytes = sizeRange.min * 1024 * 1024; // MB → bytes
+      result = result.filter(file => (file.sizeBytes ?? 0) >= minBytes);
+    }
+    if (sizeRange?.max !== undefined && sizeRange.max > 0) {
+      const maxBytes = sizeRange.max * 1024 * 1024; // MB → bytes
+      result = result.filter(file => (file.sizeBytes ?? 0) <= maxBytes);
+    }
+
+    // Date range filter (ADR-191 Phase 4)
+    const dateRange = filters.dateRange as { from?: Date; to?: Date } | undefined;
+    if (dateRange?.from) {
+      const fromDate = new Date(dateRange.from);
+      result = result.filter(file => {
+        const fileDate = file.createdAt ? new Date(file.createdAt as string) : null;
+        return fileDate ? fileDate >= fromDate : true;
+      });
+    }
+    if (dateRange?.to) {
+      const toDate = new Date(dateRange.to);
+      toDate.setHours(23, 59, 59, 999); // Include the entire day
+      result = result.filter(file => {
+        const fileDate = file.createdAt ? new Date(file.createdAt as string) : null;
+        return fileDate ? fileDate <= toDate : true;
+      });
+    }
+
     return result;
   }, [files, searchTerm, filters]);
 
