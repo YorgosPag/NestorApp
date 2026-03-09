@@ -27,7 +27,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -93,7 +93,7 @@ export interface CreateVersionInput {
 // SUBCOLLECTION NAME
 // ============================================================================
 
-const VERSIONS_SUBCOLLECTION = 'versions';
+const VERSIONS_SUBCOLLECTION = SUBCOLLECTIONS.FILE_VERSIONS;
 
 // ============================================================================
 // SERVICE

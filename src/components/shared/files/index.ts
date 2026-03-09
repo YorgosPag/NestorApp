@@ -33,6 +33,9 @@ export { FileThumbnail } from './FileThumbnail';
 // Version history (ADR-191 Phase 2.3)
 export { VersionHistory } from './VersionHistory';
 
+// Audit log (ADR-191 Phase 3.1)
+export { AuditLogPanel } from './AuditLogPanel';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {

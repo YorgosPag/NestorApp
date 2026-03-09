@@ -208,6 +208,9 @@ export const COLLECTIONS = {
   ACCOUNTING_IMPORT_BATCHES: process.env.NEXT_PUBLIC_ACCOUNTING_IMPORT_BATCHES_COLLECTION || 'accounting_import_batches',
   ACCOUNTING_TAX_INSTALLMENTS: process.env.NEXT_PUBLIC_ACCOUNTING_TAX_INSTALLMENTS_COLLECTION || 'accounting_tax_installments',
 
+  // 📄 FILE AUDIT LOG (ADR-191: Enterprise Document Management — Phase 3.1)
+  FILE_AUDIT_LOG: process.env.NEXT_PUBLIC_FILE_AUDIT_LOG_COLLECTION || 'file_audit_log',
+
   // 📐 BOQ / QUANTITY SURVEYING (ADR-175: Σύστημα Επιμετρήσεων)
   BOQ_ITEMS: process.env.NEXT_PUBLIC_BOQ_ITEMS_COLLECTION || 'boq_items',
   BOQ_CATEGORIES: process.env.NEXT_PUBLIC_BOQ_CATEGORIES_COLLECTION || 'boq_categories',
@@ -256,7 +259,10 @@ export const SUBCOLLECTIONS = {
   PROJECT_MEMBERS: process.env.NEXT_PUBLIC_PROJECT_MEMBERS_SUBCOL || 'members',
 
   // Unit subcollections (RBAC: /companies/{id}/units/{id}/grants)
-  UNIT_GRANTS: process.env.NEXT_PUBLIC_UNIT_GRANTS_SUBCOL || 'grants'
+  UNIT_GRANTS: process.env.NEXT_PUBLIC_UNIT_GRANTS_SUBCOL || 'grants',
+
+  // File subcollections (ADR-191: Document Management)
+  FILE_VERSIONS: process.env.NEXT_PUBLIC_FILE_VERSIONS_SUBCOL || 'versions'
 } as const;
 
 // ============================================================================

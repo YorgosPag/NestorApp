@@ -29,6 +29,7 @@ import {
   File,
   Eye,
   History,
+  ScrollText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { PdfCanvasViewer } from './PdfCanvasViewer';
 import { VersionHistory } from '@/components/shared/files/VersionHistory';
+import { AuditLogPanel } from '@/components/shared/files/AuditLogPanel';
 import type { FileRecord } from '@/types/file-record';
 
 // ============================================================================
@@ -203,6 +205,7 @@ function UnsupportedPreview({
 export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, className }: FilePreviewPanelProps) {
   const { t } = useTranslation('files');
   const [showVersions, setShowVersions] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
   const translateDisplayName = useFileDisplayName();
 
   const previewType = useMemo(
@@ -293,6 +296,22 @@ export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, clas
               </TooltipContent>
             </Tooltip>
           )}
+          {/* Audit log toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showAudit ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowAudit(!showAudit)}
+                className="h-7 w-7 p-0"
+              >
+                <ScrollText className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('audit.title', 'Ιστορικό ενεργειών')}
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
@@ -336,6 +355,13 @@ export function FilePreviewPanel({ file, onClose, currentUserId, onRefresh, clas
             onRollback={onRefresh}
             className="p-2"
           />
+        </div>
+      )}
+
+      {/* Audit log panel (collapsible) */}
+      {showAudit && (
+        <div className="border-b max-h-[250px] overflow-y-auto">
+          <AuditLogPanel fileId={file.id} className="p-2" />
         </div>
       )}
 

@@ -196,6 +196,23 @@ async function handlePost(
 
     await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).update(updateData);
 
+    // Audit: record AI classification (fire-and-forget, never blocks main operation)
+    try {
+      await getAdminFirestore().collection(COLLECTIONS.FILE_AUDIT_LOG).add({
+        fileId,
+        action: 'ai_classify',
+        performedBy: _ctx.userId,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          documentType: result.documentType,
+          confidence: result.confidence,
+          aiModel: result.aiModel ?? null,
+        },
+      });
+    } catch (auditErr) {
+      logger.warn('Audit log failed (non-blocking)', { error: auditErr });
+    }
+
     logger.info(`Classified file ${fileId}: ${result.documentType} (${result.confidence})`);
 
     return NextResponse.json({
