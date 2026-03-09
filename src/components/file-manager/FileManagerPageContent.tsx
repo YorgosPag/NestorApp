@@ -674,7 +674,9 @@ export function FileManagerPageContent() {
 
     if (successCount > 0) {
       showSuccess(`${successCount} αρχεί${successCount === 1 ? 'ο' : 'α'} ανέβηκ${successCount === 1 ? 'ε' : 'αν'}`);
-      refetch();
+      // Firestore eventual consistency: wait before refetching to ensure data is queryable
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await refetch();
     }
     if (failCount > 0) {
       showError(`${failCount} αρχεί${failCount === 1 ? 'ο' : 'α'} απέτυχ${failCount === 1 ? 'ε' : 'αν'}`);

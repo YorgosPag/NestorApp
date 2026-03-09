@@ -398,7 +398,7 @@ export class FileRecordService {
     }
 
     if (!options?.includeDeleted) {
-      constraints.push(where('isDeleted', '!=', true));
+      constraints.push(where('isDeleted', '==', false));
     }
 
     const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
@@ -467,7 +467,7 @@ export class FileRecordService {
     }
 
     if (!queryParams.includeDeleted) {
-      constraints.push(where('isDeleted', '!=', true));
+      constraints.push(where('isDeleted', '==', false));
     }
 
     const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
@@ -888,7 +888,7 @@ export class FileRecordService {
       where('companyId', '==', companyId),
       where('linkedTo', 'array-contains', linkTag),
       where('status', '==', FILE_STATUS.READY),
-      where('isDeleted', '!=', true),
+      where('isDeleted', '==', false),
     ];
 
     const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
@@ -1023,7 +1023,7 @@ export class FileRecordService {
     const constraints = [
       where('hash', '==', hash),
       where('status', '==', FILE_STATUS.READY),
-      where('isDeleted', '!=', true),
+      where('isDeleted', '==', false),
     ];
 
     if (companyId) {
