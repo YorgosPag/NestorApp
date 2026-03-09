@@ -194,7 +194,7 @@ interface CreateFloorRequest {
   name: string;
   buildingId: string;
   buildingName?: string;
-  projectId: string | number;
+  projectId?: string | number;
   projectName?: string;
   units?: number;
   elevation?: number;
@@ -254,13 +254,7 @@ export const POST = withStandardRateLimit(
           }, { status: 400 });
         }
 
-        if (!body.projectId) {
-          return NextResponse.json({
-            success: false,
-            error: 'Validation failed',
-            details: 'Project ID is required'
-          }, { status: 400 });
-        }
+        // projectId is optional — buildings can have floors without a project link
 
         // ============================================================================
         // 🏢 ENTERPRISE: Generate ID using centralized service
@@ -282,7 +276,7 @@ export const POST = withStandardRateLimit(
           name: body.name,
           buildingId: body.buildingId,
           buildingName: body.buildingName || '',
-          projectId: String(body.projectId),  // 🏢 ENTERPRISE: Normalize to string
+          projectId: body.projectId ? String(body.projectId) : null,
           projectName: body.projectName || '',
           companyId: ctx.companyId,  // 🔒 Tenant isolation
           units: body.units || 0,

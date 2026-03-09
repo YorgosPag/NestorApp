@@ -131,9 +131,9 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
       const result = await apiClient.post<FloorMutationResponse>('/api/floors', {
         number: parseInt(createNumber, 10) || 0,
         name: createName.trim(),
-        elevation: createElevation ? parseFloat(createElevation) : undefined,
+        elevation: createElevation ? parseFloat(createElevation) : null,
         buildingId: building.id,
-        projectId: building.projectId,
+        ...(building.projectId ? { projectId: building.projectId } : {}),
       });
       if (result?.success) {
         setShowCreateForm(false);
