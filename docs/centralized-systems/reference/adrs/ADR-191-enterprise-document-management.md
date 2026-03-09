@@ -138,14 +138,20 @@ active → trashed → archived → purged
 
 ## Section 2: Enterprise Roadmap (Phases 2-5)
 
-### Phase 2: Document Intelligence (PARTIAL — Pending)
+### Phase 2: Document Intelligence (MOSTLY COMPLETE — 2026-03-09)
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Thumbnail generation** | ⏸️ Pending | Auto-generate thumbnails — requires Sharp/Canvas server-side |
-| **AI auto-classification** | ✅ Partial | Batch classification via BatchActionsBar (public/internal/confidential) |
-| **Full-text search** | ⏸️ Pending | Requires Algolia/Meilisearch external service |
-| **File versioning** | ⏸️ Pending | `file_versions` collection — service skeleton exists |
+| Feature | Status | Files |
+|---------|--------|-------|
+| **2.1 Thumbnail generation** | ✅ Done | `src/components/shared/files/utils/generate-upload-thumbnail.ts`, `src/components/shared/files/FileThumbnail.tsx`, `src/components/shared/files/hooks/usePdfThumbnail.ts` |
+| **2.2 AI auto-classification** | ✅ Done | `src/components/shared/files/hooks/useFileClassification.ts`, `src/app/api/files/classify/route.ts` |
+| **2.3 File versioning** | ✅ Done | `src/services/file-version.service.ts`, `src/components/shared/files/VersionHistory.tsx` |
+| **2.4 Full-text search** | ⏸️ Pending | Requires Algolia/Meilisearch external service |
+
+**Λεπτομέρειες υλοποίησης:**
+
+- **Thumbnail generation**: Dual approach — (1) Persistent thumbnails at upload time via OffscreenCanvas (images→300px resize, PDFs→page 1 render), stored as WebP in Firebase Storage alongside originals. (2) On-demand client-side thumbnails via `usePdfThumbnail` hook for PDFs not yet thumbnailed. `FileThumbnail` component handles priority: pre-existing URL → PDF generation → image direct → file type icon.
+- **AI auto-classification**: Fire-and-forget call to `/api/files/classify` after every upload finalize. OpenAI gpt-4o-mini vision classifies document type (invoice, contract, permit, photo, etc.). Also available as manual batch operation via BatchActionsBar. Results stored in `ingestion.analysis` field.
+- **File versioning**: Firestore subcollection `files/{fileId}/versions`. `FileVersionService` (create/history/rollback). `VersionHistory` UI component in FilePreviewPanel with download per version and reversible rollback.
 
 ### Phase 3: Governance & Compliance (✅ COMPLETED — 2026-03-09)
 
@@ -277,7 +283,7 @@ active → trashed → archived → purged
 
 ```
 Phase 1: ████████████████████ COMPLETED — Core file management
-Phase 2: ████░░░░░░░░░░░░░░░ PARTIAL  — Batch classification done, rest pending
+Phase 2: ████████████████░░░░ 75% DONE — Thumbnails, AI classify, versioning done. Full-text search pending
 Phase 3: ████████████████████ COMPLETED — Governance & GDPR (5/5 features)
 Phase 4: ████████████████████ COMPLETED — Advanced UX (5/5 features)
 Phase 5: ████████░░░░░░░░░░░ PARTIAL  — PDF gen + webhooks done (2/5 features)
@@ -285,7 +291,7 @@ Phase 5: ████████░░░░░░░░░░░ PARTIAL  — 
 
 ### Remaining Work
 
-1. **Phase 2** — Thumbnails, full-text search, versioning (requires external services)
+1. **Phase 2.4** — Full-text search (requires Algolia/Meilisearch external service)
 2. **Phase 5.1** — myDATA/AADE (requires AADE credentials)
 3. **Phase 5.3** — Per-document ACL (requires RBAC redesign)
 4. **Phase 5.5** — S3/Azure Storage (requires cloud account)
@@ -332,3 +338,4 @@ Phase 5: ████████░░░░░░░░░░░ PARTIAL  — 
 | 2026-03-09 | Phase 4 COMPLETE — Templates, sharing, comments, folders, advanced filters |
 | 2026-03-09 | Phase 5 PARTIAL — PDF generation + webhook notifications implemented |
 | 2026-03-09 | ADR updated with all implementation details, new collections, API routes, dependencies |
+| 2026-03-09 | Phase 2 MOSTLY COMPLETE — Thumbnail generation at upload, AI auto-classify, versioning all operational |
