@@ -812,9 +812,9 @@ export function FileManagerPageContent() {
                               size="sm"
                               onClick={() => {
                                 if (showFolders) {
-                                  folderPanelRef.current?.collapse();
+                                  folderPanelRef.current?.resize(0);
                                 } else {
-                                  folderPanelRef.current?.expand();
+                                  folderPanelRef.current?.resize(20);
                                 }
                               }}
                               aria-label={t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}
@@ -1028,26 +1028,28 @@ export function FileManagerPageContent() {
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
                 <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
-                  {/* 📁 Folder sidebar — collapsible + draggable (ADR-191 Phase 4.4) */}
+                  {/* 📁 Folder sidebar — draggable (ADR-191 Phase 4.4) */}
                   <RawPanel
                     panelRef={folderPanelRef}
-                    defaultSize={0}
-                    minSize={10}
+                    defaultSize={showFolders ? 20 : 0}
+                    minSize={0}
                     maxSize={40}
-                    collapsible
-                    collapsedSize={0}
                     className="overflow-hidden"
-                    onCollapse={() => setShowFolders(false)}
-                    onExpand={() => setShowFolders(true)}
+                    onResize={(size) => {
+                      if (size < 3 && showFolders) setShowFolders(false);
+                      if (size >= 3 && !showFolders) setShowFolders(true);
+                    }}
                   >
-                    <FolderManager
-                      companyId={companyId}
-                      currentUserId={user?.uid || ''}
-                      selectedFolderId={selectedFolderId}
-                      onFolderSelect={setSelectedFolderId}
-                      onFilesDropped={handleFilesDropped}
-                      className="h-full"
-                    />
+                    {showFolders && (
+                      <FolderManager
+                        companyId={companyId}
+                        currentUserId={user?.uid || ''}
+                        selectedFolderId={selectedFolderId}
+                        onFolderSelect={setSelectedFolderId}
+                        onFilesDropped={handleFilesDropped}
+                        className="h-full"
+                      />
+                    )}
                   </RawPanel>
                   <ResizableHandle withHandle />
 
