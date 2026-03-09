@@ -85,7 +85,7 @@ import {
 } from '@/components/core/AdvancedFilters';
 
 // Split-panel layout
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef } from '@/components/ui/resizable';
 import { FilePreviewPanel } from './FilePreviewPanel';
 
 // Local components
@@ -338,6 +338,7 @@ export function FileManagerPageContent() {
   // 📁 ENTERPRISE: Virtual folder selection (ADR-191 Phase 4.4)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showFolders, setShowFolders] = useState(false);
+  const folderPanelRef = usePanelRef();
 
   // 🏢 ENTERPRISE: Upload dialog state
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -807,7 +808,13 @@ export function FileManagerPageContent() {
                             <Button
                               variant={showFolders ? 'default' : 'ghost'}
                               size="sm"
-                              onClick={() => setShowFolders((prev) => !prev)}
+                              onClick={() => {
+                                if (showFolders) {
+                                  folderPanelRef.current?.collapse();
+                                } else {
+                                  folderPanelRef.current?.expand();
+                                }
+                              }}
                               aria-label={t('folders.toggle', 'Εμφάνιση/Απόκρυψη φακέλων')}
                               aria-pressed={showFolders}
                               className={cn('px-2', showFolders && 'bg-primary text-primary-foreground')}
@@ -1021,8 +1028,9 @@ export function FileManagerPageContent() {
                 <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
                   {/* 📁 Folder sidebar — collapsible + draggable (ADR-191 Phase 4.4) */}
                   <ResizablePanel
-                    defaultSize={showFolders ? 18 : 0}
-                    minSize={0}
+                    panelRef={folderPanelRef}
+                    defaultSize={0}
+                    minSize={10}
                     maxSize={40}
                     collapsible
                     collapsedSize={0}
@@ -1030,21 +1038,19 @@ export function FileManagerPageContent() {
                     onCollapse={() => setShowFolders(false)}
                     onExpand={() => setShowFolders(true)}
                   >
-                    {showFolders && (
-                      <FolderManager
-                        companyId={companyId}
-                        currentUserId={user?.uid || ''}
-                        selectedFolderId={selectedFolderId}
-                        onFolderSelect={setSelectedFolderId}
-                        onFilesDropped={handleFilesDropped}
-                        className="h-full"
-                      />
-                    )}
+                    <FolderManager
+                      companyId={companyId}
+                      currentUserId={user?.uid || ''}
+                      selectedFolderId={selectedFolderId}
+                      onFolderSelect={setSelectedFolderId}
+                      onFilesDropped={handleFilesDropped}
+                      className="h-full"
+                    />
                   </ResizablePanel>
-                  <ResizableHandle />
+                  <ResizableHandle withHandle />
 
                   {/* File browser panel */}
-                  <ResizablePanel defaultSize={showFolders ? 32 : 40} minSize={15} className="overflow-auto">
+                  <ResizablePanel defaultSize={40} minSize={15} className="overflow-auto">
                     {filteredFiles.length === 0 ? (
                       <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
                         <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
@@ -1096,7 +1102,7 @@ export function FileManagerPageContent() {
                   <ResizableHandle withHandle />
 
                   {/* Right panel: preview (always visible) */}
-                  <ResizablePanel defaultSize={showFolders ? 50 : 60} minSize={25} className="overflow-hidden">
+                  <ResizablePanel defaultSize={60} minSize={25} className="overflow-hidden">
                     <FilePreviewPanel
                       file={selectedFile}
                       onClose={() => setSelectedFile(null)}
