@@ -129,7 +129,9 @@ export function PdfCanvasViewer({ url, storagePath, title, className }: PdfCanva
       setState((s) => ({ ...s, loading: true, error: null }));
 
       try {
+        console.log('[PdfCanvasViewer] Loading pdfjs-dist...');
         const lib = await loadPdfJs();
+        console.log('[PdfCanvasViewer] pdfjs-dist loaded');
         if (cancelled) return;
 
         // Cleanup previous document
@@ -139,12 +141,16 @@ export function PdfCanvasViewer({ url, storagePath, title, className }: PdfCanva
         }
 
         // Use Firebase Storage SDK directly — bypasses CORS restrictions
+        console.log('[PdfCanvasViewer] Fetching bytes from:', storagePath);
         const storageRef = ref(storage, storagePath);
         const bytes = await getBytes(storageRef);
+        console.log('[PdfCanvasViewer] Got bytes:', bytes.byteLength);
         const data = new Uint8Array(bytes);
         if (cancelled) return;
 
+        console.log('[PdfCanvasViewer] Loading PDF document...');
         const doc = await lib.getDocument({ data }).promise;
+        console.log('[PdfCanvasViewer] PDF loaded, pages:', doc.numPages);
         if (cancelled) {
           await doc.destroy();
           return;
