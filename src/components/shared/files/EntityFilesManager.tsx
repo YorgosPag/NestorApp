@@ -62,6 +62,8 @@ import { isAIClassifiable } from './hooks/useFileClassification';
 import { MediaGallery } from './media'; // 🏢 ENTERPRISE: Media Gallery for photos/videos (Procore/BIM360 pattern)
 import { FloorplanGallery } from './media/FloorplanGallery'; // 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern)
 import { LinkToBuildingModal } from './LinkToBuildingModal'; // 🔗 ENTERPRISE: File → Building linking
+import { FileThumbnail } from './FileThumbnail'; // 🏢 ENTERPRISE: Gallery card thumbnails
+import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: File size display
 
 // 🏢 ENTERPRISE: Split-panel preview + Batch operations (reuse central File Manager components)
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -732,42 +734,25 @@ export function EntityFilesManager({
             {activeTab === 'files' && (
               <>
                 <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
-                  {/* 🏢 ENTERPRISE: Gallery view for media files (Procore/BIM360 pattern) */}
-                  {displayStyle === 'media-gallery' && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant={viewMode === 'gallery' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setViewMode('gallery')}
-                          aria-label={t('manager.viewGallery')}
-                          aria-pressed={viewMode === 'gallery'}
-                          className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
-                        >
-                          <Grid3X3 className={iconSizes.sm} aria-hidden="true" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t('manager.viewGalleryTooltip')}</TooltipContent>
-                    </Tooltip>
-                  )}
-                  {/* 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern) */}
-                  {displayStyle === 'floorplan-gallery' && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant={viewMode === 'gallery' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setViewMode('gallery')}
-                          aria-label={t('manager.viewFloorplan')}
-                          aria-pressed={viewMode === 'gallery'}
-                          className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
-                        >
-                          <ImageIcon className={iconSizes.sm} aria-hidden="true" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t('manager.viewFloorplanTooltip')}</TooltipContent>
-                    </Tooltip>
-                  )}
+                  {/* 🏢 ENTERPRISE: Gallery view — available for ALL display styles (Google Drive/Procore pattern) */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('gallery')}
+                        aria-label={t('manager.viewGallery')}
+                        aria-pressed={viewMode === 'gallery'}
+                        className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
+                      >
+                        {displayStyle === 'floorplan-gallery'
+                          ? <ImageIcon className={iconSizes.sm} aria-hidden="true" />
+                          : <Grid3X3 className={iconSizes.sm} aria-hidden="true" />
+                        }
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('manager.viewGalleryTooltip')}</TooltipContent>
+                  </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -998,7 +983,7 @@ export function EntityFilesManager({
                       onRefresh={() => refetch()}
                       emptyMessage={t('floorplan.noFloorplans')}
                     />
-                  ) : (
+                  ) : displayStyle === 'media-gallery' ? (
                     /* 🏢 ENTERPRISE: Media Gallery View (Procore/BIM360/Autodesk pattern) */
                     <MediaGallery
                       files={filteredFiles}
@@ -1013,6 +998,37 @@ export function EntityFilesManager({
                       }}
                       emptyMessage={t('media.noMedia')}
                     />
+                  ) : (
+                    /* 🏢 ENTERPRISE: Document Card Gallery — same pattern as central File Manager */
+                    <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+                      {filteredFiles.map((file) => (
+                        <article
+                          key={file.id}
+                          className="cursor-pointer rounded-lg border bg-card hover:bg-accent/50 transition-colors p-4 flex flex-col items-center text-center gap-3"
+                          onClick={() => handleView(file)}
+                        >
+                          <FileThumbnail
+                            ext={file.ext}
+                            contentType={file.contentType}
+                            thumbnailUrl={file.thumbnailUrl}
+                            downloadUrl={file.downloadUrl}
+                            displayName={file.displayName || ''}
+                            size="md"
+                          />
+                          <p className="text-sm font-medium truncate w-full">
+                            {file.displayName || file.originalFilename}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(file.sizeBytes || 0)}
+                          </p>
+                        </article>
+                      ))}
+                      {filteredFiles.length === 0 && (
+                        <p className="col-span-full text-center text-muted-foreground py-8">
+                          {t('manager.noFiles')}
+                        </p>
+                      )}
+                    </section>
                   )
                 ) : viewMode === 'list' ? (
                   getAvailableGroups(entityType).length > 0 ? (
