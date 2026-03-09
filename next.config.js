@@ -200,7 +200,6 @@ const nextConfig = {
         },
         // Tree shaking optimizations
         usedExports: true,
-        sideEffects: false,
       };
     }
 
