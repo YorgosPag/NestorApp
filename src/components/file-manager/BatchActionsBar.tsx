@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Loader2,
   Sparkles,
+  Archive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -59,6 +60,8 @@ interface BatchActionsBarProps {
   onAIClassify?: () => Promise<void>;
   /** Whether AI classification is in progress */
   aiClassifying?: boolean;
+  /** Batch archive */
+  onBatchArchive?: () => Promise<void>;
 }
 
 // ============================================================================
@@ -85,10 +88,12 @@ export function BatchActionsBar({
   onBatchClassify,
   onAIClassify,
   aiClassifying = false,
+  onBatchArchive,
 }: BatchActionsBarProps) {
   const { t } = useTranslation('files');
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   const allSelected = selectedCount === totalCount && totalCount > 0;
 
@@ -183,6 +188,32 @@ export function BatchActionsBar({
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t('batch.aiClassifyTooltip', 'Αυτόματη αναγνώριση τύπου εγγράφου με AI')}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Batch archive (ADR-191 Phase 3.2) */}
+      {onBatchArchive && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                setArchiving(true);
+                try { await onBatchArchive(); } finally { setArchiving(false); }
+              }}
+              disabled={archiving}
+              className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700"
+            >
+              {archiving ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <Archive className="h-3.5 w-3.5 mr-1" />
+              )}
+              {t('batch.archive', 'Αρχειοθέτηση')}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('batch.archiveTooltip', 'Μεταφορά σε αρχειοθήκη')}</TooltipContent>
         </Tooltip>
       )}
 

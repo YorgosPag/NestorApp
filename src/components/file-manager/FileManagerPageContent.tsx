@@ -515,6 +515,26 @@ export function FileManagerPageContent() {
     refetch();
   }, [selectedIds, refetch]);
 
+  // 🏢 ENTERPRISE: Batch archive (ADR-191 Phase 3.2)
+  const handleBatchArchive = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    const response = await fetch('/api/files/archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileIds: ids, action: 'archive' }),
+    });
+
+    if (!response.ok) {
+      logger.error('Batch archive failed', { status: response.status });
+      return;
+    }
+
+    setSelectedIds(new Set());
+    refetch();
+  }, [selectedIds, refetch]);
+
   // 🏢 ENTERPRISE: AI auto-classification (ADR-191 Phase 2.2)
   const handleAIClassify = useCallback(async () => {
     const classifiableIds = filteredFiles
@@ -888,6 +908,7 @@ export function FileManagerPageContent() {
                   onBatchClassify={handleBatchClassify}
                   onAIClassify={handleAIClassify}
                   aiClassifying={classifyingIds.size > 0}
+                  onBatchArchive={handleBatchArchive}
                 />
               </div>
             )}
