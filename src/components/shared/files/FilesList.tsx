@@ -53,6 +53,8 @@ export interface FilesListProps {
   onDownload?: (file: FileRecord) => void;
   /** Rename handler */
   onRename?: (fileId: string, newDisplayName: string) => void;
+  /** Description update handler */
+  onDescriptionUpdate?: (fileId: string, description: string) => void;
   /** Current user ID (για delete authorization) */
   currentUserId?: string;
   /** 🔗 Link to building handler (shown for project files) */
@@ -105,6 +107,7 @@ export function FilesList({
   onDelete,
   onView,
   onDownload,
+  onDescriptionUpdate,
   currentUserId,
   onLink,
   onUnlink,
@@ -123,6 +126,12 @@ export function FilesList({
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [renameLoading, setRenameLoading] = useState(false);
+
+  // =========================================================================
+  // DESCRIPTION EDIT STATE
+  // =========================================================================
+  const [editingDescFileId, setEditingDescFileId] = useState<string | null>(null);
+  const [editingDesc, setEditingDesc] = useState('');
 
   // =========================================================================
   // DELETE CONFIRMATION STATE
@@ -181,6 +190,28 @@ export function FilesList({
       handleRenameCancel();
     }
   }, [handleRenameConfirm, handleRenameCancel]);
+
+  // =========================================================================
+  // DESCRIPTION HANDLERS
+  // =========================================================================
+
+  const handleDescriptionStart = useCallback((file: FileRecord) => {
+    setEditingDescFileId(file.id);
+    setEditingDesc(file.description || '');
+  }, []);
+
+  const handleDescriptionSave = useCallback(() => {
+    if (!editingDescFileId || !onDescriptionUpdate) return;
+    onDescriptionUpdate(editingDescFileId, editingDesc);
+    setEditingDescFileId(null);
+    setEditingDesc('');
+  }, [editingDescFileId, editingDesc, onDescriptionUpdate]);
+
+  const handleDescriptionKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setEditingDescFileId(null);
+    }
+  }, []);
 
   /**
    * Opens delete confirmation modal (center screen)
@@ -413,6 +444,38 @@ export function FilesList({
                     </span>
                   )}
                 </div>
+
+                {/* Description — inline editable */}
+                {editingDescFileId === file.id ? (
+                  <div className="flex items-center gap-1 mt-1">
+                    <input
+                      type="text"
+                      value={editingDesc}
+                      onChange={(e) => setEditingDesc(e.target.value)}
+                      onKeyDown={handleDescriptionKeyDown}
+                      onBlur={handleDescriptionSave}
+                      placeholder={t('list.descriptionPlaceholder')}
+                      className="flex-1 text-xs border rounded px-1.5 py-0.5 bg-background text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      autoFocus
+                    />
+                  </div>
+                ) : file.description ? (
+                  <p
+                    className="text-xs text-muted-foreground mt-0.5 truncate cursor-pointer hover:text-foreground transition-colors"
+                    onClick={(e) => { e.stopPropagation(); if (onDescriptionUpdate) handleDescriptionStart(file); }}
+                    title={file.description}
+                  >
+                    {file.description}
+                  </p>
+                ) : onDescriptionUpdate ? (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground/50 mt-0.5 hover:text-muted-foreground transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleDescriptionStart(file); }}
+                  >
+                    {t('list.addDescription')}
+                  </button>
+                ) : null}
               </div>
             </div>
 

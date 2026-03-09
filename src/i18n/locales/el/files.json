@@ -202,6 +202,8 @@
     "confirmRename": "Επιβεβαίωση μετονομασίας",
     "renameSuccess": "Το αρχείο μετονομάστηκε επιτυχώς",
     "renameError": "Αποτυχία μετονομασίας αρχείου",
+    "addDescription": "+ Προσθήκη περιγραφής",
+    "descriptionPlaceholder": "Προσθέστε περιγραφή ή σημειώσεις...",
     "filesCount": "αρχεία",
     "collapseGroup": "Σύμπτυξη ομάδας",
     "expandGroup": "Ανάπτυξη ομάδας"

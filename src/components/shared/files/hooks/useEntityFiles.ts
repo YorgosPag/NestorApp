@@ -81,6 +81,8 @@ export interface UseEntityFilesReturn {
   moveToTrash: (fileId: string, trashedBy: string) => Promise<void>;
   /** Rename file display name */
   renameFile: (fileId: string, newDisplayName: string, renamedBy: string) => Promise<void>;
+  /** Update file description */
+  updateDescription: (fileId: string, description: string) => Promise<void>;
   /** @deprecated Use moveToTrash instead */
   deleteFile: (fileId: string, deletedBy: string) => Promise<void>;
   /** Total storage used by entity (bytes) */
@@ -270,6 +272,29 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     }
   }, []);
 
+  // =========================================================================
+  // DESCRIPTION OPERATIONS
+  // =========================================================================
+
+  const updateDescription = useCallback(async (fileId: string, description: string) => {
+    try {
+      logger.info('Updating file description', { fileId });
+
+      await FileRecordService.updateDescription(fileId, description);
+
+      // Optimistic local state update
+      setFiles((prev) => prev.map((file) =>
+        file.id === fileId
+          ? { ...file, description: description.trim() || undefined }
+          : file
+      ));
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error updating description');
+      logger.error('Failed to update description', { error: error.message, fileId });
+      throw error;
+    }
+  }, []);
+
   /**
    * @deprecated Use moveToTrash instead
    * Kept for backward compatibility
@@ -315,6 +340,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     refetch: fetchFiles,
     moveToTrash,
     renameFile,
+    updateDescription,
     deleteFile, // @deprecated - use moveToTrash
     totalStorageBytes,
   };

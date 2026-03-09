@@ -279,6 +279,12 @@ export interface FileRecord {
   displayName: string;
 
   /**
+   * User-provided description / notes about the file
+   * Optional — editable at any time after upload
+   */
+  description?: string;
+
+  /**
    * Original filename as uploaded by user
    * Preserved for reference/download
    */

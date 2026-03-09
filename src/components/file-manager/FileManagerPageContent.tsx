@@ -443,6 +443,15 @@ export function FileManagerPageContent() {
     }
   }, [user?.uid, refetch]);
 
+  const handleDescriptionUpdate = useCallback(async (fileId: string, description: string) => {
+    try {
+      await FileRecordService.updateDescription(fileId, description);
+      refetch();
+    } catch (err) {
+      logger.error('Description update failed', { fileId, error: err });
+    }
+  }, [refetch]);
+
   // 🏢 ENTERPRISE: Dashboard card click handler
   const handleCardClick = useCallback((stat: DashboardStat) => {
     const title = stat.title;
@@ -834,6 +843,7 @@ export function FileManagerPageContent() {
                       files={filteredFiles}
                       onView={handleFileClick}
                       onRename={handleRename}
+                      onDescriptionUpdate={handleDescriptionUpdate}
                       currentUserId={user?.uid}
                     />
                   )}

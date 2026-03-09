@@ -946,6 +946,34 @@ export class FileRecordService {
     });
   }
 
+  /**
+   * Update file description / notes
+   * Editable at any time — no restrictions
+   */
+  static async updateDescription(fileId: string, description: string): Promise<void> {
+    logger.info('Updating FileRecord description', { fileId });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      throw new Error(`FileRecord not found: ${fileId}`);
+    }
+
+    await updateDoc(docRef, {
+      description: description.trim() || null,
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('FileRecord description updated', { fileId });
+
+    RealtimeService.dispatch('FILE_UPDATED', {
+      fileId,
+      updates: { description: description.trim() || null },
+      timestamp: Date.now(),
+    });
+  }
+
   // ==========================================================================
   // LEGACY DELETE OPERATIONS (deprecated - use moveToTrash)
   // ==========================================================================

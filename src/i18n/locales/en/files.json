@@ -202,6 +202,8 @@
     "confirmRename": "Confirm rename",
     "renameSuccess": "File renamed successfully",
     "renameError": "Failed to rename file",
+    "addDescription": "+ Add description",
+    "descriptionPlaceholder": "Add a description or notes...",
     "filesCount": "files",
     "collapseGroup": "Collapse group",
     "expandGroup": "Expand group"
