@@ -21,6 +21,8 @@ export interface Storage {
   building: string;
   /** 🏢 ENTERPRISE: Building document ID (foreign key) - added via migration 006 */
   buildingId?: string;
+  /** 🏢 ENTERPRISE: Company ID for tenant isolation */
+  companyId?: string;
   floor: string;
   area: number; // in square meters
   description?: string;

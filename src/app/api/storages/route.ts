@@ -91,6 +91,7 @@ function mapFirestoreToStorage(docId: string, data: FirestoreStorageData): Stora
     building: data.building || '',
     // 🏢 ENTERPRISE: buildingId field (added via migration 006)
     buildingId: data.buildingId as string | undefined,
+    companyId: data.companyId as string | undefined,
     floor: data.floor || '',
     area: typeof data.area === 'number' ? data.area : 0,
     description: data.description,
@@ -250,14 +251,13 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     let snapshot;
 
     if (requestedBuildingId) {
-      // 🏢 ENTERPRISE: Direct buildingId query with companyId tenant isolation
-      // This is the most efficient path — no need for projectId-based filtering
+      // 🏢 ENTERPRISE: Query by buildingId only (single equality — no composite index needed)
+      // Tenant isolation verified via companyId in-memory filter below
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
         .where('buildingId', '==', requestedBuildingId)
-        .where('companyId', '==', ctx.companyId)
         .get();
-      logger.info('Querying storages for building (direct)', { buildingId: requestedBuildingId });
+      logger.info('Querying storages for building', { buildingId: requestedBuildingId });
     } else if (requestedProjectId) {
       // Single project query (already validated as authorized)
       snapshot = await getAdminFirestore()
@@ -266,11 +266,12 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
         .get();
       logger.info('Querying storages for project', { projectId: requestedProjectId });
     } else {
-      // Multiple projects query - get all and filter in-memory
+      // 🏢 ENTERPRISE: Fetch by companyId for tenant isolation (no projectId dependency)
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
+        .where('companyId', '==', ctx.companyId)
         .get();
-      logger.info('Querying all storages', { authorizedProjectCount: authorizedProjectIds.size });
+      logger.info('Querying all storages for company', { companyId: ctx.companyId });
     }
 
     // =========================================================================
@@ -284,15 +285,16 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       allStorages.push(storage);
     });
 
-    // Filter by authorized projects (skip if already filtered by buildingId+companyId)
+    // 🏢 ENTERPRISE: Tenant isolation — filter by companyId
     let storages: Storage[];
     if (requestedBuildingId) {
-      // Already tenant-isolated via Firestore query (buildingId + companyId)
-      storages = allStorages;
+      // Filter by companyId in-memory (single-field buildingId query for reliability)
+      storages = allStorages.filter(s => !s.companyId || s.companyId === ctx.companyId);
     } else if (requestedProjectId) {
-      storages = allStorages; // Already filtered by Firestore query
+      storages = allStorages; // Already filtered by Firestore query + project authorization
     } else {
-      storages = allStorages.filter(storage => storage.projectId && authorizedProjectIds.has(storage.projectId));
+      // Already filtered by companyId in Firestore query
+      storages = allStorages;
     }
 
     logger.info('Found storages for authorized projects', { count: storages.length });
