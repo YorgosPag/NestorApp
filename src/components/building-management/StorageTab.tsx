@@ -169,6 +169,10 @@ export function StorageTab({ building }: StorageTabProps) {
 
   const handleSave = async (unit: StorageUnit) => {
     try {
+      // 🏢 ENTERPRISE: Resolve projectId from building data (Building type uses projectId, not project)
+      const resolvedProjectId = (building as Record<string, unknown>).projectId as string | undefined
+        || (building as Record<string, unknown>).project as string | undefined;
+
       if (editingUnit) {
         // UPDATE — PATCH /api/storages/[id]
         await apiClient.patch(`/api/storages/${editingUnit.id}`, {
@@ -183,10 +187,13 @@ export function StorageTab({ building }: StorageTabProps) {
         logger.info('Storage unit updated via API', { id: editingUnit.id });
       } else {
         // CREATE — POST /api/storages
+        // 🏢 ENTERPRISE: Auto-generate name if code is empty
+        const storageName = unit.code?.trim() || `Αποθήκη-${Date.now().toString(36).toUpperCase()}`;
+
         await apiClient.post('/api/storages', {
-          name: unit.code,
+          name: storageName,
           buildingId: building.id,
-          projectId: building.project || undefined,
+          projectId: resolvedProjectId,
           type: unit.type || 'small',
           status: unit.status || 'available',
           floor: unit.floor || undefined,
@@ -297,7 +304,7 @@ export function StorageTab({ building }: StorageTabProps) {
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Warehouse className="h-5 w-5 text-primary" />
-          {t('tabs.labels.storages')}
+          {t('tabs.labels.storage')}
           <span className="text-sm font-normal text-muted-foreground">({units.length})</span>
         </h2>
         <nav className="flex items-center gap-2">
@@ -307,7 +314,7 @@ export function StorageTab({ building }: StorageTabProps) {
           </Button>
           <Button variant="default" size="sm" onClick={handleAddNew}>
             <Plus className="mr-1 h-4 w-4" />
-            {t('tabs.labels.storages')}
+            {t('tabs.labels.storage')}
           </Button>
         </nav>
       </header>
@@ -348,7 +355,7 @@ export function StorageTab({ building }: StorageTabProps) {
       {/* Content — Centralized shared components */}
       {filteredUnits.length === 0 ? (
         <p className="py-2 text-center text-sm text-muted-foreground">
-          {t('tabs.labels.storages')} — 0
+          {t('tabs.labels.storage')} — 0
         </p>
       ) : viewMode === 'cards' ? (
         <>
@@ -380,7 +387,7 @@ export function StorageTab({ building }: StorageTabProps) {
             )}
           />
           <footer className="text-xs text-muted-foreground">
-            {filteredUnits.length} {t('tabs.labels.storages')}
+            {filteredUnits.length} {t('tabs.labels.storage')}
           </footer>
         </>
       ) : (
@@ -407,7 +414,7 @@ export function StorageTab({ building }: StorageTabProps) {
             )}
           />
           <footer className="text-xs text-muted-foreground">
-            {filteredUnits.length} {t('tabs.labels.storages')}
+            {filteredUnits.length} {t('tabs.labels.storage')}
             {filteredUnits.length !== units.length && (
               <span className="ml-1">({units.length} σύνολο)</span>
             )}
