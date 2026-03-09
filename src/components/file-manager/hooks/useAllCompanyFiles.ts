@@ -1,10 +1,13 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: useAllCompanyFiles Hook
+ * 🏢 ENTERPRISE: useAllCompanyFiles Hook (Real-time onSnapshot)
  * =============================================================================
  *
- * Centralized hook για fetch ΟΛΩΝ των αρχείων μιας εταιρείας.
+ * Centralized hook με REAL-TIME subscription για ΟΛΑ τα αρχεία εταιρείας.
  * Χρησιμοποιείται στο Central File Manager (/files).
+ *
+ * Uses Firestore onSnapshot for instant updates when files are uploaded
+ * from ANY entry point (project tab, building tab, central file manager).
  *
  * @module components/file-manager/hooks/useAllCompanyFiles
  * @enterprise ADR-031 - Canonical File Storage System
@@ -18,7 +21,16 @@
  * ```
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  type Timestamp,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -117,6 +129,27 @@ export interface UseAllCompanyFilesReturn {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Type guard: check if a Firestore document has a toDate() method (Timestamp)
+ */
+function toISOStringOrPassthrough(value: unknown): string | undefined {
+  if (value instanceof Object && 'toDate' in value) {
+    return (value as Timestamp).toDate().toISOString();
+  }
+  return value as string | undefined;
+}
+
+/**
+ * Type guard: basic validation that data looks like a FileRecord
+ */
+function isValidFileRecord(data: Record<string, unknown>): boolean {
+  return (
+    typeof data.id === 'string' &&
+    typeof data.companyId === 'string' &&
+    typeof data.fileName === 'string'
+  );
+}
 
 /**
  * Group files by entity type and ID
@@ -256,78 +289,137 @@ function calculateStats(files: FileRecord[]): FileStats {
 // ============================================================================
 
 /**
- * 🏢 ENTERPRISE: Hook για fetch ΟΛΩΝ των αρχείων εταιρείας
+ * 🏢 ENTERPRISE: Hook με REAL-TIME onSnapshot subscription
  *
  * Features:
- * - Auto-fetch on mount
- * - Manual refetch
+ * - Real-time Firestore onSnapshot (instant updates from ANY entry point)
+ * - Manual refetch for trashed files
  * - Files grouped by entity
  * - Files grouped by category
  * - Statistics calculation
- * - Trash operations
+ * - Trash operations (optimistic local + Firestore)
  * - Error handling
  * - Loading states
+ * - Automatic cleanup on unmount
  */
 export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllCompanyFilesReturn {
   const {
     companyId,
-    includeDeleted = false,
     autoFetch = true,
   } = params;
 
   // State
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [trashedFiles, setTrashedFiles] = useState<FileRecord[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Refs for cleanup
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
   // =========================================================================
-  // FETCH FILES
+  // REAL-TIME SUBSCRIPTION (onSnapshot)
   // =========================================================================
 
-  const fetchFiles = useCallback(async () => {
-    if (!companyId) {
-      logger.warn('Cannot fetch files: companyId is required');
+  useEffect(() => {
+    if (!autoFetch || !companyId) {
+      setLoading(false);
       return;
     }
 
+    logger.info('Setting up real-time subscription', { companyId });
+
+    // Build query: active files for this company
+    const filesQuery = query(
+      collection(db, COLLECTIONS.FILES),
+      where('companyId', '==', companyId),
+      where('status', '==', FILE_STATUS.READY),
+      where('isDeleted', '==', false)
+    );
+
+    // Subscribe to real-time updates
+    const unsubscribe = onSnapshot(
+      filesQuery,
+      (snapshot) => {
+        const activeFiles: FileRecord[] = [];
+
+        for (const docSnap of snapshot.docs) {
+          const data = docSnap.data();
+          const record = {
+            ...data,
+            id: docSnap.id,
+            createdAt: toISOStringOrPassthrough(data.createdAt),
+            updatedAt: toISOStringOrPassthrough(data.updatedAt),
+          } as Record<string, unknown>;
+
+          if (isValidFileRecord(record)) {
+            activeFiles.push(record as unknown as FileRecord);
+          } else {
+            logger.warn('Skipping invalid FileRecord in onSnapshot', { docId: docSnap.id });
+          }
+        }
+
+        logger.info('Real-time update received', {
+          activeCount: activeFiles.length,
+          companyId,
+        });
+
+        setFiles(activeFiles);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        logger.error('Real-time subscription error', {
+          error: err.message,
+          companyId,
+        });
+        setError(err);
+        setLoading(false);
+      }
+    );
+
+    unsubscribeRef.current = unsubscribe;
+
+    // Cleanup on unmount or companyId change
+    return () => {
+      logger.info('Cleaning up real-time subscription', { companyId });
+      unsubscribe();
+      unsubscribeRef.current = null;
+    };
+  }, [autoFetch, companyId]);
+
+  // =========================================================================
+  // TRASHED FILES (one-time fetch + manual refetch)
+  // =========================================================================
+
+  const fetchTrashedFiles = useCallback(async () => {
+    if (!companyId) return;
+
     try {
-      setLoading(true);
-      setError(null);
-
-      logger.info('Fetching all company files', { companyId, includeDeleted });
-
-      // Fetch active files
-      const activeFiles = await FileRecordService.queryFileRecords({
-        companyId,
-        status: FILE_STATUS.READY,
-        includeDeleted: false,
-      });
-
-      // Fetch trashed files separately
-      const trashed = await FileRecordService.getTrashedFiles({
-        companyId,
-      });
-
-      logger.info('Files fetched successfully', {
-        activeCount: activeFiles.length,
-        trashedCount: trashed.length,
-        companyId,
-      });
-
-      setFiles(activeFiles);
+      const trashed = await FileRecordService.getTrashedFiles({ companyId });
       setTrashedFiles(trashed);
     } catch (err) {
-      const fetchError = err instanceof Error ? err : new Error('Unknown error fetching files');
-      logger.error('Failed to fetch company files', {
-        error: fetchError.message,
+      logger.error('Failed to fetch trashed files', {
+        error: err instanceof Error ? err.message : 'Unknown',
         companyId,
       });
-      setError(fetchError);
-    } finally {
-      setLoading(false);
     }
-  }, [companyId, includeDeleted]);
+  }, [companyId]);
+
+  // Fetch trashed files on mount
+  useEffect(() => {
+    if (autoFetch && companyId) {
+      fetchTrashedFiles();
+    }
+  }, [autoFetch, companyId, fetchTrashedFiles]);
+
+  // =========================================================================
+  // REFETCH (for manual refresh — re-fetches trashed only, active is real-time)
+  // =========================================================================
+
+  const refetch = useCallback(async () => {
+    await fetchTrashedFiles();
+  }, [fetchTrashedFiles]);
 
   // =========================================================================
   // TRASH OPERATIONS
@@ -339,7 +431,8 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
 
       await FileRecordService.moveToTrash(fileId, trashedBy);
 
-      // Update local state
+      // Optimistic: move from active to trashed in local state
+      // Note: onSnapshot will also update `files` automatically
       setFiles(prev => {
         const file = prev.find(f => f.id === fileId);
         if (file) {
@@ -365,7 +458,8 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
 
       await FileRecordService.restoreFromTrash(fileId, restoredBy);
 
-      // Update local state
+      // Optimistic: move from trashed to active in local state
+      // Note: onSnapshot will also update `files` automatically
       setTrashedFiles(prev => {
         const file = prev.find(f => f.id === fileId);
         if (file) {
@@ -394,16 +488,6 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
   const stats = useMemo(() => calculateStats(files), [files]);
 
   // =========================================================================
-  // EFFECTS
-  // =========================================================================
-
-  useEffect(() => {
-    if (autoFetch && companyId) {
-      fetchFiles();
-    }
-  }, [autoFetch, companyId, fetchFiles]);
-
-  // =========================================================================
   // RETURN
   // =========================================================================
 
@@ -412,7 +496,7 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
     trashedFiles,
     loading,
     error,
-    refetch: fetchFiles,
+    refetch,
     filesByEntity,
     filesByCategory,
     stats,

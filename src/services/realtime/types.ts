@@ -22,7 +22,8 @@ export type RealtimeCollection =
   | 'floors'
   | 'contacts'
   | 'project_floorplans'
-  | 'building_floorplans';
+  | 'building_floorplans'
+  | 'files';
 
 /**
  * 🏢 ENTERPRISE: Real-time subscription status
