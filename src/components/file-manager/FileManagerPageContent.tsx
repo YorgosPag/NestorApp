@@ -687,7 +687,8 @@ export function FileManagerPageContent() {
   }
 
   return (
-      // 🏢 ENTERPRISE: Full-width layout
+    <>
+      {/* 🏢 ENTERPRISE: Full-width layout */}
       <main className="flex flex-col h-full w-full bg-background">
         {/* 🏢 ENTERPRISE: Centralized PageHeader with dashboard toggle */}
         <PageHeader
@@ -1166,6 +1167,7 @@ export function FileManagerPageContent() {
           )}
         </DialogContent>
       </Dialog>
+    </>
   );
 }
 
