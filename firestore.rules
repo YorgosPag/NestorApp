@@ -2328,10 +2328,21 @@ service cloud.firestore {
     // 🔒 READ: Public (for share validation) + Authenticated (management)
     // ✏️ WRITE: Authenticated users can create, update download count
     match /file_shares/{shareId} {
-      allow read: if true; // Public read for share validation
+      // 📖 READ: Public (for share token validation on /shared/[token] page)
+      allow read: if true;
+      // ✍️ CREATE: Authenticated users only
       allow create: if isAuthenticated();
-      allow update: if true; // Allow download count increment from public page
-      allow delete: if isAuthenticated();
+      // 📝 UPDATE: Allow download count increment (public) OR authenticated management
+      // SECURITY: Only downloadCount and lastDownloadedAt can be updated by public
+      allow update: if isAuthenticated()
+                    || (
+                         // Public can only increment download counter
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['downloadCount', 'lastDownloadedAt'])
+                       );
+      // 🗑️ DELETE: Creator only
+      allow delete: if isAuthenticated()
+                    && resource.data.createdBy == request.auth.uid;
     }
 
     // =========================================================================
@@ -2356,9 +2367,24 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Multi-step approval chains for documents
     // 🔒 READ/WRITE: Authenticated users only
     match /file_approvals/{approvalId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      // 📖 READ: Tenant-scoped — only users from the approval's company
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+      // ✍️ CREATE: Authenticated users with companyId matching their company
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAny(['companyId'])
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      // 📝 UPDATE: Authenticated users from the same company (approve/reject)
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && belongsToCompany(resource.data.companyId))
+                       );
       allow delete: if false; // Approvals are immutable records
     }
 
@@ -2369,10 +2395,31 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Document templates with variable interpolation
     // 🔒 READ/WRITE: Authenticated users only
     match /document_templates/{templateId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      // 📖 READ: Tenant-scoped — only users from the template's company
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+      // ✍️ CREATE: Authenticated users with companyId matching their company
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAny(['companyId'])
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      // 📝 UPDATE: Creator or same company member
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && belongsToCompany(resource.data.companyId))
+                       );
+      // 🗑️ DELETE: Creator or same company member
+      allow delete: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && belongsToCompany(resource.data.companyId))
+                       );
     }
 
     // =========================================================================
@@ -2392,10 +2439,31 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Virtual folders for file organization
     // 🔒 READ/WRITE: Authenticated users only
     match /file_folders/{folderId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      // 📖 READ: Tenant-scoped — only users from the folder's company
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+      // ✍️ CREATE: Authenticated users with companyId matching their company
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAny(['companyId'])
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      // 📝 UPDATE: Same company member
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && belongsToCompany(resource.data.companyId))
+                       );
+      // 🗑️ DELETE: Same company member
+      allow delete: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (resource.data.keys().hasAny(['companyId'])
+                             && belongsToCompany(resource.data.companyId))
+                       );
     }
 
     match /system_audit_logs/{logId} {

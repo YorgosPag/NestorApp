@@ -18,6 +18,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 const logger = createModuleLogger('FileArchiveRoute');
@@ -140,4 +141,4 @@ async function handlePost(
 // EXPORTS
 // ============================================================================
 
-export const POST = withAuth(handlePost);
+export const POST = withStandardRateLimit(withAuth(handlePost));

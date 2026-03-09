@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 10;
 
@@ -173,6 +174,6 @@ async function handleDelete(
   }
 }
 
-export const GET = withAuth(handleGet);
-export const POST = withAuth(handlePost);
-export const DELETE = withAuth(handleDelete);
+export const GET = withStandardRateLimit(withAuth(handleGet));
+export const POST = withStandardRateLimit(withAuth(handlePost));
+export const DELETE = withStandardRateLimit(withAuth(handleDelete));

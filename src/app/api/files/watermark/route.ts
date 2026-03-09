@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 30;
 
@@ -82,4 +83,4 @@ async function handler(
   }
 }
 
-export const POST = withAuth(handler);
+export const POST = withHeavyRateLimit(withAuth(handler));

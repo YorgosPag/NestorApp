@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const maxDuration = 60;
 
@@ -147,4 +148,4 @@ async function handler(
   }
 }
 
-export const POST = withAuth(handler);
+export const POST = withSensitiveRateLimit(withAuth(handler));

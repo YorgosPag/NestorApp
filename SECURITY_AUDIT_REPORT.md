@@ -170,7 +170,54 @@
 
 ---
 
+---
+
+## 🔄 **REMEDIATION LOG**
+
+### **2026-03-09 — Security Hardening (ADR-191 Phase)**
+
+#### ✅ **BLOCKER 1 PROGRESS: Tenant Isolation**
+**Collections fixed with `belongsToCompany()` tenant scoping:**
+- `file_approvals` — READ/CREATE/UPDATE now company-scoped
+- `document_templates` — READ/CREATE/UPDATE/DELETE now company-scoped
+- `file_folders` — READ/CREATE/UPDATE/DELETE now company-scoped
+- `file_shares` — UPDATE restricted to only `downloadCount`/`lastDownloadedAt` for public; DELETE restricted to creator
+- `projects` — Already had tenant isolation (PR-1B, 2026-01-29)
+- `files` — Already had tenant isolation
+- `contacts` — Already had tenant isolation
+
+**Still using `isAuthenticated()` only (acceptable justification):**
+- `security_roles`, `system`, `config`, `counters`, `positions` — Read-only system config, shared across tenants
+- `email_domain_policies`, `country_security_policies` — Security policies, read-only
+- `file_audit_log` — Immutable audit log (write-only, no delete/update)
+- `file_comments` — Scoped by fileId (file access already tenant-scoped)
+
+**Remaining collections needing migration:**
+- `contact_relationships` — Needs `companyId` field added
+- `attendance_events` — Needs `companyId` field added
+- `employment_records` — Needs `companyId` field added
+- `boq_items`, `boq_categories` — Need project-scoped access via lookup
+
+#### ✅ **BLOCKER 3 PROGRESS: Rate Limiting**
+**Rate limiting infrastructure:** `withRateLimit` middleware (PR-1C, 2026-01-29) — Upstash Redis-backed
+**API routes with rate limiting added (2026-03-09):**
+- `POST /api/files/watermark` — `withHeavyRateLimit` (10 req/min)
+- `POST /api/files/generate-pdf` — `withHeavyRateLimit` (10 req/min)
+- `POST /api/files/gdpr-export` — `withSensitiveRateLimit` (20 req/min)
+- `POST /api/files/gdpr-delete` — `withSensitiveRateLimit` (20 req/min)
+- `GET/POST/DELETE /api/files/webhook` — `withStandardRateLimit` (60 req/min)
+- `POST /api/files/archive` — `withStandardRateLimit` (60 req/min)
+- `POST /api/files/classify` — Already had `withHeavyRateLimit`
+
+**Rate limiting coverage:** 86+ API routes have rate limiting wrappers.
+
+#### ⏸️ **BLOCKER 2: Server-side Validation**
+Status: Partial — Firestore rules have basic validation; full business logic validation middleware pending.
+
+---
+
 **📄 Report Generated:** 2025-12-15
+**📄 Last Updated:** 2026-03-09
 **👤 Auditor:** Claude (AI Security Analyst)
 **🔍 Audit Scope:** Full application security assessment
-**⚡ Priority:** Critical - Immediate action required**
+**⚡ Priority:** Medium - Critical blockers partially addressed, further hardening needed
