@@ -12,8 +12,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, type AuthenticatedContext } from '@/lib/api-middleware';
-import { adminDb } from '@/lib/firebase-admin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 export const maxDuration = 10;
 
@@ -39,17 +40,23 @@ interface WebhookRegistration {
  */
 async function handleGet(
   _request: NextRequest,
-  ctx: AuthenticatedContext
+  ctx: AuthContext,
+  _cache: PermissionCache,
 ): Promise<NextResponse> {
   try {
+    const adminDb = getAdminFirestore();
+    if (!adminDb) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const snapshot = await adminDb
       .collection('file_webhooks')
       .where('createdBy', '==', ctx.uid)
       .get();
 
-    const webhooks = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+    const webhooks = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
       secret: '***', // Never expose secrets
     }));
 
@@ -65,9 +72,15 @@ async function handleGet(
  */
 async function handlePost(
   request: NextRequest,
-  ctx: AuthenticatedContext
+  ctx: AuthContext,
+  _cache: PermissionCache,
 ): Promise<NextResponse> {
   try {
+    const adminDb = getAdminFirestore();
+    if (!adminDb) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const { url, events, secret, companyId } = (await request.json()) as Partial<WebhookRegistration>;
 
     if (!url || !events || !secret || !companyId) {
@@ -129,9 +142,15 @@ async function handlePost(
  */
 async function handleDelete(
   request: NextRequest,
-  ctx: AuthenticatedContext
+  ctx: AuthContext,
+  _cache: PermissionCache,
 ): Promise<NextResponse> {
   try {
+    const adminDb = getAdminFirestore();
+    if (!adminDb) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const { webhookId } = await request.json();
 
     if (!webhookId) {
@@ -139,9 +158,9 @@ async function handleDelete(
     }
 
     const docRef = adminDb.collection('file_webhooks').doc(webhookId);
-    const doc = await docRef.get();
+    const docSnap = await docRef.get();
 
-    if (!doc.exists || doc.data()?.createdBy !== ctx.uid) {
+    if (!docSnap.exists || docSnap.data()?.createdBy !== ctx.uid) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 

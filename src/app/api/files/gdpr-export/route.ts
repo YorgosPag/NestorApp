@@ -12,17 +12,23 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, type AuthenticatedContext } from '@/lib/api-middleware';
-import { adminDb } from '@/lib/firebase-admin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 export const maxDuration = 60;
 
 async function handler(
   _request: NextRequest,
-  ctx: AuthenticatedContext
+  ctx: AuthContext,
+  _cache: PermissionCache,
 ): Promise<NextResponse> {
   try {
     const userId = ctx.uid;
+    const adminDb = getAdminFirestore();
+    if (!adminDb) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
     // Query all files created by this user
     const filesSnapshot = await adminDb

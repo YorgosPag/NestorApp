@@ -11,13 +11,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, type AuthenticatedContext } from '@/lib/api-middleware';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 export const maxDuration = 30;
 
 async function handler(
   request: NextRequest,
-  _ctx: AuthenticatedContext
+  _ctx: AuthContext,
+  _cache: PermissionCache,
 ): Promise<NextResponse> {
   try {
     const { url, text, opacity = 0.15, fontSize = 48 } = await request.json();
