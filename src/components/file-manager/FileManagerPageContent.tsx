@@ -88,6 +88,7 @@ import { TrashView } from '@/components/shared/files/TrashView';
 import { InboxView } from '@/components/shared/files/InboxView';
 import { formatFileSize } from '@/utils/file-validation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { FileRecordService } from '@/services/file-record.service';
 
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
@@ -431,6 +432,16 @@ export function FileManagerPageContent() {
       window.open(file.downloadUrl, '_blank', 'noopener,noreferrer');
     }
   }, []);
+
+  const handleRename = useCallback(async (fileId: string, newDisplayName: string) => {
+    if (!user?.uid) return;
+    try {
+      await FileRecordService.renameFile(fileId, newDisplayName, user.uid);
+      refetch();
+    } catch (err) {
+      logger.error('Rename failed', { fileId, error: err });
+    }
+  }, [user?.uid, refetch]);
 
   // 🏢 ENTERPRISE: Dashboard card click handler
   const handleCardClick = useCallback((stat: DashboardStat) => {
@@ -814,6 +825,7 @@ export function FileManagerPageContent() {
                       viewMode={treeViewMode}
                       onFileClick={handleFileClick}
                       onFileDoubleClick={handleFileDoubleClick}
+                      onRename={handleRename}
                       className="h-full"
                     />
                   ) : (
@@ -821,6 +833,7 @@ export function FileManagerPageContent() {
                     <FilesList
                       files={filteredFiles}
                       onView={handleFileClick}
+                      onRename={handleRename}
                       currentUserId={user?.uid}
                     />
                   )}

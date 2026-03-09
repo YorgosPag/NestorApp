@@ -14,7 +14,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { FileText, Download, Eye, Trash2, Calendar, HardDrive, Link2, Unlink } from 'lucide-react';
+import { FileText, Download, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { Button } from '@/components/ui/button';
@@ -118,7 +118,14 @@ export function FilesList({
   const { success, error } = useNotifications(); // 🏢 ENTERPRISE: Toast notifications
 
   // =========================================================================
-  // DELETE CONFIRMATION STATE - 🏢 ENTERPRISE: Modal dialog (center screen)
+  // RENAME STATE
+  // =========================================================================
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [renameLoading, setRenameLoading] = useState(false);
+
+  // =========================================================================
+  // DELETE CONFIRMATION STATE
   // =========================================================================
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
@@ -135,9 +142,48 @@ export function FilesList({
   // HANDLERS
   // =========================================================================
 
+  // =========================================================================
+  // RENAME HANDLERS
+  // =========================================================================
+
+  const handleRenameStart = useCallback((file: FileRecord) => {
+    setEditingFileId(file.id);
+    setEditingName(file.displayName);
+  }, []);
+
+  const handleRenameCancel = useCallback(() => {
+    setEditingFileId(null);
+    setEditingName('');
+  }, []);
+
+  const handleRenameConfirm = useCallback(async () => {
+    if (!editingFileId || !onRename || !editingName.trim()) return;
+
+    setRenameLoading(true);
+    try {
+      onRename(editingFileId, editingName.trim());
+      success(t('list.renameSuccess'));
+      setEditingFileId(null);
+      setEditingName('');
+    } catch (err) {
+      error(t('list.renameError'));
+      logger.error('Rename failed', { error: err });
+    } finally {
+      setRenameLoading(false);
+    }
+  }, [editingFileId, editingName, onRename, t, success, error]);
+
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleRenameConfirm();
+    } else if (e.key === 'Escape') {
+      handleRenameCancel();
+    }
+  }, [handleRenameConfirm, handleRenameCancel]);
+
   /**
-   * 🏢 ENTERPRISE: Opens delete confirmation modal (center screen)
-   * Replaces showConfirmDialog (toast) with proper AlertDialog modal
+   * Opens delete confirmation modal (center screen)
    */
   const handleDeleteClick = useCallback((fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -303,10 +349,44 @@ export function FilesList({
 
               {/* Details */}
               <div className="flex-1 min-w-0">
-                {/* Display name - 🏢 ENTERPRISE: Runtime i18n translation */}
-                <p className="text-sm font-medium text-foreground truncate">
-                  {translateDisplayName(file)}
-                </p>
+                {/* Display name — inline editable */}
+                {editingFileId === file.id ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={handleRenameKeyDown}
+                      className="flex-1 text-sm font-medium border rounded px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                      disabled={renameLoading}
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRenameConfirm}
+                      disabled={renameLoading || !editingName.trim()}
+                      className="h-6 w-6 text-green-600"
+                      aria-label={t('list.confirmRename')}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRenameCancel}
+                      disabled={renameLoading}
+                      className="h-6 w-6 text-red-500"
+                      aria-label={t('common.cancel')}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {translateDisplayName(file)}
+                  </p>
+                )}
 
                 {/* Metadata */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
@@ -374,7 +454,24 @@ export function FilesList({
                 </Tooltip>
               )}
 
-              {/* 🔗 Link to building (only for owned, non-linked files) */}
+              {/* Rename (only for owned files, not linked) */}
+              {onRename && !file.isLinkedFile && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => { e.stopPropagation(); handleRenameStart(file); }}
+                      aria-label={t('list.renameFile')}
+                    >
+                      <Pencil className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.renameFile')}</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Link to building (only for owned, non-linked files) */}
               {showLinkAction && onLink && !file.isLinkedFile && (
                 <Tooltip>
                   <TooltipTrigger asChild>

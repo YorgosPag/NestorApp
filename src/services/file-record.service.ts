@@ -906,6 +906,47 @@ export class FileRecordService {
   }
 
   // ==========================================================================
+  // RENAME OPERATIONS
+  // ==========================================================================
+
+  /**
+   * Rename file display name
+   * @enterprise Updates displayName in Firestore — propagates to all views instantly
+   *
+   * Only updates the displayName field. The storagePath and originalFilename
+   * remain unchanged (enterprise pattern: display layer ≠ storage layer).
+   */
+  static async renameFile(fileId: string, newDisplayName: string, renamedBy: string): Promise<void> {
+    if (!newDisplayName.trim()) {
+      throw new Error('Display name cannot be empty');
+    }
+
+    logger.info('Renaming FileRecord', { fileId, newDisplayName, renamedBy });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    // Verify document exists
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      throw new Error(`FileRecord not found: ${fileId}`);
+    }
+
+    await updateDoc(docRef, {
+      displayName: newDisplayName.trim(),
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('FileRecord renamed successfully', { fileId, newDisplayName });
+
+    // Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatch('FILE_UPDATED', {
+      fileId,
+      updates: { displayName: newDisplayName.trim() },
+      timestamp: Date.now(),
+    });
+  }
+
+  // ==========================================================================
   // LEGACY DELETE OPERATIONS (deprecated - use moveToTrash)
   // ==========================================================================
 

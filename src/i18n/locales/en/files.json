@@ -198,6 +198,10 @@
     "unlinkConfirm": "Do you want to unlink this file? It will no longer appear here, but remains in the Project.",
     "unlinkSuccess": "File unlinked successfully",
     "unlinkError": "Failed to unlink file",
+    "renameFile": "Rename file",
+    "confirmRename": "Confirm rename",
+    "renameSuccess": "File renamed successfully",
+    "renameError": "Failed to rename file",
     "filesCount": "files",
     "collapseGroup": "Collapse group",
     "expandGroup": "Expand group"

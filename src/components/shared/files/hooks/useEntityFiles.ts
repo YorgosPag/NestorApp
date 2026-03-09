@@ -79,6 +79,8 @@ export interface UseEntityFilesReturn {
   refetch: () => Promise<void>;
   /** Move file to trash (soft delete with 30-day retention) */
   moveToTrash: (fileId: string, trashedBy: string) => Promise<void>;
+  /** Rename file display name */
+  renameFile: (fileId: string, newDisplayName: string, renamedBy: string) => Promise<void>;
   /** @deprecated Use moveToTrash instead */
   deleteFile: (fileId: string, deletedBy: string) => Promise<void>;
   /** Total storage used by entity (bytes) */
@@ -236,6 +238,38 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     }
   }, []);
 
+  // =========================================================================
+  // RENAME OPERATIONS
+  // =========================================================================
+
+  /**
+   * Rename file display name
+   * Updates displayName in Firestore and local state instantly
+   */
+  const renameFile = useCallback(async (fileId: string, newDisplayName: string, renamedBy: string) => {
+    try {
+      logger.info('Renaming file', { fileId, newDisplayName, renamedBy });
+
+      await FileRecordService.renameFile(fileId, newDisplayName, renamedBy);
+
+      logger.info('File renamed successfully', { fileId });
+
+      // Update local state immediately (optimistic update)
+      setFiles((prev) => prev.map((file) =>
+        file.id === fileId
+          ? { ...file, displayName: newDisplayName.trim() }
+          : file
+      ));
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error renaming file');
+      logger.error('Failed to rename file', {
+        error: error.message,
+        fileId,
+      });
+      throw error;
+    }
+  }, []);
+
   /**
    * @deprecated Use moveToTrash instead
    * Kept for backward compatibility
@@ -280,6 +314,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     error,
     refetch: fetchFiles,
     moveToTrash,
+    renameFile,
     deleteFile, // @deprecated - use moveToTrash
     totalStorageBytes,
   };

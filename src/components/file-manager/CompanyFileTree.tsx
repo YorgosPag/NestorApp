@@ -72,6 +72,8 @@ interface CompanyFileTreeProps {
   onFileClick?: (file: FileRecord) => void;
   /** On file double click */
   onFileDoubleClick?: (file: FileRecord) => void;
+  /** On file rename */
+  onRename?: (fileId: string, newDisplayName: string) => void;
   /** Additional class names */
   className?: string;
 }
@@ -165,6 +167,7 @@ interface TreeNodeProps {
   toggleNode: (nodeId: string) => void;
   onFileClick?: (file: FileRecord) => void;
   onFileDoubleClick?: (file: FileRecord) => void;
+  onRename?: (fileId: string, newDisplayName: string) => void;
   viewMode: ViewMode;
 }
 
@@ -175,25 +178,49 @@ function TreeNode({
   toggleNode,
   onFileClick,
   onFileDoubleClick,
+  onRename,
   viewMode,
 }: TreeNodeProps) {
   const isExpanded = expandedNodes.has(node.id);
   const hasChildren = node.children && node.children.length > 0;
   const paddingLeft = depth * 16 + 8;
 
+  // Inline rename state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+
   const handleClick = useCallback(() => {
+    if (isEditing) return;
     if (node.type === 'file' && node.file && onFileClick) {
       onFileClick(node.file);
     } else if (hasChildren) {
       toggleNode(node.id);
     }
-  }, [node, hasChildren, toggleNode, onFileClick]);
+  }, [node, hasChildren, toggleNode, onFileClick, isEditing]);
 
   const handleDoubleClick = useCallback(() => {
-    if (node.type === 'file' && node.file && onFileDoubleClick) {
+    if (node.type === 'file' && node.file && onRename) {
+      setEditName(node.file.displayName);
+      setIsEditing(true);
+    } else if (node.type === 'file' && node.file && onFileDoubleClick) {
       onFileDoubleClick(node.file);
     }
-  }, [node, onFileDoubleClick]);
+  }, [node, onFileDoubleClick, onRename]);
+
+  const handleRenameConfirm = useCallback(() => {
+    if (!node.file || !onRename || !editName.trim()) return;
+    onRename(node.file.id, editName.trim());
+    setIsEditing(false);
+  }, [node.file, onRename, editName]);
+
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleRenameConfirm();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  }, [handleRenameConfirm]);
 
   return (
     <li role="treeitem" aria-expanded={node.type !== 'file' ? isExpanded : undefined}>
@@ -205,8 +232,7 @@ function TreeNode({
           'w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-sm',
           'hover:bg-muted/50 transition-colors duration-150',
           'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
-          node.type === 'file' && 'cursor-pointer',
-          node.type !== 'file' && 'cursor-pointer'
+          'cursor-pointer'
         )}
         style={{ paddingLeft }}
       >
@@ -236,13 +262,26 @@ function TreeNode({
           )}
         </span>
 
-        {/* Node Label */}
-        <span className="truncate flex-1 text-left">
-          {node.label}
-        </span>
+        {/* Node Label — inline editable on double-click */}
+        {isEditing ? (
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={handleRenameKeyDown}
+            onBlur={handleRenameConfirm}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 text-sm border rounded px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            autoFocus
+          />
+        ) : (
+          <span className="truncate flex-1 text-left">
+            {node.label}
+          </span>
+        )}
 
         {/* Technical Mode: Show path */}
-        {viewMode === 'technical' && node.type === 'file' && node.file && (
+        {viewMode === 'technical' && node.type === 'file' && node.file && !isEditing && (
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="text-xs text-muted-foreground truncate max-w-[200px]">
@@ -275,6 +314,7 @@ function TreeNode({
               toggleNode={toggleNode}
               onFileClick={onFileClick}
               onFileDoubleClick={onFileDoubleClick}
+              onRename={onRename}
               viewMode={viewMode}
             />
           ))}
@@ -536,6 +576,7 @@ export function CompanyFileTree({
   viewMode = 'business',
   onFileClick,
   onFileDoubleClick,
+  onRename,
   className,
 }: CompanyFileTreeProps) {
   const { t, i18n } = useTranslation('files');
@@ -634,6 +675,7 @@ export function CompanyFileTree({
             toggleNode={toggleNode}
             onFileClick={onFileClick}
             onFileDoubleClick={onFileDoubleClick}
+            onRename={onRename}
             viewMode={viewMode}
           />
         </ul>

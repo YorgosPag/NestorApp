@@ -206,6 +206,7 @@ export function EntityFilesManager({
     error,
     refetch,
     deleteFile,
+    renameFile,
     totalStorageBytes,
   } = useEntityFiles({
     entityType,
@@ -456,6 +457,14 @@ export function EntityFilesManager({
   const handleDelete = useCallback(async (fileId: string) => {
     await deleteFile(fileId, currentUserId);
   }, [deleteFile, currentUserId]);
+
+  // =========================================================================
+  // RENAME HANDLER
+  // =========================================================================
+
+  const handleRename = useCallback((fileId: string, newDisplayName: string) => {
+    renameFile(fileId, newDisplayName, currentUserId);
+  }, [renameFile, currentUserId]);
 
   // =========================================================================
   // 🔗 LINK/UNLINK HANDLERS
@@ -917,6 +926,7 @@ export function EntityFilesManager({
                   files={filteredFiles}
                   loading={loading}
                   onDelete={handleDelete}
+                  onRename={handleRename}
                   onView={handleView}
                   onDownload={handleDownload}
                   currentUserId={currentUserId}
@@ -929,6 +939,7 @@ export function EntityFilesManager({
                   files={filteredFiles}
                   loading={loading}
                   onDelete={handleDelete}
+                  onRename={handleRename}
                   onView={handleView}
                   onDownload={handleDownload}
                   currentUserId={currentUserId}
