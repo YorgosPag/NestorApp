@@ -1011,9 +1011,9 @@ export function FileManagerPageContent() {
                 <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
                   {/* 📁 Folder sidebar — collapsible + draggable (ADR-191 Phase 4.4) */}
                   <ResizablePanel
-                    defaultSize={showFolders ? 15 : 0}
+                    defaultSize={showFolders ? 18 : 0}
                     minSize={0}
-                    maxSize={25}
+                    maxSize={40}
                     collapsible
                     collapsedSize={0}
                     className="overflow-hidden"
@@ -1031,10 +1031,10 @@ export function FileManagerPageContent() {
                       />
                     )}
                   </ResizablePanel>
-                  {showFolders && <ResizableHandle />}
+                  <ResizableHandle />
 
                   {/* File browser panel */}
-                  <ResizablePanel defaultSize={showFolders ? 35 : 40} minSize={20} className="overflow-auto">
+                  <ResizablePanel defaultSize={showFolders ? 32 : 40} minSize={15} className="overflow-auto">
                     {filteredFiles.length === 0 ? (
                       <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
                         <Files className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
