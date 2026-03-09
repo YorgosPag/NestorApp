@@ -232,7 +232,8 @@ export function EntityFilesManager({
       return files;
     }
 
-    const lowerSearch = searchTerm.toLowerCase().trim();
+    const norm = (s?: string | null) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') ?? '';
+    const query = norm(searchTerm.trim());
 
     return files.filter((file) => {
       const searchableFields = [
@@ -244,9 +245,7 @@ export function EntityFilesManager({
         file.description,
       ].filter(Boolean);
 
-      return searchableFields.some((field) =>
-        field?.toLowerCase().includes(lowerSearch)
-      );
+      return searchableFields.some((field) => norm(field).includes(query));
     });
   }, [files, searchTerm]);
 

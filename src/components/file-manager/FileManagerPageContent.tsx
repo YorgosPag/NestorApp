@@ -359,24 +359,26 @@ export function FileManagerPageContent() {
   const filteredFiles = useMemo(() => {
     let result = files;
 
-    // Search term filter (from toolbar search)
+    // Search term filter — accent & case insensitive (Greek support)
     if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase();
+      const query = searchTerm.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const norm = (s?: string | null) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') ?? '';
       result = result.filter(file =>
-        file.displayName?.toLowerCase().includes(query) ||
-        file.originalFilename?.toLowerCase().includes(query) ||
-        (file as { entityLabel?: string }).entityLabel?.toLowerCase().includes(query) ||
-        file.category?.toLowerCase().includes(query) ||
-        file.description?.toLowerCase().includes(query)
+        norm(file.displayName).includes(query) ||
+        norm(file.originalFilename).includes(query) ||
+        norm((file as { entityLabel?: string }).entityLabel).includes(query) ||
+        norm(file.category).includes(query) ||
+        norm(file.description).includes(query)
       );
     }
 
     // Advanced filters - search term
     if (filters.searchTerm?.trim()) {
-      const query = filters.searchTerm.toLowerCase();
+      const query = filters.searchTerm.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const norm = (s?: string | null) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') ?? '';
       result = result.filter(file =>
-        file.displayName?.toLowerCase().includes(query) ||
-        file.originalFilename?.toLowerCase().includes(query)
+        norm(file.displayName).includes(query) ||
+        norm(file.originalFilename).includes(query)
       );
     }
 

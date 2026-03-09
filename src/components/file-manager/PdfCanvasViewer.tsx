@@ -278,7 +278,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
 
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
-  }, []);
+  }, [state.loading]);
 
   // ── Pan (click & drag) ─────────────────────────────────────────────────
   useEffect(() => {
@@ -322,7 +322,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, []);
+  }, [state.loading]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
@@ -376,30 +376,16 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goToPrev, goToNext, zoomIn, zoomOut, fitToWidth]);
 
-  // Loading state
-  if (state.loading) {
-    return (
-      <section className={cn('flex items-center justify-center h-full', className)}>
-        <p className="text-sm text-muted-foreground animate-pulse">
-          {t('floorplan.loading', 'Φόρτωση PDF...')}
-        </p>
-      </section>
-    );
-  }
-
-  // Error state
-  if (state.error) {
-    return (
-      <section className={cn('flex items-center justify-center h-full', className)}>
-        <p className="text-sm text-destructive">{state.error}</p>
-      </section>
-    );
-  }
+  // Loading / error overlay (rendered inside the main layout so containerRef stays mounted)
+  const showOverlay = state.loading || !!state.error;
 
   return (
     <section className={cn('flex flex-col h-full', className)}>
-      {/* Toolbar */}
-      <nav className="flex items-center justify-between px-3 py-1.5 border-b bg-muted/50 gap-2">
+      {/* Toolbar — hidden during loading */}
+      <nav className={cn(
+        'flex items-center justify-between px-3 py-1.5 border-b bg-muted/50 gap-2',
+        showOverlay && 'invisible'
+      )}>
         {/* Page navigation */}
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -506,8 +492,20 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
       {/* Canvas area — scrollable, pan-enabled */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto flex items-start justify-center p-4 bg-muted/20 select-none"
+        className="flex-1 overflow-auto flex items-start justify-center p-4 bg-muted/20 select-none relative"
       >
+        {showOverlay && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted/20">
+            {state.loading && (
+              <p className="text-sm text-muted-foreground animate-pulse">
+                {t('floorplan.loading', 'Φόρτωση PDF...')}
+              </p>
+            )}
+            {state.error && (
+              <p className="text-sm text-destructive">{state.error}</p>
+            )}
+          </div>
+        )}
         <canvas
           ref={canvasRef}
           className="shadow-md rounded bg-white"

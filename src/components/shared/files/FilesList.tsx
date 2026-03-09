@@ -375,7 +375,7 @@ export function FilesList({
                   className={`flex-shrink-0 w-10 h-10 bg-primary/10 ${quick.card} flex items-center justify-center`}
                   aria-hidden="true"
                 >
-                  <IconComponent className={`${iconSizes.md} text-primary`} />
+                  <IconComponent className={`${iconSizes.md} text-foreground`} />
                 </div>
               )}
 
