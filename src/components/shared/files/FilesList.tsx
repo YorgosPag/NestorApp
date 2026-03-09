@@ -17,6 +17,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { FileText, Download, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
+import { FileThumbnail } from './FileThumbnail';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -83,14 +84,7 @@ function formatFileSize(bytes: number | undefined): string {
   return formatFileSizeUtil(bytes);
 }
 
-/**
- * Get file icon based on extension
- */
-function getFileIcon(ext: string): typeof FileText {
-  // For now, return FileText for all
-  // TODO: Επέκταση με περισσότερα icons (Image, Video, PDF, etc.)
-  return FileText;
-}
+
 
 // ============================================================================
 // COMPONENT
@@ -359,8 +353,6 @@ export function FilesList({
       </h3>
 
       {files.map((file) => {
-        const IconComponent = getFileIcon(file.ext);
-
         return (
           <article
             key={file.id}
@@ -382,22 +374,16 @@ export function FilesList({
 
             {/* File info */}
             <div className="flex items-center space-x-3 flex-1 min-w-0">
-              {/* Thumbnail preview or fallback icon */}
-              {file.thumbnailUrl ? (
-                <img
-                  src={file.thumbnailUrl}
-                  alt={translateDisplayName(file)}
-                  className={`flex-shrink-0 w-10 h-10 ${quick.card} object-cover`}
-                  loading="lazy"
-                />
-              ) : (
-                <div
-                  className={`flex-shrink-0 w-10 h-10 bg-primary/10 ${quick.card} flex items-center justify-center`}
-                  aria-hidden="true"
-                >
-                  <IconComponent className={`${iconSizes.md} text-foreground`} />
-                </div>
-              )}
+              {/* Thumbnail preview (image/PDF) or semantic file icon */}
+              <FileThumbnail
+                ext={file.ext}
+                contentType={file.contentType}
+                thumbnailUrl={file.thumbnailUrl}
+                downloadUrl={file.downloadUrl}
+                displayName={translateDisplayName(file)}
+                size="sm"
+                borderRadius={quick.card}
+              />
 
               {/* Details */}
               <div className="flex-1 min-w-0">

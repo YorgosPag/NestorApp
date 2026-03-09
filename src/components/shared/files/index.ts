@@ -27,9 +27,23 @@ export type { FilePathTreeProps } from './FilePathTree';
 export { AddCaptureMenu } from './AddCaptureMenu';
 export type { AddCaptureMenuProps } from './AddCaptureMenu';
 
+// Thumbnail component (ADR-191: Document Intelligence)
+export { FileThumbnail } from './FileThumbnail';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {
   UseEntityFilesParams,
   UseEntityFilesReturn,
 } from './hooks/useEntityFiles';
+
+export { usePdfThumbnail } from './hooks/usePdfThumbnail';
+
+// Utilities
+export {
+  getFileIconInfo,
+  getCategoryIconInfo,
+  isImageFile,
+  isPdfFile,
+  isVideoFile,
+} from './utils/file-icons';

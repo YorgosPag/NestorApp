@@ -52,6 +52,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { SearchInput } from '@/components/ui/search';
+import { FileThumbnail } from '@/components/shared/files/FileThumbnail';
 
 // 🏢 ENTERPRISE: Error Boundary with Admin Notification
 import {
@@ -119,19 +120,6 @@ interface FileCardProps {
 function FileCard({ file, onClick, onDoubleClick }: FileCardProps) {
   const { t } = useTranslation('files');
 
-  // 🏢 ENTERPRISE: Type assertion for optional thumbnailUrl (not in base FileRecord)
-  const fileWithThumbnail = file as FileRecord & { thumbnailUrl?: string };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'photos': return <Image className="h-8 w-8 text-blue-500" />;
-      case 'videos': return <Video className="h-8 w-8 text-purple-500" />;
-      case 'floorplans': return <Network className="h-8 w-8 text-orange-500" />;
-      case 'contracts': return <FileText className="h-8 w-8 text-green-500" />;
-      default: return <Files className="h-8 w-8 text-gray-500" />;
-    }
-  };
-
   return (
     <Card
       className="cursor-pointer hover:bg-accent/50 transition-colors"
@@ -140,18 +128,15 @@ function FileCard({ file, onClick, onDoubleClick }: FileCardProps) {
     >
       <CardContent className="p-4">
         <article className="flex flex-col items-center text-center gap-3">
-          {/* Thumbnail or Icon */}
-          {fileWithThumbnail.thumbnailUrl ? (
-            <img
-              src={fileWithThumbnail.thumbnailUrl}
-              alt={file.displayName || ''}
-              className="h-16 w-16 object-cover rounded"
-            />
-          ) : (
-            <figure className="h-16 w-16 flex items-center justify-center bg-muted rounded">
-              {getCategoryIcon(file.category || 'documents')}
-            </figure>
-          )}
+          {/* Thumbnail or semantic icon */}
+          <FileThumbnail
+            ext={file.ext}
+            contentType={file.contentType}
+            thumbnailUrl={file.thumbnailUrl}
+            downloadUrl={file.downloadUrl}
+            displayName={file.displayName || ''}
+            size="md"
+          />
 
           {/* File name */}
           <p className="text-sm font-medium truncate w-full">
