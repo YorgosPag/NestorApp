@@ -105,7 +105,7 @@ import { FileFolderService } from '@/services/file-folder.service';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
 import { generateUploadThumbnail, buildThumbnailPath } from '@/components/shared/files/utils/generate-upload-thumbnail';
-import { useNotifications } from '@/components/ui/notification-toast';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const logger = createModuleLogger('FileManagerPageContent');
 import type { FileRecord } from '@/types/file-record';
