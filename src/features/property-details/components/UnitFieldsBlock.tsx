@@ -286,113 +286,115 @@ export function UnitFieldsBlock({
       className="space-y-4 p-1"
       onSubmit={(e) => { e.preventDefault(); if (isEditing) handleSave(); }}
     >
-      {/* ─── Identity Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <FileText className={cn(iconSizes.md, 'text-blue-500')} />
-            {t('fields.identity.sectionTitle', { defaultValue: 'Ταυτότητα Μονάδας' })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <fieldset className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs">
-              {t('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })}
-            </Label>
-            <Input
-              id="unit-name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="h-8 text-sm"
-              placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
-              disabled={!isEditing}
-            />
-          </fieldset>
-          <fieldset className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs">
-              {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
-            </Label>
-            <Select value={formData.type} disabled={!isEditing}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
-              </SelectTrigger>
-              <SelectContent>
-                {UNIT_TYPE_OPTIONS.map((unitType) => (
-                  <SelectItem key={unitType} value={unitType} className="text-sm">
-                    {t(`types.${unitType}`, { defaultValue: unitType })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </fieldset>
-          <fieldset className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs">
-              {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
-            </Label>
-            <Textarea
-              id="unit-description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="h-20 text-sm resize-none"
-              placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
-              disabled={!isEditing}
-            />
-          </fieldset>
-        </CardContent>
-      </Card>
-
-      {/* ─── Location Card ─── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <MapPin className={cn(iconSizes.md, 'text-rose-500')} />
-            {t('fields.location.sectionTitle', { defaultValue: 'Θέση' })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <fieldset className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs flex items-center gap-1">
-              <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
-              {t('fields.location.floor', { defaultValue: 'Όροφος' })}
-            </Label>
-            {isEditing ? (
+      {/* ─── Identity + Location Row ─── */}
+      <section className="grid grid-cols-2 gap-3">
+        {/* ─── Identity Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <FileText className={cn(iconSizes.sm, 'text-blue-500')} />
+              {t('fields.identity.sectionTitle', { defaultValue: 'Ταυτότητα Μονάδας' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0 space-y-2">
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })}
+              </Label>
               <Input
-                id="unit-floor"
-                type="number"
-                min={-5}
-                max={100}
-                value={formData.floor}
-                onChange={(e) => setFormData(prev => ({ ...prev, floor: parseInt(e.target.value) || 0 }))}
-                className="h-8 text-sm"
+                id="unit-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className={cn('h-7 text-xs', quick.input)}
+                placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
                 disabled={!isEditing}
               />
-            ) : (
-              <p className="text-sm">{formatFloorLabel(formData.floor)}</p>
-            )}
-          </fieldset>
-          <fieldset className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs flex items-center gap-1">
-              <Compass className={cn(iconSizes.xs, 'text-amber-500')} />
-              {t('orientation.sectionTitle')}
-            </Label>
-            <div className="flex flex-wrap gap-1">
-              {ORIENTATION_OPTIONS.map((orientation) => {
-                const isSelected = formData.orientations.includes(orientation);
-                return (
-                  <Button key={orientation} type="button"
-                    variant={isSelected ? 'default' : 'outline'} size="sm"
-                    className="h-6 px-1.5 text-xs"
-                    disabled={!isEditing}
-                    onClick={() => toggleArrayItem('orientations', orientation)}>
-                    {t(`orientation.short.${orientation}`)}
-                  </Button>
-                );
-              })}
-            </div>
-          </fieldset>
-        </CardContent>
-      </Card>
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
+              </Label>
+              <Select value={formData.type} disabled={!isEditing}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_TYPE_OPTIONS.map((unitType) => (
+                    <SelectItem key={unitType} value={unitType} className="text-xs">
+                      {t(`types.${unitType}`, { defaultValue: unitType })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
+              </Label>
+              <Textarea
+                id="unit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="h-16 text-xs resize-none"
+                placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
+                disabled={!isEditing}
+              />
+            </fieldset>
+          </CardContent>
+        </Card>
+
+        {/* ─── Location Card ─── */}
+        <Card>
+          <CardHeader className="p-2 pb-1">
+            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
+              <MapPin className={cn(iconSizes.sm, 'text-rose-500')} />
+              {t('fields.location.sectionTitle', { defaultValue: 'Θέση' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0 space-y-2">
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
+                {t('fields.location.floor', { defaultValue: 'Όροφος' })}
+              </Label>
+              {isEditing ? (
+                <Input
+                  id="unit-floor"
+                  type="number"
+                  min={-5}
+                  max={100}
+                  value={formData.floor}
+                  onChange={(e) => setFormData(prev => ({ ...prev, floor: parseInt(e.target.value) || 0 }))}
+                  className={cn('h-7 text-xs', quick.input)}
+                />
+              ) : (
+                <p className="text-xs">{formatFloorLabel(formData.floor)}</p>
+              )}
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Compass className={cn(iconSizes.xs, 'text-amber-500')} />
+                {t('orientation.sectionTitle')}
+              </Label>
+              <div className="flex flex-wrap gap-1">
+                {ORIENTATION_OPTIONS.map((orientation) => {
+                  const isSelected = formData.orientations.includes(orientation);
+                  return (
+                    <Button key={orientation} type="button"
+                      variant={isSelected ? 'default' : 'outline'} size="sm"
+                      className="h-6 px-1.5 text-xs"
+                      disabled={!isEditing}
+                      onClick={() => toggleArrayItem('orientations', orientation)}>
+                      {t(`orientation.short.${orientation}`)}
+                    </Button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════════════
           ROW 1: Διάταξη, Εμβαδά, Κατάσταση/Ενέργεια
