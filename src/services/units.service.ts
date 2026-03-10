@@ -192,14 +192,10 @@ export async function getUnitsByBuilding(buildingId: string): Promise<Property[]
     }
   }
 
-// Update a unit
+// Update a unit via Admin SDK API (server-side validation + audit trail)
 export async function updateUnit(unitId: string, updates: Partial<Property>): Promise<{ success: boolean }> {
   try {
-    const unitRef = doc(db, UNITS_COLLECTION, unitId);
-    await updateDoc(unitRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    await apiClient.patch(`/api/units/${unitId}`, updates);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to update their local state
@@ -219,7 +215,6 @@ export async function updateUnit(unitId: string, updates: Partial<Property>): Pr
 
     return { success: true };
   } catch (error) {
-    // Error logging removed
     throw error;
   }
 }

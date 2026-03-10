@@ -36,13 +36,22 @@ const UNIT_TRACKED_FIELDS: Record<string, string> = {
   buildingId: 'Κτίριο',
   projectId: 'Έργο',
   companyId: 'Εταιρεία',
+  orientation: 'Προσανατολισμός',
+  condition: 'Κατάσταση ακινήτου',
+  energyClass: 'Ενεργειακή κλάση',
 };
+
+/** Fields that are NEVER writable via PATCH (security) */
+const FORBIDDEN_FIELDS: ReadonlySet<string> = new Set([
+  'id', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
+]);
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface UnitPatchPayload {
+/** Unit PATCH body — core fields explicitly typed, extended fields passed through */
+interface UnitPatchPayload extends Record<string, unknown> {
   name?: string;
   type?: string;
   status?: string;
@@ -50,15 +59,10 @@ interface UnitPatchPayload {
   area?: number;
   price?: number;
   description?: string;
-  /** Set to null to unlink from building, or string to link */
   buildingId?: string | null;
-  /** Set to null to unlink from project, or string to link */
   projectId?: string | null;
-  /** Set to null to unlink from company, or string to link */
   companyId?: string | null;
-  /** Company display name (denormalized for quick reads) */
   companyName?: string;
-  /** Project display name (denormalized for quick reads) */
   projectName?: string;
 }
 
@@ -97,18 +101,18 @@ export const PATCH = withStandardRateLimit(
           updatedBy: ctx.uid,
         };
 
-        if (body.name?.trim()) updateData.name = body.name.trim();
-        if (body.type) updateData.type = body.type;
-        if (body.status) updateData.status = body.status;
-        if (body.floor !== undefined) updateData.floor = body.floor?.trim() || null;
-        if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
-        if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
-        if (body.description !== undefined) updateData.description = body.description?.trim() || null;
-        if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
-        if (body.projectId !== undefined) updateData.projectId = body.projectId ?? null;
-        if (body.companyId !== undefined) updateData.companyId = body.companyId ?? null;
-        if (body.companyName !== undefined) updateData.companyName = body.companyName ?? null;
-        if (body.projectName !== undefined) updateData.projectName = body.projectName ?? null;
+        // Pass through all fields except forbidden ones
+        // Handles both core fields (name, status, etc.) and extended fields (layout, areas, orientation, etc.)
+        for (const [key, value] of Object.entries(body)) {
+          if (FORBIDDEN_FIELDS.has(key)) continue;
+          if (value === undefined) continue;
+          updateData[key] = value ?? null;
+        }
+
+        // Trim string fields for core fields
+        if (typeof updateData.name === 'string') updateData.name = (updateData.name as string).trim() || existing.name;
+        if (typeof updateData.floor === 'string') updateData.floor = (updateData.floor as string).trim() || null;
+        if (typeof updateData.description === 'string') updateData.description = (updateData.description as string).trim() || null;
 
         // Compute field-level diffs BEFORE the update
         const auditChanges = EntityAuditService.diffFields(existing, updateData, UNIT_TRACKED_FIELDS);
