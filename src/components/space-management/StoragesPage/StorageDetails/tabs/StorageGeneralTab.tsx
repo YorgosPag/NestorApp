@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { Warehouse, MapPin, StickyNote, Calendar } from 'lucide-react';
+import { Warehouse, MapPin, StickyNote } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('StorageGeneralTab');
@@ -325,35 +324,7 @@ export function StorageGeneralTab({
         </CardContent>
       </Card>
 
-      {/* Update Information Card (always read-only) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
-            {t('general.updateInfo')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
-              <Input
-                value={storage.lastUpdated ? formatDateShort(storage.lastUpdated) : t('general.notSet')}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.owner')}</Label>
-              <Input
-                value={storage.owner || t('general.notAssigned')}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ADR-195: Update Information Card αφαιρέθηκε — audit trail θα γίνει κεντρικά (EntityAuditService + ActivityTab) */}
     </div>
   );
 }

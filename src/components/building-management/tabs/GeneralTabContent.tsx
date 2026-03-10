@@ -77,6 +77,12 @@ export function GeneralTabContent({
   const [formData, setFormData] = useState(() => buildFormData(building));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // 🏢 ENTERPRISE: Local projectId state for create mode
+  // In create mode, we store projectId locally until the building is saved
+  const [createProjectId, setCreateProjectId] = useState<string | null>(
+    isCreateMode ? (building.projectId || null) : null
+  );
+
   // Track cancel vs save transitions for form reset
   const didSaveRef = React.useRef(false);
   const prevEditingRef = React.useRef(effectiveIsEditing);
@@ -144,11 +150,13 @@ export function GeneralTabContent({
       };
 
       if (isCreateMode) {
-        logger.info('Creating new building in Firestore', { formData });
+        logger.info('Creating new building in Firestore', { formData, projectId: createProjectId });
         const result = await createBuilding({
           ...payload,
           companyId: building.companyId || '',
           status: 'planning',
+          // 🏢 ENTERPRISE: Include projectId if selected during creation
+          ...(createProjectId ? { projectId: createProjectId } : {}),
         });
 
         if (!result.success || !result.buildingId) {
@@ -184,7 +192,7 @@ export function GeneralTabContent({
     } finally {
       setIsSaving(false);
     }
-  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, t]);
+  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, createProjectId, t]);
 
   // Register save function for parent header delegation
   useEffect(() => {
@@ -243,6 +251,13 @@ export function GeneralTabContent({
     return projects.map(p => ({ id: p.id, name: p.name }));
   }, []);
 
+  // 🏢 ENTERPRISE: In create mode, save projectId locally (no API call — building doesn't exist yet)
+  const saveProjectLocal = useCallback(async (newId: string | null, _name: string) => {
+    setCreateProjectId(newId);
+    logger.info('Project selected for new building (local)', { projectId: newId });
+    return { success: true };
+  }, []);
+
   const saveProject = useCallback(async (newId: string | null) => {
     try {
       const result = await updateBuilding(String(building.id), {
@@ -290,9 +305,10 @@ export function GeneralTabContent({
         errors={errors}
       />
       {/* ENTERPRISE: Company + Project linking — EntityLinkCard (centralized)
-          Disabled in create mode (building must exist in Firestore before linking) */}
-      {!isCreateMode && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          Company linking: disabled in create mode (requires existing building)
+          Project linking: available in create mode (stores locally, saved with createBuilding) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {!isCreateMode && (
           <EntityLinkCard
             cardId="building-company-link"
             icon={Building2}
@@ -315,28 +331,28 @@ export function GeneralTabContent({
               currentLabel: t('companySelector.currentCompany'),
             }}
           />
-          <EntityLinkCard
-            cardId="building-project-link"
-            icon={FolderKanban}
-            currentValue={building.projectId}
-            loadOptions={loadProjects}
-            onSave={saveProject}
-            isEditing={effectiveIsEditing}
-            labels={{
-              title: t('projectSelector.title'),
-              label: t('projectSelector.label'),
-              placeholder: t('projectSelector.placeholder'),
-              noSelection: t('projectSelector.noProject'),
-              loading: t('projectSelector.loading'),
-              save: t('projectSelector.save'),
-              saving: t('projectSelector.saving'),
-              success: t('projectSelector.success'),
-              error: t('projectSelector.error'),
-              currentLabel: t('projectSelector.currentProject'),
-            }}
-          />
-        </div>
-      )}
+        )}
+        <EntityLinkCard
+          cardId="building-project-link"
+          icon={FolderKanban}
+          currentValue={isCreateMode ? createProjectId : building.projectId}
+          loadOptions={loadProjects}
+          onSave={isCreateMode ? saveProjectLocal : saveProject}
+          isEditing={effectiveIsEditing}
+          labels={{
+            title: t('projectSelector.title'),
+            label: t('projectSelector.label'),
+            placeholder: t('projectSelector.placeholder'),
+            noSelection: t('projectSelector.noProject'),
+            loading: t('projectSelector.loading'),
+            save: t('projectSelector.save'),
+            saving: t('projectSelector.saving'),
+            success: t('projectSelector.success'),
+            error: t('projectSelector.error'),
+            currentLabel: t('projectSelector.currentProject'),
+          }}
+        />
+      </div>
     </section>
   );
 }

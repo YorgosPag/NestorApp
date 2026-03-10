@@ -363,6 +363,7 @@
 | **ADR-180** | Hybrid Navigation — Dashboard Home με Navigation Tiles | ✅ IMPLEMENTED | [View](./adrs/ADR-180-hybrid-navigation-dashboard-tiles.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-191** | Enterprise Document Management System — Roadmap & Current State | ✅ PHASES_1-5_COMPLETE | [View](./adrs/ADR-191-enterprise-document-management.md) |
+| **ADR-195** | Entity Audit Trail — Centralized Change History System | ✅ APPROVED | [View](./adrs/ADR-195-entity-audit-trail.md) |
 
 ---
 

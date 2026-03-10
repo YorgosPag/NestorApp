@@ -1,46 +1,28 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "ADR-191: Parking Type Unification + Open Space Support",
-  "problem": "4 divergent ParkingSpot interfaces across the codebase (types/parking.ts, useFirestoreParkingSpots, API route, DXF Viewer). Hardcoded Greek labels in UI. buildingId was required, preventing open-space parking.",
-  "cause": "Organic growth without canonical type definition. Each layer defined its own ParkingSpot with different fields (code vs number, level vs floor, different type/status enums).",
+  "category": "FIX",
+  "shortDescription": "Info Tab Section Consistency — Unified Section Order (ADR-194)",
+  "problem": "Storage και Parking Info tabs είχαν ασυνεπή ονομασία (Βασικές Πληροφορίες vs Ταυτότητα), λείπαν Notes στο Storage, Parking είχε λάθος τίτλο Περιγραφή αντί Σημειώσεις, και τα Metadata cards χάθηκαν στο ADR-193.",
+  "cause": "ADR-193 αφαίρεσε financial cards αλλά κατά λάθος αφαίρεσε και τα Metadata cards. Τα Storage/Parking tabs δεν ακολουθούσαν το ίδιο naming convention με τα Units.",
   "filesChanged": [
-    "src/types/parking.ts",
-    "src/hooks/useFirestoreParkingSpots.ts",
-    "src/hooks/useParkingData.ts",
-    "src/hooks/useParkingStats.ts",
-    "src/hooks/useParkingPageState.ts",
-    "src/app/api/parking/route.ts",
-    "src/app/api/parking/[id]/route.ts",
+    "src/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab.tsx",
+    "src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab.tsx",
+    "src/i18n/locales/el/storage.json",
+    "src/i18n/locales/en/storage.json",
     "src/i18n/locales/el/parking.json",
     "src/i18n/locales/en/parking.json",
-    "src/i18n/locales/el/building.json",
-    "src/i18n/locales/en/building.json",
-    "src/components/space-management/ParkingPage/AddParkingDialog.tsx",
-    "src/components/building-management/tabs/ParkingTabContent.tsx",
-    "src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingHistoryTab.tsx",
-    "src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx",
-    "src/components/projects/parking/data.ts",
-    "src/components/projects/parking/ParkingFilterPanel.tsx",
-    "src/components/projects/parking/ParkingSpotTableRow.tsx",
-    "src/components/projects/parking/ParkingStatsSummary.tsx",
-    "src/components/parking/parking-spot-table/hooks/useParkingSort.ts",
-    "src/components/projects/utils/parking-utils.ts",
-    "src/services/projects/contracts.ts",
-    "src/components/projects/structure-tab/parts/ParkingNode.tsx"
+    "docs/centralized-systems/reference/adr-index.md",
+    "docs/centralized-systems/reference/adrs/ADR-194-info-tab-section-consistency.md"
   ],
-  "solution": "Phase 1: Canonical type in src/types/parking.ts with buildingId optional, projectId support, new locationZone field. API updated for open-space. Phase 2: UI components updated to i18n + Radix Select + locationZone. Phase 3: Legacy files migrated to canonical types. Phase 4: DXF Viewer local ParkingSpot replaced with canonical import.",
-  "testing": "npx tsc --noEmit — 0 new errors in parking files. Vercel build triggered.",
-  "notes": "Compatible with LOCKED architecture decisions. No new hierarchy levels added. parking_spots collection unchanged. Backward compatible — existing documents work with optional buildingId.",
+  "solution": "1) Card 1: Renamed basicInfo → identity (Ταυτότητα) σε Storage και Parking, 2) Storage Card 3: icon Layers → StickyNote, added Notes textarea κάτω από Description, 3) Parking Card 3: fixed title description → notes, 4) Restored Metadata card (Calendar icon) σε Storage (lastUpdated + owner) και Parking (createdAt + updatedAt + createdBy), 5) Added i18n key general.identity σε 4 locale files",
+  "testing": "Pre-commit checks passed. Vercel auto-deploy triggered.",
+  "notes": "Enterprise pattern: SAP RE-FX consistent section order — Identity → Location → Notes → Admin Data. Τώρα Storage και Parking ακολουθούν ίδια δομή.",
   "contributors": {
-    "user": "Giorgos",
+    "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-03-07"
+    "sessionDate": "2026-03-10"
   },
   "relatedBackups": [],
   "commits": [
-    {
-      "hash": "fca49061",
-      "message": "feat(parking): ADR-191 — canonical ParkingSpot type unification + open space support"
-    }
+    { "hash": "f993ccfa", "message": "feat(ui): unify Info tab sections across Storage & Parking (ADR-194)" }
   ]
 }

@@ -362,6 +362,14 @@ export function FilesList({
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView?.(file); } }}
+            draggable
+            onDragStart={(e) => {
+              const ids = selectedIds?.has(file.id)
+                ? Array.from(selectedIds)
+                : [file.id];
+              e.dataTransfer.setData('application/x-file-ids', JSON.stringify(ids));
+              e.dataTransfer.effectAllowed = 'move';
+            }}
           >
             {/* Checkbox for multi-select */}
             {onToggleSelect && (
