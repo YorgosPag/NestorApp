@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useState, Suspense } from 'react';
+import React, { useCallback, useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { UnitsHeader } from '@/components/units/page/UnitsHeader';
@@ -57,6 +58,9 @@ function UnitsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('units');
   const colors = useSemanticColors();
+  const searchParams = useSearchParams();
+  const urlUnitId = searchParams.get('unitId');
+  const urlTab = searchParams.get('tab');
 
   // 🏢 ENTERPRISE: Create label getters with translation support
   const getStatusLabel = React.useMemo(() => createStatusLabelGetter(t), [t]);
@@ -184,6 +188,16 @@ function UnitsPageContent() {
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
+
+  // 🏢 ENTERPRISE: Auto-select unit from URL query param (?unitId=xxx&tab=yyy)
+  useEffect(() => {
+    if (urlUnitId && properties.length > 0 && !selectedUnit) {
+      const found = properties.find(p => p.id === urlUnitId);
+      if (found) {
+        handlePolygonSelect(urlUnitId, false);
+      }
+    }
+  }, [urlUnitId, properties, selectedUnit, handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Sync selectedUnit with NavigationContext for breadcrumb display
   React.useEffect(() => {
@@ -444,6 +458,7 @@ function UnitsPageContent() {
               isCreatingNewUnit={isCreatingNewUnit}
               onUnitCreated={handleUnitCreated}
               onCancelCreate={handleCancelCreate}
+              defaultTab={urlTab || undefined}
             />
           ) : (
             // ✅ ENTERPRISE: Pass filtered properties + selection to grid (Single Source of Truth)

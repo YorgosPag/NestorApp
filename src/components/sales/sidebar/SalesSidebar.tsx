@@ -140,12 +140,12 @@ export function SalesSidebar({
             <UnitSummaryContent data={selectedUnit} />
           </TabsContent>
 
-          {/* Photos, Videos, Documents → redirect to /units (Χώροι) — same button style as UnitSummary */}
-          {(['photos', 'videos', 'documents'] as const).map(tabId => {
+          {/* Documents, Photos, Videos → redirect to /units with matching tab */}
+          {(['documents', 'photos', 'videos'] as const).map(tabId => {
             const hints: Record<string, string> = {
+              documents: 'Τα έγγραφα διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
               photos: 'Οι φωτογραφίες διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
               videos: 'Τα βίντεο διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
-              documents: 'Τα έγγραφα διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
             };
             return (
               <TabsContent key={tabId} value={tabId} className="flex-1 overflow-y-auto">
@@ -159,7 +159,7 @@ export function SalesSidebar({
                       size="sm"
                       className="w-full justify-center gap-2 text-sm"
                       onClick={() => {
-                        window.location.href = `/units?unitId=${selectedUnit.id}`;
+                        window.location.href = `/units?unitId=${selectedUnit.id}&tab=${tabId}`;
                       }}
                     >
                       <ExternalLink className={iconSizes.sm} />

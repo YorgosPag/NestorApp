@@ -38,4 +38,6 @@ export interface UnitsSidebarProps {
   onUnitCreated?: (unitId: string) => void;
   /** Callback to cancel new unit creation */
   onCancelCreate?: () => void;
+  /** Default tab to open (from URL query param) */
+  defaultTab?: string;
 }

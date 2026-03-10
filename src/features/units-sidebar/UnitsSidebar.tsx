@@ -46,6 +46,7 @@ export function UnitsSidebar({
   isCreatingNewUnit = false,
   onUnitCreated,
   onCancelCreate,
+  defaultTab,
 }: UnitsSidebarProps) {
   // 🗨️ ENTERPRISE: Centralized systems
   const { t } = useTranslation('units');
@@ -112,7 +113,7 @@ export function UnitsSidebar({
           tabs={unitsTabs.map(convertToUniversalConfig)}
           data={selectedUnit}
           componentMapping={UNITS_COMPONENT_MAPPING}
-          defaultTab="info"
+          defaultTab={defaultTab || "info"}
           theme="default"
           // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
           translationNamespace="building"
