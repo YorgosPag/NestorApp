@@ -205,13 +205,15 @@ function SalesAvailableContent() {
                 {/* Content */}
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold truncate">{unit.code ?? unit.name}</span>
+                    <span className="text-sm font-semibold truncate">{unit.name || unit.code || unit.id}</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded ${
                       unit.commercialStatus === 'for-sale' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
                       unit.commercialStatus === 'reserved' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' :
                       'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                     }`}>
-                      {t(`sales.commercialStatus.${unit.commercialStatus ?? 'unavailable'}`, { defaultValue: unit.commercialStatus ?? 'unavailable' })}
+                      {unit.commercialStatus
+                        ? t(`sales.commercialStatus.${unit.commercialStatus}`, { defaultValue: unit.commercialStatus })
+                        : t('sales.commercialStatus.new', { defaultValue: 'Νέα' })}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">

@@ -81,13 +81,16 @@ export function SalesUnitListCard({
   const { t } = useTranslation('common');
 
   const commercialStatus = unit.commercialStatus ?? 'unavailable';
+  const hasCommercialStatus = !!unit.commercialStatus;
   const badgeConfig = COMMERCIAL_STATUS_BADGE[commercialStatus];
 
-  // Badge
+  // Badge — units without commercialStatus show "Νέα" (not "unavailable")
   const badges = useMemo(() => [{
-    label: t(badgeConfig.labelKey, { defaultValue: commercialStatus }),
-    variant: badgeConfig.variant,
-  }], [t, badgeConfig, commercialStatus]);
+    label: hasCommercialStatus
+      ? t(badgeConfig.labelKey, { defaultValue: commercialStatus })
+      : t('sales.commercialStatus.new', { defaultValue: 'Νέα' }),
+    variant: hasCommercialStatus ? badgeConfig.variant : ('outline' as BadgeVariant),
+  }], [t, badgeConfig, commercialStatus, hasCommercialStatus]);
 
   // Row 2: Physical stats
   const area = unit.areas?.gross ?? unit.area ?? 0;
@@ -184,7 +187,7 @@ export function SalesUnitListCard({
 
   return (
     <ListCard
-      title={unit.code ?? unit.name}
+      title={unit.name || unit.code || unit.id}
       badges={badges}
       stats={allStats}
       compact={compact}

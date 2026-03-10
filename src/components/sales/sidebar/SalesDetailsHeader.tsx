@@ -111,7 +111,7 @@ export function SalesDetailsHeader(props: SalesDetailsHeaderProps) {
   return (
     <EntityDetailsHeader
       icon={ShoppingBag}
-      title={unit.code ?? unit.name}
+      title={unit.name || unit.code || unit.id}
       subtitle={t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type })}
       variant="detailed"
       actions={actions}
