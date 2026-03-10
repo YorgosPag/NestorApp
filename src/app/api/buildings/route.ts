@@ -52,12 +52,17 @@ export const GET = withStandardRateLimit(
       logger.info('[Buildings] Loading all buildings for tenant', { tenantCompanyId });
     }
 
-    // 🎯 ENTERPRISE: Build query with tenant filter + optional projectId
-    let queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
-      .where('companyId', '==', tenantCompanyId);
-
+    // 🎯 ENTERPRISE: Build query — projectId is sufficient for scoping when provided
+    let queryRef;
     if (projectId) {
-      queryRef = queryRef.where('projectId', '==', projectId);
+      // When projectId is given, filter only by projectId (no companyId needed)
+      // The project itself is already tenant-scoped
+      queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
+        .where('projectId', '==', projectId);
+    } else {
+      // Without projectId, use tenant companyId to list all buildings
+      queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
+        .where('companyId', '==', tenantCompanyId);
     }
 
     const snapshot = await queryRef.get();
