@@ -98,20 +98,20 @@ export function SalesUnitListCard({
     {
       icon: NAVIGATION_ENTITIES.unit.icon,
       iconColor: 'text-teal-600',
-      label: t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type }),
-      value: '',
+      label: t('sales.fields.type', { defaultValue: 'Τύπος' }),
+      value: t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type }),
     },
     {
       icon: NAVIGATION_ENTITIES.area?.icon ?? Calculator,
       iconColor: 'text-pink-600',
-      label: `${area} m²`,
-      value: '',
+      label: t('sales.fields.area', { defaultValue: 'Εμβαδόν' }),
+      value: `${area} m²`,
     },
     ...(unit.floor !== undefined ? [{
       icon: NAVIGATION_ENTITIES.floor?.icon ?? Calendar,
       iconColor: 'text-orange-600',
-      label: `${unit.floor}ος`,
-      value: '',
+      label: t('sales.fields.floor', { defaultValue: 'Όροφος' }),
+      value: `${unit.floor}ος`,
     }] : []),
   ], [t, unit.type, area, unit.floor]);
 
@@ -125,8 +125,8 @@ export function SalesUnitListCard({
       {
         icon: DollarSign,
         iconColor: 'text-green-600',
-        label: formatCurrency(askingPrice),
-        value: '',
+        label: t('sales.fields.askingPrice', { defaultValue: 'Τιμή' }),
+        value: formatCurrency(askingPrice),
       },
     ];
 
@@ -134,8 +134,8 @@ export function SalesUnitListCard({
       stats.push({
         icon: Calculator,
         iconColor: 'text-blue-600',
-        label: `${formatCurrency(pricePerSqm)}/m²`,
-        value: '',
+        label: t('sales.fields.pricePerSqm', { defaultValue: '€/m²' }),
+        value: `${formatCurrency(pricePerSqm)}/m²`,
       });
     }
 
@@ -143,8 +143,8 @@ export function SalesUnitListCard({
       stats.push({
         icon: Calendar,
         iconColor: 'text-gray-500',
-        label: `${daysOnMarket} ${t('sales.daysOnMarket', { defaultValue: 'ημέρες' })}`,
-        value: '',
+        label: t('sales.fields.daysOnMarket', { defaultValue: 'Ημέρες' }),
+        value: `${daysOnMarket} ${t('sales.daysOnMarket', { defaultValue: 'ημέρες' })}`,
       });
     }
 
@@ -161,8 +161,8 @@ export function SalesUnitListCard({
       stats.push({
         icon: User,
         iconColor: 'text-violet-600',
-        label: t('sales.buyer', { defaultValue: 'Αγοραστής' }),
-        value: '',
+        label: t('sales.fields.buyer', { defaultValue: 'Αγοραστής' }),
+        value: String(unit.commercial.buyerContactId),
       });
     }
 
@@ -170,8 +170,8 @@ export function SalesUnitListCard({
       stats.push({
         icon: CreditCard,
         iconColor: 'text-amber-600',
-        label: formatCurrency(unit.commercial.reservationDeposit),
-        value: '',
+        label: t('sales.fields.deposit', { defaultValue: 'Προκαταβολή' }),
+        value: formatCurrency(unit.commercial.reservationDeposit),
       });
     }
 
