@@ -109,7 +109,6 @@ export function SpaceFloorplanInline({
       projectId={projectId}
       domain="construction"
       category="floorplans"
-      purpose="space-floorplan"
       entryPointCategoryFilter="floorplans"
       displayStyle="floorplan-gallery"
       acceptedTypes={FLOORPLAN_ACCEPT}
