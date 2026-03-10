@@ -240,7 +240,8 @@ export function UnitFieldsBlock({
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
           type: formData.type || 'apartment',
-          status: 'draft',
+          status: 'reserved',
+          operationalStatus: 'draft',
           floor: formData.floor,
           area: formData.areaGross,
         };
