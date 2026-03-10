@@ -87,14 +87,16 @@ export class UnitFloorplanService {
     try {
       const docId = `${unitId}_unit`;
 
-      // Legacy save (backward compat)
+      // Legacy save (backward compat) — includes companyId for Firestore Rules
       await setDoc(doc(db, this.LEGACY_COLLECTION, docId), {
         unitId,
         type: 'unit',
         scene: data.scene,
         fileName: data.fileName,
         timestamp: data.timestamp,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        ...(options?.companyId ? { companyId: options.companyId } : {}),
+        ...(options?.createdBy ? { createdBy: options.createdBy } : {}),
       });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)

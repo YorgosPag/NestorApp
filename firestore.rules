@@ -919,9 +919,12 @@ service cloud.firestore {
                            && resource.data.createdBy == request.auth.uid)
                      );
 
-      // ✍️ CREATE: companyId required
+      // ✍️ CREATE: companyId required (super_admin can create for any company)
       allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
+                    && (
+                         request.resource.data.companyId == getUserCompanyId()
+                         || isSuperAdminOnly()
+                       );
 
       // 📝 UPDATE: Creator or company admin
       allow update: if isAuthenticated()
