@@ -62,23 +62,36 @@ export const GET = withStandardRateLimit(
 
         // ============================================================================
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
+        // Super admin with buildingId: query by buildingId directly (units may
+        // have different companyId than the building's companyId)
         // ============================================================================
 
-        const unitsSnapshot = await getAdminFirestore()
-          .collection(COLLECTIONS.UNITS)
-          .where('companyId', '==', tenantCompanyId)
-          .orderBy('name', 'asc')
-          .get();
+        const db = getAdminFirestore();
+        let unitsQuery;
+
+        if (isSuperAdmin && buildingId) {
+          // 🏢 ENTERPRISE: Super admin querying by buildingId — skip companyId filter
+          // This handles cases where units have different companyId than their building
+          unitsQuery = db.collection(COLLECTIONS.UNITS)
+            .where('buildingId', '==', buildingId)
+            .orderBy('name', 'asc');
+        } else {
+          unitsQuery = db.collection(COLLECTIONS.UNITS)
+            .where('companyId', '==', tenantCompanyId)
+            .orderBy('name', 'asc');
+        }
+
+        const unitsSnapshot = await unitsQuery.get();
 
         let units = unitsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
 
-        logger.info('[Units/List] Found units for tenant', { count: units.length, companyId: ctx.companyId });
+        logger.info('[Units/List] Found units', { count: units.length, companyId: tenantCompanyId, buildingId: buildingId || 'all' });
 
-        // 🏢 ENTERPRISE: Filter by buildingId if provided
-        if (buildingId) {
+        // 🏢 ENTERPRISE: Filter by buildingId if provided (for non-super-admin path)
+        if (buildingId && !isSuperAdmin) {
           units = units.filter(unit => {
             const unitData = unit as Record<string, unknown> & { buildingId?: string };
             return unitData.buildingId === buildingId;

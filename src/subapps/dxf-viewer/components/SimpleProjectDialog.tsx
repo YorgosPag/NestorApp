@@ -356,20 +356,22 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         count: number;
       }
 
-      const companyParam = selectedCompanyId ? `?companyId=${selectedCompanyId}` : '';
-      const result = await apiClient.get<UnitsApiResponse>(`/api/units${companyParam}`);
+      // 🏢 ENTERPRISE: Query by buildingId (server-side filter) + companyId for super_admin
+      const params = new URLSearchParams();
+      if (selectedCompanyId) params.set('companyId', selectedCompanyId);
+      params.set('buildingId', buildingId);
+      const queryString = params.toString();
 
-      // Filter units that belong to the selected building
-      const buildingUnits = (result?.units || []).filter((unit: Unit) =>
-        unit.buildingId === buildingId || unit.building === buildingId
-      );
+      const result = await apiClient.get<UnitsApiResponse>(`/api/units?${queryString}`);
+
+      // Server already filters by buildingId — use all returned units
+      const buildingUnits = result?.units || [];
 
       setUnits(buildingUnits);
       dlog('ProjectDialog', `✅ Loaded ${buildingUnits.length} units for building`);
 
       if (buildingUnits.length === 0) {
-        const allBuildingIds = [...new Set((result?.units || []).map((u: Unit) => u.buildingId))];
-        dlog('ProjectDialog', `⚠️ No units found. Available building IDs:`, allBuildingIds);
+        dlog('ProjectDialog', `⚠️ No units found for buildingId: ${buildingId}`);
       }
     } catch (error) {
       derr('ProjectDialog', '❌ Error loading units for building:', error);
