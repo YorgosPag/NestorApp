@@ -62,6 +62,27 @@ export const GET = withStandardRateLimit(
 
     const snapshot = await queryRef.get();
 
+    // 🔍 DIAGNOSTIC: If no results with tenant filter, check without it
+    if (snapshot.empty && projectId) {
+      const diagQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
+        .where('projectId', '==', projectId);
+      const diagSnapshot = await diagQuery.get();
+      if (!diagSnapshot.empty) {
+        const diagData = diagSnapshot.docs.map(d => ({
+          id: d.id,
+          companyId: d.data().companyId,
+          projectId: d.data().projectId,
+          name: d.data().name,
+        }));
+        logger.warn('[Buildings] DIAGNOSTIC: Buildings exist but with different companyId', {
+          expectedCompanyId: tenantCompanyId,
+          actualBuildings: diagData,
+        });
+      } else {
+        logger.warn('[Buildings] DIAGNOSTIC: No buildings at all for projectId', { projectId });
+      }
+    }
+
     // 🏢 ENTERPRISE: Ensure Firestore document ID is preserved
     const buildings: BuildingDocument[] = snapshot.docs.map(doc => ({
       ...doc.data(),
