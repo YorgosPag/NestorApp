@@ -1,0 +1,223 @@
+'use client';
+
+/**
+ * @fileoverview Sale Info Tab Content — ADR-197 §2.7 Tab 1
+ * @description Commercial data: prices, status, buyer, dates
+ * @pattern Enterprise card layout with semantic sections
+ */
+
+import React from 'react';
+import {
+  DollarSign,
+  UserCheck,
+  Calendar,
+  TrendingDown,
+  CreditCard,
+  Clock,
+  ExternalLink,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { Unit } from '@/types/unit';
+
+// =============================================================================
+// 🏢 TYPES
+// =============================================================================
+
+interface SaleInfoContentProps {
+  data?: Unit;
+}
+
+// =============================================================================
+// 🏢 HELPERS
+// =============================================================================
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  return new Intl.NumberFormat('el-GR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatDate(ts: { toDate?: () => Date } | null | undefined): string {
+  if (!ts || typeof ts.toDate !== 'function') return '—';
+  return new Intl.DateTimeFormat('el-GR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(ts.toDate());
+}
+
+function computeDaysOnMarket(listedDate: { toDate?: () => Date } | null | undefined): string {
+  if (!listedDate || typeof listedDate.toDate !== 'function') return '—';
+  const listed = listedDate.toDate();
+  const days = Math.floor((Date.now() - listed.getTime()) / (1000 * 60 * 60 * 24));
+  return `${days}`;
+}
+
+function computeDiscount(asking: number | null | undefined, final: number | null | undefined): string | null {
+  if (!asking || !final || asking <= 0) return null;
+  const pct = ((asking - final) / asking) * 100;
+  if (pct <= 0) return null;
+  return `−${pct.toFixed(1)}%`;
+}
+
+// =============================================================================
+// 🏢 FIELD ROW COMPONENT
+// =============================================================================
+
+function InfoRow({
+  icon: Icon,
+  iconColor,
+  label,
+  value,
+  valueColor,
+}: {
+  icon: React.ElementType;
+  iconColor: string;
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
+  const iconSizes = useIconSizes();
+
+  return (
+    <div className="flex items-center justify-between py-1.5">
+      <span className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Icon className={`${iconSizes.sm} ${iconColor} flex-shrink-0`} />
+        {label}
+      </span>
+      <span className={`text-sm font-medium ${valueColor ?? 'text-foreground'}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// =============================================================================
+// 🏢 COMPONENT
+// =============================================================================
+
+export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
+  const { t } = useTranslation('common');
+  const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
+
+  if (!unit) return null;
+
+  const commercial = unit.commercial;
+  const askingPrice = commercial?.askingPrice;
+  const finalPrice = commercial?.finalPrice;
+  const area = unit.areas?.gross ?? unit.area ?? 0;
+  const pricePerSqm = askingPrice && area > 0 ? Math.round(askingPrice / area) : null;
+  const discount = computeDiscount(askingPrice, finalPrice);
+  const daysOnMarket = computeDaysOnMarket(commercial?.listedDate);
+
+  return (
+    <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.saleInfo', { defaultValue: 'Πληροφορίες Πώλησης' })}>
+      {/* Εμπορικά Στοιχεία */}
+      <Card>
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <DollarSign className={`${iconSizes.sm} text-green-600`} />
+            {t('sales.saleInfo.pricing', { defaultValue: 'Εμπορικά Στοιχεία' })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2">
+          <InfoRow
+            icon={DollarSign}
+            iconColor="text-green-600"
+            label={t('sales.saleInfo.askingPrice', { defaultValue: 'Ζητούμενη' })}
+            value={formatCurrency(askingPrice)}
+            valueColor={colors.text.success}
+          />
+          {finalPrice !== null && finalPrice !== undefined && (
+            <InfoRow
+              icon={DollarSign}
+              iconColor="text-blue-600"
+              label={t('sales.saleInfo.finalPrice', { defaultValue: 'Τελική τιμή' })}
+              value={`${formatCurrency(finalPrice)}${discount ? ` (${discount})` : ''}`}
+              valueColor={colors.text.info}
+            />
+          )}
+          {pricePerSqm && (
+            <InfoRow
+              icon={TrendingDown}
+              iconColor="text-purple-600"
+              label="€/m²"
+              value={formatCurrency(pricePerSqm)}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Κράτηση / Αγοραστής */}
+      {(commercial?.buyerContactId || commercial?.reservationDeposit) && (
+        <Card>
+          <CardHeader className="p-3 pb-0">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <UserCheck className={`${iconSizes.sm} text-violet-600`} />
+              {t('sales.saleInfo.reservation', { defaultValue: 'Κράτηση' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 pt-2">
+            {commercial?.reservationDeposit && (
+              <InfoRow
+                icon={CreditCard}
+                iconColor="text-amber-600"
+                label={t('sales.saleInfo.deposit', { defaultValue: 'Προκαταβολή' })}
+                value={formatCurrency(commercial.reservationDeposit)}
+              />
+            )}
+            {commercial?.buyerContactId && (
+              <div className="flex items-center justify-between py-1.5">
+                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <UserCheck className={`${iconSizes.sm} text-violet-600 flex-shrink-0`} />
+                  {t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
+                </span>
+                <button className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}>
+                  {t('sales.saleInfo.viewContact', { defaultValue: 'Προβολή' })}
+                  <ExternalLink className={iconSizes.xs} />
+                </button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ημερομηνίες */}
+      <Card>
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Calendar className={`${iconSizes.sm} text-orange-600`} />
+            {t('sales.saleInfo.dates', { defaultValue: 'Ημερομηνίες' })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2">
+          <InfoRow
+            icon={Calendar}
+            iconColor="text-blue-600"
+            label={t('sales.saleInfo.listedDate', { defaultValue: 'Στην αγορά' })}
+            value={formatDate(commercial?.listedDate)}
+          />
+          <InfoRow
+            icon={Calendar}
+            iconColor="text-green-600"
+            label={t('sales.saleInfo.saleDate', { defaultValue: 'Ημ. πώλησης' })}
+            value={formatDate(commercial?.saleDate)}
+          />
+          <InfoRow
+            icon={Clock}
+            iconColor="text-gray-500"
+            label={t('sales.saleInfo.daysOnMarket', { defaultValue: 'Ημέρες' })}
+            value={daysOnMarket}
+          />
+        </CardContent>
+      </Card>
+    </section>
+  );
+}

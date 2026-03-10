@@ -55,6 +55,65 @@ export type OperationalStatus =
 export type LegacySalesStatus = PropertyStatus | 'rented';
 
 // =============================================================================
+// 🏢 COMMERCIAL STATUS (Sales/Rental Truth — ADR-197)
+// =============================================================================
+
+/**
+ * ✅ ENTERPRISE: Commercial status for unit market disposition
+ * Independent from operationalStatus (a unit can be under-construction AND for-sale)
+ *
+ * @since ADR-197 — Sales Pages Implementation
+ * @pattern Yardi Voyager, SAP RE-FX, MRI Software — single disposition field
+ *
+ * @example "unavailable" — Not listed on market (default)
+ * @example "for-sale" — Listed for sale
+ * @example "for-rent" — Listed for rent
+ * @example "for-sale-and-rent" — Dual listing
+ * @example "reserved" — Deposit paid, pending completion
+ * @example "sold" — Sale completed
+ * @example "rented" — Active lease
+ */
+export type CommercialStatus =
+  | 'unavailable'         // Μη διαθέσιμη (default — not on market)
+  | 'for-sale'            // Προς πώληση
+  | 'for-rent'            // Προς ενοικίαση
+  | 'for-sale-and-rent'   // Πώληση & Ενοικίαση (dual listing)
+  | 'reserved'            // Κρατημένη (προκαταβολή)
+  | 'sold'                // Πωλημένη
+  | 'rented';             // Ενοικιασμένη
+
+// =============================================================================
+// 🏢 COMMERCIAL DATA (Sales/Rental Pricing — ADR-197)
+// =============================================================================
+
+/**
+ * ✅ ENTERPRISE: Commercial/pricing data for units on market
+ * Attached to Unit type as optional `commercial` field
+ *
+ * @since ADR-197 — Sales Pages Implementation
+ * @pattern Salesforce Property Cloud, HubSpot CRM — pricing + buyer tracking
+ */
+export interface UnitCommercialData {
+  /** Ζητούμενη τιμή καταλόγου */
+  askingPrice: number | null;
+
+  /** Τελική τιμή πώλησης μετά διαπραγμάτευση (γράφεται στο συμβόλαιο) */
+  finalPrice: number | null;
+
+  /** Ποσό προκαταβολής κράτησης */
+  reservationDeposit: number | null;
+
+  /** Reference → contacts collection (αγοραστής/ενοικιαστής) */
+  buyerContactId: string | null;
+
+  /** Ημερομηνία ολοκλήρωσης πώλησης */
+  saleDate: Timestamp | null;
+
+  /** Ημερομηνία εισαγωγής στην αγορά (για υπολογισμό "ημέρες στην αγορά") */
+  listedDate: Timestamp | null;
+}
+
+// =============================================================================
 // 🏢 UNIT TYPE - CANONICAL ENGLISH CODES
 // =============================================================================
 // 📅 Updated 2026-01-24: Changed to canonical English codes
@@ -207,6 +266,21 @@ export interface Unit {
    */
   unitCoverage?: UnitCoverage;
 
+  /**
+   * ✅ NEW: Commercial status (market disposition)
+   * Independent from operationalStatus — a unit can be under-construction AND for-sale
+   * @since ADR-197 — Sales Pages Implementation
+   * @default 'unavailable'
+   */
+  commercialStatus?: CommercialStatus;
+
+  /**
+   * ✅ NEW: Commercial/pricing data
+   * Contains asking price, final price, buyer, dates
+   * @since ADR-197 — Sales Pages Implementation
+   */
+  commercial?: UnitCommercialData;
+
   unitName?: string; // ✅ ENTERPRISE FIX: Optional fallback property for backward compatibility
 
   // === NEW EXTENDED FIELDS (v1.0.5) ===
@@ -356,6 +430,10 @@ export interface UnitDoc {
   };
   unitAmenities?: AmenityCodeType[];
   linkedSpaces?: LinkedSpace[];
+
+  // Commercial fields (ADR-197)
+  commercialStatus?: CommercialStatus;
+  commercial?: Partial<UnitCommercialData>;
 
   // Legacy fields that might exist in old documents
   status?: LegacySalesStatus;

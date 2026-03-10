@@ -1,282 +1,247 @@
 'use client';
 
-import React from 'react';
+/**
+ * @fileoverview Sales Available Units Page — ADR-197
+ * @description Full enterprise page: header, dashboard, filters, dual quick filters, list+details
+ * @pattern Mirrors /units page with "Sales Lens" (commercial data prominent)
+ * @replaces Previous mock implementation with real Firestore data
+ */
 
+import React, { Suspense } from 'react';
+
+import { useSalesUnitsViewerState } from '@/hooks/useSalesUnitsViewerState';
+import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
+import { SalesQuickFilters } from '@/components/sales/page/SalesQuickFilters';
+import { SalesSidebar } from '@/components/sales/sidebar/SalesSidebar';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
+  ShoppingBag,
   DollarSign,
-  Calendar,
   TrendingUp,
-  Eye,
-  Users,
+  Maximize2,
 } from 'lucide-react';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { ListContainer, PageContainer } from '@/core/containers';
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PageContainer } from '@/core/containers';
-// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { Unit } from '@/types/unit';
 
-// 🏢 ENTERPRISE: Centralized Unit Icon & Color
-const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
-const unitColor = NAVIGATION_ENTITIES.unit.color;
+// =============================================================================
+// 🏢 CURRENCY FORMATTER
+// =============================================================================
 
-export default function AvailableApartmentsPage() {
-  const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
-  const colors = useSemanticColors();
-  // 🏢 ENTERPRISE: i18n support
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1_000_000) {
+    return `€${(value / 1_000_000).toFixed(1)}M`;
+  }
+  if (value >= 1_000) {
+    return `€${(value / 1_000).toFixed(0)}K`;
+  }
+  return `€${value}`;
+}
+
+// =============================================================================
+// 🏢 MAIN CONTENT
+// =============================================================================
+
+function SalesAvailableContent() {
   const { t } = useTranslation('common');
+  const colors = useSemanticColors();
 
-  // Placeholder stats for Available Apartments - inside component for i18n access
-  const availableStats: DashboardStat[] = [
+  const {
+    filteredUnits,
+    loading,
+    viewMode,
+    setViewMode,
+    showDashboard,
+    setShowDashboard,
+    showFilters,
+    setShowFilters,
+    selectedUnit,
+    selectedUnitId,
+    handleSelectUnit,
+    filters,
+    handleFiltersChange,
+    selectedCommercialStatus,
+    setSelectedCommercialStatus,
+    selectedUnitType,
+    setSelectedUnitType,
+    dashboardStats,
+  } = useSalesUnitsViewerState();
+
+  // Search state (for header search)
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  // Apply header search on top of hook filters
+  React.useEffect(() => {
+    handleFiltersChange({ searchTerm });
+  }, [searchTerm, handleFiltersChange]);
+
+  // =========================================================================
+  // Dashboard Stats (ADR-197 §2.5)
+  // =========================================================================
+  const unifiedDashboardStats: DashboardStat[] = [
     {
-      title: t('sales.available.stats.availableApartments'),
-      value: '142',
-      description: t('sales.available.stats.forSaleNow'),
-      icon: NAVIGATION_ENTITIES.unit.icon,
+      title: t('sales.available.stats.availableApartments', { defaultValue: 'Διαθέσιμες Μονάδες' }),
+      value: dashboardStats.availableCount,
+      description: t('sales.available.stats.forSaleNow', { defaultValue: 'Προς πώληση τώρα' }),
+      icon: ShoppingBag,
       color: 'blue',
-      trend: { value: -8, label: t('sales.stats.decrease') }
     },
     {
-      title: t('sales.available.stats.avgPrice'),
-      value: '€385K',
-      description: t('sales.available.stats.avgPriceDesc'),
+      title: t('sales.available.stats.avgPrice', { defaultValue: 'Μέση Τιμή' }),
+      value: dashboardStats.averagePrice > 0 ? formatCurrencyCompact(dashboardStats.averagePrice) : '—',
+      description: t('sales.available.stats.avgPriceDesc', { defaultValue: 'Μέση ζητούμενη τιμή' }),
       icon: DollarSign,
       color: 'green',
-      trend: { value: 12, label: t('sales.stats.increase') }
     },
     {
-      title: t('sales.available.stats.interest'),
-      value: '67',
-      description: t('sales.available.stats.activeViews'),
-      icon: Eye,
+      title: t('sales.available.stats.totalValue', { defaultValue: 'Συνολική Αξία' }),
+      value: dashboardStats.totalValue > 0 ? formatCurrencyCompact(dashboardStats.totalValue) : '—',
+      description: t('sales.available.stats.totalValueDesc', { defaultValue: 'Αξία χαρτοφυλακίου' }),
+      icon: TrendingUp,
       color: 'purple',
-      trend: { value: 23, label: t('sales.stats.increase') }
     },
     {
-      title: t('sales.available.stats.avgTime'),
-      value: '4.2 μήνες',
-      description: t('sales.available.stats.onMarket'),
-      icon: Calendar,
+      title: t('sales.available.stats.avgPricePerSqm', { defaultValue: 'Μ.Ο. €/m²' }),
+      value: dashboardStats.averagePricePerSqm > 0
+        ? `€${Math.round(dashboardStats.averagePricePerSqm).toLocaleString('el-GR')}`
+        : '—',
+      description: t('sales.available.stats.avgPricePerSqmDesc', { defaultValue: 'Μέση τιμή ανά τ.μ.' }),
+      icon: Maximize2,
       color: 'orange',
-      trend: { value: -15, label: t('sales.stats.decrease') }
-    }
+    },
   ];
+
   return (
-    <PageContainer fullScreen ariaLabel={t('sales.available.title')}>
-        {/* Header */}
-          <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
-            <div className="flex h-14 items-center px-4">
-              <div className="flex items-center gap-2">
-                <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-                <h1 className="text-lg font-semibold">{t('sales.available.title')}</h1>
-              </div>
-              <div className={`ml-auto text-sm ${colors.text.muted}`}>
-                {t('sales.available.subtitle')}
-              </div>
-            </div>
-          </div>
+    <PageContainer ariaLabel={t('sales.available.title', { defaultValue: 'Διαθέσιμες Μονάδες' })}>
+      {/* LAYER 1: Header */}
+      <SalesAvailableHeader
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        showDashboard={showDashboard}
+        setShowDashboard={setShowDashboard}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        showFilters={showFilters}
+        setShowFilters={setShowFilters}
+      />
 
-          {/* Dashboard Stats - Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <UnifiedDashboard
-              title={t('sales.available.overview')}
-              stats={availableStats}
-              variant="modern"
-            />
+      {/* LAYER 2: Dashboard (toggle-able) */}
+      {showDashboard && (
+        <UnifiedDashboard
+          stats={unifiedDashboardStats}
+          columns={6}
+        />
+      )}
 
-            {/* Available Types */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Γκαρσονιέρες */}
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('sales.available.types.studios.title')}</h3>
+      {/* LAYER 3: Quick Filters (dual row — ADR-197 §2.10) */}
+      <div className="px-1 pt-1 sm:px-2 sm:pt-2">
+        <SalesQuickFilters
+          selectedCommercialStatus={selectedCommercialStatus}
+          onCommercialStatusChange={setSelectedCommercialStatus}
+          selectedUnitType={selectedUnitType}
+          onUnitTypeChange={setSelectedUnitType}
+        />
+      </div>
+
+      {/* LAYER 4: List + Details */}
+      <ListContainer>
+        {viewMode === 'list' ? (
+          <SalesSidebar
+            units={filteredUnits as Unit[]}
+            selectedUnit={selectedUnit as Unit | null}
+            onSelectUnit={handleSelectUnit}
+            selectedUnitId={selectedUnitId}
+          />
+        ) : (
+          // Grid view — cards in grid layout
+          <section
+            className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
+            aria-label={t('sales.available.gridLabel', { defaultValue: 'Grid μονάδων πωλήσεων' })}
+          >
+            {(filteredUnits as Unit[]).map(unit => (
+              <article
+                key={unit.id}
+                onClick={() => handleSelectUnit(unit.id)}
+                className="border border-border rounded-lg shadow-sm bg-card overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectUnit(unit.id); }}
+              >
+                {/* Thumbnail placeholder */}
+                <div className="aspect-[16/10] bg-muted flex items-center justify-center">
+                  <ShoppingBag className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className={`text-sm ${colors.text.muted} mb-2`}>
-                  {t('sales.available.types.studios.description')}
-                </p>
-                <div className="text-2xl font-bold">34</div>
-                <div className="space-y-2 mt-3">
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.avgPrice')}</span>
-                    <span className={`${colors.text.success} font-medium`}>€185K</span>
+                {/* Content */}
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold truncate">{unit.code ?? unit.name}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                      unit.commercialStatus === 'for-sale' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
+                      unit.commercialStatus === 'reserved' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' :
+                      'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                    }`}>
+                      {t(`sales.commercialStatus.${unit.commercialStatus ?? 'unavailable'}`, { defaultValue: unit.commercialStatus ?? 'unavailable' })}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.sqmRange')}</span>
-                    <span>25-45 τ.μ.</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.activeViews')}</span>
-                    <span className={`${colors.text.warning} font-medium`}>12</span>
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type })} · {unit.areas?.gross ?? unit.area ?? '—'} m²
+                  </p>
+                  <p className="text-lg font-bold text-green-600 mt-1">
+                    {unit.commercial?.askingPrice
+                      ? formatCurrencyCompact(unit.commercial.askingPrice)
+                      : '—'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {unit.commercial?.askingPrice && (unit.areas?.gross ?? unit.area)
+                      ? `€${Math.round(unit.commercial.askingPrice / (unit.areas?.gross ?? unit.area ?? 1)).toLocaleString('el-GR')}/m²`
+                      : ''}
+                  </p>
                 </div>
+              </article>
+            ))}
+
+            {filteredUnits.length === 0 && (
+              <div className="col-span-full p-6 text-center text-sm text-muted-foreground">
+                {t('sales.available.noResults', { defaultValue: 'Δεν βρέθηκαν μονάδες.' })}
               </div>
+            )}
+          </section>
+        )}
+      </ListContainer>
+    </PageContainer>
+  );
+}
 
-              {/* Δυάρια */}
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('sales.available.types.oneBedroom.title')}</h3>
-                </div>
-                <p className={`text-sm ${colors.text.muted} mb-2`}>
-                  {t('sales.available.types.oneBedroom.description')}
-                </p>
-                <div className="text-2xl font-bold">67</div>
-                <div className="space-y-2 mt-3">
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.avgPrice')}</span>
-                    <span className={`${colors.text.success} font-medium`}>€295K</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.sqmRange')}</span>
-                    <span>55-85 τ.μ.</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.activeViews')}</span>
-                    <span className={`${colors.text.warning} font-medium`}>31</span>
-                  </div>
-                </div>
-              </div>
+// =============================================================================
+// 🏢 LOADING FALLBACK
+// =============================================================================
 
-              {/* Τριάρια+ */}
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('sales.available.types.twoBedroom.title')}</h3>
-                </div>
-                <p className={`text-sm ${colors.text.muted} mb-2`}>
-                  {t('sales.available.types.twoBedroom.description')}
-                </p>
-                <div className="text-2xl font-bold">41</div>
-                <div className="space-y-2 mt-3">
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.avgPrice')}</span>
-                    <span className={`${colors.text.success} font-medium`}>€485K</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.sqmRange')}</span>
-                    <span>90-150 τ.μ.</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.available.types.activeViews')}</span>
-                    <span className={`${colors.text.warning} font-medium`}>24</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+function SalesAvailableFallback() {
+  const { t } = useTranslation('common');
+  const colors = useSemanticColors();
 
-            {/* Price Ranges & Interest */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Κλιμάκια Τιμών */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <DollarSign className={iconSizes.md} />
-                  {t('sales.available.priceRanges.title')}
-                </h2>
+  return (
+    <div className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
+      <div className="text-center">
+        <AnimatedSpinner size="large" className="mx-auto mb-4" />
+        <p className={colors.text.muted}>
+          {t('sales.available.loading', { defaultValue: 'Φόρτωση διαθέσιμων μονάδων...' })}
+        </p>
+      </div>
+    </div>
+  );
+}
 
-                <div className="space-y-3">
-                  <div className={`p-4 bg-card ${quick.card}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">€100K - €250K</span>
-                      <span className={`${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
-                        {t('sales.available.priceRanges.available', { count: 42 })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('sales.available.priceRanges.range1Desc')}
-                    </p>
-                  </div>
+// =============================================================================
+// 🏢 PAGE EXPORT
+// =============================================================================
 
-                  <div className={`p-4 bg-card ${quick.card}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">€250K - €400K</span>
-                      <span className={`${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
-                        {t('sales.available.priceRanges.available', { count: 67 })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('sales.available.priceRanges.range2Desc')}
-                    </p>
-                  </div>
-
-                  <div className={`p-4 bg-card ${quick.card}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">€400K+</span>
-                      <span className={`${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
-                        {t('sales.available.priceRanges.available', { count: 33 })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('sales.available.priceRanges.range3Desc')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Ενδιαφέρον & Δραστηριότητα */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Eye className={iconSizes.md} />
-                  {t('sales.available.activity.title')}
-                </h2>
-
-                <div className={`p-6 bg-card ${quick.card}`}>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Users className={iconSizes.sm} />
-                        {t('sales.available.activity.activeVisits')}
-                      </span>
-                      <span className={`font-medium ${colors.text.success}`}>{t('sales.available.activity.requests', { count: 127 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Calendar className={iconSizes.sm} />
-                        {t('sales.available.activity.scheduledVisits')}
-                      </span>
-                      <span className={`font-medium ${colors.text.info}`}>{t('sales.available.activity.appointments', { count: 34 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <DollarSign className={iconSizes.sm} />
-                        {t('sales.available.activity.offersUnderReview')}
-                      </span>
-                      <span className={`font-medium ${colors.text.warning}`}>{t('sales.available.activity.offers', { count: 18 })}</span>
-                    </div>
-                    <div className="border-t pt-3 mt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground flex items-center gap-2">
-                          <TrendingUp className={iconSizes.sm} />
-                          {t('sales.available.activity.hotProperties', { count: 5 })}
-                        </span>
-                        <span className={`font-semibold ${colors.text.error}`}>{t('sales.available.activity.properties', { count: 23 })}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Info Message */}
-            <div className={`p-4 bg-muted/50 ${quick.card}`}>
-              <div className="flex items-center gap-2 text-sm">
-                <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
-                <span className="font-medium">{t('sales.available.info.title')}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('sales.available.info.description')}
-              </p>
-            </div>
-          </div>
-      </PageContainer>
+export default function AvailableApartmentsPage() {
+  return (
+    <Suspense fallback={<SalesAvailableFallback />}>
+      <SalesAvailableContent />
+    </Suspense>
   );
 }
