@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
-import { Car, MapPin, StickyNote, Calendar } from 'lucide-react';
+import { Car, MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -20,7 +20,6 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -29,7 +28,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ParkingGeneralTab');
@@ -284,61 +282,7 @@ export function ParkingGeneralTab({
 
       {/* ADR-193: Financial Card (price, price/m²) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
-      {/* Notes Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
-            {t('general.notes')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={form.notes}
-            onChange={(e) => updateField('notes', e.target.value)}
-            className="h-20 text-sm resize-none"
-            disabled={!isEditing}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Update Information Card (always read-only) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
-            {t('general.updateInfo')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.createdAt')}</Label>
-              <Input
-                value={parking.createdAt ? formatDateShort(parking.createdAt) : t('general.notSet')}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
-              <Input
-                value={parking.updatedAt ? formatDateShort(parking.updatedAt) : t('general.notSet')}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.createdBy')}</Label>
-              <Input
-                value={parking.createdBy || t('general.notSet')}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ADR-194: Notes + Update Info cards αφαιρέθηκαν — audit trail θα γίνει κεντρικά (pending decision) */}
     </div>
   );
 }
