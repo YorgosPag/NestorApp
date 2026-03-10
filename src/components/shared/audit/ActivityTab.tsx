@@ -1,7 +1,13 @@
 /**
- * 📜 ActivityTab — Shared Entity Audit Trail Component
+ * 📜 ActivityTab — Enterprise Entity Audit Trail Component
  *
- * Displays a vertical timeline of entity changes.
+ * Displays a vertical timeline of entity changes with:
+ * - Statistics header (total + per action type)
+ * - Quick filters by action type
+ * - Day-grouped timeline entries
+ * - Field-level diffs with human-readable nested object display
+ * - Real-time updates via RealtimeService
+ *
  * Generic — works for any entity type (unit, building, contact, etc.)
  *
  * @module components/shared/audit/ActivityTab
@@ -10,7 +16,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Clock,
   Edit3,
@@ -22,9 +28,11 @@ import {
   Loader2,
   History,
   ChevronDown,
+  BarChart3,
+  Filter,
 } from 'lucide-react';
 import { useEntityAudit } from '@/hooks/useEntityAudit';
-import { formatRelativeTime, formatDateTime } from '@/lib/intl-utils';
+import { formatRelativeTime, formatDateTime, formatDate } from '@/lib/intl-utils';
 import type { AuditEntityType, AuditAction, EntityAuditEntry } from '@/types/audit-trail';
 import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 
@@ -36,16 +44,25 @@ interface ActionConfig {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   color: string;
+  bgColor: string;
 }
 
 const ACTION_MAP: Record<AuditAction, ActionConfig> = {
-  created: { icon: Plus, label: 'Δημιουργήθηκε', color: 'text-emerald-600' },
-  updated: { icon: Edit3, label: 'Ενημερώθηκε', color: 'text-blue-600' },
-  deleted: { icon: Trash2, label: 'Διαγράφηκε', color: 'text-red-600' },
-  status_changed: { icon: RefreshCw, label: 'Αλλαγή κατάστασης', color: 'text-amber-600' },
-  linked: { icon: Link2, label: 'Συνδέθηκε', color: 'text-purple-600' },
-  unlinked: { icon: Unlink, label: 'Αποσυνδέθηκε', color: 'text-gray-600' },
+  created: { icon: Plus, label: 'Δημιουργία', color: 'text-emerald-600', bgColor: 'bg-emerald-50 dark:bg-emerald-950/30' },
+  updated: { icon: Edit3, label: 'Ενημέρωση', color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950/30' },
+  deleted: { icon: Trash2, label: 'Διαγραφή', color: 'text-red-600', bgColor: 'bg-red-50 dark:bg-red-950/30' },
+  status_changed: { icon: RefreshCw, label: 'Αλλαγή κατάστασης', color: 'text-amber-600', bgColor: 'bg-amber-50 dark:bg-amber-950/30' },
+  linked: { icon: Link2, label: 'Σύνδεση', color: 'text-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950/30' },
+  unlinked: { icon: Unlink, label: 'Αποσύνδεση', color: 'text-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-950/30' },
 };
+
+const FILTER_OPTIONS: { value: AuditAction | 'all'; label: string }[] = [
+  { value: 'all', label: 'Όλα' },
+  { value: 'updated', label: 'Ενημερώσεις' },
+  { value: 'created', label: 'Δημιουργίες' },
+  { value: 'deleted', label: 'Διαγραφές' },
+  { value: 'status_changed', label: 'Κατάσταση' },
+];
 
 // ============================================================================
 // COMPONENT
@@ -57,17 +74,29 @@ interface ActivityTabProps extends TabComponentProps {
 }
 
 export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabProps) {
-  // Resolve entityId from props (direct or from unit/data objects)
   const resolvedEntityId = entityId
     ?? (unit as Record<string, unknown> | undefined)?.id as string | undefined
     ?? (data as Record<string, unknown> | undefined)?.id as string | undefined;
 
   const resolvedEntityType = entityType ?? 'unit';
+  const [activeFilter, setActiveFilter] = useState<AuditAction | 'all'>('all');
 
   const { entries, isLoading, error, hasMore, loadMore } = useEntityAudit({
     entityType: resolvedEntityType,
     entityId: resolvedEntityId,
   });
+
+  // Filter entries by action type
+  const filteredEntries = useMemo(() => {
+    if (activeFilter === 'all') return entries;
+    return entries.filter((e) => e.action === activeFilter);
+  }, [entries, activeFilter]);
+
+  // Group filtered entries by date
+  const groupedEntries = useMemo(() => groupEntriesByDate(filteredEntries), [filteredEntries]);
+
+  // Statistics
+  const stats = useMemo(() => computeStats(entries), [entries]);
 
   if (!resolvedEntityId) {
     return (
@@ -80,46 +109,65 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
 
   return (
     <section className="space-y-4 p-4">
+      {/* ── Header ── */}
       <header className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
         <History className="h-4 w-4" />
         <span>Ιστορικό αλλαγών</span>
       </header>
 
-      {/* Error state */}
+      {/* ── Statistics ── */}
+      {entries.length > 0 && <StatsPanel stats={stats} />}
+
+      {/* ── Quick Filters ── */}
+      {entries.length > 0 && (
+        <QuickFilters
+          active={activeFilter}
+          onChange={setActiveFilter}
+          stats={stats}
+        />
+      )}
+
+      {/* ── Error ── */}
       {error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
-      {/* Loading state (initial) */}
+      {/* ── Loading (initial) ── */}
       {isLoading && entries.length === 0 && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
 
-      {/* Empty state */}
+      {/* ── Empty ── */}
       {!isLoading && entries.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Clock className="mb-2 h-8 w-8 opacity-40" />
           <p className="text-sm">Δεν υπάρχει ιστορικό αλλαγών</p>
-          <p className="text-xs opacity-60">
-            Οι αλλαγές θα εμφανίζονται εδώ αυτόματα
-          </p>
+          <p className="text-xs opacity-60">Οι αλλαγές θα εμφανίζονται εδώ αυτόματα</p>
         </div>
       )}
 
-      {/* Timeline */}
-      {entries.length > 0 && (
-        <ol className="relative border-l-2 border-muted ml-3 space-y-0">
-          {entries.map((entry) => (
-            <AuditEntryItem key={entry.id} entry={entry} />
-          ))}
-        </ol>
+      {/* ── Empty after filter ── */}
+      {!isLoading && entries.length > 0 && filteredEntries.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+          <Filter className="mb-2 h-6 w-6 opacity-40" />
+          <p className="text-sm">Δεν βρέθηκαν αλλαγές για αυτό το φίλτρο</p>
+        </div>
       )}
 
-      {/* Load more */}
+      {/* ── Day-Grouped Timeline ── */}
+      {groupedEntries.map(({ dateLabel, dateKey, entries: dayEntries }) => (
+        <DayGroup key={dateKey} dateLabel={dateLabel}>
+          {dayEntries.map((entry) => (
+            <AuditEntryItem key={entry.id} entry={entry} />
+          ))}
+        </DayGroup>
+      ))}
+
+      {/* ── Load more ── */}
       {hasMore && (
         <footer className="flex justify-center pt-2">
           <button
@@ -142,6 +190,116 @@ export function ActivityTab({ entityType, entityId, unit, data }: ActivityTabPro
 }
 
 // ============================================================================
+// STATISTICS PANEL
+// ============================================================================
+
+interface Stats {
+  total: number;
+  byAction: Partial<Record<AuditAction, number>>;
+}
+
+function StatsPanel({ stats }: { stats: Stats }) {
+  const visibleActions: AuditAction[] = ['updated', 'created', 'deleted', 'status_changed'];
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {/* Total */}
+      <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+        <BarChart3 className="h-4 w-4 text-muted-foreground" />
+        <div>
+          <p className="text-lg font-semibold leading-none">{stats.total}</p>
+          <p className="text-[10px] text-muted-foreground">Συνολικά</p>
+        </div>
+      </div>
+
+      {/* Per action */}
+      {visibleActions.map((action) => {
+        const config = ACTION_MAP[action];
+        const Icon = config.icon;
+        const count = stats.byAction[action] ?? 0;
+        if (count === 0) return null;
+
+        return (
+          <div key={action} className={`flex items-center gap-2 rounded-md px-3 py-2 ${config.bgColor}`}>
+            <Icon className={`h-4 w-4 ${config.color}`} />
+            <div>
+              <p className="text-lg font-semibold leading-none">{count}</p>
+              <p className="text-[10px] text-muted-foreground">{config.label}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================================
+// QUICK FILTERS
+// ============================================================================
+
+function QuickFilters({
+  active,
+  onChange,
+  stats,
+}: {
+  active: AuditAction | 'all';
+  onChange: (v: AuditAction | 'all') => void;
+  stats: Stats;
+}) {
+  return (
+    <nav className="flex flex-wrap gap-1.5" aria-label="Φίλτρα ιστορικού">
+      {FILTER_OPTIONS.map(({ value, label }) => {
+        const isActive = active === value;
+        const count = value === 'all' ? stats.total : (stats.byAction[value] ?? 0);
+
+        // Hide filter buttons with 0 entries (except "all")
+        if (value !== 'all' && count === 0) return null;
+
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onChange(isActive && value !== 'all' ? 'all' : value)}
+            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              isActive
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            {label}
+            <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>
+              {count}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ============================================================================
+// DAY GROUP
+// ============================================================================
+
+function DayGroup({ dateLabel, children }: { dateLabel: string; children: React.ReactNode }) {
+  return (
+    <section>
+      {/* Day header */}
+      <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-background/95 py-1 backdrop-blur-sm">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[11px] font-medium text-muted-foreground">{dateLabel}</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      {/* Day entries */}
+      <ol className="relative ml-3 space-y-0 border-l-2 border-muted">
+        {children}
+      </ol>
+    </section>
+  );
+}
+
+// ============================================================================
 // TIMELINE ENTRY
 // ============================================================================
 
@@ -154,16 +312,16 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
   const absoluteTime = timestamp ? formatDateTime(timestamp) : '';
 
   return (
-    <li className="relative pl-8 pb-6 last:pb-0">
+    <li className="relative pb-5 pl-8 last:pb-0">
       {/* Timeline dot */}
       <div
-        className={`absolute -left-[9px] top-1 flex h-4 w-4 items-center justify-center rounded-full bg-background border-2 border-muted ${config.color}`}
+        className={`absolute -left-[9px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-muted bg-background ${config.color}`}
       >
         <Icon className="h-2.5 w-2.5" />
       </div>
 
       <article className="space-y-1">
-        {/* Header: action + who */}
+        {/* Header: action + who + time */}
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className={`text-sm font-medium ${config.color}`}>
             {config.label}
@@ -173,18 +331,16 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
               από {entry.performedByName}
             </span>
           )}
+          {timestamp && (
+            <time
+              dateTime={entry.timestamp}
+              className="ml-auto text-[11px] text-muted-foreground"
+              title={absoluteTime}
+            >
+              {relativeTime}
+            </time>
+          )}
         </div>
-
-        {/* Timestamp */}
-        {timestamp && (
-          <time
-            dateTime={entry.timestamp}
-            className="block text-xs text-muted-foreground"
-            title={absoluteTime}
-          >
-            {relativeTime}
-          </time>
-        )}
 
         {/* Field-level changes */}
         {entry.changes.length > 0 && (
@@ -200,7 +356,7 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
                   {formatDisplayValue(change.oldValue)}
                 </span>
                 {' → '}
-                <span className="text-foreground font-medium">
+                <span className="font-medium text-foreground">
                   {formatDisplayValue(change.newValue)}
                 </span>
               </li>
@@ -249,6 +405,61 @@ function formatDisplayValue(value: string | number | boolean | null): string {
   }
 
   return String(value);
+}
+
+/** Group entries by calendar date */
+function groupEntriesByDate(entries: EntityAuditEntry[]): { dateLabel: string; dateKey: string; entries: EntityAuditEntry[] }[] {
+  if (entries.length === 0) return [];
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const todayKey = toDateKey(today);
+  const yesterdayKey = toDateKey(yesterday);
+
+  const groups = new Map<string, EntityAuditEntry[]>();
+
+  for (const entry of entries) {
+    const dateKey = entry.timestamp ? toDateKey(new Date(entry.timestamp)) : 'unknown';
+    const existing = groups.get(dateKey);
+    if (existing) {
+      existing.push(entry);
+    } else {
+      groups.set(dateKey, [entry]);
+    }
+  }
+
+  return Array.from(groups.entries()).map(([dateKey, dayEntries]) => {
+    let dateLabel: string;
+    if (dateKey === todayKey) {
+      dateLabel = 'Σήμερα';
+    } else if (dateKey === yesterdayKey) {
+      dateLabel = 'Χθες';
+    } else if (dateKey === 'unknown') {
+      dateLabel = 'Άγνωστη ημερομηνία';
+    } else {
+      // Parse the dateKey back to display
+      const [y, m, d] = dateKey.split('-');
+      dateLabel = formatDate(new Date(Number(y), Number(m) - 1, Number(d)));
+    }
+
+    return { dateLabel, dateKey, entries: dayEntries };
+  });
+}
+
+/** Create a YYYY-MM-DD key from a date */
+function toDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/** Compute statistics from entries */
+function computeStats(entries: EntityAuditEntry[]): Stats {
+  const byAction: Partial<Record<AuditAction, number>> = {};
+  for (const entry of entries) {
+    byAction[entry.action] = (byAction[entry.action] ?? 0) + 1;
+  }
+  return { total: entries.length, byAction };
 }
 
 export default ActivityTab;
