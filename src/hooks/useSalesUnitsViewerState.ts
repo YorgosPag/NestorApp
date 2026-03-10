@@ -8,7 +8,7 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
-import { useFirestoreUnits } from '@/hooks/useFirestoreUnits';
+import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import type { Unit, CommercialStatus } from '@/types/unit';
 
 // =============================================================================
@@ -71,8 +71,8 @@ function isVisibleInSales(unit: Unit): boolean {
 // =============================================================================
 
 export function useSalesUnitsViewerState() {
-  // Data from Firestore (same collection as /units page)
-  const { units: allUnits, loading, error, refetch } = useFirestoreUnits();
+  // Data from SharedPropertiesProvider — SAME data source as /units page
+  const { properties: allUnits, isLoading: loading, forceDataRefresh: refetch } = useSharedProperties();
 
   // View state
   const [viewMode, setViewMode] = useState<SalesViewMode>('list');
@@ -215,7 +215,6 @@ export function useSalesUnitsViewerState() {
     salesUnits,
     filteredUnits,
     loading,
-    error,
     refetch,
 
     // View state
