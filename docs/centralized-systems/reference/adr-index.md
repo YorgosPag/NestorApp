@@ -211,6 +211,7 @@
 | **ADR-193** | Field Display Domain Separation — Χώροι vs Πωλήσεις | ✅ IMPLEMENTED | 2026-03-10 | UI / Domain Architecture / Field Display | [📄](./adrs/ADR-193-field-display-domain-separation.md) |
 | **ADR-194** | Info Tab Section Consistency — Unified Section Order | ✅ IMPLEMENTED | 2026-03-10 | UI / Consistency / Space Management | [📄](./adrs/ADR-194-info-tab-section-consistency.md) |
 | **ADR-195** | Entity Audit Trail — Centralized Change History System | ✅ APPROVED | 2026-03-10 | Entity Systems | [📄](./adrs/ADR-195-entity-audit-trail.md) |
+| **ADR-196** | Unit Floorplan Enterprise FileRecord Migration | ✅ IMPLEMENTED | 2026-03-10 | Backend Systems / File Management | [📄](./adrs/ADR-196-unit-floorplan-enterprise-filerecord.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -365,6 +366,7 @@
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-191** | Enterprise Document Management System — Roadmap & Current State | ✅ PHASES_1-5_COMPLETE | [View](./adrs/ADR-191-enterprise-document-management.md) |
 | **ADR-195** | Entity Audit Trail — Centralized Change History System | ✅ APPROVED | [View](./adrs/ADR-195-entity-audit-trail.md) |
+| **ADR-196** | Unit Floorplan Enterprise FileRecord Migration | ✅ IMPLEMENTED | [View](./adrs/ADR-196-unit-floorplan-enterprise-filerecord.md) |
 
 ---
 
