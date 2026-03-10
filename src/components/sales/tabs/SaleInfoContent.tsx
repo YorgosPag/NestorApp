@@ -190,8 +190,8 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
         </Card>
       )}
 
-      {/* ADR-198: Παραστατικά πώλησης */}
-      {commercial?.transactionChainId && (
+      {/* ADR-198: Παραστατικά πώλησης — εμφάνιση αν υπάρχει deposit ή πώληση */}
+      {(commercial?.reservationDeposit || commercial?.transactionChainId || unit.status === 'sold') && (
         <TransactionChainCard unitId={unit.id} />
       )}
 
