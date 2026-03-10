@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 160 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-10
+**📊 Stats**: 161 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-11
 
 ---
 
@@ -212,6 +212,7 @@
 | **ADR-194** | Info Tab Section Consistency — Unified Section Order | ✅ IMPLEMENTED | 2026-03-10 | UI / Consistency / Space Management | [📄](./adrs/ADR-194-info-tab-section-consistency.md) |
 | **ADR-195** | Entity Audit Trail — Centralized Change History System | ✅ APPROVED | 2026-03-10 | Entity Systems | [📄](./adrs/ADR-195-entity-audit-trail.md) |
 | **ADR-196** | Unit Floorplan Enterprise FileRecord Migration | ✅ IMPLEMENTED | 2026-03-10 | Backend Systems / File Management | [📄](./adrs/ADR-196-unit-floorplan-enterprise-filerecord.md) |
+| **ADR-198** | Sales-to-Accounting Bridge (Transaction Chain Pattern) | ✅ APPROVED | 2026-03-11 | Backend Systems / Accounting Integration | [📄](./adrs/ADR-198-sales-accounting-bridge.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -421,6 +422,7 @@
 | **ADR-156** | Voice Message Transcription (OpenAI Whisper) | ✅ IMPLEMENTED | [View](./adrs/ADR-156-voice-message-transcription-whisper.md) |
 | **ADR-161** | Global Voice Assistant (Header Microphone) | ✅ IMPLEMENTED | [View](./adrs/ADR-161-global-voice-assistant.md) |
 | **ADR-164** | In-App Voice AI Pipeline (Right-Side Chat Panel) | ✅ IMPLEMENTED | [View](./adrs/ADR-164-in-app-voice-ai-pipeline.md) |
+| **ADR-198** | Sales-to-Accounting Bridge (Transaction Chain Pattern) | ✅ APPROVED | [View](./adrs/ADR-198-sales-accounting-bridge.md) |
 
 ---
 

@@ -40,7 +40,8 @@ export type EntryType = 'income' | 'expense';
  *
  * - `service_income`: Αμοιβές υπηρεσιών (μελέτες, ΠΕΑ, άδειες, επιβλέψεις)
  * - `construction_income`: Κατασκευαστικά έσοδα (μη οικιστικά)
- * - `construction_res_income`: Κατασκευαστικά (οικιστικά)
+ * - `construction_res_income`: Πωλήσεις ακινήτων (νεόδμητα που κατασκευάζουμε & πουλάμε)
+ * - `rental_income`: Μισθώματα ακινήτων (ενοίκια από ιδιόκτητα ακίνητα)
  * - `asset_sale_income`: Πώληση παγίου (εξοπλισμός, Η/Υ)
  * - `other_income`: Λοιπά έσοδα (τόκοι, αποζημιώσεις)
  */
@@ -48,6 +49,7 @@ export type IncomeCategory =
   | 'service_income'
   | 'construction_income'
   | 'construction_res_income'
+  | 'rental_income'
   | 'asset_sale_income'
   | 'other_income';
 

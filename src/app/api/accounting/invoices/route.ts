@@ -64,6 +64,11 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
           filters.projectId = projectId;
         }
 
+        const unitId = searchParams.get('unitId');
+        if (unitId) {
+          filters.unitId = unitId;
+        }
+
         const pageSize = searchParams.get('pageSize');
         const result = await repository.listInvoices(
           filters,

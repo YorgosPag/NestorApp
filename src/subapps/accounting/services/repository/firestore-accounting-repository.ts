@@ -333,6 +333,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
       if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
       if (filters.customerId) query = query.where('customer.contactId', '==', filters.customerId);
       if (filters.projectId) query = query.where('projectId', '==', filters.projectId);
+      if (filters.unitId) query = query.where('unitId', '==', filters.unitId);
 
       query = query.orderBy('issueDate', 'desc').limit(pageSize);
 

@@ -191,6 +191,21 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
       } as Record<string, unknown>);
       onOpenChange(false);
       onSuccess?.();
+
+      // ADR-198: Fire-and-forget — δημιουργία τιμολογίου προκαταβολής
+      const depositAmount = Number(deposit);
+      if (depositAmount > 0) {
+        apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+          eventType: 'deposit_invoice',
+          unitId: unit.id,
+          unitName: unit.name ?? unit.unitName ?? '',
+          projectId: unit.project ?? null,
+          buyerContactId: buyerContactId || null,
+          paymentMethod: 'bank_transfer',
+          notes: null,
+          depositAmount,
+        }).catch(() => { /* fire-and-forget — η κράτηση πέτυχε ήδη */ });
+      }
     } catch {
       // Error handled by service
     } finally {
@@ -307,6 +322,19 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       } as Record<string, unknown>);
       onOpenChange(false);
       onSuccess?.();
+
+      // ADR-198: Fire-and-forget — τιμολόγιο τελικής πώλησης (υπόλοιπο μετά deposit)
+      apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+        eventType: 'final_sale_invoice',
+        unitId: unit.id,
+        unitName: unit.name ?? unit.unitName ?? '',
+        projectId: unit.project ?? null,
+        buyerContactId: unit.commercial?.buyerContactId ?? null,
+        paymentMethod: 'bank_transfer',
+        notes: null,
+        finalPrice: price,
+        depositAlreadyInvoiced: unit.commercial?.reservationDeposit ?? 0,
+      }).catch(() => { /* fire-and-forget — η πώληση πέτυχε ήδη */ });
     } catch {
       // Error handled by service
     } finally {
@@ -409,6 +437,10 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
   const handleRevert = useCallback(async () => {
     setSaving(true);
     try {
+      // ADR-198: Capture deposit before clearing commercial data
+      const depositToRefund = unit.commercial?.reservationDeposit ?? 0;
+      const refundBuyerContactId = unit.commercial?.buyerContactId ?? null;
+
       await apiClient.patch(`/api/units/${unit.id}`, {
         commercialStatus: 'for-sale',
         commercial: {
@@ -422,6 +454,21 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       } as Record<string, unknown>);
       onOpenChange(false);
       onSuccess?.();
+
+      // ADR-198: Fire-and-forget — πιστωτικό τιμολόγιο αν υπήρχε deposit
+      if (depositToRefund > 0) {
+        apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
+          eventType: 'credit_invoice',
+          unitId: unit.id,
+          unitName: unit.name ?? unit.unitName ?? '',
+          projectId: unit.project ?? null,
+          buyerContactId: refundBuyerContactId,
+          paymentMethod: 'bank_transfer',
+          notes: null,
+          creditAmount: depositToRefund,
+          reason: 'Ακύρωση κράτησης',
+        }).catch(() => { /* fire-and-forget — η επαναφορά πέτυχε ήδη */ });
+      }
     } catch {
       // Error handled by service
     } finally {

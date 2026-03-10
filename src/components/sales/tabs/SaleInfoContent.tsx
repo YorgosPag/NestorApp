@@ -21,6 +21,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit } from '@/types/unit';
+import { TransactionChainCard } from '@/components/sales/cards/TransactionChainCard';
 
 // =============================================================================
 // 🏢 TYPES
@@ -187,6 +188,11 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* ADR-198: Παραστατικά πώλησης */}
+      {commercial?.transactionChainId && (
+        <TransactionChainCard unitId={unit.id} />
       )}
 
       {/* Ημερομηνίες */}

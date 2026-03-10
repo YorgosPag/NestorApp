@@ -246,6 +246,8 @@ export interface Invoice {
   // — Σχέσεις —
   /** Αναφορά σε project (Firestore doc ID) */
   projectId: string | null;
+  /** Αναφορά σε unit (Firestore doc ID) — πωλήσεις ακινήτων (ADR-198) */
+  unitId: string | null;
   /** Αναφορά σε αρχικό τιμολόγιο (για πιστωτικά) */
   relatedInvoiceId: string | null;
   /** Αναφορά σε εγγραφή Ε-Ε (Firestore doc ID) */
@@ -308,6 +310,8 @@ export interface InvoiceFilters {
   searchText?: string;
   /** Αναζήτηση project */
   projectId?: string;
+  /** Φιλτράρισμα ανά unit (πωλήσεις ακινήτων — ADR-198) */
+  unitId?: string;
 }
 
 // ============================================================================

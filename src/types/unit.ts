@@ -111,6 +111,9 @@ export interface UnitCommercialData {
 
   /** Ημερομηνία εισαγωγής στην αγορά (για υπολογισμό "ημέρες στην αγορά") */
   listedDate: Timestamp | null;
+
+  /** Αλυσίδα συναλλαγών — κοινό ID για deposit/final/credit invoices (ADR-198) */
+  transactionChainId: string | null;
 }
 
 // =============================================================================

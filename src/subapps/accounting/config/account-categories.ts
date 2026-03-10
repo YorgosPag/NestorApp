@@ -12,7 +12,7 @@ import type { AccountCategory, IncomeCategory, ExpenseCategory } from '../types/
 import type { CategoryDefinition } from '../types/journal';
 
 // ============================================================================
-// ACCOUNT CATEGORIES — FULL REGISTRY (5 income + 19 expense = 24 total)
+// ACCOUNT CATEGORIES — FULL REGISTRY (6 income + 19 expense = 25 total)
 // ============================================================================
 
 /**
@@ -22,11 +22,11 @@ import type { CategoryDefinition } from '../types/journal';
  * Κάθε κατηγορία φέρει πλήρη metadata: myDATA, E3, ΦΠΑ, ΚΑΔ κ.λπ.
  *
  * @remarks
- * Σειρά: πρώτα τα 5 έσοδα (sortOrder 1–5), μετά τα 19 έξοδα (sortOrder 6–24)
+ * Σειρά: πρώτα τα 6 έσοδα (sortOrder 1–6), μετά τα 19 έξοδα (sortOrder 7–25)
  */
 export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   // ════════════════════════════════════════════════════════════════════════════
-  // ΕΣΟΔΑ (5 κατηγορίες)
+  // ΕΣΟΔΑ (6 κατηγορίες)
   // ════════════════════════════════════════════════════════════════════════════
   {
     code: 'service_income',
@@ -61,8 +61,8 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
   {
     code: 'construction_res_income',
     type: 'income',
-    label: 'Κατασκευαστικά (Οικιστικά)',
-    description: 'Εργολαβίες κατασκευής (οικιστικά κτήρια)',
+    label: 'Πωλήσεις Ακινήτων',
+    description: 'Πωλήσεις νεόδμητων ακινήτων (κατασκευή & πώληση)',
     mydataCode: 'category1_1',
     e3Code: '561_001',
     defaultVatRate: 24,
@@ -72,6 +72,21 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     sortOrder: 3,
     icon: 'Home',
     kadCode: '41201001',
+  },
+  {
+    code: 'rental_income',
+    type: 'income',
+    label: 'Μισθώματα Ακινήτων',
+    description: 'Ενοίκια από ιδιόκτητα ακίνητα (κατοικίες, καταστήματα, γραφεία)',
+    mydataCode: 'category1_5',
+    e3Code: '561_005',
+    defaultVatRate: 24,
+    vatDeductible: false,
+    vatDeductiblePercent: 0,
+    isActive: true,
+    sortOrder: 4,
+    icon: 'KeyRound',
+    kadCode: '68201100',
   },
   {
     code: 'asset_sale_income',
@@ -84,7 +99,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 4,
+    sortOrder: 5,
     icon: 'PackageOpen',
     kadCode: null,
   },
@@ -99,7 +114,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 5,
+    sortOrder: 6,
     icon: 'Coins',
     kadCode: null,
   },
@@ -118,7 +133,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 6,
+    sortOrder: 7,
     icon: 'Users',
     kadCode: null,
   },
@@ -133,7 +148,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 7,
+    sortOrder: 8,
     icon: 'DoorOpen',
     kadCode: null,
   },
@@ -148,7 +163,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 8,
+    sortOrder: 9,
     icon: 'Zap',
     kadCode: null,
   },
@@ -163,7 +178,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 50,
     isActive: true,
-    sortOrder: 9,
+    sortOrder: 10,
     icon: 'Phone',
     kadCode: null,
   },
@@ -178,7 +193,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 10,
+    sortOrder: 11,
     icon: 'Fuel',
     kadCode: null,
   },
@@ -193,7 +208,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 50,
     isActive: true,
-    sortOrder: 11,
+    sortOrder: 12,
     icon: 'Car',
     kadCode: null,
   },
@@ -208,7 +223,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 12,
+    sortOrder: 13,
     icon: 'Shield',
     kadCode: null,
   },
@@ -223,7 +238,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 13,
+    sortOrder: 14,
     icon: 'Paperclip',
     kadCode: null,
   },
@@ -238,7 +253,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 14,
+    sortOrder: 15,
     icon: 'Monitor',
     kadCode: null,
   },
@@ -253,7 +268,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 15,
+    sortOrder: 16,
     icon: 'Wrench',
     kadCode: null,
   },
@@ -268,7 +283,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 16,
+    sortOrder: 17,
     icon: 'Plane',
     kadCode: null,
   },
@@ -283,7 +298,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 17,
+    sortOrder: 18,
     icon: 'GraduationCap',
     kadCode: null,
   },
@@ -298,7 +313,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 18,
+    sortOrder: 19,
     icon: 'Megaphone',
     kadCode: null,
   },
@@ -313,7 +328,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 19,
+    sortOrder: 20,
     icon: 'HeartPulse',
     kadCode: null,
   },
@@ -328,7 +343,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 20,
+    sortOrder: 21,
     icon: 'Receipt',
     kadCode: null,
   },
@@ -343,7 +358,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 21,
+    sortOrder: 22,
     icon: 'Landmark',
     kadCode: null,
   },
@@ -358,7 +373,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 22,
+    sortOrder: 23,
     icon: 'Award',
     kadCode: null,
   },
@@ -373,7 +388,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: false,
     vatDeductiblePercent: 0,
     isActive: true,
-    sortOrder: 23,
+    sortOrder: 24,
     icon: 'TrendingDown',
     kadCode: null,
   },
@@ -388,7 +403,7 @@ export const ACCOUNT_CATEGORIES: readonly CategoryDefinition[] = [
     vatDeductible: true,
     vatDeductiblePercent: 100,
     isActive: true,
-    sortOrder: 24,
+    sortOrder: 25,
     icon: 'MoreHorizontal',
     kadCode: null,
   },
@@ -417,7 +432,7 @@ export function getCategoryByCode(code: AccountCategory): CategoryDefinition | u
 /**
  * Επιστρέφει μόνο τις κατηγορίες εσόδων
  *
- * @returns Πίνακας 5 income categories, ταξινομημένες κατά sortOrder
+ * @returns Πίνακας 6 income categories, ταξινομημένες κατά sortOrder
  */
 export function getIncomeCategories(): CategoryDefinition[] {
   return ACCOUNT_CATEGORIES.filter(
