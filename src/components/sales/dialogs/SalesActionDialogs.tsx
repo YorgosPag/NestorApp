@@ -204,7 +204,9 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           paymentMethod: 'bank_transfer',
           notes: null,
           depositAmount,
-        }).catch(() => { /* fire-and-forget — η κράτηση πέτυχε ήδη */ });
+        }).catch((err: unknown) => {
+          console.warn('[ADR-198] Deposit invoice fire-and-forget failed:', err);
+        });
       }
     } catch {
       // Error handled by service
@@ -334,7 +336,9 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         notes: null,
         finalPrice: price,
         depositAlreadyInvoiced: unit.commercial?.reservationDeposit ?? 0,
-      }).catch(() => { /* fire-and-forget — η πώληση πέτυχε ήδη */ });
+      }).catch((err: unknown) => {
+        console.warn('[ADR-198] Final sale invoice fire-and-forget failed:', err);
+      });
     } catch {
       // Error handled by service
     } finally {
@@ -467,7 +471,9 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           notes: null,
           creditAmount: depositToRefund,
           reason: 'Ακύρωση κράτησης',
-        }).catch(() => { /* fire-and-forget — η επαναφορά πέτυχε ήδη */ });
+        }).catch((err: unknown) => {
+          console.warn('[ADR-198] Credit invoice fire-and-forget failed:', err);
+        });
       }
     } catch {
       // Error handled by service
