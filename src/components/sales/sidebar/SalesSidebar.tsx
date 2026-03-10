@@ -8,7 +8,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, ExternalLink } from 'lucide-react';
+import { ShoppingBag, ExternalLink, Video } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesUnitListCard } from '@/components/sales/cards/SalesUnitListCard';
@@ -16,6 +16,8 @@ import { SalesQuickFilters } from '@/components/sales/page/SalesQuickFilters';
 import { SalesDetailsHeader } from '@/components/sales/sidebar/SalesDetailsHeader';
 import { SaleInfoContent } from '@/components/sales/tabs/SaleInfoContent';
 import { UnitSummaryContent } from '@/components/sales/tabs/UnitSummaryContent';
+import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+import { SalesVideosTab } from '@/components/sales/tabs/SalesVideosTab';
 import {
   ChangePriceDialog,
   ReserveDialog,
@@ -62,6 +64,7 @@ const SALES_TABS = [
   { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', defaultLabel: 'Πώληση' },
   { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', defaultLabel: 'Μονάδα' },
   { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', defaultLabel: 'Φωτογραφίες' },
+  { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos', defaultLabel: 'Βίντεο' },
   { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', defaultLabel: 'Έγγραφα' },
   { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', defaultLabel: 'Ιστορικό' },
 ] as const;
@@ -135,17 +138,15 @@ export function SalesSidebar({
             <UnitSummaryContent data={selectedUnit} />
           </TabsContent>
 
-          {/* Photos, Documents, History → redirect to /units (Χώροι) */}
-          {(['photos', 'documents', 'history'] as const).map(tabId => (
+          {/* Photos & Documents → redirect to /units (Χώροι) */}
+          {(['photos', 'documents'] as const).map(tabId => (
             <TabsContent key={tabId} value={tabId} className="flex-1 overflow-y-auto">
               <section className="flex flex-col items-center justify-center gap-3 p-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   {t(`sales.tabs.${tabId}Hint`, {
                     defaultValue: tabId === 'photos'
                       ? 'Οι φωτογραφίες βρίσκονται στη σελίδα Χώροι → Μονάδες'
-                      : tabId === 'documents'
-                        ? 'Τα έγγραφα βρίσκονται στη σελίδα Χώροι → Μονάδες'
-                        : 'Το ιστορικό βρίσκεται στη σελίδα Χώροι → Μονάδες',
+                      : 'Τα έγγραφα βρίσκονται στη σελίδα Χώροι → Μονάδες',
                   })}
                 </p>
                 <Button
@@ -160,6 +161,16 @@ export function SalesSidebar({
               </section>
             </TabsContent>
           ))}
+
+          {/* Videos — EntityFilesManager (ADR-031) */}
+          <TabsContent value="videos" className="flex-1 overflow-y-auto">
+            <SalesVideosTab unit={selectedUnit} />
+          </TabsContent>
+
+          {/* History — Centralized ActivityTab (ADR-195) */}
+          <TabsContent value="history" className="flex-1 overflow-y-auto">
+            <ActivityTab entityType="unit" entityId={selectedUnit.id} />
+          </TabsContent>
         </Tabs>
       }
     />
