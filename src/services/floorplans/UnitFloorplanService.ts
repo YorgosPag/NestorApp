@@ -109,7 +109,14 @@ export class UnitFloorplanService {
 
       // 🏢 ENTERPRISE: Create FileRecord → visible in FloorPlanTab
       if (options?.companyId && options?.createdBy) {
+        // eslint-disable-next-line no-console
+        console.log('[UnitFloorplan] Creating FileRecord:', { unitId, companyId: options.companyId, createdBy: options.createdBy });
         await this.createFileRecord(unitId, data, options);
+        // eslint-disable-next-line no-console
+        console.log('[UnitFloorplan] FileRecord created successfully');
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn('[UnitFloorplan] No options provided — skipping FileRecord creation', { hasOptions: !!options });
       }
 
       return true;

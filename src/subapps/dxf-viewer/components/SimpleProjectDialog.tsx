@@ -473,6 +473,15 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         const unitFileRecordOptions = selectedCompanyId && createdBy
           ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, buildingId: selectedBuildingId, createdBy, originalFile: file }
           : undefined;
+        // eslint-disable-next-line no-console
+        console.log('[Pipeline→Unit] FileRecord options:', {
+          hasOptions: !!unitFileRecordOptions,
+          companyId: selectedCompanyId || '(empty)',
+          unitId: selectedUnitId,
+          buildingId: selectedBuildingId || '(empty)',
+          createdBy: createdBy || '(empty)',
+          fileName: file.name,
+        });
         saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData, unitFileRecordOptions);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Save floor floorplan
