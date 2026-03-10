@@ -35,6 +35,7 @@ import { useEntityAudit } from '@/hooks/useEntityAudit';
 import { formatRelativeTime, formatDateTime, formatDate } from '@/lib/intl-utils';
 import type { AuditEntityType, AuditAction, EntityAuditEntry } from '@/types/audit-trail';
 import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
+import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
 
 // ============================================================================
 // ACTION CONFIG
@@ -201,32 +202,33 @@ interface Stats {
 function StatsPanel({ stats }: { stats: Stats }) {
   const visibleActions: AuditAction[] = ['updated', 'created', 'deleted', 'status_changed'];
 
+  const actionColorMap: Record<string, string> = {
+    created: 'green',
+    updated: 'blue',
+    deleted: 'red',
+    status_changed: 'orange',
+  };
+
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-      {/* Total */}
-      <div className="flex items-center gap-2 rounded-md border px-3 py-2">
-        <BarChart3 className="h-4 w-4 text-muted-foreground" />
-        <div>
-          <p className="text-lg font-semibold leading-none">{stats.total}</p>
-          <p className="text-[10px] text-muted-foreground">Συνολικά</p>
-        </div>
-      </div>
-
-      {/* Per action */}
+      <StatsCard
+        title="Συνολικά"
+        value={stats.total}
+        icon={BarChart3}
+        color="gray"
+      />
       {visibleActions.map((action) => {
         const config = ACTION_MAP[action];
-        const Icon = config.icon;
         const count = stats.byAction[action] ?? 0;
         if (count === 0) return null;
-
         return (
-          <div key={action} className={`flex items-center gap-2 rounded-md px-3 py-2 ${config.bgColor}`}>
-            <Icon className={`h-4 w-4 ${config.color}`} />
-            <div>
-              <p className="text-lg font-semibold leading-none">{count}</p>
-              <p className="text-[10px] text-muted-foreground">{config.label}</p>
-            </div>
-          </div>
+          <StatsCard
+            key={action}
+            title={config.label}
+            value={count}
+            icon={config.icon}
+            color={actionColorMap[action] ?? 'gray'}
+          />
         );
       })}
     </div>
