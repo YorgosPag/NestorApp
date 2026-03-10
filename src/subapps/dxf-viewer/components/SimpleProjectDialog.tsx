@@ -478,6 +478,19 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           ? { companyId: fileRecordCompanyId, projectId: selectedProjectId || undefined, buildingId: selectedBuildingId, createdBy, originalFile: file }
           : undefined;
         saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData, unitFileRecordOptions);
+
+        // 🏢 ENTERPRISE: Record floorplan upload in entity audit trail (fire-and-forget)
+        if (saved) {
+          apiClient.post(`/api/units/${selectedUnitId}/activity`, {
+            action: 'updated',
+            changes: [{
+              field: 'floorplan',
+              oldValue: null,
+              newValue: file.name,
+              label: 'Κάτοψη μονάδας',
+            }],
+          }).catch(() => { /* fire-and-forget — audit failure must not break save */ });
+        }
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Save floor floorplan
         const selectedFloorData = floors.find(f => f.id === selectedFloorId);
