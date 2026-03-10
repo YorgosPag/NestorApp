@@ -18,6 +18,7 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import pako from 'pako';
+import toast from 'react-hot-toast';
 import { db, storage } from '@/lib/firebase';
 import { FileRecordService } from '@/services/file-record.service';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
@@ -109,14 +110,20 @@ export class UnitFloorplanService {
 
       // 🏢 ENTERPRISE: Create FileRecord → visible in FloorPlanTab
       if (options?.companyId && options?.createdBy) {
-        // eslint-disable-next-line no-console
-        console.log('[UnitFloorplan] Creating FileRecord:', { unitId, companyId: options.companyId, createdBy: options.createdBy });
-        await this.createFileRecord(unitId, data, options);
-        // eslint-disable-next-line no-console
-        console.log('[UnitFloorplan] FileRecord created successfully');
+        try {
+          await this.createFileRecord(unitId, data, options);
+          toast.success('FileRecord δημιουργήθηκε — η κάτοψη θα εμφανιστεί στην καρτέλα');
+        } catch (fileRecordError) {
+          const errMsg = fileRecordError instanceof Error ? fileRecordError.message : String(fileRecordError);
+          toast.error(`FileRecord αποτυχία: ${errMsg}`);
+          logger.error('FileRecord creation failed (non-blocking)', { unitId, error: errMsg });
+        }
       } else {
-        // eslint-disable-next-line no-console
-        console.warn('[UnitFloorplan] No options provided — skipping FileRecord creation', { hasOptions: !!options });
+        logger.warn('No FileRecord options — skipping enterprise file creation', {
+          hasOptions: !!options,
+          hasCompanyId: !!options?.companyId,
+          hasCreatedBy: !!options?.createdBy,
+        });
       }
 
       return true;
@@ -303,11 +310,12 @@ export class UnitFloorplanService {
         sizeBytes: uploadSize,
       });
     } catch (error) {
-      // FileRecord failure is non-blocking — legacy save already succeeded
+      // Re-throw so caller can show toast with specific error
       logger.error('Failed to create FileRecord for unit floorplan', {
         unitId,
         error: error instanceof Error ? error.message : String(error),
       });
+      throw error;
     }
   }
 }

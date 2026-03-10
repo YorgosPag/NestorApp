@@ -65,7 +65,7 @@ export const PATCH = withStandardRateLimit(
         if (!doc.exists) throw new ApiError(404, 'Parking spot not found');
 
         const existing = doc.data() as Record<string, unknown>;
-        if (existing.companyId && existing.companyId !== ctx.companyId) {
+        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
           throw new ApiError(403, 'Access denied');
         }
 
@@ -129,7 +129,7 @@ export const DELETE = withStandardRateLimit(
         if (!doc.exists) throw new ApiError(404, 'Parking spot not found');
 
         const existing = doc.data() as Record<string, unknown>;
-        if (existing.companyId && existing.companyId !== ctx.companyId) {
+        if (ctx.globalRole !== 'super_admin' && existing.companyId && existing.companyId !== ctx.companyId) {
           throw new ApiError(403, 'Access denied');
         }
 

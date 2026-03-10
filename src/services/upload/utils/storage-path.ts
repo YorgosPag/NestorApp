@@ -100,12 +100,13 @@ export interface StoragePathValidationError {
 
 /**
  * Validates that a string contains only safe path characters (IDs)
- * Allows alphanumeric, underscore, hyphen
+ * 🏢 ENTERPRISE: Supports Unicode (Greek IDs like Α-101, ΤΕΣΤ) and dots (A_D0.1)
+ * Allows: Unicode letters, digits, underscore, hyphen, dot
  */
 function isValidPathSegment(value: string): boolean {
   if (!value || typeof value !== 'string') return false;
-  // Allow only alphanumeric, underscore, hyphen, dot (for extensions)
-  return /^[a-zA-Z0-9_-]+$/.test(value);
+  // Unicode-aware: \p{L} = any letter, \p{N} = any digit
+  return /^[\p{L}\p{N}_.\-]+$/u.test(value);
 }
 
 /**

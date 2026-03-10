@@ -23,7 +23,7 @@ export function useUnitsSidebar(floors: FloorData[]|undefined, viewerProps: View
       await updateUnit(propertyId, updates);
       logger.info(`Unit ${propertyId} updated in Firestore:`, { data: Object.keys(updates) });
     } catch (error) {
-      logger.error('Failed to persist unit update to Firestore:', { error: error });
+      logger.error(`Failed to persist unit update to Firestore: ${error instanceof Error ? error.message : String(error)}`);
       throw error; // Re-throw so UI can handle error state
     }
   }, []);
