@@ -63,9 +63,9 @@ interface SalesSidebarProps {
 const SALES_TABS = [
   { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', defaultLabel: 'Πώληση' },
   { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', defaultLabel: 'Μονάδα' },
+  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', defaultLabel: 'Έγγραφα' },
   { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', defaultLabel: 'Φωτογραφίες' },
   { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos', defaultLabel: 'Βίντεο' },
-  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', defaultLabel: 'Έγγραφα' },
   { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', defaultLabel: 'Ιστορικό' },
 ] as const;
 
