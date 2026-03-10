@@ -8,7 +8,6 @@ import type { PropertyDetailsContentProps } from './types';
 import { useTranslation } from 'react-i18next';
 
 import { MultiLevelNavigation } from '@/components/property-viewer/details/MultiLevelNavigation';
-import { PropertyMeta } from '@/components/property-viewer/details/PropertyMeta';
 
 import { ReadOnlyBanner } from './components/ReadOnlyBanner';
 import { BuyerMismatchAlert } from './components/BuyerMismatchAlert';
@@ -119,15 +118,7 @@ export function PropertyDetailsContent({
         />
       )}
 
-      <PropertyMeta
-        property={resolvedProperty}
-        onUpdateProperty={safeOnUpdateProperty}
-        isEditMode={isEditMode}
-        onToggleEditMode={handleToggleEditMode}
-        // TODO: onNavigateToFloorPlan - implement when Floor Plan tab navigation is ready
-      />
-
-      {/* 🏢 ENTERPRISE: Unit Fields Block (bedrooms, bathrooms, orientations, etc) */}
+      {/* 🏢 ENTERPRISE: Unit Fields Block (identity, location, layout, areas, etc) */}
       <UnitFieldsBlock
         property={resolvedProperty}
         onUpdateProperty={safeOnUpdateProperty}
