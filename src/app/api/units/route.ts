@@ -17,6 +17,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -49,8 +50,15 @@ export const GET = withStandardRateLimit(
         const { searchParams } = new URL(request.url);
         const buildingId = searchParams.get('buildingId');
         const floorId = searchParams.get('floorId');
+        const queryCompanyId = searchParams.get('companyId');
 
-        logger.info('[Units/List] Fetching units', { companyId: ctx.companyId, userId: ctx.uid, buildingId: buildingId || 'all', floorId: floorId || 'all' });
+        // 🏢 ENTERPRISE: Super admin can access any company's units
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
+        const tenantCompanyId = isSuperAdmin && queryCompanyId
+          ? queryCompanyId
+          : ctx.companyId;
+
+        logger.info('[Units/List] Fetching units', { companyId: tenantCompanyId, userId: ctx.uid, buildingId: buildingId || 'all', floorId: floorId || 'all', isSuperAdmin });
 
         // ============================================================================
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
@@ -58,7 +66,7 @@ export const GET = withStandardRateLimit(
 
         const unitsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.UNITS)
-          .where('companyId', '==', ctx.companyId)
+          .where('companyId', '==', tenantCompanyId)
           .orderBy('name', 'asc')
           .get();
 

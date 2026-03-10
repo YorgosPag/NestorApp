@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -67,8 +68,15 @@ export const GET = withStandardRateLimit(
         const { searchParams } = new URL(request.url);
         const buildingId = searchParams.get('buildingId');
         const projectId = searchParams.get('projectId');
+        const queryCompanyId = searchParams.get('companyId');
 
-        logger.info('[Floors/List] Fetching floors', { companyId: ctx.companyId, userId: ctx.uid, buildingId: buildingId || 'all', projectId: projectId || 'all' });
+        // 🏢 ENTERPRISE: Super admin can access any company's floors
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
+        const tenantCompanyId = isSuperAdmin && queryCompanyId
+          ? queryCompanyId
+          : ctx.companyId;
+
+        logger.info('[Floors/List] Fetching floors', { companyId: tenantCompanyId, userId: ctx.uid, buildingId: buildingId || 'all', projectId: projectId || 'all', isSuperAdmin });
 
         // ============================================================================
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
@@ -76,7 +84,7 @@ export const GET = withStandardRateLimit(
 
         let floorsQuery = getAdminFirestore()
           .collection(COLLECTIONS.FLOORS)
-          .where('companyId', '==', ctx.companyId);
+          .where('companyId', '==', tenantCompanyId);
 
         // Apply additional filters
         if (buildingId) {

@@ -198,7 +198,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         count: number;
       }
 
-      const result = await apiClient.get<BuildingsApiResponse>(`/api/buildings?projectId=${projectId}`);
+      const companyParam = selectedCompanyId ? `&companyId=${selectedCompanyId}` : '';
+      const result = await apiClient.get<BuildingsApiResponse>(`/api/buildings?projectId=${projectId}${companyParam}`);
 
       if (result?.buildings && result.buildings.length > 0) {
         setBuildings(result.buildings);
@@ -329,7 +330,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         count: number;
       }
 
-      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}`);
+      const companyParam = selectedCompanyId ? `&companyId=${selectedCompanyId}` : '';
+      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}${companyParam}`);
 
       if (result?.floors && result.floors.length > 0) {
         setFloors(result.floors);
@@ -354,7 +356,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         count: number;
       }
 
-      const result = await apiClient.get<UnitsApiResponse>('/api/units');
+      const companyParam = selectedCompanyId ? `?companyId=${selectedCompanyId}` : '';
+      const result = await apiClient.get<UnitsApiResponse>(`/api/units${companyParam}`);
 
       // Filter units that belong to the selected building
       const buildingUnits = (result?.units || []).filter((unit: Unit) =>

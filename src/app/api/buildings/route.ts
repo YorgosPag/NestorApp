@@ -35,25 +35,28 @@ export const GET = withStandardRateLimit(
       throw new Error('Database unavailable: Firebase Admin not initialized');
     }
 
-    // Extract projectId parameter for filtering
+    // Extract query parameters
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
+    const queryCompanyId = searchParams.get('companyId');
 
-    // TENANT ISOLATION: Always scope to user's company
-    const tenantCompanyId = ctx.companyId;
+    // 🏢 ENTERPRISE: Super admin can access any company's buildings
+    const isSuperAdmin = isRoleBypass(ctx.globalRole);
+    const tenantCompanyId = isSuperAdmin && queryCompanyId
+      ? queryCompanyId
+      : ctx.companyId;
 
     if (projectId) {
-      logger.info('[Buildings] Loading for project', { projectId, tenantCompanyId });
+      logger.info('[Buildings] Loading for project', { projectId, tenantCompanyId, isSuperAdmin });
     } else {
       logger.info('[Buildings] Loading all buildings for tenant', { tenantCompanyId });
     }
 
-    // 🎯 ENTERPRISE: Build query with MANDATORY tenant filter + optional projectId
+    // 🎯 ENTERPRISE: Build query with tenant filter + optional projectId
     let queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
       .where('companyId', '==', tenantCompanyId);
 
     if (projectId) {
-      // 🔒 TENANT + PROJECT: Filter by both companyId AND projectId
       queryRef = queryRef.where('projectId', '==', projectId);
     }
 
