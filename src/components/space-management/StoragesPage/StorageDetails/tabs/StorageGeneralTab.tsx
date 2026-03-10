@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { Warehouse, MapPin, Layers } from 'lucide-react';
+import { Warehouse, MapPin, StickyNote, Calendar } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('StorageGeneralTab');
@@ -192,7 +193,7 @@ export function StorageGeneralTab({
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <Warehouse className={cn(iconSizes.md, 'text-blue-500')} />
-            {t('general.basicInfo')}
+            {t('general.identity')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -294,21 +295,63 @@ export function StorageGeneralTab({
 
       {/* ADR-193: Financial Card (price, price/m², project) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
-      {/* Description Card */}
+      {/* Description & Notes Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Layers className={cn(iconSizes.md, 'text-violet-500')} />
-            {t('general.fields.description')}
+            <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
+            {t('general.descriptionNotes')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <fieldset className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs">{t('general.fields.description')}</Label>
+            <Textarea
+              value={form.description}
+              onChange={(e) => updateField('description', e.target.value)}
+              className="h-20 text-sm resize-none"
+              disabled={!isEditing}
+            />
+          </fieldset>
+          <fieldset className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs">{t('general.fields.notes')}</Label>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => updateField('notes', e.target.value)}
+              className="h-20 text-sm resize-none"
+              disabled={!isEditing}
+            />
+          </fieldset>
+        </CardContent>
+      </Card>
+
+      {/* Update Information Card (always read-only) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
+            {t('general.updateInfo')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea
-            value={form.description}
-            onChange={(e) => updateField('description', e.target.value)}
-            className="h-20 text-sm resize-none"
-            disabled={!isEditing}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
+              <Input
+                value={storage.lastUpdated ? formatDateShort(storage.lastUpdated) : t('general.notSet')}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.owner')}</Label>
+              <Input
+                value={storage.owner || t('general.notAssigned')}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
+          </div>
         </CardContent>
       </Card>
     </div>

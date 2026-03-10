@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
-import { Car, MapPin, StickyNote } from 'lucide-react';
+import { Car, MapPin, StickyNote, Calendar } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ParkingGeneralTab');
@@ -188,7 +189,7 @@ export function ParkingGeneralTab({
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <Car className={cn(iconSizes.md, 'text-blue-500')} />
-            {t('general.basicInfo')}
+            {t('general.identity')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -300,12 +301,12 @@ export function ParkingGeneralTab({
 
       {/* ADR-193: Financial Card (price, price/m²) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
-      {/* Description Card */}
+      {/* Notes Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
-            {t('general.fields.description')}
+            {t('general.notes')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -315,6 +316,44 @@ export function ParkingGeneralTab({
             className="h-20 text-sm resize-none"
             disabled={!isEditing}
           />
+        </CardContent>
+      </Card>
+
+      {/* Update Information Card (always read-only) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
+            {t('general.updateInfo')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.createdAt')}</Label>
+              <Input
+                value={parking.createdAt ? formatDateShort(parking.createdAt) : t('general.notSet')}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
+              <Input
+                value={parking.updatedAt ? formatDateShort(parking.updatedAt) : t('general.notSet')}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.createdBy')}</Label>
+              <Input
+                value={parking.createdBy || t('general.notSet')}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
+          </div>
         </CardContent>
       </Card>
     </div>

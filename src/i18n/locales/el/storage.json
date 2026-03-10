@@ -45,6 +45,7 @@
   },
   "general": {
     "basicInfo": "Βασικές Πληροφορίες",
+    "identity": "Ταυτότητα",
     "location": "Τοποθεσία",
     "financial": "Οικονομικά Στοιχεία",
     "descriptionNotes": "Περιγραφή & Σημειώσεις",

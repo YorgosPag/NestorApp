@@ -44,6 +44,7 @@
   },
   "general": {
     "basicInfo": "Basic Information",
+    "identity": "Identity",
     "location": "Location",
     "financial": "Financial Information",
     "descriptionNotes": "Description & Notes",
