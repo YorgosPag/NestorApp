@@ -130,19 +130,6 @@ export function PropertyMeta({
         </div>
       </div>
 
-      {/* Description */}
-      {property.description && (
-        <>
-          <Separator />
-          <div className={spacing.spaceBetween.sm}>
-            <h4 className="text-xs font-medium">{t('meta.description')}</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {property.description}
-            </p>
-          </div>
-        </>
-      )}
-
       {/* Features */}
       {property.features && property.features.length > 0 && (
         <>

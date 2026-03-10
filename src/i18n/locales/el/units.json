@@ -89,8 +89,14 @@
       "sectionTitle": "Ταυτότητα Μονάδας",
       "name": "Όνομα Μονάδας",
       "namePlaceholder": "π.χ. Διαμέρισμα Α1",
+      "type": "Τύπος Μονάδας",
+      "typePlaceholder": "Επιλέξτε τύπο...",
       "description": "Περιγραφή",
       "descriptionPlaceholder": "Προσθέστε περιγραφή για τη μονάδα..."
+    },
+    "location": {
+      "sectionTitle": "Θέση",
+      "floor": "Όροφος"
     },
     "layout": {
       "bedrooms": "Υπνοδωμάτια",
@@ -320,6 +326,7 @@
     "apartment_3br": "Διαμέρισμα 3Δ",
     "maisonette": "Μεζονέτα",
     "shop": "Κατάστημα",
+    "office": "Γραφείο",
     "storage": "Αποθήκη"
   },
   "status": {

@@ -89,8 +89,14 @@
       "sectionTitle": "Unit Identity",
       "name": "Unit Name",
       "namePlaceholder": "e.g. Apartment A1",
+      "type": "Unit Type",
+      "typePlaceholder": "Select type...",
       "description": "Description",
       "descriptionPlaceholder": "Add a description for this unit..."
+    },
+    "location": {
+      "sectionTitle": "Location",
+      "floor": "Floor"
     },
     "layout": {
       "bedrooms": "Bedrooms",
@@ -309,6 +315,7 @@
     "apartment_3br": "3 Bedroom Apartment",
     "maisonette": "Maisonette",
     "shop": "Shop",
+    "office": "Office",
     "storage": "Storage"
   },
   "status": {

@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import {
   Bed, Bath, Compass, Wrench, Zap,
-  Ruler, Thermometer, Snowflake, Home, Shield, Flame, FileText
+  Ruler, Thermometer, Snowflake, Home, Shield, Flame, FileText, MapPin
 } from 'lucide-react';
 
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -44,6 +44,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
+import type { UnitType } from '@/types/unit';
+import { formatFloorLabel } from '@/lib/intl-utils';
 import type {
   ConditionType,
   OrientationType,
@@ -117,6 +119,11 @@ const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [
   'alarm', 'security-door', 'cctv', 'access-control', 'intercom', 'motion-sensors'
 ];
 
+const UNIT_TYPE_OPTIONS: UnitType[] = [
+  'studio', 'apartment_1br', 'apartment', 'apartment_2br',
+  'apartment_3br', 'maisonette', 'shop', 'office', 'storage'
+];
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -140,7 +147,9 @@ export function UnitFieldsBlock({
 
   const [formData, setFormData] = useState({
     name: property.name ?? '',
+    type: property.type ?? '',
     description: property.description ?? '',
+    floor: property.floor ?? 0,
     bedrooms: property.layout?.bedrooms ?? 0,
     bathrooms: property.layout?.bathrooms ?? 0,
     wc: property.layout?.wc ?? 0,
@@ -167,6 +176,8 @@ export function UnitFieldsBlock({
     try {
       const updates: Partial<Property> = {
         name: formData.name,
+        type: formData.type,
+        floor: formData.floor,
         layout: {
           bedrooms: formData.bedrooms,
           bathrooms: formData.bathrooms,
@@ -229,7 +240,9 @@ export function UnitFieldsBlock({
   const handleCancel = useCallback(() => {
     setFormData({
       name: property.name ?? '',
+      type: property.type ?? '',
       description: property.description ?? '',
+      floor: property.floor ?? 0,
       bedrooms: property.layout?.bedrooms ?? 0,
       bathrooms: property.layout?.bathrooms ?? 0,
       wc: property.layout?.wc ?? 0,
@@ -297,6 +310,24 @@ export function UnitFieldsBlock({
           </fieldset>
           <fieldset className="space-y-1.5">
             <Label className="text-muted-foreground text-xs">
+              {t('fields.identity.type', { defaultValue: 'Τύπος Μονάδας' })}
+            </Label>
+            <Select value={formData.type} disabled={!isEditing}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder={t('fields.identity.typePlaceholder', { defaultValue: 'Επιλέξτε τύπο...' })} />
+              </SelectTrigger>
+              <SelectContent>
+                {UNIT_TYPE_OPTIONS.map((unitType) => (
+                  <SelectItem key={unitType} value={unitType} className="text-sm">
+                    {t(`types.${unitType}`, { defaultValue: unitType })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </fieldset>
+          <fieldset className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs">
               {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
             </Label>
             <Textarea
@@ -311,10 +342,62 @@ export function UnitFieldsBlock({
         </CardContent>
       </Card>
 
+      {/* ─── Location Card ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+            <MapPin className={cn(iconSizes.md, 'text-rose-500')} />
+            {t('fields.location.sectionTitle', { defaultValue: 'Θέση' })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <fieldset className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs flex items-center gap-1">
+              <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
+              {t('fields.location.floor', { defaultValue: 'Όροφος' })}
+            </Label>
+            {isEditing ? (
+              <Input
+                id="unit-floor"
+                type="number"
+                min={-5}
+                max={100}
+                value={formData.floor}
+                onChange={(e) => setFormData(prev => ({ ...prev, floor: parseInt(e.target.value) || 0 }))}
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
+            ) : (
+              <p className="text-sm">{formatFloorLabel(formData.floor)}</p>
+            )}
+          </fieldset>
+          <fieldset className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs flex items-center gap-1">
+              <Compass className={cn(iconSizes.xs, 'text-amber-500')} />
+              {t('orientation.sectionTitle')}
+            </Label>
+            <div className="flex flex-wrap gap-1">
+              {ORIENTATION_OPTIONS.map((orientation) => {
+                const isSelected = formData.orientations.includes(orientation);
+                return (
+                  <Button key={orientation} type="button"
+                    variant={isSelected ? 'default' : 'outline'} size="sm"
+                    className="h-6 px-1.5 text-xs"
+                    disabled={!isEditing}
+                    onClick={() => toggleArrayItem('orientations', orientation)}>
+                    {t(`orientation.short.${orientation}`)}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+        </CardContent>
+      </Card>
+
       {/* ═══════════════════════════════════════════════════════════════
-          ROW 1: Διάταξη, Εμβαδά, Προσανατολισμός, Κατάσταση/Ενέργεια, Συστήματα
+          ROW 1: Διάταξη, Εμβαδά, Κατάσταση/Ενέργεια
       ═══════════════════════════════════════════════════════════════ */}
-      <section className="grid grid-cols-5 gap-3">
+      <section className="grid grid-cols-3 gap-3">
         {/* ─── Layout Card ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
@@ -388,32 +471,6 @@ export function UnitFieldsBlock({
           </CardContent>
         </Card>
 
-        {/* ─── Orientation Card ─── */}
-        <Card>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Compass className={cn(iconSizes.sm, 'text-amber-500')} />
-              {t('orientation.sectionTitle')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 pt-0">
-            <div className="flex flex-wrap gap-1">
-              {ORIENTATION_OPTIONS.map((orientation) => {
-                const isSelected = formData.orientations.includes(orientation);
-                return (
-                  <Button key={orientation} type="button"
-                    variant={isSelected ? 'default' : 'outline'} size="sm"
-                    className="h-6 px-1.5 text-xs"
-                    disabled={!isEditing}
-                    onClick={() => toggleArrayItem('orientations', orientation)}>
-                    {t(`orientation.short.${orientation}`)}
-                  </Button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* ─── Condition & Energy Card ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
@@ -459,6 +516,12 @@ export function UnitFieldsBlock({
           </CardContent>
         </Card>
 
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          ROW 2: Συστήματα, Φινιρίσματα, Χαρακτηριστικά
+      ═══════════════════════════════════════════════════════════════ */}
+      <section className="grid grid-cols-3 gap-3">
         {/* ─── Systems Card ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
@@ -502,12 +565,6 @@ export function UnitFieldsBlock({
             </div>
           </CardContent>
         </Card>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          ROW 2: Φινιρίσματα, Χαρακτηριστικά
-      ═══════════════════════════════════════════════════════════════ */}
-      <section className="grid grid-cols-2 gap-3">
         {/* ─── Finishes Card ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
