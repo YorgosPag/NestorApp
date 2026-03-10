@@ -5,11 +5,12 @@
  *
  * Γενικές πληροφορίες αποθήκης.
  * ADR-193: Supports inline editing mode (toggled by parent header).
- * Each section wrapped in Card for visual separation (same pattern as ParkingGeneralTab).
+ * Fields always rendered as Input/Select (disabled when not editing) — Units prototype pattern.
+ * Each section wrapped in Card for visual separation.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatDate, formatCurrency, formatFloorString } from '@/lib/intl-utils';
+import { formatDate } from '@/lib/intl-utils';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
 import { Warehouse, MapPin, Calendar, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -123,7 +124,7 @@ export function StorageGeneralTab({
   const typography = useTypography();
   const { t } = useTranslation('storage');
 
-  // Form state for edit mode
+  // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
 
   // Reset form when storage data changes or edit mode starts
@@ -193,17 +194,6 @@ export function StorageGeneralTab({
     };
   }, [handleSave, onSaveRef]);
 
-  // Helpers
-  const getTypeLabel = (type: string | undefined): string => {
-    if (!type) return t('general.unknown');
-    return t(`general.types.${type}`, type);
-  };
-
-  const getStatusLabel = (status: string | undefined): string => {
-    if (!status) return t('general.unknown');
-    return t(`general.statuses.${status}`, status);
-  };
-
   const updateField = <K extends keyof StorageFormState>(key: K, value: StorageFormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
@@ -221,73 +211,63 @@ export function StorageGeneralTab({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.name')}</Label>
-              {isEditing ? (
-                <Input
-                  value={form.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                />
-              ) : (
-                <p className="text-sm font-medium">{storage.name || 'N/A'}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.name')}</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.type')}</Label>
-              {isEditing ? (
-                <Select
-                  value={form.type}
-                  onValueChange={(v) => updateField('type', v as StorageType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STORAGE_TYPES.map(st => (
-                      <SelectItem key={st.value} value={st.value}>
-                        {t(st.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">{getTypeLabel(storage.type)}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.type')}</Label>
+              <Select
+                value={form.type}
+                onValueChange={(v) => updateField('type', v as StorageType)}
+                disabled={!isEditing}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STORAGE_TYPES.map(st => (
+                    <SelectItem key={st.value} value={st.value}>
+                      {t(st.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.status')}</Label>
-              {isEditing ? (
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => updateField('status', v as StorageStatus)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STORAGE_STATUSES.map(ss => (
-                      <SelectItem key={ss.value} value={ss.value}>
-                        {t(ss.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">{getStatusLabel(storage.status)}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.status')}</Label>
+              <Select
+                value={form.status}
+                onValueChange={(v) => updateField('status', v as StorageStatus)}
+                disabled={!isEditing}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STORAGE_STATUSES.map(ss => (
+                    <SelectItem key={ss.value} value={ss.value}>
+                      {t(ss.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.area')}</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.area}
-                  onChange={(e) => updateField('area', e.target.value)}
-                  placeholder="m²"
-                />
-              ) : (
-                <p className="text-sm font-medium">{storage.area ? `${storage.area} m²` : 'N/A'}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.area')}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.area}
+                onChange={(e) => updateField('area', e.target.value)}
+                placeholder="m²"
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
           </div>
         </CardContent>
@@ -304,22 +284,22 @@ export function StorageGeneralTab({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.building')}</Label>
-              <p className="text-sm font-medium">{storage.building || 'N/A'}</p>
+              <Label className="text-muted-foreground text-xs">{t('general.fields.building')}</Label>
+              <Input
+                value={storage.building || ''}
+                className="h-8 text-sm"
+                disabled
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.floor')}</Label>
-              {isEditing ? (
-                <Input
-                  value={form.floor}
-                  onChange={(e) => updateField('floor', e.target.value)}
-                  placeholder="-1"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {storage.floor ? formatFloorString(storage.floor) : 'N/A'}
-                </p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.floor')}</Label>
+              <Input
+                value={form.floor}
+                onChange={(e) => updateField('floor', e.target.value)}
+                placeholder="-1"
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
           </div>
         </CardContent>
@@ -336,35 +316,32 @@ export function StorageGeneralTab({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.price')}</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => updateField('price', e.target.value)}
-                  placeholder="€"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {storage.price ? formatCurrency(storage.price) : t('general.notSet')}
-                </p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.price')}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => updateField('price', e.target.value)}
+                placeholder="€"
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.pricePerSqm')}</Label>
-              <p className="text-sm font-medium">
-                {storage.price && storage.area
-                  ? formatCurrency(storage.price / storage.area)
-                  : t('general.notCalculated')
-                }
-              </p>
+              <Label className="text-muted-foreground text-xs">{t('general.fields.pricePerSqm')}</Label>
+              <Input
+                value={storage.price && storage.area ? `${(storage.price / storage.area).toFixed(2)} €/m²` : '—'}
+                className="h-8 text-sm"
+                disabled
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.project')}</Label>
-              <p className="text-sm font-mono text-xs text-muted-foreground">
-                {storage.projectId || t('general.notAssigned')}
-              </p>
+              <Label className="text-muted-foreground text-xs">{t('general.fields.project')}</Label>
+              <Input
+                value={storage.projectId || ''}
+                className="h-8 text-sm"
+                disabled
+              />
             </fieldset>
           </div>
         </CardContent>
@@ -381,42 +358,28 @@ export function StorageGeneralTab({
         <CardContent>
           <div className="space-y-4">
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.description')}</Label>
-              {isEditing ? (
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                  className="h-20 resize-none"
-                />
-              ) : (
-                storage.description ? (
-                  <p className="text-sm bg-muted/50 p-3 rounded-md">{storage.description}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">—</p>
-                )
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.description')}</Label>
+              <Textarea
+                value={form.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                className="h-20 text-sm resize-none"
+                disabled={!isEditing}
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.notes')}</Label>
-              {isEditing ? (
-                <Textarea
-                  value={form.notes}
-                  onChange={(e) => updateField('notes', e.target.value)}
-                  className="h-20 resize-none"
-                />
-              ) : (
-                storage.notes ? (
-                  <p className="text-sm bg-muted/50 p-3 rounded-md">{storage.notes}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">—</p>
-                )
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.notes')}</Label>
+              <Textarea
+                value={form.notes}
+                onChange={(e) => updateField('notes', e.target.value)}
+                className="h-20 text-sm resize-none"
+                disabled={!isEditing}
+              />
             </fieldset>
           </div>
         </CardContent>
       </Card>
 
-      {/* Update Information Card (read-only always) */}
+      {/* Update Information Card (always read-only) */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -426,18 +389,22 @@ export function StorageGeneralTab({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {storage.lastUpdated && (
-              <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground">{t('general.fields.lastUpdated')}</Label>
-                <p className="text-sm font-medium">{formatTimestamp(storage.lastUpdated)}</p>
-              </fieldset>
-            )}
-            {storage.owner && (
-              <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground">{t('general.fields.owner')}</Label>
-                <p className="text-sm font-medium">{storage.owner}</p>
-              </fieldset>
-            )}
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
+              <Input
+                value={storage.lastUpdated ? formatTimestamp(storage.lastUpdated) : '—'}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.owner')}</Label>
+              <Input
+                value={storage.owner || '—'}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
           </div>
         </CardContent>
       </Card>

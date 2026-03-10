@@ -5,12 +5,12 @@
  *
  * Γενικές πληροφορίες θέσης στάθμευσης.
  * Supports inline editing mode (toggled by parent header).
- * Each section wrapped in Card for visual separation (Google Material pattern).
- * Follows BuildingDetails GeneralTabContent pattern.
+ * Fields always rendered as Input/Select (disabled when not editing) — Units prototype pattern.
+ * Each section wrapped in Card for visual separation.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatDate, formatCurrency, formatFloorString } from '@/lib/intl-utils';
+import { formatDate } from '@/lib/intl-utils';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
 import { Car, MapPin, Calendar, Euro, StickyNote } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -120,7 +120,7 @@ export function ParkingGeneralTab({
   const typography = useTypography();
   const { t } = useTranslation('parking');
 
-  // Form state for edit mode
+  // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<ParkingFormState>(() => buildFormState(parking));
 
   // Reset form when parking data changes or edit mode starts
@@ -190,24 +190,13 @@ export function ParkingGeneralTab({
     };
   }, [handleSave, onSaveRef]);
 
-  // Helpers
-  const getTypeLabel = (type: string | undefined): string => {
-    if (!type) return t('general.unknown');
-    return t(`general.types.${type}`, type);
-  };
-
-  const getStatusLabel = (status: string | undefined): string => {
-    if (!status) return t('general.unknown');
-    return t(`general.statuses.${status}`, status);
-  };
-
   const updateField = <K extends keyof ParkingFormState>(key: K, value: ParkingFormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
   return (
     <div className="p-4 space-y-4">
-      {/* ─── Basic Information Card ─── */}
+      {/* Basic Information Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -218,79 +207,69 @@ export function ParkingGeneralTab({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.spotCode')}</Label>
-              {isEditing ? (
-                <Input
-                  value={form.number}
-                  onChange={(e) => updateField('number', e.target.value)}
-                />
-              ) : (
-                <p className="text-sm font-medium">{parking.number || 'N/A'}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.spotCode')}</Label>
+              <Input
+                value={form.number}
+                onChange={(e) => updateField('number', e.target.value)}
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.type')}</Label>
-              {isEditing ? (
-                <Select
-                  value={form.type}
-                  onValueChange={(v) => updateField('type', v as ParkingSpotType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PARKING_TYPES.map(pt => (
-                      <SelectItem key={pt.value} value={pt.value}>
-                        {t(pt.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">{getTypeLabel(parking.type)}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.type')}</Label>
+              <Select
+                value={form.type}
+                onValueChange={(v) => updateField('type', v as ParkingSpotType)}
+                disabled={!isEditing}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARKING_TYPES.map(pt => (
+                    <SelectItem key={pt.value} value={pt.value}>
+                      {t(pt.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.status')}</Label>
-              {isEditing ? (
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => updateField('status', v as ParkingSpotStatus)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PARKING_STATUSES.map(ps => (
-                      <SelectItem key={ps.value} value={ps.value}>
-                        {t(ps.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">{getStatusLabel(parking.status)}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.status')}</Label>
+              <Select
+                value={form.status}
+                onValueChange={(v) => updateField('status', v as ParkingSpotStatus)}
+                disabled={!isEditing}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARKING_STATUSES.map(ps => (
+                    <SelectItem key={ps.value} value={ps.value}>
+                      {t(ps.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.area')}</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.area}
-                  onChange={(e) => updateField('area', e.target.value)}
-                  placeholder="m²"
-                />
-              ) : (
-                <p className="text-sm font-medium">{parking.area ? `${parking.area} m²` : 'N/A'}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.area')}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.area}
+                onChange={(e) => updateField('area', e.target.value)}
+                placeholder="m²"
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
           </div>
         </CardContent>
       </Card>
 
-      {/* ─── Location Card ─── */}
+      {/* Location Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -301,47 +280,45 @@ export function ParkingGeneralTab({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.floor')}</Label>
-              {isEditing ? (
-                <Input
-                  value={form.floor}
-                  onChange={(e) => updateField('floor', e.target.value)}
-                  placeholder="-1"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {parking.floor ? formatFloorString(parking.floor) : 'N/A'}
-                </p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.floor')}</Label>
+              <Input
+                value={form.floor}
+                onChange={(e) => updateField('floor', e.target.value)}
+                placeholder="-1"
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.position')}</Label>
-              {isEditing ? (
-                <Input
-                  value={form.location}
-                  onChange={(e) => updateField('location', e.target.value)}
-                />
-              ) : (
-                <p className="text-sm font-medium">{parking.location || 'N/A'}</p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.position')}</Label>
+              <Input
+                value={form.location}
+                onChange={(e) => updateField('location', e.target.value)}
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.buildingId')}</Label>
-              <p className="text-sm font-mono text-xs text-muted-foreground">
-                {parking.buildingId || 'N/A'}
-              </p>
+              <Label className="text-muted-foreground text-xs">{t('general.fields.buildingId')}</Label>
+              <Input
+                value={parking.buildingId || ''}
+                className="h-8 text-sm font-mono text-xs"
+                disabled
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.projectId')}</Label>
-              <p className="text-sm font-mono text-xs text-muted-foreground">
-                {parking.projectId || 'N/A'}
-              </p>
+              <Label className="text-muted-foreground text-xs">{t('general.fields.projectId')}</Label>
+              <Input
+                value={parking.projectId || ''}
+                className="h-8 text-sm font-mono text-xs"
+                disabled
+              />
             </fieldset>
           </div>
         </CardContent>
       </Card>
 
-      {/* ─── Financial Card ─── */}
+      {/* Financial Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -352,38 +329,32 @@ export function ParkingGeneralTab({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.price')}</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => updateField('price', e.target.value)}
-                  placeholder="€"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {parking.price !== undefined && parking.price > 0
-                    ? formatCurrency(parking.price)
-                    : parking.price === 0
-                      ? t('general.priceValues.shared')
-                      : t('general.priceValues.notSet')}
-                </p>
-              )}
+              <Label className="text-muted-foreground text-xs">{t('general.fields.price')}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => updateField('price', e.target.value)}
+                placeholder="€"
+                className="h-8 text-sm"
+                disabled={!isEditing}
+              />
             </fieldset>
             <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.pricePerSqm')}</Label>
-              <p className="text-sm font-medium">
-                {parking.price && parking.area && parking.price > 0
-                  ? formatCurrency(parking.price / parking.area)
-                  : t('general.notCalculated')}
-              </p>
+              <Label className="text-muted-foreground text-xs">{t('general.fields.pricePerSqm')}</Label>
+              <Input
+                value={parking.price && parking.area && parking.price > 0
+                  ? `${(parking.price / parking.area).toFixed(2)} €/m²`
+                  : '—'}
+                className="h-8 text-sm"
+                disabled
+              />
             </fieldset>
           </div>
         </CardContent>
       </Card>
 
-      {/* ─── Notes Card ─── */}
+      {/* Notes Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -392,23 +363,16 @@ export function ParkingGeneralTab({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isEditing ? (
-            <Textarea
-              value={form.notes}
-              onChange={(e) => updateField('notes', e.target.value)}
-              className="h-20 resize-none"
-            />
-          ) : (
-            parking.notes ? (
-              <p className="text-sm bg-muted/50 p-3 rounded-md">{parking.notes}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">—</p>
-            )
-          )}
+          <Textarea
+            value={form.notes}
+            onChange={(e) => updateField('notes', e.target.value)}
+            className="h-20 text-sm resize-none"
+            disabled={!isEditing}
+          />
         </CardContent>
       </Card>
 
-      {/* ─── Update Information Card (read-only always) ─── */}
+      {/* Update Information Card (always read-only) */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
@@ -418,22 +382,30 @@ export function ParkingGeneralTab({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {parking.createdAt && (
-              <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground">{t('general.fields.createdAt')}</Label>
-                <p className="text-sm font-medium">{formatTimestamp(parking.createdAt)}</p>
-              </fieldset>
-            )}
-            {parking.updatedAt && (
-              <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground">{t('general.fields.lastUpdated')}</Label>
-                <p className="text-sm font-medium">{formatTimestamp(parking.updatedAt)}</p>
-              </fieldset>
-            )}
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.createdAt')}</Label>
+              <Input
+                value={parking.createdAt ? formatTimestamp(parking.createdAt) : '—'}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
+            <fieldset className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
+              <Input
+                value={parking.updatedAt ? formatTimestamp(parking.updatedAt) : '—'}
+                className="h-8 text-sm"
+                disabled
+              />
+            </fieldset>
             {parking.createdBy && (
               <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground">{t('general.fields.createdBy')}</Label>
-                <p className="text-sm font-medium">{parking.createdBy}</p>
+                <Label className="text-muted-foreground text-xs">{t('general.fields.createdBy')}</Label>
+                <Input
+                  value={parking.createdBy}
+                  className="h-8 text-sm"
+                  disabled
+                />
               </fieldset>
             )}
           </div>
