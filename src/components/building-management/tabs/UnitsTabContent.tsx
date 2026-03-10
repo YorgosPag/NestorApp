@@ -17,7 +17,6 @@ import { createUnit } from '@/services/units.service';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -108,10 +107,11 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const [createCode, setCreateCode] = useState('');
   const [createType, setCreateType] = useState<UnitType | ''>('apartment');
   const [createFloor, setCreateFloor] = useState('');
-  const [createArea, setCreateArea] = useState('');
+  const [createAreaNet, setCreateAreaNet] = useState('');
+  const [createAreaGross, setCreateAreaGross] = useState('');
   const [createBedrooms, setCreateBedrooms] = useState('');
   const [createBathrooms, setCreateBathrooms] = useState('');
-  const [createDescription, setCreateDescription] = useState('');
+  const [createWC, setCreateWC] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Edit state
@@ -217,10 +217,11 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     setCreateCode('');
     setCreateType('apartment');
     setCreateFloor('');
-    setCreateArea('');
+    setCreateAreaNet('');
+    setCreateAreaGross('');
     setCreateBedrooms('');
     setCreateBathrooms('');
-    setCreateDescription('');
+    setCreateWC('');
   };
 
   const handleCreate = async () => {
@@ -244,12 +245,17 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
       };
 
       if (createCode.trim()) unitData.code = createCode.trim();
-      if (createArea) unitData.area = parseFloat(createArea);
-      if (createDescription.trim()) unitData.description = createDescription.trim();
+
+      const areas: Record<string, number> = {};
+      if (createAreaNet) areas.net = parseFloat(createAreaNet);
+      if (createAreaGross) areas.gross = parseFloat(createAreaGross);
+      if (Object.keys(areas).length > 0) unitData.areas = areas;
+      if (createAreaNet) unitData.area = parseFloat(createAreaNet);
 
       const layout: Record<string, number> = {};
       if (createBedrooms) layout.bedrooms = parseInt(createBedrooms, 10);
       if (createBathrooms) layout.bathrooms = parseInt(createBathrooms, 10);
+      if (createWC) layout.wc = parseInt(createWC, 10);
       if (Object.keys(layout).length > 0) unitData.layout = layout;
 
       const result = await createUnit(unitData);
@@ -558,8 +564,8 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             </label>
           </fieldset>
 
-          {/* Row 2: Floor, Area, Bedrooms, Bathrooms */}
-          <fieldset className="grid grid-cols-4 gap-2">
+          {/* Row 2: Floor, Net m², Gross m², Bedrooms, Bathrooms, WC */}
+          <fieldset className="grid grid-cols-6 gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
                 Όροφος
@@ -575,14 +581,28 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
-                m²
+                Καθαρά m²
               </span>
               <Input
                 type="number"
-                step="0.01"
-                value={createArea}
-                onChange={(e) => setCreateArea(e.target.value)}
-                placeholder="85"
+                step="0.1"
+                value={createAreaNet}
+                onChange={(e) => setCreateAreaNet(e.target.value)}
+                placeholder="75"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Μικτά m²
+              </span>
+              <Input
+                type="number"
+                step="0.1"
+                value={createAreaGross}
+                onChange={(e) => setCreateAreaGross(e.target.value)}
+                placeholder="90"
                 className="h-9"
                 disabled={creating}
               />
@@ -613,21 +633,20 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
                 disabled={creating}
               />
             </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                WC
+              </span>
+              <Input
+                type="number"
+                value={createWC}
+                onChange={(e) => setCreateWC(e.target.value)}
+                placeholder="1"
+                className="h-9"
+                disabled={creating}
+              />
+            </label>
           </fieldset>
-
-          {/* Row 3: Description */}
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              Περιγραφή
-            </span>
-            <Textarea
-              value={createDescription}
-              onChange={(e) => setCreateDescription(e.target.value)}
-              placeholder="Περιγραφή μονάδας..."
-              className="h-16 resize-none"
-              disabled={creating}
-            />
-          </label>
 
           {/* Actions */}
           <nav className="flex justify-end gap-2">
