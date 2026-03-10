@@ -57,6 +57,13 @@ export class SalesAccountingBridge {
   private readonly services = createAccountingServices();
 
   /**
+   * Diagnostic — check if accounting is configured
+   */
+  async checkSetup(): Promise<CompanyProfile | null> {
+    return this.services.repository.getCompanySetup();
+  }
+
+  /**
    * Κεντρικό entry point — επεξεργάζεται ένα sales event
    */
   async processEvent(event: SalesAccountingEvent): Promise<SalesAccountingResult> {

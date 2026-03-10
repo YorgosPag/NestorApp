@@ -120,3 +120,27 @@ async function handlePost(
 }
 
 export const POST = withStandardRateLimit(handlePost);
+
+// =============================================================================
+// GET — Diagnostic (verify route exists + accounting setup)
+// =============================================================================
+
+export async function GET(): Promise<NextResponse> {
+  try {
+    const bridge = new SalesAccountingBridge();
+    const profile = await bridge.checkSetup();
+    return NextResponse.json({
+      route: 'sales-accounting-event',
+      status: 'deployed',
+      timestamp: new Date().toISOString(),
+      accountingConfigured: profile !== null,
+      profileName: profile?.businessName ?? null,
+    });
+  } catch (error) {
+    return NextResponse.json({
+      route: 'sales-accounting-event',
+      status: 'error',
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+  }
+}
