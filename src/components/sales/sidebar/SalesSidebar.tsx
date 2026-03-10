@@ -20,6 +20,7 @@ import {
   ChangePriceDialog,
   ReserveDialog,
   SellDialog,
+  RevertDialog,
 } from '@/components/sales/dialogs/SalesActionDialogs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
@@ -92,10 +93,12 @@ export function SalesSidebar({
   const [changePriceOpen, setChangePriceOpen] = useState(false);
   const [reserveOpen, setReserveOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
+  const [revertOpen, setRevertOpen] = useState(false);
 
   const handleChangePrice = useCallback(() => setChangePriceOpen(true), []);
   const handleReserve = useCallback(() => setReserveOpen(true), []);
   const handleSell = useCallback(() => setSellOpen(true), []);
+  const handleRevert = useCallback(() => setRevertOpen(true), []);
 
   // =========================================================================
   // Details Content (shared between desktop & mobile)
@@ -109,6 +112,7 @@ export function SalesSidebar({
           onChangePrice={handleChangePrice}
           onReserve={handleReserve}
           onSell={handleSell}
+          onRevert={handleRevert}
         />
       }
       tabsRenderer={
@@ -251,6 +255,11 @@ export function SalesSidebar({
             unit={selectedUnit}
             open={sellOpen}
             onOpenChange={setSellOpen}
+          />
+          <RevertDialog
+            unit={selectedUnit}
+            open={revertOpen}
+            onOpenChange={setRevertOpen}
           />
         </>
       )}

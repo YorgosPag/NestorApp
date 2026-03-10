@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DollarSign, UserCheck, CheckCircle } from 'lucide-react';
+import { DollarSign, UserCheck, CheckCircle, Undo2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -327,6 +327,108 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             {saving
               ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
               : t('sales.dialogs.sell.confirm', { defaultValue: 'Επιβεβαίωση Πώλησης' })}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =============================================================================
+// 🏢 4. ΕΠΑΝΑΦΟΡΑ (Revert — cancel sale/reservation)
+// =============================================================================
+
+export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
+  const { t } = useTranslation('common');
+  const iconSizes = useIconSizes();
+  const [saving, setSaving] = useState(false);
+
+  const currentStatus = unit.commercialStatus;
+  const statusLabel = currentStatus === 'sold'
+    ? t('sales.commercialStatus.sold', { defaultValue: 'Πωλήθηκε' })
+    : currentStatus === 'reserved'
+      ? t('sales.commercialStatus.reserved', { defaultValue: 'Κρατημένη' })
+      : currentStatus ?? '';
+
+  const handleRevert = useCallback(async () => {
+    setSaving(true);
+    try {
+      await apiClient.patch(`/api/units/${unit.id}`, {
+        commercialStatus: 'for-sale',
+        commercial: {
+          askingPrice: unit.commercial?.askingPrice ?? null,
+          finalPrice: null,
+          reservationDeposit: null,
+          buyerContactId: null,
+          saleDate: null,
+          listedDate: unit.commercial?.listedDate ?? null,
+        },
+      } as Record<string, unknown>);
+      onOpenChange(false);
+      onSuccess?.();
+    } catch {
+      // Error handled by service
+    } finally {
+      setSaving(false);
+    }
+  }, [unit, onOpenChange, onSuccess]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Undo2 className={`${iconSizes.sm} text-orange-600`} />
+            {t('sales.dialogs.revert.title', { defaultValue: 'Επαναφορά Μονάδας' })}
+          </DialogTitle>
+          <DialogDescription>
+            {t('sales.dialogs.revert.description', {
+              defaultValue: 'Ακύρωση πώλησης ή κράτησης — η μονάδα επιστρέφει σε κατάσταση «Προς Πώληση»',
+            })}
+          </DialogDescription>
+        </DialogHeader>
+
+        <section className="space-y-3 py-2">
+          <p className="text-sm">
+            {t('sales.dialogs.revert.currentStatus', { defaultValue: 'Τρέχουσα κατάσταση' })}:{' '}
+            <span className="font-semibold">{statusLabel}</span>
+          </p>
+
+          {unit.commercial?.buyerContactId && (
+            <p className="text-sm text-muted-foreground">
+              {t('sales.dialogs.revert.buyer', { defaultValue: 'Αγοραστής' })}:{' '}
+              <span className="font-medium text-foreground">{unit.commercial.buyerContactId}</span>
+            </p>
+          )}
+
+          {unit.commercial?.finalPrice && (
+            <p className="text-sm text-muted-foreground">
+              {t('sales.dialogs.revert.finalPrice', { defaultValue: 'Τιμή πώλησης' })}:{' '}
+              <span className="font-medium text-foreground">
+                €{unit.commercial.finalPrice.toLocaleString('el-GR')}
+              </span>
+            </p>
+          )}
+
+          <p className="text-xs text-orange-600 font-medium">
+            {t('sales.dialogs.revert.warning', {
+              defaultValue: 'Τα στοιχεία αγοραστή, προκαταβολής και τελικής τιμής θα διαγραφούν. Η ζητούμενη τιμή διατηρείται.',
+            })}
+          </p>
+        </section>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+          </Button>
+          <Button
+            onClick={handleRevert}
+            disabled={saving}
+            className="bg-orange-600 hover:bg-orange-700 text-white"
+          >
+            {saving
+              ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
+              : t('sales.dialogs.revert.confirm', { defaultValue: 'Επαναφορά σε Προς Πώληση' })}
           </Button>
         </DialogFooter>
       </DialogContent>
