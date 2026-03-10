@@ -45,28 +45,6 @@ const DEFAULT_FILTERS: SalesFilterState = {
 };
 
 // =============================================================================
-// 🏢 COMMERCIAL STATUS HELPERS
-// =============================================================================
-
-/** Status values that are explicitly hidden from the sales page */
-const SALES_HIDDEN_STATUSES: CommercialStatus[] = [
-  'sold',
-  'rented',
-];
-
-/**
- * Units visible in "Διαθέσιμες Μονάδες":
- * - Units with commercialStatus: for-sale, for-sale-and-rent, reserved, unavailable
- * - Units WITHOUT commercialStatus (not yet classified → treat as available)
- * - Excludes: sold, rented
- */
-function isVisibleInSales(unit: Unit): boolean {
-  const status = unit.commercialStatus;
-  if (!status) return true; // No commercial status → show (not yet classified)
-  return !SALES_HIDDEN_STATUSES.includes(status);
-}
-
-// =============================================================================
 // 🏢 MAIN HOOK
 // =============================================================================
 
@@ -86,10 +64,11 @@ export function useSalesUnitsViewerState() {
   const [selectedUnitType, setSelectedUnitType] = useState<string>('all');
 
   // =========================================================================
-  // FILTER: Only units that are on the sales market
+  // ALL UNITS — no pre-filtering; quick/advanced filters handle visibility
+  // Sold/rented units remain accessible for post-sale follow-up (ADR-197)
   // =========================================================================
   const salesUnits = useMemo(() => {
-    return (allUnits as Unit[]).filter(isVisibleInSales);
+    return allUnits as Unit[];
   }, [allUnits]);
 
   // =========================================================================
