@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ShoppingBag, ExternalLink, Video } from 'lucide-react';
+import { ShoppingBag, ExternalLink } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesUnitListCard } from '@/components/sales/cards/SalesUnitListCard';
@@ -16,7 +16,6 @@ import { SalesDetailsHeader } from '@/components/sales/sidebar/SalesDetailsHeade
 import { SaleInfoContent } from '@/components/sales/tabs/SaleInfoContent';
 import { UnitSummaryContent } from '@/components/sales/tabs/UnitSummaryContent';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
-import { SalesVideosTab } from '@/components/sales/tabs/SalesVideosTab';
 import {
   ChangePriceDialog,
   ReserveDialog,
@@ -33,6 +32,7 @@ import {
   DollarSign,
   Home,
   Camera,
+  Video,
   FileText,
   Clock,
 } from 'lucide-react';
@@ -136,38 +136,36 @@ export function SalesSidebar({
             <UnitSummaryContent data={selectedUnit} />
           </TabsContent>
 
-          {/* Photos & Documents → redirect to /units (Χώροι) — same button style as UnitSummary */}
-          {(['photos', 'documents'] as const).map(tabId => (
-            <TabsContent key={tabId} value={tabId} className="flex-1 overflow-y-auto">
-              <section className="p-4">
-                <p className="text-sm text-muted-foreground text-center mb-3">
-                  {t(`sales.tabs.${tabId}Hint`, {
-                    defaultValue: tabId === 'photos'
-                      ? 'Οι φωτογραφίες διαχειρίζονται στη σελίδα Χώροι → Μονάδες'
-                      : 'Τα έγγραφα διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
-                  })}
-                </p>
-                <div className="pt-2 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-center gap-2 text-sm"
-                    onClick={() => {
-                      window.location.href = `/units?unitId=${selectedUnit.id}`;
-                    }}
-                  >
-                    <ExternalLink className={iconSizes.sm} />
-                    {t('sales.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
-                  </Button>
-                </div>
-              </section>
-            </TabsContent>
-          ))}
-
-          {/* Videos — EntityFilesManager (ADR-031) */}
-          <TabsContent value="videos" className="flex-1 overflow-y-auto">
-            <SalesVideosTab unit={selectedUnit} />
-          </TabsContent>
+          {/* Photos, Videos, Documents → redirect to /units (Χώροι) — same button style as UnitSummary */}
+          {(['photos', 'videos', 'documents'] as const).map(tabId => {
+            const hints: Record<string, string> = {
+              photos: 'Οι φωτογραφίες διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
+              videos: 'Τα βίντεο διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
+              documents: 'Τα έγγραφα διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
+            };
+            return (
+              <TabsContent key={tabId} value={tabId} className="flex-1 overflow-y-auto">
+                <section className="p-4">
+                  <p className="text-sm text-muted-foreground text-center mb-3">
+                    {t(`sales.tabs.${tabId}Hint`, { defaultValue: hints[tabId] })}
+                  </p>
+                  <div className="pt-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-center gap-2 text-sm"
+                      onClick={() => {
+                        window.location.href = `/units?unitId=${selectedUnit.id}`;
+                      }}
+                    >
+                      <ExternalLink className={iconSizes.sm} />
+                      {t('sales.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                    </Button>
+                  </div>
+                </section>
+              </TabsContent>
+            );
+          })}
 
           {/* History — Centralized ActivityTab (ADR-195) */}
           <TabsContent value="history" className="flex-1 overflow-y-auto">
