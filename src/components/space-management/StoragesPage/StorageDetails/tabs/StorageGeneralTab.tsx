@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatDate } from '@/lib/intl-utils';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { Warehouse, MapPin, Calendar, Euro, Layers } from 'lucide-react';
+import { Warehouse, MapPin, Calendar, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -54,7 +54,6 @@ interface StorageFormState {
   status: StorageStatus;
   floor: string;
   area: string;
-  price: string;
   description: string;
   notes: string;
 }
@@ -98,7 +97,6 @@ function buildFormState(storage: Storage): StorageFormState {
     status: storage.status || 'available',
     floor: storage.floor || '',
     area: storage.area !== undefined ? String(storage.area) : '',
-    price: storage.price !== undefined ? String(storage.price) : '',
     description: storage.description || '',
     notes: storage.notes || '',
   };
@@ -145,9 +143,6 @@ export function StorageGeneralTab({
       const newArea = form.area ? parseFloat(form.area) : undefined;
       if (newArea !== storage.area) payload.area = newArea ?? null;
 
-      const newPrice = form.price ? parseFloat(form.price) : undefined;
-      if (newPrice !== storage.price) payload.price = newPrice ?? null;
-
       if (form.description.trim() !== (storage.description || '')) payload.description = form.description.trim();
       if (form.notes.trim() !== (storage.notes || '')) payload.notes = form.notes.trim();
 
@@ -168,7 +163,6 @@ export function StorageGeneralTab({
           status: form.status,
           floor: form.floor.trim() || undefined,
           area: newArea,
-          price: newPrice,
         },
         timestamp: Date.now(),
       });
@@ -305,47 +299,7 @@ export function StorageGeneralTab({
         </CardContent>
       </Card>
 
-      {/* Financial Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Euro className={cn(iconSizes.md, 'text-amber-500')} />
-            {t('general.financial')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.price')}</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.price}
-                onChange={(e) => updateField('price', e.target.value)}
-                placeholder="€"
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.pricePerSqm')}</Label>
-              <Input
-                value={storage.price && storage.area ? `${(storage.price / storage.area).toFixed(2)} €/m²` : '—'}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.project')}</Label>
-              <Input
-                value={storage.projectId || ''}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ADR-193: Financial Card (price, price/m², project) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
       {/* Description & Notes Card */}
       <Card>

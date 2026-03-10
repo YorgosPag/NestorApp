@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatDate } from '@/lib/intl-utils';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
-import { Car, MapPin, Calendar, Euro, StickyNote } from 'lucide-react';
+import { Car, MapPin, Calendar, StickyNote } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -55,7 +55,6 @@ interface ParkingFormState {
   floor: string;
   location: string;
   area: string;
-  price: string;
   notes: string;
 }
 
@@ -95,7 +94,6 @@ function buildFormState(parking: ParkingSpot): ParkingFormState {
     floor: parking.floor || '',
     location: parking.location || '',
     area: parking.area !== undefined ? String(parking.area) : '',
-    price: parking.price !== undefined ? String(parking.price) : '',
     notes: parking.notes || '',
   };
 }
@@ -142,9 +140,6 @@ export function ParkingGeneralTab({
       const newArea = form.area ? parseFloat(form.area) : undefined;
       if (newArea !== parking.area) payload.area = newArea ?? null;
 
-      const newPrice = form.price ? parseFloat(form.price) : undefined;
-      if (newPrice !== parking.price) payload.price = newPrice ?? null;
-
       if (form.notes.trim() !== (parking.notes || '')) payload.notes = form.notes.trim();
 
       // Nothing changed
@@ -164,7 +159,6 @@ export function ParkingGeneralTab({
           status: form.status,
           floor: form.floor.trim() || undefined,
           area: newArea,
-          price: newPrice,
         },
         timestamp: Date.now(),
       });
@@ -306,53 +300,12 @@ export function ParkingGeneralTab({
                 disabled
               />
             </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.projectId')}</Label>
-              <Input
-                value={parking.projectId || ''}
-                className="h-8 text-sm font-mono text-xs"
-                disabled
-              />
-            </fieldset>
+            {/* ADR-193: projectId αφαιρέθηκε — εμπορικό context, ανήκει στις Πωλήσεις */}
           </div>
         </CardContent>
       </Card>
 
-      {/* Financial Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Euro className={cn(iconSizes.md, 'text-amber-500')} />
-            {t('general.financial')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.price')}</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.price}
-                onChange={(e) => updateField('price', e.target.value)}
-                placeholder="€"
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.pricePerSqm')}</Label>
-              <Input
-                value={parking.price && parking.area && parking.price > 0
-                  ? `${(parking.price / parking.area).toFixed(2)} €/m²`
-                  : '—'}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ADR-193: Financial Card (price, price/m²) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
       {/* Notes Card */}
       <Card>

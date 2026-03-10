@@ -208,7 +208,7 @@
 | **ADR-190** | Photo/Logo Upload System — SSoT Consolidation | ✅ ACCEPTED | 2026-03-06 | Infrastructure / File Upload | [📄](./adrs/ADR-190-photo-upload-ssot-consolidation.md) |
 | **ADR-191** | Enterprise Document Management System — Roadmap & Current State | ✅ PHASES_1-5_COMPLETE | 2026-03-09 | File Management / Document Governance | [📄](./adrs/ADR-191-enterprise-document-management.md) |
 | **ADR-192** | Master-Detail Navigation — Building Space Tabs | ✅ ACCEPTED | 2026-03-10 | UI / Navigation / Building Management | [📄](./adrs/ADR-192-master-detail-navigation.md) |
-| **ADR-193** | Storage & Parking Tabs Alignment with Units (Prototype) | ✅ ACCEPTED | 2026-03-10 | UI / Tabs / Space Management | [📄](./adrs/ADR-193-storage-parking-tabs-alignment.md) |
+| **ADR-193** | Field Display Domain Separation — Χώροι vs Πωλήσεις | ✅ IMPLEMENTED | 2026-03-10 | UI / Domain Architecture / Field Display | [📄](./adrs/ADR-193-field-display-domain-separation.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
