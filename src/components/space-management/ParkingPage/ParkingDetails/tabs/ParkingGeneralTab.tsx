@@ -277,24 +277,7 @@ export function ParkingGeneralTab({
                 disabled={!isEditing}
               />
             </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.position')}</Label>
-              <Input
-                value={form.location}
-                onChange={(e) => updateField('location', e.target.value)}
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.buildingId')}</Label>
-              <Input
-                value={parking.buildingId || ''}
-                className="h-8 text-sm font-mono text-xs"
-                disabled
-              />
-            </fieldset>
-            {/* ADR-193: projectId αφαιρέθηκε — εμπορικό context, ανήκει στις Πωλήσεις */}
+            {/* ADR-194: position + buildingId αφαιρέθηκαν — μη χρήσιμα για τον χρήστη */}
           </div>
         </CardContent>
       </Card>
