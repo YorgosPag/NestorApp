@@ -12,6 +12,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -39,7 +40,7 @@ import {
   filterUnits,
   calculateStats,
 } from './StorageTab/utils';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from './shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from './shared';
 
 const logger = createModuleLogger('StorageTab');
@@ -78,6 +79,7 @@ interface StorageMutationResult {
 
 export function StorageTab({ building }: StorageTabProps) {
   const { t } = useTranslation('building');
+  const router = useRouter();
 
   // Data state
   const [units, setUnits] = useState<StorageUnit[]>([]);
@@ -111,18 +113,6 @@ export function StorageTab({ building }: StorageTabProps) {
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
-
-  // Expand state (for inline floorplans)
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const toggleExpand = useCallback(
-    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
-    []
-  );
-
-  // Auto-collapse expanded row when editing starts
-  useEffect(() => {
-    if (editingId) setExpandedId(null);
-  }, [editingId]);
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
@@ -575,21 +565,11 @@ export function StorageTab({ building }: StorageTabProps) {
             )}
             fields={storageCardFields}
             actions={{
-              onView: () => {},
+              onView: (u) => router.push(`/spaces/storage?storageId=${u.id}`),
               onEdit: startEdit,
               onDelete: handleDeleteClick,
             }}
             actionState={{ deletingId }}
-            expandedId={expandedId}
-            onToggleExpand={toggleExpand}
-            renderExpandedContent={(u) => (
-              <SpaceFloorplanInline
-                entityType="storage_unit"
-                entityId={u.id}
-                entityLabel={u.code}
-                projectId={building.projectId}
-              />
-            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.storage')}
@@ -602,22 +582,12 @@ export function StorageTab({ building }: StorageTabProps) {
             columns={storageColumns}
             getKey={(u) => u.id}
             actions={{
-              onView: () => {},
+              onView: (u) => router.push(`/spaces/storage?storageId=${u.id}`),
               onEdit: startEdit,
               onDelete: handleDeleteClick,
             }}
             actionState={{ deletingId }}
             editingId={editingId}
-            expandedId={expandedId}
-            onToggleExpand={toggleExpand}
-            renderExpandedContent={(u) => (
-              <SpaceFloorplanInline
-                entityType="storage_unit"
-                entityId={u.id}
-                entityLabel={u.code}
-                projectId={building.projectId}
-              />
-            )}
             renderEditRow={() => (
               <>
                 <TableCell>

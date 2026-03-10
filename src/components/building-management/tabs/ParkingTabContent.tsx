@@ -11,6 +11,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,7 @@ import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 import { PARKING_TYPES, PARKING_STATUSES, PARKING_LOCATION_ZONES } from '@/types/parking';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 
 // ============================================================================
@@ -80,6 +81,7 @@ interface ParkingTabContentProps {
 export function ParkingTabContent({ building }: ParkingTabContentProps) {
   const { t } = useTranslation('parking');
   const { t: tBuilding } = useTranslation('building');
+  const router = useRouter();
 
   // Data state
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
@@ -117,19 +119,6 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
-
-  // Expand state (for inline floorplans)
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const toggleExpand = useCallback(
-    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
-    []
-  );
-
-  // Auto-collapse expanded row when editing starts
-  useEffect(() => {
-    if (editingId) setExpandedId(null);
-  }, [editingId]);
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
@@ -710,22 +699,12 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             renderStatus={(s) => getStatusBadge(s.status)}
             fields={parkingCardFields}
             actions={{
-              onView: () => {},
+              onView: (s) => router.push(`/spaces/parking?parkingId=${s.id}`),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
-            expandedId={expandedId}
-            onToggleExpand={toggleExpand}
-            renderExpandedContent={(s) => (
-              <SpaceFloorplanInline
-                entityType="parking_spot"
-                entityId={s.id}
-                entityLabel={s.number}
-                projectId={building.projectId}
-              />
-            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredSpots.length} {tBuilding('tabs.labels.parking')}
@@ -738,23 +717,13 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             columns={parkingColumns}
             getKey={(s) => s.id}
             actions={{
-              onView: () => {},
+              onView: (s) => router.push(`/spaces/parking?parkingId=${s.id}`),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
             editingId={editingId}
-            expandedId={expandedId}
-            onToggleExpand={toggleExpand}
-            renderExpandedContent={(s) => (
-              <SpaceFloorplanInline
-                entityType="parking_spot"
-                entityId={s.id}
-                entityLabel={s.number}
-                projectId={building.projectId}
-              />
-            )}
             renderEditRow={() => (
               <>
                 <TableCell>

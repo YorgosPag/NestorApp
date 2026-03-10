@@ -11,6 +11,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createUnit } from '@/services/units.service';
@@ -32,7 +33,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, SpaceFloorplanInline } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 
 // ============================================================================
@@ -105,6 +106,7 @@ const UNIT_STATUSES_FOR_FILTER = ['for-sale', 'for-rent', 'sold', 'reserved', 'r
 
 export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const { t } = useTranslation('building');
+  const router = useRouter();
 
   // Data state
   const [units, setUnits] = useState<Unit[]>([]);
@@ -142,18 +144,6 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
-
-  // Expand state (for inline floorplans)
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const toggleExpand = useCallback(
-    (id: string) => setExpandedId((prev) => (prev === id ? null : id)),
-    []
-  );
-
-  // Auto-collapse expanded row when editing starts
-  useEffect(() => {
-    if (editingId) setExpandedId(null);
-  }, [editingId]);
 
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
@@ -742,22 +732,12 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             renderStatus={(u) => getStatusBadge(u.status)}
             fields={unitCardFields}
             actions={{
-              onView: () => {},
+              onView: (u) => router.push(`/units?unitId=${u.id}`),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
-            expandedId={expandedId}
-            onToggleExpand={toggleExpand}
-            renderExpandedContent={(u) => (
-              <SpaceFloorplanInline
-                entityType="unit"
-                entityId={u.id}
-                entityLabel={u.name}
-                projectId={building.projectId}
-              />
-            )}
           />
           <footer className="text-xs text-muted-foreground">
             {filteredUnits.length} {t('tabs.labels.units')}
@@ -770,23 +750,13 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             columns={unitColumns}
             getKey={(u) => u.id}
             actions={{
-              onView: () => {},
+              onView: (u) => router.push(`/units?unitId=${u.id}`),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
             }}
             actionState={{ unlinkingId, deletingId }}
             editingId={editingId}
-            expandedId={expandedId}
-            onToggleExpand={toggleExpand}
-            renderExpandedContent={(u) => (
-              <SpaceFloorplanInline
-                entityType="unit"
-                entityId={u.id}
-                entityLabel={u.name}
-                projectId={building.projectId}
-              />
-            )}
             renderEditRow={() => (
               <>
                 <TableCell>
