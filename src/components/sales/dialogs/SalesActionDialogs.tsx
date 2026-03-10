@@ -194,7 +194,9 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
       // ADR-198: Fire-and-forget — δημιουργία τιμολογίου προκαταβολής
       const depositAmount = Number(deposit);
+      console.log('[ADR-198] Deposit amount:', depositAmount, 'unitId:', unit.id);
       if (depositAmount > 0) {
+        console.log('[ADR-198] Sending deposit_invoice event...');
         apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
           eventType: 'deposit_invoice',
           unitId: unit.id,
@@ -204,9 +206,13 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           paymentMethod: 'bank_transfer',
           notes: null,
           depositAmount,
+        }).then((res: unknown) => {
+          console.log('[ADR-198] Deposit invoice SUCCESS:', res);
         }).catch((err: unknown) => {
-          console.warn('[ADR-198] Deposit invoice fire-and-forget failed:', err);
+          console.error('[ADR-198] Deposit invoice FAILED:', err);
         });
+      } else {
+        console.warn('[ADR-198] Skipped — depositAmount is 0 or invalid');
       }
     } catch {
       // Error handled by service
