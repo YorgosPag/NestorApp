@@ -114,13 +114,19 @@ export interface UnitsTabLabelsConfig {
 
 /**
  * Storage Tab Labels Configuration Type
- * ✅ ENTERPRISE: Type-safe storage tab labels (existing function preserved)
+ * ✅ ENTERPRISE: Type-safe storage tab labels
+ * 🔧 ADR-193: Aligned with Units prototype — info, floor-plan, documents, photos, videos
  */
 export interface StorageTabLabelsConfig {
+  readonly info: string;
+  readonly 'floor-plan': string;
+  readonly documents: string;
+  readonly photos: string;
+  readonly videos: string;
+  // Legacy keys for backward compatibility
   readonly general: string;
   readonly details: string;
   readonly units: string;
-  readonly documents: string;
   readonly notes: string;
   readonly history: string;
 }
@@ -128,13 +134,17 @@ export interface StorageTabLabelsConfig {
 /**
  * Parking Tab Labels Configuration Type
  * ✅ ENTERPRISE: Type-safe parking tab labels
+ * 🔧 ADR-193: Aligned with Units prototype — info, floor-plan, documents, photos, videos
  */
 export interface ParkingTabLabelsConfig {
-  readonly general: string;
-  readonly parkingFloorplan: string;
+  readonly info: string;
+  readonly 'floor-plan': string;
   readonly documents: string;
   readonly photos: string;
   readonly videos: string;
+  // Legacy keys for backward compatibility
+  readonly general: string;
+  readonly parkingFloorplan: string;
 }
 
 // ====================================================================
@@ -259,10 +269,16 @@ export const MODAL_SELECT_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
-  general: "tabs.labels.general",
+  // 🎯 Core storage tabs — ADR-193 aligned with Units prototype
+  info: "tabs.labels.basicInfo",
+  'floor-plan': "tabs.labels.floorplans",
+  documents: "tabs.labels.documents",
+  photos: "tabs.labels.photos",
+  videos: "tabs.labels.videos",
+  // 🔧 Legacy keys for backward compatibility
+  general: "tabs.labels.basicInfo",
   details: "tabs.labels.statistics",
   units: "tabs.labels.floorplans",
-  documents: "tabs.labels.documents",
   notes: "tabs.labels.photos",
   history: "tabs.labels.history"
 } as const;
@@ -274,11 +290,15 @@ export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
-  general: "tabs.labels.general",
-  parkingFloorplan: "tabs.labels.parkingFloorplan",
+  // 🎯 Core parking tabs — ADR-193 aligned with Units prototype
+  info: "tabs.labels.basicInfo",
+  'floor-plan': "tabs.labels.floorplans",
   documents: "tabs.labels.documents",
   photos: "tabs.labels.photos",
-  videos: "tabs.labels.videos"
+  videos: "tabs.labels.videos",
+  // 🔧 Legacy keys for backward compatibility
+  general: "tabs.labels.basicInfo",
+  parkingFloorplan: "tabs.labels.parkingFloorplan"
 } as const;
 
 // ====================================================================

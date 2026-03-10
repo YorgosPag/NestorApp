@@ -17,13 +17,13 @@
 
 // ============================================================================
 // STORAGE-SPECIFIC COMPONENTS
+// ADR-193: Aligned with Units prototype — removed Stats/History, added Videos
 // ============================================================================
 
 import { StorageGeneralTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab';
-import { StorageStatsTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageStatsTab';
 import { StorageDocumentsTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageDocumentsTab';
 import { StoragePhotosTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StoragePhotosTab';
-import { StorageHistoryTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageHistoryTab';
+import { StorageVideosTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageVideosTab';
 
 // ============================================================================
 // SHARED COMPONENTS (reused from their original locations)
@@ -38,10 +38,9 @@ import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTa
 
 export const STORAGE_COMPONENT_MAPPING = {
   'StorageGeneralTab': StorageGeneralTab,
-  'StorageStatsTab': StorageStatsTab,
   'StorageDocumentsTab': StorageDocumentsTab,
   'StoragePhotosTab': StoragePhotosTab,
-  'StorageHistoryTab': StorageHistoryTab,
+  'StorageVideosTab': StorageVideosTab,
   'PlaceholderTab': PlaceholderTab,
   'FloorplanViewerTab': FloorplanViewerTab,
 } as const;
