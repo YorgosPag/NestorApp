@@ -83,8 +83,11 @@ export function FloorPlanTab({
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
 
-  // Get companyId and userId from auth context
-  const companyId = user?.companyId;
+  // 🏢 ENTERPRISE: Use unit's companyId (from Firestore) if available,
+  // fallback to auth context. This ensures super_admin sees files
+  // for units belonging to other companies.
+  const unitCompanyId = (selectedUnit as Record<string, unknown> | null)?.companyId as string | undefined;
+  const companyId = unitCompanyId || user?.companyId;
   const currentUserId = user?.uid;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
