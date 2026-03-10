@@ -10,9 +10,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatDate } from '@/lib/intl-utils';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { Warehouse, MapPin, Calendar, Layers } from 'lucide-react';
+import { Warehouse, MapPin, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -100,12 +99,6 @@ function buildFormState(storage: Storage): StorageFormState {
     description: storage.description || '',
     notes: storage.notes || '',
   };
-}
-
-function formatTimestamp(value: Date | { toDate: () => Date } | string): string {
-  if (value instanceof Date) return formatDate(value.toISOString());
-  if (typeof value === 'object' && 'toDate' in value) return formatDate(value.toDate().toISOString());
-  return formatDate(String(value));
 }
 
 // ============================================================================
@@ -301,65 +294,21 @@ export function StorageGeneralTab({
 
       {/* ADR-193: Financial Card (price, price/m², project) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
-      {/* Description & Notes Card */}
+      {/* Description Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <Layers className={cn(iconSizes.md, 'text-violet-500')} />
-            {t('general.descriptionNotes')}
+            {t('general.fields.description')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.description')}</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => updateField('description', e.target.value)}
-                className="h-20 text-sm resize-none"
-                disabled={!isEditing}
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.notes')}</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => updateField('notes', e.target.value)}
-                className="h-20 text-sm resize-none"
-                disabled={!isEditing}
-              />
-            </fieldset>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Update Information Card (always read-only) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
-            {t('general.updateInfo')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
-              <Input
-                value={storage.lastUpdated ? formatTimestamp(storage.lastUpdated) : '—'}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.owner')}</Label>
-              <Input
-                value={storage.owner || '—'}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-          </div>
+          <Textarea
+            value={form.description}
+            onChange={(e) => updateField('description', e.target.value)}
+            className="h-20 text-sm resize-none"
+            disabled={!isEditing}
+          />
         </CardContent>
       </Card>
     </div>

@@ -10,9 +10,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatDate } from '@/lib/intl-utils';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
-import { Car, MapPin, Calendar, StickyNote } from 'lucide-react';
+import { Car, MapPin, StickyNote } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -96,12 +95,6 @@ function buildFormState(parking: ParkingSpot): ParkingFormState {
     area: parking.area !== undefined ? String(parking.area) : '',
     notes: parking.notes || '',
   };
-}
-
-function formatTimestamp(value: Date | { toDate: () => Date } | string): string {
-  if (value instanceof Date) return formatDate(value.toISOString());
-  if (typeof value === 'object' && 'toDate' in value) return formatDate(value.toDate().toISOString());
-  return formatDate(String(value));
 }
 
 // ============================================================================
@@ -307,12 +300,12 @@ export function ParkingGeneralTab({
 
       {/* ADR-193: Financial Card (price, price/m²) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
-      {/* Notes Card */}
+      {/* Description Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
-            {t('general.notes')}
+            {t('general.fields.description')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -322,46 +315,6 @@ export function ParkingGeneralTab({
             className="h-20 text-sm resize-none"
             disabled={!isEditing}
           />
-        </CardContent>
-      </Card>
-
-      {/* Update Information Card (always read-only) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
-            {t('general.updateInfo')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.createdAt')}</Label>
-              <Input
-                value={parking.createdAt ? formatTimestamp(parking.createdAt) : '—'}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.lastUpdated')}</Label>
-              <Input
-                value={parking.updatedAt ? formatTimestamp(parking.updatedAt) : '—'}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            {parking.createdBy && (
-              <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs">{t('general.fields.createdBy')}</Label>
-                <Input
-                  value={parking.createdBy}
-                  className="h-8 text-sm"
-                  disabled
-                />
-              </fieldset>
-            )}
-          </div>
         </CardContent>
       </Card>
     </div>
