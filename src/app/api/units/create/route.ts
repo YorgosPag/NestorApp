@@ -70,12 +70,30 @@ export const POST = withStandardRateLimit(
           throw new ApiError(400, 'Unit name is required');
         }
 
-        // 🔒 SECURITY: Override companyId with authenticated user's company
-        // This prevents cross-tenant unit creation
+        // 🏢 ENTERPRISE: companyId INHERITANCE — Unit inherits from Building
+        // A unit physically belongs to a building, so it must share the building's companyId.
+        // This prevents data inconsistency when super_admin creates units across tenants.
+        let resolvedCompanyId = ctx.companyId;  // Default: authenticated user's company
+
+        if (body.buildingId) {
+          const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+          if (buildingDoc.exists) {
+            const buildingCompanyId = buildingDoc.data()?.companyId;
+            if (buildingCompanyId) {
+              resolvedCompanyId = buildingCompanyId;
+              logger.info('[Units] companyId inherited from building', {
+                buildingId: body.buildingId,
+                buildingCompanyId,
+                userCompanyId: ctx.companyId,
+              });
+            }
+          }
+        }
+
         const sanitizedData = {
           ...body,
           name: body.name.trim(),
-          companyId: ctx.companyId,  // 🔒 FORCED: Always use auth context companyId
+          companyId: resolvedCompanyId,  // 🔒 INHERITED: From building (or fallback to user)
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
           createdBy: ctx.uid,
@@ -86,7 +104,7 @@ export const POST = withStandardRateLimit(
           Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
         );
 
-        logger.info('[Units] Creating new unit', { name: body.name, companyId: ctx.companyId });
+        logger.info('[Units] Creating new unit', { name: body.name, companyId: resolvedCompanyId, buildingId: body.buildingId || 'none' });
 
         // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
         const docRef = await adminDb.collection(COLLECTIONS.UNITS).add(cleanData);
