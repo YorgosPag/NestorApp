@@ -31,11 +31,12 @@ interface InvoiceSummary {
   paymentStatus: string;
 }
 
+/** apiClient.get() αυτόματα unwraps canonical { success, data } → επιστρέφει μόνο data */
 interface InvoiceListResponse {
-  success: boolean;
-  data?: {
-    items: InvoiceSummary[];
-  };
+  items: InvoiceSummary[];
+  hasNext: boolean;
+  totalShown: number;
+  pageSize: number;
 }
 
 // =============================================================================
@@ -111,8 +112,8 @@ export function TransactionChainCard({ unitId }: TransactionChainCardProps) {
         const response = await apiClient.get<InvoiceListResponse>(
           `/api/accounting/invoices?unitId=${encodeURIComponent(unitId)}`
         );
-        if (!cancelled && response.success && response.data) {
-          setInvoices(response.data.items);
+        if (!cancelled && response.items) {
+          setInvoices(response.items);
         }
       } catch {
         // Graceful — αν δεν υπάρχουν invoices ή λογιστική, δεν εμφανίζεται
