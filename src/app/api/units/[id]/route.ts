@@ -26,6 +26,7 @@ const logger = createModuleLogger('UnitIdRoute');
 
 /** Fields tracked for entity audit trail (field → human label) */
 const UNIT_TRACKED_FIELDS: Record<string, string> = {
+  // Core fields
   name: 'Όνομα',
   type: 'Τύπος',
   status: 'Κατάσταση',
@@ -36,9 +37,16 @@ const UNIT_TRACKED_FIELDS: Record<string, string> = {
   buildingId: 'Κτίριο',
   projectId: 'Έργο',
   companyId: 'Εταιρεία',
-  orientation: 'Προσανατολισμός',
+  // Extended fields (from UnitFieldsBlock)
+  layout: 'Διαρρύθμιση',
+  areas: 'Εμβαδά',
+  orientations: 'Προσανατολισμοί',
   condition: 'Κατάσταση ακινήτου',
-  energyClass: 'Ενεργειακή κλάση',
+  energy: 'Ενεργειακή κλάση',
+  finishes: 'Φινιρίσματα',
+  interiorFeatures: 'Εσωτερικά χαρακτηριστικά',
+  securityFeatures: 'Χαρακτηριστικά ασφαλείας',
+  systemsOverride: 'Εγκαταστάσεις (Θέρμανση/Ψύξη)',
 };
 
 /** Fields that are NEVER writable via PATCH (security) */

@@ -216,10 +216,38 @@ function AuditEntryItem({ entry }: { entry: EntityAuditEntry }) {
 // HELPERS
 // ============================================================================
 
+/** Nested object key labels for human-readable display */
+const NESTED_KEY_LABELS: Record<string, string> = {
+  bedrooms: 'Υ/Δ', bathrooms: 'Μπάνια', wc: 'WC',
+  gross: 'Μικτό', net: 'Καθαρό', balcony: 'Μπαλκόνι',
+  terrace: 'Βεράντα', garden: 'Κήπος',
+  class: 'Κλάση',
+  flooring: 'Δάπεδο', windowFrames: 'Κουφώματα', glazing: 'Υαλοπίνακες',
+  heatingType: 'Θέρμανση', coolingType: 'Ψύξη',
+};
+
 function formatDisplayValue(value: string | number | boolean | null): string {
   if (value === null || value === undefined) return '—';
   if (typeof value === 'boolean') return value ? 'Ναι' : 'Όχι';
   if (value === '') return '—';
+
+  // Try to parse JSON objects/arrays for human-readable display
+  if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.length === 0 ? '—' : parsed.join(', ');
+      }
+      if (typeof parsed === 'object' && parsed !== null) {
+        return Object.entries(parsed)
+          .map(([k, v]) => `${NESTED_KEY_LABELS[k] ?? k}: ${v}`)
+          .join(', ');
+      }
+    } catch {
+      // Not valid JSON, fall through
+    }
+  }
+
   return String(value);
 }
 
