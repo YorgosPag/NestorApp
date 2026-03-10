@@ -18,10 +18,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DollarSign, UserCheck, CheckCircle, Undo2 } from 'lucide-react';
+import { DollarSign, UserCheck, CheckCircle, Undo2, UserPlus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
+import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
+import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { Unit } from '@/types/unit';
 
 // =============================================================================
@@ -135,8 +138,20 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [deposit, setDeposit] = useState<string>('');
-  const [buyerName, setBuyerName] = useState<string>('');
+  const [buyerContactId, setBuyerContactId] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  // 🏢 ENTERPRISE: New contact creation dialog state
+  const [showNewContactDialog, setShowNewContactDialog] = useState(false);
+
+  const handleContactSelect = useCallback((contact: ContactSummary | null) => {
+    setBuyerContactId(contact?.id ?? '');
+  }, []);
+
+  // 🏢 ENTERPRISE: After new contact created, refresh search and auto-select
+  const handleNewContactCreated = useCallback(() => {
+    setShowNewContactDialog(false);
+    // ContactSearchManager will auto-reload on next open
+  }, []);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -147,7 +162,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           askingPrice: unit.commercial?.askingPrice ?? null,
           finalPrice: unit.commercial?.finalPrice ?? null,
           reservationDeposit: deposit ? Number(deposit) : null,
-          buyerContactId: buyerName || null,
+          buyerContactId: buyerContactId || null,
           saleDate: unit.commercial?.saleDate ?? null,
           listedDate: unit.commercial?.listedDate ?? null,
         },
@@ -159,64 +174,82 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     } finally {
       setSaving(false);
     }
-  }, [deposit, buyerName, unit, onOpenChange, onSuccess]);
+  }, [deposit, buyerContactId, unit, onOpenChange, onSuccess]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserCheck className={`${iconSizes.sm} text-purple-600`} />
-            {t('sales.dialogs.reserve.title', { defaultValue: 'Κράτηση Μονάδας' })}
-          </DialogTitle>
-          <DialogDescription>
-            {t('sales.dialogs.reserve.description', {
-              defaultValue: 'Καταχωρήστε τα στοιχεία κράτησης',
-            })}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className={`${iconSizes.sm} text-purple-600`} />
+              {t('sales.dialogs.reserve.title', { defaultValue: 'Κράτηση Μονάδας' })}
+            </DialogTitle>
+            <DialogDescription>
+              {t('sales.dialogs.reserve.description', {
+                defaultValue: 'Καταχωρήστε τα στοιχεία κράτησης',
+              })}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-3 py-2">
-          <fieldset className="space-y-1">
-            <Label className="text-sm font-medium">
-              {t('sales.dialogs.reserve.buyerName', { defaultValue: 'Όνομα αγοραστή' })}
-            </Label>
-            <Input
-              value={buyerName}
-              onChange={(e) => setBuyerName(e.target.value)}
-              placeholder={t('sales.dialogs.reserve.buyerPlaceholder', { defaultValue: 'π.χ. Ιωάννης Παπαδόπουλος' })}
-              autoFocus
-            />
-          </fieldset>
+          <section className="space-y-3 py-2">
+            {/* 🏢 ENTERPRISE: Contact search dropdown (replaces plain Input) */}
+            <fieldset className="space-y-1">
+              <ContactSearchManager
+                selectedContactId={buyerContactId}
+                onContactSelect={handleContactSelect}
+                label={t('sales.dialogs.reserve.buyerName', { defaultValue: 'Αγοραστής' })}
+                placeholder={t('sales.dialogs.reserve.buyerPlaceholder', { defaultValue: 'Αναζήτηση επαφής...' })}
+                allowedContactTypes={['individual', 'company']}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs text-muted-foreground"
+                onClick={() => setShowNewContactDialog(true)}
+              >
+                <UserPlus className={iconSizes.xs} />
+                {t('sales.dialogs.reserve.newContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
+              </Button>
+            </fieldset>
 
-          <fieldset className="space-y-1">
-            <Label className="text-sm font-medium">
-              {t('sales.dialogs.reserve.deposit', { defaultValue: 'Προκαταβολή (€)' })}
-            </Label>
-            <Input
-              type="number"
-              min={0}
-              step={500}
-              value={deposit}
-              onChange={(e) => setDeposit(e.target.value)}
-              placeholder="π.χ. 5000"
-              className="text-right"
-            />
-          </fieldset>
-        </div>
+            <fieldset className="space-y-1">
+              <Label className="text-sm font-medium">
+                {t('sales.dialogs.reserve.deposit', { defaultValue: 'Προκαταβολή (€)' })}
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                step={500}
+                value={deposit}
+                onChange={(e) => setDeposit(e.target.value)}
+                placeholder="π.χ. 5000"
+                className="text-right"
+              />
+            </fieldset>
+          </section>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            {t('common.cancel', { defaultValue: 'Ακύρωση' })}
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving
-              ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
-              : t('sales.dialogs.reserve.confirm', { defaultValue: 'Κράτηση' })}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+              {t('common.cancel', { defaultValue: 'Ακύρωση' })}
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving
+                ? t('common.saving', { defaultValue: 'Αποθήκευση...' })
+                : t('sales.dialogs.reserve.confirm', { defaultValue: 'Κράτηση' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 🏢 ENTERPRISE: Centralized new contact dialog */}
+      <TabbedAddNewContactDialog
+        open={showNewContactDialog}
+        onOpenChange={setShowNewContactDialog}
+        onContactAdded={handleNewContactCreated}
+      />
+    </>
   );
 }
 
