@@ -37,6 +37,7 @@ import PhotosTabContent from '@/components/building-management/tabs/PhotosTabCon
 import VideosTabContent from '@/components/building-management/tabs/VideosTabContent';
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
+import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 
 // ============================================================================
 // UNITS COMPONENT MAPPING
@@ -56,6 +57,8 @@ export const UNITS_COMPONENT_MAPPING: Record<string, ComponentType<TabComponentP
   'DocumentsPlaceholder': PlaceholderTab as ComponentType<TabComponentProps>,
   'PlaceholderTab': PlaceholderTab as ComponentType<TabComponentProps>,
   'FloorplanViewerTab': FloorplanViewerTab as unknown as ComponentType<TabComponentProps>,
+  // 📜 ADR-195: Entity Audit Trail
+  'ActivityTab': ActivityTab as ComponentType<TabComponentProps>,
 };
 
 // ============================================================================

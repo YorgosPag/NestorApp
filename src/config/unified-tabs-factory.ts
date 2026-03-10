@@ -236,6 +236,15 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             order: 5, // PR1.2: Reordered after customer removal
             enabled: true,
             component: 'VideosTab'
+          },
+          {
+            id: 'history',
+            value: 'history',
+            icon: 'clock',
+            description: 'Ιστορικό αλλαγών της μονάδας',
+            order: 6,
+            enabled: true,
+            component: 'ActivityTab'
           }
         ],
         defaultEnabled: true

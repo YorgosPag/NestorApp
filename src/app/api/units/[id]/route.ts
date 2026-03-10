@@ -16,8 +16,27 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityAuditService } from '@/services/entity-audit.service';
 
 const logger = createModuleLogger('UnitIdRoute');
+
+// ============================================================================
+// AUDIT TRAIL — Tracked Fields
+// ============================================================================
+
+/** Fields tracked for entity audit trail (field → human label) */
+const UNIT_TRACKED_FIELDS: Record<string, string> = {
+  name: 'Όνομα',
+  type: 'Τύπος',
+  status: 'Κατάσταση',
+  floor: 'Όροφος',
+  area: 'Εμβαδόν',
+  price: 'Τιμή',
+  description: 'Περιγραφή',
+  buildingId: 'Κτίριο',
+  projectId: 'Έργο',
+  companyId: 'Εταιρεία',
+};
 
 // ============================================================================
 // TYPES
@@ -91,14 +110,33 @@ export const PATCH = withStandardRateLimit(
         if (body.companyName !== undefined) updateData.companyName = body.companyName ?? null;
         if (body.projectName !== undefined) updateData.projectName = body.projectName ?? null;
 
+        // Compute field-level diffs BEFORE the update
+        const auditChanges = EntityAuditService.diffFields(existing, updateData, UNIT_TRACKED_FIELDS);
+
         await docRef.update(updateData);
 
         logger.info('Unit updated', { id, companyId: ctx.companyId });
 
+        // Auth audit (existing — kept)
         await logAuditEvent(ctx, 'data_updated', 'unit', 'api', {
           newValue: { type: 'status', value: { unitId: id, updates: Object.keys(updateData) } },
           metadata: { reason: 'Unit updated via API' },
         });
+
+        // Entity audit trail (fire-and-forget)
+        if (auditChanges.length > 0) {
+          const isStatusChange = auditChanges.some((c) => c.field === 'status');
+          EntityAuditService.recordChange({
+            entityType: 'unit',
+            entityId: id,
+            entityName: (existing.name as string) ?? null,
+            action: isStatusChange ? 'status_changed' : 'updated',
+            changes: auditChanges,
+            performedBy: ctx.uid,
+            performedByName: ctx.email ?? null,
+            companyId: ctx.companyId,
+          }).catch(() => { /* fire-and-forget */ });
+        }
 
         return apiSuccess<UnitMutationResult>({ id }, 'Unit updated');
       } catch (error) {
@@ -139,10 +177,23 @@ export const DELETE = withStandardRateLimit(
 
         logger.info('Unit deleted', { id, companyId: ctx.companyId });
 
+        // Auth audit (existing — kept)
         await logAuditEvent(ctx, 'data_deleted', 'unit', 'api', {
           newValue: { type: 'status', value: { unitId: id, name: existing.name } },
           metadata: { reason: 'Unit deleted via API' },
         });
+
+        // Entity audit trail (fire-and-forget)
+        EntityAuditService.recordChange({
+          entityType: 'unit',
+          entityId: id,
+          entityName: (existing.name as string) ?? null,
+          action: 'deleted',
+          changes: [],
+          performedBy: ctx.uid,
+          performedByName: ctx.email ?? null,
+          companyId: ctx.companyId,
+        }).catch(() => { /* fire-and-forget */ });
 
         return apiSuccess<UnitMutationResult>({ id }, 'Unit deleted');
       } catch (error) {
