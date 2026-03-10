@@ -123,11 +123,19 @@ export async function notifyAccountingOffice(
   result: SalesAccountingResult
 ): Promise<void> {
   // Skip αν δεν πέτυχε η δημιουργία τιμολογίου
-  if (!result.success) return;
+  if (!result.success) {
+    console.log('[ADR-198 Notify] Skipping — invoice creation failed');
+    return;
+  }
 
   // Skip αν δεν υπάρχει email λογιστηρίου
   const accountingEmail = getAccountingEmail();
-  if (!accountingEmail) return;
+  if (!accountingEmail) {
+    console.log('[ADR-198 Notify] Skipping — ACCOUNTING_NOTIFY_EMAIL not set');
+    return;
+  }
+
+  console.log(`[ADR-198 Notify] Sending to ${accountingEmail} for ${event.eventType}`);
 
   try {
     let subject: string;
@@ -154,14 +162,21 @@ export async function notifyAccountingOffice(
       }
     }
 
-    await sendReplyViaMailgun({
+    const mailResult = await sendReplyViaMailgun({
       to: accountingEmail,
       subject,
       textBody: body,
     });
-  } catch {
+
+    if (mailResult.success) {
+      console.log(`[ADR-198 Notify] Email sent successfully — messageId: ${mailResult.messageId}`);
+    } else {
+      console.warn(`[ADR-198 Notify] Mailgun returned error: ${mailResult.error}`);
+    }
+  } catch (err) {
     // Fire-and-forget — η πώληση και το τιμολόγιο πέτυχαν ήδη
-    console.warn('[ADR-198] Failed to send accounting notification email');
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[ADR-198 Notify] Failed to send email: ${msg}`);
   }
 }
 
