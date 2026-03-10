@@ -28,8 +28,14 @@ export interface UnitsSidebarProps {
   onSelectUnit: (id: string, isShift: boolean) => void;
   selectedUnitIds: string[];
   onAssignmentSuccess: () => void;
-  /** Callback to open the "New Unit" dialog */
+  /** Callback to start inline new unit creation */
   onNewUnit?: () => void;
   /** Callback to delete the selected unit */
   onDeleteUnit?: (unitId: string) => void;
+  /** Whether we are in "create new unit" mode (inline form) */
+  isCreatingNewUnit?: boolean;
+  /** Callback when new unit is successfully created */
+  onUnitCreated?: (unitId: string) => void;
+  /** Callback to cancel new unit creation */
+  onCancelCreate?: () => void;
 }

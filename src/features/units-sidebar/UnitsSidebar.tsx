@@ -14,6 +14,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Viewport detection for conditional rendering (avoid duplicate mount)
 import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Centralized confirmation dialog (replaces window.confirm)
+import { useNotifications } from '@/providers/NotificationProvider';
 
 import { UnitsList } from '@/components/units/UnitsList';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
@@ -41,6 +43,9 @@ export function UnitsSidebar({
   onAssignmentSuccess,
   onNewUnit,
   onDeleteUnit,
+  isCreatingNewUnit = false,
+  onUnitCreated,
+  onCancelCreate,
 }: UnitsSidebarProps) {
   // 🗨️ ENTERPRISE: Centralized systems
   const { t } = useTranslation('units');
@@ -65,19 +70,34 @@ export function UnitsSidebar({
 
   // 🏢 ENTERPRISE: Edit mode state - lifted to sidebar level (Pattern A)
   const [isEditMode, setIsEditMode] = useState(false);
+  // Auto-enter edit mode when creating new unit
+  const effectiveEditMode = isEditMode || isCreatingNewUnit;
   const handleToggleEditMode = useCallback(() => setIsEditMode(prev => !prev), []);
-  const handleExitEditMode = useCallback(() => setIsEditMode(false), []);
-
-  // 🏢 ENTERPRISE: Delete handler with confirmation
-  const handleDeleteUnit = useCallback(() => {
-    if (!selectedUnit || !onDeleteUnit) return;
-    const confirmed = window.confirm(
-      t('navigation.actions.delete.confirmMessage', { name: selectedUnit.name })
-    );
-    if (confirmed) {
-      onDeleteUnit(selectedUnit.id);
+  const handleExitEditMode = useCallback(() => {
+    setIsEditMode(false);
+    // If we were creating, cancel the creation
+    if (isCreatingNewUnit && onCancelCreate) {
+      onCancelCreate();
     }
-  }, [selectedUnit, onDeleteUnit, t]);
+  }, [isCreatingNewUnit, onCancelCreate]);
+
+  // 🏢 ENTERPRISE: Centralized confirmation dialog (replaces window.confirm)
+  const { showConfirmDialog } = useNotifications();
+
+  const handleDeleteUnit = useCallback(async () => {
+    if (!selectedUnit || !onDeleteUnit) return;
+    await showConfirmDialog(
+      t('navigation.actions.delete.confirmMessage', { name: selectedUnit.name }),
+      () => onDeleteUnit(selectedUnit.id),
+      undefined,
+      {
+        title: t('navigation.actions.delete.confirmTitle', { defaultValue: 'Διαγραφή Μονάδας' }),
+        confirmText: t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }),
+        cancelText: t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' }),
+        type: 'warning'
+      }
+    );
+  }, [selectedUnit, onDeleteUnit, t, showConfirmDialog]);
 
   // Get units tabs from centralized config
   const unitsTabs = getSortedUnitsTabs();
@@ -86,7 +106,7 @@ export function UnitsSidebar({
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedUnit}
-      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={isEditMode} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewUnit={onNewUnit} onDeleteUnit={handleDeleteUnit} />}
+      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={effectiveEditMode} isCreatingNewUnit={isCreatingNewUnit} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} onNewUnit={onNewUnit} onDeleteUnit={handleDeleteUnit} />}
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={unitsTabs.map(convertToUniversalConfig)}
@@ -107,9 +127,12 @@ export function UnitsSidebar({
             // UniversalTabsRenderer spreads additionalData as props, so this is the correct pattern
             onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
             // 🏢 ENTERPRISE: Edit mode state lifted to sidebar level (Pattern A - entity header)
-            isEditMode,
+            isEditMode: effectiveEditMode,
             onToggleEditMode: handleToggleEditMode,
             onExitEditMode: handleExitEditMode,
+            // 🏢 ENTERPRISE: Inline new unit creation props
+            isCreatingNewUnit,
+            onUnitCreated,
           }}
           globalProps={{
             unitId: selectedUnit?.id
@@ -132,6 +155,9 @@ export function UnitsSidebar({
           selectedUnitIds={selectedUnitIds}
           onSelectUnit={onSelectUnit}
           onAssignmentSuccess={onAssignmentSuccess}
+          onNewUnit={onNewUnit}
+          onEditUnit={handleToggleEditMode}
+          onDeleteUnit={handleDeleteUnit}
         />
         {/* 🏢 ENTERPRISE: Render details ONLY on desktop — prevents duplicate mount */}
         {!isMobile && selectedUnit && detailsContent}
@@ -144,6 +170,9 @@ export function UnitsSidebar({
           selectedUnitIds={selectedUnitIds}
           onSelectUnit={onSelectUnit}
           onAssignmentSuccess={onAssignmentSuccess}
+          onNewUnit={onNewUnit}
+          onEditUnit={handleToggleEditMode}
+          onDeleteUnit={handleDeleteUnit}
         />
       </div>
 

@@ -30,7 +30,6 @@ interface UnitsHeaderProps {
   setShowDashboard: (show: boolean) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  onNewUnit?: () => void;
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
@@ -43,7 +42,6 @@ export function UnitsHeader({
   setShowDashboard,
   searchTerm,
   setSearchTerm,
-  onNewUnit,
   showFilters,
   setShowFilters,
 }: UnitsHeaderProps) {
@@ -76,10 +74,6 @@ export function UnitsHeader({
           viewMode: viewMode as CoreViewMode,
           onViewModeChange: (mode) => setViewMode(mode as UnitsViewMode),
           viewModes: ['list', 'grid'] as CoreViewMode[],
-          addButton: {
-            label: t('header.newUnit'),
-            onClick: () => onNewUnit?.()
-          },
           // Mobile-only filter button
           customActions: setShowFilters ? [
             <button

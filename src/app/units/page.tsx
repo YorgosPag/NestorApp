@@ -27,8 +27,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🏢 ENTERPRISE: AddUnitDialog for creating new units
-import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
+import type { Property } from '@/types/property-viewer';
 
 // 🏢 ENTERPRISE: Translation key type for OPERATIONAL status labels (Physical Truth - No Sales!)
 type OperationalStatusKey = 'ready' | 'underConstruction' | 'inspection' | 'maintenance' | 'draft';
@@ -65,7 +64,7 @@ function UnitsPageContent() {
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
   const { companies, projects, syncBreadcrumb } = useNavigation();
-  const { buildings, loading: buildingsLoading } = useFirestoreBuildings();
+  const { buildings } = useFirestoreBuildings();
 
   const {
     properties,
@@ -123,8 +122,45 @@ function UnitsPageContent() {
     forceDataRefresh,
   } = useUnitsViewerState();
 
-  // 🏢 ENTERPRISE: Add Unit Dialog state
-  const [showAddUnitDialog, setShowAddUnitDialog] = useState(false);
+  // 🏢 ENTERPRISE: Inline new unit creation state (replaces AddUnitDialog modal)
+  const [isCreatingNewUnit, setIsCreatingNewUnit] = useState(false);
+  const [newUnitTemplate, setNewUnitTemplate] = useState<Property | null>(null);
+
+  // 🏢 ENTERPRISE: Start inline new unit creation
+  const handleNewUnitInline = useCallback(() => {
+    const blankUnit: Property = {
+      id: '__new__',
+      name: '',
+      type: '',
+      status: 'draft',
+      floor: 0,
+      area: 0,
+      layout: { bedrooms: 0, bathrooms: 0, wc: 0 },
+      areas: { gross: 0 },
+      orientations: [],
+      buildingId: '',
+    };
+    setNewUnitTemplate(blankUnit);
+    setIsCreatingNewUnit(true);
+    // Select the template so it shows in the details panel
+    handlePolygonSelect('__new__', false);
+  }, [handlePolygonSelect]);
+
+  // 🏢 ENTERPRISE: Callback when new unit is successfully created
+  const handleUnitCreated = useCallback((unitId: string) => {
+    setIsCreatingNewUnit(false);
+    setNewUnitTemplate(null);
+    forceDataRefresh();
+    // Select the newly created unit
+    handlePolygonSelect(unitId, false);
+  }, [forceDataRefresh, handlePolygonSelect]);
+
+  // 🏢 ENTERPRISE: Cancel new unit creation
+  const handleCancelCreate = useCallback(() => {
+    setIsCreatingNewUnit(false);
+    setNewUnitTemplate(null);
+    handlePolygonSelect('__none__', false);
+  }, [handlePolygonSelect]);
 
   // 🏢 ENTERPRISE: Delete unit handler — Firestore + local state sync
   const handleDeleteUnit = useCallback(async (unitId: string) => {
@@ -342,7 +378,6 @@ function UnitsPageContent() {
           setShowDashboard={setShowDashboard}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
-          onNewUnit={() => setShowAddUnitDialog(true)}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
         />
@@ -396,15 +431,18 @@ function UnitsPageContent() {
           {viewMode === 'list' ? (
             <UnitsSidebar
               units={searchFilteredProperties}
-              selectedUnit={selectedUnit || null}
+              selectedUnit={isCreatingNewUnit ? newUnitTemplate : (selectedUnit || null)}
               onSelectUnit={handlePolygonSelect}
               selectedUnitIds={selectedPropertyIds}
               viewerProps={viewerProps}
               floors={safeFloors}
               setShowHistoryPanel={setShowHistoryPanel}
               onAssignmentSuccess={handleAssignmentSuccess}
-              onNewUnit={() => setShowAddUnitDialog(true)}
+              onNewUnit={handleNewUnitInline}
               onDeleteUnit={handleDeleteUnit}
+              isCreatingNewUnit={isCreatingNewUnit}
+              onUnitCreated={handleUnitCreated}
+              onCancelCreate={handleCancelCreate}
             />
           ) : (
             // ✅ ENTERPRISE: Pass filtered properties + selection to grid (Single Source of Truth)
@@ -422,15 +460,6 @@ function UnitsPageContent() {
             {/* Placeholder for VersionHistoryPanel */}
           </div>
         )}
-
-        {/* 🏢 ENTERPRISE: Add Unit Dialog */}
-        <AddUnitDialog
-          open={showAddUnitDialog}
-          onOpenChange={setShowAddUnitDialog}
-          onUnitAdded={forceDataRefresh}
-          buildings={buildings}
-          buildingsLoading={buildingsLoading}
-        />
       </PageContainer>
   );
 }

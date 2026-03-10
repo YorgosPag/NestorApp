@@ -14,6 +14,8 @@ interface UnitDetailsHeaderProps {
   unit: Property | null;
   /** 🏢 ENTERPRISE: Edit mode state - Pattern A (entity header) */
   isEditMode?: boolean;
+  /** Whether we are creating a new unit (inline form) */
+  isCreatingNewUnit?: boolean;
   /** 🏢 ENTERPRISE: Toggle edit mode callback (enters edit mode) */
   onToggleEditMode?: () => void;
   /** 🏢 ENTERPRISE: Exit edit mode callback (cancel without save) */
@@ -27,6 +29,7 @@ interface UnitDetailsHeaderProps {
 export function UnitDetailsHeader({
   unit,
   isEditMode = false,
+  isCreatingNewUnit = false,
   onToggleEditMode,
   onExitEditMode,
   onNewUnit,
@@ -66,11 +69,18 @@ export function UnitDetailsHeader({
   }
 
   // 🏢 ENTERPRISE: Actions via centralized presets
-  // Normal mode: Edit (🔵), Νέα Μονάδα (🟢), Διαγραφή (🔴)
+  // Creating mode: Δημιουργία (🟢), Cancel (⚪)
   // Edit mode: Save (🟢), Cancel (⚪)
+  // Normal mode: Edit (🔵), Νέα Μονάδα (🟢), Διαγραφή (🔴)
   const actions = isEditMode
     ? [
-        createEntityAction('save', t('buildingSelector.save', { defaultValue: 'Αποθήκευση' }), handleHeaderSave),
+        createEntityAction(
+          'save',
+          isCreatingNewUnit
+            ? t('navigation.actions.newUnit.create', { defaultValue: 'Δημιουργία' })
+            : t('buildingSelector.save', { defaultValue: 'Αποθήκευση' }),
+          handleHeaderSave
+        ),
         createEntityAction('cancel', t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' }), handleHeaderCancel),
       ]
     : [
@@ -79,14 +89,18 @@ export function UnitDetailsHeader({
         createEntityAction('delete', t('navigation.actions.delete.label', { defaultValue: 'Διαγραφή' }), () => onDeleteUnit?.()),
       ];
 
-  // Selected State - Unit is selected
+  // Selected State - Unit is selected (or creating new)
+  const headerTitle = isCreatingNewUnit
+    ? t('navigation.actions.newUnit.label', { defaultValue: 'Νέα Μονάδα' })
+    : unit.name;
+
   return (
     <>
       {/* 🖥️ DESKTOP: Show full header with actions */}
       <div className="hidden md:block">
         <EntityDetailsHeader
           icon={UnitIcon}
-          title={unit.name}
+          title={headerTitle}
           actions={actions}
           variant="detailed"
         />

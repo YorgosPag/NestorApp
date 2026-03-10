@@ -39,6 +39,9 @@ export function PropertyDetailsContent({
   isEditMode: externalEditMode,
   onToggleEditMode: externalToggleEditMode,
   onExitEditMode: externalExitEditMode,
+  // 🏢 ENTERPRISE: Inline new unit creation props
+  isCreatingNewUnit,
+  onUnitCreated,
 }: Partial<PropertyDetailsContentProps> & {
   property?: ExtendedPropertyDetails & { buyerMismatch?: boolean };
   unit?: ExtendedPropertyDetails;
@@ -50,6 +53,9 @@ export function PropertyDetailsContent({
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
   onExitEditMode?: () => void;
+  // 🏢 ENTERPRISE: Inline new unit creation
+  isCreatingNewUnit?: boolean;
+  onUnitCreated?: (unitId: string) => void;
 }) {
   const { t } = useTranslation(['common', 'properties']);
   const { quick } = useBorderTokens();
@@ -125,6 +131,8 @@ export function PropertyDetailsContent({
         isReadOnly={isReadOnly}
         isEditMode={isEditMode}
         onExitEditMode={handleExitEditMode}
+        isCreatingNewUnit={isCreatingNewUnit}
+        onUnitCreated={onUnitCreated}
       />
 
       {/* Entity Linking: Company, Project, Building */}

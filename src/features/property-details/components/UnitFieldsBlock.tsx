@@ -71,6 +71,10 @@ interface UnitFieldsBlockProps {
   isReadOnly?: boolean;
   isEditMode?: boolean;
   onExitEditMode?: () => void;
+  /** Whether we are creating a new unit (inline form) */
+  isCreatingNewUnit?: boolean;
+  /** Callback when new unit is successfully created */
+  onUnitCreated?: (unitId: string) => void;
 }
 
 // =============================================================================
@@ -133,7 +137,9 @@ export function UnitFieldsBlock({
   onUpdateProperty,
   isReadOnly = false,
   isEditMode = false,
-  onExitEditMode
+  onExitEditMode,
+  isCreatingNewUnit = false,
+  onUnitCreated,
 }: UnitFieldsBlockProps) {
   const { t } = useTranslation('units');
   const spacing = useSpacingTokens();
@@ -170,59 +176,85 @@ export function UnitFieldsBlock({
     securityFeatures: property.securityFeatures ?? []
   });
 
+  // ── Build updates from form data ──
+  const buildUpdatesFromForm = useCallback((): Partial<Property> => {
+    const updates: Partial<Property> = {
+      name: formData.name,
+      type: formData.type,
+      floor: formData.floor,
+      layout: {
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        wc: formData.wc
+      },
+      orientations: formData.orientations as OrientationType[],
+    };
+
+    if (formData.description.trim()) {
+      updates.description = formData.description.trim();
+    }
+
+    const areasData: { gross: number; net?: number; balcony?: number; terrace?: number; garden?: number } = {
+      gross: formData.areaGross
+    };
+    if (formData.areaNet > 0) areasData.net = formData.areaNet;
+    if (formData.areaBalcony > 0) areasData.balcony = formData.areaBalcony;
+    if (formData.areaTerrace > 0) areasData.terrace = formData.areaTerrace;
+    if (formData.areaGarden > 0) areasData.garden = formData.areaGarden;
+    updates.areas = areasData;
+
+    if (formData.condition) updates.condition = formData.condition as ConditionType;
+    if (formData.energyClass) updates.energy = { class: formData.energyClass as EnergyClassType };
+
+    if (formData.heatingType || formData.coolingType) {
+      const systemsOverride: Record<string, string> = {};
+      if (formData.heatingType) systemsOverride.heatingType = formData.heatingType;
+      if (formData.coolingType) systemsOverride.coolingType = formData.coolingType;
+      updates.systemsOverride = systemsOverride as Property['systemsOverride'];
+    }
+
+    if (formData.flooring.length > 0 || formData.windowFrames || formData.glazing) {
+      const finishes: Record<string, unknown> = {};
+      if (formData.flooring.length > 0) finishes.flooring = formData.flooring;
+      if (formData.windowFrames) finishes.windowFrames = formData.windowFrames;
+      if (formData.glazing) finishes.glazing = formData.glazing;
+      updates.finishes = finishes as Property['finishes'];
+    }
+
+    if (formData.interiorFeatures.length > 0) updates.interiorFeatures = formData.interiorFeatures as InteriorFeatureCodeType[];
+    if (formData.securityFeatures.length > 0) updates.securityFeatures = formData.securityFeatures as SecurityFeatureCodeType[];
+
+    return updates;
+  }, [formData]);
+
   // ── Save handler ──
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      const updates: Partial<Property> = {
-        name: formData.name,
-        type: formData.type,
-        floor: formData.floor,
-        layout: {
-          bedrooms: formData.bedrooms,
-          bathrooms: formData.bathrooms,
-          wc: formData.wc
-        },
-        orientations: formData.orientations as OrientationType[],
-      };
+      const updates = buildUpdatesFromForm();
 
-      if (formData.description.trim()) {
-        updates.description = formData.description.trim();
+      if (isCreatingNewUnit) {
+        // 🏢 ENTERPRISE: Create new unit via addUnit service
+        const { addUnit } = await import('@/services/units.service');
+        const unitData: Omit<Property, 'id'> = {
+          ...updates,
+          name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
+          type: formData.type || 'apartment',
+          status: 'draft',
+          floor: formData.floor,
+          area: formData.areaGross,
+        };
+        const result = await addUnit(unitData);
+        if (result.success && onUnitCreated) {
+          onUnitCreated(result.id);
+        }
+        toast.success(t('save.createSuccess', { defaultValue: 'Η μονάδα δημιουργήθηκε επιτυχώς' }));
+      } else {
+        // Normal update
+        await onUpdateProperty(property.id, updates);
+        if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
+        toast.success(t('save.success', 'Οι αλλαγές αποθηκεύτηκαν'));
       }
-
-      const areasData: { gross: number; net?: number; balcony?: number; terrace?: number; garden?: number } = {
-        gross: formData.areaGross
-      };
-      if (formData.areaNet > 0) areasData.net = formData.areaNet;
-      if (formData.areaBalcony > 0) areasData.balcony = formData.areaBalcony;
-      if (formData.areaTerrace > 0) areasData.terrace = formData.areaTerrace;
-      if (formData.areaGarden > 0) areasData.garden = formData.areaGarden;
-      updates.areas = areasData;
-
-      if (formData.condition) updates.condition = formData.condition as ConditionType;
-      if (formData.energyClass) updates.energy = { class: formData.energyClass as EnergyClassType };
-
-      if (formData.heatingType || formData.coolingType) {
-        const systemsOverride: Record<string, string> = {};
-        if (formData.heatingType) systemsOverride.heatingType = formData.heatingType;
-        if (formData.coolingType) systemsOverride.coolingType = formData.coolingType;
-        updates.systemsOverride = systemsOverride as Property['systemsOverride'];
-      }
-
-      if (formData.flooring.length > 0 || formData.windowFrames || formData.glazing) {
-        const finishes: Record<string, unknown> = {};
-        if (formData.flooring.length > 0) finishes.flooring = formData.flooring;
-        if (formData.windowFrames) finishes.windowFrames = formData.windowFrames;
-        if (formData.glazing) finishes.glazing = formData.glazing;
-        updates.finishes = finishes as Property['finishes'];
-      }
-
-      if (formData.interiorFeatures.length > 0) updates.interiorFeatures = formData.interiorFeatures as InteriorFeatureCodeType[];
-      if (formData.securityFeatures.length > 0) updates.securityFeatures = formData.securityFeatures as SecurityFeatureCodeType[];
-
-      await onUpdateProperty(property.id, updates);
-      if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
-      toast.success(t('save.success', 'Οι αλλαγές αποθηκεύτηκαν'));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('permission') || errorMessage.includes('PERMISSION_DENIED')) {
@@ -234,7 +266,7 @@ export function UnitFieldsBlock({
     } finally {
       setIsSaving(false);
     }
-  }, [formData, property.id, onUpdateProperty, onExitEditMode, t]);
+  }, [buildUpdatesFromForm, isCreatingNewUnit, formData.name, formData.type, formData.floor, formData.areaGross, property.id, onUpdateProperty, onExitEditMode, onUnitCreated, t]);
 
   // ── Cancel handler ──
   const handleCancel = useCallback(() => {

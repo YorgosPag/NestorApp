@@ -20,6 +20,12 @@ interface UnitsListProps {
   selectedUnitIds: string[];
   onSelectUnit: (unitId: string, isShift: boolean) => void;
   onAssignmentSuccess: () => void;
+  /** Callback for creating a new unit (inline) */
+  onNewUnit?: () => void;
+  /** Callback for editing the selected unit */
+  onEditUnit?: () => void;
+  /** Callback for deleting the selected unit */
+  onDeleteUnit?: () => void;
 }
 
 export function UnitsList({
@@ -27,6 +33,9 @@ export function UnitsList({
   selectedUnitIds,
   onSelectUnit,
   onAssignmentSuccess,
+  onNewUnit,
+  onEditUnit,
+  onDeleteUnit,
 }: UnitsListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('units');
@@ -165,24 +174,12 @@ export function UnitsList({
             setSortOrder(newSortOrder);
           }}
           hasSelectedContact={selectedUnitIds.length > 0}
-          onNewItem={() => {
-            // Debug logging removed
-          }}
-          onEditItem={(id) => {
-            // Debug logging removed
-          }}
-          onDeleteItems={(ids) => {
-            // Debug logging removed
-          }}
-          onExport={() => {
-            // Debug logging removed
-          }}
-          onRefresh={() => {
-            // Debug logging removed
-          }}
-          onSettings={() => {
-            // Debug logging removed
-          }}
+          onNewItem={() => onNewUnit?.()}
+          onEditItem={() => onEditUnit?.()}
+          onDeleteItems={() => onDeleteUnit?.()}
+          onExport={() => {}}
+          onRefresh={() => {}}
+          onSettings={() => {}}
         />
       </div>
 
@@ -203,24 +200,12 @@ export function UnitsList({
               setSortOrder(newSortOrder);
             }}
             hasSelectedContact={selectedUnitIds.length > 0}
-            onNewItem={() => {
-              // Debug logging removed
-            }}
-            onEditItem={(id) => {
-              // Debug logging removed
-            }}
-            onDeleteItems={(ids) => {
-              // Debug logging removed
-            }}
-            onExport={() => {
-              // Debug logging removed
-            }}
-            onRefresh={() => {
-              // Debug logging removed
-            }}
-            onSettings={() => {
-              // Debug logging removed
-            }}
+            onNewItem={() => onNewUnit?.()}
+            onEditItem={() => onEditUnit?.()}
+            onDeleteItems={() => onDeleteUnit?.()}
+            onExport={() => {}}
+            onRefresh={() => {}}
+            onSettings={() => {}}
           />
         )}
       </div>
