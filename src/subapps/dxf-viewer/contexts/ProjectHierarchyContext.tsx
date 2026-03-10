@@ -16,13 +16,6 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 
-// Mock function για getBuildingsByProjectId (προσωρινά)
-const getBuildingsByProjectId = async (projectId: string) => {
-  // Προσωρινή implementation - θα αντικατασταθεί με πραγματικό service
-
-  return [];
-};
-
 export interface Unit {
   id: string;
   name: string;

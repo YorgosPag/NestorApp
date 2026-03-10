@@ -117,17 +117,48 @@ export const GET = withStandardRateLimit(async function GET(
         // 2. FETCH FROM FIRESTORE (Admin SDK + Tenant Isolation)
         // ============================================================================
 
-        const snapshot = await getAdminFirestore()
+        const db = getAdminFirestore();
+
+        // Fetch projects
+        const snapshot = await db
           .collection(COLLECTIONS.PROJECTS)
           .where('companyId', '==', companyId)
           .get();
 
+        // Fetch buildings for all projects in parallel
+        const projectIds = snapshot.docs.map(doc => doc.id);
+        let buildingsByProject: Record<string, Array<{ id: string; name: string; [key: string]: unknown }>> = {};
+
+        if (projectIds.length > 0) {
+          const buildingsSnapshot = await db
+            .collection(COLLECTIONS.BUILDINGS)
+            .where('companyId', '==', companyId)
+            .get();
+
+          for (const bDoc of buildingsSnapshot.docs) {
+            const bData = bDoc.data();
+            const pid = bData.projectId as string;
+            if (pid && projectIds.includes(pid)) {
+              if (!buildingsByProject[pid]) {
+                buildingsByProject[pid] = [];
+              }
+              buildingsByProject[pid].push({
+                id: bDoc.id,
+                name: (bData.name as string) || `Building ${bDoc.id}`,
+                ...bData,
+              });
+            }
+          }
+        }
+
+        // Merge buildings into projects
         const projects = snapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          buildings: buildingsByProject[doc.id] || [],
         }));
 
-        logger.info('Loaded projects from Firestore', { count: snapshot.docs.length });
+        logger.info('Loaded projects from Firestore', { count: snapshot.docs.length, buildingsTotal: Object.values(buildingsByProject).flat().length });
 
         // ============================================================================
         // 3. CACHE FOR FUTURE REQUESTS
