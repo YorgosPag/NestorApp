@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import type { AuditEntityType, EntityAuditEntry, EntityAuditResponse } from '@/types/audit-trail';
 
 interface UseEntityAuditOptions {
