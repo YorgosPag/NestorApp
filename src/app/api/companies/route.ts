@@ -240,62 +240,24 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
 
     if (isAdmin) {
       // =====================================================================
-      // 🔓 ADMIN MODE: Load from navigation_companies (multi-company view)
-      // Same logic as /api/audit/bootstrap for admins
+      // 🔓 ADMIN MODE: Load ALL active companies from contacts
+      // No dependency on navigation_companies — shows every company-type contact
       // =====================================================================
-      logger.info('[Companies/List] Admin mode - loading from navigation_companies', { globalRole: ctx.globalRole });
+      logger.info('[Companies/List] Admin mode - loading all active companies', { globalRole: ctx.globalRole });
 
-      // Step 1: Get navigation company IDs
-      const navigationSnapshot = await getAdminFirestore()
-        .collection(COLLECTIONS.NAVIGATION)
-        .get();
-
-      const navigationCompanyIds: string[] = [];
-      navigationSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const contactId = data.contactId;
-        if (typeof contactId === 'string' && contactId.length > 0) {
-          navigationCompanyIds.push(contactId);
-        }
-      });
-
-      logger.info('[Companies/List] Navigation company IDs loaded', { count: navigationCompanyIds.length });
-
-      if (navigationCompanyIds.length === 0) {
-        logger.warn('API: No navigation companies found - admin has no companies configured');
-        return NextResponse.json({
-          companies: [],
-          count: 0,
-          cached: false
-        });
-      }
-
-      // Step 2: Get company details from contacts
       const companiesSnapshot = await getAdminFirestore()
         .collection(COLLECTIONS.CONTACTS)
         .where('type', '==', 'company')
         .where('status', '==', 'active')
         .get();
 
-      // Build company map
-      const companyMap = new Map<string, CompanyContact>();
-      companiesSnapshot.docs.forEach(doc => {
+      for (const doc of companiesSnapshot.docs) {
         const rawData = doc.data() as FirestoreCompanyData;
         const company = mapFirestoreToCompanyContact(doc.id, rawData);
-        companyMap.set(doc.id, company);
-      });
-
-      // Step 3: Filter to navigation companies only
-      for (const companyId of navigationCompanyIds) {
-        const company = companyMap.get(companyId);
-        if (company) {
-          relevantCompanies.push(company);
-        } else {
-          logger.warn('API: Navigation company not found in active contacts', { companyId });
-        }
+        relevantCompanies.push(company);
       }
 
-      logger.info('API: Admin loaded companies from navigation_companies', { count: relevantCompanies.length });
+      logger.info('API: Admin loaded all active companies', { count: relevantCompanies.length });
 
     } else {
       // =====================================================================
