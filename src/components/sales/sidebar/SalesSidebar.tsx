@@ -6,7 +6,7 @@
  * @pattern Mirrors UnitsSidebar with commercial context
  */
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { ShoppingBag } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
@@ -15,6 +15,11 @@ import { SalesQuickFilters } from '@/components/sales/page/SalesQuickFilters';
 import { SalesDetailsHeader } from '@/components/sales/sidebar/SalesDetailsHeader';
 import { SaleInfoContent } from '@/components/sales/tabs/SaleInfoContent';
 import { UnitSummaryContent } from '@/components/sales/tabs/UnitSummaryContent';
+import {
+  ChangePriceDialog,
+  ReserveDialog,
+  SellDialog,
+} from '@/components/sales/dialogs/SalesActionDialogs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
 import { MobileDetailsSlideIn } from '@/core/layouts';
@@ -78,12 +83,30 @@ export function SalesSidebar({
   const iconSizes = useIconSizes();
 
   // =========================================================================
+  // Dialog State (ADR-197 §2.9 — 3 commercial actions)
+  // =========================================================================
+  const [changePriceOpen, setChangePriceOpen] = useState(false);
+  const [reserveOpen, setReserveOpen] = useState(false);
+  const [sellOpen, setSellOpen] = useState(false);
+
+  const handleChangePrice = useCallback(() => setChangePriceOpen(true), []);
+  const handleReserve = useCallback(() => setReserveOpen(true), []);
+  const handleSell = useCallback(() => setSellOpen(true), []);
+
+  // =========================================================================
   // Details Content (shared between desktop & mobile)
   // =========================================================================
   const detailsContent = selectedUnit ? (
     <DetailsContainer
       selectedItem={selectedUnit}
-      header={<SalesDetailsHeader unit={selectedUnit} />}
+      header={
+        <SalesDetailsHeader
+          unit={selectedUnit}
+          onChangePrice={handleChangePrice}
+          onReserve={handleReserve}
+          onSell={handleSell}
+        />
+      }
       tabsRenderer={
         <Tabs defaultValue="sale-info" className="flex-1 flex flex-col min-h-0">
           <TabsList className="flex flex-wrap gap-1 w-full h-auto min-h-fit flex-shrink-0">
@@ -188,6 +211,27 @@ export function SalesSidebar({
       >
         {isMobile && selectedUnit && detailsContent}
       </MobileDetailsSlideIn>
+
+      {/* Commercial Action Dialogs (ADR-197 §2.9) */}
+      {selectedUnit && (
+        <>
+          <ChangePriceDialog
+            unit={selectedUnit}
+            open={changePriceOpen}
+            onOpenChange={setChangePriceOpen}
+          />
+          <ReserveDialog
+            unit={selectedUnit}
+            open={reserveOpen}
+            onOpenChange={setReserveOpen}
+          />
+          <SellDialog
+            unit={selectedUnit}
+            open={sellOpen}
+            onOpenChange={setSellOpen}
+          />
+        </>
+      )}
     </>
   );
 }

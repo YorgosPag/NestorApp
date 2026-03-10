@@ -47,6 +47,9 @@ const UNIT_TRACKED_FIELDS: Record<string, string> = {
   interiorFeatures: 'Εσωτερικά χαρακτηριστικά',
   securityFeatures: 'Χαρακτηριστικά ασφαλείας',
   systemsOverride: 'Εγκαταστάσεις (Θέρμανση/Ψύξη)',
+  // Commercial fields (ADR-197 §2.9)
+  commercialStatus: 'Εμπορική κατάσταση',
+  commercial: 'Εμπορικά στοιχεία',
 };
 
 /** Fields that are NEVER writable via PATCH (security) */

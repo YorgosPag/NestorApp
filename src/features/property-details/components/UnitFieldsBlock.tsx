@@ -153,6 +153,7 @@ export function UnitFieldsBlock({
 
   const [formData, setFormData] = useState({
     name: property.name ?? '',
+    code: property.code ?? '',
     type: property.type ?? '',
     description: property.description ?? '',
     floor: property.floor ?? 0,
@@ -180,6 +181,7 @@ export function UnitFieldsBlock({
   const buildUpdatesFromForm = useCallback((): Partial<Property> => {
     const updates: Partial<Property> = {
       name: formData.name,
+      code: formData.code || undefined,
       type: formData.type,
       floor: formData.floor,
       layout: {
@@ -236,16 +238,17 @@ export function UnitFieldsBlock({
       if (isCreatingNewUnit) {
         // 🏢 ENTERPRISE: Create new unit via addUnit service
         const { addUnit } = await import('@/services/units.service');
-        const unitData: Omit<Property, 'id'> = {
+        const unitData = {
           ...updates,
           name: formData.name || t('navigation.actions.newUnit.defaultName', { defaultValue: 'Νέα Μονάδα' }),
+          code: formData.code || '',
           type: formData.type || 'apartment',
-          status: 'reserved',
-          operationalStatus: 'draft',
+          status: 'reserved' as const,
+          operationalStatus: 'draft' as const,
           floor: formData.floor,
           area: formData.areaGross,
         };
-        const result = await addUnit(unitData);
+        const result = await addUnit(unitData as Omit<Property, 'id'>);
         if (result.success && onUnitCreated) {
           onUnitCreated(result.id);
         }
@@ -273,6 +276,7 @@ export function UnitFieldsBlock({
   const handleCancel = useCallback(() => {
     setFormData({
       name: property.name ?? '',
+      code: property.code ?? '',
       type: property.type ?? '',
       description: property.description ?? '',
       floor: property.floor ?? 0,
@@ -340,6 +344,19 @@ export function UnitFieldsBlock({
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 className={cn('h-7 text-xs', quick.input)}
                 placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
+                disabled={!isEditing}
+              />
+            </fieldset>
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t('fields.identity.code', { defaultValue: 'Κωδικός Μονάδας' })}
+              </Label>
+              <Input
+                id="unit-code"
+                value={formData.code}
+                onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                className={cn('h-7 text-xs', quick.input)}
+                placeholder={t('fields.identity.codePlaceholder', { defaultValue: 'π.χ. A_D0.1' })}
                 disabled={!isEditing}
               />
             </fieldset>

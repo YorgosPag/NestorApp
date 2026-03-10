@@ -188,6 +188,7 @@ export function SalesUnitListCard({
   return (
     <ListCard
       title={unit.name || unit.code || unit.id}
+      subtitle={unit.code ? `${unit.code}` : undefined}
       badges={badges}
       stats={allStats}
       compact={compact}
