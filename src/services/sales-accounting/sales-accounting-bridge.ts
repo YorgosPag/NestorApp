@@ -16,6 +16,7 @@ import { getCategoryByCode } from '@/subapps/accounting/config/account-categorie
 import { generateTransactionId } from '@/services/enterprise-id.service';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
+import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
 import type { CompanyProfile } from '@/subapps/accounting/types/company';
 import type {
   SalesAccountingEvent,
@@ -382,7 +383,7 @@ export class SalesAccountingBridge {
           unitPrice: params.netAmount,
           vatRate: VAT_RATE,
           netAmount: params.netAmount,
-          mydataCode: category?.mydataCode ?? 'category1_1',
+          mydataCode: (category?.mydataCode ?? 'category1_1') as MyDataIncomeType,
         },
       ],
       currency: 'EUR',
