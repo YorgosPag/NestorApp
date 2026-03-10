@@ -11,6 +11,7 @@ import { ShoppingBag } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesUnitListCard } from '@/components/sales/cards/SalesUnitListCard';
+import { SalesQuickFilters } from '@/components/sales/page/SalesQuickFilters';
 import { SalesDetailsHeader } from '@/components/sales/sidebar/SalesDetailsHeader';
 import { SaleInfoContent } from '@/components/sales/tabs/SaleInfoContent';
 import { UnitSummaryContent } from '@/components/sales/tabs/UnitSummaryContent';
@@ -38,6 +39,12 @@ interface SalesSidebarProps {
   selectedUnit: Unit | null;
   onSelectUnit: (unitId: string) => void;
   selectedUnitId: string | null;
+  /** Quick filter: selected commercial status */
+  selectedCommercialStatus: string;
+  onCommercialStatusChange: (status: string) => void;
+  /** Quick filter: selected unit type */
+  selectedUnitType: string;
+  onUnitTypeChange: (type: string) => void;
 }
 
 // =============================================================================
@@ -61,6 +68,10 @@ export function SalesSidebar({
   selectedUnit,
   onSelectUnit,
   selectedUnitId,
+  selectedCommercialStatus,
+  onCommercialStatusChange,
+  selectedUnitType,
+  onUnitTypeChange,
 }: SalesSidebarProps) {
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
@@ -129,6 +140,14 @@ export function SalesSidebar({
         icon={ShoppingBag}
         entityName={t('sales.available.listTitle', { defaultValue: 'Μονάδες' })}
         itemCount={units.length}
+      />
+
+      {/* Quick Filters inside list column (mirrors UnitsList pattern) */}
+      <SalesQuickFilters
+        selectedCommercialStatus={selectedCommercialStatus}
+        onCommercialStatusChange={onCommercialStatusChange}
+        selectedUnitType={selectedUnitType}
+        onUnitTypeChange={onUnitTypeChange}
       />
 
       <ScrollArea className="flex-1">

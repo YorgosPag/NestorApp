@@ -48,16 +48,22 @@ const DEFAULT_FILTERS: SalesFilterState = {
 // 🏢 COMMERCIAL STATUS HELPERS
 // =============================================================================
 
-/** Status values that appear in the "Διαθέσιμες Μονάδες" sales page */
-const SALES_VISIBLE_STATUSES: CommercialStatus[] = [
-  'for-sale',
-  'for-sale-and-rent',
-  'reserved',
+/** Status values that are explicitly hidden from the sales page */
+const SALES_HIDDEN_STATUSES: CommercialStatus[] = [
+  'sold',
+  'rented',
 ];
 
-function isForSaleUnit(unit: Unit): boolean {
-  const status = unit.commercialStatus ?? 'unavailable';
-  return SALES_VISIBLE_STATUSES.includes(status);
+/**
+ * Units visible in "Διαθέσιμες Μονάδες":
+ * - Units with commercialStatus: for-sale, for-sale-and-rent, reserved, unavailable
+ * - Units WITHOUT commercialStatus (not yet classified → treat as available)
+ * - Excludes: sold, rented
+ */
+function isVisibleInSales(unit: Unit): boolean {
+  const status = unit.commercialStatus;
+  if (!status) return true; // No commercial status → show (not yet classified)
+  return !SALES_HIDDEN_STATUSES.includes(status);
 }
 
 // =============================================================================
@@ -83,7 +89,7 @@ export function useSalesUnitsViewerState() {
   // FILTER: Only units that are on the sales market
   // =========================================================================
   const salesUnits = useMemo(() => {
-    return (allUnits as Unit[]).filter(isForSaleUnit);
+    return (allUnits as Unit[]).filter(isVisibleInSales);
   }, [allUnits]);
 
   // =========================================================================

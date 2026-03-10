@@ -11,9 +11,9 @@ import React, { Suspense } from 'react';
 
 import { useSalesUnitsViewerState } from '@/hooks/useSalesUnitsViewerState';
 import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
-import { SalesQuickFilters } from '@/components/sales/page/SalesQuickFilters';
 import { SalesSidebar } from '@/components/sales/sidebar/SalesSidebar';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel, unitFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import {
   ShoppingBag,
   DollarSign,
@@ -77,6 +77,20 @@ function SalesAvailableContent() {
     handleFiltersChange({ searchTerm });
   }, [searchTerm, handleFiltersChange]);
 
+  // Adapter: AdvancedFiltersPanel (UnitFilterState) → SalesFilterState
+  const handleAdvancedFiltersChange = React.useCallback((unitFilters: UnitFilterState) => {
+    handleFiltersChange({
+      searchTerm: unitFilters.searchTerm || '',
+      building: unitFilters.building?.[0] || 'all',
+      floor: unitFilters.floor?.[0] || 'all',
+      unitType: unitFilters.type?.[0] || 'all',
+      areaRange: {
+        min: unitFilters.areaRange?.min ?? null,
+        max: unitFilters.areaRange?.max ?? null,
+      },
+    });
+  }, [handleFiltersChange]);
+
   // =========================================================================
   // Dashboard Stats (ADR-197 §2.5)
   // =========================================================================
@@ -135,15 +149,26 @@ function SalesAvailableContent() {
         />
       )}
 
-      {/* LAYER 3: Quick Filters (dual row — ADR-197 §2.10) */}
-      <div className="px-1 pt-1 sm:px-2 sm:pt-2">
-        <SalesQuickFilters
-          selectedCommercialStatus={selectedCommercialStatus}
-          onCommercialStatusChange={setSelectedCommercialStatus}
-          selectedUnitType={selectedUnitType}
-          onUnitTypeChange={setSelectedUnitType}
+      {/* LAYER 3: Advanced Filters (mirrors /units page pattern) */}
+      <div className="hidden md:block -mt-1">
+        <AdvancedFiltersPanel
+          config={unitFiltersConfig}
+          filters={filters as unknown as UnitFilterState}
+          onFiltersChange={handleAdvancedFiltersChange}
         />
       </div>
+
+      {/* Mobile: Show only when showFilters is true */}
+      {showFilters && (
+        <div className="md:hidden">
+          <AdvancedFiltersPanel
+            config={unitFiltersConfig}
+            filters={filters as unknown as UnitFilterState}
+            onFiltersChange={handleAdvancedFiltersChange}
+            defaultOpen
+          />
+        </div>
+      )}
 
       {/* LAYER 4: List + Details */}
       <ListContainer>
@@ -153,6 +178,10 @@ function SalesAvailableContent() {
             selectedUnit={selectedUnit as Unit | null}
             onSelectUnit={handleSelectUnit}
             selectedUnitId={selectedUnitId}
+            selectedCommercialStatus={selectedCommercialStatus}
+            onCommercialStatusChange={setSelectedCommercialStatus}
+            selectedUnitType={selectedUnitType}
+            onUnitTypeChange={setSelectedUnitType}
           />
         ) : (
           // Grid view — cards in grid layout
