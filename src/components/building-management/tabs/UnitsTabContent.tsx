@@ -52,6 +52,16 @@ interface UnitsApiResponse {
   count?: number;
 }
 
+interface FloorRecord {
+  id: string;
+  number: number;
+  name: string;
+}
+
+interface FloorsApiResponse {
+  floors: FloorRecord[];
+}
+
 interface UnitsTabContentProps {
   building: Building;
 }
@@ -98,6 +108,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   // Data state
   const [units, setUnits] = useState<Unit[]>([]);
+  const [floors, setFloors] = useState<FloorRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -153,8 +164,22 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
   const iconSizes = useIconSizes();
 
   // ============================================================================
-  // FETCH UNITS
+  // FETCH UNITS & FLOORS
   // ============================================================================
+
+  const fetchFloors = useCallback(async () => {
+    try {
+      const result = await apiClient.get<FloorsApiResponse>(
+        `/api/floors?buildingId=${building.id}`
+      );
+      if (result?.floors) {
+        const sorted = [...result.floors].sort((a, b) => a.number - b.number);
+        setFloors(sorted);
+      }
+    } catch {
+      // Non-blocking — floors dropdown will simply be empty
+    }
+  }, [building.id]);
 
   const fetchUnits = useCallback(async () => {
     setLoading(true);
@@ -175,7 +200,8 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
 
   useEffect(() => {
     fetchUnits();
-  }, [fetchUnits]);
+    fetchFloors();
+  }, [fetchUnits, fetchFloors]);
 
   // ============================================================================
   // COMPUTED: Stats & Filtered Data
@@ -570,14 +596,29 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
               <span className="text-xs font-medium text-muted-foreground">
                 Όροφος
               </span>
-              <Input
-                type="number"
-                value={createFloor}
-                onChange={(e) => setCreateFloor(e.target.value)}
-                placeholder="1"
-                className="h-9"
-                disabled={creating}
-              />
+              {floors.length > 0 ? (
+                <Select value={createFloor} onValueChange={setCreateFloor} disabled={creating}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Επιλέξτε..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {floors.map(f => (
+                      <SelectItem key={f.id} value={String(f.number)}>
+                        {f.name} ({f.number})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  type="number"
+                  value={createFloor}
+                  onChange={(e) => setCreateFloor(e.target.value)}
+                  placeholder="0"
+                  className="h-9"
+                  disabled={creating}
+                />
+              )}
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">
