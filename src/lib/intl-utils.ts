@@ -79,14 +79,16 @@ export const formatRelativeTime = (date: Date | string | number): string => {
   const locale = getCurrentLocale();
   const now = new Date();
   const diffInMs = dateObj.getTime() - now.getTime();
-  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-  
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  
+
+  // Use Math.trunc (not Math.floor) to avoid rounding -0.08 → -1 (which shows "χθες" for today's events)
+  const diffInDays = Math.trunc(diffInMs / (1000 * 60 * 60 * 24));
+
   if (Math.abs(diffInDays) < 1) {
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInHours = Math.trunc(diffInMs / (1000 * 60 * 60));
     if (Math.abs(diffInHours) < 1) {
-      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      const diffInMinutes = Math.trunc(diffInMs / (1000 * 60));
+      if (diffInMinutes === 0) return rtf.format(0, 'minute'); // "τώρα" / "just now"
       return rtf.format(diffInMinutes, 'minute');
     }
     return rtf.format(diffInHours, 'hour');
@@ -97,11 +99,11 @@ export const formatRelativeTime = (date: Date | string | number): string => {
   }
   
   if (Math.abs(diffInDays) < 30) {
-    const diffInWeeks = Math.floor(diffInDays / 7);
+    const diffInWeeks = Math.trunc(diffInDays / 7);
     return rtf.format(diffInWeeks, 'week');
   }
-  
-  const diffInMonths = Math.floor(diffInDays / 30);
+
+  const diffInMonths = Math.trunc(diffInDays / 30);
   return rtf.format(diffInMonths, 'month');
 };
 
