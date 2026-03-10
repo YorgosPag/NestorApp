@@ -126,7 +126,7 @@ export function UnitsSidebar({
   return (
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
-      <div className={`hidden md:flex flex-1 ${layout.listItemsGap} min-h-0`}>
+      <div className={`hidden md:flex flex-1 ${layout.listItemsGap} min-h-0 min-w-0 overflow-hidden`}>
         <UnitsList
           units={units}
           selectedUnitIds={selectedUnitIds}

@@ -747,7 +747,7 @@ export function EntityFilesManager({
   return (
     <Card className="w-full">
       <CardHeader>
-        <nav className="flex items-center justify-between" role="toolbar" aria-label={t('manager.fileManagementTools')}>
+        <nav className="flex flex-wrap items-center justify-between gap-2" role="toolbar" aria-label={t('manager.fileManagementTools')}>
           <div className="flex flex-col gap-1">
             <CardTitle className="flex items-center gap-2">
               <FileText className={iconSizes.md} aria-hidden="true" />
@@ -768,7 +768,7 @@ export function EntityFilesManager({
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* 🗑️ ENTERPRISE: Tab switcher (Procore/BIM360 pattern) */}
             <div className="flex gap-1 border rounded-md p-1" role="tablist" aria-label={t('manager.filesTitle')}>
               <Button

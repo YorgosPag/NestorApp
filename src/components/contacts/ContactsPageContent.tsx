@@ -754,7 +754,7 @@ export function ContactsPageContent() {
           ) : viewMode === 'list' ? (
             <>
               {/* 🖥️ DESKTOP: Standard split layout - Same as Units/Projects/Buildings */}
-              <section className="hidden md:flex flex-1 gap-2 min-h-0" role="region" aria-label={t('page.views.desktopView')}>
+              <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('page.views.desktopView')}>
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}

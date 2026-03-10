@@ -326,7 +326,7 @@ export function BuildingsPageContent() {
           {viewMode === 'list' ? (
             <>
               {/* [DESKTOP] Standard split layout */}
-              <section className="hidden md:flex flex-1 gap-2 min-h-0" role="region" aria-label={t('pages.buildings.views.desktopView')}>
+              <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('pages.buildings.views.desktopView')}>
                 <BuildingsList
                   buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
