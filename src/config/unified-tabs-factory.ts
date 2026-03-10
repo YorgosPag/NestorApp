@@ -242,12 +242,11 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
       };
 
     case 'storage':
-      // ADR-193: Aligned with Units (prototype) — 5 tabs: info, floor-plan, documents, photos, videos
       return {
         baseTabs: [
           {
-            id: 'info',
-            value: 'info',
+            id: 'general',
+            value: 'general',
             icon: 'info',
             description: 'Βασικές πληροφορίες και στοιχεία αποθήκης',
             order: 1,
@@ -255,11 +254,20 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'StorageGeneralTab'
           },
           {
-            id: 'floor-plan',
-            value: 'floor-plan',
-            icon: 'map',
-            description: 'Κάτοψη και διάταξη αποθήκης',
+            id: 'statistics',
+            value: 'statistics',
+            icon: 'bar-chart-3',
+            description: 'Στατιστικά χρήσης και αποδοτικότητας αποθήκης',
             order: 2,
+            enabled: true,
+            component: 'StorageStatsTab'
+          },
+          {
+            id: 'floorplans',
+            value: 'floorplans',
+            icon: 'layout-grid',
+            description: 'Κατόψεις και διάταξη αποθήκης',
+            order: 3,
             enabled: true,
             component: 'FloorplanViewerTab',
             componentProps: {
@@ -272,39 +280,38 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'documents',
             icon: 'file-text',
             description: 'Διαχείριση εγγράφων και συμβολαίων αποθήκης',
-            order: 3,
+            order: 4,
             enabled: true,
             component: 'StorageDocumentsTab'
           },
           {
             id: 'photos',
             value: 'photos',
-            icon: 'camera',
+            icon: 'image',
             description: 'Φωτογραφίες και εικόνες της αποθήκης',
-            order: 4,
+            order: 5,
             enabled: true,
             component: 'StoragePhotosTab'
           },
           {
-            id: 'videos',
-            value: 'videos',
-            icon: 'video',
-            description: 'Βίντεο της αποθήκης',
-            order: 5,
+            id: 'activity',
+            value: 'activity',
+            icon: 'clock',
+            description: 'Ιστορικό μισθώσεων και χρήσης αποθήκης',
+            order: 6,
             enabled: true,
-            component: 'StorageVideosTab'
+            component: 'StorageHistoryTab'
           }
         ],
         defaultEnabled: true
       };
 
     case 'parking':
-      // ADR-193: Aligned with Units (prototype) — 5 tabs: info, floor-plan, documents, photos, videos
       return {
         baseTabs: [
           {
-            id: 'info',
-            value: 'info',
+            id: 'general',
+            value: 'general',
             icon: 'info',
             description: 'Βασικές πληροφορίες και στοιχεία θέσης στάθμευσης',
             order: 1,
@@ -312,8 +319,8 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'ParkingGeneralTab'
           },
           {
-            id: 'floor-plan',
-            value: 'floor-plan',
+            id: 'parkingFloorplan',
+            value: 'parkingFloorplan',
             icon: 'map',
             description: 'Κάτοψη θέσης στάθμευσης',
             order: 2,

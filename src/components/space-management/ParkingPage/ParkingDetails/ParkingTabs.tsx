@@ -46,7 +46,7 @@ export function ParkingTabs({ parking, isEditing, onEditingChange, saveRef }: Pa
       tabs={tabs.map(convertToUniversalConfig)}
       data={parking}
       componentMapping={PARKING_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
-      defaultTab="info"
+      defaultTab="general"
       theme="default"
       translationNamespace="building"
       globalProps={{

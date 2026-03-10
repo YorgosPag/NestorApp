@@ -80,15 +80,17 @@ export const BUILDING_COMPONENT_MAPPING = {
 // ============================================================================
 
 import { StorageGeneralTab } from '../../space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab';
+import { StorageStatsTab } from '../../space-management/StoragesPage/StorageDetails/tabs/StorageStatsTab';
 import { StorageDocumentsTab } from '../../space-management/StoragesPage/StorageDetails/tabs/StorageDocumentsTab';
 import { StoragePhotosTab } from '../../space-management/StoragesPage/StorageDetails/tabs/StoragePhotosTab';
-import { StorageVideosTab } from '../../space-management/StoragesPage/StorageDetails/tabs/StorageVideosTab';
+import { StorageHistoryTab } from '../../space-management/StoragesPage/StorageDetails/tabs/StorageHistoryTab';
 
 export const STORAGE_COMPONENT_MAPPING = {
   'StorageGeneralTab': StorageGeneralTab,
+  'StorageStatsTab': StorageStatsTab,
   'StorageDocumentsTab': StorageDocumentsTab,
   'StoragePhotosTab': StoragePhotosTab,
-  'StorageVideosTab': StorageVideosTab,
+  'StorageHistoryTab': StorageHistoryTab,
   'PlaceholderTab': PlaceholderTab,
   'FloorplanViewerTab': FloorplanViewerTab,
 } as const;

@@ -1,446 +1,152 @@
 'use client';
 
-/**
- * 📦 ENTERPRISE STORAGE GENERAL TAB COMPONENT
- *
- * Γενικές πληροφορίες αποθήκης.
- * ADR-193: Supports inline editing mode (toggled by parent header).
- * Each section wrapped in Card for visual separation (same pattern as ParkingGeneralTab).
- */
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { formatDate, formatCurrency, formatFloorString } from '@/lib/intl-utils';
-import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { Storage } from '@/types/storage/contracts';
 import { Warehouse, MapPin, Calendar, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { RealtimeService } from '@/services/realtime/RealtimeService';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('StorageGeneralTab');
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface StorageGeneralTabProps {
   storage: Storage;
-  /** Inline editing active (from parent via globalProps) */
-  isEditing?: boolean;
-  /** Notify parent when editing state changes */
-  onEditingChange?: (editing: boolean) => void;
-  /** Ref for save delegation from header button */
-  onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-interface StorageFormState {
-  name: string;
-  type: StorageType;
-  status: StorageStatus;
-  floor: string;
-  area: string;
-  price: string;
-  description: string;
-  notes: string;
-}
-
-interface StoragePatchResult {
-  id: string;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const STORAGE_TYPES: { value: StorageType; labelKey: string }[] = [
-  { value: 'large', labelKey: 'general.types.large' },
-  { value: 'small', labelKey: 'general.types.small' },
-  { value: 'basement', labelKey: 'general.types.basement' },
-  { value: 'ground', labelKey: 'general.types.ground' },
-  { value: 'special', labelKey: 'general.types.special' },
-  { value: 'storage', labelKey: 'general.types.storage' },
-  { value: 'garage', labelKey: 'general.types.garage' },
-  { value: 'warehouse', labelKey: 'general.types.warehouse' },
-];
-
-const STORAGE_STATUSES: { value: StorageStatus; labelKey: string }[] = [
-  { value: 'available', labelKey: 'general.statuses.available' },
-  { value: 'occupied', labelKey: 'general.statuses.occupied' },
-  { value: 'maintenance', labelKey: 'general.statuses.maintenance' },
-  { value: 'reserved', labelKey: 'general.statuses.reserved' },
-  { value: 'sold', labelKey: 'general.statuses.sold' },
-  { value: 'unavailable', labelKey: 'general.statuses.unavailable' },
-];
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function buildFormState(storage: Storage): StorageFormState {
-  return {
-    name: storage.name || '',
-    type: storage.type || 'storage',
-    status: storage.status || 'available',
-    floor: storage.floor || '',
-    area: storage.area !== undefined ? String(storage.area) : '',
-    price: storage.price !== undefined ? String(storage.price) : '',
-    description: storage.description || '',
-    notes: storage.notes || '',
-  };
-}
-
-function formatTimestamp(value: Date | { toDate: () => Date } | string): string {
-  if (value instanceof Date) return formatDate(value.toISOString());
-  if (typeof value === 'object' && 'toDate' in value) return formatDate(value.toDate().toISOString());
-  return formatDate(String(value));
-}
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
-export function StorageGeneralTab({
-  storage,
-  isEditing = false,
-  onEditingChange,
-  onSaveRef,
-}: StorageGeneralTabProps) {
+export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
   const iconSizes = useIconSizes();
-  const typography = useTypography();
+  // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('storage');
-
-  // Form state for edit mode
-  const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
-
-  // Reset form when storage data changes or edit mode starts
-  useEffect(() => {
-    setForm(buildFormState(storage));
-  }, [storage, isEditing]);
-
-  // Register save handler with parent via ref
-  const handleSave = useCallback(async (): Promise<boolean> => {
-    try {
-      const payload: Record<string, unknown> = {};
-
-      if (form.name.trim() !== (storage.name || '')) payload.name = form.name.trim();
-      if (form.type !== (storage.type || 'storage')) payload.type = form.type;
-      if (form.status !== (storage.status || 'available')) payload.status = form.status;
-      if (form.floor.trim() !== (storage.floor || '')) payload.floor = form.floor.trim();
-
-      const newArea = form.area ? parseFloat(form.area) : undefined;
-      if (newArea !== storage.area) payload.area = newArea ?? null;
-
-      const newPrice = form.price ? parseFloat(form.price) : undefined;
-      if (newPrice !== storage.price) payload.price = newPrice ?? null;
-
-      if (form.description.trim() !== (storage.description || '')) payload.description = form.description.trim();
-      if (form.notes.trim() !== (storage.notes || '')) payload.notes = form.notes.trim();
-
-      // Nothing changed
-      if (Object.keys(payload).length === 0) {
-        onEditingChange?.(false);
-        return true;
-      }
-
-      await apiClient.patch<StoragePatchResult>(`/api/storages/${storage.id}`, payload);
-
-      // Dispatch realtime event for cross-page sync
-      RealtimeService.dispatch('STORAGE_UPDATED', {
-        storageId: storage.id,
-        updates: {
-          name: form.name.trim(),
-          type: form.type,
-          status: form.status,
-          floor: form.floor.trim() || undefined,
-          area: newArea,
-          price: newPrice,
-        },
-        timestamp: Date.now(),
-      });
-
-      logger.info('Storage updated', { id: storage.id });
-      onEditingChange?.(false);
-      return true;
-    } catch (err) {
-      logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
-      return false;
-    }
-  }, [form, storage, onEditingChange]);
-
-  // Register save ref for header delegation
-  useEffect(() => {
-    if (onSaveRef) {
-      onSaveRef.current = handleSave;
-    }
-    return () => {
-      if (onSaveRef) {
-        onSaveRef.current = null;
-      }
-    };
-  }, [handleSave, onSaveRef]);
-
-  // Helpers
-  const getTypeLabel = (type: string | undefined): string => {
-    if (!type) return t('general.unknown');
-    return t(`general.types.${type}`, type);
-  };
-
-  const getStatusLabel = (status: string | undefined): string => {
-    if (!status) return t('general.unknown');
-    return t(`general.statuses.${status}`, status);
-  };
-
-  const updateField = <K extends keyof StorageFormState>(key: K, value: StorageFormState[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }));
-  };
-
   return (
-    <div className="p-4 space-y-4">
-      {/* Basic Information Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Warehouse className={cn(iconSizes.md, 'text-blue-500')} />
-            {t('general.basicInfo')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.name')}</Label>
-              {isEditing ? (
-                <Input
-                  value={form.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                />
-              ) : (
-                <p className="text-sm font-medium">{storage.name || 'N/A'}</p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.type')}</Label>
-              {isEditing ? (
-                <Select
-                  value={form.type}
-                  onValueChange={(v) => updateField('type', v as StorageType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STORAGE_TYPES.map(st => (
-                      <SelectItem key={st.value} value={st.value}>
-                        {t(st.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">{getTypeLabel(storage.type)}</p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.status')}</Label>
-              {isEditing ? (
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => updateField('status', v as StorageStatus)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STORAGE_STATUSES.map(ss => (
-                      <SelectItem key={ss.value} value={ss.value}>
-                        {t(ss.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm font-medium">{getStatusLabel(storage.status)}</p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.area')}</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.area}
-                  onChange={(e) => updateField('area', e.target.value)}
-                  placeholder="m²"
-                />
-              ) : (
-                <p className="text-sm font-medium">{storage.area ? `${storage.area} m²` : 'N/A'}</p>
-              )}
-            </fieldset>
+    <div className="p-6 space-y-6">
+      {/* Basic Information */}
+      <section>
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <Warehouse className={iconSizes.md} />
+          {t('general.basicInfo')}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.name')}</label>
+            <p className="mt-1 text-sm">{storage.name}</p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Location Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
-            {t('general.location')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.building')}</Label>
-              <p className="text-sm font-medium">{storage.building || 'N/A'}</p>
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.floor')}</Label>
-              {isEditing ? (
-                <Input
-                  value={form.floor}
-                  onChange={(e) => updateField('floor', e.target.value)}
-                  placeholder="-1"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {storage.floor ? formatFloorString(storage.floor) : 'N/A'}
-                </p>
-              )}
-            </fieldset>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.type')}</label>
+            <p className="mt-1 text-sm">
+              {t(`general.types.${storage.type}`, { defaultValue: t('general.unknown') })}
+            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Financial Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Euro className={cn(iconSizes.md, 'text-amber-500')} />
-            {t('general.financial')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.price')}</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => updateField('price', e.target.value)}
-                  placeholder="€"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {storage.price ? formatCurrency(storage.price) : t('general.notSet')}
-                </p>
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.pricePerSqm')}</Label>
-              <p className="text-sm font-medium">
-                {storage.price && storage.area
-                  ? formatCurrency(storage.price / storage.area)
-                  : t('general.notCalculated')
-                }
-              </p>
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.project')}</Label>
-              <p className="text-sm font-mono text-xs text-muted-foreground">
-                {storage.projectId || t('general.notAssigned')}
-              </p>
-            </fieldset>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.status')}</label>
+            <p className="mt-1 text-sm">
+              {t(`general.statuses.${storage.status}`, { defaultValue: t('general.unknown') })}
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.area')}</label>
+            <p className="mt-1 text-sm">{storage.area} m²</p>
+          </div>
+        </div>
+      </section>
 
-      {/* Description & Notes Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Layers className={cn(iconSizes.md, 'text-violet-500')} />
+      {/* Location */}
+      <section>
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <MapPin className={iconSizes.md} />
+          {t('general.location')}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.building')}</label>
+            <p className="mt-1 text-sm">{storage.building}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.floor')}</label>
+            <p className="mt-1 text-sm">{storage.floor ? formatFloorString(storage.floor) : 'N/A'}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Financial Information */}
+      <section>
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          {/* 🏢 ENTERPRISE: Using Euro icon for financial section */}
+          <Euro className={iconSizes.md} />
+          {t('general.financial')}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.price')}</label>
+            <p className="mt-1 text-sm">
+              {storage.price ? formatCurrency(storage.price) : t('general.notSet')}
+            </p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.pricePerSqm')}</label>
+            <p className="mt-1 text-sm">
+              {storage.price && storage.area
+                ? formatCurrency(storage.price / storage.area)
+                : t('general.notCalculated')
+              }
+            </p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.project')}</label>
+            <p className="mt-1 text-sm">
+              {storage.projectId || t('general.notAssigned')}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Description & Notes */}
+      {(storage.description || storage.notes) && (
+        <section>
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Layers className={iconSizes.md} />
             {t('general.descriptionNotes')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
           <div className="space-y-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.description')}</Label>
-              {isEditing ? (
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                  className="h-20 resize-none"
-                />
-              ) : (
-                storage.description ? (
-                  <p className="text-sm bg-muted/50 p-3 rounded-md">{storage.description}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">—</p>
-                )
-              )}
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('general.fields.notes')}</Label>
-              {isEditing ? (
-                <Textarea
-                  value={form.notes}
-                  onChange={(e) => updateField('notes', e.target.value)}
-                  className="h-20 resize-none"
-                />
-              ) : (
-                storage.notes ? (
-                  <p className="text-sm bg-muted/50 p-3 rounded-md">{storage.notes}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">—</p>
-                )
-              )}
-            </fieldset>
+            {storage.description && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">{t('general.fields.description')}</label>
+                <p className="mt-1 text-sm">{storage.description}</p>
+              </div>
+            )}
+            {storage.notes && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">{t('general.fields.notes')}</label>
+                <p className="mt-1 text-sm">{storage.notes}</p>
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </section>
+      )}
 
-      {/* Update Information Card (read-only always) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <Calendar className={cn(iconSizes.md, 'text-slate-500')} />
-            {t('general.updateInfo')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {storage.lastUpdated && (
-              <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground">{t('general.fields.lastUpdated')}</Label>
-                <p className="text-sm font-medium">{formatTimestamp(storage.lastUpdated)}</p>
-              </fieldset>
-            )}
-            {storage.owner && (
-              <fieldset className="space-y-1.5">
-                <Label className="text-muted-foreground">{t('general.fields.owner')}</Label>
-                <p className="text-sm font-medium">{storage.owner}</p>
-              </fieldset>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Update Information */}
+      <section>
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <Calendar className={iconSizes.md} />
+          {t('general.updateInfo')}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {storage.lastUpdated && (
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">{t('general.fields.lastUpdated')}</label>
+              <p className="mt-1 text-sm">{formatDate(
+                storage.lastUpdated instanceof Date
+                  ? storage.lastUpdated.toISOString()
+                  : storage.lastUpdated
+              )}</p>
+            </div>
+          )}
+          {storage.owner && (
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">{t('general.fields.owner')}</label>
+              <p className="mt-1 text-sm">{storage.owner}</p>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
