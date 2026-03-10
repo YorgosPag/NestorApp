@@ -206,32 +206,26 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     const requestedBuildingId = searchParams.get('buildingId');
 
     // =========================================================================
-    // STEP 0: Get authorized projects (TENANT ISOLATION)
+    // STEP 1: Fetch storages from Firestore (TENANT FILTERED)
     // =========================================================================
-    logger.info('Getting authorized projects for company');
 
-    const projectsSnapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.PROJECTS)
-      .where('companyId', '==', ctx.companyId)
-      .get();
+    let snapshot;
 
-    const authorizedProjectIds = new Set(projectsSnapshot.docs.map(doc => doc.id));
-    logger.info('Found authorized projects', { projectCount: authorizedProjectIds.size, companyId: ctx.companyId });
+    if (requestedBuildingId) {
+      // 🏢 ENTERPRISE: Query by buildingId — tenant isolation via companyId in-memory filter
+      logger.info('Querying storages for building', { buildingId: requestedBuildingId });
+      snapshot = await getAdminFirestore()
+        .collection(COLLECTIONS.STORAGE)
+        .where('buildingId', '==', requestedBuildingId)
+        .get();
+    } else if (requestedProjectId) {
+      // Validate projectId belongs to user's company
+      const projectsSnapshot = await getAdminFirestore()
+        .collection(COLLECTIONS.PROJECTS)
+        .where('companyId', '==', ctx.companyId)
+        .get();
+      const authorizedProjectIds = new Set(projectsSnapshot.docs.map(doc => doc.id));
 
-    if (authorizedProjectIds.size === 0) {
-      logger.info('No projects found for company - returning empty result');
-      return NextResponse.json({
-        success: true,
-        data: {
-          storages: [],
-          count: 0,
-          cached: false
-        }
-      });
-    }
-
-    // Validate projectId parameter if provided
-    if (requestedProjectId) {
       if (!authorizedProjectIds.has(requestedProjectId)) {
         logger.warn('TENANT ISOLATION: Unauthorized project access attempt', { userId: ctx.uid, projectId: requestedProjectId });
         return NextResponse.json({
@@ -240,38 +234,19 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
           details: 'The requested project does not belong to your organization'
         }, { status: 403 });
       }
-      logger.info('Project authorized - proceeding with query', { projectId: requestedProjectId });
-    }
 
-    // =========================================================================
-    // STEP 1: Fetch storages from Firestore (TENANT FILTERED)
-    // =========================================================================
-    logger.info('Fetching storages from Firestore with Admin SDK (tenant-filtered)');
-
-    let snapshot;
-
-    if (requestedBuildingId) {
-      // 🏢 ENTERPRISE: Query by buildingId only (single equality — no composite index needed)
-      // Tenant isolation verified via companyId in-memory filter below
-      snapshot = await getAdminFirestore()
-        .collection(COLLECTIONS.STORAGE)
-        .where('buildingId', '==', requestedBuildingId)
-        .get();
-      logger.info('Querying storages for building', { buildingId: requestedBuildingId });
-    } else if (requestedProjectId) {
-      // Single project query (already validated as authorized)
+      logger.info('Querying storages for project', { projectId: requestedProjectId });
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
         .where('projectId', '==', requestedProjectId)
         .get();
-      logger.info('Querying storages for project', { projectId: requestedProjectId });
     } else {
-      // 🏢 ENTERPRISE: Fetch by companyId for tenant isolation (no projectId dependency)
+      // 🏢 ENTERPRISE: Fetch by companyId for tenant isolation
+      logger.info('Querying all storages for company', { companyId: ctx.companyId });
       snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
         .where('companyId', '==', ctx.companyId)
         .get();
-      logger.info('Querying all storages for company', { companyId: ctx.companyId });
     }
 
     // =========================================================================
@@ -285,25 +260,12 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       allStorages.push(storage);
     });
 
-    // 🏢 ENTERPRISE: Tenant isolation — filter by companyId
-    let storages: Storage[];
-    if (requestedBuildingId) {
-      // Filter by companyId in-memory (single-field buildingId query for reliability)
-      storages = allStorages.filter(s => !s.companyId || s.companyId === ctx.companyId);
-    } else if (requestedProjectId) {
-      storages = allStorages; // Already filtered by Firestore query + project authorization
-    } else {
-      // Already filtered by companyId in Firestore query
-      storages = allStorages;
-    }
+    // 🏢 ENTERPRISE: Tenant isolation — filter by companyId for buildingId queries
+    const storages = requestedBuildingId
+      ? allStorages.filter(s => !s.companyId || s.companyId === ctx.companyId)
+      : allStorages;
 
-    logger.info('Found storages for authorized projects', { count: storages.length });
-    if (!requestedProjectId) {
-      const filteredOut = allStorages.length - storages.length;
-      if (filteredOut > 0) {
-        logger.info('TENANT ISOLATION: Filtered out storages from unauthorized projects', { filteredOut });
-      }
-    }
+    logger.info('Found storages', { count: storages.length });
 
     // =========================================================================
     // STEP 3: Return tenant-filtered results (CANONICAL FORMAT)
