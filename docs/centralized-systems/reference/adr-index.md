@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 159 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-10
+**📊 Stats**: 160 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-10
 
 ---
 
@@ -21,7 +21,7 @@
 | 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
 | 📊 **Data & State** | 11 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
-| 📂 **Entity Systems** | 12 | [View](#entity-systems) |
+| 📂 **Entity Systems** | 13 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 8 | [View](#security-auth) |
@@ -210,6 +210,7 @@
 | **ADR-192** | Master-Detail Navigation — Building Space Tabs | ✅ ACCEPTED | 2026-03-10 | UI / Navigation / Building Management | [📄](./adrs/ADR-192-master-detail-navigation.md) |
 | **ADR-193** | Field Display Domain Separation — Χώροι vs Πωλήσεις | ✅ IMPLEMENTED | 2026-03-10 | UI / Domain Architecture / Field Display | [📄](./adrs/ADR-193-field-display-domain-separation.md) |
 | **ADR-194** | Info Tab Section Consistency — Unified Section Order | ✅ IMPLEMENTED | 2026-03-10 | UI / Consistency / Space Management | [📄](./adrs/ADR-194-info-tab-section-consistency.md) |
+| **ADR-195** | Entity Audit Trail — Centralized Change History System | ✅ APPROVED | 2026-03-10 | Entity Systems | [📄](./adrs/ADR-195-entity-audit-trail.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
