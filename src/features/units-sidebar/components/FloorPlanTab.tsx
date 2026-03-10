@@ -141,26 +141,19 @@ export function FloorPlanTab({
   }
 
   return (
-    <>
-      {/* 🔍 DEBUG BANNER — ΑΦΑΙΡΕΣΤΕ ΜΕΤΑ ΤΟ DEBUGGING */}
-      <section className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-xs px-3 py-1.5 border-b border-yellow-300 dark:border-yellow-700 font-mono">
-        <span className="font-bold">DEBUG:</span>{' '}
-        companyId={companyId || '❌ EMPTY'} | entityId={String(selectedUnit.id)} | unitCompanyId={unitCompanyId || '❌ MISSING'} | userCompanyId={user?.companyId || '?'}
-      </section>
-      <EntityFilesManager
-        companyId={companyId}
-        currentUserId={currentUserId}
-        entityType="unit"
-        entityId={String(selectedUnit.id)}
-        entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
-        domain="construction"
-        category="floorplans"
-        purpose="unit-floorplan"
-        entryPointCategoryFilter="floorplans"
-        displayStyle="floorplan-gallery"
-        acceptedTypes={FLOORPLAN_ACCEPT}
-        companyName={companyDisplayName}
-      />
-    </>
+    <EntityFilesManager
+      companyId={companyId}
+      currentUserId={currentUserId}
+      entityType="unit"
+      entityId={String(selectedUnit.id)}
+      entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
+      domain="construction"
+      category="floorplans"
+      purpose="unit-floorplan"
+      entryPointCategoryFilter="floorplans"
+      displayStyle="floorplan-gallery"
+      acceptedTypes={FLOORPLAN_ACCEPT}
+      companyName={companyDisplayName}
+    />
   );
 }

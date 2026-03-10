@@ -57,7 +57,6 @@ import { useTypography } from '@/hooks/useTypography';
 import { getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
 import { getSelectStyles } from '../config/modal-select';
-import toast from 'react-hot-toast';
 // 🏢 ENTERPRISE: Centralized spacing & timing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
@@ -469,13 +468,15 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 ENTERPRISE: Save unit floorplan with FileRecord (same pattern as buildings)
+        // 🏢 ENTERPRISE: Use UNIT's companyId (from Firestore data), not wizard's selectedCompanyId
+        // The FloorPlanTab queries with the unit's companyId — they MUST match
         const createdBy = user?.uid;
-        const unitFileRecordOptions = selectedCompanyId && createdBy
-          ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, buildingId: selectedBuildingId, createdBy, originalFile: file }
+        const selectedUnit = units.find(u => u.id === selectedUnitId);
+        const unitCompanyId = (selectedUnit as Record<string, unknown> | undefined)?.companyId as string | undefined;
+        const fileRecordCompanyId = unitCompanyId || selectedCompanyId;
+        const unitFileRecordOptions = fileRecordCompanyId && createdBy
+          ? { companyId: fileRecordCompanyId, projectId: selectedProjectId || undefined, buildingId: selectedBuildingId, createdBy, originalFile: file }
           : undefined;
-        // 🔍 DEBUG: Visible toast with save parameters
-        toast(`📋 Unit Save: companyId=${selectedCompanyId || '❌EMPTY'} unitId=${selectedUnitId} hasOpts=${!!unitFileRecordOptions}`, { duration: 8000 });
         saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData, unitFileRecordOptions);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Save floor floorplan
