@@ -33,14 +33,13 @@ const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
 
 export const GET = withStandardRateLimit(
   withAuth<ApiSuccessResponse<EntityAuditResponse>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache, segmentData?: { params: Promise<{ entityType: string; entityId: string }> }) => {
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const db = getAdminFirestore();
       if (!db) throw new ApiError(503, 'Database unavailable');
 
-      // Extract route params
-      const resolvedParams = await segmentData?.params;
-      const entityType = resolvedParams?.entityType;
-      const entityId = resolvedParams?.entityId;
+      // Extract route params from URL
+      // URL pattern: /api/audit-trail/[entityType]/[entityId]
+      const { entityType, entityId } = extractParamsFromUrl(request.url);
 
       if (!entityType || !VALID_ENTITY_TYPES.has(entityType)) {
         throw new ApiError(400, `Invalid entity type. Valid: ${[...VALID_ENTITY_TYPES].join(', ')}`);
@@ -109,3 +108,21 @@ export const GET = withStandardRateLimit(
     },
   ),
 );
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function extractParamsFromUrl(url: string): { entityType: string | null; entityId: string | null } {
+  const segments = new URL(url).pathname.split('/');
+  // /api/audit-trail/[entityType]/[entityId]
+  // segments: ['', 'api', 'audit-trail', entityType, entityId]
+  const auditTrailIdx = segments.indexOf('audit-trail');
+  if (auditTrailIdx === -1 || auditTrailIdx + 2 >= segments.length) {
+    return { entityType: null, entityId: null };
+  }
+  return {
+    entityType: segments[auditTrailIdx + 1] || null,
+    entityId: segments[auditTrailIdx + 2] || null,
+  };
+}
