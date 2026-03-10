@@ -7,7 +7,6 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { ShoppingBag, ExternalLink, Video } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
@@ -84,7 +83,6 @@ export function SalesSidebar({
   onUnitTypeChange,
 }: SalesSidebarProps) {
   const { t } = useTranslation('common');
-  const router = useRouter();
   const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
 
@@ -138,26 +136,30 @@ export function SalesSidebar({
             <UnitSummaryContent data={selectedUnit} />
           </TabsContent>
 
-          {/* Photos & Documents → redirect to /units (Χώροι) */}
+          {/* Photos & Documents → redirect to /units (Χώροι) — same button style as UnitSummary */}
           {(['photos', 'documents'] as const).map(tabId => (
             <TabsContent key={tabId} value={tabId} className="flex-1 overflow-y-auto">
-              <section className="flex flex-col items-center justify-center gap-3 p-6 text-center">
-                <p className="text-sm text-muted-foreground">
+              <section className="p-4">
+                <p className="text-sm text-muted-foreground text-center mb-3">
                   {t(`sales.tabs.${tabId}Hint`, {
                     defaultValue: tabId === 'photos'
-                      ? 'Οι φωτογραφίες βρίσκονται στη σελίδα Χώροι → Μονάδες'
-                      : 'Τα έγγραφα βρίσκονται στη σελίδα Χώροι → Μονάδες',
+                      ? 'Οι φωτογραφίες διαχειρίζονται στη σελίδα Χώροι → Μονάδες'
+                      : 'Τα έγγραφα διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
                   })}
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => router.push('/units')}
-                >
-                  <ExternalLink className={iconSizes.sm} />
-                  {t('sales.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
-                </Button>
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center gap-2 text-sm"
+                    onClick={() => {
+                      window.location.href = `/units?unitId=${selectedUnit.id}`;
+                    }}
+                  >
+                    <ExternalLink className={iconSizes.sm} />
+                    {t('sales.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                  </Button>
+                </div>
               </section>
             </TabsContent>
           ))}
