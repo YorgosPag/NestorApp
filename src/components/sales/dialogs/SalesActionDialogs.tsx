@@ -140,17 +140,39 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const [deposit, setDeposit] = useState<string>('');
   const [buyerContactId, setBuyerContactId] = useState<string>('');
   const [saving, setSaving] = useState(false);
-  // 🏢 ENTERPRISE: New contact creation dialog state
-  const [showNewContactDialog, setShowNewContactDialog] = useState(false);
+
+  // 🏢 ENTERPRISE: Dialog switching pattern — Radix Dialog cannot nest modals,
+  // so we swap between Reserve ↔ NewContact using a single active-dialog state.
+  // 'reserve' = show reservation form, 'new-contact' = show contact creation form.
+  const [activeDialog, setActiveDialog] = useState<'reserve' | 'new-contact'>('reserve');
+
+  // Reset to reserve view when the dialog opens
+  const handleReserveOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setActiveDialog('reserve');
+    }
+    onOpenChange(isOpen);
+  }, [onOpenChange]);
 
   const handleContactSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
   }, []);
 
-  // 🏢 ENTERPRISE: After new contact created, refresh search and auto-select
+  // 🏢 ENTERPRISE: Switch to new contact dialog — hides Reserve, shows Contact form
+  const handleOpenNewContact = useCallback(() => {
+    setActiveDialog('new-contact');
+  }, []);
+
+  // 🏢 ENTERPRISE: After new contact created — switch back to Reserve dialog
   const handleNewContactCreated = useCallback(() => {
-    setShowNewContactDialog(false);
-    // ContactSearchManager will auto-reload on next open
+    setActiveDialog('reserve');
+    // ContactSearchManager will auto-reload contacts on re-mount
+  }, []);
+
+  const handleNewContactCancel = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setActiveDialog('reserve');
+    }
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -178,7 +200,8 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* 🏢 RESERVE DIALOG — visible only when activeDialog === 'reserve' */}
+      <Dialog open={open && activeDialog === 'reserve'} onOpenChange={handleReserveOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -193,7 +216,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           </DialogHeader>
 
           <section className="space-y-3 py-2">
-            {/* 🏢 ENTERPRISE: Contact search dropdown (replaces plain Input) */}
+            {/* 🏢 ENTERPRISE: Contact search dropdown with create-new button */}
             <fieldset className="space-y-1">
               <ContactSearchManager
                 selectedContactId={buyerContactId}
@@ -207,7 +230,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
                 variant="ghost"
                 size="sm"
                 className="gap-1 text-xs text-muted-foreground"
-                onClick={() => setShowNewContactDialog(true)}
+                onClick={handleOpenNewContact}
               >
                 <UserPlus className={iconSizes.xs} />
                 {t('sales.dialogs.reserve.newContact', { defaultValue: 'Δημιουργία νέας επαφής' })}
@@ -243,10 +266,10 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
         </DialogContent>
       </Dialog>
 
-      {/* 🏢 ENTERPRISE: Centralized new contact dialog */}
+      {/* 🏢 NEW CONTACT DIALOG — swaps in when user clicks "Δημιουργία νέας επαφής" */}
       <TabbedAddNewContactDialog
-        open={showNewContactDialog}
-        onOpenChange={setShowNewContactDialog}
+        open={open && activeDialog === 'new-contact'}
+        onOpenChange={handleNewContactCancel}
         onContactAdded={handleNewContactCreated}
       />
     </>
