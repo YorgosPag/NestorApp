@@ -107,14 +107,14 @@ function mapFirestoreToStorage(docId: string, data: FirestoreStorageData): Stora
  * 🔧 Helper: Validate StorageType
  */
 function isValidStorageType(type: string): type is StorageType {
-  return ['large', 'small', 'basement', 'ground', 'special'].includes(type);
+  return ['storage', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse'].includes(type);
 }
 
 /**
  * 🔧 Helper: Validate StorageStatus
  */
 function isValidStorageStatus(status: string): status is StorageStatus {
-  return ['available', 'occupied', 'maintenance', 'reserved'].includes(status);
+  return ['available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable'].includes(status);
 }
 
 /**

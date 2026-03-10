@@ -213,7 +213,7 @@ export function StorageTab({ building }: StorageTabProps) {
     try {
       const storageName = createCode.trim() || `Αποθήκη-${Date.now().toString(36).toUpperCase()}`;
 
-      const result = await apiClient.post<StorageCreateResult>('/api/storages', {
+      await apiClient.post<StorageCreateResult>('/api/storages', {
         name: storageName,
         buildingId: building.id,
         projectId: building.projectId || null,
@@ -226,11 +226,9 @@ export function StorageTab({ building }: StorageTabProps) {
         building: building.name,
       });
 
-      if (result?.storageId) {
-        toast.success('Η αποθήκη δημιουργήθηκε');
-        resetCreateForm();
-        await fetchStorageUnits();
-      }
+      toast.success('Η αποθήκη δημιουργήθηκε');
+      resetCreateForm();
+      await fetchStorageUnits();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα δημιουργίας';
       logger.error('Create storage error', { error: msg });
@@ -262,7 +260,7 @@ export function StorageTab({ building }: StorageTabProps) {
     if (!editingId) return;
     setSaving(true);
     try {
-      const result = await apiClient.patch<StorageMutationResult>(`/api/storages/${editingId}`, {
+      await apiClient.patch<StorageMutationResult>(`/api/storages/${editingId}`, {
         name: editCode.trim() || undefined,
         type: editType,
         status: editStatus,
@@ -270,11 +268,9 @@ export function StorageTab({ building }: StorageTabProps) {
         area: editArea ? parseFloat(editArea) : null,
         price: editPrice ? parseFloat(editPrice) : null,
       });
-      if (result?.id) {
-        toast.success('Η αποθήκη ενημερώθηκε');
-        setEditingId(null);
-        await fetchStorageUnits();
-      }
+      toast.success('Η αποθήκη ενημερώθηκε');
+      setEditingId(null);
+      await fetchStorageUnits();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Σφάλμα ενημέρωσης';
       logger.error('Edit storage error', { error: msg });
