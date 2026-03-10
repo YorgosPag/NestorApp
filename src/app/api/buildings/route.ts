@@ -53,39 +53,44 @@ export const GET = withStandardRateLimit(
     }
 
     // 🎯 ENTERPRISE: Build query — projectId is sufficient for scoping when provided
-    let queryRef;
+    let snapshot;
     if (projectId) {
-      // When projectId is given, filter only by projectId (no companyId needed)
-      // The project itself is already tenant-scoped
-      queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
+      // Try string match first
+      const stringQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
         .where('projectId', '==', projectId);
+      snapshot = await stringQuery.get();
+
+      // Firestore does strict type matching — try number if string returned nothing
+      if (snapshot.empty && !isNaN(Number(projectId))) {
+        const numQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
+          .where('projectId', '==', Number(projectId));
+        snapshot = await numQuery.get();
+        if (!snapshot.empty) {
+          logger.info('[Buildings] Found buildings with numeric projectId', { projectId, count: snapshot.size });
+        }
+      }
+
+      // Last resort: scan ALL buildings and log their projectId types for diagnostics
+      if (snapshot.empty) {
+        const allBuildings = await adminDb.collection(COLLECTIONS.BUILDINGS).get();
+        const diagnostics = allBuildings.docs.map(d => ({
+          id: d.id,
+          name: d.data().name,
+          projectId: d.data().projectId,
+          projectIdType: typeof d.data().projectId,
+          companyId: d.data().companyId,
+        }));
+        logger.warn('[Buildings] DIAGNOSTIC: No buildings found. All buildings in DB:', {
+          searchProjectId: projectId,
+          searchProjectIdType: typeof projectId,
+          allBuildings: diagnostics,
+        });
+      }
     } else {
       // Without projectId, use tenant companyId to list all buildings
-      queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
+      const queryRef = adminDb.collection(COLLECTIONS.BUILDINGS)
         .where('companyId', '==', tenantCompanyId);
-    }
-
-    const snapshot = await queryRef.get();
-
-    // 🔍 DIAGNOSTIC: If no results with tenant filter, check without it
-    if (snapshot.empty && projectId) {
-      const diagQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
-        .where('projectId', '==', projectId);
-      const diagSnapshot = await diagQuery.get();
-      if (!diagSnapshot.empty) {
-        const diagData = diagSnapshot.docs.map(d => ({
-          id: d.id,
-          companyId: d.data().companyId,
-          projectId: d.data().projectId,
-          name: d.data().name,
-        }));
-        logger.warn('[Buildings] DIAGNOSTIC: Buildings exist but with different companyId', {
-          expectedCompanyId: tenantCompanyId,
-          actualBuildings: diagData,
-        });
-      } else {
-        logger.warn('[Buildings] DIAGNOSTIC: No buildings at all for projectId', { projectId });
-      }
+      snapshot = await queryRef.get();
     }
 
     // 🏢 ENTERPRISE: Ensure Firestore document ID is preserved
