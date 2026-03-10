@@ -32,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για multi-tenancy
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { useEntityFiles } from './hooks/useEntityFiles';
@@ -261,6 +262,42 @@ export function EntityFilesManager({
   }, [files, searchTerm]);
 
   // =========================================================================
+  // 📋 AUDIT TRAIL — Record file operations (ADR-195)
+  // =========================================================================
+
+  /** Map of entity types that support activity recording via API */
+  const AUDITABLE_ENTITY_TYPES: ReadonlySet<string> = useMemo(
+    () => new Set(['unit']),
+    [],
+  );
+
+  /**
+   * Fire-and-forget audit trail entry for file operations.
+   * Only fires for entity types that have an activity API endpoint.
+   */
+  const recordFileActivity = useCallback(
+    (action: 'updated' | 'deleted' | 'created' | 'unlinked', field: string, oldValue: string | null, newValue: string | null, label: string) => {
+      if (!AUDITABLE_ENTITY_TYPES.has(entityType)) return;
+      apiClient
+        .post(`/api/${entityType}s/${entityId}/activity`, {
+          action,
+          changes: [{ field, oldValue, newValue, label }],
+        })
+        .catch(() => { /* fire-and-forget — audit failure must never break file ops */ });
+    },
+    [entityType, entityId, AUDITABLE_ENTITY_TYPES],
+  );
+
+  /** Look up a file's display name by ID from the current files array */
+  const getFileName = useCallback(
+    (fileId: string): string => {
+      const file = files.find((f) => f.id === fileId);
+      return file?.displayName ?? file?.originalFilename ?? fileId;
+    },
+    [files],
+  );
+
+  // =========================================================================
   // UPLOAD HANDLER (Canonical Pipeline - ADR-031)
   // =========================================================================
 
@@ -434,6 +471,9 @@ export function EntityFilesManager({
 
           successCount++;
 
+          // 📋 AUDIT: Record file upload in entity audit trail
+          recordFileActivity('created', 'file_upload', null, displayName ?? file.name, 'Ανέβασμα αρχείου');
+
           // 🏢 ENTERPRISE: Add delay between uploads to avoid rate limiting
           // Storage Rules do Firestore validation (2-3 reads per upload)
           // Wait 300ms between uploads to stay under quota limits
@@ -492,6 +532,7 @@ export function EntityFilesManager({
     showError, // 🏢 ENTERPRISE: Toast notification
     warning, // 🏢 ENTERPRISE: Toast notification
     t, // 🏢 ENTERPRISE: Translation function
+    recordFileActivity, // 📋 AUDIT: File upload audit trail
   ]);
 
   // =========================================================================
@@ -499,20 +540,26 @@ export function EntityFilesManager({
   // =========================================================================
 
   const handleDelete = useCallback(async (fileId: string) => {
+    const name = getFileName(fileId);
     await deleteFile(fileId, currentUserId);
-  }, [deleteFile, currentUserId]);
+    recordFileActivity('deleted', 'file_trash', name, null, 'Μετακίνηση αρχείου στον κάδο');
+  }, [deleteFile, currentUserId, getFileName, recordFileActivity]);
 
   // =========================================================================
   // RENAME HANDLER
   // =========================================================================
 
   const handleRename = useCallback((fileId: string, newDisplayName: string) => {
+    const oldName = getFileName(fileId);
     renameFile(fileId, newDisplayName, currentUserId);
-  }, [renameFile, currentUserId]);
+    recordFileActivity('updated', 'file_rename', oldName, newDisplayName, 'Μετονομασία αρχείου');
+  }, [renameFile, currentUserId, getFileName, recordFileActivity]);
 
   const handleDescriptionUpdate = useCallback((fileId: string, description: string) => {
+    const name = getFileName(fileId);
     updateDescription(fileId, description);
-  }, [updateDescription]);
+    recordFileActivity('updated', 'file_description', name, description, 'Ενημέρωση περιγραφής αρχείου');
+  }, [updateDescription, getFileName, recordFileActivity]);
 
   // =========================================================================
   // 🔗 LINK/UNLINK HANDLERS
@@ -523,9 +570,11 @@ export function EntityFilesManager({
   }, []);
 
   const handleUnlink = useCallback(async (fileId: string) => {
+    const name = getFileName(fileId);
     await FileRecordService.unlinkFileFromEntity(fileId, entityType, entityId);
+    recordFileActivity('unlinked', 'file_unlink', name, null, 'Αποσύνδεση αρχείου');
     await refetch();
-  }, [entityType, entityId, refetch]);
+  }, [entityType, entityId, refetch, getFileName, recordFileActivity]);
 
   // =========================================================================
   // 🏢 ENTERPRISE: BATCH OPERATIONS (shared hook - reuse central File Manager logic)
@@ -536,10 +585,10 @@ export function EntityFilesManager({
     toggleSelect,
     selectAll,
     clearSelection,
-    handleBatchDelete,
+    handleBatchDelete: batchDeleteRaw,
     handleBatchDownload,
     handleBatchClassify,
-    handleBatchArchive,
+    handleBatchArchive: batchArchiveRaw,
     handleAIClassify,
     aiClassifying,
   } = useBatchFileOperations({
@@ -547,6 +596,24 @@ export function EntityFilesManager({
     currentUserId,
     refetch,
   });
+
+  /** Wrap batch delete to record audit for each deleted file */
+  const handleBatchDelete = useCallback(async () => {
+    const names = Array.from(selectedIds).map(getFileName);
+    await batchDeleteRaw();
+    for (const name of names) {
+      recordFileActivity('deleted', 'file_trash', name, null, 'Μαζική μετακίνηση αρχείου στον κάδο');
+    }
+  }, [batchDeleteRaw, selectedIds, getFileName, recordFileActivity]);
+
+  /** Wrap batch archive to record audit for each archived file */
+  const handleBatchArchive = useCallback(async () => {
+    const names = Array.from(selectedIds).map(getFileName);
+    await batchArchiveRaw();
+    for (const name of names) {
+      recordFileActivity('updated', 'file_archive', name, null, 'Αρχειοθέτηση αρχείου');
+    }
+  }, [batchArchiveRaw, selectedIds, getFileName, recordFileActivity]);
 
   // =========================================================================
   // VIEW/DOWNLOAD HANDLERS
@@ -1106,7 +1173,8 @@ export function EntityFilesManager({
             currentUserId={currentUserId}
             entityType={entityType}
             entityId={entityId}
-            onRestore={() => {
+            onRestore={(fileId: string) => {
+              recordFileActivity('updated', 'file_restore', null, fileId, 'Επαναφορά αρχείου από κάδο');
               refetch();
             }}
           />
