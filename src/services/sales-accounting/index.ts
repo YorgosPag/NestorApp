@@ -11,3 +11,4 @@ export type {
   FinalSaleInvoiceEvent,
   CreditInvoiceEvent,
 } from './types';
+export { notifyAccountingOffice } from './accounting-notification';

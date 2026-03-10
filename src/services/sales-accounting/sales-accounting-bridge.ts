@@ -14,6 +14,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { getCategoryByCode } from '@/subapps/accounting/config/account-categories';
 import { generateTransactionId } from '@/services/enterprise-id.service';
+import { notifyAccountingOffice } from './accounting-notification';
 import type { CreateInvoiceInput } from '@/subapps/accounting/types/invoice';
 import type { InvoiceIssuer, InvoiceCustomer } from '@/subapps/accounting/types/invoice';
 import type { MyDataIncomeType } from '@/subapps/accounting/types/common';
@@ -76,14 +77,24 @@ export class SalesAccountingBridge {
       );
     }
 
+    let result: SalesAccountingResult;
+
     switch (event.eventType) {
       case 'deposit_invoice':
-        return this.createDepositInvoice(event, companyProfile);
+        result = await this.createDepositInvoice(event, companyProfile);
+        break;
       case 'final_sale_invoice':
-        return this.createFinalSaleInvoice(event, companyProfile);
+        result = await this.createFinalSaleInvoice(event, companyProfile);
+        break;
       case 'credit_invoice':
-        return this.createCreditInvoice(event, companyProfile);
+        result = await this.createCreditInvoice(event, companyProfile);
+        break;
     }
+
+    // 2. Email ειδοποίηση στο λογιστήριο (fire-and-forget)
+    notifyAccountingOffice(event, result).catch(() => { /* silent */ });
+
+    return result;
   }
 
   // ── Deposit Invoice ──────────────────────────────────────────────────────
