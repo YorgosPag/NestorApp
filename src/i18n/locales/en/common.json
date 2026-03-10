@@ -1344,6 +1344,13 @@
         "title": "Available Units",
         "description": "Here you see all units that are actively for sale. Includes prices, buyer interest and sales statistics."
       }
+    },
+    "tabs": {
+      "saleInfo": "Sale",
+      "unitSummary": "Unit",
+      "photos": "Photos",
+      "documents": "Documents",
+      "history": "History"
     }
   },
   "photoPreview": {

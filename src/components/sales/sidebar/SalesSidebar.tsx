@@ -7,7 +7,8 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ShoppingBag } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ShoppingBag, ExternalLink } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesUnitListCard } from '@/components/sales/cards/SalesUnitListCard';
@@ -23,6 +24,7 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
 import { MobileDetailsSlideIn } from '@/core/layouts';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -57,11 +59,11 @@ interface SalesSidebarProps {
 // =============================================================================
 
 const SALES_TABS = [
-  { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo' },
-  { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary' },
-  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos' },
-  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents' },
-  { id: 'history', icon: Clock, labelKey: 'sales.tabs.history' },
+  { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', defaultLabel: 'Πώληση' },
+  { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', defaultLabel: 'Μονάδα' },
+  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', defaultLabel: 'Φωτογραφίες' },
+  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', defaultLabel: 'Έγγραφα' },
+  { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', defaultLabel: 'Ιστορικό' },
 ] as const;
 
 // =============================================================================
@@ -79,6 +81,7 @@ export function SalesSidebar({
   onUnitTypeChange,
 }: SalesSidebarProps) {
   const { t } = useTranslation('common');
+  const router = useRouter();
   const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
 
@@ -118,7 +121,7 @@ export function SalesSidebar({
               >
                 <tab.icon className={iconSizes.sm} />
                 <span className="hidden sm:inline">
-                  {t(tab.labelKey, { defaultValue: tab.id })}
+                  {t(tab.labelKey, { defaultValue: tab.defaultLabel })}
                 </span>
               </TabsTrigger>
             ))}
@@ -132,23 +135,31 @@ export function SalesSidebar({
             <UnitSummaryContent data={selectedUnit} />
           </TabsContent>
 
-          <TabsContent value="photos" className="flex-1 overflow-y-auto">
-            <div className="p-4 text-sm text-muted-foreground text-center">
-              {t('sales.tabs.photosPlaceholder', { defaultValue: 'Φωτογραφίες — θα ενεργοποιηθεί σύντομα' })}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="documents" className="flex-1 overflow-y-auto">
-            <div className="p-4 text-sm text-muted-foreground text-center">
-              {t('sales.tabs.documentsPlaceholder', { defaultValue: 'Έγγραφα — θα ενεργοποιηθεί σύντομα' })}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history" className="flex-1 overflow-y-auto">
-            <div className="p-4 text-sm text-muted-foreground text-center">
-              {t('sales.tabs.historyPlaceholder', { defaultValue: 'Ιστορικό — θα ενεργοποιηθεί σύντομα' })}
-            </div>
-          </TabsContent>
+          {/* Photos, Documents, History → redirect to /units (Χώροι) */}
+          {(['photos', 'documents', 'history'] as const).map(tabId => (
+            <TabsContent key={tabId} value={tabId} className="flex-1 overflow-y-auto">
+              <section className="flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {t(`sales.tabs.${tabId}Hint`, {
+                    defaultValue: tabId === 'photos'
+                      ? 'Οι φωτογραφίες βρίσκονται στη σελίδα Χώροι → Μονάδες'
+                      : tabId === 'documents'
+                        ? 'Τα έγγραφα βρίσκονται στη σελίδα Χώροι → Μονάδες'
+                        : 'Το ιστορικό βρίσκεται στη σελίδα Χώροι → Μονάδες',
+                  })}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => router.push('/units')}
+                >
+                  <ExternalLink className={iconSizes.sm} />
+                  {t('sales.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                </Button>
+              </section>
+            </TabsContent>
+          ))}
         </Tabs>
       }
     />
