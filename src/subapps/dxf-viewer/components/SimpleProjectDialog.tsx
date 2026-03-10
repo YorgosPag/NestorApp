@@ -57,6 +57,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
 import { getSelectStyles } from '../config/modal-select';
+import toast from 'react-hot-toast';
 // 🏢 ENTERPRISE: Centralized spacing & timing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
@@ -473,15 +474,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         const unitFileRecordOptions = selectedCompanyId && createdBy
           ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, buildingId: selectedBuildingId, createdBy, originalFile: file }
           : undefined;
-        // eslint-disable-next-line no-console
-        console.log('[Pipeline→Unit] FileRecord options:', {
-          hasOptions: !!unitFileRecordOptions,
-          companyId: selectedCompanyId || '(empty)',
-          unitId: selectedUnitId,
-          buildingId: selectedBuildingId || '(empty)',
-          createdBy: createdBy || '(empty)',
-          fileName: file.name,
-        });
+        // 🔍 DEBUG: Visible toast with save parameters
+        toast(`📋 Unit Save: companyId=${selectedCompanyId || '❌EMPTY'} unitId=${selectedUnitId} hasOpts=${!!unitFileRecordOptions}`, { duration: 8000 });
         saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData, unitFileRecordOptions);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Save floor floorplan
