@@ -52,39 +52,28 @@ export const GET = withStandardRateLimit(
       logger.info('[Buildings] Loading all buildings for tenant', { tenantCompanyId });
     }
 
-    // 🎯 ENTERPRISE: Build query — projectId is sufficient for scoping when provided
+    // 🎯 ENTERPRISE: Build query — projectId + fallback to companyId
     let snapshot;
     if (projectId) {
-      // Try string match first
+      // Step 1: Try exact projectId match (string)
       const stringQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
         .where('projectId', '==', projectId);
       snapshot = await stringQuery.get();
 
-      // Firestore does strict type matching — try number if string returned nothing
+      // Step 2: Try numeric projectId (Firestore strict type matching)
       if (snapshot.empty && !isNaN(Number(projectId))) {
         const numQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', Number(projectId));
         snapshot = await numQuery.get();
-        if (!snapshot.empty) {
-          logger.info('[Buildings] Found buildings with numeric projectId', { projectId, count: snapshot.size });
-        }
       }
 
-      // Last resort: scan ALL buildings and log their projectId types for diagnostics
-      if (snapshot.empty) {
-        const allBuildings = await adminDb.collection(COLLECTIONS.BUILDINGS).get();
-        const diagnostics = allBuildings.docs.map(d => ({
-          id: d.id,
-          name: d.data().name,
-          projectId: d.data().projectId,
-          projectIdType: typeof d.data().projectId,
-          companyId: d.data().companyId,
-        }));
-        logger.warn('[Buildings] DIAGNOSTIC: No buildings found. All buildings in DB:', {
-          searchProjectId: projectId,
-          searchProjectIdType: typeof projectId,
-          allBuildings: diagnostics,
-        });
+      // Step 3: Fallback — many buildings have no projectId field.
+      // Load ALL buildings for the same companyId so the user can pick one.
+      if (snapshot.empty && tenantCompanyId) {
+        logger.info('[Buildings] No buildings with projectId, falling back to companyId', { projectId, tenantCompanyId });
+        const fallbackQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
+          .where('companyId', '==', tenantCompanyId);
+        snapshot = await fallbackQuery.get();
       }
     } else {
       // Without projectId, use tenant companyId to list all buildings
