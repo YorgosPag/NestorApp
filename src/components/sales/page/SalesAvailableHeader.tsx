@@ -30,6 +30,12 @@ interface SalesAvailableHeaderProps {
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
   onAddToMarket?: () => void;
+  /** Override the default "Διαθέσιμες Μονάδες" title */
+  titleOverride?: string;
+  /** Override the default subtitle */
+  subtitleOverride?: string;
+  /** Override search placeholder */
+  searchPlaceholderOverride?: string;
 }
 
 export function SalesAvailableHeader({
@@ -42,6 +48,9 @@ export function SalesAvailableHeader({
   showFilters,
   setShowFilters,
   onAddToMarket,
+  titleOverride,
+  subtitleOverride,
+  searchPlaceholderOverride,
 }: SalesAvailableHeaderProps) {
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
@@ -77,14 +86,14 @@ export function SalesAvailableHeader({
       spacing="compact"
       title={{
         icon: ShoppingBag,
-        title: t('sales.available.title'),
-        subtitle: t('sales.available.subtitle'),
+        title: titleOverride ?? t('sales.available.title'),
+        subtitle: subtitleOverride ?? t('sales.available.subtitle'),
       }}
       breadcrumb={<NavigationBreadcrumb />}
       search={{
         value: searchTerm,
         onChange: setSearchTerm,
-        placeholder: t('sales.available.searchPlaceholder', { defaultValue: 'Αναζήτηση μονάδας...' }),
+        placeholder: searchPlaceholderOverride ?? t('sales.available.searchPlaceholder', { defaultValue: 'Αναζήτηση μονάδας...' }),
       }}
       actions={{
         showDashboard,

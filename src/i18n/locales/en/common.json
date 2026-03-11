@@ -1356,6 +1356,8 @@
   },
   "salesStorage": {
     "pageTitle": "Available Storage Units",
+    "pageSubtitle": "Storage units for sale - Active listings",
+    "searchPlaceholder": "Search storage...",
     "loading": "Loading available storage units...",
     "listLabel": "Sales storage list",
     "listTitle": "Storage Units",
@@ -1397,6 +1399,8 @@
   },
   "salesParking": {
     "pageTitle": "Available Parking Spots",
+    "pageSubtitle": "Parking spots for sale - Active listings",
+    "searchPlaceholder": "Search parking...",
     "loading": "Loading available parking spots...",
     "listLabel": "Sales parking list",
     "listTitle": "Parking Spots",

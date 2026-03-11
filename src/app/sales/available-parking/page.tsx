@@ -128,6 +128,9 @@ function SalesParkingContent() {
         setSearchTerm={setSearchTerm}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
+        titleOverride={t('salesParking.pageTitle', { defaultValue: 'Διαθέσιμες Θέσεις Στάθμευσης' })}
+        subtitleOverride={t('salesParking.pageSubtitle', { defaultValue: 'Θέσεις στάθμευσης προς πώληση - Ενεργές καταχωρήσεις' })}
+        searchPlaceholderOverride={t('salesParking.searchPlaceholder', { defaultValue: 'Αναζήτηση θέσης...' })}
       />
 
       {/* LAYER 2: Dashboard */}

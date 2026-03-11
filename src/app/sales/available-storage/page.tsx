@@ -131,6 +131,9 @@ function SalesStorageContent() {
         setSearchTerm={setSearchTerm}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
+        titleOverride={t('salesStorage.pageTitle', { defaultValue: 'Διαθέσιμες Αποθήκες' })}
+        subtitleOverride={t('salesStorage.pageSubtitle', { defaultValue: 'Αποθήκες προς πώληση - Ενεργές καταχωρήσεις' })}
+        searchPlaceholderOverride={t('salesStorage.searchPlaceholder', { defaultValue: 'Αναζήτηση αποθήκης...' })}
       />
 
       {/* LAYER 2: Dashboard */}
