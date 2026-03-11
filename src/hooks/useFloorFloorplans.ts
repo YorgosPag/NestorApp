@@ -123,15 +123,22 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
    */
   const loadEnterprise = useCallback(async (fId: string): Promise<FloorFloorplanData | null> => {
     if (!companyId) {
-      logger.warn('companyId required for Enterprise pattern — skipping');
+      console.error('[useFloorFloorplans] ❌ NO companyId — cannot load enterprise path');
       return null;
     }
 
     try {
-      logger.info('Loading via FloorFloorplanService', { companyId, floorId: fId });
-      return await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
+      console.error('[useFloorFloorplans] 🔍 Loading via FloorFloorplanService', { companyId, floorId: fId });
+      const result = await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
+      console.error('[useFloorFloorplans] 📦 Enterprise result:', {
+        found: !!result,
+        hasScene: !!result?.scene,
+        fileName: result?.fileName,
+        fileType: result?.fileType,
+      });
+      return result;
     } catch (err) {
-      logger.warn('Enterprise load failed', { error: err });
+      console.error('[useFloorFloorplans] ❌ Enterprise load FAILED:', err);
       return null;
     }
   }, [companyId]);
@@ -210,7 +217,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
         return;
       }
 
-      logger.info('Fetching floor floorplan', { floorId: effectiveFloorId, companyId });
+      console.error('[useFloorFloorplans] 🚀 START fetch', { floorId: effectiveFloorId, companyId, buildingId, floorNumber });
 
       // Step 2: PRIMARY — Enterprise FileRecord path
       let floorplanData = await loadEnterprise(effectiveFloorId);

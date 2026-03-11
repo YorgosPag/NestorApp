@@ -219,7 +219,7 @@ export class FloorFloorplanService {
     const { companyId, floorId } = params;
 
     try {
-      floorplanLogger.debug(`Loading floor floorplan`, { floorId, companyId });
+      console.error('[FloorFloorplanService] 🔍 loadFloorplan START', { floorId, companyId });
 
       // Query files collection for this floor's floorplans
       // 🏢 ENTERPRISE: Using positional args as per FileRecordService API
@@ -236,8 +236,13 @@ export class FloorFloorplanService {
         }
       );
 
+      console.error('[FloorFloorplanService] 📦 Query result:', {
+        count: fileRecords?.length ?? 0,
+        ids: fileRecords?.map(f => f.id) ?? [],
+      });
+
       if (!fileRecords || fileRecords.length === 0) {
-        floorplanLogger.debug(`No floorplan found for floor`, { floorId });
+        console.error('[FloorFloorplanService] ❌ No FileRecord found for floor', { floorId, companyId });
         return null;
       }
 
@@ -287,16 +292,14 @@ export class FloorFloorplanService {
       }
 
       // Download scene JSON from Storage
+      console.error('[FloorFloorplanService] ⬇️ Downloading from Storage', { storagePath: fileRecord.storagePath });
       const storageRef = ref(storage, fileRecord.storagePath);
       const sceneBytes = await getBytes(storageRef);
+      console.error('[FloorFloorplanService] ✅ Downloaded', { bytes: sceneBytes.byteLength });
       const sceneJson = new TextDecoder().decode(sceneBytes);
+      console.error('[FloorFloorplanService] 📄 JSON preview:', sceneJson.substring(0, 200));
       const scene = JSON.parse(sceneJson) as SceneModel;
-
-      floorplanLogger.debug(`Loaded DXF floorplan`, {
-        floorId,
-        fileId: fileRecord.id,
-        entityCount: scene.entities?.length || 0,
-      });
+      console.error('[FloorFloorplanService] ✅ Parsed scene', { entities: scene.entities?.length || 0 });
 
       return {
         buildingId,
@@ -314,10 +317,7 @@ export class FloorFloorplanService {
         fileRecordId: fileRecord.id,
       };
     } catch (error) {
-      floorplanLogger.error(`Error loading floor floorplan`, {
-        floorId,
-        error: error instanceof Error ? error.message : String(error)
-      });
+      console.error('[FloorFloorplanService] ❌ EXCEPTION in loadFloorplan:', error);
       return null;
     }
   }
