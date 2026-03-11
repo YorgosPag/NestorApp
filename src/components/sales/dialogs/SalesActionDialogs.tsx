@@ -63,8 +63,12 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
           finalPrice: unit.commercial?.finalPrice ?? null,
           reservationDeposit: unit.commercial?.reservationDeposit ?? null,
           buyerContactId: unit.commercial?.buyerContactId ?? null,
+          buyerName: unit.commercial?.buyerName ?? null,
+          reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: unit.commercial?.saleDate ?? null,
+          cancellationDate: unit.commercial?.cancellationDate ?? null,
           listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),
+          transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       } as Record<string, unknown>);
       onOpenChange(false);
@@ -190,7 +194,9 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           buyerName: buyerName || null,
           reservationDate: new Date().toISOString(),
           saleDate: unit.commercial?.saleDate ?? null,
+          cancellationDate: unit.commercial?.cancellationDate ?? null,
           listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),
+          transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       } as Record<string, unknown>);
       onOpenChange(false);
@@ -335,8 +341,12 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           finalPrice: price,
           reservationDeposit: unit.commercial?.reservationDeposit ?? null,
           buyerContactId: unit.commercial?.buyerContactId ?? null,
+          buyerName: unit.commercial?.buyerName ?? null,
+          reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: new Date().toISOString(),
+          cancellationDate: unit.commercial?.cancellationDate ?? null,
           listedDate: unit.commercial?.listedDate ?? null,
+          transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       } as Record<string, unknown>);
       onOpenChange(false);
@@ -476,10 +486,12 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           finalPrice: null,
           reservationDeposit: null,
           buyerContactId: null,
+          buyerName: null,
           reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: null,
           listedDate: unit.commercial?.listedDate ?? null,
           cancellationDate: new Date().toISOString(),
+          transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       } as Record<string, unknown>);
       onOpenChange(false);
