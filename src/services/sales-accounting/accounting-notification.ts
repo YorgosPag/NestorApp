@@ -139,10 +139,10 @@ function buildCreditNotification(
   const vatAmount = event.creditAmount - netAmount;
 
   return {
-    subject: `❌ Ακύρωση — ${event.unitName} (${formatEuro(event.creditAmount)})`,
+    subject: `❌ ${event.reason} — ${event.unitName} (${formatEuro(event.creditAmount)})`,
     body: [
       `═══════════════════════════════════════`,
-      `  ΑΚΥΡΩΣΗ ΚΡΑΤΗΣΗΣ — ΠΙΣΤΩΤΙΚΟ ΤΙΜΟΛΟΓΙΟ`,
+      `  ${event.reason.toUpperCase()} — ΠΙΣΤΩΤΙΚΟ ΤΙΜΟΛΟΓΙΟ`,
       `═══════════════════════════════════════`,
       ``,
       `Ημερομηνία: ${formatDate(new Date())}`,

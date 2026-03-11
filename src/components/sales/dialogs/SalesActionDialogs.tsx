@@ -497,8 +497,16 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
       onOpenChange(false);
       onSuccess?.();
 
-      // ADR-198: Fire-and-forget — πιστωτικό τιμολόγιο αν υπήρχε deposit
-      if (depositToRefund > 0) {
+      // ADR-198: Fire-and-forget — πιστωτικό τιμολόγιο
+      // Sold → ακύρωση πώλησης: πιστώνεται η ΤΕΛΙΚΗ ΤΙΜΗ (deposit + υπόλοιπο)
+      // Reserved → ακύρωση κράτησης: πιστώνεται μόνο η προκαταβολή
+      const wasSold = currentStatus === 'sold';
+      const creditAmount = wasSold
+        ? (unit.commercial?.finalPrice ?? depositToRefund)
+        : depositToRefund;
+      const creditReason = wasSold ? 'Ακύρωση πώλησης' : 'Ακύρωση κράτησης';
+
+      if (creditAmount > 0) {
         apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
           eventType: 'credit_invoice',
           unitId: unit.id,
@@ -514,8 +522,8 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           projectAddress: null,
           paymentMethod: 'bank_transfer',
           notes: null,
-          creditAmount: depositToRefund,
-          reason: 'Ακύρωση κράτησης',
+          creditAmount,
+          reason: creditReason,
         }).catch((err: unknown) => {
           console.warn('[ADR-198] Credit invoice fire-and-forget failed:', err);
         });
