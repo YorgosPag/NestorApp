@@ -1373,7 +1373,16 @@
     },
     "tabs": {
       "info": "Info",
-      "history": "History"
+      "floorPlan": "Floor Plan",
+      "documents": "Documents",
+      "photos": "Photos",
+      "videos": "Videos",
+      "history": "History",
+      "floorPlanHint": "Floor plan is managed in Spaces → Storage",
+      "documentsHint": "Documents are managed in Spaces → Storage",
+      "photosHint": "Photos are managed in Spaces → Storage",
+      "videosHint": "Videos are managed in Spaces → Storage",
+      "openInSpaces": "Open in Spaces"
     },
     "details": {
       "title": "Storage Details",
@@ -1405,7 +1414,14 @@
     },
     "tabs": {
       "info": "Info",
-      "history": "History"
+      "documents": "Documents",
+      "photos": "Photos",
+      "videos": "Videos",
+      "history": "History",
+      "documentsHint": "Documents are managed in Spaces → Parking",
+      "photosHint": "Photos are managed in Spaces → Parking",
+      "videosHint": "Videos are managed in Spaces → Parking",
+      "openInSpaces": "Open in Spaces"
     },
     "details": {
       "title": "Parking Details",

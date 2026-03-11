@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Car, DollarSign, Clock } from 'lucide-react';
+import { Car, DollarSign, Clock, FileText, Camera, Video, ExternalLink } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesParkingCard } from '@/components/sales/cards/SalesParkingCard';
@@ -21,6 +21,7 @@ import { useIsMobile } from '@/hooks/useMobile';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ParkingSpot } from '@/types/parking';
 
@@ -45,6 +46,9 @@ interface SalesParkingSidebarProps {
 
 const TABS = [
   { id: 'info', icon: DollarSign, labelKey: 'salesParking.tabs.info', defaultLabel: 'Πληροφορίες' },
+  { id: 'documents', icon: FileText, labelKey: 'salesParking.tabs.documents', defaultLabel: 'Έγγραφα' },
+  { id: 'photos', icon: Camera, labelKey: 'salesParking.tabs.photos', defaultLabel: 'Φωτογραφίες' },
+  { id: 'videos', icon: Video, labelKey: 'salesParking.tabs.videos', defaultLabel: 'Βίντεο' },
   { id: 'history', icon: Clock, labelKey: 'salesParking.tabs.history', defaultLabel: 'Ιστορικό' },
 ] as const;
 
@@ -109,6 +113,30 @@ export function SalesParkingSidebar({
           <TabsContent value="info" className="flex-1">
             <ParkingDetailPanel data={selectedItem} />
           </TabsContent>
+
+          {/* Documents, Photos, Videos → redirect to /spaces/parking */}
+          {(['documents', 'photos', 'videos'] as const).map(tabId => (
+            <TabsContent key={tabId} value={tabId} className="flex-1">
+              <section className="p-4">
+                <p className="text-sm text-muted-foreground text-center mb-3">
+                  {t(`salesParking.tabs.${tabId}Hint`, { defaultValue: `Διαχείριση στη σελίδα Χώροι → Στάθμευση` })}
+                </p>
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center gap-2 text-sm"
+                    onClick={() => {
+                      window.location.href = `/spaces/parking?parkingId=${selectedItem.id}`;
+                    }}
+                  >
+                    <ExternalLink className={iconSizes.sm} />
+                    {t('salesParking.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                  </Button>
+                </div>
+              </section>
+            </TabsContent>
+          ))}
 
           <TabsContent value="history" className="flex-1">
             <ActivityTab entityType="parking" entityId={selectedItem.id} />

@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Package, DollarSign, Clock } from 'lucide-react';
+import { Package, DollarSign, Clock, Map, FileText, Camera, Video, ExternalLink } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { SalesStorageCard } from '@/components/sales/cards/SalesStorageCard';
@@ -21,6 +21,7 @@ import { useIsMobile } from '@/hooks/useMobile';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Storage } from '@/types/storage/contracts';
 
@@ -45,6 +46,10 @@ interface SalesStorageSidebarProps {
 
 const TABS = [
   { id: 'info', icon: DollarSign, labelKey: 'salesStorage.tabs.info', defaultLabel: 'Πληροφορίες' },
+  { id: 'floor-plan', icon: Map, labelKey: 'salesStorage.tabs.floorPlan', defaultLabel: 'Κάτοψη' },
+  { id: 'documents', icon: FileText, labelKey: 'salesStorage.tabs.documents', defaultLabel: 'Έγγραφα' },
+  { id: 'photos', icon: Camera, labelKey: 'salesStorage.tabs.photos', defaultLabel: 'Φωτογραφίες' },
+  { id: 'videos', icon: Video, labelKey: 'salesStorage.tabs.videos', defaultLabel: 'Βίντεο' },
   { id: 'history', icon: Clock, labelKey: 'salesStorage.tabs.history', defaultLabel: 'Ιστορικό' },
 ] as const;
 
@@ -109,6 +114,33 @@ export function SalesStorageSidebar({
           <TabsContent value="info" className="flex-1">
             <StorageDetailPanel data={selectedItem} />
           </TabsContent>
+
+          {/* Floor-plan, Documents, Photos, Videos → redirect to /spaces/storage */}
+          {(['floor-plan', 'documents', 'photos', 'videos'] as const).map(tabId => {
+            const hintKey = tabId === 'floor-plan' ? 'floorPlan' : tabId;
+            return (
+              <TabsContent key={tabId} value={tabId} className="flex-1">
+                <section className="p-4">
+                  <p className="text-sm text-muted-foreground text-center mb-3">
+                    {t(`salesStorage.tabs.${hintKey}Hint`, { defaultValue: `Διαχείριση στη σελίδα Χώροι → Αποθήκες` })}
+                  </p>
+                  <div className="pt-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-center gap-2 text-sm"
+                      onClick={() => {
+                        window.location.href = `/spaces/storage?storageId=${selectedItem.id}`;
+                      }}
+                    >
+                      <ExternalLink className={iconSizes.sm} />
+                      {t('salesStorage.tabs.openInSpaces', { defaultValue: 'Άνοιγμα στους Χώρους' })}
+                    </Button>
+                  </div>
+                </section>
+              </TabsContent>
+            );
+          })}
 
           <TabsContent value="history" className="flex-1">
             <ActivityTab entityType="storage" entityId={selectedItem.id} />
