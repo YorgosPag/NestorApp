@@ -125,6 +125,15 @@ export function PropertyDetailsContent({
         />
       )}
 
+      {/* Entity Linking: Building — shown BEFORE fields for consistency with Parking/Storage */}
+      {!isReadOnly && (
+        <UnitEntityLinks
+          unitId={resolvedProperty?.id ?? ''}
+          currentBuildingId={resolvedProperty?.buildingId}
+          isEditing={isEditMode}
+        />
+      )}
+
       {/* 🏢 ENTERPRISE: Unit Fields Block (identity, location, layout, areas, etc) */}
       <UnitFieldsBlock
         property={resolvedProperty}
@@ -134,16 +143,8 @@ export function PropertyDetailsContent({
         onExitEditMode={handleExitEditMode}
         isCreatingNewUnit={isCreatingNewUnit}
         onUnitCreated={onUnitCreated}
+        buildingId={resolvedProperty?.buildingId}
       />
-
-      {/* Entity Linking: Company, Project, Building */}
-      {!isReadOnly && (
-        <UnitEntityLinks
-          unitId={resolvedProperty?.id ?? ''}
-          currentBuildingId={resolvedProperty?.buildingId}
-          isEditing={isEditMode}
-        />
-      )}
 
       {/* Share Button removed per user request */}
 

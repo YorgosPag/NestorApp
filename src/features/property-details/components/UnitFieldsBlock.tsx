@@ -46,6 +46,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import type { UnitType } from '@/types/unit';
 import { formatFloorLabel } from '@/lib/intl-utils';
+import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type {
   ConditionType,
   OrientationType,
@@ -75,6 +76,8 @@ interface UnitFieldsBlockProps {
   isCreatingNewUnit?: boolean;
   /** Callback when new unit is successfully created */
   onUnitCreated?: (unitId: string) => void;
+  /** Building ID for floor dropdown — passed from parent (UnitEntityLinks) */
+  buildingId?: string | null;
 }
 
 // =============================================================================
@@ -140,6 +143,7 @@ export function UnitFieldsBlock({
   onExitEditMode,
   isCreatingNewUnit = false,
   onUnitCreated,
+  buildingId,
 }: UnitFieldsBlockProps) {
   const { t } = useTranslation('units');
   const spacing = useSpacingTokens();
@@ -403,25 +407,14 @@ export function UnitFieldsBlock({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">
-            <fieldset className="space-y-1">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
-                {t('fields.location.floor', { defaultValue: 'Όροφος' })}
-              </Label>
-              {isEditing ? (
-                <Input
-                  id="unit-floor"
-                  type="number"
-                  min={-5}
-                  max={100}
-                  value={formData.floor}
-                  onChange={(e) => setFormData(prev => ({ ...prev, floor: parseInt(e.target.value) || 0 }))}
-                  className={cn('h-7 text-xs', quick.input)}
-                />
-              ) : (
-                <p className="text-xs">{formatFloorLabel(formData.floor)}</p>
-              )}
-            </fieldset>
+            <FloorSelectField
+              buildingId={buildingId ?? null}
+              value={String(formData.floor)}
+              onChange={(v) => setFormData(prev => ({ ...prev, floor: v ? parseInt(v) || 0 : 0 }))}
+              label={t('fields.location.floor', { defaultValue: 'Όροφος' })}
+              noBuildingHint={t('fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+              disabled={!isEditing}
+            />
             <fieldset className="space-y-1">
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
                 <Compass className={cn(iconSizes.xs, 'text-amber-500')} />
