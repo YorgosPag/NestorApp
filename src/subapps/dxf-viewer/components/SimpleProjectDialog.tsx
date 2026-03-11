@@ -511,11 +511,17 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 FIX: Use floor's companyId (from Firestore data) or auth user's companyId
-        // The Ευρετήριο Ακινήτων queries with user.companyId — they MUST match
+        // 🏢 FIX: companyId MUST match what ReadOnlyMediaViewer uses at load time (property.companyId)
+        // Priority: floor's own companyId → building's companyId → first unit's companyId → selectedCompanyId (last resort)
+        // NOTE: user?.companyId is ALWAYS undefined here (useAuth returns Firebase User, NOT FirebaseAuthUser)
         const createdBy = user?.uid;
         const floorCompanyId = (selectedFloorData as Record<string, unknown> | undefined)?.companyId as string | undefined;
-        const effectiveCompanyId = floorCompanyId || user?.companyId || selectedCompanyId;
+        const selectedBuildingData = buildings.find(b => b.id === selectedBuildingId);
+        const buildingCompanyId = (selectedBuildingData as Record<string, unknown> | undefined)?.companyId as string | undefined;
+        const unitCompanyIdFallback = units.length > 0
+          ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
+          : undefined;
+        const effectiveCompanyId = floorCompanyId || buildingCompanyId || unitCompanyIdFallback || selectedCompanyId;
         if (effectiveCompanyId && createdBy) {
           saved = await FloorFloorplanService.saveFloorplan({
             companyId: effectiveCompanyId,
@@ -538,14 +544,21 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           timestamp: Date.now()
         };
         // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
+        // 🏢 FIX: Use building's own companyId (not selectedCompanyId which is contact entity)
         const createdBy = user?.uid;
-        const fileRecordOptions = selectedCompanyId && createdBy
-          ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
+        const dxfBuildingData = buildings.find(b => b.id === selectedBuildingId);
+        const dxfBuildingCompanyId = (dxfBuildingData as Record<string, unknown> | undefined)?.companyId as string | undefined;
+        const dxfBuildingUnitFallback = units.length > 0
+          ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
+          : undefined;
+        const buildingEffectiveCompanyId = dxfBuildingCompanyId || dxfBuildingUnitFallback || selectedCompanyId;
+        const fileRecordOptions = buildingEffectiveCompanyId && createdBy
+          ? { companyId: buildingEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
           : undefined;
         // eslint-disable-next-line no-console
         console.log('[Pipeline→Building] FileRecord options:', {
           hasOptions: !!fileRecordOptions,
-          companyId: selectedCompanyId || '(empty)',
+          companyId: buildingEffectiveCompanyId || '(empty)',
           projectId: selectedProjectId || '(empty)',
           buildingId: selectedBuildingId,
           createdBy: createdBy || '(empty)',
@@ -833,10 +846,16 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
-      // 🏢 FIX: Use floor's companyId or auth user's companyId (same fix as DXF path)
+      // 🏢 FIX: companyId MUST match what ReadOnlyMediaViewer uses at load time (property.companyId)
+      // Same priority chain as DXF path above
       const createdBy = user?.uid;
       const pdfFloorCompanyId = (selectedFloorData as Record<string, unknown> | undefined)?.companyId as string | undefined;
-      const effectivePdfCompanyId = pdfFloorCompanyId || user?.companyId || selectedCompanyId;
+      const pdfBuildingData = buildings.find(b => b.id === selectedBuildingId);
+      const pdfBuildingCompanyId = (pdfBuildingData as Record<string, unknown> | undefined)?.companyId as string | undefined;
+      const pdfUnitCompanyIdFallback = units.length > 0
+        ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
+        : undefined;
+      const effectivePdfCompanyId = pdfFloorCompanyId || pdfBuildingCompanyId || pdfUnitCompanyIdFallback || selectedCompanyId;
       if (effectivePdfCompanyId && createdBy) {
         saved = await FloorFloorplanService.saveFloorplan({
           companyId: effectivePdfCompanyId,
@@ -862,9 +881,16 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         timestamp: Date.now()
       };
       // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
+      // 🏢 FIX: Use building's own companyId (not selectedCompanyId which is contact entity)
       const createdBy = user?.uid;
-      const pdfFileRecordOptions = selectedCompanyId && createdBy
-        ? { companyId: selectedCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
+      const pdfBuildingObj = buildings.find(b => b.id === selectedBuildingId);
+      const pdfBldgCompanyId = (pdfBuildingObj as Record<string, unknown> | undefined)?.companyId as string | undefined;
+      const pdfBldgUnitFallback = units.length > 0
+        ? (units[0] as Record<string, unknown>)?.companyId as string | undefined
+        : undefined;
+      const pdfBldgEffectiveCompanyId = pdfBldgCompanyId || pdfBldgUnitFallback || selectedCompanyId;
+      const pdfFileRecordOptions = pdfBldgEffectiveCompanyId && createdBy
+        ? { companyId: pdfBldgEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
         : undefined;
       saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData, pdfFileRecordOptions);
     } else {
