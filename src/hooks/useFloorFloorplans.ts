@@ -2,40 +2,25 @@
 
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Floor Floorplans Hook
+ * 🏢 ENTERPRISE: Floor Floorplans Hook (V2)
  * =============================================================================
  *
- * Hook for loading floor-level floorplans using FloorFloorplanService.
- * Follows the same pattern as useBuildingFloorplans and useUnitFloorplans.
+ * Loads floor-level floorplans using FloorFloorplanService (Enterprise pattern).
+ *
+ * Strategy order (V2 — enterprise-first):
+ * 1. PRIMARY: FloorFloorplanService.loadFloorplan() → `files` collection (FileRecord)
+ * 2. FALLBACK: Legacy `floor_floorplans` collection (for old embedded PDF data)
+ *
+ * Removed: cadFiles full-collection scan (was downloading ALL docs without WHERE)
  *
  * @module hooks/useFloorFloorplans
  * @enterprise ADR-060 - DXF Scene Storage Architecture
- *
- * Features:
- * - Loads floor floorplan from FloorFloorplanService
- * - Finds floor by buildingId + floorNumber when floorId is null
- * - Supports both DXF and PDF floorplans
- * - Real-time refetch capability
- *
- * @example
- * ```tsx
- * const { floorFloorplan, loading, error } = useFloorFloorplans({
- *   floorId: null,
- *   buildingId: 'building-123',
- *   floorNumber: 1,
- * });
- *
- * if (floorFloorplan?.scene) {
- *   // Render DXF scene
- * }
- * ```
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { FloorFloorplanService, type FloorFloorplanData } from '@/services/floorplans/FloorFloorplanService';
-import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useFloorFloorplans');
@@ -66,9 +51,7 @@ interface UseFloorFloorplansReturn {
   refetch: () => Promise<void>;
 }
 
-/**
- * Floor floorplan metadata from Firestore
- */
+/** Legacy floor_floorplans metadata */
 interface FloorFloorplanMetadata {
   buildingId: string;
   floorId: string;
@@ -82,9 +65,7 @@ interface FloorFloorplanMetadata {
   deleted?: boolean;
 }
 
-/**
- * Floor document from floors collection
- */
+/** Floor document from floors collection */
 interface FloorDocument {
   id: string;
   buildingId: string;
@@ -97,16 +78,12 @@ interface FloorDocument {
 // ============================================================================
 
 /**
- * 🏢 ENTERPRISE: Floor Floorplans Hook
+ * 🏢 ENTERPRISE: Floor Floorplans Hook (V2)
  *
- * Loads floor floorplan data using multiple strategies:
- * 1. If floorId provided, use it directly
- * 2. If buildingId + floorNumber provided, find floorId from floors collection
- * 3. Search floor_floorplans collection
- * 4. Search cadFiles collection
- *
- * @param params - Floor identification parameters
- * @returns Floor floorplan data, loading state, error, and refetch function
+ * Loading order:
+ * 1. Resolve floorId (direct or from buildingId + floorNumber)
+ * 2. PRIMARY: Enterprise FileRecord path (FloorFloorplanService)
+ * 3. FALLBACK: Legacy floor_floorplans collection (old PDF data only)
  */
 export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFloorplansReturn {
   const { floorId, buildingId, floorNumber, companyId } = params;
@@ -116,12 +93,10 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * 🏢 ENTERPRISE: Find floorId from buildingId + floorNumber
+   * Resolve floorId from buildingId + floorNumber
    */
   const findFloorId = useCallback(async (bId: string, fNum: number): Promise<string | null> => {
     try {
-      logger.info('Finding floor by buildingId + number', { buildingId: bId, floorNumber: fNum });
-
       const floorsRef = collection(db, 'floors');
       const q = query(
         floorsRef,
@@ -132,12 +107,10 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
 
       if (!snapshot.empty) {
         const floorDoc = snapshot.docs[0];
-        const floorData = floorDoc.data() as FloorDocument;
-        logger.info('Found floor', { id: floorDoc.id, name: floorData.name });
+        logger.info('Found floor', { id: floorDoc.id });
         return floorDoc.id;
       }
 
-      logger.info('No floor found for buildingId + number');
       return null;
     } catch (err) {
       logger.warn('Error finding floor', { error: err });
@@ -146,12 +119,29 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   }, []);
 
   /**
-   * 🏢 ENTERPRISE: Strategy 1 - Search floor_floorplans collection
+   * PRIMARY: Load via Enterprise FileRecord pattern
    */
-  const searchFloorFloorplans = useCallback(async (floorIdStr: string): Promise<FloorFloorplanData | null> => {
-    try {
-      logger.info('Searching floor_floorplans collection for', { floorId: floorIdStr });
+  const loadEnterprise = useCallback(async (fId: string): Promise<FloorFloorplanData | null> => {
+    if (!companyId) {
+      logger.warn('companyId required for Enterprise pattern — skipping');
+      return null;
+    }
 
+    try {
+      logger.info('Loading via FloorFloorplanService', { companyId, floorId: fId });
+      return await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
+    } catch (err) {
+      logger.warn('Enterprise load failed', { error: err });
+      return null;
+    }
+  }, [companyId]);
+
+  /**
+   * FALLBACK: Search legacy floor_floorplans collection
+   * Only useful for old PDF floorplans with embedded pdfImageUrl
+   */
+  const searchLegacyFloorFloorplans = useCallback(async (floorIdStr: string): Promise<FloorFloorplanData | null> => {
+    try {
       const floorplansRef = collection(db, 'floor_floorplans');
       const q = query(floorplansRef, where('floorId', '==', floorIdStr));
       const snapshot = await getDocs(q);
@@ -160,17 +150,12 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
         const docData = snapshot.docs[0].data() as FloorFloorplanMetadata;
 
         if (docData.deleted) {
-          logger.info('Floorplan is deleted');
           return null;
         }
 
-        logger.info('Found floorplan metadata', {
-          buildingId: docData.buildingId,
-          floorId: docData.floorId,
-          fileType: docData.fileType,
-        });
-
+        // Only return PDF data from legacy collection — DXF scenes should come from FileRecord
         if (docData.fileType === 'pdf' || docData.pdfImageUrl) {
+          logger.info('Found legacy PDF floorplan', { floorId: floorIdStr });
           return {
             buildingId: docData.buildingId,
             floorId: docData.floorId,
@@ -184,95 +169,26 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
           };
         }
 
-        // 🏢 ENTERPRISE: Use new API with companyId if available
+        // For DXF entries in legacy collection, try enterprise path
         if (companyId) {
           return await FloorFloorplanService.loadFloorplan({ companyId, floorId: floorIdStr });
         }
-        // Legacy fallback - return metadata only (no scene loading without companyId)
-        logger.warn('companyId not available for Enterprise loading');
+
         return null;
       }
 
-      logger.info('No floorplan found in floor_floorplans collection');
       return null;
     } catch (err) {
-      logger.warn('Error searching floor_floorplans', { error: err });
+      logger.warn('Error searching legacy floor_floorplans', { error: err });
       return null;
     }
   }, [companyId]);
 
   /**
-   * 🏢 ENTERPRISE: Strategy 2 - Search cadFiles collection
-   */
-  const searchCadFiles = useCallback(async (floorIdStr: string): Promise<FloorFloorplanData | null> => {
-    try {
-      logger.info('Searching cadFiles collection for floor', { floorId: floorIdStr });
-
-      const cadFilesRef = collection(db, 'cadFiles');
-      const snapshot = await getDocs(cadFilesRef);
-
-      const matchingDoc = snapshot.docs.find(d => {
-        const fileId = d.id;
-        return fileId.includes(floorIdStr) && fileId.startsWith('floor_floorplan_');
-      });
-
-      if (matchingDoc) {
-        const fileId = matchingDoc.id;
-        logger.info('Found cadFile', { fileId });
-
-        const parts = fileId.replace('floor_floorplan_', '').split('_');
-        const floorIdIndex = parts.findIndex(p => p === floorIdStr || parts.join('_').includes(floorIdStr));
-        const extractedBuildingId = floorIdIndex > 0 ? parts.slice(0, floorIdIndex).join('_') : parts[0];
-
-        const sceneData = await DxfFirestoreService.loadFileV2(fileId);
-
-        if (sceneData) {
-          return {
-            buildingId: extractedBuildingId,
-            floorId: floorIdStr,
-            floorNumber: 0,
-            type: 'floor',
-            fileName: sceneData.fileName,
-            timestamp: sceneData.lastModified?.toMillis?.() || Date.now(),
-            fileType: 'dxf',
-            scene: sceneData.scene,
-          };
-        }
-      }
-
-      logger.info('No cadFile found for floor');
-      return null;
-    } catch (err) {
-      logger.warn('Error searching cadFiles', { error: err });
-      return null;
-    }
-  }, []);
-
-  /**
-   * 🏢 ENTERPRISE: Strategy 3 - Load directly with FloorFloorplanService
-   */
-  const loadDirectly = useCallback(async (fId: string): Promise<FloorFloorplanData | null> => {
-    try {
-      // 🏢 ENTERPRISE: Requires companyId for the new API
-      if (!companyId) {
-        logger.warn('companyId required for Enterprise pattern');
-        return null;
-      }
-      logger.info('Loading directly with FloorFloorplanService', { companyId, floorId: fId });
-      return await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
-    } catch (err) {
-      logger.warn('Error loading directly', { error: err });
-      return null;
-    }
-  }, [companyId]);
-
-  /**
-   * Main fetch function - tries multiple strategies
+   * Main fetch function — enterprise-first strategy
    */
   const fetchFloorplans = useCallback(async () => {
-    // Check if we have enough data to search
     if (!floorId && (!buildingId || floorNumber === null)) {
-      logger.info('No floor identification data provided');
       setFloorFloorplan(null);
       setLoading(false);
       return;
@@ -282,10 +198,8 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       setLoading(true);
       setError(null);
 
-      // Determine the floorId to use
+      // Step 1: Resolve floorId
       let effectiveFloorId = floorId;
-
-      // If no floorId but have buildingId + floorNumber, find the floorId
       if (!effectiveFloorId && buildingId && floorNumber !== null) {
         effectiveFloorId = await findFloorId(buildingId, floorNumber);
       }
@@ -293,37 +207,30 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       if (!effectiveFloorId) {
         logger.info('Could not determine floorId');
         setFloorFloorplan(null);
-        setLoading(false);
         return;
       }
 
-      logger.info('Fetching floor floorplan for', { floorId: effectiveFloorId });
+      logger.info('Fetching floor floorplan', { floorId: effectiveFloorId, companyId });
 
-      // Strategy 1: Search floor_floorplans collection
-      let floorplanData = await searchFloorFloorplans(effectiveFloorId);
+      // Step 2: PRIMARY — Enterprise FileRecord path
+      let floorplanData = await loadEnterprise(effectiveFloorId);
 
-      // Strategy 2: Search cadFiles collection
+      // Step 3: FALLBACK — Legacy floor_floorplans (old PDF data)
       if (!floorplanData) {
-        floorplanData = await searchCadFiles(effectiveFloorId);
-      }
-
-      // Strategy 3: Try loading directly with Enterprise pattern if we have companyId
-      if (!floorplanData && companyId) {
-        floorplanData = await loadDirectly(effectiveFloorId);
+        floorplanData = await searchLegacyFloorFloorplans(effectiveFloorId);
       }
 
       setFloorFloorplan(floorplanData);
 
       if (floorplanData) {
         logger.info('Floor floorplan loaded', {
-          buildingId: floorplanData.buildingId,
           floorId: floorplanData.floorId,
           fileType: floorplanData.fileType || 'dxf',
           hasScene: !!floorplanData.scene,
           hasPdf: !!floorplanData.pdfImageUrl,
         });
       } else {
-        logger.info('No floorplan found');
+        logger.info('No floorplan found for floor', { floorId: effectiveFloorId });
       }
 
     } catch (err) {
@@ -333,9 +240,8 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
     } finally {
       setLoading(false);
     }
-  }, [floorId, buildingId, floorNumber, companyId, findFloorId, searchFloorFloorplans, searchCadFiles, loadDirectly]);
+  }, [floorId, buildingId, floorNumber, companyId, findFloorId, loadEnterprise, searchLegacyFloorFloorplans]);
 
-  // Fetch on mount and when params change
   useEffect(() => {
     fetchFloorplans();
   }, [fetchFloorplans]);
