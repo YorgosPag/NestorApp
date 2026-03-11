@@ -45,7 +45,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   className = '',
 }) => {
   const iconSizes = useIconSizes();
-  const { quick, getDirectionalBorder, radius } = useBorderTokens();
+  const { quick, getDirectionalBorder, radiusClass } = useBorderTokens();
   const colors = useSemanticColors();
 
   // ✅ ENTERPRISE: Dark-theme compatible variant styles - ALL CENTRALIZED via COLOR_BRIDGE
@@ -106,7 +106,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
 
   // ✅ ENTERPRISE: Direct div instead of BaseCard to prevent bg-card override
   return (
-    <div className={`${radius.md} ${variantStyles.containerClass} ${className}`}>
+    <div className={`${radiusClass.lg} ${variantStyles.containerClass} ${className}`}>
       {title && (
         <div className={`${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')}`}>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
