@@ -7,6 +7,7 @@ export type {
   SalesAccountingEvent,
   SalesAccountingEventType,
   SalesAccountingResult,
+  SaleLineItem,
   DepositInvoiceEvent,
   FinalSaleInvoiceEvent,
   CreditInvoiceEvent,

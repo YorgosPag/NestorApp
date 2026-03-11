@@ -1,7 +1,7 @@
 # ADR-199: Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances)
 
-> **Status**: APPROVED
-> **Date**: 2026-03-11
+> **Status**: IMPLEMENTED (Phase 1+2)
+> **Date**: 2026-03-11 (Approved) / 2026-03-12 (Implemented)
 > **Author**: Claude Code (Anthropic AI) + Γιώργος Παγώνης
 > **Category**: Domain / Sales Architecture
 > **References**: ADR-182, ADR-191, ADR-197, ADR-198, `REAL_ESTATE_ARCHITECTURE_DECISIONS.md` (LOCKED)
@@ -839,3 +839,25 @@ if (space.commercial?.parentUnitSaleId === unit.id) {
 | Sales pages (ADR-197) | `docs/centralized-systems/reference/adrs/ADR-197-sales-pages-implementation.md` |
 | Sales-to-Accounting bridge (ADR-198) | `docs/centralized-systems/reference/adrs/ADR-198-sales-accounting-bridge.md` |
 | Architecture decisions (LOCKED) | `docs/centralized-systems/reference/REAL_ESTATE_ARCHITECTURE_DECISIONS.md` |
+| **NEW** AppurtenancesSection UI | `src/components/sales/dialogs/AppurtenancesSection.tsx` |
+| **NEW** useLinkedSpacesForSale hook | `src/hooks/sales/useLinkedSpacesForSale.ts` |
+| **NEW** Appurtenance sync API | `src/app/api/sales/[unitId]/appurtenance-sync/route.ts` |
+
+---
+
+## Changelog
+
+### 2026-03-12 — Phase 1+2 IMPLEMENTED
+
+**Files changed:**
+- `src/types/unit.ts` — Added `includedInSale`, `salePrice` to LinkedSpace
+- `src/types/sales-shared.ts` — Added `canSellIndependently()` helper
+- `src/services/sales-accounting/types.ts` — Added `SaleLineItem`, `lineItems` to base event
+- `src/services/sales-accounting/sales-accounting-bridge.ts` — Multi-line `buildInvoiceInput()`
+- `src/services/sales-accounting/index.ts` — Export `SaleLineItem`
+- `src/components/sales/dialogs/SalesActionDialogs.tsx` — Reserve/Sell/Revert with appurtenances
+
+**Files created:**
+- `src/app/api/sales/[unitId]/appurtenance-sync/route.ts` — Batch writes for parking/storage status
+- `src/hooks/sales/useLinkedSpacesForSale.ts` — Hook for resolving linked spaces in sale dialogs
+- `src/components/sales/dialogs/AppurtenancesSection.tsx` — UI component for appurtenances

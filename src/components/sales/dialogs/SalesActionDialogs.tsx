@@ -24,6 +24,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
+import { AppurtenancesSection } from './AppurtenancesSection';
+import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import type { Unit } from '@/types/unit';
 
@@ -153,6 +155,9 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const [buyerName, setBuyerName] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
+  // ADR-199: Linked spaces (appurtenances)
+  const linkedSpaces = useLinkedSpacesForSale(unit);
+
   // 🏢 ENTERPRISE: Dialog switching pattern — Radix Dialog cannot nest modals,
   // so we swap between Reserve ↔ NewContact using a single active-dialog state.
   // 'reserve' = show reservation form, 'new-contact' = show contact creation form.
@@ -211,13 +216,19 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
       // ADR-198: Fire-and-forget — δημιουργία τιμολογίου προκαταβολής
       const depositAmount = Number(deposit);
-      console.log('[ADR-198] Deposit amount:', depositAmount, 'unitId:', unit.id);
+      const unitName = unit.name ?? unit.unitName ?? '';
+
+      // ADR-199: Build multi-line items if appurtenances selected
+      const selectedSpaces = linkedSpaces.getSelectedSpaces();
+      const lineItems = selectedSpaces.length > 0
+        ? linkedSpaces.buildLineItems(depositAmount, unitName)
+        : undefined;
+
       if (depositAmount > 0) {
-        console.log('[ADR-198] Sending deposit_invoice event...');
         apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
           eventType: 'deposit_invoice',
           unitId: unit.id,
-          unitName: unit.name ?? unit.unitName ?? '',
+          unitName,
           projectId: unit.project ?? null,
           buyerContactId: buyerContactId || null,
           buyerName: buyerName || null,
@@ -230,20 +241,30 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           paymentMethod: 'bank_transfer',
           notes: null,
           depositAmount,
-        }).then((res: unknown) => {
-          console.log('[ADR-198] Deposit invoice SUCCESS:', res);
+          lineItems,
         }).catch((err: unknown) => {
-          console.error('[ADR-198] Deposit invoice FAILED:', err);
+          console.warn('[ADR-198] Deposit invoice fire-and-forget failed:', err);
         });
-      } else {
-        console.warn('[ADR-198] Skipped — depositAmount is 0 or invalid');
+      }
+
+      // ADR-199: Sync appurtenance commercial status
+      if (selectedSpaces.length > 0) {
+        const syncPayload = linkedSpaces.buildSyncPayload('reserve');
+        apiClient.post(`/api/sales/${unit.id}/appurtenance-sync`, {
+          action: 'reserve',
+          spaces: syncPayload,
+          buyerContactId: buyerContactId || null,
+          buyerName: buyerName || null,
+        }).catch((err: unknown) => {
+          console.warn('[ADR-199] Appurtenance sync fire-and-forget failed:', err);
+        });
       }
     } catch {
       // Error handled by service
     } finally {
       setSaving(false);
     }
-  }, [deposit, buyerContactId, unit, onOpenChange, onSuccess]);
+  }, [deposit, buyerContactId, buyerName, unit, onOpenChange, onSuccess, linkedSpaces]);
 
   return (
     <>
@@ -298,6 +319,17 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
                 className="text-right"
               />
             </fieldset>
+
+            {/* ADR-199: Linked parking/storage appurtenances */}
+            {linkedSpaces.hasSpaces && (
+              <AppurtenancesSection
+                spaces={linkedSpaces.spaces}
+                unitPrice={Number(deposit) || 0}
+                totalAppurtenancesPrice={linkedSpaces.totalAppurtenancesPrice}
+                onToggle={linkedSpaces.toggleSpace}
+                onPriceChange={linkedSpaces.setSpacePrice}
+              />
+            )}
           </section>
 
           <DialogFooter>
@@ -335,6 +367,9 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   );
   const [saving, setSaving] = useState(false);
 
+  // ADR-199: Linked spaces (appurtenances)
+  const linkedSpaces = useLinkedSpacesForSale(unit);
+
   // Sync state when dialog opens or unit asking price changes
   useEffect(() => {
     if (open) {
@@ -366,11 +401,17 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
       onOpenChange(false);
       onSuccess?.();
 
-      // ADR-198: Fire-and-forget — τιμολόγιο τελικής πώλησης (υπόλοιπο μετά deposit)
+      // ADR-198 + ADR-199: Fire-and-forget — τιμολόγιο τελικής πώλησης
+      const unitName = unit.name ?? unit.unitName ?? '';
+      const selectedSpaces = linkedSpaces.getSelectedSpaces();
+      const lineItems = selectedSpaces.length > 0
+        ? linkedSpaces.buildLineItems(price, unitName)
+        : undefined;
+
       apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
         eventType: 'final_sale_invoice',
         unitId: unit.id,
-        unitName: unit.name ?? unit.unitName ?? '',
+        unitName,
         projectId: unit.project ?? null,
         buyerContactId: unit.commercial?.buyerContactId ?? null,
         buyerName: unit.commercial?.buyerName ?? null,
@@ -384,15 +425,29 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         notes: null,
         finalPrice: price,
         depositAlreadyInvoiced: unit.commercial?.reservationDeposit ?? 0,
+        lineItems,
       }).catch((err: unknown) => {
         console.warn('[ADR-198] Final sale invoice fire-and-forget failed:', err);
       });
+
+      // ADR-199: Sync appurtenance commercial status
+      if (selectedSpaces.length > 0) {
+        const syncPayload = linkedSpaces.buildSyncPayload('sell');
+        apiClient.post(`/api/sales/${unit.id}/appurtenance-sync`, {
+          action: 'sell',
+          spaces: syncPayload,
+          buyerContactId: unit.commercial?.buyerContactId ?? null,
+          buyerName: unit.commercial?.buyerName ?? null,
+        }).catch((err: unknown) => {
+          console.warn('[ADR-199] Appurtenance sync fire-and-forget failed:', err);
+        });
+      }
     } catch {
       // Error handled by service
     } finally {
       setSaving(false);
     }
-  }, [finalPrice, unit, onOpenChange, onSuccess]);
+  }, [finalPrice, unit, onOpenChange, onSuccess, linkedSpaces]);
 
   const askingPrice = unit.commercial?.askingPrice;
   const discount = askingPrice && Number(finalPrice) > 0
@@ -444,6 +499,17 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             </p>
           )}
 
+          {/* ADR-199: Linked parking/storage appurtenances */}
+          {linkedSpaces.hasSpaces && (
+            <AppurtenancesSection
+              spaces={linkedSpaces.spaces}
+              unitPrice={Number(finalPrice) || 0}
+              totalAppurtenancesPrice={linkedSpaces.totalAppurtenancesPrice}
+              onToggle={linkedSpaces.toggleSpace}
+              onPriceChange={linkedSpaces.setSpacePrice}
+            />
+          )}
+
           <p className="text-xs text-muted-foreground">
             {t('sales.dialogs.sell.warning', {
               defaultValue: 'Η μονάδα θα μεταβεί σε κατάσταση "Πωλήθηκε" και δεν θα εμφανίζεται πλέον στις διαθέσιμες.',
@@ -478,6 +544,9 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [saving, setSaving] = useState(false);
+
+  // ADR-199: Linked spaces (appurtenances) — read-only in revert
+  const linkedSpaces = useLinkedSpacesForSale(unit);
 
   const currentStatus = unit.commercialStatus;
   const statusLabel = currentStatus === 'sold'
@@ -520,11 +589,17 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
         : depositToRefund;
       const creditReason = wasSold ? 'Ακύρωση πώλησης' : 'Ακύρωση κράτησης';
 
+      // ADR-199: Build multi-line credit items if appurtenances exist
+      const unitName = unit.name ?? unit.unitName ?? '';
+      const lineItems = linkedSpaces.hasSpaces
+        ? linkedSpaces.buildLineItems(creditAmount, unitName)
+        : undefined;
+
       if (creditAmount > 0) {
         apiClient.post(`/api/sales/${unit.id}/accounting-event`, {
           eventType: 'credit_invoice',
           unitId: unit.id,
-          unitName: unit.name ?? unit.unitName ?? '',
+          unitName,
           projectId: unit.project ?? null,
           buyerContactId: refundBuyerContactId,
           buyerName: unit.commercial?.buyerName ?? null,
@@ -538,16 +613,32 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           notes: null,
           creditAmount,
           reason: creditReason,
+          lineItems,
         }).catch((err: unknown) => {
           console.warn('[ADR-198] Credit invoice fire-and-forget failed:', err);
         });
+      }
+
+      // ADR-199: Revert appurtenance commercial status
+      if (linkedSpaces.hasSpaces) {
+        const syncPayload = linkedSpaces.buildSyncPayload('revert');
+        if (syncPayload.length > 0) {
+          apiClient.post(`/api/sales/${unit.id}/appurtenance-sync`, {
+            action: 'revert',
+            spaces: syncPayload,
+            buyerContactId: null,
+            buyerName: null,
+          }).catch((err: unknown) => {
+            console.warn('[ADR-199] Appurtenance revert sync failed:', err);
+          });
+        }
       }
     } catch {
       // Error handled by service
     } finally {
       setSaving(false);
     }
-  }, [unit, onOpenChange, onSuccess]);
+  }, [unit, onOpenChange, onSuccess, linkedSpaces]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -584,6 +675,18 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
                 €{unit.commercial.finalPrice.toLocaleString('el-GR')}
               </span>
             </p>
+          )}
+
+          {/* ADR-199: Read-only list of linked appurtenances that will be reverted */}
+          {linkedSpaces.hasSpaces && (
+            <AppurtenancesSection
+              spaces={linkedSpaces.spaces}
+              unitPrice={unit.commercial?.finalPrice ?? unit.commercial?.reservationDeposit ?? 0}
+              totalAppurtenancesPrice={linkedSpaces.totalAppurtenancesPrice}
+              onToggle={() => {}}
+              onPriceChange={() => {}}
+              readOnly
+            />
           )}
 
           <p className="text-xs text-orange-600 font-medium">

@@ -21,6 +21,22 @@ export type SalesAccountingEventType =
   | 'credit_invoice';
 
 // ============================================================================
+// SALE LINE ITEM (ADR-199 — Multi-line invoices for appurtenances)
+// ============================================================================
+
+/** Γραμμή πώλησης — unit ή παρακολούθημα (parking/storage) */
+export interface SaleLineItem {
+  /** Firestore document ID of the asset */
+  assetId: string;
+  /** Type of asset being sold */
+  assetType: 'unit' | 'parking' | 'storage';
+  /** Human-readable name (e.g. "Α-101", "P-05", "S-12") */
+  assetName: string;
+  /** Gross amount including VAT */
+  grossAmount: number;
+}
+
+// ============================================================================
 // BASE EVENT (Shared fields)
 // ============================================================================
 
@@ -52,6 +68,8 @@ export interface SalesAccountingEventBase {
   paymentMethod: PaymentMethod;
   /** Σημειώσεις */
   notes: string | null;
+  /** ADR-199: Multi-line invoice items (unit + appurtenances) */
+  lineItems?: SaleLineItem[];
 }
 
 // ============================================================================

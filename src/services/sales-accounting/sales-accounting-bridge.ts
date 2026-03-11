@@ -22,6 +22,7 @@ import type { CompanyProfile } from '@/subapps/accounting/types/company';
 import type {
   SalesAccountingEvent,
   SalesAccountingResult,
+  SaleLineItem,
   DepositInvoiceEvent,
   FinalSaleInvoiceEvent,
   CreditInvoiceEvent,
@@ -138,6 +139,7 @@ export class SalesAccountingBridge {
       unitId: event.unitId,
       relatedInvoiceId: null,
       notes: event.notes,
+      saleLineItems: event.lineItems,
     });
 
     return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.unitId);
@@ -181,6 +183,7 @@ export class SalesAccountingBridge {
       unitId: event.unitId,
       relatedInvoiceId: depositInvoiceId,
       notes: event.notes,
+      saleLineItems: event.lineItems,
     });
 
     return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.unitId);
@@ -221,6 +224,7 @@ export class SalesAccountingBridge {
       unitId: event.unitId,
       relatedInvoiceId: depositInvoiceId,
       notes: event.notes,
+      saleLineItems: event.lineItems,
     });
 
     return this.executeInvoiceCreation(invoiceInput, transactionChainId, event.unitId);
@@ -430,6 +434,9 @@ export class SalesAccountingBridge {
 
   /**
    * Χτίζει πλήρες CreateInvoiceInput
+   *
+   * ADR-199: Αν υπάρχουν lineItems (παρακολουθήματα), δημιουργεί N γραμμές
+   * αντί για 1. Backward compatible — χωρίς lineItems ίδια συμπεριφορά.
    */
   private buildInvoiceInput(params: {
     type: 'sales_invoice' | 'credit_invoice';
@@ -445,10 +452,52 @@ export class SalesAccountingBridge {
     unitId: string;
     relatedInvoiceId: string | null;
     notes: string | null;
+    /** ADR-199: Multi-line items (unit + appurtenances) */
+    saleLineItems?: SaleLineItem[];
   }): CreateInvoiceInput {
     const category = getCategoryByCode(INCOME_CATEGORY);
+    const mydataCode = (category?.mydataCode ?? 'category1_1') as MyDataIncomeType;
     const now = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const fiscalYear = new Date().getFullYear();
+
+    // ADR-199: Multi-line invoices for appurtenances
+    const hasMultipleLines = params.saleLineItems && params.saleLineItems.length > 0;
+
+    const invoiceLineItems = hasMultipleLines
+      ? params.saleLineItems.map((item, idx) => {
+          const lineNet = roundTwo(item.grossAmount / VAT_DIVISOR);
+          return {
+            lineNumber: idx + 1,
+            description: this.buildLineDescription(params.type, item),
+            quantity: 1,
+            unit: 'τεμ',
+            unitPrice: lineNet,
+            vatRate: VAT_RATE,
+            netAmount: lineNet,
+            mydataCode,
+          };
+        })
+      : [
+          {
+            lineNumber: 1,
+            description: params.description,
+            quantity: 1,
+            unit: 'τεμ',
+            unitPrice: params.netAmount,
+            vatRate: VAT_RATE,
+            netAmount: params.netAmount,
+            mydataCode,
+          },
+        ];
+
+    // Recalculate totals from line items for consistency
+    const totalNet = hasMultipleLines
+      ? roundTwo(invoiceLineItems.reduce((sum, li) => sum + li.netAmount, 0))
+      : params.netAmount;
+    const totalGross = hasMultipleLines
+      ? roundTwo(params.saleLineItems!.reduce((sum, li) => sum + li.grossAmount, 0))
+      : params.grossAmount;
+    const totalVat = roundTwo(totalGross - totalNet);
 
     return {
       series: params.series,
@@ -457,33 +506,22 @@ export class SalesAccountingBridge {
       dueDate: null,
       issuer: params.issuer,
       customer: params.customer,
-      lineItems: [
-        {
-          lineNumber: 1,
-          description: params.description,
-          quantity: 1,
-          unit: 'τεμ',
-          unitPrice: params.netAmount,
-          vatRate: VAT_RATE,
-          netAmount: params.netAmount,
-          mydataCode: (category?.mydataCode ?? 'category1_1') as MyDataIncomeType,
-        },
-      ],
+      lineItems: invoiceLineItems,
       currency: 'EUR',
-      totalNetAmount: params.netAmount,
-      totalVatAmount: params.vatAmount,
-      totalGrossAmount: params.grossAmount,
+      totalNetAmount: totalNet,
+      totalVatAmount: totalVat,
+      totalGrossAmount: totalGross,
       vatBreakdown: [
         {
           vatRate: VAT_RATE,
-          netAmount: params.netAmount,
-          vatAmount: params.vatAmount,
+          netAmount: totalNet,
+          vatAmount: totalVat,
         },
       ],
       paymentMethod: params.paymentMethod as CreateInvoiceInput['paymentMethod'],
       paymentStatus: 'paid',
       payments: [],
-      totalPaid: params.grossAmount,
+      totalPaid: totalGross,
       balanceDue: 0,
       mydata: {
         status: 'draft',
@@ -501,6 +539,22 @@ export class SalesAccountingBridge {
       notes: params.notes,
       fiscalYear,
     };
+  }
+
+  /**
+   * ADR-199: Builds description for an invoice line item
+   */
+  private buildLineDescription(
+    invoiceType: 'sales_invoice' | 'credit_invoice',
+    item: SaleLineItem
+  ): string {
+    const assetLabels: Record<SaleLineItem['assetType'], string> = {
+      unit: 'Μονάδα',
+      parking: 'Θέση στάθμευσης',
+      storage: 'Αποθήκη',
+    };
+    const prefix = invoiceType === 'credit_invoice' ? 'Πιστωτικό —' : 'Πώληση —';
+    return `${prefix} ${assetLabels[item.assetType]} ${item.assetName}`;
   }
 
   /**

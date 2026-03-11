@@ -207,6 +207,14 @@ export interface LinkedSpace {
 
   /** Optional metadata for extensions (must not use 'any') */
   metadata?: Record<string, string | number | boolean>;
+
+  // === ADR-199: Sale Appurtenances ===
+
+  /** Whether this linked space is included in the unit's sale transaction */
+  includedInSale?: boolean;
+
+  /** Sale price for this specific space (null = no separate price) */
+  salePrice?: number | null;
 }
 
 // =============================================================================

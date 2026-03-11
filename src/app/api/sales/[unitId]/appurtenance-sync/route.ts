@@ -1,0 +1,169 @@
+/**
+ * =============================================================================
+ * POST /api/sales/{unitId}/appurtenance-sync — Sync parking/storage status
+ * =============================================================================
+ *
+ * Updates commercialStatus and commercial data on linked parking/storage
+ * spaces when a unit is reserved, sold, or reverted.
+ *
+ * Uses Firestore batch writes for atomicity.
+ *
+ * Auth: withAuth (authenticated users)
+ * Rate: withStandardRateLimit (60 req/min)
+ *
+ * @module api/sales/[unitId]/appurtenance-sync
+ * @see ADR-199 Sales Appurtenances
+ */
+
+import 'server-only';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+type SyncAction = 'reserve' | 'sell' | 'revert';
+
+interface SyncSpacePayload {
+  spaceId: string;
+  spaceType: 'parking' | 'storage';
+  salePrice?: number | null;
+}
+
+interface SyncRequestBody {
+  action: SyncAction;
+  spaces: SyncSpacePayload[];
+  buyerContactId: string | null;
+  buyerName: string | null;
+}
+
+const VALID_ACTIONS: readonly SyncAction[] = ['reserve', 'sell', 'revert'];
+
+// =============================================================================
+// VALIDATION
+// =============================================================================
+
+function validateBody(body: Partial<SyncRequestBody>): string | null {
+  if (!body.action || !VALID_ACTIONS.includes(body.action)) {
+    return 'action must be one of: reserve, sell, revert';
+  }
+  if (!Array.isArray(body.spaces) || body.spaces.length === 0) {
+    return 'spaces must be a non-empty array';
+  }
+  for (const space of body.spaces) {
+    if (!space.spaceId?.trim()) return 'Each space must have a spaceId';
+    if (space.spaceType !== 'parking' && space.spaceType !== 'storage') {
+      return 'spaceType must be "parking" or "storage"';
+    }
+  }
+  return null;
+}
+
+// =============================================================================
+// COLLECTION RESOLVER
+// =============================================================================
+
+function getCollectionName(spaceType: 'parking' | 'storage'): string {
+  return spaceType === 'parking' ? COLLECTIONS.PARKING_SPACES : COLLECTIONS.STORAGE;
+}
+
+// =============================================================================
+// POST — Sync appurtenance status
+// =============================================================================
+
+async function handlePost(
+  request: NextRequest,
+  segmentData?: { params: Promise<{ unitId: string }> }
+): Promise<NextResponse> {
+  const handler = withAuth(
+    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      try {
+        const { unitId } = await segmentData!.params;
+        const body = (await req.json()) as Partial<SyncRequestBody>;
+
+        const validationError = validateBody(body);
+        if (validationError) {
+          return NextResponse.json(
+            { success: false, error: validationError },
+            { status: 400 }
+          );
+        }
+
+        const { action, spaces, buyerContactId, buyerName } = body as SyncRequestBody;
+
+        await safeFirestoreOperation(async (db) => {
+          const batch = db.batch();
+          const now = new Date().toISOString();
+
+          for (const space of spaces) {
+            const collection = getCollectionName(space.spaceType);
+            const docRef = db.collection(collection).doc(space.spaceId);
+
+            switch (action) {
+              case 'reserve':
+                batch.update(docRef, {
+                  commercialStatus: 'reserved',
+                  'commercial.buyerContactId': buyerContactId ?? null,
+                  'commercial.buyerName': buyerName ?? null,
+                  'commercial.askingPrice': space.salePrice ?? null,
+                  'commercial.reservationDate': now,
+                  'commercial.linkedUnitId': unitId,
+                });
+                break;
+
+              case 'sell':
+                batch.update(docRef, {
+                  commercialStatus: 'sold',
+                  'commercial.buyerContactId': buyerContactId ?? null,
+                  'commercial.buyerName': buyerName ?? null,
+                  'commercial.finalPrice': space.salePrice ?? null,
+                  'commercial.saleDate': now,
+                  'commercial.linkedUnitId': unitId,
+                });
+                break;
+
+              case 'revert':
+                batch.update(docRef, {
+                  commercialStatus: null,
+                  'commercial.buyerContactId': null,
+                  'commercial.buyerName': null,
+                  'commercial.askingPrice': null,
+                  'commercial.finalPrice': null,
+                  'commercial.reservationDeposit': null,
+                  'commercial.reservationDate': null,
+                  'commercial.saleDate': null,
+                  'commercial.linkedUnitId': null,
+                });
+                break;
+            }
+          }
+
+          await batch.commit();
+        }, undefined);
+
+        return NextResponse.json({
+          success: true,
+          message: `Synced ${spaces.length} space(s) with action: ${action}`,
+          unitId,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to sync appurtenances';
+        console.error('[appurtenance-sync] Error:', message);
+        return NextResponse.json(
+          { success: false, error: message },
+          { status: 500 }
+        );
+      }
+    }
+  );
+
+  return handler(request);
+}
+
+export const POST = withStandardRateLimit(handlePost);
