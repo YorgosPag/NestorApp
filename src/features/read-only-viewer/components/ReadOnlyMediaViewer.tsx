@@ -65,6 +65,8 @@ interface ReadOnlyMediaViewerProps {
   buildingId?: string | null;
   /** Floor number - used with buildingId to find floor */
   floorNumber?: number | null;
+  /** 🏢 FIX: Company ID from unit data — needed for FileRecord queries (super_admin support) */
+  companyId?: string | null;
   /** Optional className */
   className?: string;
 }
@@ -107,12 +109,17 @@ export function ReadOnlyMediaViewer({
   floorName,
   buildingId,
   floorNumber,
+  companyId: propCompanyId,
   className,
 }: ReadOnlyMediaViewerProps) {
   const { t } = useTranslation(['properties', 'common', 'files']);
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
   const { user } = useAuth();
+
+  // 🏢 FIX: Use unit's companyId (from Firestore) if available, fallback to auth context.
+  // Critical for super_admin who may have a different companyId or none in claims.
+  const effectiveCompanyId = propCompanyId || user?.companyId;
 
   // ==========================================================================
   // 🏢 ENTERPRISE: URL-Based State (Deep Linking Support)
@@ -152,19 +159,19 @@ export function ReadOnlyMediaViewer({
   const floorplansData = useEntityFiles({
     entityType: 'unit',
     entityId: unitId || '',
-    companyId: user?.companyId,
+    companyId: effectiveCompanyId,
     category: 'floorplans',
-    autoFetch: !!unitId && !!user?.companyId,
+    autoFetch: !!unitId && !!effectiveCompanyId,
   });
 
   // 🏢 Floor floorplans (Κάτοψη Ορόφου) - Uses FloorFloorplanService (ADR-060)
   // This hook loads from dxf-scenes/{fileId}/scene.json via FloorFloorplanService
-  logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: user?.companyId } });
+  logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: effectiveCompanyId } });
   const { floorFloorplan, loading: floorFloorplanLoading, error: floorFloorplanError, refetch: refetchFloorFloorplan } = useFloorFloorplans({
     floorId: floorId || null,
     buildingId: buildingId || null,
     floorNumber: floorNumber ?? null,
-    companyId: user?.companyId || null, // 🏢 ENTERPRISE: Required for Enterprise pattern (ADR-031)
+    companyId: effectiveCompanyId || null, // 🏢 FIX: Use unit's companyId for super_admin support
   });
 
   // 🏢 ENTERPRISE: Adapter - Convert FloorFloorplanData to FileRecord[] for FloorplanGallery
@@ -196,7 +203,7 @@ export function ReadOnlyMediaViewer({
         downloadUrl: floorFloorplan.pdfImageUrl || '',
         status: 'ready',
         lifecycleState: 'active',
-        companyId: user?.companyId || '',
+        companyId: effectiveCompanyId || '',
         entityType: 'floor',
         entityId: floorFloorplan.floorId,
         domain: 'construction',
@@ -225,22 +232,22 @@ export function ReadOnlyMediaViewer({
       error: floorFloorplanError ? new Error(floorFloorplanError) : null,
       refetch: refetchFloorFloorplan,
     };
-  }, [floorFloorplan, floorFloorplanLoading, floorFloorplanError, refetchFloorFloorplan, user?.companyId]);
+  }, [floorFloorplan, floorFloorplanLoading, floorFloorplanError, refetchFloorFloorplan, effectiveCompanyId]);
 
   const photosData = useEntityFiles({
     entityType: 'unit',
     entityId: unitId || '',
-    companyId: user?.companyId,
+    companyId: effectiveCompanyId,
     category: 'photos',
-    autoFetch: !!unitId && !!user?.companyId,
+    autoFetch: !!unitId && !!effectiveCompanyId,
   });
 
   const videosData = useEntityFiles({
     entityType: 'unit',
     entityId: unitId || '',
-    companyId: user?.companyId,
+    companyId: effectiveCompanyId,
     category: 'videos',
-    autoFetch: !!unitId && !!user?.companyId,
+    autoFetch: !!unitId && !!effectiveCompanyId,
   });
 
   // ==========================================================================

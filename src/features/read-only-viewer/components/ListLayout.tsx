@@ -108,6 +108,11 @@ export function ListLayout({
               ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.floor ?? null
               : null
           }
+          companyId={
+            selectedPropertyIds[0]
+              ? (filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown> | undefined)?.companyId as string | undefined ?? null
+              : null
+          }
         />
       </div>
 
