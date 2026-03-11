@@ -79,7 +79,7 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-2">
-        <ol className="relative border-l-2 border-muted ml-2 flex flex-col gap-0">
+        <ol className="relative border-l-2 border-muted ml-2 flex flex-col gap-0 pb-1">
           {/* Εταιρεία */}
           {hierarchy.company && (
             <HierarchyNode

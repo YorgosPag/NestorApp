@@ -6,7 +6,7 @@
  * @pattern Enterprise dialog pattern with Radix UI primitives
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,13 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
     unit.commercial?.askingPrice?.toString() ?? ''
   );
   const [saving, setSaving] = useState(false);
+
+  // Sync state when dialog opens or unit data changes
+  useEffect(() => {
+    if (open) {
+      setAskingPrice(unit.commercial?.askingPrice?.toString() ?? '');
+    }
+  }, [open, unit.commercial?.askingPrice]);
 
   const handleSave = useCallback(async () => {
     const price = Number(askingPrice);
@@ -327,6 +334,13 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     unit.commercial?.askingPrice?.toString() ?? ''
   );
   const [saving, setSaving] = useState(false);
+
+  // Sync state when dialog opens or unit asking price changes
+  useEffect(() => {
+    if (open) {
+      setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
+    }
+  }, [open, unit.commercial?.askingPrice]);
 
   const handleSave = useCallback(async () => {
     const price = Number(finalPrice);
