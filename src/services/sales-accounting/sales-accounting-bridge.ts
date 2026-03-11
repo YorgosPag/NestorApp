@@ -83,6 +83,9 @@ export class SalesAccountingBridge {
       event.buyerName = customer.name !== 'Αγοραστής' ? customer.name : null;
     }
 
+    // 1c. Resolve hierarchy server-side (building → project → company)
+    await this.resolveHierarchy(event);
+
     let result: SalesAccountingResult;
 
     switch (event.eventType) {
@@ -305,6 +308,62 @@ export class SalesAccountingBridge {
       if (snap.empty) return null;
       return (snap.docs[0].data() as { invoiceId: string }).invoiceId;
     }, null);
+  }
+
+  /**
+   * Resolve ιεραρχίας: building → project → company
+   * Εμπλουτίζει το event με πληροφορίες ιεραρχίας για τα emails
+   */
+  private async resolveHierarchy(event: SalesAccountingEvent): Promise<void> {
+    // Skip αν ήδη έχει ιεραρχία
+    if (event.companyName && event.buildingName && event.projectAddress) return;
+
+    await safeFirestoreOperation(async (db) => {
+      // 1. Fetch unit → buildingId, floor
+      const unitSnap = await db.collection(COLLECTIONS.UNITS).doc(event.unitId).get();
+      if (!unitSnap.exists) return;
+      const unitData = unitSnap.data() as Record<string, unknown>;
+      event.unitFloor = (unitData.floor as number) ?? null;
+
+      const buildingId = unitData.buildingId as string | undefined;
+      if (!buildingId) return;
+
+      // 2. Fetch building
+      const buildingSnap = await db.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+      if (!buildingSnap.exists) return;
+      const buildingData = buildingSnap.data() as Record<string, unknown>;
+      event.buildingName = (buildingData.name as string) ?? null;
+
+      const projectId = buildingData.projectId as string | undefined;
+      if (!projectId) return;
+
+      // 3. Fetch project
+      const projectSnap = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+      if (!projectSnap.exists) return;
+      const projectData = projectSnap.data() as Record<string, unknown>;
+      if (!event.projectName) event.projectName = (projectData.name as string) ?? null;
+      event.permitTitle = (projectData.title as string) ?? null;
+      const addr = (projectData.address as string) ?? '';
+      const city = (projectData.city as string) ?? '';
+      event.projectAddress = [addr, city].filter(Boolean).join(', ') || null;
+
+      // 4. Fetch company
+      const companyId = projectData.companyId as string | undefined;
+      if (!companyId) {
+        event.companyName = (projectData.company as string) ?? null;
+        return;
+      }
+      const companySnap = await db.collection(COLLECTIONS.CONTACTS).doc(companyId).get();
+      if (companySnap.exists) {
+        const companyData = companySnap.data() as Record<string, unknown>;
+        event.companyName = (companyData.companyName as string)
+          ?? (companyData.displayName as string)
+          ?? (projectData.company as string)
+          ?? null;
+      } else {
+        event.companyName = (projectData.company as string) ?? null;
+      }
+    }, undefined);
   }
 
   /**

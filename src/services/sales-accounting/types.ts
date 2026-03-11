@@ -38,6 +38,16 @@ export interface SalesAccountingEventBase {
   buyerName: string | null;
   /** Όνομα έργου (για email ειδοποίησης) */
   projectName: string | null;
+  /** Τίτλος αδείας (για email ειδοποίησης) */
+  permitTitle: string | null;
+  /** Όνομα εταιρείας (για email ειδοποίησης) */
+  companyName: string | null;
+  /** Όνομα κτιρίου (για email ειδοποίησης) */
+  buildingName: string | null;
+  /** Όροφος μονάδας (για email ειδοποίησης) */
+  unitFloor: number | null;
+  /** Διεύθυνση έργου (για email ειδοποίησης) */
+  projectAddress: string | null;
   /** Τρόπος πληρωμής */
   paymentMethod: PaymentMethod;
   /** Σημειώσεις */

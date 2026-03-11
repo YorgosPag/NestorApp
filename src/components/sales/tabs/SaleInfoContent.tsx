@@ -23,6 +23,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit } from '@/types/unit';
 import { TransactionChainCard } from '@/components/sales/cards/TransactionChainCard';
+import { UnitHierarchyCard } from '@/components/sales/cards/UnitHierarchyCard';
 
 // =============================================================================
 // 🏢 TYPES
@@ -139,6 +140,9 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
 
   return (
     <section className="flex flex-col gap-2 p-2" aria-label={t('sales.tabs.saleInfo', { defaultValue: 'Πληροφορίες Πώλησης' })}>
+      {/* Ιεραρχία Ακινήτου: Εταιρεία → Έργο → Κτίριο → Μονάδα */}
+      <UnitHierarchyCard unitId={unit.id} />
+
       {/* Εμπορικά Στοιχεία */}
       <Card>
         <CardHeader className="p-3 pb-0">
