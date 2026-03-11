@@ -77,6 +77,12 @@ export class SalesAccountingBridge {
       );
     }
 
+    // 1b. Resolve buyer name server-side (ο client μπορεί να μην το γνωρίζει)
+    if (!event.buyerName && event.buyerContactId) {
+      const customer = await this.resolveCustomer(event.buyerContactId);
+      event.buyerName = customer.name !== 'Αγοραστής' ? customer.name : null;
+    }
+
     let result: SalesAccountingResult;
 
     switch (event.eventType) {
