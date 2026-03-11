@@ -223,11 +223,14 @@ export class FloorFloorplanService {
 
       // Query files collection for this floor's floorplans
       // 🏢 ENTERPRISE: Using positional args as per FileRecordService API
+      // 🏢 FIX: Include domain to match the existing Firestore composite index
+      // Index: entityType + entityId + status + companyId + domain + category + purpose + isDeleted
       const fileRecords = await FileRecordService.getFilesByEntity(
         ENTITY_TYPES.FLOOR,
         floorId,
         {
           companyId,
+          domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
           purpose: 'floor-floorplan',
         }
@@ -324,11 +327,14 @@ export class FloorFloorplanService {
    */
   static async hasFloorplan(companyId: string, floorId: string): Promise<boolean> {
     try {
+      // 🏢 FIX: Include domain to match the existing Firestore composite index
+      // Index: entityType + entityId + status + companyId + domain + category + purpose + isDeleted
       const fileRecords = await FileRecordService.getFilesByEntity(
         ENTITY_TYPES.FLOOR,
         floorId,
         {
           companyId,
+          domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
           purpose: 'floor-floorplan',
         }
@@ -352,11 +358,14 @@ export class FloorFloorplanService {
    */
   static async deleteFloorplan(companyId: string, floorId: string, deletedBy: string): Promise<boolean> {
     try {
+      // 🏢 FIX: Include domain to match the existing Firestore composite index
+      // Index: entityType + entityId + status + companyId + domain + category + purpose + isDeleted
       const fileRecords = await FileRecordService.getFilesByEntity(
         ENTITY_TYPES.FLOOR,
         floorId,
         {
           companyId,
+          domain: FILE_DOMAINS.CONSTRUCTION,
           category: FILE_CATEGORIES.FLOORPLANS,
           purpose: 'floor-floorplan',
         }
