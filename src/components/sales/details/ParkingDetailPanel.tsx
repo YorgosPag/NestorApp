@@ -62,14 +62,14 @@ export function ParkingDetailPanel({ data }: ParkingDetailPanelProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <InfoRow icon={Car} label={t('parking:general.fields.type', { defaultValue: 'Τύπος' })} value={t(`parking:types.${data.type ?? 'standard'}`, { defaultValue: data.type ?? 'standard' })} />
-          <InfoRow icon={MapPin} label={t('parking:general.fields.locationZone', { defaultValue: 'Ζώνη' })} value={data.locationZone ? t(`parking:locationZone.${data.locationZone}`, { defaultValue: data.locationZone }) : '—'} />
-          <InfoRow icon={Layers} label={t('parking:general.fields.floor', { defaultValue: 'Επίπεδο' })} value={data.floor || '—'} />
+          <InfoRow icon={Car} iconColor={SALES_ICON_COLORS.type} label={t('parking:general.fields.type', { defaultValue: 'Τύπος' })} value={t(`parking:types.${data.type ?? 'standard'}`, { defaultValue: data.type ?? 'standard' })} />
+          <InfoRow icon={MapPin} iconColor={SALES_ICON_COLORS.locationZone} label={t('parking:general.fields.locationZone', { defaultValue: 'Ζώνη' })} value={data.locationZone ? t(`parking:locationZone.${data.locationZone}`, { defaultValue: data.locationZone }) : '—'} />
+          <InfoRow icon={Layers} iconColor={SALES_ICON_COLORS.floor} label={t('parking:general.fields.floor', { defaultValue: 'Επίπεδο' })} value={data.floor || '—'} />
           {area > 0 && (
-            <InfoRow icon={Maximize2} label={t('parking:general.fields.area', { defaultValue: 'Εμβαδόν' })} value={`${area} m²`} />
+            <InfoRow icon={Maximize2} iconColor={SALES_ICON_COLORS.area} label={t('parking:general.fields.area', { defaultValue: 'Εμβαδόν' })} value={`${area} m²`} />
           )}
           {data.millesimalShares != null && data.millesimalShares > 0 && (
-            <InfoRow icon={Hash} label={t('salesParking.details.millesimalShares', { defaultValue: 'Χιλιοστά' })} value={`${data.millesimalShares}‰`} />
+            <InfoRow icon={Hash} iconColor={SALES_ICON_COLORS.millesimalShares} label={t('salesParking.details.millesimalShares', { defaultValue: 'Χιλιοστά' })} value={`${data.millesimalShares}‰`} />
           )}
         </CardContent>
       </Card>

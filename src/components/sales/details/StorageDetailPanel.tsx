@@ -62,12 +62,12 @@ export function StorageDetailPanel({ data }: StorageDetailPanelProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <InfoRow icon={Layers} label={t('storage:general.fields.type', { defaultValue: 'Τύπος' })} value={t(`storage:types.${data.type}`, { defaultValue: data.type })} />
-          <InfoRow icon={Building2} label={t('storage:general.fields.building', { defaultValue: 'Κτίριο' })} value={data.building || '—'} />
-          <InfoRow icon={MapPin} label={t('storage:general.fields.floor', { defaultValue: 'Όροφος' })} value={data.floor || '—'} />
-          <InfoRow icon={Maximize2} label={t('storage:general.fields.area', { defaultValue: 'Εμβαδόν' })} value={area > 0 ? `${area} m²` : '—'} />
+          <InfoRow icon={Layers} iconColor={SALES_ICON_COLORS.type} label={t('storage:general.fields.type', { defaultValue: 'Τύπος' })} value={t(`storage:types.${data.type}`, { defaultValue: data.type })} />
+          <InfoRow icon={Building2} iconColor={SALES_ICON_COLORS.building} label={t('storage:general.fields.building', { defaultValue: 'Κτίριο' })} value={data.building || '—'} />
+          <InfoRow icon={MapPin} iconColor={SALES_ICON_COLORS.floor} label={t('storage:general.fields.floor', { defaultValue: 'Όροφος' })} value={data.floor || '—'} />
+          <InfoRow icon={Maximize2} iconColor={SALES_ICON_COLORS.area} label={t('storage:general.fields.area', { defaultValue: 'Εμβαδόν' })} value={area > 0 ? `${area} m²` : '—'} />
           {data.millesimalShares != null && data.millesimalShares > 0 && (
-            <InfoRow icon={Hash} label={t('salesStorage.details.millesimalShares', { defaultValue: 'Χιλιοστά' })} value={`${data.millesimalShares}‰`} />
+            <InfoRow icon={Hash} iconColor={SALES_ICON_COLORS.millesimalShares} label={t('salesStorage.details.millesimalShares', { defaultValue: 'Χιλιοστά' })} value={`${data.millesimalShares}‰`} />
           )}
         </CardContent>
       </Card>

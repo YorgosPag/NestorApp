@@ -21,10 +21,18 @@ export const SALES_ICON_COLORS = {
   cancellationDate: 'text-red-600',
   daysOnMarket: 'text-gray-500',
 
+  // Basic info field icons
+  type: 'text-teal-600',
+  building: 'text-indigo-600',
+  floor: 'text-orange-600',
+  area: 'text-pink-600',
+  millesimalShares: 'text-cyan-600',
+  locationZone: 'text-orange-600',
+
   // Section headers
   pricingSection: 'text-green-600',
   reservationSection: 'text-violet-600',
   datesSection: 'text-orange-600',
   financialSection: 'text-green-600',
-  basicInfoSection: 'text-muted-foreground',
+  basicInfoSection: 'text-indigo-600',
 } as const;
