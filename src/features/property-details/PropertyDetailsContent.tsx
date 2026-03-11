@@ -140,8 +140,6 @@ export function PropertyDetailsContent({
       {!isReadOnly && (
         <UnitEntityLinks
           unitId={resolvedProperty?.id ?? ''}
-          currentCompanyId={(resolvedProperty as unknown as Record<string, unknown>)?.companyId as string | undefined}
-          currentProjectId={(resolvedProperty as unknown as Record<string, unknown>)?.projectId as string | undefined}
           currentBuildingId={resolvedProperty?.buildingId}
           isEditing={isEditMode}
         />
