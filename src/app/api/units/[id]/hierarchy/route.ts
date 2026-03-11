@@ -32,6 +32,9 @@ export interface UnitHierarchyResponse {
     permitTitle: string;
     address: string;
     city: string;
+    postalCode: string;
+    municipality: string;
+    regionalUnit: string;
   } | null;
   /** Κτίριο */
   building: {
@@ -114,12 +117,27 @@ export const GET = withStandardRateLimit(
               if (projectDoc.exists) {
                 const projectData = projectDoc.data();
                 if (projectData) {
+                  // Extract address details from structured addresses[] or legacy fields
+                  const addresses = projectData.addresses as Array<{
+                    isPrimary?: boolean;
+                    street?: string;
+                    number?: string;
+                    city?: string;
+                    postalCode?: string;
+                    municipality?: string;
+                    regionalUnit?: string;
+                  }> | undefined;
+                  const primaryAddr = addresses?.find(a => a.isPrimary) ?? addresses?.[0];
+
                   result.project = {
                     id: projectDoc.id,
                     name: projectData.name ?? '',
                     permitTitle: projectData.title ?? '',
                     address: projectData.address ?? '',
                     city: projectData.city ?? '',
+                    postalCode: primaryAddr?.postalCode ?? '',
+                    municipality: primaryAddr?.municipality ?? '',
+                    regionalUnit: primaryAddr?.regionalUnit ?? '',
                   };
 
                   // 4. Fetch company (from project.companyId)

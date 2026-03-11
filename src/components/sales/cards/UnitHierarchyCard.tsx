@@ -70,6 +70,12 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
     ? [hierarchy.project.address, hierarchy.project.city].filter(Boolean).join(', ')
     : null;
 
+  // Επιπλέον στοιχεία διεύθυνσης: ΤΚ, Δήμος, Π.Ε.
+  const postalCode = hierarchy.project?.postalCode || null;
+  const municipality = hierarchy.project?.municipality || null;
+  const regionalUnit = hierarchy.project?.regionalUnit || null;
+  const hasExtraAddressInfo = postalCode || municipality || regionalUnit;
+
   return (
     <Card>
       <CardHeader className="p-3 pb-0">
@@ -137,9 +143,20 @@ export function UnitHierarchyCard({ unitId }: UnitHierarchyCardProps) {
 
         {/* Διεύθυνση */}
         {address && (
-          <footer className="flex items-center gap-2 mt-3 pt-2 border-t text-sm text-muted-foreground">
-            <MapPin className={`${iconSizes.sm} text-red-500 flex-shrink-0`} />
-            <span>{address}</span>
+          <footer className="mt-3 pt-2 border-t text-sm text-muted-foreground space-y-1">
+            <p className="flex items-center gap-2">
+              <MapPin className={`${iconSizes.sm} text-red-500 flex-shrink-0`} />
+              <span>{address}</span>
+            </p>
+            {hasExtraAddressInfo && (
+              <p className="flex items-center gap-2 pl-6 text-xs">
+                {[
+                  postalCode ? `ΤΚ ${postalCode}` : null,
+                  municipality,
+                  regionalUnit ? `Π.Ε. ${regionalUnit}` : null,
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </footer>
         )}
       </CardContent>
