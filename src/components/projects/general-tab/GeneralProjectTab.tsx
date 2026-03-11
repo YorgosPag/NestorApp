@@ -15,6 +15,11 @@ import { updateProject } from '@/services/projects.service';
 import { createProject } from '@/services/projects-client.service';
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
+// 🏢 ENTERPRISE: Company linking via EntityLinkCard
+import { Building2 } from 'lucide-react';
+import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
+import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
+import { getAllCompaniesForSelect } from '@/services/companies.service';
 const logger = createModuleLogger('GeneralProjectTab');
 
 interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
@@ -191,6 +196,51 @@ export function GeneralProjectTab({
     }
   }, [registerSaveCallback, handleSave]);
 
+  // =========================================================================
+  // EntityLinkCard callbacks — Company
+  // =========================================================================
+
+  const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
+    const companies = await getAllCompaniesForSelect();
+    return companies
+      .filter(c => c.id)
+      .map(c => ({ id: c.id!, name: c.companyName || '' }));
+  }, []);
+
+  // 🏢 ENTERPRISE: In create mode, save companyId locally (no API call — project not yet in Firestore)
+  const saveCompanyLocal = useCallback(async (newId: string | null, _name: string) => {
+    setProjectData(prev => ({
+      ...prev,
+      companyId: newId || '',
+      companyName: _name || '',
+    }));
+    return { success: true };
+  }, []);
+
+  const saveCompanyLink = useCallback(async (newId: string | null) => {
+    try {
+      const result = await updateProject(project.id, {
+        companyId: newId || null,
+        company: null, // Clear legacy company name
+      });
+      if (result.success) {
+        setProjectData(prev => ({
+          ...prev,
+          companyId: newId || '',
+        }));
+        RealtimeService.dispatch('PROJECT_UPDATED', {
+          projectId: project.id,
+          updates: { companyId: newId },
+          timestamp: Date.now(),
+        });
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Failed to update' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
+    }
+  }, [project.id]);
+
   return (
     <>
       <GeneralProjectHeader
@@ -204,13 +254,33 @@ export function GeneralProjectTab({
       />
 
       <section className={cn(spacing.spaceBetween.md, spacing.margin.top.md)}>
+        {/* 🏢 ENTERPRISE: Company linking — top of page, standalone EntityLinkCard */}
+        <EntityLinkCard
+          cardId="project-company-link"
+          icon={Building2}
+          currentValue={projectData.companyId || project.companyId}
+          loadOptions={loadCompanies}
+          onSave={isCreateMode ? saveCompanyLocal : saveCompanyLink}
+          isEditing={isEditing}
+          labels={{
+            title: t('basicInfo.companyLink.title'),
+            label: t('basicInfo.companyLink.label'),
+            placeholder: t('basicInfo.companyLink.placeholder'),
+            noSelection: t('basicInfo.companyLink.noSelection'),
+            loading: t('basicInfo.companyLink.loading'),
+            save: t('basicInfo.companyLink.save'),
+            saving: t('basicInfo.companyLink.saving'),
+            success: t('basicInfo.companyLink.success'),
+            error: t('basicInfo.companyLink.error'),
+            currentLabel: t('basicInfo.companyLink.currentLabel'),
+          }}
+        />
+
         <BasicProjectInfoTab
           data={projectData}
           setData={setProjectData}
           isEditing={isEditing}
           projectId={project.id}
-          companyId={projectData.companyId || project.companyId}
-          isCreateMode={isCreateMode}
         />
 
         <PermitsAndStatusTab

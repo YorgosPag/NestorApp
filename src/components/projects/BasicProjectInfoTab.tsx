@@ -1,91 +1,34 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase, Building2, Loader2 } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { getAllCompaniesForSelect } from '@/services/companies.service';
-import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import type { ProjectFormData } from './general-tab/types';
-
-interface CompanyOption {
-    id: string;
-    name: string;
-}
 
 interface BasicProjectInfoTabProps {
     data: ProjectFormData;
     setData: React.Dispatch<React.SetStateAction<ProjectFormData>>;
     isEditing: boolean;
     projectId: string;
-    companyId?: string;
-    /** 🏢 ENTERPRISE: Create mode — save company locally, no PATCH API call */
-    isCreateMode?: boolean;
 }
 
-export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: BasicProjectInfoTabProps) {
+export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectInfoTabProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
     const spacing = useSpacingTokens();
 
-    const [companies, setCompanies] = useState<CompanyOption[]>([]);
-    const [loadingCompanies, setLoadingCompanies] = useState(false);
-
-    // Load companies on mount
-    useEffect(() => {
-        let cancelled = false;
-        setLoadingCompanies(true);
-
-        getAllCompaniesForSelect()
-            .then(result => {
-                if (!cancelled) {
-                    setCompanies(
-                        result
-                            .filter(c => c.id)
-                            .map(c => ({ id: c.id!, name: c.companyName || '' }))
-                    );
-                }
-            })
-            .finally(() => {
-                if (!cancelled) setLoadingCompanies(false);
-            });
-
-        return () => { cancelled = true; };
-    }, []);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
-
-    const handleCompanySelect = (selectedId: string) => {
-        if (isSelectClearValue(selectedId)) {
-            setData(prev => ({ ...prev, companyId: '', companyName: '' }));
-            return;
-        }
-        const selected = companies.find(c => c.id === selectedId);
-        setData(prev => ({
-            ...prev,
-            companyId: selectedId,
-            companyName: selected?.name || '',
-        }));
-    };
-
-    const currentCompanyId = data.companyId || companyId || '';
 
     return (
         <Card>
@@ -110,48 +53,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing, companyId }: Bas
                     </div>
                 </div>
 
-                {/* Company Selection — Radix Select (ADR-001) */}
-                <div className={spacing.spaceBetween.sm}>
-                    <Label className="text-sm font-medium">
-                        <span className={cn("inline-flex items-center", spacing.gap.sm)}>
-                            <Building2 className={iconSizes.sm} />
-                            {t('basicInfo.companyLink.label')}
-                        </span>
-                    </Label>
-                    {loadingCompanies ? (
-                        <div className={cn("flex items-center", spacing.gap.sm, "h-10 text-muted-foreground text-sm")}>
-                            <Loader2 className={cn(iconSizes.sm, "animate-spin")} />
-                            {t('basicInfo.companyLink.loading')}
-                        </div>
-                    ) : (
-                        <Select
-                            value={currentCompanyId || SELECT_CLEAR_VALUE}
-                            onValueChange={handleCompanySelect}
-                            disabled={!isEditing}
-                        >
-                            <SelectTrigger className="h-10">
-                                <SelectValue placeholder={t('basicInfo.companyLink.placeholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem
-                                    value={SELECT_CLEAR_VALUE}
-                                    className="text-popover-foreground italic"
-                                >
-                                    {t('basicInfo.companyLink.noSelection')}
-                                </SelectItem>
-                                {companies.map(company => (
-                                    <SelectItem
-                                        key={company.id}
-                                        value={company.id}
-                                        className="text-popover-foreground"
-                                    >
-                                        {company.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                </div>
+                {/* Company link moved to top-level EntityLinkCard in GeneralProjectTab */}
 
                 <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="description" className="text-sm font-medium">{t('basicInfo.projectDescription')}</Label>

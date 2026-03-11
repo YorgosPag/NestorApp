@@ -268,13 +268,7 @@ export function GeneralTabContent({
           <span>{saveError}</span>
         </aside>
       )}
-      <BasicInfoCard
-        formData={formData}
-        updateField={updateField}
-        isEditing={effectiveIsEditing}
-        errors={errors}
-      />
-      {/* ENTERPRISE: Building → Project linking (only direct parent)
+      {/* ENTERPRISE: Building → Project linking at TOP (only direct parent)
           Company is resolved through hierarchy: Building → Project → Company */}
       <EntityLinkCard
         cardId="building-project-link"
@@ -295,6 +289,12 @@ export function GeneralTabContent({
           error: t('projectSelector.error'),
           currentLabel: t('projectSelector.currentProject'),
         }}
+      />
+      <BasicInfoCard
+        formData={formData}
+        updateField={updateField}
+        isEditing={effectiveIsEditing}
+        errors={errors}
       />
     </section>
   );

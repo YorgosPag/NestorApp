@@ -917,3 +917,17 @@ if (space.commercial?.parentUnitSaleId === unit.id) {
 - `src/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab.tsx`
 - `src/features/property-details/PropertyDetailsContent.tsx`
 - `src/features/property-details/components/UnitFieldsBlock.tsx`
+
+### 2026-03-12: Entity linking at top of Projects & Buildings
+
+**Problem**: Projects had company selection inline inside BasicProjectInfoTab (not a standalone EntityLinkCard). Buildings had project EntityLinkCard below BasicInfoCard instead of at the top. Inconsistent with the Units/Parking/Storage pattern.
+
+**Solution**:
+- **Projects**: Extracted company link from `BasicProjectInfoTab` into standalone `EntityLinkCard` at the top of `GeneralProjectTab`. Cleaned up unused company-related code from BasicProjectInfoTab (imports, state, handlers).
+- **Buildings**: Moved `EntityLinkCard` (project link) from below `BasicInfoCard` to **above** it — matching the "link at top" pattern.
+- Label uses existing i18n key `basicInfo.companyLink.title` = "Σύνδεση με Εταιρεία" for projects.
+
+**Files changed**:
+- `src/components/projects/BasicProjectInfoTab.tsx` — removed company selection UI + unused imports/state
+- `src/components/projects/general-tab/GeneralProjectTab.tsx` — added EntityLinkCard for company at top
+- `src/components/building-management/tabs/GeneralTabContent.tsx` — moved EntityLinkCard above BasicInfoCard
