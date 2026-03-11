@@ -330,8 +330,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         count: number;
       }
 
-      const companyParam = selectedCompanyId ? `&companyId=${selectedCompanyId}` : '';
-      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}${companyParam}`);
+      // 🏢 FIX: Do NOT send companyId — floors are stored with ctx.companyId (auth user),
+      // not the selectedCompanyId (contact entity). The API uses ctx.companyId automatically.
+      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}`);
 
       if (result?.floors && result.floors.length > 0) {
         setFloors(result.floors);
