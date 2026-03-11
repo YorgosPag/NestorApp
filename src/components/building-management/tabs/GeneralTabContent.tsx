@@ -9,11 +9,10 @@ import type { Building } from '../BuildingsPageContent';
 // ENTERPRISE: Firestore persistence for building CRUD
 import { updateBuilding, createBuilding, getProjectsList } from '../building-services';
 import { createModuleLogger } from '@/lib/telemetry';
-// ENTERPRISE: Centralized EntityLinkCard (replaces CompanySelectorCard + ProjectSelectorCard)
-import { Building2, FolderKanban } from 'lucide-react';
+// ENTERPRISE: Centralized EntityLinkCard (replaces ProjectSelectorCard)
+import { FolderKanban } from 'lucide-react';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import type { EntityLinkOption } from '@/components/shared/EntityLinkCard';
-import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { RealtimeService } from '@/services/realtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -214,35 +213,6 @@ export function GeneralTabContent({
   };
 
   // =========================================================================
-  // EntityLinkCard callbacks — Company
-  // =========================================================================
-
-  const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
-    const companies = await getAllCompaniesForSelect();
-    return companies
-      .filter(c => c.id)
-      .map(c => ({ id: c.id!, name: c.companyName || '' }));
-  }, []);
-
-  const saveCompany = useCallback(async (newId: string | null, name: string) => {
-    try {
-      // 🔒 SECURITY: Use linkedCompanyId (NOT companyId which is the tenant isolation key)
-      const result = await updateBuilding(String(building.id), {
-        linkedCompanyId: newId,
-        linkedCompanyName: name || null,
-        company: name || null,
-      });
-      if (result.success) {
-        logger.info('Building linked to company', { buildingId: building.id, companyName: name });
-        return { success: true };
-      }
-      return { success: false, error: result.error || 'Failed to update' };
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
-    }
-  }, [building.id]);
-
-  // =========================================================================
   // EntityLinkCard callbacks — Project
   // =========================================================================
 
@@ -304,55 +274,28 @@ export function GeneralTabContent({
         isEditing={effectiveIsEditing}
         errors={errors}
       />
-      {/* ENTERPRISE: Company + Project linking — EntityLinkCard (centralized)
-          Company linking: disabled in create mode (requires existing building)
-          Project linking: available in create mode (stores locally, saved with createBuilding) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {!isCreateMode && (
-          <EntityLinkCard
-            cardId="building-company-link"
-            icon={Building2}
-            currentValue={building.linkedCompanyId || building.companyId}
-            loadOptions={loadCompanies}
-            onSave={saveCompany}
-            isEditing={effectiveIsEditing}
-            searchable
-            searchPlaceholder="Αναζήτηση εταιρείας..."
-            labels={{
-              title: t('companySelector.title'),
-              label: t('companySelector.label'),
-              placeholder: t('companySelector.placeholder'),
-              noSelection: t('companySelector.noCompany'),
-              loading: t('companySelector.loading'),
-              save: t('companySelector.save'),
-              saving: t('companySelector.saving'),
-              success: t('companySelector.success'),
-              error: t('companySelector.error'),
-              currentLabel: t('companySelector.currentCompany'),
-            }}
-          />
-        )}
-        <EntityLinkCard
-          cardId="building-project-link"
-          icon={FolderKanban}
-          currentValue={isCreateMode ? createProjectId : building.projectId}
-          loadOptions={loadProjects}
-          onSave={isCreateMode ? saveProjectLocal : saveProject}
-          isEditing={effectiveIsEditing}
-          labels={{
-            title: t('projectSelector.title'),
-            label: t('projectSelector.label'),
-            placeholder: t('projectSelector.placeholder'),
-            noSelection: t('projectSelector.noProject'),
-            loading: t('projectSelector.loading'),
-            save: t('projectSelector.save'),
-            saving: t('projectSelector.saving'),
-            success: t('projectSelector.success'),
-            error: t('projectSelector.error'),
-            currentLabel: t('projectSelector.currentProject'),
-          }}
-        />
-      </div>
+      {/* ENTERPRISE: Building → Project linking (only direct parent)
+          Company is resolved through hierarchy: Building → Project → Company */}
+      <EntityLinkCard
+        cardId="building-project-link"
+        icon={FolderKanban}
+        currentValue={isCreateMode ? createProjectId : building.projectId}
+        loadOptions={loadProjects}
+        onSave={isCreateMode ? saveProjectLocal : saveProject}
+        isEditing={effectiveIsEditing}
+        labels={{
+          title: t('projectSelector.title'),
+          label: t('projectSelector.label'),
+          placeholder: t('projectSelector.placeholder'),
+          noSelection: t('projectSelector.noProject'),
+          loading: t('projectSelector.loading'),
+          save: t('projectSelector.save'),
+          saving: t('projectSelector.saving'),
+          success: t('projectSelector.success'),
+          error: t('projectSelector.error'),
+          currentLabel: t('projectSelector.currentProject'),
+        }}
+      />
     </section>
   );
 }
