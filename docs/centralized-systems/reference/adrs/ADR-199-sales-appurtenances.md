@@ -856,8 +856,15 @@ if (space.commercial?.parentUnitSaleId === unit.id) {
 - `src/services/sales-accounting/sales-accounting-bridge.ts` — Multi-line `buildInvoiceInput()`
 - `src/services/sales-accounting/index.ts` — Export `SaleLineItem`
 - `src/components/sales/dialogs/SalesActionDialogs.tsx` — Reserve/Sell/Revert with appurtenances
+- `src/features/property-details/PropertyDetailsContent.tsx` — Integrated LinkedSpacesCard in unit details
 
 **Files created:**
 - `src/app/api/sales/[unitId]/appurtenance-sync/route.ts` — Batch writes for parking/storage status
 - `src/hooks/sales/useLinkedSpacesForSale.ts` — Hook for resolving linked spaces in sale dialogs
 - `src/components/sales/dialogs/AppurtenancesSection.tsx` — UI component for appurtenances
+
+### UI Integration
+- LinkedSpacesCard rendered in PropertyDetailsContent after AttachmentsBlock
+- Visible when unit has a buildingId and user is NOT in read-only mode
+- Edit mode: select parking/storage from dropdowns, choose inclusion type, save
+- View mode: read-only badges showing linked spaces

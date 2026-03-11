@@ -27,6 +27,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PropertyDetailsContent');
 
 import { UnitEntityLinks } from './components/UnitEntityLinks';
+import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 
 export function PropertyDetailsContent({
   property,
@@ -161,6 +162,16 @@ export function PropertyDetailsContent({
       )}
 
       <AttachmentsBlock storage={attachedStorage} parking={attachedParking} />
+
+      {/* ADR-199: Linked parking/storage spaces (appurtenances) */}
+      {!isReadOnly && resolvedProperty?.buildingId && (
+        <LinkedSpacesCard
+          unitId={resolvedProperty.id ?? ''}
+          buildingId={resolvedProperty.buildingId}
+          currentLinkedSpaces={resolvedProperty.linkedSpaces ?? []}
+          isEditing={isEditMode}
+        />
+      )}
 
       <ContactsBlock owner={resolvedProperty.owner} agent={resolvedProperty.agent} />
 
