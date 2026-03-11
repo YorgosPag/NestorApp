@@ -868,3 +868,17 @@ if (space.commercial?.parentUnitSaleId === unit.id) {
 - Visible when unit has a buildingId and user is NOT in read-only mode
 - Edit mode: select parking/storage from dropdowns, choose inclusion type, save
 - View mode: read-only badges showing linked spaces
+
+---
+
+### 2026-03-12: Building Linking + Floor Dropdown for Parking & Storage
+
+**Problem**: Parking & Storage detail pages lacked a "Building Link" card (unlike Units), and floor was a freetext input instead of a dropdown populated from the building's floors.
+
+**Solution**:
+- Created `FloorSelectField` (`src/components/shared/FloorSelectField.tsx`) — reusable Radix Select that fetches floors via `GET /api/floors?buildingId=X`
+- Added `EntityLinkCard` to `ParkingGeneralTab` and `StorageGeneralTab` for building linking
+- Replaced freetext floor `<Input>` with `FloorSelectField` in both tabs
+- Floor resets to empty when building changes
+- Floor disabled with hint when no building is linked
+- i18n translations added for `entityLinks.building.*` in parking + storage namespaces (el/en)

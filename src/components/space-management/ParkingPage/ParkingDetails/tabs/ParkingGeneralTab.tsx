@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
-import { Car, MapPin } from 'lucide-react';
+import { Car, MapPin, Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,6 +29,9 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
+import { getBuildingsList } from '@/services/units.service';
+import { FloorSelectField } from '@/components/shared/FloorSelectField';
 
 const logger = createModuleLogger('ParkingGeneralTab');
 
@@ -112,11 +115,40 @@ export function ParkingGeneralTab({
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<ParkingFormState>(() => buildFormState(parking));
+  const [linkedBuildingId, setLinkedBuildingId] = useState<string | null>(parking.buildingId ?? null);
 
   // Reset form when parking data changes or edit mode starts
   useEffect(() => {
     setForm(buildFormState(parking));
+    setLinkedBuildingId(parking.buildingId ?? null);
   }, [parking, isEditing]);
+
+  // Building link callbacks
+  const loadBuildings = useCallback(() => getBuildingsList(), []);
+
+  const saveBuildingLink = useCallback(async (newBuildingId: string | null): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // Reset floor when building changes
+      const payload: Record<string, unknown> = { buildingId: newBuildingId };
+      if (newBuildingId !== linkedBuildingId) {
+        payload.floor = '';
+      }
+      await apiClient.patch<ParkingPatchResult>(`/api/parking/${parking.id}`, payload);
+      setLinkedBuildingId(newBuildingId);
+      if (newBuildingId !== linkedBuildingId) {
+        setForm(prev => ({ ...prev, floor: '' }));
+      }
+      RealtimeService.dispatch('PARKING_UPDATED', {
+        parkingSpotId: parking.id,
+        updates: { buildingId: newBuildingId },
+        timestamp: Date.now(),
+      });
+      return { success: true };
+    } catch (err) {
+      logger.error('Failed to save building link', { error: err instanceof Error ? err.message : String(err) });
+      return { success: false, error: 'Failed to save' };
+    }
+  }, [parking.id, linkedBuildingId]);
 
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
@@ -255,6 +287,28 @@ export function ParkingGeneralTab({
         </CardContent>
       </Card>
 
+      {/* Building Link Card */}
+      <EntityLinkCard
+        cardId="parking-building-link"
+        icon={Building2}
+        labels={{
+          title: t('entityLinks.building.title'),
+          label: t('entityLinks.building.label'),
+          placeholder: t('entityLinks.building.placeholder'),
+          noSelection: t('entityLinks.building.noSelection'),
+          loading: t('entityLinks.building.loading'),
+          save: t('entityLinks.building.save'),
+          saving: t('entityLinks.building.saving'),
+          success: t('entityLinks.building.success'),
+          error: t('entityLinks.building.error'),
+          currentLabel: t('entityLinks.building.currentLabel'),
+        }}
+        currentValue={linkedBuildingId ?? undefined}
+        loadOptions={loadBuildings}
+        onSave={saveBuildingLink}
+        isEditing={isEditing}
+      />
+
       {/* Location Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -265,17 +319,14 @@ export function ParkingGeneralTab({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.floor')}</Label>
-              <Input
-                value={form.floor}
-                onChange={(e) => updateField('floor', e.target.value)}
-                placeholder="-1"
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
-            {/* ADR-194: position + buildingId αφαιρέθηκαν — μη χρήσιμα για τον χρήστη */}
+            <FloorSelectField
+              buildingId={linkedBuildingId}
+              value={form.floor}
+              onChange={(v) => updateField('floor', v)}
+              label={t('general.fields.floor')}
+              noBuildingHint={t('entityLinks.building.noFloorHint')}
+              disabled={!isEditing}
+            />
           </div>
         </CardContent>
       </Card>

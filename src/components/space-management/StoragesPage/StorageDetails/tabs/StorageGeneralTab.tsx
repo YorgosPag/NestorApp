@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
-import { Warehouse, MapPin, StickyNote } from 'lucide-react';
+import { Warehouse, MapPin, StickyNote, Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -30,6 +30,9 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
+import { getBuildingsList } from '@/services/units.service';
+import { FloorSelectField } from '@/components/shared/FloorSelectField';
 
 const logger = createModuleLogger('StorageGeneralTab');
 
@@ -117,11 +120,39 @@ export function StorageGeneralTab({
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
+  const [linkedBuildingId, setLinkedBuildingId] = useState<string | null>(storage.buildingId ?? null);
 
   // Reset form when storage data changes or edit mode starts
   useEffect(() => {
     setForm(buildFormState(storage));
+    setLinkedBuildingId(storage.buildingId ?? null);
   }, [storage, isEditing]);
+
+  // Building link callbacks
+  const loadBuildings = useCallback(() => getBuildingsList(), []);
+
+  const saveBuildingLink = useCallback(async (newBuildingId: string | null): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const payload: Record<string, unknown> = { buildingId: newBuildingId };
+      if (newBuildingId !== linkedBuildingId) {
+        payload.floor = '';
+      }
+      await apiClient.patch<StoragePatchResult>(`/api/storages/${storage.id}`, payload);
+      setLinkedBuildingId(newBuildingId);
+      if (newBuildingId !== linkedBuildingId) {
+        setForm(prev => ({ ...prev, floor: '' }));
+      }
+      RealtimeService.dispatch('STORAGE_UPDATED', {
+        storageId: storage.id,
+        updates: { buildingId: newBuildingId },
+        timestamp: Date.now(),
+      });
+      return { success: true };
+    } catch (err) {
+      logger.error('Failed to save building link', { error: err instanceof Error ? err.message : String(err) });
+      return { success: false, error: 'Failed to save' };
+    }
+  }, [storage.id, linkedBuildingId]);
 
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
@@ -260,6 +291,28 @@ export function StorageGeneralTab({
         </CardContent>
       </Card>
 
+      {/* Building Link Card */}
+      <EntityLinkCard
+        cardId="storage-building-link"
+        icon={Building2}
+        labels={{
+          title: t('entityLinks.building.title'),
+          label: t('entityLinks.building.label'),
+          placeholder: t('entityLinks.building.placeholder'),
+          noSelection: t('entityLinks.building.noSelection'),
+          loading: t('entityLinks.building.loading'),
+          save: t('entityLinks.building.save'),
+          saving: t('entityLinks.building.saving'),
+          success: t('entityLinks.building.success'),
+          error: t('entityLinks.building.error'),
+          currentLabel: t('entityLinks.building.currentLabel'),
+        }}
+        currentValue={linkedBuildingId ?? undefined}
+        loadOptions={loadBuildings}
+        onSave={saveBuildingLink}
+        isEditing={isEditing}
+      />
+
       {/* Location Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -270,24 +323,14 @@ export function StorageGeneralTab({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.building')}</Label>
-              <Input
-                value={storage.building || ''}
-                className="h-8 text-sm"
-                disabled
-              />
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">{t('general.fields.floor')}</Label>
-              <Input
-                value={form.floor}
-                onChange={(e) => updateField('floor', e.target.value)}
-                placeholder="-1"
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
+            <FloorSelectField
+              buildingId={linkedBuildingId}
+              value={form.floor}
+              onChange={(v) => updateField('floor', v)}
+              label={t('general.fields.floor')}
+              noBuildingHint={t('entityLinks.building.noFloorHint')}
+              disabled={!isEditing}
+            />
           </div>
         </CardContent>
       </Card>

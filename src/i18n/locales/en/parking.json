@@ -97,6 +97,21 @@
     "saveSuccess": "Parking spot updated",
     "saveError": "Failed to save"
   },
+  "entityLinks": {
+    "building": {
+      "title": "Building Link",
+      "label": "Belongs to Building",
+      "placeholder": "Select building...",
+      "noSelection": "No building",
+      "loading": "Loading buildings...",
+      "save": "Save",
+      "saving": "Saving...",
+      "success": "Link saved",
+      "error": "Failed to save",
+      "currentLabel": "Current building:",
+      "noFloorHint": "Link a building first"
+    }
+  },
   "projectTab": {
     "subtabs": {
       "floorplans": "Floor Plans",
