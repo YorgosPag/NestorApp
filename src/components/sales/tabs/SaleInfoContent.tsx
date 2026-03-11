@@ -197,7 +197,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
               <div className="flex items-center justify-between py-1.5">
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
                   <UserCheck className={`${iconSizes.sm} text-violet-600 flex-shrink-0`} />
-                  {t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
+                  {commercial.buyerName ?? t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
                 </span>
                 <button
                   onClick={() => router.push(`/crm/contacts/${commercial.buyerContactId}`)}

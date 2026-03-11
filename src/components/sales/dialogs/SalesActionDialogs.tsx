@@ -187,6 +187,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           finalPrice: unit.commercial?.finalPrice ?? null,
           reservationDeposit: deposit ? Number(deposit) : null,
           buyerContactId: buyerContactId || null,
+          buyerName: buyerName || null,
           reservationDate: new Date().toISOString(),
           saleDate: unit.commercial?.saleDate ?? null,
           listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),

@@ -88,7 +88,7 @@ export function SalesDetailsHeader({
     <EntityDetailsHeader
       icon={ShoppingBag}
       title={unit.name || unit.code || unit.id}
-      subtitle={[unit.code, t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type })].filter(Boolean).join(' · ')}
+      subtitle={[unit.code, t(`units:types.${unit.type}`, { defaultValue: unit.type })].filter(Boolean).join(' · ')}
       variant="detailed"
       actions={actions}
     />

@@ -162,7 +162,7 @@ export function SalesUnitListCard({
         icon: User,
         iconColor: 'text-violet-600',
         label: t('sales.fields.buyer', { defaultValue: 'Αγοραστής' }),
-        value: String(unit.commercial.buyerContactId),
+        value: unit.commercial.buyerName ?? t('sales.fields.unknownBuyer', { defaultValue: 'Αγοραστής' }),
       });
     }
 

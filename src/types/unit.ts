@@ -106,6 +106,9 @@ export interface UnitCommercialData {
   /** Reference → contacts collection (αγοραστής/ενοικιαστής) */
   buyerContactId: string | null;
 
+  /** Όνομα αγοραστή (denormalized για εμφάνιση σε κάρτες/emails χωρίς extra fetch) */
+  buyerName: string | null;
+
   /** Ημερομηνία κράτησης */
   reservationDate: Timestamp | null;
 
