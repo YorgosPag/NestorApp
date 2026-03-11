@@ -10,6 +10,7 @@ import React, { useMemo } from 'react';
 import { DollarSign, Calculator, MapPin, Car } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { ParkingSpot } from '@/types/parking';
 
 // =============================================================================
@@ -37,19 +38,6 @@ const STATUS_BADGE: Record<string, { variant: BadgeVariant; labelKey: string }> 
   sold:        { variant: 'destructive', labelKey: 'parking:status.sold' },
   maintenance: { variant: 'secondary',   labelKey: 'parking:status.maintenance' },
 };
-
-// =============================================================================
-// 🏢 HELPERS
-// =============================================================================
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 // =============================================================================
 // 🏢 COMPONENT
@@ -95,7 +83,7 @@ export function SalesParkingCard({
         icon: DollarSign,
         iconColor: 'text-green-600',
         label: t('parking:general.fields.price', { defaultValue: 'Τιμή' }),
-        value: formatCurrency(price > 0 ? price : null),
+        value: formatCurrencyWhole(price > 0 ? price : null),
       },
     ];
 

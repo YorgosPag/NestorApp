@@ -496,6 +496,31 @@ export const formatDateGreek = (dateInput?: Date | string | number): string => {
 };
 
 /**
+ * Format currency with zero decimals and null guard
+ * Replaces 7+ local formatCurrency duplicates across sales components
+ *
+ * @param amount - Nullable amount
+ * @returns Formatted string like "€12.500" or "—" for null/undefined
+ */
+export const formatCurrencyWhole = (amount: number | null | undefined): string => {
+  if (amount === null || amount === undefined) return '—';
+  return formatCurrency(amount, 'EUR', { maximumFractionDigits: 0 });
+};
+
+/**
+ * Format currency in compact notation (€500K / €1.2M)
+ * Replaces 2 local formatCurrencyCompact duplicates in sales pages
+ *
+ * @param value - Numeric amount (must be a valid number)
+ * @returns Compact string like "€500K", "€1.2M", or "€800"
+ */
+export const formatCurrencyCompact = (value: number): string => {
+  if (value >= 1_000_000) return `€${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `€${(value / 1_000).toFixed(0)}K`;
+  return `€${value}`;
+};
+
+/**
  * ✅ CENTRALIZED: Calculate days until completion date
  * Consolidates duplicate functions from BuildingCardUtils.ts and project-utils.ts
  */

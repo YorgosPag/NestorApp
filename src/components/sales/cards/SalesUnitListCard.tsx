@@ -17,6 +17,7 @@ import {
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Unit, CommercialStatus } from '@/types/unit';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 
@@ -51,15 +52,6 @@ const COMMERCIAL_STATUS_BADGE: Record<CommercialStatus, { variant: BadgeVariant;
 // =============================================================================
 // 🏢 HELPERS
 // =============================================================================
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function computeDaysOnMarket(listedDate: { toDate?: () => Date } | null | undefined): number | null {
   if (!listedDate || typeof listedDate.toDate !== 'function') return null;
@@ -127,7 +119,7 @@ export function SalesUnitListCard({
         icon: DollarSign,
         iconColor: 'text-green-600',
         label: t('sales.fields.askingPrice', { defaultValue: 'Τιμή' }),
-        value: formatCurrency(askingPrice),
+        value: formatCurrencyWhole(askingPrice),
       },
     ];
 
@@ -136,7 +128,7 @@ export function SalesUnitListCard({
         icon: Calculator,
         iconColor: 'text-blue-600',
         label: t('sales.fields.pricePerSqm', { defaultValue: '€/m²' }),
-        value: `${formatCurrency(pricePerSqm)}/m²`,
+        value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
       });
     }
 
@@ -202,7 +194,7 @@ export function SalesUnitListCard({
         icon: CreditCard,
         iconColor: 'text-amber-600',
         label: t('sales.fields.deposit', { defaultValue: 'Προκαταβολή' }),
-        value: formatCurrency(unit.commercial.reservationDeposit),
+        value: formatCurrencyWhole(unit.commercial.reservationDeposit),
       });
     }
 
@@ -212,7 +204,7 @@ export function SalesUnitListCard({
         icon: DollarSign,
         iconColor: 'text-blue-600',
         label: t('sales.fields.finalPrice', { defaultValue: 'Τελική τιμή' }),
-        value: formatCurrency(unit.commercial.finalPrice),
+        value: formatCurrencyWhole(unit.commercial.finalPrice),
       });
     }
 

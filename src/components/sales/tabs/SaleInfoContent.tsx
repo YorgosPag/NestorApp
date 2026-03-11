@@ -21,6 +21,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { InfoRow } from '@/components/shared/InfoRow';
+import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
 import type { Unit } from '@/types/unit';
 import { TransactionChainCard } from '@/components/sales/cards/TransactionChainCard';
 import { UnitHierarchyCard } from '@/components/sales/cards/UnitHierarchyCard';
@@ -37,15 +40,6 @@ interface SaleInfoContentProps {
 // =============================================================================
 // 🏢 HELPERS
 // =============================================================================
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatDate(ts: { toDate?: () => Date } | string | null | undefined): string {
   if (!ts) return '—';
@@ -85,38 +79,6 @@ function computeDiscount(asking: number | null | undefined, final: number | null
   const pct = ((asking - final) / asking) * 100;
   if (pct <= 0) return null;
   return `−${pct.toFixed(1)}%`;
-}
-
-// =============================================================================
-// 🏢 FIELD ROW COMPONENT
-// =============================================================================
-
-function InfoRow({
-  icon: Icon,
-  iconColor,
-  label,
-  value,
-  valueColor,
-}: {
-  icon: React.ElementType;
-  iconColor: string;
-  label: string;
-  value: string;
-  valueColor?: string;
-}) {
-  const iconSizes = useIconSizes();
-
-  return (
-    <div className="flex items-center justify-between py-1.5">
-      <span className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Icon className={`${iconSizes.sm} ${iconColor} flex-shrink-0`} />
-        {label}
-      </span>
-      <span className={`text-sm font-medium ${valueColor ?? 'text-foreground'}`}>
-        {value}
-      </span>
-    </div>
-  );
 }
 
 // =============================================================================
@@ -173,33 +135,33 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
       <Card>
         <CardHeader className="p-3 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <DollarSign className={`${iconSizes.sm} text-green-600`} />
+            <DollarSign className={`${iconSizes.sm} ${SALES_ICON_COLORS.pricingSection}`} />
             {t('sales.saleInfo.pricing', { defaultValue: 'Εμπορικά Στοιχεία' })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-2">
           <InfoRow
             icon={DollarSign}
-            iconColor="text-green-600"
+            iconColor={SALES_ICON_COLORS.askingPrice}
             label={t('sales.saleInfo.askingPrice', { defaultValue: 'Ζητούμενη' })}
-            value={formatCurrency(askingPrice)}
+            value={formatCurrencyWhole(askingPrice)}
             valueColor={colors.text.success}
           />
           {finalPrice !== null && finalPrice !== undefined && (
             <InfoRow
               icon={DollarSign}
-              iconColor="text-blue-600"
+              iconColor={SALES_ICON_COLORS.finalPrice}
               label={t('sales.saleInfo.finalPrice', { defaultValue: 'Τελική τιμή' })}
-              value={`${formatCurrency(finalPrice)}${discount ? ` (${discount})` : ''}`}
+              value={`${formatCurrencyWhole(finalPrice)}${discount ? ` (${discount})` : ''}`}
               valueColor={colors.text.info}
             />
           )}
           {pricePerSqm && (
             <InfoRow
               icon={TrendingDown}
-              iconColor="text-purple-600"
+              iconColor={SALES_ICON_COLORS.pricePerSqm}
               label="€/m²"
-              value={formatCurrency(pricePerSqm)}
+              value={formatCurrencyWhole(pricePerSqm)}
             />
           )}
         </CardContent>
@@ -210,7 +172,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
         <Card>
           <CardHeader className="p-3 pb-0">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <UserCheck className={`${iconSizes.sm} text-violet-600`} />
+              <UserCheck className={`${iconSizes.sm} ${SALES_ICON_COLORS.reservationSection}`} />
               {t('sales.saleInfo.reservation', { defaultValue: 'Κράτηση' })}
             </CardTitle>
           </CardHeader>
@@ -218,15 +180,15 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             {commercial?.reservationDeposit && (
               <InfoRow
                 icon={CreditCard}
-                iconColor="text-amber-600"
+                iconColor={SALES_ICON_COLORS.deposit}
                 label={t('sales.saleInfo.deposit', { defaultValue: 'Προκαταβολή' })}
-                value={formatCurrency(commercial.reservationDeposit)}
+                value={formatCurrencyWhole(commercial.reservationDeposit)}
               />
             )}
             {commercial?.buyerContactId && (
               <div className="flex items-center justify-between py-1.5">
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <UserCheck className={`${iconSizes.sm} text-violet-600 flex-shrink-0`} />
+                  <UserCheck className={`${iconSizes.sm} ${SALES_ICON_COLORS.buyer} flex-shrink-0`} />
                   {t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
                 </span>
                 <button
@@ -251,21 +213,21 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
       <Card>
         <CardHeader className="p-3 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Calendar className={`${iconSizes.sm} text-orange-600`} />
+            <Calendar className={`${iconSizes.sm} ${SALES_ICON_COLORS.datesSection}`} />
             {t('sales.saleInfo.dates', { defaultValue: 'Ημερομηνίες' })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-2">
           <InfoRow
             icon={Calendar}
-            iconColor="text-blue-600"
+            iconColor={SALES_ICON_COLORS.listedDate}
             label={t('sales.saleInfo.listedDate', { defaultValue: 'Στην αγορά' })}
             value={formatDate(commercial?.listedDate)}
           />
           {commercial?.reservationDate && (
             <InfoRow
               icon={Calendar}
-              iconColor="text-violet-600"
+              iconColor={SALES_ICON_COLORS.reservationDate}
               label={t('sales.saleInfo.reservationDate', { defaultValue: 'Ημ. κράτησης' })}
               value={formatDate(commercial.reservationDate)}
             />
@@ -273,7 +235,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
           {commercial?.saleDate && (
             <InfoRow
               icon={Calendar}
-              iconColor="text-green-600"
+              iconColor={SALES_ICON_COLORS.saleDate}
               label={t('sales.saleInfo.saleDate', { defaultValue: 'Ημ. πώλησης' })}
               value={formatDate(commercial.saleDate)}
             />
@@ -281,14 +243,14 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
           {commercial?.cancellationDate && (
             <InfoRow
               icon={Calendar}
-              iconColor="text-red-600"
+              iconColor={SALES_ICON_COLORS.cancellationDate}
               label={t('sales.saleInfo.cancellationDate', { defaultValue: 'Ημ. ακύρωσης' })}
               value={formatDate(commercial.cancellationDate)}
             />
           )}
           <InfoRow
             icon={Clock}
-            iconColor="text-gray-500"
+            iconColor={SALES_ICON_COLORS.daysOnMarket}
             label={t('sales.saleInfo.daysOnMarket', { defaultValue: 'Ημέρες' })}
             value={daysOnMarket}
           />

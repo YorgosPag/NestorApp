@@ -11,6 +11,7 @@ import { Receipt, FileText, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrency } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // =============================================================================
@@ -42,14 +43,6 @@ interface InvoiceListResponse {
 // =============================================================================
 // HELPERS
 // =============================================================================
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 function formatDate(isoDate: string): string {
   try {

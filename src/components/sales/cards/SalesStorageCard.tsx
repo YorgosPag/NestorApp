@@ -10,6 +10,7 @@ import React, { useMemo } from 'react';
 import { DollarSign, Calculator, Layers } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
 
 // =============================================================================
@@ -38,19 +39,6 @@ const STATUS_BADGE: Record<string, { variant: BadgeVariant; labelKey: string }> 
   maintenance: { variant: 'secondary',   labelKey: 'storage:status.maintenance' },
   unavailable: { variant: 'default',     labelKey: 'storage:status.unavailable' },
 };
-
-// =============================================================================
-// 🏢 HELPERS
-// =============================================================================
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 // =============================================================================
 // 🏢 COMPONENT
@@ -95,7 +83,7 @@ export function SalesStorageCard({
         icon: DollarSign,
         iconColor: 'text-green-600',
         label: t('storage:general.fields.price', { defaultValue: 'Τιμή' }),
-        value: formatCurrency(price > 0 ? price : null),
+        value: formatCurrencyWhole(price > 0 ? price : null),
       },
     ];
 
@@ -104,7 +92,7 @@ export function SalesStorageCard({
         icon: Calculator,
         iconColor: 'text-blue-600',
         label: t('storage:general.fields.pricePerSqm', { defaultValue: '€/m²' }),
-        value: `${formatCurrency(pricePerSqm)}/m²`,
+        value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
       });
     }
 
