@@ -87,14 +87,18 @@ export class UnitFloorplanService {
     try {
       const docId = `${unitId}_unit`;
 
-      // Legacy save (backward compat) — includes companyId for Firestore Rules
+      // Legacy metadata save (backward compat) — NO scene data!
+      // 🏢 FIX: Scene data MUST go to Firebase Storage only (via createFileRecord),
+      // NOT embedded in Firestore document. A full DXF scene can be 200K+ lines / 1MB+
+      // which exceeds Firestore's 1MB document limit and wastes read bandwidth.
       await setDoc(doc(db, this.LEGACY_COLLECTION, docId), {
         unitId,
         type: 'unit',
-        scene: data.scene,
         fileName: data.fileName,
         timestamp: data.timestamp,
         updatedAt: new Date().toISOString(),
+        // Marker: scene is stored in Firebase Storage via FileRecord pattern
+        sceneStoredInStorage: true,
         ...(options?.companyId ? { companyId: options.companyId } : {}),
         ...(options?.createdBy ? { createdBy: options.createdBy } : {}),
       });
@@ -139,16 +143,78 @@ export class UnitFloorplanService {
   }
 
   /**
-   * Load unit floorplan data from legacy Firestore collection
+   * Load unit floorplan data
+   *
+   * Strategy:
+   * 1. Check legacy collection for metadata
+   * 2. If scene is embedded (old data) → return directly
+   * 3. If sceneStoredInStorage (new data) → load from FileRecord/Storage
    */
-  static async loadFloorplan(unitId: string): Promise<UnitFloorplanData | null> {
+  static async loadFloorplan(unitId: string, companyId?: string): Promise<UnitFloorplanData | null> {
     try {
       const docId = `${unitId}_unit`;
       const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
 
-      if (docSnap.exists()) {
-        return docSnap.data() as UnitFloorplanData;
+      if (!docSnap.exists()) {
+        return null;
       }
+
+      const data = docSnap.data();
+
+      // Legacy format: scene embedded in Firestore document
+      if (data.scene && !data.sceneStoredInStorage) {
+        return data as UnitFloorplanData;
+      }
+
+      // New format: scene in Firebase Storage — load via FileRecord
+      if (data.sceneStoredInStorage && companyId) {
+        try {
+          const fileRecords = await FileRecordService.getFilesByEntity(
+            ENTITY_TYPES.UNIT,
+            unitId,
+            {
+              companyId,
+              domain: FILE_DOMAINS.CONSTRUCTION,
+              category: FILE_CATEGORIES.FLOORPLANS,
+              purpose: 'unit-floorplan',
+            }
+          );
+
+          if (fileRecords.length > 0) {
+            const fileRecord = fileRecords[0];
+            if (fileRecord.storagePath) {
+              const storageRef = ref(storage, fileRecord.storagePath);
+              const { getBytes } = await import('firebase/storage');
+              const compressedBytes = await getBytes(storageRef);
+
+              // Try to decompress (gzip) first, fallback to raw JSON
+              let sceneJson: string;
+              try {
+                const decompressed = pako.ungzip(new Uint8Array(compressedBytes));
+                sceneJson = new TextDecoder().decode(decompressed);
+              } catch {
+                // Not compressed, try raw
+                sceneJson = new TextDecoder().decode(compressedBytes);
+              }
+
+              const scene = JSON.parse(sceneJson) as DxfSceneData;
+              return {
+                unitId,
+                type: 'unit',
+                scene,
+                fileName: data.fileName,
+                timestamp: data.timestamp,
+              };
+            }
+          }
+        } catch (storageError) {
+          logger.error('Failed to load scene from Storage, falling back', {
+            unitId, error: storageError instanceof Error ? storageError.message : String(storageError),
+          });
+        }
+      }
+
+      // Fallback: return metadata without scene
       return null;
     } catch {
       return null;

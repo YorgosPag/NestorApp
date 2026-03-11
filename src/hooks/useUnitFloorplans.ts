@@ -13,7 +13,12 @@ interface UseUnitFloorplansReturn {
   refetch: () => Promise<void>;
 }
 
-export function useUnitFloorplans(unitId: string | number): UseUnitFloorplansReturn {
+/**
+ * 🏢 ENTERPRISE: Load unit floorplan with companyId for Storage-backed scenes.
+ * @param unitId - The unit ID to load floorplan for
+ * @param companyId - Company ID (required for new Storage-backed floorplans via FileRecord)
+ */
+export function useUnitFloorplans(unitId: string | number, companyId?: string): UseUnitFloorplansReturn {
   const [unitFloorplan, setUnitFloorplan] = useState<UnitFloorplanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,15 +29,15 @@ export function useUnitFloorplans(unitId: string | number): UseUnitFloorplansRet
     try {
       setLoading(true);
       setError(null);
-      
-      logger.info('Fetching unit floorplan from Firestore', { unitId: unitIdStr });
-      
-      // Load unit floorplan
-      const unitData = await UnitFloorplanService.loadFloorplan(unitIdStr);
+
+      logger.info('Fetching unit floorplan', { unitId: unitIdStr, hasCompanyId: !!companyId });
+
+      // 🏢 ENTERPRISE: Pass companyId so Storage-backed scenes can be loaded via FileRecord
+      const unitData = await UnitFloorplanService.loadFloorplan(unitIdStr, companyId);
       setUnitFloorplan(unitData);
-      
+
       logger.info('Unit floorplan loaded', { hasUnitFloorplan: !!unitData });
-      
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       logger.error('Error fetching unit floorplan', { error: err });
@@ -49,7 +54,7 @@ export function useUnitFloorplans(unitId: string | number): UseUnitFloorplansRet
       setUnitFloorplan(null);
       setLoading(false);
     }
-  }, [unitIdStr]);
+  }, [unitIdStr, companyId]);
 
   return {
     unitFloorplan,
