@@ -14,11 +14,11 @@ interface UseUnitFloorplansReturn {
 }
 
 /**
- * 🏢 ENTERPRISE: Load unit floorplan with companyId for Storage-backed scenes.
+ * 🏢 ENTERPRISE: Load unit floorplan with companyId (REQUIRED) for Storage-backed scenes.
  * @param unitId - The unit ID to load floorplan for
- * @param companyId - Company ID (required for new Storage-backed floorplans via FileRecord)
+ * @param companyId - Company ID (REQUIRED for FileRecord lookup)
  */
-export function useUnitFloorplans(unitId: string | number, companyId?: string): UseUnitFloorplansReturn {
+export function useUnitFloorplans(unitId: string | number, companyId: string): UseUnitFloorplansReturn {
   const [unitFloorplan, setUnitFloorplan] = useState<UnitFloorplanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +30,9 @@ export function useUnitFloorplans(unitId: string | number, companyId?: string): 
       setLoading(true);
       setError(null);
 
-      logger.info('Fetching unit floorplan', { unitId: unitIdStr, hasCompanyId: !!companyId });
+      logger.info('Fetching unit floorplan', { unitId: unitIdStr, companyId });
 
-      // 🏢 ENTERPRISE: Pass companyId so Storage-backed scenes can be loaded via FileRecord
-      const unitData = await UnitFloorplanService.loadFloorplan(unitIdStr, companyId);
+      const unitData = await UnitFloorplanService.loadFloorplan({ companyId, unitId: unitIdStr });
       setUnitFloorplan(unitData);
 
       logger.info('Unit floorplan loaded', { hasUnitFloorplan: !!unitData });
@@ -48,7 +47,7 @@ export function useUnitFloorplans(unitId: string | number, companyId?: string): 
   };
 
   useEffect(() => {
-    if (unitIdStr && unitIdStr !== '0' && unitIdStr !== 'undefined') {
+    if (unitIdStr && unitIdStr !== '0' && unitIdStr !== 'undefined' && companyId) {
       fetchFloorplans();
     } else {
       setUnitFloorplan(null);

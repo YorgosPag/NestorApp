@@ -1,32 +1,46 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE Unit Floorplan Service
+ * =============================================================================
+ * 🏢 ENTERPRISE Unit Floorplan Service (V2)
+ * =============================================================================
  *
- * Manages unit floorplan DXF data using Firebase Storage + FileRecord pattern.
- * Migrated from legacy `unit_floorplans` collection to enterprise `files` system.
- *
- * Architecture:
- * - Scene data → Firebase Storage (unlimited size, gzip compressed)
- * - Metadata → Firestore `files` collection (FileRecord SSoT)
- * - Legacy collection kept for backward-compatible reads
+ * Manages unit floorplan files using the Enterprise File Storage pattern.
+ * Uses FileRecordService for metadata and canonical storage paths.
  *
  * @module services/floorplans/UnitFloorplanService
- * @version 2.0.0 - Enterprise Migration (same pattern as BuildingFloorplanService)
+ * @version 2.0.0
+ * @enterprise ADR-031 - Canonical File Storage System
+ *
+ * Storage Pattern:
+ * - Firestore: `files` collection (FileRecord documents)
+ * - Storage: `companies/{companyId}/.../entities/unit/{unitId}/domains/construction/categories/floorplans/files/{fileId}.*`
+ *
+ * Legacy Fallback:
+ * - Reads from `unit_floorplans/{unitId}_unit` for backward compatibility with old data
+ *
+ * @see FloorFloorplanService for the gold-standard reference implementation
+ * @see FileRecordService for the core file operations
  */
 
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import pako from 'pako';
-import toast from 'react-hot-toast';
 import { db, storage } from '@/lib/firebase';
 import { FileRecordService } from '@/services/file-record.service';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
-import { createModuleLogger } from '@/lib/telemetry';
+import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 
-const logger = createModuleLogger('UnitFloorplanService');
+// =============================================================================
+// 🏢 ENTERPRISE LOGGER CONFIGURATION
+// =============================================================================
+
+const logger = new Logger({
+  level: process.env.NODE_ENV === 'production' ? LogLevel.ERROR : LogLevel.DEBUG,
+  prefix: '[UnitFloorplan]',
+  output: process.env.NODE_ENV === 'production' ? new DevNullOutput() : undefined,
+});
 
 // ============================================================================
 // TYPES
@@ -46,258 +60,90 @@ export interface UnitFloorplanData {
   scene: DxfSceneData;
   fileName: string;
   timestamp: number;
+  /** FileRecord ID (for Enterprise pattern) */
+  fileRecordId?: string;
 }
 
 /**
- * 🏢 ENTERPRISE: Options for FileRecord creation
- * When provided, saveFloorplan() creates a FileRecord so the floorplan
- * appears in the unit's FloorPlanTab via EntityFilesManager.
+ * 🏢 ENTERPRISE: Parameters for saving a unit floorplan
  */
-export interface UnitFloorplanSaveOptions {
+export interface SaveUnitFloorplanParams {
+  /** Company ID (REQUIRED) */
   companyId: string;
+  /** Project ID (optional but recommended) */
   projectId?: string;
+  /** Building ID (optional) */
   buildingId?: string;
+  /** Unit ID (REQUIRED) */
+  unitId: string;
+  /** Floorplan data */
+  data: UnitFloorplanData;
+  /** User ID who created this */
   createdBy: string;
+  /** Original file for direct upload (DXF/PDF) */
   originalFile?: File;
 }
 
+/**
+ * 🏢 ENTERPRISE: Parameters for loading a unit floorplan
+ */
+export interface LoadUnitFloorplanParams {
+  /** Company ID (REQUIRED) */
+  companyId: string;
+  /** Unit ID */
+  unitId: string;
+}
+
 // ============================================================================
-// SERVICE
+// SERVICE IMPLEMENTATION
 // ============================================================================
 
 export class UnitFloorplanService {
-  /** @deprecated Legacy collection — kept for backward-compatible reads */
+  /** @deprecated Legacy collection — kept for backward-compatible reads only */
   private static readonly LEGACY_COLLECTION = 'unit_floorplans';
 
   /**
-   * 🏢 ENTERPRISE: Save unit floorplan
+   * 🏢 ENTERPRISE: Save unit floorplan using FileRecordService
    *
-   * 1. Saves scene to legacy collection (backward compat)
-   * 2. If options provided → creates FileRecord (enterprise `files` system)
-   *    Following 3-step canonical upload pattern (ADR-031):
-   *    a. createPendingFileRecord()
-   *    b. Upload to Firebase Storage (gzip compressed)
-   *    c. finalizeFileRecord() → status: ready + downloadUrl
-   */
-  static async saveFloorplan(
-    unitId: string,
-    data: UnitFloorplanData,
-    options?: UnitFloorplanSaveOptions
-  ): Promise<boolean> {
-    try {
-      const docId = `${unitId}_unit`;
-
-      // Legacy metadata save (backward compat) — NO scene data!
-      // 🏢 FIX: Scene data MUST go to Firebase Storage only (via createFileRecord),
-      // NOT embedded in Firestore document. A full DXF scene can be 200K+ lines / 1MB+
-      // which exceeds Firestore's 1MB document limit and wastes read bandwidth.
-      await setDoc(doc(db, this.LEGACY_COLLECTION, docId), {
-        unitId,
-        type: 'unit',
-        fileName: data.fileName,
-        timestamp: data.timestamp,
-        updatedAt: new Date().toISOString(),
-        // Marker: scene is stored in Firebase Storage via FileRecord pattern
-        sceneStoredInStorage: true,
-        ...(options?.companyId ? { companyId: options.companyId } : {}),
-        ...(options?.createdBy ? { createdBy: options.createdBy } : {}),
-      });
-
-      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-      RealtimeService.dispatch('FLOORPLAN_CREATED', {
-        floorplanId: docId,
-        floorplan: {
-          entityType: ENTITY_TYPES.UNIT,
-          entityId: unitId,
-          name: data.fileName,
-        },
-        timestamp: Date.now(),
-      });
-
-      // 🏢 ENTERPRISE: Create FileRecord → visible in FloorPlanTab
-      if (options?.companyId && options?.createdBy) {
-        try {
-          await this.createFileRecord(unitId, data, options);
-          toast.success('FileRecord δημιουργήθηκε — η κάτοψη θα εμφανιστεί στην καρτέλα');
-        } catch (fileRecordError) {
-          const errMsg = fileRecordError instanceof Error ? fileRecordError.message : String(fileRecordError);
-          toast.error(`FileRecord αποτυχία: ${errMsg}`);
-          logger.error('FileRecord creation failed (non-blocking)', { unitId, error: errMsg });
-        }
-      } else {
-        logger.warn('No FileRecord options — skipping enterprise file creation', {
-          hasOptions: !!options,
-          hasCompanyId: !!options?.companyId,
-          hasCreatedBy: !!options?.createdBy,
-        });
-      }
-
-      return true;
-    } catch (error) {
-      logger.error('Error saving unit floorplan', {
-        unitId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return false;
-    }
-  }
-
-  /**
-   * Load unit floorplan data
+   * Flow (same pattern as FloorFloorplanService):
+   * 1. createPendingFileRecord() → `files` collection
+   * 2. Upload to Firebase Storage (gzip DXF, raw PDF, gzip JSON fallback)
+   * 3. Thumbnail generation (non-blocking)
+   * 4. finalizeFileRecord() → status: ready + downloadUrl
+   * 5. RealtimeService.dispatch('FLOORPLAN_CREATED')
    *
-   * Strategy:
-   * 1. Check legacy collection for metadata
-   * 2. If scene is embedded (old data) → return directly
-   * 3. If sceneStoredInStorage (new data) → load from FileRecord/Storage
+   * NOTE: Does NOT write to legacy `unit_floorplans` collection.
    */
-  static async loadFloorplan(unitId: string, companyId?: string): Promise<UnitFloorplanData | null> {
+  static async saveFloorplan(params: SaveUnitFloorplanParams): Promise<boolean> {
+    const { companyId, projectId, buildingId, unitId, data, createdBy, originalFile } = params;
+
     try {
-      const docId = `${unitId}_unit`;
-      const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
+      logger.debug('Saving unit floorplan via Enterprise storage', { unitId, companyId });
 
-      if (!docSnap.exists()) {
-        return null;
-      }
-
-      const data = docSnap.data();
-
-      // Legacy format: scene embedded in Firestore document
-      if (data.scene && !data.sceneStoredInStorage) {
-        return data as UnitFloorplanData;
-      }
-
-      // New format: scene in Firebase Storage — load via FileRecord
-      if (data.sceneStoredInStorage && companyId) {
-        try {
-          const fileRecords = await FileRecordService.getFilesByEntity(
-            ENTITY_TYPES.UNIT,
-            unitId,
-            {
-              companyId,
-              domain: FILE_DOMAINS.CONSTRUCTION,
-              category: FILE_CATEGORIES.FLOORPLANS,
-              purpose: 'unit-floorplan',
-            }
-          );
-
-          if (fileRecords.length > 0) {
-            const fileRecord = fileRecords[0];
-            if (fileRecord.storagePath) {
-              const storageRef = ref(storage, fileRecord.storagePath);
-              const { getBytes } = await import('firebase/storage');
-              const compressedBytes = await getBytes(storageRef);
-
-              // Try to decompress (gzip) first, fallback to raw JSON
-              let sceneJson: string;
-              try {
-                const decompressed = pako.ungzip(new Uint8Array(compressedBytes));
-                sceneJson = new TextDecoder().decode(decompressed);
-              } catch {
-                // Not compressed, try raw
-                sceneJson = new TextDecoder().decode(compressedBytes);
-              }
-
-              const scene = JSON.parse(sceneJson) as DxfSceneData;
-              return {
-                unitId,
-                type: 'unit',
-                scene,
-                fileName: data.fileName,
-                timestamp: data.timestamp,
-              };
-            }
-          }
-        } catch (storageError) {
-          logger.error('Failed to load scene from Storage, falling back', {
-            unitId, error: storageError instanceof Error ? storageError.message : String(storageError),
-          });
-        }
-      }
-
-      // Fallback: return metadata without scene
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Check if unit floorplan exists
-   */
-  static async hasFloorplan(unitId: string): Promise<boolean> {
-    try {
-      const docId = `${unitId}_unit`;
-      const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
-      return docSnap.exists();
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Delete unit floorplan
-   */
-  static async deleteFloorplan(unitId: string): Promise<boolean> {
-    try {
-      const docId = `${unitId}_unit`;
-      await setDoc(doc(db, this.LEGACY_COLLECTION, docId), {
-        deleted: true,
-        deletedAt: new Date().toISOString()
-      });
-
-      RealtimeService.dispatch('FLOORPLAN_DELETED', {
-        floorplanId: docId,
-        timestamp: Date.now(),
-      });
-
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  // ==========================================================================
-  // PRIVATE: FileRecord creation (enterprise pattern)
-  // ==========================================================================
-
-  /**
-   * 🏢 ENTERPRISE: Create FileRecord for unit floorplan
-   *
-   * 3-step canonical upload (same as BuildingFloorplanService):
-   * 1. createPendingFileRecord() → Firestore `files` collection
-   * 2. Upload file to Firebase Storage (gzip compressed for DXF)
-   * 3. finalizeFileRecord() → status: ready + downloadUrl
-   */
-  private static async createFileRecord(
-    unitId: string,
-    data: UnitFloorplanData,
-    options: UnitFloorplanSaveOptions
-  ): Promise<void> {
-    try {
       const fileName = data.fileName || `${unitId}_unit_floorplan.dxf`;
-      const hasOriginalFile = !!options.originalFile;
+      const hasOriginalFile = !!originalFile;
       const fileExtension = hasOriginalFile
-        ? (options.originalFile!.name.split('.').pop()?.toLowerCase() || 'dxf')
+        ? (originalFile.name.split('.').pop()?.toLowerCase() || 'dxf')
         : 'json';
       const contentType = hasOriginalFile
-        ? (options.originalFile!.type || (fileExtension === 'pdf' ? 'application/pdf' : 'application/dxf'))
+        ? (originalFile.type || (fileExtension === 'pdf' ? 'application/pdf' : 'application/dxf'))
         : 'application/json';
 
       // Step 1: Create pending FileRecord
       const createResult = await FileRecordService.createPendingFileRecord({
-        companyId: options.companyId,
-        projectId: options.projectId,
+        companyId,
+        projectId,
         entityType: ENTITY_TYPES.UNIT,
         entityId: unitId,
         domain: FILE_DOMAINS.CONSTRUCTION,
         category: FILE_CATEGORIES.FLOORPLANS,
         originalFilename: fileName,
         contentType,
-        createdBy: options.createdBy,
+        createdBy,
         entityLabel: `Unit ${unitId}`,
         purpose: 'unit-floorplan',
         ext: fileExtension,
-        descriptors: [unitId, options.buildingId || '', 'unit-floorplan'].filter(Boolean),
+        descriptors: [unitId, buildingId || '', 'unit-floorplan'].filter(Boolean),
       });
 
       // Step 2: Upload to Firebase Storage
@@ -306,11 +152,11 @@ export class UnitFloorplanService {
       let downloadUrl: string;
 
       if (hasOriginalFile) {
-        const originalSize = options.originalFile!.size;
+        const originalSize = originalFile.size;
 
         if (fileExtension === 'dxf') {
           // DXF: gzip compress (text files compress 80-90%)
-          const arrayBuffer = await options.originalFile!.arrayBuffer();
+          const arrayBuffer = await originalFile.arrayBuffer();
           const compressed = pako.gzip(new Uint8Array(arrayBuffer));
           const uploadResult = await uploadBytes(storageRef, compressed, {
             contentType,
@@ -319,7 +165,7 @@ export class UnitFloorplanService {
           downloadUrl = await getDownloadURL(uploadResult.ref);
         } else {
           // PDF/other: upload as-is
-          const uploadResult = await uploadBytes(storageRef, options.originalFile!, {
+          const uploadResult = await uploadBytes(storageRef, originalFile, {
             contentType,
           });
           downloadUrl = await getDownloadURL(uploadResult.ref);
@@ -338,7 +184,7 @@ export class UnitFloorplanService {
         downloadUrl = await getDownloadURL(uploadResult.ref);
       }
 
-      // Step 3: Generate thumbnail (non-blocking)
+      // Step 3: Thumbnail generation (non-blocking)
       let thumbnailUrl: string | undefined;
       try {
         const { generateDxfThumbnail, generatePdfThumbnail } = await import('@/services/thumbnail-generator');
@@ -347,7 +193,7 @@ export class UnitFloorplanService {
         if (data.scene && fileExtension !== 'pdf') {
           thumbnailBlob = await generateDxfThumbnail(data.scene, 300, 200);
         } else if (hasOriginalFile && fileExtension === 'pdf') {
-          thumbnailBlob = await generatePdfThumbnail(options.originalFile!, 300, 200);
+          thumbnailBlob = await generatePdfThumbnail(originalFile, 300, 200);
         }
 
         if (thumbnailBlob) {
@@ -357,7 +203,6 @@ export class UnitFloorplanService {
           thumbnailUrl = await getDownloadURL(thumbRef);
         }
       } catch (thumbError) {
-        // Thumbnail failure is non-blocking
         logger.warn('Thumbnail generation skipped', {
           error: thumbError instanceof Error ? thumbError.message : String(thumbError),
         });
@@ -371,19 +216,200 @@ export class UnitFloorplanService {
         thumbnailUrl,
       });
 
-      logger.info('FileRecord created for unit floorplan', {
-        fileId: createResult.fileId,
+      logger.info('Enterprise save complete for unit', {
         unitId,
+        fileId: createResult.fileId,
         ext: fileExtension,
         sizeBytes: uploadSize,
       });
+
+      // Step 5: Real-time notification
+      RealtimeService.dispatch('FLOORPLAN_CREATED', {
+        floorplanId: createResult.fileId,
+        floorplan: {
+          entityType: ENTITY_TYPES.UNIT,
+          entityId: unitId,
+          name: fileName,
+        },
+        timestamp: Date.now(),
+      });
+
+      return true;
     } catch (error) {
-      // Re-throw so caller can show toast with specific error
-      logger.error('Failed to create FileRecord for unit floorplan', {
+      logger.error('Error saving unit floorplan', {
+        unitId,
+        companyId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Load unit floorplan from FileRecordService
+   *
+   * Strategy:
+   * 1. Primary: Query `files` collection via FileRecordService
+   * 2. Fallback: Check legacy `unit_floorplans/{unitId}_unit` for embedded scene (old data)
+   * 3. If neither → return null
+   */
+  static async loadFloorplan(params: LoadUnitFloorplanParams): Promise<UnitFloorplanData | null> {
+    const { companyId, unitId } = params;
+
+    try {
+      logger.debug('Loading unit floorplan', { unitId, companyId });
+
+      // ── Primary: FileRecord-based lookup ──
+      const fileRecords = await FileRecordService.getFilesByEntity(
+        ENTITY_TYPES.UNIT,
+        unitId,
+        {
+          companyId,
+          domain: FILE_DOMAINS.CONSTRUCTION,
+          category: FILE_CATEGORIES.FLOORPLANS,
+          purpose: 'unit-floorplan',
+        }
+      );
+
+      if (fileRecords.length > 0) {
+        const fileRecord = fileRecords[0];
+
+        if (!fileRecord.storagePath) {
+          logger.warn('FileRecord has no storagePath', { unitId, fileId: fileRecord.id });
+          return null;
+        }
+
+        const storageRef = ref(storage, fileRecord.storagePath);
+        const compressedBytes = await getBytes(storageRef);
+
+        // Try gzip decompress first, fallback to raw JSON
+        let sceneJson: string;
+        try {
+          const decompressed = pako.ungzip(new Uint8Array(compressedBytes));
+          sceneJson = new TextDecoder().decode(decompressed);
+        } catch {
+          sceneJson = new TextDecoder().decode(compressedBytes);
+        }
+
+        const scene = JSON.parse(sceneJson) as DxfSceneData;
+
+        logger.debug('Loaded unit floorplan from FileRecord', {
+          unitId,
+          fileId: fileRecord.id,
+          entityCount: scene.entities?.length || 0,
+        });
+
+        return {
+          unitId,
+          type: 'unit',
+          scene,
+          fileName: fileRecord.originalFilename,
+          timestamp: typeof fileRecord.createdAt === 'string'
+            ? new Date(fileRecord.createdAt).getTime()
+            : fileRecord.createdAt instanceof Date
+              ? fileRecord.createdAt.getTime()
+              : Date.now(),
+          fileRecordId: fileRecord.id,
+        };
+      }
+
+      // ── Fallback: Legacy collection (backward compat for old data) ──
+      const docId = `${unitId}_unit`;
+      const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+
+        // Only return if scene is embedded (truly old data)
+        if (data.scene && !data.sceneStoredInStorage) {
+          logger.warn('Loaded unit floorplan from LEGACY collection (embedded scene)', { unitId });
+          return data as UnitFloorplanData;
+        }
+      }
+
+      logger.debug('No floorplan found for unit', { unitId });
+      return null;
+    } catch (error) {
+      logger.error('Error loading unit floorplan', {
+        unitId,
+        companyId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Check if unit floorplan exists
+   */
+  static async hasFloorplan(companyId: string, unitId: string): Promise<boolean> {
+    try {
+      const fileRecords = await FileRecordService.getFilesByEntity(
+        ENTITY_TYPES.UNIT,
+        unitId,
+        {
+          companyId,
+          domain: FILE_DOMAINS.CONSTRUCTION,
+          category: FILE_CATEGORIES.FLOORPLANS,
+          purpose: 'unit-floorplan',
+        }
+      );
+
+      if (fileRecords.length > 0) {
+        return true;
+      }
+
+      // Fallback: check legacy collection
+      const docId = `${unitId}_unit`;
+      const docSnap = await getDoc(doc(db, this.LEGACY_COLLECTION, docId));
+      return docSnap.exists() && !docSnap.data()?.deleted;
+    } catch (error) {
+      logger.warn('Error checking unit floorplan', {
         unitId,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      return false;
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Delete unit floorplan (soft delete via FileRecordService)
+   */
+  static async deleteFloorplan(companyId: string, unitId: string, deletedBy: string): Promise<boolean> {
+    try {
+      const fileRecords = await FileRecordService.getFilesByEntity(
+        ENTITY_TYPES.UNIT,
+        unitId,
+        {
+          companyId,
+          domain: FILE_DOMAINS.CONSTRUCTION,
+          category: FILE_CATEGORIES.FLOORPLANS,
+          purpose: 'unit-floorplan',
+        }
+      );
+
+      if (!fileRecords || fileRecords.length === 0) {
+        return true; // Nothing to delete
+      }
+
+      for (const fileRecord of fileRecords) {
+        await FileRecordService.moveToTrash(fileRecord.id, deletedBy);
+      }
+
+      logger.info('Deleted unit floorplan(s)', { unitId, count: fileRecords.length });
+
+      RealtimeService.dispatch('FLOORPLAN_DELETED', {
+        floorplanId: unitId,
+        timestamp: Date.now(),
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Error deleting unit floorplan', {
+        unitId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
     }
   }
 }

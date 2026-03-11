@@ -474,11 +474,18 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         const createdBy = user?.uid;
         const selectedUnit = units.find(u => u.id === selectedUnitId);
         const unitCompanyId = (selectedUnit as Record<string, unknown> | undefined)?.companyId as string | undefined;
-        const fileRecordCompanyId = unitCompanyId || selectedCompanyId;
-        const unitFileRecordOptions = fileRecordCompanyId && createdBy
-          ? { companyId: fileRecordCompanyId, projectId: selectedProjectId || undefined, buildingId: selectedBuildingId, createdBy, originalFile: file }
-          : undefined;
-        saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData, unitFileRecordOptions);
+        // 🏢 FIX: Prioritize unit's own companyId → auth user's companyId → wizard's selectedCompanyId
+        // The FloorPlanTab loads with user?.companyId, so they MUST match for super_admin
+        const fileRecordCompanyId = unitCompanyId || user?.companyId || selectedCompanyId;
+        saved = await UnitFloorplanService.saveFloorplan({
+          companyId: fileRecordCompanyId,
+          projectId: selectedProjectId || undefined,
+          buildingId: selectedBuildingId,
+          unitId: selectedUnitId,
+          data: unitData,
+          createdBy: createdBy || '',
+          originalFile: file,
+        });
 
         // 🏢 ENTERPRISE: Record floorplan upload in entity audit trail (fire-and-forget)
         if (saved) {
@@ -643,7 +650,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       let hasExisting = false;
 
       if (currentStep === 'unit' && type === 'unit') {
-        hasExisting = await UnitFloorplanService.hasFloorplan(selectedUnitId);
+        const checkCompanyId = user?.companyId || selectedCompanyId;
+        hasExisting = await UnitFloorplanService.hasFloorplan(checkCompanyId, selectedUnitId);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Check for existing floor floorplan
         hasExisting = await FloorFloorplanService.hasFloorplan(selectedBuildingId, selectedFloorId);
