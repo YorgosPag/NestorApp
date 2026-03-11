@@ -882,3 +882,20 @@ if (space.commercial?.parentUnitSaleId === unit.id) {
 - Floor resets to empty when building changes
 - Floor disabled with hint when no building is linked
 - i18n translations added for `entityLinks.building.*` in parking + storage namespaces (el/en)
+
+### 2026-03-12: Unified Building Link + Floor Dropdown across Units, Parking & Storage
+
+**Problem**: Units page had building link (`UnitEntityLinks`) at the bottom and floor as a plain number input, while Parking/Storage now used `EntityLinkCard` + `FloorSelectField` at the top. Inconsistent UX confused users.
+
+**Solution**:
+- Moved `UnitEntityLinks` **above** `UnitFieldsBlock` in `PropertyDetailsContent.tsx` — same position as Parking/Storage
+- Replaced floor `<Input type="number">` with `FloorSelectField` dropdown in `UnitFieldsBlock.tsx`
+- Added `buildingId` prop to `UnitFieldsBlock` — passed from parent via `resolvedProperty.buildingId`
+- All 3 entity types (Unit, Parking, Storage) now follow identical pattern:
+  1. EntityLinkCard for building selection
+  2. FloorSelectField dropdown populated from linked building's floors
+  3. Floor disabled with hint when no building linked
+
+**Files changed**:
+- `src/features/property-details/PropertyDetailsContent.tsx` — reordered UnitEntityLinks before UnitFieldsBlock
+- `src/features/property-details/components/UnitFieldsBlock.tsx` — FloorSelectField + buildingId prop
