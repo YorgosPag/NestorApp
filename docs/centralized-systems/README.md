@@ -6,7 +6,7 @@
 
 **📊 Quick Stats**: 33 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: BOQ Phase 1B — UI Layer for Measurements Tab (Summary Cards, ΑΤΟΕ Accordion, Filter Bar, Item Editor) (2026-02-12)
+> **🆕 Latest**: ADR-198 Sales-to-Accounting Bridge — Auto invoices, journal entries, email notifications on reserve/sell/cancel (2026-03-11)
 
 ---
 

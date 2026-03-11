@@ -1,6 +1,6 @@
 # ADR-198: Sales-to-Accounting Bridge (Transaction Chain Pattern)
 
-**Status**: APPROVED
+**Status**: IMPLEMENTED & VERIFIED
 **Date**: 2026-03-11
 **Category**: Backend Systems / Accounting Integration
 **Related**: ACC-001 (Invoice Types), ACC-002 (Journal Entries), ACC-004 (VAT Engine)
@@ -67,8 +67,29 @@ SalesAccountingBridge (Server Service)
   ├─ createAccountingServices() — reuse existing accounting infra
   │   ├─ repository.createInvoice() — atomic numbering
   │   └─ service.createJournalEntryFromInvoice() — auto journal
-  └─ update unit.commercial.transactionChainId — Firestore Admin SDK
+  ├─ update unit.commercial.transactionChainId — Firestore Admin SDK
+  └─ notifyAccountingOffice() — fire-and-forget Mailgun email
 ```
+
+### Email Notification (Accounting Office)
+
+Μετά τη δημιουργία invoice, στέλνεται αυτόματα email στο λογιστήριο:
+
+| Setting | Value |
+|---------|-------|
+| Env var | `ACCOUNTING_NOTIFY_EMAIL` |
+| Provider | Mailgun (EU region) via `sendReplyViaMailgun()` |
+| Pattern | Fire-and-forget — δεν μπλοκάρει πώληση |
+| Graceful skip | Αν δεν υπάρχει email → skip χωρίς error |
+
+**Email content ανά event type:**
+- **Deposit**: Κράτηση μονάδας, ποσό, αριθμός τιμολογίου, link στα invoices
+- **Final sale**: Πώληση, τελική τιμή, υπόλοιπο, link
+- **Credit**: Ακύρωση, ποσό επιστροφής, αιτία, link
+
+| File | Purpose |
+|------|---------|
+| `src/services/sales-accounting/accounting-notification.ts` | Email builders + send logic |
 
 ### Key Components
 
@@ -79,6 +100,7 @@ SalesAccountingBridge (Server Service)
 | Barrel | `src/services/sales-accounting/index.ts` | Re-exports |
 | API Route | `src/app/api/sales/[unitId]/accounting-event/route.ts` | POST endpoint with auth + rate limit |
 | UI Card | `src/components/sales/cards/TransactionChainCard.tsx` | Invoice chain display in SaleInfoContent |
+| Email Notify | `src/services/sales-accounting/accounting-notification.ts` | Mailgun email to accounting office |
 
 ### Type Extensions
 
@@ -105,6 +127,7 @@ SalesAccountingBridge (Server Service)
 - `enterprise-id.service.generateInvoiceAccId()` → ID generation
 - `account-categories.ts` → category configs
 - `withAuth` + `withStandardRateLimit` → API security
+- `sendReplyViaMailgun()` → Mailgun email sending (EU region)
 
 ## Consequences
 
@@ -115,6 +138,12 @@ SalesAccountingBridge (Server Service)
 - Αξιοποιεί 100% το υπάρχον accounting module χωρίς duplication
 - Fire-and-forget = μηδενική επίπτωση στο UX πωλήσεων
 - Transaction chain = πλήρης ιχνηλασιμότητα ανά μονάδα
+
+### Positive (Email)
+
+- Το λογιστήριο ενημερώνεται αυτόματα χωρίς πρόσβαση στην εφαρμογή
+- Περιλαμβάνει deep link στα invoices για άμεση πρόσβαση
+- Graceful — αν αποτύχει, η πώληση δεν επηρεάζεται
 
 ### Negative
 
@@ -136,8 +165,32 @@ SalesAccountingBridge (Server Service)
 6. ΦΠΑ → σωστός υπολογισμός (24% σε καθαρό ποσό)
 7. Graceful degradation → χωρίς company profile, η πώληση γίνεται κανονικά
 
+### Firestore Composite Indexes Required
+
+| Fields | Collection | Purpose |
+|--------|------------|---------|
+| `fiscalYear` ASC + `issueDate` DESC | `accounting_invoices` | Main invoices listing |
+| `fiscalYear` ASC + `type` ASC + `issueDate` DESC | `accounting_invoices` | Filter by type |
+| `fiscalYear` ASC + `paymentStatus` ASC + `issueDate` DESC | `accounting_invoices` | Filter by payment status |
+| `unitId` ASC + `issueDate` DESC | `accounting_invoices` | TransactionChainCard queries |
+| `unitId` ASC + `type` ASC + `createdAt` ASC | `accounting_invoices` | findDepositInvoiceId |
+
+### Environment Variables
+
+| Var | Purpose | Required |
+|-----|---------|----------|
+| `ACCOUNTING_NOTIFY_EMAIL` | Email λογιστηρίου για ειδοποιήσεις | Optional (graceful skip) |
+| `FIREBASE_SERVICE_ACCOUNT_KEY_B64` | Firebase Admin SDK (server-side Firestore) | Required |
+| `MAILGUN_API_KEY` | Mailgun sending | Required for email |
+| `MAILGUN_DOMAIN` | Mailgun domain (nestorconstruct.gr) | Required for email |
+| `MAILGUN_REGION` | `eu` | Required for email |
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-03-11 | ADR created — APPROVED |
+| 2026-03-11 | Email notification via Mailgun added |
+| 2026-03-11 | TransactionChainCard fix — apiClient unwraps canonical response |
+| 2026-03-11 | Firestore composite indexes deployed |
+| 2026-03-11 | VERIFIED in production — invoices, emails, UI card all working |
