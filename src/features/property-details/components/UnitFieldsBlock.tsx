@@ -393,34 +393,35 @@ export function UnitFieldsBlock({
           </CardContent>
         </Card>
 
-        {/* ─── Orientation Card (floor moved to top-level grid) ─── */}
+        {/* ─── Areas Card ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Compass className={cn(iconSizes.sm, 'text-amber-500')} />
-              {t('orientation.sectionTitle')}
+              <Ruler className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)} />
+              {t('fields.areas.sectionTitle')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2 pt-0 space-y-2">
-            <fieldset className="space-y-1">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                {t('orientation.sectionTitle')}
-              </Label>
-              <div className="flex flex-wrap gap-1">
-                {ORIENTATION_OPTIONS.map((orientation) => {
-                  const isSelected = formData.orientations.includes(orientation);
-                  return (
-                    <Button key={orientation} type="button"
-                      variant={isSelected ? 'default' : 'outline'} size="sm"
-                      className="h-6 px-1.5 text-xs"
-                      disabled={!isEditing}
-                      onClick={() => toggleArrayItem('orientations', orientation)}>
-                      {t(`orientation.short.${orientation}`)}
-                    </Button>
-                  );
-                })}
-              </div>
-            </fieldset>
+          <CardContent className="p-2 pt-0">
+            <div className="space-y-2">
+              {([
+                ['areaGross', 'fields.areas.gross'],
+                ['areaNet', 'fields.areas.net'],
+                ['areaBalcony', 'fields.areas.balcony'],
+                ['areaTerrace', 'fields.areas.terrace'],
+                ['areaGarden', 'fields.areas.garden'],
+              ] as const).map(([field, labelKey]) => (
+                <fieldset key={field} className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">{t(labelKey)}</Label>
+                  <Input
+                    type="number" min={0} step={0.1}
+                    value={formData[field]}
+                    onChange={(e) => setFormData(prev => ({ ...prev, [field]: parseFloat(e.target.value) || 0 }))}
+                    className={cn('h-7 text-xs', quick.input)}
+                    disabled={!isEditing}
+                  />
+                </fieldset>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </section>
@@ -470,35 +471,34 @@ export function UnitFieldsBlock({
           </CardContent>
         </Card>
 
-        {/* ─── Areas Card ─── */}
+        {/* ─── Orientation Card ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Ruler className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)} />
-              {t('fields.areas.sectionTitle')}
+              <Compass className={cn(iconSizes.sm, 'text-amber-500')} />
+              {t('orientation.sectionTitle')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2 pt-0">
-            <div className="space-y-2">
-              {([
-                ['areaGross', 'fields.areas.gross'],
-                ['areaNet', 'fields.areas.net'],
-                ['areaBalcony', 'fields.areas.balcony'],
-                ['areaTerrace', 'fields.areas.terrace'],
-                ['areaGarden', 'fields.areas.garden'],
-              ] as const).map(([field, labelKey]) => (
-                <fieldset key={field} className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t(labelKey)}</Label>
-                  <Input
-                    type="number" min={0} step={0.1}
-                    value={formData[field]}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [field]: parseFloat(e.target.value) || 0 }))}
-                    className={cn('h-7 text-xs', quick.input)}
-                    disabled={!isEditing}
-                  />
-                </fieldset>
-              ))}
-            </div>
+          <CardContent className="p-2 pt-0 space-y-2">
+            <fieldset className="space-y-1">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                {t('orientation.sectionTitle')}
+              </Label>
+              <div className="flex flex-wrap gap-1">
+                {ORIENTATION_OPTIONS.map((orientation) => {
+                  const isSelected = formData.orientations.includes(orientation);
+                  return (
+                    <Button key={orientation} type="button"
+                      variant={isSelected ? 'default' : 'outline'} size="sm"
+                      className="h-6 px-1.5 text-xs"
+                      disabled={!isEditing}
+                      onClick={() => toggleArrayItem('orientations', orientation)}>
+                      {t(`orientation.short.${orientation}`)}
+                    </Button>
+                  );
+                })}
+              </div>
+            </fieldset>
           </CardContent>
         </Card>
 
