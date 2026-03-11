@@ -45,18 +45,35 @@ function formatCurrency(value: number | null | undefined): string {
   }).format(value);
 }
 
-function formatDate(ts: { toDate?: () => Date } | null | undefined): string {
-  if (!ts || typeof ts.toDate !== 'function') return '—';
+function formatDate(ts: { toDate?: () => Date } | string | null | undefined): string {
+  if (!ts) return '—';
+  let date: Date;
+  if (typeof ts === 'string') {
+    date = new Date(ts);
+  } else if (typeof ts.toDate === 'function') {
+    date = ts.toDate();
+  } else {
+    return '—';
+  }
+  if (isNaN(date.getTime())) return '—';
   return new Intl.DateTimeFormat('el-GR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  }).format(ts.toDate());
+  }).format(date);
 }
 
-function computeDaysOnMarket(listedDate: { toDate?: () => Date } | null | undefined): string {
-  if (!listedDate || typeof listedDate.toDate !== 'function') return '—';
-  const listed = listedDate.toDate();
+function computeDaysOnMarket(listedDate: { toDate?: () => Date } | string | null | undefined): string {
+  if (!listedDate) return '—';
+  let listed: Date;
+  if (typeof listedDate === 'string') {
+    listed = new Date(listedDate);
+  } else if (typeof listedDate.toDate === 'function') {
+    listed = listedDate.toDate();
+  } else {
+    return '—';
+  }
+  if (isNaN(listed.getTime())) return '—';
   const days = Math.floor((Date.now() - listed.getTime()) / (1000 * 60 * 60 * 24));
   return `${days}`;
 }
@@ -215,12 +232,30 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             label={t('sales.saleInfo.listedDate', { defaultValue: 'Στην αγορά' })}
             value={formatDate(commercial?.listedDate)}
           />
-          <InfoRow
-            icon={Calendar}
-            iconColor="text-green-600"
-            label={t('sales.saleInfo.saleDate', { defaultValue: 'Ημ. πώλησης' })}
-            value={formatDate(commercial?.saleDate)}
-          />
+          {commercial?.reservationDate && (
+            <InfoRow
+              icon={Calendar}
+              iconColor="text-violet-600"
+              label={t('sales.saleInfo.reservationDate', { defaultValue: 'Ημ. κράτησης' })}
+              value={formatDate(commercial.reservationDate)}
+            />
+          )}
+          {commercial?.saleDate && (
+            <InfoRow
+              icon={Calendar}
+              iconColor="text-green-600"
+              label={t('sales.saleInfo.saleDate', { defaultValue: 'Ημ. πώλησης' })}
+              value={formatDate(commercial.saleDate)}
+            />
+          )}
+          {commercial?.cancellationDate && (
+            <InfoRow
+              icon={Calendar}
+              iconColor="text-red-600"
+              label={t('sales.saleInfo.cancellationDate', { defaultValue: 'Ημ. ακύρωσης' })}
+              value={formatDate(commercial.cancellationDate)}
+            />
+          )}
           <InfoRow
             icon={Clock}
             iconColor="text-gray-500"

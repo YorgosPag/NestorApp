@@ -187,8 +187,9 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           finalPrice: unit.commercial?.finalPrice ?? null,
           reservationDeposit: deposit ? Number(deposit) : null,
           buyerContactId: buyerContactId || null,
+          reservationDate: new Date().toISOString(),
           saleDate: unit.commercial?.saleDate ?? null,
-          listedDate: unit.commercial?.listedDate ?? null,
+          listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),
         },
       } as Record<string, unknown>);
       onOpenChange(false);
@@ -464,8 +465,10 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           finalPrice: null,
           reservationDeposit: null,
           buyerContactId: null,
+          reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: null,
           listedDate: unit.commercial?.listedDate ?? null,
+          cancellationDate: new Date().toISOString(),
         },
       } as Record<string, unknown>);
       onOpenChange(false);

@@ -106,8 +106,14 @@ export interface UnitCommercialData {
   /** Reference → contacts collection (αγοραστής/ενοικιαστής) */
   buyerContactId: string | null;
 
+  /** Ημερομηνία κράτησης */
+  reservationDate: Timestamp | null;
+
   /** Ημερομηνία ολοκλήρωσης πώλησης */
   saleDate: Timestamp | null;
+
+  /** Ημερομηνία ακύρωσης κράτησης/πώλησης */
+  cancellationDate: Timestamp | null;
 
   /** Ημερομηνία εισαγωγής στην αγορά (για υπολογισμό "ημέρες στην αγορά") */
   listedDate: Timestamp | null;
