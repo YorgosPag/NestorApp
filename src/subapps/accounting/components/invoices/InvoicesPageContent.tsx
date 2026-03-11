@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import {
   Plus,
@@ -30,6 +30,7 @@ import type { Invoice } from '@/subapps/accounting/types';
 import { formatCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { InvoicesTable } from './InvoicesTable';
+import { InvoiceDetails } from './details/InvoiceDetails';
 
 // ============================================================================
 // TYPES
@@ -116,7 +117,11 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 export function InvoicesPageContent() {
   const { t } = useTranslation('accounting');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
+
+  // Detail view — ?view=invoiceId
+  const viewInvoiceId = searchParams.get('view');
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,6 +212,19 @@ export function InvoicesPageContent() {
     ];
   }, [invoices, loading, t]);
 
+  // ── Detail View ──────────────────────────────────────────────────────────
+  if (viewInvoiceId) {
+    return (
+      <main className="min-h-screen bg-background p-6">
+        <InvoiceDetails
+          invoiceId={viewInvoiceId}
+          onBack={() => router.push('/accounting/invoices')}
+        />
+      </main>
+    );
+  }
+
+  // ── List View ──────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-background">
       {/* Page Header */}

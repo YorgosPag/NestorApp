@@ -32,8 +32,18 @@ export function InvoiceRow({ invoice }: InvoiceRowProps) {
   const { t } = useTranslation('accounting');
   const router = useRouter();
 
+  const handleClick = () => {
+    router.push(`/accounting/invoices?view=${invoice.invoiceId}`);
+  };
+
   return (
-    <TableRow className="cursor-pointer hover:bg-muted/50">
+    <TableRow
+      className="cursor-pointer hover:bg-muted/50"
+      onClick={handleClick}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') handleClick(); }}
+    >
       <TableCell className="font-medium">
         {invoice.series}-{invoice.number}
       </TableCell>
@@ -57,7 +67,7 @@ export function InvoiceRow({ invoice }: InvoiceRowProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push(`/accounting/invoices?view=${invoice.invoiceId}`)}
+          onClick={(e) => { e.stopPropagation(); handleClick(); }}
           aria-label={t('invoices.invoiceDetails')}
         >
           <Eye className="h-4 w-4" />
