@@ -1,28 +1,25 @@
 {
-  "category": "FIX",
-  "shortDescription": "Info Tab Section Consistency — Unified Section Order (ADR-194)",
-  "problem": "Storage και Parking Info tabs είχαν ασυνεπή ονομασία (Βασικές Πληροφορίες vs Ταυτότητα), λείπαν Notes στο Storage, Parking είχε λάθος τίτλο Περιγραφή αντί Σημειώσεις, και τα Metadata cards χάθηκαν στο ADR-193.",
-  "cause": "ADR-193 αφαίρεσε financial cards αλλά κατά λάθος αφαίρεσε και τα Metadata cards. Τα Storage/Parking tabs δεν ακολουθούσαν το ίδιο naming convention με τα Units.",
+  "category": "FEATURE",
+  "shortDescription": "ADR-199 — Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances)",
+  "problem": "Η ροή πωλήσεων αφορά ΜΟΝΟ μονάδες. Parking/Storage δεν συμμετέχουν στην πώληση ως παρακολουθήματα, παρόλο που στην ελληνική αγορά ακινήτων πωλούνται μαζί με τη μονάδα.",
+  "cause": "Δεν υπήρχε αρχιτεκτονική σχεδίαση για ένταξη parking/storage στη ροή πώλησης. Τα types δεν είχαν millesimalShares, commercialStatus ή commercial data.",
   "filesChanged": [
-    "src/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab.tsx",
-    "src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab.tsx",
-    "src/i18n/locales/el/storage.json",
-    "src/i18n/locales/en/storage.json",
-    "src/i18n/locales/el/parking.json",
-    "src/i18n/locales/en/parking.json",
-    "docs/centralized-systems/reference/adr-index.md",
-    "docs/centralized-systems/reference/adrs/ADR-194-info-tab-section-consistency.md"
+    "docs/centralized-systems/reference/adrs/ADR-199-sales-appurtenances.md",
+    "docs/centralized-systems/reference/adr-index.md"
   ],
-  "solution": "1) Card 1: Renamed basicInfo → identity (Ταυτότητα) σε Storage και Parking, 2) Storage Card 3: icon Layers → StickyNote, added Notes textarea κάτω από Description, 3) Parking Card 3: fixed title description → notes, 4) Restored Metadata card (Calendar icon) σε Storage (lastUpdated + owner) και Parking (createdAt + updatedAt + createdBy), 5) Added i18n key general.identity σε 4 locale files",
-  "testing": "Pre-commit checks passed. Vercel auto-deploy triggered.",
-  "notes": "Enterprise pattern: SAP RE-FX consistent section order — Identity → Location → Notes → Admin Data. Τώρα Storage και Parking ακολουθούν ίδια δομή.",
+  "solution": "Πλήρες ADR-199 με: 1. Ανάλυση ελληνικού δικαίου (Ν.3741/1929, χιλιοστά οικοπέδου). 2. Data model αποφάσεις (millesimalShares, SpaceCommercialData, SaleableAsset). 3. UI/UX σχεδίαση (dialogs με section παρακολουθημάτων). 4. Invoice multi-line items. 5. Server-side status sync. 6. 7 complete σενάρια πώλησης. 7. 4-phase implementation plan.",
+  "testing": "Documentation only — no code changes",
+  "notes": "ADR ΜΟΝΟ, ΟΧΙ κώδικας. Backward compatible — όλα τα νέα πεδία είναι optional. Zero migration needed.",
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6",
-    "sessionDate": "2026-03-10"
+    "sessionDate": "2026-03-11"
   },
   "relatedBackups": [],
   "commits": [
-    { "hash": "f993ccfa", "message": "feat(ui): unify Info tab sections across Storage & Parking (ADR-194)" }
+    {
+      "hash": "6b5d6104",
+      "message": "docs(adr): add ADR-199 — Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances)"
+    }
   ]
 }
