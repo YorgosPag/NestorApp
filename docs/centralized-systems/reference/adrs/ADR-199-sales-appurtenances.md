@@ -899,3 +899,21 @@ if (space.commercial?.parentUnitSaleId === unit.id) {
 **Files changed**:
 - `src/features/property-details/PropertyDetailsContent.tsx` — reordered UnitEntityLinks before UnitFieldsBlock
 - `src/features/property-details/components/UnitFieldsBlock.tsx` — FloorSelectField + buildingId prop
+
+### 2026-03-12: Building + Floor side-by-side at top of all detail tabs
+
+**Problem**: EntityLinkCard (building) and FloorSelectField (floor) were in separate sections, not at the top, and labeled "Τοποθεσία" which confused users. Layout inconsistent across Units/Parking/Storage.
+
+**Solution**:
+- **All 3 tabs**: Building link + Floor card placed in `grid grid-cols-1 md:grid-cols-2` at the **top** of the page
+- **ParkingGeneralTab**: Removed separate Location Card — floor now in top grid next to building link
+- **StorageGeneralTab**: Same — removed separate Location Card
+- **PropertyDetailsContent (Units)**: Building link + Floor side-by-side in top grid; floor removed from UnitFieldsBlock Location Card
+- **UnitFieldsBlock**: Removed floor from Location Card → renamed to Orientation Card; removed `buildingId` prop (no longer needed)
+- **Label change**: Card title uses "Όροφος" instead of "Τοποθεσία"
+
+**Files changed**:
+- `src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab.tsx`
+- `src/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab.tsx`
+- `src/features/property-details/PropertyDetailsContent.tsx`
+- `src/features/property-details/components/UnitFieldsBlock.tsx`

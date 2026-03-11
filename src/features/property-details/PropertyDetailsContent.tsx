@@ -28,6 +28,12 @@ const logger = createModuleLogger('PropertyDetailsContent');
 
 import { UnitEntityLinks } from './components/UnitEntityLinks';
 import { LinkedSpacesCard } from './components/LinkedSpacesCard';
+import { FloorSelectField } from '@/components/shared/FloorSelectField';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MapPin } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
+import { cn } from '@/lib/utils';
 
 export function PropertyDetailsContent({
   property,
@@ -58,9 +64,11 @@ export function PropertyDetailsContent({
   isCreatingNewUnit?: boolean;
   onUnitCreated?: (unitId: string) => void;
 }) {
-  const { t } = useTranslation(['common', 'properties']);
+  const { t } = useTranslation(['common', 'properties', 'units']);
   const { quick } = useBorderTokens();
   const spacing = useSpacingTokens();
+  const iconSizes = useIconSizes();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: Edit mode - prefer external props (from UnitsSidebar), fallback to local state
   const [localEditMode, setLocalEditMode] = useState(false);
@@ -125,13 +133,37 @@ export function PropertyDetailsContent({
         />
       )}
 
-      {/* Entity Linking: Building — shown BEFORE fields for consistency with Parking/Storage */}
+      {/* Building Link + Floor — side by side at the top */}
       {!isReadOnly && (
-        <UnitEntityLinks
-          unitId={resolvedProperty?.id ?? ''}
-          currentBuildingId={resolvedProperty?.buildingId}
-          isEditing={isEditMode}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UnitEntityLinks
+            unitId={resolvedProperty?.id ?? ''}
+            currentBuildingId={resolvedProperty?.buildingId}
+            isEditing={isEditMode}
+          />
+          <Card>
+            <CardHeader className="p-2">
+              <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+                <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
+                {t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 pt-0">
+              <FloorSelectField
+                buildingId={resolvedProperty?.buildingId ?? null}
+                value={String(resolvedProperty?.floor ?? '')}
+                onChange={(v) => {
+                  if (safeOnUpdateProperty && resolvedProperty?.id) {
+                    safeOnUpdateProperty(resolvedProperty.id, { floor: v ? parseInt(v) || 0 : 0 });
+                  }
+                }}
+                label={t('units:fields.location.floor', { defaultValue: 'Όροφος' })}
+                noBuildingHint={t('units:fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
+                disabled={!isEditMode}
+              />
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* 🏢 ENTERPRISE: Unit Fields Block (identity, location, layout, areas, etc) */}
@@ -143,7 +175,6 @@ export function PropertyDetailsContent({
         onExitEditMode={handleExitEditMode}
         isCreatingNewUnit={isCreatingNewUnit}
         onUnitCreated={onUnitCreated}
-        buildingId={resolvedProperty?.buildingId}
       />
 
       {/* Share Button removed per user request */}

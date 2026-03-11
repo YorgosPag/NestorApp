@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import {
   Bed, Bath, Compass, Wrench, Zap,
-  Ruler, Thermometer, Snowflake, Home, Shield, Flame, FileText, MapPin
+  Ruler, Thermometer, Snowflake, Home, Shield, Flame, FileText
 } from 'lucide-react';
 
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -45,8 +45,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { Property } from '@/types/property-viewer';
 import type { UnitType } from '@/types/unit';
-import { formatFloorLabel } from '@/lib/intl-utils';
-import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type {
   ConditionType,
   OrientationType,
@@ -76,8 +74,6 @@ interface UnitFieldsBlockProps {
   isCreatingNewUnit?: boolean;
   /** Callback when new unit is successfully created */
   onUnitCreated?: (unitId: string) => void;
-  /** Building ID for floor dropdown — passed from parent (UnitEntityLinks) */
-  buildingId?: string | null;
 }
 
 // =============================================================================
@@ -143,7 +139,6 @@ export function UnitFieldsBlock({
   onExitEditMode,
   isCreatingNewUnit = false,
   onUnitCreated,
-  buildingId,
 }: UnitFieldsBlockProps) {
   const { t } = useTranslation('units');
   const spacing = useSpacingTokens();
@@ -398,26 +393,17 @@ export function UnitFieldsBlock({
           </CardContent>
         </Card>
 
-        {/* ─── Location Card ─── */}
+        {/* ─── Orientation Card (floor moved to top-level grid) ─── */}
         <Card>
           <CardHeader className="p-2 pb-1">
             <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <MapPin className={cn(iconSizes.sm, 'text-rose-500')} />
-              {t('fields.location.sectionTitle', { defaultValue: 'Θέση' })}
+              <Compass className={cn(iconSizes.sm, 'text-amber-500')} />
+              {t('orientation.sectionTitle')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 pt-0 space-y-2">
-            <FloorSelectField
-              buildingId={buildingId ?? null}
-              value={String(formData.floor)}
-              onChange={(v) => setFormData(prev => ({ ...prev, floor: v ? parseInt(v) || 0 : 0 }))}
-              label={t('fields.location.floor', { defaultValue: 'Όροφος' })}
-              noBuildingHint={t('fields.location.noFloorHint', { defaultValue: 'Συνδέστε πρώτα κτίριο' })}
-              disabled={!isEditing}
-            />
             <fieldset className="space-y-1">
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Compass className={cn(iconSizes.xs, 'text-amber-500')} />
                 {t('orientation.sectionTitle')}
               </Label>
               <div className="flex flex-wrap gap-1">

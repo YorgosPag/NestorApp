@@ -214,6 +214,48 @@ export function ParkingGeneralTab({
 
   return (
     <div className="p-4 space-y-4">
+      {/* Building Link + Floor — side by side at the top */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <EntityLinkCard
+          cardId="parking-building-link"
+          icon={Building2}
+          labels={{
+            title: t('entityLinks.building.title'),
+            label: t('entityLinks.building.label'),
+            placeholder: t('entityLinks.building.placeholder'),
+            noSelection: t('entityLinks.building.noSelection'),
+            loading: t('entityLinks.building.loading'),
+            save: t('entityLinks.building.save'),
+            saving: t('entityLinks.building.saving'),
+            success: t('entityLinks.building.success'),
+            error: t('entityLinks.building.error'),
+            currentLabel: t('entityLinks.building.currentLabel'),
+          }}
+          currentValue={linkedBuildingId ?? undefined}
+          loadOptions={loadBuildings}
+          onSave={saveBuildingLink}
+          isEditing={isEditing}
+        />
+        <Card>
+          <CardHeader className="p-2">
+            <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
+              <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
+              {t('general.fields.floor')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0">
+            <FloorSelectField
+              buildingId={linkedBuildingId}
+              value={form.floor}
+              onChange={(v) => updateField('floor', v)}
+              label={t('general.fields.floor')}
+              noBuildingHint={t('entityLinks.building.noFloorHint')}
+              disabled={!isEditing}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Basic Information Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -283,50 +325,6 @@ export function ParkingGeneralTab({
                 disabled={!isEditing}
               />
             </fieldset>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Building Link Card */}
-      <EntityLinkCard
-        cardId="parking-building-link"
-        icon={Building2}
-        labels={{
-          title: t('entityLinks.building.title'),
-          label: t('entityLinks.building.label'),
-          placeholder: t('entityLinks.building.placeholder'),
-          noSelection: t('entityLinks.building.noSelection'),
-          loading: t('entityLinks.building.loading'),
-          save: t('entityLinks.building.save'),
-          saving: t('entityLinks.building.saving'),
-          success: t('entityLinks.building.success'),
-          error: t('entityLinks.building.error'),
-          currentLabel: t('entityLinks.building.currentLabel'),
-        }}
-        currentValue={linkedBuildingId ?? undefined}
-        loadOptions={loadBuildings}
-        onSave={saveBuildingLink}
-        isEditing={isEditing}
-      />
-
-      {/* Location Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-            <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
-            {t('general.location')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FloorSelectField
-              buildingId={linkedBuildingId}
-              value={form.floor}
-              onChange={(v) => updateField('floor', v)}
-              label={t('general.fields.floor')}
-              noBuildingHint={t('entityLinks.building.noFloorHint')}
-              disabled={!isEditing}
-            />
           </div>
         </CardContent>
       </Card>
