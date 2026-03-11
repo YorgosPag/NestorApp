@@ -201,13 +201,13 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
               <div className="flex items-center justify-between py-1.5">
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
                   <UserCheck className={`${iconSizes.sm} text-violet-600 flex-shrink-0`} />
-                  {commercial.buyerName ?? t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
+                  {t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
                 </span>
                 <button
                   onClick={() => router.push(`/crm/contacts/${commercial.buyerContactId}`)}
                   className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}
                 >
-                  {t('sales.saleInfo.viewContact', { defaultValue: 'Προβολή' })}
+                  {commercial.buyerName ?? t('sales.saleInfo.unknownBuyer', { defaultValue: 'Άγνωστος' })}
                   <ExternalLink className={iconSizes.xs} />
                 </button>
               </div>

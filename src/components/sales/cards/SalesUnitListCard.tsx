@@ -99,7 +99,7 @@ export function SalesUnitListCard({
       icon: NAVIGATION_ENTITIES.unit.icon,
       iconColor: 'text-teal-600',
       label: t('sales.fields.type', { defaultValue: 'Τύπος' }),
-      value: t(`sales.unitTypes.${unit.type}`, { defaultValue: unit.type }),
+      value: t(`units:types.${unit.type}`, { defaultValue: unit.type }),
     },
     {
       icon: NAVIGATION_ENTITIES.area?.icon ?? Calculator,
@@ -151,10 +151,12 @@ export function SalesUnitListCard({
     return stats;
   }, [askingPrice, pricePerSqm, daysOnMarket, t]);
 
-  // Row 4: Conditional (reserved only — buyer + deposit)
+  // Row 4: Conditional (reserved or sold — buyer + deposit)
   const isReserved = commercialStatus === 'reserved';
+  const isSold = commercialStatus === 'sold';
+  const showBuyerSection = isReserved || isSold;
   const buyerStats = useMemo(() => {
-    if (!isReserved) return undefined;
+    if (!showBuyerSection) return undefined;
     const stats = [];
 
     if (unit.commercial?.buyerContactId) {
@@ -176,7 +178,7 @@ export function SalesUnitListCard({
     }
 
     return stats.length > 0 ? stats : undefined;
-  }, [isReserved, unit.commercial, t]);
+  }, [showBuyerSection, unit.commercial, t]);
 
   // Combine all stats
   const allStats = useMemo(() => {
