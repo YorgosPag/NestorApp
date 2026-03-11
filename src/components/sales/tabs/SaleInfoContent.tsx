@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   DollarSign,
   UserCheck,
@@ -107,6 +108,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   const { t } = useTranslation('common');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
+  const router = useRouter();
 
   if (!unit) return null;
 
@@ -180,7 +182,10 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
                   <UserCheck className={`${iconSizes.sm} text-violet-600 flex-shrink-0`} />
                   {t('sales.saleInfo.buyer', { defaultValue: 'Αγοραστής' })}
                 </span>
-                <button className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}>
+                <button
+                  onClick={() => router.push(`/crm/contacts/${commercial.buyerContactId}`)}
+                  className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}
+                >
                   {t('sales.saleInfo.viewContact', { defaultValue: 'Προβολή' })}
                   <ExternalLink className={iconSizes.xs} />
                 </button>
