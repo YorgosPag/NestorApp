@@ -476,7 +476,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         const unitCompanyId = (selectedUnit as Record<string, unknown> | undefined)?.companyId as string | undefined;
         // 🏢 FIX: Prioritize unit's own companyId → auth user's companyId → wizard's selectedCompanyId
         // The FloorPlanTab loads with user?.companyId, so they MUST match for super_admin
-        const fileRecordCompanyId = unitCompanyId || user?.companyId || selectedCompanyId;
+        const fileRecordCompanyId = unitCompanyId || (user as Record<string, unknown> | null)?.companyId as string | undefined || selectedCompanyId;
         saved = await UnitFloorplanService.saveFloorplan({
           companyId: fileRecordCompanyId,
           projectId: selectedProjectId || undefined,
@@ -650,7 +650,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       let hasExisting = false;
 
       if (currentStep === 'unit' && type === 'unit') {
-        const checkCompanyId = user?.companyId || selectedCompanyId;
+        const checkCompanyId = (user as Record<string, unknown> | null)?.companyId as string | undefined || selectedCompanyId;
         hasExisting = await UnitFloorplanService.hasFloorplan(checkCompanyId, selectedUnitId);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
         // 🏢 ENTERPRISE (2026-01-31): Check for existing floor floorplan

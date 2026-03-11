@@ -191,7 +191,9 @@ export class UnitFloorplanService {
         let thumbnailBlob: Blob | null = null;
 
         if (data.scene && fileExtension !== 'pdf') {
-          thumbnailBlob = await generateDxfThumbnail(data.scene, 300, 200);
+          // Scene entities are typed as unknown[] but contain {type, layer} objects at runtime
+          const sceneForThumb = data.scene as Parameters<typeof generateDxfThumbnail>[0];
+          thumbnailBlob = await generateDxfThumbnail(sceneForThumb, 300, 200);
         } else if (hasOriginalFile && fileExtension === 'pdf') {
           thumbnailBlob = await generatePdfThumbnail(originalFile, 300, 200);
         }
