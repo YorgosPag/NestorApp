@@ -6,7 +6,7 @@
  * @pattern Same as UnitListCard but with commercial data prominent
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   DollarSign,
   Calendar,
@@ -18,6 +18,7 @@ import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit, CommercialStatus } from '@/types/unit';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // =============================================================================
 // 🏢 TYPES
@@ -155,20 +156,48 @@ export function SalesUnitListCard({
   const isReserved = commercialStatus === 'reserved';
   const isSold = commercialStatus === 'sold';
   const showBuyerSection = isReserved || isSold;
+
+  // Fallback: fetch buyer name from API if missing in Firestore
+  const [resolvedBuyerName, setResolvedBuyerName] = useState<string | null>(
+    unit.commercial?.buyerName ?? null
+  );
+
+  useEffect(() => {
+    const contactId = unit.commercial?.buyerContactId;
+    const existingName = unit.commercial?.buyerName;
+    if (existingName || !contactId || !showBuyerSection) {
+      setResolvedBuyerName(existingName ?? null);
+      return;
+    }
+
+    let cancelled = false;
+    apiClient.get<{ contact: { displayName: string } }>(
+      `/api/contacts/${encodeURIComponent(contactId)}`
+    ).then((data) => {
+      if (!cancelled && data?.contact?.displayName) {
+        setResolvedBuyerName(data.contact.displayName);
+      }
+    }).catch(() => { /* silent */ });
+
+    return () => { cancelled = true; };
+  }, [unit.commercial?.buyerContactId, unit.commercial?.buyerName, showBuyerSection]);
+
   const buyerStats = useMemo(() => {
     if (!showBuyerSection) return undefined;
     const stats = [];
 
+    // Αγοραστής — reserved & sold
     if (unit.commercial?.buyerContactId) {
       stats.push({
         icon: User,
         iconColor: 'text-violet-600',
         label: t('sales.fields.buyer', { defaultValue: 'Αγοραστής' }),
-        value: unit.commercial.buyerName ?? t('sales.fields.unknownBuyer', { defaultValue: 'Αγοραστής' }),
+        value: resolvedBuyerName ?? t('sales.fields.unknownBuyer', { defaultValue: '...' }),
       });
     }
 
-    if (unit.commercial?.reservationDeposit) {
+    // Προκαταβολή — μόνο σε reserved (σε sold δεν ενδιαφέρει πλέον)
+    if (isReserved && unit.commercial?.reservationDeposit) {
       stats.push({
         icon: CreditCard,
         iconColor: 'text-amber-600',
@@ -177,8 +206,18 @@ export function SalesUnitListCard({
       });
     }
 
+    // Τελική τιμή — μόνο σε sold
+    if (isSold && unit.commercial?.finalPrice) {
+      stats.push({
+        icon: DollarSign,
+        iconColor: 'text-blue-600',
+        label: t('sales.fields.finalPrice', { defaultValue: 'Τελική τιμή' }),
+        value: formatCurrency(unit.commercial.finalPrice),
+      });
+    }
+
     return stats.length > 0 ? stats : undefined;
-  }, [showBuyerSection, unit.commercial, t]);
+  }, [showBuyerSection, isReserved, isSold, unit.commercial, resolvedBuyerName, t]);
 
   // Combine all stats
   const allStats = useMemo(() => {
