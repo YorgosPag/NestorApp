@@ -139,6 +139,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
   const iconSizes = useIconSizes();
   const [deposit, setDeposit] = useState<string>('');
   const [buyerContactId, setBuyerContactId] = useState<string>('');
+  const [buyerName, setBuyerName] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
   // 🏢 ENTERPRISE: Dialog switching pattern — Radix Dialog cannot nest modals,
@@ -156,6 +157,7 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
   const handleContactSelect = useCallback((contact: ContactSummary | null) => {
     setBuyerContactId(contact?.id ?? '');
+    setBuyerName(contact?.name ?? '');
   }, []);
 
   // 🏢 ENTERPRISE: Switch to new contact dialog — hides Reserve, shows Contact form
@@ -203,6 +205,8 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           unitName: unit.name ?? unit.unitName ?? '',
           projectId: unit.project ?? null,
           buyerContactId: buyerContactId || null,
+          buyerName: buyerName || null,
+          projectName: null,
           paymentMethod: 'bank_transfer',
           notes: null,
           depositAmount,
@@ -338,6 +342,8 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         unitName: unit.name ?? unit.unitName ?? '',
         projectId: unit.project ?? null,
         buyerContactId: unit.commercial?.buyerContactId ?? null,
+        buyerName: unit.commercial?.buyerName ?? null,
+        projectName: null,
         paymentMethod: 'bank_transfer',
         notes: null,
         finalPrice: price,
@@ -473,6 +479,8 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           unitName: unit.name ?? unit.unitName ?? '',
           projectId: unit.project ?? null,
           buyerContactId: refundBuyerContactId,
+          buyerName: unit.commercial?.buyerName ?? null,
+          projectName: null,
           paymentMethod: 'bank_transfer',
           notes: null,
           creditAmount: depositToRefund,

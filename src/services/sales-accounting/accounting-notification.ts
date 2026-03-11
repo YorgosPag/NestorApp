@@ -37,21 +37,39 @@ function buildDepositNotification(
 ): { subject: string; body: string } {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
   const appUrl = getAppBaseUrl();
+  const netAmount = event.depositAmount / 1.24;
+  const vatAmount = event.depositAmount - netAmount;
 
   return {
     subject: `🧾 Νέα κράτηση — ${event.unitName} (${formatEuro(event.depositAmount)})`,
     body: [
-      `ΚΡΑΤΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΠΡΟΚΑΤΑΒΟΛΗΣ`,
+      `═══════════════════════════════════════`,
+      `  ΚΡΑΤΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΠΡΟΚΑΤΑΒΟΛΗΣ`,
+      `═══════════════════════════════════════`,
       ``,
-      `Μονάδα: ${event.unitName}`,
-      `Ποσό προκαταβολής: ${formatEuro(event.depositAmount)} (με ΦΠΑ 24%)`,
-      `Τρόπος πληρωμής: Τραπεζική κατάθεση`,
+      `Ημερομηνία: ${formatDate(new Date())}`,
       `Τιμολόγιο: ${invoiceRef}`,
       ``,
-      `Δείτε τα τιμολόγια:`,
-      `${appUrl}/accounting/invoices`,
+      `── Στοιχεία Μονάδας ──`,
+      `Μονάδα: ${event.unitName}`,
+      ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
       ``,
-      `— Nestor App (αυτόματη ειδοποίηση)`,
+      `── Στοιχεία Αγοραστή ──`,
+      `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+      ``,
+      `── Οικονομικά Στοιχεία ──`,
+      `Καθαρό ποσό: ${formatEuro(netAmount)}`,
+      `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
+      `Σύνολο (με ΦΠΑ): ${formatEuro(event.depositAmount)}`,
+      `Τρόπος πληρωμής: ${formatPaymentMethod(event.paymentMethod)}`,
+      ``,
+      `── Σύνδεσμοι ──`,
+      `Προβολή τιμολογίου: ${appUrl}/accounting/invoices${result.invoiceId ? `?view=${result.invoiceId}` : ''}`,
+      `Όλα τα τιμολόγια: ${appUrl}/accounting/invoices`,
+      ``,
+      `═══════════════════════════════════════`,
+      `  Nestor App — Αυτόματη ειδοποίηση`,
+      `═══════════════════════════════════════`,
     ].join('\n'),
   };
 }
@@ -62,23 +80,43 @@ function buildFinalSaleNotification(
 ): { subject: string; body: string } {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
   const remaining = event.finalPrice - event.depositAlreadyInvoiced;
+  const netRemaining = remaining / 1.24;
+  const vatRemaining = remaining - netRemaining;
   const appUrl = getAppBaseUrl();
 
   return {
     subject: `🏠 Πώληση — ${event.unitName} (${formatEuro(event.finalPrice)})`,
     body: [
-      `ΠΩΛΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΥΠΟΛΟΙΠΟΥ`,
+      `═══════════════════════════════════════`,
+      `  ΠΩΛΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΥΠΟΛΟΙΠΟΥ`,
+      `═══════════════════════════════════════`,
       ``,
-      `Μονάδα: ${event.unitName}`,
-      `Τελική τιμή: ${formatEuro(event.finalPrice)}`,
-      `Ήδη τιμολογημένο (προκαταβολή): ${formatEuro(event.depositAlreadyInvoiced)}`,
-      `Υπόλοιπο τιμολογίου: ${formatEuro(remaining)} (με ΦΠΑ 24%)`,
+      `Ημερομηνία: ${formatDate(new Date())}`,
       `Τιμολόγιο: ${invoiceRef}`,
       ``,
-      `Δείτε τα τιμολόγια:`,
-      `${appUrl}/accounting/invoices`,
+      `── Στοιχεία Μονάδας ──`,
+      `Μονάδα: ${event.unitName}`,
+      ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
       ``,
-      `— Nestor App (αυτόματη ειδοποίηση)`,
+      `── Στοιχεία Αγοραστή ──`,
+      `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+      ``,
+      `── Οικονομικά Στοιχεία ──`,
+      `Τελική τιμή πώλησης: ${formatEuro(event.finalPrice)}`,
+      `Ήδη τιμολογημένο (προκαταβολή): ${formatEuro(event.depositAlreadyInvoiced)}`,
+      ``,
+      `Υπόλοιπο (καθαρό): ${formatEuro(netRemaining)}`,
+      `ΦΠΑ 24%: ${formatEuro(vatRemaining)}`,
+      `Υπόλοιπο (με ΦΠΑ): ${formatEuro(remaining)}`,
+      `Τρόπος πληρωμής: ${formatPaymentMethod(event.paymentMethod)}`,
+      ``,
+      `── Σύνδεσμοι ──`,
+      `Προβολή τιμολογίου: ${appUrl}/accounting/invoices${result.invoiceId ? `?view=${result.invoiceId}` : ''}`,
+      `Όλα τα τιμολόγια: ${appUrl}/accounting/invoices`,
+      ``,
+      `═══════════════════════════════════════`,
+      `  Nestor App — Αυτόματη ειδοποίηση`,
+      `═══════════════════════════════════════`,
     ].join('\n'),
   };
 }
@@ -89,21 +127,41 @@ function buildCreditNotification(
 ): { subject: string; body: string } {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
   const appUrl = getAppBaseUrl();
+  const netAmount = event.creditAmount / 1.24;
+  const vatAmount = event.creditAmount - netAmount;
 
   return {
     subject: `❌ Ακύρωση — ${event.unitName} (${formatEuro(event.creditAmount)})`,
     body: [
-      `ΑΚΥΡΩΣΗ ΚΡΑΤΗΣΗΣ — ΠΙΣΤΩΤΙΚΟ ΤΙΜΟΛΟΓΙΟ`,
+      `═══════════════════════════════════════`,
+      `  ΑΚΥΡΩΣΗ ΚΡΑΤΗΣΗΣ — ΠΙΣΤΩΤΙΚΟ ΤΙΜΟΛΟΓΙΟ`,
+      `═══════════════════════════════════════`,
       ``,
-      `Μονάδα: ${event.unitName}`,
-      `Ποσό επιστροφής: ${formatEuro(event.creditAmount)} (με ΦΠΑ 24%)`,
-      `Αιτία: ${event.reason}`,
+      `Ημερομηνία: ${formatDate(new Date())}`,
       `Πιστωτικό: ${invoiceRef}`,
       ``,
-      `Δείτε τα τιμολόγια:`,
-      `${appUrl}/accounting/invoices`,
+      `── Στοιχεία Μονάδας ──`,
+      `Μονάδα: ${event.unitName}`,
+      ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
       ``,
-      `— Nestor App (αυτόματη ειδοποίηση)`,
+      `── Στοιχεία Αγοραστή ──`,
+      `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+      ``,
+      `── Οικονομικά Στοιχεία ──`,
+      `Καθαρό ποσό επιστροφής: ${formatEuro(netAmount)}`,
+      `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
+      `Σύνολο επιστροφής (με ΦΠΑ): ${formatEuro(event.creditAmount)}`,
+      ``,
+      `── Αιτιολογία ──`,
+      `${event.reason}`,
+      ``,
+      `── Σύνδεσμοι ──`,
+      `Προβολή πιστωτικού: ${appUrl}/accounting/invoices${result.invoiceId ? `?view=${result.invoiceId}` : ''}`,
+      `Όλα τα τιμολόγια: ${appUrl}/accounting/invoices`,
+      ``,
+      `═══════════════════════════════════════`,
+      `  Nestor App — Αυτόματη ειδοποίηση`,
+      `═══════════════════════════════════════`,
     ].join('\n'),
   };
 }
@@ -190,4 +248,26 @@ function formatEuro(amount: number): string {
     currency: 'EUR',
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('el-GR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  bank_transfer: 'Τραπεζική κατάθεση',
+  cash: 'Μετρητά',
+  check: 'Επιταγή',
+  credit_card: 'Πιστωτική κάρτα',
+  debit_card: 'Χρεωστική κάρτα',
+};
+
+function formatPaymentMethod(method: string): string {
+  return PAYMENT_METHOD_LABELS[method] ?? method;
 }

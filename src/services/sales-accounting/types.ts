@@ -34,6 +34,10 @@ export interface SalesAccountingEventBase {
   projectId: string | null;
   /** Firestore contact ID αγοραστή (αν υπάρχει) */
   buyerContactId: string | null;
+  /** Όνομα αγοραστή (για email ειδοποίησης) */
+  buyerName: string | null;
+  /** Όνομα έργου (για email ειδοποίησης) */
+  projectName: string | null;
   /** Τρόπος πληρωμής */
   paymentMethod: PaymentMethod;
   /** Σημειώσεις */
