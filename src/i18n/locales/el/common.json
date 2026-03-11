@@ -1353,6 +1353,70 @@
       "history": "Ιστορικό"
     }
   },
+  "salesStorage": {
+    "pageTitle": "Διαθέσιμες Αποθήκες",
+    "loading": "Φόρτωση διαθέσιμων αποθηκών...",
+    "listLabel": "Λίστα αποθηκών πωλήσεων",
+    "listTitle": "Αποθήκες",
+    "noResults": "Δεν βρέθηκαν αποθήκες με αυτά τα κριτήρια.",
+    "gridLabel": "Grid αποθηκών",
+    "stats": {
+      "available": "Διαθέσιμες Αποθήκες",
+      "forSaleNow": "Προς πώληση τώρα",
+      "avgPrice": "Μέση Τιμή",
+      "avgPriceDesc": "Μέση ζητούμενη τιμή",
+      "totalValue": "Συνολική Αξία",
+      "totalValueDesc": "Αξία χαρτοφυλακίου",
+      "avgPricePerSqm": "Μ.Ο. €/m²",
+      "avgPricePerSqmDesc": "Μέση τιμή ανά τ.μ."
+    },
+    "tabs": {
+      "info": "Πληροφορίες",
+      "history": "Ιστορικό"
+    },
+    "details": {
+      "title": "Στοιχεία Αποθήκης",
+      "noSelection": "Επιλέξτε μια αποθήκη για λεπτομέρειες.",
+      "millesimalShares": "Χιλιοστά",
+      "finalPrice": "Τελική Τιμή"
+    },
+    "quickFilters": {
+      "statusAriaLabel": "Φίλτρο κατάστασης αποθήκης",
+      "typeAriaLabel": "Φίλτρο τύπου αποθήκης"
+    }
+  },
+  "salesParking": {
+    "pageTitle": "Διαθέσιμες Θέσεις Στάθμευσης",
+    "loading": "Φόρτωση διαθέσιμων θέσεων...",
+    "listLabel": "Λίστα θέσεων στάθμευσης",
+    "listTitle": "Θέσεις Στάθμευσης",
+    "noResults": "Δεν βρέθηκαν θέσεις στάθμευσης με αυτά τα κριτήρια.",
+    "gridLabel": "Grid θέσεων στάθμευσης",
+    "stats": {
+      "available": "Διαθέσιμες Θέσεις",
+      "forSaleNow": "Προς πώληση τώρα",
+      "avgPrice": "Μέση Τιμή",
+      "avgPriceDesc": "Μέση ζητούμενη τιμή",
+      "totalValue": "Συνολική Αξία",
+      "totalValueDesc": "Αξία χαρτοφυλακίου",
+      "avgPricePerSqm": "Μ.Ο. €/m²",
+      "avgPricePerSqmDesc": "Μέση τιμή ανά τ.μ."
+    },
+    "tabs": {
+      "info": "Πληροφορίες",
+      "history": "Ιστορικό"
+    },
+    "details": {
+      "title": "Στοιχεία Θέσης",
+      "noSelection": "Επιλέξτε μια θέση στάθμευσης για λεπτομέρειες.",
+      "millesimalShares": "Χιλιοστά",
+      "finalPrice": "Τελική Τιμή"
+    },
+    "quickFilters": {
+      "statusAriaLabel": "Φίλτρο κατάστασης θέσης",
+      "typeAriaLabel": "Φίλτρο τύπου θέσης"
+    }
+  },
   "photoPreview": {
     "toolbar": {
       "ariaLabel": "Εργαλεία Φωτογραφίας"

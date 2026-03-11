@@ -43,6 +43,12 @@ export {
   defaultStorageFilters
 } from './configs/storageFiltersConfig';
 
+// Parking Configurations (ADR-199)
+export {
+  parkingFiltersConfig,
+  defaultParkingFilters
+} from './configs/parkingFiltersConfig';
+
 // ============================================================================
 // ADR-051: UNIFIED TYPE SYSTEM
 // ============================================================================
@@ -89,6 +95,11 @@ export type { CommunicationsFilterState, TaskFilterState, FileFilterState, AIInb
 export type {
   StorageFilterState
 } from './configs/storageFiltersConfig';
+
+// Parking Types (ADR-199)
+export type {
+  ParkingFilterState
+} from './configs/parkingFiltersConfig';
 
 // ============================================================================
 // ADR-051: CENTRALIZED APPLY FILTERS UTILITY

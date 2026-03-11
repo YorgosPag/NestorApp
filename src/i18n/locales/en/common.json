@@ -1354,6 +1354,70 @@
       "history": "History"
     }
   },
+  "salesStorage": {
+    "pageTitle": "Available Storage Units",
+    "loading": "Loading available storage units...",
+    "listLabel": "Sales storage list",
+    "listTitle": "Storage Units",
+    "noResults": "No storage units found matching your criteria.",
+    "gridLabel": "Storage units grid",
+    "stats": {
+      "available": "Available Storage",
+      "forSaleNow": "For sale now",
+      "avgPrice": "Avg Price",
+      "avgPriceDesc": "Average asking price",
+      "totalValue": "Total Value",
+      "totalValueDesc": "Portfolio value",
+      "avgPricePerSqm": "Avg €/m²",
+      "avgPricePerSqmDesc": "Average price per sqm"
+    },
+    "tabs": {
+      "info": "Info",
+      "history": "History"
+    },
+    "details": {
+      "title": "Storage Details",
+      "noSelection": "Select a storage unit for details.",
+      "millesimalShares": "Millesimal Shares",
+      "finalPrice": "Final Price"
+    },
+    "quickFilters": {
+      "statusAriaLabel": "Storage status filter",
+      "typeAriaLabel": "Storage type filter"
+    }
+  },
+  "salesParking": {
+    "pageTitle": "Available Parking Spots",
+    "loading": "Loading available parking spots...",
+    "listLabel": "Sales parking list",
+    "listTitle": "Parking Spots",
+    "noResults": "No parking spots found matching your criteria.",
+    "gridLabel": "Parking spots grid",
+    "stats": {
+      "available": "Available Spots",
+      "forSaleNow": "For sale now",
+      "avgPrice": "Avg Price",
+      "avgPriceDesc": "Average asking price",
+      "totalValue": "Total Value",
+      "totalValueDesc": "Portfolio value",
+      "avgPricePerSqm": "Avg €/m²",
+      "avgPricePerSqmDesc": "Average price per sqm"
+    },
+    "tabs": {
+      "info": "Info",
+      "history": "History"
+    },
+    "details": {
+      "title": "Parking Details",
+      "noSelection": "Select a parking spot for details.",
+      "millesimalShares": "Millesimal Shares",
+      "finalPrice": "Final Price"
+    },
+    "quickFilters": {
+      "statusAriaLabel": "Parking status filter",
+      "typeAriaLabel": "Parking type filter"
+    }
+  },
   "photoPreview": {
     "toolbar": {
       "ariaLabel": "Photo Tools"

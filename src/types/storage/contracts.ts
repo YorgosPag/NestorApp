@@ -31,6 +31,14 @@ export interface Storage {
   projectId?: string;
   owner?: string;
   notes?: string;
+
+  // ADR-199: Sales appurtenance fields
+  /** Millesimal shares (χιλιοστά) — 0 = common, >0 = independently sellable */
+  millesimalShares?: number | null;
+  /** Commercial status for sales context */
+  commercialStatus?: import('@/types/sales-shared').SpaceCommercialStatus;
+  /** Commercial data overlay for sales */
+  commercial?: import('@/types/sales-shared').SpaceCommercialData;
 }
 
 // Legacy interface for backward compatibility
