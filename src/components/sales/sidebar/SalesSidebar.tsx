@@ -116,7 +116,7 @@ export function SalesSidebar({
         />
       }
       tabsRenderer={
-        <Tabs defaultValue="sale-info" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="sale-info" className="flex flex-col">
           <TabsList className="flex flex-wrap gap-1 w-full h-auto min-h-fit flex-shrink-0">
             {SALES_TABS.map(tab => (
               <TabsTrigger
@@ -132,11 +132,11 @@ export function SalesSidebar({
             ))}
           </TabsList>
 
-          <TabsContent value="sale-info" className="flex-1 overflow-y-auto">
+          <TabsContent value="sale-info" className="flex-1">
             <SaleInfoContent data={selectedUnit} />
           </TabsContent>
 
-          <TabsContent value="unit-summary" className="flex-1 overflow-y-auto">
+          <TabsContent value="unit-summary" className="flex-1">
             <UnitSummaryContent data={selectedUnit} />
           </TabsContent>
 
@@ -148,7 +148,7 @@ export function SalesSidebar({
               videos: 'Τα βίντεο διαχειρίζονται στη σελίδα Χώροι → Μονάδες',
             };
             return (
-              <TabsContent key={tabId} value={tabId} className="flex-1 overflow-y-auto">
+              <TabsContent key={tabId} value={tabId} className="flex-1">
                 <section className="p-4">
                   <p className="text-sm text-muted-foreground text-center mb-3">
                     {t(`sales.tabs.${tabId}Hint`, { defaultValue: hints[tabId] })}
@@ -172,7 +172,7 @@ export function SalesSidebar({
           })}
 
           {/* History — Centralized ActivityTab (ADR-195) */}
-          <TabsContent value="history" className="flex-1 overflow-y-auto">
+          <TabsContent value="history" className="flex-1">
             <ActivityTab entityType="unit" entityId={selectedUnit.id} />
           </TabsContent>
         </Tabs>
