@@ -39,9 +39,9 @@ export function SalesDetailsHeader({
   const { t } = useTranslation('common');
 
   const status = unit.commercialStatus;
-  const isAvailable = !status || status === 'available';
   const isReserved = status === 'reserved';
   const isSold = status === 'sold';
+  const canReserve = !isReserved && !isSold;
   const canRevert = isSold || isReserved;
 
   const actions = useMemo<EntityHeaderAction[]>(() => {
@@ -53,8 +53,8 @@ export function SalesDetailsHeader({
         onChangePrice,
         { icon: DollarSign }
       )] : []),
-      // 2. Κράτηση — μόνο αν είναι διαθέσιμο
-      ...(isAvailable ? [createEntityAction(
+      // 2. Κράτηση — μόνο αν δεν είναι ήδη κρατημένο ή πουλημένο
+      ...(canReserve ? [createEntityAction(
         'new',
         t('sales.actions.reserve', { defaultValue: 'Κράτηση' }),
         onReserve,
@@ -82,7 +82,7 @@ export function SalesDetailsHeader({
     }
 
     return list;
-  }, [t, onChangePrice, onReserve, onSell, onRevert, isAvailable, isSold, canRevert]);
+  }, [t, onChangePrice, onReserve, onSell, onRevert, canReserve, isSold, canRevert]);
 
   return (
     <EntityDetailsHeader
