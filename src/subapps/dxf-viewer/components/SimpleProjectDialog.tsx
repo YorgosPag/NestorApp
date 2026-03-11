@@ -504,10 +504,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
+        // 🏢 FIX: Use floor's companyId (from Firestore data) or auth user's companyId
+        // The Ευρετήριο Ακινήτων queries with user.companyId — they MUST match
         const createdBy = user?.uid;
-        if (selectedCompanyId && createdBy) {
+        const floorCompanyId = (selectedFloorData as Record<string, unknown> | undefined)?.companyId as string | undefined;
+        const effectiveCompanyId = floorCompanyId || user?.companyId || selectedCompanyId;
+        if (effectiveCompanyId && createdBy) {
           saved = await FloorFloorplanService.saveFloorplan({
-            companyId: selectedCompanyId,
+            companyId: effectiveCompanyId,
             projectId: selectedProjectId || undefined,
             buildingId: selectedBuildingId,
             floorId: selectedFloorId,
@@ -821,10 +825,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
+      // 🏢 FIX: Use floor's companyId or auth user's companyId (same fix as DXF path)
       const createdBy = user?.uid;
-      if (selectedCompanyId && createdBy) {
+      const pdfFloorCompanyId = (selectedFloorData as Record<string, unknown> | undefined)?.companyId as string | undefined;
+      const effectivePdfCompanyId = pdfFloorCompanyId || user?.companyId || selectedCompanyId;
+      if (effectivePdfCompanyId && createdBy) {
         saved = await FloorFloorplanService.saveFloorplan({
-          companyId: selectedCompanyId,
+          companyId: effectivePdfCompanyId,
           projectId: selectedProjectId || undefined,
           buildingId: selectedBuildingId,
           floorId: selectedFloorId,
