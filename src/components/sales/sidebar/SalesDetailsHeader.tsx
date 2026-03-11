@@ -38,34 +38,38 @@ export function SalesDetailsHeader({
 }: SalesDetailsHeaderProps) {
   const { t } = useTranslation('common');
 
-  const canRevert = unit.commercialStatus === 'sold' || unit.commercialStatus === 'reserved';
+  const status = unit.commercialStatus;
+  const isAvailable = !status || status === 'available';
+  const isReserved = status === 'reserved';
+  const isSold = status === 'sold';
+  const canRevert = isSold || isReserved;
 
   const actions = useMemo<EntityHeaderAction[]>(() => {
     const list: EntityHeaderAction[] = [
-      // 1. Αλλαγή τιμής — always visible
-      createEntityAction(
+      // 1. Αλλαγή τιμής — μόνο αν δεν είναι πουλημένο
+      ...(!isSold ? [createEntityAction(
         'edit',
         t('sales.actions.changePrice', { defaultValue: 'Τιμή' }),
         onChangePrice,
         { icon: DollarSign }
-      ),
-      // 2. Κράτηση — always visible
-      createEntityAction(
+      )] : []),
+      // 2. Κράτηση — μόνο αν είναι διαθέσιμο
+      ...(isAvailable ? [createEntityAction(
         'new',
         t('sales.actions.reserve', { defaultValue: 'Κράτηση' }),
         onReserve,
         { icon: UserCheck }
-      ),
-      // 3. Πώληση — always visible
-      createEntityAction(
+      )] : []),
+      // 3. Πώληση — μόνο αν είναι διαθέσιμο ή κρατημένο (όχι αν είναι ήδη πουλημένο)
+      ...(!isSold ? [createEntityAction(
         'save',
         t('sales.actions.sell', { defaultValue: 'Πώληση' }),
         onSell,
         { icon: CheckCircle }
-      ),
+      )] : []),
     ];
 
-    // 4. Επαναφορά — only when sold or reserved
+    // 4. Επαναφορά — μόνο αν είναι κρατημένο ή πουλημένο
     if (canRevert) {
       list.push(
         createEntityAction(
@@ -78,7 +82,7 @@ export function SalesDetailsHeader({
     }
 
     return list;
-  }, [t, onChangePrice, onReserve, onSell, onRevert, canRevert]);
+  }, [t, onChangePrice, onReserve, onSell, onRevert, isAvailable, isSold, canRevert]);
 
   return (
     <EntityDetailsHeader
