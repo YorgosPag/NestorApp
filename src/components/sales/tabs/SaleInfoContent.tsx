@@ -6,7 +6,7 @@
  * @pattern Enterprise card layout with semantic sections
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   DollarSign,
@@ -24,6 +24,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit } from '@/types/unit';
 import { TransactionChainCard } from '@/components/sales/cards/TransactionChainCard';
 import { UnitHierarchyCard } from '@/components/sales/cards/UnitHierarchyCard';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // =============================================================================
 // 🏢 TYPES
@@ -128,6 +129,31 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
   const iconSizes = useIconSizes();
   const router = useRouter();
 
+  // Fallback: αν buyerName λείπει αλλά buyerContactId υπάρχει, φέρνουμε από API
+  const [resolvedBuyerName, setResolvedBuyerName] = useState<string | null>(
+    unit?.commercial?.buyerName ?? null
+  );
+
+  useEffect(() => {
+    const contactId = unit?.commercial?.buyerContactId;
+    const existingName = unit?.commercial?.buyerName;
+    if (existingName || !contactId) {
+      setResolvedBuyerName(existingName ?? null);
+      return;
+    }
+
+    let cancelled = false;
+    apiClient.get<{ contact: { displayName: string } }>(
+      `/api/contacts/${encodeURIComponent(contactId)}`
+    ).then((data) => {
+      if (!cancelled && data?.contact?.displayName) {
+        setResolvedBuyerName(data.contact.displayName);
+      }
+    }).catch(() => { /* silent */ });
+
+    return () => { cancelled = true; };
+  }, [unit?.commercial?.buyerContactId, unit?.commercial?.buyerName]);
+
   if (!unit) return null;
 
   const commercial = unit.commercial;
@@ -207,7 +233,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
                   onClick={() => router.push(`/contacts?contactId=${commercial.buyerContactId}`)}
                   className={`text-sm font-medium ${colors.text.info} flex items-center gap-1 hover:underline`}
                 >
-                  {commercial.buyerName ?? t('sales.saleInfo.unknownBuyer', { defaultValue: 'Άγνωστος' })}
+                  {resolvedBuyerName ?? t('sales.saleInfo.unknownBuyer', { defaultValue: 'Άγνωστος' })}
                   <ExternalLink className={iconSizes.xs} />
                 </button>
               </div>
