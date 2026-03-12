@@ -18,12 +18,14 @@ import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Unit } from '@/types/unit';
+import type { DocumentData } from 'firebase/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121) — persona form→Firestore mapping
 import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 const logger = createModuleLogger('ContactsService');
 
@@ -75,6 +77,23 @@ const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 const BATCH_SIZE = parseInt(process.env.NEXT_PUBLIC_CONTACTS_BATCH_SIZE || '100'); // Increased to show more contacts in dropdowns
 const MAX_BATCH = parseInt(process.env.NEXT_PUBLIC_CONTACTS_MAX_BATCH || '500');
+
+// ============================================================================
+// POST-QUERY NORMALIZATION (replaces contactConverter.fromFirestore for migrated methods)
+// ============================================================================
+
+/**
+ * Convert raw Firestore document data to typed Contact.
+ * Handles Timestamp → Date conversion for date fields.
+ */
+function toContact(raw: DocumentData): Contact {
+  return {
+    id: raw.id as string,
+    ...raw,
+    createdAt: asDate(raw.createdAt),
+    updatedAt: asDate(raw.updatedAt),
+  } as Contact;
+}
 
 // ---------- Query builder ----------
 async function buildContactsQuery(options?: {
@@ -285,43 +304,40 @@ export class ContactsService {
     }
   }
 
-  // Read single
+  // Read single — ADR-214 Phase 2: via FirestoreQueryService
   static async getContact(id: string): Promise<Contact | null> {
     try {
-      const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
-      const docSnap = await getDoc(docRef);
-      return docSnap.exists() ? (docSnap.data() as Contact) : null;
+      const raw = await firestoreQueryService.getById<DocumentData>('CONTACTS', id);
+      return raw ? toContact(raw) : null;
     } catch (error) {
-      // Error logging removed //('Error getting contact:', error);
       throw new Error('Failed to get contact');
     }
   }
 
-  // Owner Contact IDs (FIX: no '!= null' queries)
+  // Owner Contact IDs (FIX: no '!= null' queries) — ADR-214: query UNITS via centralized service
   static async getOwnerContactIds(): Promise<string[]> {
     try {
-      // Χρησιμοποιούμε where('soldTo','>=','') και φιλτράρουμε client-side
-      const q = query(collection(db, UNITS_COLLECTION), where('soldTo', '>=', ''));
-      const snap = await getDocs(q);
-      const ownerIds = new Set<string>();
-      snap.forEach((d) => {
-        const unit = d.data() as Partial<Unit>;
-        if (unit?.soldTo && typeof unit.soldTo === 'string') ownerIds.add(unit.soldTo);
+      const result = await firestoreQueryService.getAll<DocumentData>('UNITS', {
+        constraints: [where('soldTo', '>=', '')],
+        tenantOverride: 'skip',
       });
+      const ownerIds = new Set<string>();
+      for (const d of result.documents) {
+        const soldTo = d.soldTo;
+        if (soldTo && typeof soldTo === 'string') ownerIds.add(soldTo);
+      }
       return Array.from(ownerIds);
     } catch (error) {
-      // Error logging removed //('Error getting owner contact IDs:', error);
       throw new Error('Failed to get owner contact IDs');
     }
   }
 
+  // ADR-214 Phase 2: via FirestoreQueryService
   static async getAllContactIds(): Promise<string[]> {
     try {
-      // Firestore δεν έχει projection select στο web sdk — διαβάζουμε ids από docs
-      const qs = await getDocs(getCol<Contact>(CONTACTS_COLLECTION, contactConverter));
-      return qs.docs.map((d) => d.id);
+      const result = await firestoreQueryService.getAll<DocumentData>('CONTACTS', {});
+      return result.documents.map(d => d.id as string);
     } catch (error) {
-      // Error logging removed //('Error getting all contact IDs:', error);
       throw new Error('Failed to get all contact IDs');
     }
   }
@@ -403,7 +419,6 @@ export class ContactsService {
       const lastDoc = qs.docs[qs.docs.length - 1] || null;
       return { contacts: filtered, lastDoc, nextCursor: lastDoc?.id ?? null };
     } catch (error) {
-      // Error logging removed //('Error getting contacts:', error);
       throw new Error('Failed to get contacts');
     }
   }
@@ -580,7 +595,6 @@ export class ContactsService {
     try {
       await this.updateContact(id, { isFavorite: !currentStatus });
     } catch (error) {
-      // Error logging removed //('Error toggling favorite:', error);
       throw new Error('Failed to toggle favorite');
     }
   }
@@ -601,7 +615,6 @@ export class ContactsService {
 
       await this.updateContact(id, updateData);
     } catch (error) {
-      // Error logging removed //('Error archiving contact:', error);
       throw new Error('Failed to archive contact');
     }
   }
@@ -615,7 +628,6 @@ export class ContactsService {
       };
       await this.updateContact(id, updateData);
     } catch (error) {
-      // Error logging removed //('Error restoring contact:', error);
       throw new Error('Failed to restore contact');
     }
   }
@@ -646,7 +658,6 @@ export class ContactsService {
         await batch.commit();
       }
     } catch (error) {
-      // Error logging removed //('Error archiving multiple contacts:', error);
       throw new Error('Failed to archive contacts');
     }
   }
@@ -663,7 +674,6 @@ export class ContactsService {
         timestamp: Date.now()
       });
     } catch (error) {
-      // Error logging removed //('Error deleting contact:', error);
       throw new Error('Failed to delete contact');
     }
   }
@@ -676,7 +686,6 @@ export class ContactsService {
         await batch.commit();
       }
     } catch (error) {
-      // Error logging removed //('Error deleting multiple contacts:', error);
       throw new Error('Failed to delete contacts');
     }
   }
@@ -699,27 +708,25 @@ export class ContactsService {
     });
   }
 
-  // Stats
+  // Stats — ADR-214 Phase 2: via FirestoreQueryService
   static async getContactStatistics(): Promise<{
     total: number; individuals: number; companies: number; services: number; favorites: number;
   }> {
     try {
-      const qs = await getDocs(getCol<Contact>(CONTACTS_COLLECTION, contactConverter));
+      const result = await firestoreQueryService.getAll<DocumentData>('CONTACTS', {});
       let individuals = 0, companies = 0, services = 0, favorites = 0;
 
-      qs.forEach((d) => {
-        const data = d.data() as Contact;
-        switch (data.type) {
+      for (const raw of result.documents) {
+        switch (raw.type) {
           case 'individual': individuals++; break;
           case 'company': companies++; break;
           case 'service': services++; break;
         }
-        if (data.isFavorite) favorites++;
-      });
+        if (raw.isFavorite) favorites++;
+      }
 
-      return { total: qs.size, individuals, companies, services, favorites };
+      return { total: result.size, individuals, companies, services, favorites };
     } catch (error) {
-      // Error logging removed //('Error getting statistics:', error);
       throw new Error('Failed to get statistics');
     }
   }
@@ -751,27 +758,26 @@ export class ContactsService {
       if (countInBatch > 0) await batch.commit();
       return contacts.length;
     } catch (error) {
-      // Error logging removed //('Error importing contacts:', error);
       throw new Error('Failed to import contacts');
     }
   }
 
-  // Export
+  // Export — ADR-214 Phase 2: via FirestoreQueryService
   static async exportContacts(type?: ContactType): Promise<Contact[]> {
     try {
       const constraints: QueryConstraint[] = [];
       if (type) constraints.push(where('type', '==', type));
-      const q = query(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), ...constraints);
-      const snapshot = await getDocs(q);
-      // Type assertion: converter ensures data is Contact type
-      return mapDocs<Contact>(snapshot as unknown as QuerySnapshot<Contact>);
+
+      const result = await firestoreQueryService.getAll<DocumentData>('CONTACTS', {
+        constraints,
+      });
+      return result.documents.map(toContact);
     } catch (error) {
-      // Error logging removed //('Error exporting contacts:', error);
       throw new Error('Failed to export contacts');
     }
   }
 
-  // Search (advanced)
+  // Search (advanced) — ADR-214 Phase 2: via FirestoreQueryService
   static async searchContacts(searchOptions: {
     searchTerm?: string; type?: ContactType; tags?: string[]; city?: string;
     hasPhone?: boolean; hasEmail?: boolean; createdAfter?: Date; createdBefore?: Date;
@@ -787,10 +793,10 @@ export class ContactsService {
       const constraints: QueryConstraint[] = [];
       if (searchOptions.type) constraints.push(where('type', '==', searchOptions.type));
 
-      const q = query(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), ...constraints);
-      const snapshot = await getDocs(q);
-      // Type assertion: converter ensures data is Contact type
-      let contacts = mapDocs<Contact>(snapshot as unknown as QuerySnapshot<Contact>);
+      const result = await firestoreQueryService.getAll<DocumentData>('CONTACTS', {
+        constraints,
+      });
+      let contacts = result.documents.map(toContact);
 
       const term = (searchOptions.searchTerm || '').toLowerCase();
 
@@ -834,7 +840,6 @@ export class ContactsService {
 
       return contacts;
     } catch (error) {
-      // Error logging removed //('Error searching contacts:', error);
       throw new Error('Failed to search contacts');
     }
   }
