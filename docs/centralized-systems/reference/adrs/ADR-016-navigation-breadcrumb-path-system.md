@@ -50,54 +50,51 @@
 - **File**: `src/components/shared/ModuleBreadcrumb.tsx`
 - **Pattern**: Auto-generates breadcrumb from URL path via `usePathname()`
 - **i18n**: `navigation.module.*` keys (EL + EN)
-- **Visual**: Semantic Tailwind colors, `/` separator, Home icon, `hidden sm:flex`
+- **Visual**: Colored lucide icons per module, `→` separator (matches NavigationBreadcrumb), `hidden sm:flex`
+- **Placement**: INSIDE page headers (PageHeader `breadcrumb` prop, or manual `<header>` elements)
 
 ### Route → Breadcrumb Mapping
 
 ```
-/crm                     → Αρχική / CRM
-/crm/tasks               → Αρχική / CRM / Εργασίες
-/crm/calendar            → Αρχική / CRM / Ημερολόγιο
-/crm/leads               → Αρχική / CRM / Leads
-/crm/pipeline            → Αρχική / CRM / Pipeline
-/crm/communications      → Αρχική / CRM / Επικοινωνίες
-/sales                   → Αρχική / Πωλήσεις
-/spaces                  → Αρχική / Χώροι
-/obligations             → Αρχική / Υποχρεώσεις
-/contacts                → Αρχική / Επαφές
-/accounting              → Αρχική / Λογιστικό
-/accounting/*            → Αρχική / Λογιστικό / [sub]
-/account/profile         → Αρχική / Λογαριασμός / Προφίλ
-/account/preferences     → Αρχική / Λογαριασμός / Προτιμήσεις
-/account/privacy         → Αρχική / Λογαριασμός / Απόρρητο
-/account/security        → Αρχική / Λογαριασμός / Ασφάλεια
-/account/notifications   → Αρχική / Λογαριασμός / Ειδοποιήσεις
-/admin/ai-inbox          → Αρχική / Διαχείριση / AI Inbox
-/admin/operator-inbox    → Αρχική / Διαχείριση / Operator Inbox
+/crm                     → 🏠 Αρχική → 📊 CRM
+/crm/tasks               → 🏠 Αρχική → 📊 CRM → 📋 Εργασίες
+/crm/calendar            → 🏠 Αρχική → 📊 CRM → 📅 Ημερολόγιο
+/crm/leads               → 🏠 Αρχική → 📊 CRM → 🎯 Leads
+/crm/pipeline            → 🏠 Αρχική → 📊 CRM → 🔀 Pipeline
+/crm/communications      → 🏠 Αρχική → 📊 CRM → 📞 Επικοινωνίες
+/sales                   → 🏠 Αρχική → 💲 Πωλήσεις
+/spaces                  → 🏠 Αρχική → 🏗️ Χώροι
+/obligations             → 🏠 Αρχική → ⚖️ Υποχρεώσεις
+/contacts                → 🏠 Αρχική → 👥 Επαφές
+/accounting              → 🏠 Αρχική → 🧮 Λογιστικό
+/accounting/*            → 🏠 Αρχική → 🧮 Λογιστικό → [sub]
+/account/profile         → 🏠 Αρχική → 👤 Λογαριασμός → Προφίλ
+/account/preferences     → 🏠 Αρχική → 👤 Λογαριασμός → Προτιμήσεις
+/account/privacy         → 🏠 Αρχική → 👤 Λογαριασμός → Απόρρητο
+/account/security        → 🏠 Αρχική → 👤 Λογαριασμός → Ασφάλεια
+/account/notifications   → 🏠 Αρχική → 👤 Λογαριασμός → Ειδοποιήσεις
+/admin/ai-inbox          → 🏠 Αρχική → ⚙️ Διαχείριση → AI Inbox
+/admin/operator-inbox    → 🏠 Αρχική → ⚙️ Διαχείριση → Operator Inbox
 ```
 
-### Σελίδες που χρησιμοποιούν ModuleBreadcrumb
+### Σελίδες + Τοποθέτηση
 
-| Route | File |
-|-------|------|
-| `/crm` | `src/app/crm/page.tsx` |
-| `/crm/tasks` | `src/app/crm/tasks/page.tsx` |
-| `/crm/calendar` | `src/app/crm/calendar/page.tsx` |
-| `/crm/leads` | `src/app/crm/leads/page.tsx` |
-| `/crm/pipeline` | `src/app/crm/pipeline/page.tsx` |
-| `/crm/communications` | `src/app/crm/communications/page.tsx` |
-| `/sales` | `src/app/sales/page.tsx` |
-| `/spaces` | `src/app/spaces/page.tsx` |
-| `/obligations` | `src/app/obligations/page.tsx` |
-| `/contacts` | `src/app/contacts/page.tsx` |
-| `/accounting` | `src/app/accounting/page.tsx` |
-| `/account/profile` | `src/app/account/profile/page.tsx` |
-| `/account/preferences` | `src/app/account/preferences/page.tsx` |
-| `/account/privacy` | `src/app/account/privacy/page.tsx` |
-| `/account/security` | `src/app/account/security/page.tsx` |
-| `/account/notifications` | `src/app/account/notifications/page.tsx` |
-| `/admin/ai-inbox` | `src/app/admin/ai-inbox/page.tsx` |
-| `/admin/operator-inbox` | `src/app/admin/operator-inbox/page.tsx` |
+| Route | Placement | File |
+|-------|-----------|------|
+| `/crm` | Inside header div | `src/app/crm/page.tsx` |
+| `/crm/tasks` | PageHeader `breadcrumb` prop | `src/app/crm/tasks/page.tsx` |
+| `/crm/calendar` | Inside `<header>` element | `src/app/crm/calendar/page.tsx` |
+| `/crm/leads` | Inside `<header>` wrapper | `src/app/crm/leads/page.tsx` |
+| `/crm/pipeline` | Inside `<header>` wrapper | `src/app/crm/pipeline/page.tsx` |
+| `/crm/communications` | PageHeader `breadcrumb` prop | `src/app/crm/communications/page.tsx` |
+| `/sales` | Inside header div | `src/app/sales/page.tsx` |
+| `/spaces` | Inside header div | `src/app/spaces/page.tsx` |
+| `/obligations` | Inside `<header>` element | `src/app/obligations/page.tsx` |
+| `/contacts` | ContactsHeader → PageHeader `breadcrumb` | `src/components/contacts/ContactsPageContent.tsx` |
+| `/accounting` | Above (no header to target) | `src/app/accounting/page.tsx` |
+| `/account/*` (5 pages) | Account layout `<header>` | `src/app/account/layout.tsx` |
+| `/admin/ai-inbox` | AIInboxHeader → PageHeader `breadcrumb` | `src/app/admin/ai-inbox/AIInboxClient.tsx` |
+| `/admin/operator-inbox` | PageHeader `breadcrumb` prop | `src/app/admin/operator-inbox/OperatorInboxClient.tsx` |
 
 ### Εξαιρέσεις (χωρίς breadcrumb)
 
@@ -127,7 +124,7 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
 ### Adding a new route
 
-Add the URL segment to `SEGMENT_LABEL_MAP` in `ModuleBreadcrumb.tsx` and add the corresponding i18n key to `navigation.module.*` in both `el/navigation.json` and `en/navigation.json`.
+Add the URL segment to `SEGMENT_CONFIG` in `ModuleBreadcrumb.tsx` (with `labelKey`, `icon`, and `color`) and add the corresponding i18n key to `navigation.module.*` in both `el/navigation.json` and `en/navigation.json`.
 
 ---
 
@@ -137,3 +134,4 @@ Add the URL segment to `SEGMENT_LABEL_MAP` in `ModuleBreadcrumb.tsx` and add the
 |------|--------|
 | 2026-01-01 | Initial: NavigationBreadcrumb for entity hierarchy |
 | 2026-03-12 | Added ModuleBreadcrumb for module/dashboard pages (18 pages) |
+| 2026-03-12 | Fix: moved breadcrumb INSIDE headers, `→` separator, colored icons per module |
