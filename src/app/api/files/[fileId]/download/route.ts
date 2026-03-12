@@ -59,7 +59,9 @@ export const GET = withStandardRateLimit(
           }
 
           // Download from Firebase Storage via Admin SDK (no CORS/rules issues)
-          const bucket = getAdminStorage().bucket();
+          // Must specify bucket name — default bucket differs from actual storage bucket
+          const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'pagonis-87766.firebasestorage.app';
+          const bucket = getAdminStorage().bucket(bucketName);
           const file = bucket.file(fileData.storagePath);
 
           const [fileBuffer] = await file.download();
