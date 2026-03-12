@@ -9,6 +9,7 @@
 import 'server-only';
 
 import { isRecord } from '@/lib/type-guards';
+import { stripNullValues } from '@/utils/firestore-sanitize';
 import {
   AI_ANALYSIS_DEFAULTS,
   AI_MULTI_INTENT_SCHEMA,
@@ -179,24 +180,6 @@ function buildFileDataBuffer(buffer: Buffer, mimeType?: string): string {
     return base64;
   }
   return `data:${mimeType};base64,${base64}`;
-}
-
-/**
- * Strip null values from an object recursively.
- * OpenAI strict mode returns null for optional fields.
- * Zod schemas expect those fields to be omitted instead.
- */
-function stripNullValues(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value === null) continue;
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      result[key] = stripNullValues(value as Record<string, unknown>);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
 }
 
 function shouldRetryWithoutStructuredOutput(error: unknown): boolean {

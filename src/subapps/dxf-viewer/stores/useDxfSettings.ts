@@ -3,8 +3,9 @@
  * Παρέχουν εύκολη πρόσβαση και debouncing
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useDxfSettingsStore } from './DxfSettingsStore';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import type {
   LineSettings,
   TextSettings,
@@ -14,40 +15,6 @@ import type {
 } from '../settings-core/types';
 // 🏢 ADR-098: Centralized Timing Constants
 import { STORAGE_TIMING } from '../config/timing-config';
-
-// ============================================================================
-// DEBOUNCE UTILITY
-// ============================================================================
-
-function useDebounce<Args extends unknown[]>(
-  callback: (...args: Args) => void,
-  delay: number
-): (...args: Args) => void {
-  const timeoutRef = useRef<NodeJS.Timeout>();
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const debouncedCallback = useCallback(
-    (...args: Args) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      timeoutRef.current = setTimeout(() => {
-        callback(...args);
-      }, delay);
-    },
-    [callback, delay]
-  );
-
-  return debouncedCallback;
-}
 
 // ============================================================================
 // GENERAL SETTINGS HOOKS
@@ -62,7 +29,7 @@ export function useGeneralLineSettings() {
   const saveToLocalStorage = useDxfSettingsStore((state) => state.saveToLocalStorage);
 
   // Debounced update για sliders
-  const debouncedSetSettings = useDebounce((patch: Partial<LineSettings>) => {
+  const debouncedSetSettings = useDebouncedCallback((patch: Partial<LineSettings>) => {
     setSettings(patch);
     saveToLocalStorage();
   }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
@@ -88,7 +55,7 @@ export function useGeneralTextSettings() {
   const setSettings = useDxfSettingsStore((state) => state.setGeneralText);
   const saveToLocalStorage = useDxfSettingsStore((state) => state.saveToLocalStorage);
 
-  const debouncedSetSettings = useDebounce((patch: Partial<TextSettings>) => {
+  const debouncedSetSettings = useDebouncedCallback((patch: Partial<TextSettings>) => {
     setSettings(patch);
     saveToLocalStorage();
   }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
@@ -113,7 +80,7 @@ export function useGeneralGripSettings() {
   const setSettings = useDxfSettingsStore((state) => state.setGeneralGrip);
   const saveToLocalStorage = useDxfSettingsStore((state) => state.saveToLocalStorage);
 
-  const debouncedSetSettings = useDebounce((patch: Partial<GripSettings>) => {
+  const debouncedSetSettings = useDebouncedCallback((patch: Partial<GripSettings>) => {
     setSettings(patch);
     saveToLocalStorage();
   }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
@@ -156,7 +123,7 @@ export function useEntitySettings(entityId: EntityId | null) {
   }, [entityId, general, overrides]);
 
   // Debounced override setter
-  const debouncedSetOverride = useDebounce((patch: PartialDxfSettings) => {
+  const debouncedSetOverride = useDebouncedCallback((patch: PartialDxfSettings) => {
     if (entityId) {
       setOverride(entityId, patch);
       saveToLocalStorage();
@@ -194,7 +161,7 @@ export function useSelectionSettings() {
   const clearSelection = useDxfSettingsStore((state) => state.clearSelection);
   const saveToLocalStorage = useDxfSettingsStore((state) => state.saveToLocalStorage);
 
-  const debouncedApplyToSelection = useDebounce((patch: PartialDxfSettings) => {
+  const debouncedApplyToSelection = useDebouncedCallback((patch: PartialDxfSettings) => {
     applyToSelection(patch);
     saveToLocalStorage();
   }, STORAGE_TIMING.SETTINGS_DEBOUNCE);

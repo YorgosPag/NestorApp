@@ -21,6 +21,7 @@ import { ChevronDown, Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { normalizeForSearch } from '@/utils/greek-text';
 
 // ============================================================================
 // TYPES
@@ -72,19 +73,6 @@ const DEFAULT_DEBOUNCE_MS = 150;
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/**
- * Normalize text for accent-insensitive Greek search.
- * Removes diacritics so "Πατ" matches "Πατρών",
- * and punctuation so "ΔΟΥ" matches "Δ.Ο.Υ." and "ΕΥΔΑΠ" matches "Ε.ΥΔ.Α.Π.".
- */
-function normalizeGreek(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.\-_/\\()]/g, '')
-    .toLowerCase();
-}
 
 // ============================================================================
 // COMPONENT
@@ -149,13 +137,13 @@ export function SearchableCombobox({
   const filtered = useMemo(() => {
     if (!debouncedQuery.trim()) return options.slice(0, maxDisplayed);
 
-    const normalizedQuery = normalizeGreek(debouncedQuery);
+    const normalizedQuery = normalizeForSearch(debouncedQuery);
     const matches = options.filter((option) => {
-      const normalizedLabel = normalizeGreek(option.label);
+      const normalizedLabel = normalizeForSearch(option.label);
       const normalizedSecondary = option.secondaryLabel
-        ? normalizeGreek(option.secondaryLabel)
+        ? normalizeForSearch(option.secondaryLabel)
         : '';
-      const normalizedValue = normalizeGreek(option.value);
+      const normalizedValue = normalizeForSearch(option.value);
       return (
         normalizedLabel.includes(normalizedQuery) ||
         normalizedSecondary.includes(normalizedQuery) ||
@@ -226,7 +214,7 @@ export function SearchableCombobox({
       if (!allowFreeText && inputValue) {
         // If not free text, validate that the input matches an option
         const match = options.find(
-          (o) => normalizeGreek(o.label) === normalizeGreek(inputValue),
+          (o) => normalizeForSearch(o.label) === normalizeForSearch(inputValue),
         );
         if (match) {
           onValueChange(match.value, match);

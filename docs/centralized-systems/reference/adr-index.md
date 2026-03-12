@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 202 ADRs | Last Updated: 2026-03-12
+**📊 Stats**: 203 ADRs | Last Updated: 2026-03-12
 
 ---
 
@@ -239,6 +239,7 @@
 | **ADR-214** | Firestore Query Centralization — Audit & 11-Phase Plan | ✅ APPROVED — Audit Complete | 2026-03-12 | Data Access Layer / Architecture | [📄](./adrs/ADR-214-firestore-query-centralization.md) |
 | **ADR-215** | Phase 10 — chunkArray/isRecord/formatBytes/formatDate/formatCurrency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-215-phase10-chunk-typeguards-formatters.md) |
 | **ADR-216** | formatCurrency Centralization — 0% → 100% Adoption (29 patterns, 23 files) | ✅ Implemented | 2026-03-12 | Centralization / Currency Formatting | [📄](./adrs/ADR-216-formatCurrency-centralization.md) |
+| **ADR-217** | Phase 11 — Object Sanitization, Greek Text Normalization, Debounce Callback Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-217-phase11-sanitize-greek-debounce.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

@@ -21,6 +21,7 @@ import {
 import { generateObligationId, generateTransmittalId } from '@/services/enterprise-id.service';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { auth, db } from '@/lib/firebase';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type {
   ObligationDocument,
   ObligationTemplate,
@@ -82,31 +83,6 @@ const toOptionalDate = (value: unknown): Date | undefined => {
   return toDateValue(value);
 };
 
-const stripUndefinedDeep = <T>(value: T): T => {
-  if (value === null || value === undefined) {
-    return value;
-  }
-
-  if (value instanceof Date) {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => stripUndefinedDeep(item))
-      .filter((item) => item !== undefined) as T;
-  }
-
-  if (typeof value === 'object') {
-    const sanitizedEntries = Object.entries(value as Record<string, unknown>)
-      .filter(([, item]) => item !== undefined)
-      .map(([key, item]) => [key, stripUndefinedDeep(item)]);
-
-    return Object.fromEntries(sanitizedEntries) as T;
-  }
-
-  return value;
-};
 const createAuditEvent = (
   action: ObligationAuditEvent['action'],
   actor: string,

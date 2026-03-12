@@ -23,8 +23,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToISO } from '@/lib/date-local';
 import type {
   BOQItem,
   BOQCategory,
@@ -41,45 +43,9 @@ const logger = createModuleLogger('FirestoreBOQRepository');
 // NORMALIZERS — Firestore → Domain
 // ============================================================================
 
-const toDateString = (value: unknown): string => {
-  if (typeof value === 'string') return value;
-
-  if (value && typeof value === 'object') {
-    const candidate = value as {
-      toDate?: () => Date;
-      seconds?: number;
-      nanoseconds?: number;
-    };
-
-    try {
-      if (typeof candidate.toDate === 'function') {
-        return candidate.toDate().toISOString();
-      }
-    } catch {
-      // Ignore malformed timestamps
-    }
-
-    if (typeof candidate.seconds === 'number') {
-      const millis = candidate.seconds * 1000 + Math.floor((candidate.nanoseconds ?? 0) / 1000000);
-      return new Date(millis).toISOString();
-    }
-  }
-
-  return new Date().toISOString();
-};
-
-/**
- * Strip undefined values deep — Firestore rejects undefined
- */
-const stripUndefined = <T extends Record<string, unknown>>(obj: T): T => {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      result[key] = value;
-    }
-  }
-  return result as T;
-};
+// ADR-217: Delegates to centralized normalizeToISO
+const toDateString = (value: unknown): string =>
+  normalizeToISO(value) ?? new Date().toISOString();
 
 /**
  * Normalize Firestore document → BOQItem
@@ -244,7 +210,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
 
     const docRef = await addDoc(
       collection(db, COLLECTIONS.BOQ_ITEMS),
-      stripUndefined(newItem as unknown as Record<string, unknown>)
+      stripUndefinedDeep(newItem as unknown as Record<string, unknown>)
     );
 
     return { id: docRef.id, ...newItem };
@@ -263,7 +229,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
       };
 
       // Ensure no undefined values reach Firestore
-      const sanitized = stripUndefined(updatePayload);
+      const sanitized = stripUndefinedDeep(updatePayload);
 
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);
       await updateDoc(docRef, sanitized);
@@ -320,7 +286,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
 
       const docRef = await addDoc(
         collection(db, COLLECTIONS.BOQ_ITEMS),
-        stripUndefined(payload as unknown as Record<string, unknown>)
+        stripUndefinedDeep(payload as unknown as Record<string, unknown>)
       );
 
       return { id: docRef.id, ...duplicateData };

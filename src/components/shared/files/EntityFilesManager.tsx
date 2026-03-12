@@ -25,6 +25,7 @@
 'use client';
 
 import React, { useCallback, useState, useMemo } from 'react';
+import { normalizeForSearch } from '@/utils/greek-text';
 import { FileText, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -244,7 +245,7 @@ export function EntityFilesManager({
       return files;
     }
 
-    const norm = (s?: string | null) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') ?? '';
+    const norm = (s?: string | null) => s ? normalizeForSearch(s) : '';
     const query = norm(searchTerm.trim());
 
     return files.filter((file) => {
@@ -1035,7 +1036,7 @@ export function EntityFilesManager({
             )}
 
             {/* 🏢 ENTERPRISE: Split-panel layout — file list + inline preview (Google Drive/Procore pattern) */}
-            <ResizablePanelGroup direction="horizontal" className="min-h-[400px] rounded-lg">
+            <ResizablePanelGroup orientation="horizontal" className="min-h-[400px] rounded-lg">
               <ResizablePanel defaultSize={selectedFile ? 45 : 100} minSize={30}>
                 {/* Files display (gallery, list, or tree) - Based on viewMode state */}
                 {viewMode === 'gallery' ? (

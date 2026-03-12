@@ -24,8 +24,9 @@
  * @module components/shared/EscoSkillPicker
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -84,9 +85,8 @@ export function EscoSkillPicker({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   // Refs
-  const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const listRef = React.useRef<HTMLUListElement>(null);
 
   // Derived
   const isMaxReached = value.length >= maxSkills;
@@ -125,24 +125,9 @@ export function EscoSkillPicker({
     }
   }, [resolvedLanguage, value]);
 
-  const debouncedSearch = useCallback((query: string) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      performSearch(query);
-    }, DEBOUNCE_MS);
-  }, [performSearch]);
-
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
+  const debouncedSearch = useDebouncedCallback((query: string) => {
+    performSearch(query);
+  }, DEBOUNCE_MS);
 
   // ========================================================================
   // EVENT HANDLERS

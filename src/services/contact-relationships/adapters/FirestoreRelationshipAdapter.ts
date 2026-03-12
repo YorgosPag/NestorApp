@@ -28,6 +28,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -69,14 +70,9 @@ export class FirestoreRelationshipAdapter {
     try {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
-      // 🔧 Filter out undefined values (Firestore doesn't accept undefined)
-      const cleanedRelationship = Object.fromEntries(
-        Object.entries(relationship).filter(([_, value]) => value !== undefined)
-      );
-
-      // Convert to Firestore-friendly format
+      // Convert to Firestore-friendly format (strip undefined keys)
       const firestoreData = {
-        ...cleanedRelationship,
+        ...stripUndefinedDeep(relationship),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -371,12 +367,11 @@ export class FirestoreRelationshipAdapter {
   /**
    * 🧹 Clean Firestore Data
    *
-   * Removes undefined values που Firestore δεν δέχεται
+   * Removes undefined values που Firestore δεν δέχεται.
+   * Delegates to centralized stripUndefinedDeep (ADR-217).
    */
   static cleanFirestoreData(data: Record<string, unknown>): Record<string, unknown> {
-    return Object.fromEntries(
-      Object.entries(data).filter(([_, value]) => value !== undefined)
-    );
+    return stripUndefinedDeep(data);
   }
 }
 

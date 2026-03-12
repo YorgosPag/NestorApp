@@ -15,23 +15,11 @@
  */
 
 // ============================================================================
-// ACCENT NORMALIZATION (NFD strip)
+// ACCENT NORMALIZATION (NFD strip) — re-exported from centralized utils
 // ============================================================================
 
-/**
- * Remove Unicode diacritics (accents) from text.
- * "Γιώργος" → "Γιωργος", "Σοφία" → "Σοφια"
- */
-export function stripAccents(text: string): string {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-/**
- * Normalize Greek text: lowercase + accent strip.
- */
-export function normalizeGreekText(text: string): string {
-  return stripAccents(text.toLowerCase());
-}
+// ADR-217: Centralized in src/utils/greek-text.ts
+export { stripAccents, normalizeGreekText } from '@/utils/greek-text';
 
 // ============================================================================
 // GREEK → LATIN TRANSLITERATION

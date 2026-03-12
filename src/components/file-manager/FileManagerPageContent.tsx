@@ -22,6 +22,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { normalizeForSearch } from '@/utils/greek-text';
 import {
   FolderTree,
   List,
@@ -375,8 +376,8 @@ export function FileManagerPageContent() {
 
     // Search term filter — accent & case insensitive (Greek support)
     if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const norm = (s?: string | null) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') ?? '';
+      const query = normalizeForSearch(searchTerm);
+      const norm = (s?: string | null) => s ? normalizeForSearch(s) : '';
       result = result.filter(file =>
         norm(file.displayName).includes(query) ||
         norm(file.originalFilename).includes(query) ||
@@ -1066,7 +1067,7 @@ export function FileManagerPageContent() {
             {/* Content — Split panel: file list + preview */}
             <CardContent className="flex-1 overflow-hidden p-0">
               {activeTab === 'files' ? (
-                <ResizablePanelGroup direction="horizontal" className="h-full min-h-[500px]">
+                <ResizablePanelGroup orientation="horizontal" className="h-full min-h-[500px]">
                     {/* File browser panel */}
                     <ResizablePanel defaultSize={40} minSize={15} className="overflow-auto">
                       {filteredFiles.length === 0 ? (
