@@ -236,6 +236,7 @@
 | **ADR-211** | Phase 8 — Small Utility Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-211-phase8-small-utility-dedup.md) |
 | **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
 | **ADR-213** | Phone/Email/VAT Validation Centralization | ✅ Implemented | 2026-03-12 | Centralization / Validation | [📄](./adrs/ADR-213-validation-centralization.md) |
+| **ADR-214** | Firestore Query Centralization — Audit & 11-Phase Plan | ✅ APPROVED — Audit Complete | 2026-03-12 | Data Access Layer / Architecture | [📄](./adrs/ADR-214-firestore-query-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
