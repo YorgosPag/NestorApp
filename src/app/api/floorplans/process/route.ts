@@ -247,7 +247,7 @@ async function handleProcessFloorplan(
     // 4. TENANT ISOLATION CHECK
     // =========================================================================
 
-    if (fileData.companyId && fileData.companyId !== ctx.companyId) {
+    if (fileData.companyId && fileData.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
       logger.warn('[FloorplanProcess] Tenant mismatch', { fileCompanyId: fileData.companyId, userCompanyId: ctx.companyId });
       return NextResponse.json(
         {

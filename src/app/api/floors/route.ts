@@ -365,7 +365,7 @@ export const PATCH = withStandardRateLimit(
           }
 
           const floorData = floorDoc.data();
-          if (floorData?.companyId !== ctx.companyId) {
+          if (floorData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
           }
 
@@ -424,7 +424,7 @@ export const DELETE = withStandardRateLimit(
           }
 
           const floorData = floorDoc.data();
-          if (floorData?.companyId !== ctx.companyId) {
+          if (floorData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
           }
 
