@@ -6,6 +6,7 @@ import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('useTranslation');
 
 /**
@@ -82,9 +83,7 @@ export const useTranslation = (namespace?: string | string[]) => {
         await i18n.changeLanguage(lng);
         
         // Store preference
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('preferred-language', lng);
-        }
+        safeSetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, lng);
       } catch (error) {
         logger.error('Failed to change language', { error });
       }

@@ -36,6 +36,7 @@ import { PARKING_TYPES, PARKING_STATUSES, PARKING_LOCATION_ZONES } from '@/types
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
+import { ENTITY_ROUTES } from '@/lib/routes';
 
 // ============================================================================
 // CONFIRM ACTION TYPE
@@ -699,7 +700,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             renderStatus={(s) => getStatusBadge(s.status)}
             fields={parkingCardFields}
             actions={{
-              onView: (s) => router.push(`/spaces/parking?parkingId=${s.id}`),
+              onView: (s) => router.push(ENTITY_ROUTES.spaces.parking(s.id)),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
@@ -717,7 +718,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
             columns={parkingColumns}
             getKey={(s) => s.id}
             actions={{
-              onView: (s) => router.push(`/spaces/parking?parkingId=${s.id}`),
+              onView: (s) => router.push(ENTITY_ROUTES.spaces.parking(s.id)),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,

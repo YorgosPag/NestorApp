@@ -16,6 +16,7 @@ import type { TFunction } from 'i18next';
 import { generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { safeGetItem } from '@/lib/storage';
 // 🏢 ENTERPRISE: Product Tour System (ADR-037) - Safe wrapper for graceful degradation
 import { useTourSafe } from '@/components/ui/ProductTour';
 import { ERROR_DIALOG_BUTTON_IDS, createErrorDialogTourConfig } from './errorDialogTour';
@@ -270,16 +271,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   private getUserId(): string | null {
-    try {
-      const userData = localStorage.getItem('currentUser');
-      if (userData) {
-        const user = JSON.parse(userData);
-        return user.email || user.id || null;
-      }
-    } catch {
-      // Ignore localStorage errors
-    }
-    return null;
+    const user = safeGetItem<{ email?: string; id?: string } | null>('currentUser', null);
+    return user?.email || user?.id || null;
   }
 
   private scheduleRetry = () => {
@@ -1139,16 +1132,8 @@ export function RouteErrorFallback({
 
   // === Helper Functions ===
   const getUserId = (): string | null => {
-    try {
-      const userData = localStorage.getItem('currentUser');
-      if (userData) {
-        const user = JSON.parse(userData);
-        return user.email || user.id || null;
-      }
-    } catch {
-      // Ignore localStorage errors
-    }
-    return null;
+    const user = safeGetItem<{ email?: string; id?: string } | null>('currentUser', null);
+    return user?.email || user?.id || null;
   };
 
   const getErrorSeverity = (err: Error): 'critical' | 'error' | 'warning' => {

@@ -9,6 +9,7 @@ import ICU from 'i18next-icu';
 import { loadNamespace, type Namespace, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('i18n-config');
 
 // Load essential translations for initial boot
@@ -90,7 +91,7 @@ if (typeof window !== 'undefined') {
       'obligations',   // 🏢 Obligations workspace translations
     ];
 
-    const saved = localStorage.getItem('preferred-language');
+    const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');
     const browser = navigator.language.split('-')[0];
     const preferred = (saved || browser) as Language;
     const validLang: Language = SUPPORTED_LANGUAGES.includes(preferred) ? preferred : DEFAULT_LANGUAGE;

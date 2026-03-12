@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -453,13 +454,7 @@ function Lightbox({ imageUrl, onClose }: LightboxProps) {
   const { t } = useTranslation('crm');
 
   // Close on escape key
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  useEscapeKey(onClose);
 
   return (
     <div

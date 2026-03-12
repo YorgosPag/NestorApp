@@ -17,6 +17,7 @@
 import { generateSessionId, generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -411,38 +412,28 @@ export class ErrorTracker {
 
   private getCurrentUserId(): string | undefined {
     // Try to get user ID from various sources
-    try {
-      // From localStorage
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        return user.id || user.email;
-      }
+    const userObj = safeGetItem<{ id?: string; email?: string } | null>(STORAGE_KEYS.USER, null);
+    if (userObj) {
+      return userObj.id || userObj.email;
+    }
 
-      // From session storage
+    // From session storage (not migrated — sessionStorage is separate)
+    try {
       const sessionUser = sessionStorage.getItem('currentUser');
       if (sessionUser) {
         const user = JSON.parse(sessionUser);
         return user.id || user.email;
       }
-
-      return undefined;
     } catch {
-      return undefined;
+      // ignore
     }
+
+    return undefined;
   }
 
   private getCurrentUserType(): 'citizen' | 'professional' | 'technical' | undefined {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        return user.userType;
-      }
-      return undefined;
-    } catch {
-      return undefined;
-    }
+    const userObj = safeGetItem<{ userType?: 'citizen' | 'professional' | 'technical' } | null>(STORAGE_KEYS.USER, null);
+    return userObj?.userType;
   }
 
   // ============================================================================
@@ -450,19 +441,14 @@ export class ErrorTracker {
   // ============================================================================
 
   private persistErrors(): void {
-    try {
-      const errorsToStore = this.errorQueue.slice(-this.config.maxStoredErrors);
-      localStorage.setItem('geo_alert_errors', JSON.stringify(errorsToStore));
-    } catch (error) {
-      this.log('Failed to persist errors', error);
-    }
+    const errorsToStore = this.errorQueue.slice(-this.config.maxStoredErrors);
+    safeSetItem(STORAGE_KEYS.ERROR_LOG, errorsToStore);
   }
 
   private loadPersistedErrors(): void {
     try {
-      const stored = localStorage.getItem('geo_alert_errors');
-      if (stored) {
-        const errors: ErrorReport[] = JSON.parse(stored);
+      const errors = safeGetItem<ErrorReport[]>(STORAGE_KEYS.ERROR_LOG, []);
+      if (errors.length > 0) {
         this.errorQueue = errors;
         this.log('Loaded persisted errors', { count: errors.length });
       }
@@ -679,7 +665,7 @@ ${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.meta
     this.errorCounts.clear();
 
     if (this.config.persistErrors) {
-      localStorage.removeItem('geo_alert_errors');
+      safeRemoveItem(STORAGE_KEYS.ERROR_LOG);
     }
 
     this.log('All errors cleared');

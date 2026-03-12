@@ -8,6 +8,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CommonBadge } from '@/core/badges';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity } from '@/types/crm';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import { formatCurrency, formatDateTime } from '@/lib/intl-utils';
 import { normalizeToDate } from '@/lib/date-local';
 import { Button } from '@/components/ui/button';
@@ -45,7 +46,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
 
     const handleCardClick = () => {
         if (opportunity.id) {
-            router.push(`/crm/leads/${opportunity.id}`);
+            router.push(ENTITY_ROUTES.crm.lead(opportunity.id));
         }
     };
 

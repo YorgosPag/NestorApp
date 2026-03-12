@@ -35,6 +35,7 @@ import type { Building } from '@/types/building/contracts';
 import type { Unit, UnitType } from '@/types/unit';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
+import { ENTITY_ROUTES } from '@/lib/routes';
 
 // ============================================================================
 // CONFIRM ACTION TYPE
@@ -732,7 +733,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             renderStatus={(u) => getStatusBadge(u.status)}
             fields={unitCardFields}
             actions={{
-              onView: (u) => router.push(`/units?unitId=${u.id}`),
+              onView: (u) => router.push(ENTITY_ROUTES.units.withId(u.id)),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,
@@ -750,7 +751,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
             columns={unitColumns}
             getKey={(u) => u.id}
             actions={{
-              onView: (u) => router.push(`/units?unitId=${u.id}`),
+              onView: (u) => router.push(ENTITY_ROUTES.units.withId(u.id)),
               onEdit: startEdit,
               onUnlink: handleUnlinkClick,
               onDelete: handleDeleteClick,

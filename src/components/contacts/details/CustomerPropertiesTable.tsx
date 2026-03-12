@@ -12,6 +12,7 @@ import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Eye, Plus } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { ENTITY_ROUTES } from '@/lib/routes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -61,7 +62,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
     }
     
     const handleViewUnit = (unitId: string) => {
-        router.push(`/units?unitId=${unitId}`);
+        router.push(ENTITY_ROUTES.units.withId(unitId));
     };
 
     return (

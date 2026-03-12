@@ -13,6 +13,7 @@
  */
 
 import { type ErrorTrackerConfig } from '@/services/ErrorTracker';
+import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
 
 // ============================================================================
 // ENVIRONMENT-BASED CONFIGURATION
@@ -248,7 +249,7 @@ export const privacyConfig = {
 
   // **🍪 Cookie Consent**
   requireConsent: isProduction,
-  consentKey: 'geo_alert_error_tracking_consent',
+  consentKey: STORAGE_KEYS.ERROR_TRACKING_CONSENT,
 
   // **📊 Data Retention**
   dataRetentionDays: isProduction ? 30 : 7,
@@ -318,7 +319,7 @@ export const shouldReportError = (error: Error): boolean => {
 
   // Check privacy settings
   if (privacyConfig.requireConsent) {
-    const hasConsent = localStorage.getItem(privacyConfig.consentKey) === 'true';
+    const hasConsent = safeGetItem(privacyConfig.consentKey, '') === 'true';
     if (!hasConsent) return false;
   }
 
@@ -339,7 +340,7 @@ export const getSamplingRate = (): number => {
  */
 export const hasUserOptedOut = (): boolean => {
   if (!privacyConfig.allowUserOptOut) return false;
-  return localStorage.getItem('geo_alert_error_tracking_opt_out') === 'true';
+  return safeGetItem(STORAGE_KEYS.ERROR_TRACKING_OPT_OUT, '') === 'true';
 };
 
 // ============================================================================

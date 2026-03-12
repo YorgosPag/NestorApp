@@ -37,6 +37,7 @@ import type { Workspace, ActiveWorkspaceContext } from '@/types/workspace';
 import { useAuth } from '@/auth/contexts/AuthContext';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('WorkspaceContext');
 
 // ============================================================================
@@ -44,12 +45,6 @@ const logger = createModuleLogger('WorkspaceContext');
 // ============================================================================
 
 const WorkspaceContext = createContext<ActiveWorkspaceContext | null>(null);
-
-// ============================================================================
-// LOCAL STORAGE KEYS
-// ============================================================================
-
-const STORAGE_KEY_ACTIVE_WORKSPACE = 'nestor_active_workspace_id';
 
 // ============================================================================
 // PROVIDER COMPONENT
@@ -106,7 +101,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       setAvailableWorkspaces(workspaces);
 
       // Try to restore previously selected workspace from localStorage
-      const savedWorkspaceId = localStorage.getItem(STORAGE_KEY_ACTIVE_WORKSPACE);
+      const savedWorkspaceId = safeGetItem(STORAGE_KEYS.ACTIVE_WORKSPACE, '');
 
       if (savedWorkspaceId) {
         const savedWorkspace = workspaces.find((w) => w.id === savedWorkspaceId);
@@ -120,7 +115,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       // Fallback: Auto-select first workspace if available
       if (workspaces.length > 0) {
         setActiveWorkspace(workspaces[0]);
-        localStorage.setItem(STORAGE_KEY_ACTIVE_WORKSPACE, workspaces[0].id);
+        safeSetItem(STORAGE_KEYS.ACTIVE_WORKSPACE, workspaces[0].id);
         logger.info(`[WorkspaceContext] Auto-selected first workspace: ${workspaces[0].id}`);
       } else {
         logger.warn('[WorkspaceContext] No workspaces available for user');
@@ -173,7 +168,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       setActiveWorkspace(workspace);
 
       // Persist to localStorage
-      localStorage.setItem(STORAGE_KEY_ACTIVE_WORKSPACE, workspaceId);
+      safeSetItem(STORAGE_KEYS.ACTIVE_WORKSPACE, workspaceId);
 
       logger.info(`[WorkspaceContext] Switched to workspace: ${workspaceId}`);
 

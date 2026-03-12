@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { ENTITY_ROUTES } from '@/lib/routes';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -482,7 +483,7 @@ export default function NewObligationPage() {
 
       const newObligation = await obligationsService.create(obligationData);
 
-      router.push(`/obligations/${newObligation.id}/edit`);
+      router.push(ENTITY_ROUTES.obligations.edit(newObligation.id));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('Error creating obligation', { error, errorMessage });

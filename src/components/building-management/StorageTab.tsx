@@ -42,6 +42,7 @@ import {
 } from './StorageTab/utils';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog } from './shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from './shared';
+import { ENTITY_ROUTES } from '@/lib/routes';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -565,7 +566,7 @@ export function StorageTab({ building }: StorageTabProps) {
             )}
             fields={storageCardFields}
             actions={{
-              onView: (u) => router.push(`/spaces/storage?storageId=${u.id}`),
+              onView: (u) => router.push(ENTITY_ROUTES.spaces.storage(u.id)),
               onEdit: startEdit,
               onDelete: handleDeleteClick,
             }}
@@ -582,7 +583,7 @@ export function StorageTab({ building }: StorageTabProps) {
             columns={storageColumns}
             getKey={(u) => u.id}
             actions={{
-              onView: (u) => router.push(`/spaces/storage?storageId=${u.id}`),
+              onView: (u) => router.push(ENTITY_ROUTES.spaces.storage(u.id)),
               onEdit: startEdit,
               onDelete: handleDeleteClick,
             }}

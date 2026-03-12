@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { BaseButton } from './BaseButton';
@@ -70,18 +71,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
-  useEffect(() => {
-    if (!isOpen || !closeOnEscape) return;
-    
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, closeOnEscape, onClose]);
+  useEscapeKey(onClose, isOpen && closeOnEscape);
 
   // Focus management
   useEffect(() => {

@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRouter } from 'next/navigation';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -234,46 +235,41 @@ export function NotificationDrawer() {
     };
   }, [isOpen]);
 
-  // ✅ ENTERPRISE: Escape key + Focus trap (Tab loop)
+  // ✅ ENTERPRISE: Escape key (centralized hook)
+  useEscapeKey(close, isOpen);
+
+  // ✅ ENTERPRISE: Focus trap (Tab loop)
   useEffect(() => {
     if (!isOpen) return;
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        close();
-        return;
-      }
+      if (e.key !== 'Tab') return;
 
-      // Focus trap: Tab loop inside drawer
-      if (e.key === 'Tab') {
-        const drawer = document.getElementById('notification-drawer');
-        if (!drawer) return;
+      const drawer = document.getElementById('notification-drawer');
+      if (!drawer) return;
 
-        const focusableElements = drawer.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
+      const focusableElements = drawer.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
 
-        if (e.shiftKey) {
-          // Shift+Tab: από πρώτο -> τελευταίο
-          if (document.activeElement === firstElement) {
-            e.preventDefault();
-            lastElement?.focus();
-          }
-        } else {
-          // Tab: από τελευταίο -> πρώτο
-          if (document.activeElement === lastElement) {
-            e.preventDefault();
-            firstElement?.focus();
-          }
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
         }
       }
     };
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen, close]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

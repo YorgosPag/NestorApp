@@ -34,14 +34,9 @@ import type {
   TourAnalyticsData,
 } from './ProductTour.types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage';
 
 const logger = createModuleLogger('ProductTourContext');
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const STORAGE_PREFIX = 'pagonis_tour_dismissed_';
 
 // =============================================================================
 // INITIAL STATE
@@ -205,41 +200,26 @@ export function TourProvider({ children }: TourProviderProps) {
   // ==========================================================================
 
   const getStorageKey = useCallback((persistenceKey: string) => {
-    return `${STORAGE_PREFIX}${persistenceKey}`;
+    return `${STORAGE_KEYS.PRODUCT_TOUR_PREFIX}${persistenceKey}`;
   }, []);
 
   const saveDismissalToStorage = useCallback(
     (persistenceKey: string) => {
-      if (typeof window === 'undefined') return;
-      try {
-        localStorage.setItem(getStorageKey(persistenceKey), 'true');
-      } catch {
-        // localStorage not available (SSR, privacy mode, etc.)
-      }
+      safeSetItem(getStorageKey(persistenceKey), 'true');
     },
     [getStorageKey]
   );
 
   const checkDismissalFromStorage = useCallback(
     (persistenceKey: string): boolean => {
-      if (typeof window === 'undefined') return false;
-      try {
-        return localStorage.getItem(getStorageKey(persistenceKey)) === 'true';
-      } catch {
-        return false;
-      }
+      return safeGetItem(getStorageKey(persistenceKey), '') === 'true';
     },
     [getStorageKey]
   );
 
   const clearDismissalFromStorage = useCallback(
     (persistenceKey: string) => {
-      if (typeof window === 'undefined') return;
-      try {
-        localStorage.removeItem(getStorageKey(persistenceKey));
-      } catch {
-        // localStorage not available
-      }
+      safeRemoveItem(getStorageKey(persistenceKey));
     },
     [getStorageKey]
   );

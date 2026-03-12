@@ -46,6 +46,7 @@ import type {
 } from '../types/auth.types';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { safeGetItem, safeSetItem, safeRemoveItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('AuthContext');
 
 // =============================================================================
@@ -242,14 +243,10 @@ function validateSession(firebaseUser: FirebaseUser | null): SessionValidationRe
 function clearCorruptedUserData(uid: string): void {
   logger.info('[AuthContext] Clearing corrupted user data for:', { uid });
 
-  try {
-    localStorage.removeItem(`givenName_${uid}`);
-    localStorage.removeItem(`familyName_${uid}`);
-    localStorage.removeItem(`profile_complete_${uid}`);
-    logger.info('[AuthContext] Corrupted data cleared');
-  } catch (error) {
-    logger.warn('[AuthContext] Could not clear localStorage', { error });
-  }
+  safeRemoveItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${uid}`);
+  safeRemoveItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${uid}`);
+  safeRemoveItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${uid}`);
+  logger.info('[AuthContext] Corrupted data cleared');
 }
 
 function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<string, unknown>): FirebaseAuthUser {
@@ -257,14 +254,14 @@ function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<string, 
   const isGoogleProvider = firebaseUser.providerData.some(
     (provider) => provider.providerId === 'google.com'
   );
-  const profileIncomplete = isGoogleProvider && !localStorage.getItem(`profile_complete_${firebaseUser.uid}`);
+  const profileIncomplete = isGoogleProvider && !safeGetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${firebaseUser.uid}`, '');
 
   return {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
     displayName,
-    givenName: localStorage.getItem(`givenName_${firebaseUser.uid}`) || null,
-    familyName: localStorage.getItem(`familyName_${firebaseUser.uid}`) || null,
+    givenName: safeGetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${firebaseUser.uid}`, '') || null,
+    familyName: safeGetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${firebaseUser.uid}`, '') || null,
     emailVerified: firebaseUser.emailVerified,
     photoURL: firebaseUser.photoURL,
     profileIncomplete,
@@ -769,9 +766,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Store givenName and familyName separately in localStorage
         // (Firebase Auth doesn't have separate fields for these)
-        localStorage.setItem(`givenName_${result.user.uid}`, givenName);
-        localStorage.setItem(`familyName_${result.user.uid}`, familyName);
-        localStorage.setItem(`profile_complete_${result.user.uid}`, 'true');
+        safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${result.user.uid}`, givenName);
+        safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${result.user.uid}`, familyName);
+        safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${result.user.uid}`, 'true');
 
         // Send verification email
         await sendEmailVerification(result.user);
@@ -864,8 +861,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await updateProfile(auth.currentUser, { displayName });
 
       // Store in localStorage (Firebase doesn't have separate fields)
-      localStorage.setItem(`givenName_${auth.currentUser.uid}`, givenName);
-      localStorage.setItem(`familyName_${auth.currentUser.uid}`, familyName);
+      safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${auth.currentUser.uid}`, givenName);
+      safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${auth.currentUser.uid}`, familyName);
 
       setUser(prev => prev ? { ...prev, displayName, givenName, familyName } : null);
       logger.info('[AuthContext] Profile updated:', { displayName });
@@ -891,9 +888,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await updateProfile(auth.currentUser, { displayName });
 
       // Store structured name data
-      localStorage.setItem(`givenName_${auth.currentUser.uid}`, givenName);
-      localStorage.setItem(`familyName_${auth.currentUser.uid}`, familyName);
-      localStorage.setItem(`profile_complete_${auth.currentUser.uid}`, 'true');
+      safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${auth.currentUser.uid}`, givenName);
+      safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${auth.currentUser.uid}`, familyName);
+      safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${auth.currentUser.uid}`, 'true');
 
       // Update local state - profile is now complete
       setUser(prev => prev ? {

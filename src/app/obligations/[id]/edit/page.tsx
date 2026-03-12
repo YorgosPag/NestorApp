@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import { PageLayout } from '@/components/app/page-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -325,7 +326,7 @@ export default function EditObligationPage() {
           <section className="rounded-lg border border-destructive/40 p-6 text-sm text-destructive">
             {t('workspace.edit.loadError')}
           </section>
-          <Button variant="outline" onClick={() => router.push('/obligations')}>
+          <Button variant="outline" onClick={() => router.push(ENTITY_ROUTES.obligations.list)}>
             {t('workspace.edit.back')}
           </Button>
         </main>
@@ -343,7 +344,7 @@ export default function EditObligationPage() {
             <p className="text-sm text-muted-foreground">{t('workspace.edit.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/obligations">
+            <Link href={ENTITY_ROUTES.obligations.list}>
               <Button variant="outline">{t('workspace.edit.register')}</Button>
             </Link>
             <Button onClick={handleSave} disabled={saving}>

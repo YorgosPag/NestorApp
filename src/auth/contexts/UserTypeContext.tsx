@@ -18,6 +18,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useEf
 import type { UserType, UserTypeContextType } from '../types/auth.types';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('UserTypeContext');
 
 // =============================================================================
@@ -25,12 +26,6 @@ const logger = createModuleLogger('UserTypeContext');
 // =============================================================================
 
 const UserTypeContext = createContext<UserTypeContextType | null>(null);
-
-// =============================================================================
-// STORAGE KEY
-// =============================================================================
-
-const USER_TYPE_STORAGE_KEY = 'geo-alert-user-type';
 
 // =============================================================================
 // PROVIDER COMPONENT
@@ -50,15 +45,10 @@ export function UserTypeProvider({
 
   // Load user type from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(USER_TYPE_STORAGE_KEY);
-      if (stored && isValidUserType(stored)) {
-        setUserTypeState(stored as UserType);
-      } else {
-        setUserTypeState(defaultUserType);
-      }
-    } catch {
-      // localStorage not available (SSR or privacy mode)
+    const stored = safeGetItem(STORAGE_KEYS.USER_TYPE, '');
+    if (stored && isValidUserType(stored)) {
+      setUserTypeState(stored as UserType);
+    } else {
       setUserTypeState(defaultUserType);
     }
     setIsLoading(false);
@@ -67,12 +57,7 @@ export function UserTypeProvider({
   // Set user type and persist to localStorage
   const setUserType = useCallback((type: UserType) => {
     setUserTypeState(type);
-    try {
-      localStorage.setItem(USER_TYPE_STORAGE_KEY, type);
-    } catch {
-      // Silently fail if localStorage is not available
-      logger.warn('[UserTypeContext] localStorage not available');
-    }
+    safeSetItem(STORAGE_KEYS.USER_TYPE, type);
   }, []);
 
   // Computed properties

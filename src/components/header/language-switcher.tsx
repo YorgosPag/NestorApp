@@ -13,6 +13,7 @@ import { useTranslation } from '@/i18n';
 import { changeLanguage, preloadCriticalNamespaces } from '@/i18n/lazy-config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { createModuleLogger } from '@/lib/telemetry';
+import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 
 const logger = createModuleLogger('LanguageSwitcher');
 
@@ -63,7 +64,7 @@ export function LanguageSwitcher() {
       await changeLanguage(nextLanguage);
       
       // Store preference in localStorage
-      localStorage.setItem('preferred-language', nextLanguage);
+      safeSetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, nextLanguage);
       
     } catch (error) {
       logger.error('Failed to change language', { error });

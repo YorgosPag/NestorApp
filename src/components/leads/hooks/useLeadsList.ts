@@ -8,6 +8,7 @@ import type { Opportunity } from "@/types/crm";
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ENTITY_ROUTES } from '@/lib/routes';
 
 const logger = createModuleLogger('useLeadsList');
 
@@ -47,7 +48,7 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
     setEmailingLead(lead); setShowEmailModal(true);
   };
 
-  const handleViewProfile = (leadId: string) => { router.push(`/crm/leads/${leadId}`); };
+  const handleViewProfile = (leadId: string) => { router.push(ENTITY_ROUTES.crm.lead(leadId)); };
 
   const handleDelete = async (leadId: string, leadName: string) => {
     const confirmDelete = await confirm({
