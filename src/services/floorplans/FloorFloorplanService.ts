@@ -198,7 +198,7 @@ export class FloorFloorplanService {
     const { companyId, floorId } = params;
 
     try {
-      console.error('[FloorFloorplanService] 🔍 loadFloorplan START', { floorId, companyId });
+      console.error(`[FloorFloorplanService] 🔍 loadFloorplan START floorId="${floorId}" companyId="${companyId}"`);
 
       // Query files collection for this floor's floorplans
       // 🏢 ENTERPRISE: Using positional args as per FileRecordService API
@@ -236,7 +236,7 @@ export class FloorFloorplanService {
       });
 
       if (!fileRecords || fileRecords.length === 0) {
-        console.error('[FloorFloorplanService] ❌ No FileRecord found for floor', { floorId, companyId });
+        console.error(`[FloorFloorplanService] ❌ No FileRecord found for floor floorId="${floorId}" companyId="${companyId}" entityType="${ENTITY_TYPES.FLOOR}" domain="${FILE_DOMAINS.CONSTRUCTION}" category="${FILE_CATEGORIES.FLOORPLANS}"`);
         return null;
       }
 

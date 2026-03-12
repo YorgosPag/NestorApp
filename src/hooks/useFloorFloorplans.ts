@@ -128,7 +128,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
     }
 
     try {
-      console.error('[useFloorFloorplans] 🔍 Loading via FloorFloorplanService', { companyId, floorId: fId });
+      console.error(`[useFloorFloorplans] 🔍 Loading via FloorFloorplanService companyId="${companyId}" floorId="${fId}"`);
       const result = await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
       console.error('[useFloorFloorplans] 📦 Enterprise result:', {
         found: !!result,

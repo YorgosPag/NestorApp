@@ -122,16 +122,7 @@ export function ReadOnlyMediaViewer({
   const effectiveCompanyId = propCompanyId || user?.companyId;
 
   // 🔍 DEBUG: Log all params to help diagnose floor floorplan loading issues
-  console.error('[ReadOnlyMediaViewer] DEBUG PARAMS:', {
-    unitId,
-    floorId,
-    buildingId,
-    floorNumber,
-    propCompanyId,
-    userCompanyId: user?.companyId,
-    effectiveCompanyId,
-    userUid: user?.uid,
-  });
+  console.error(`[ReadOnlyMediaViewer] DEBUG PARAMS: unitId="${unitId}" floorId="${floorId}" buildingId="${buildingId}" floorNumber=${floorNumber} propCompanyId="${propCompanyId}" userCompanyId="${user?.companyId}" effectiveCompanyId="${effectiveCompanyId}"`);
 
   // ==========================================================================
   // 🏢 ENTERPRISE: URL-Based State (Deep Linking Support)
