@@ -13,6 +13,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -329,7 +330,7 @@ export function StorageTab({ building }: StorageTabProps) {
     { key: 'type', label: t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className="text-muted-foreground">{translatedGetTypeLabel(u.type)}</span> },
     { key: 'floor', label: t('storageTable.columns.floor'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className="text-muted-foreground">{u.floor || '—'}</span> },
     { key: 'area', label: t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
-    { key: 'price', label: t('storageTable.columns.price'), width: 'w-24', sortValue: (u) => u.price || 0, render: (u) => <span className="font-mono text-xs">{u.price ? `€${u.price.toLocaleString()}` : '—'}</span> },
+    { key: 'price', label: t('storageTable.columns.price'), width: 'w-24', sortValue: (u) => u.price || 0, render: (u) => <span className="font-mono text-xs">{formatCurrencyWhole(u.price)}</span> },
     { key: 'status', label: t('storageTable.columns.status'), width: 'w-28', sortValue: (u) => u.status, render: (u) => (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
         {translatedGetStatusLabel(u.status)}
@@ -341,7 +342,7 @@ export function StorageTab({ building }: StorageTabProps) {
     { label: t('storageTable.columns.type'), render: (u) => translatedGetTypeLabel(u.type) },
     { label: t('storageTable.columns.floor'), render: (u) => u.floor || '—' },
     { label: 'm²', render: (u) => u.area || '—' },
-    { label: t('storageTable.columns.price'), render: (u) => u.price ? `€${u.price.toLocaleString()}` : '—' },
+    { label: t('storageTable.columns.price'), render: (u) => formatCurrencyWhole(u.price) },
   ], [t, translatedGetTypeLabel]);
 
   // ============================================================================

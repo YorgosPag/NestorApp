@@ -11,6 +11,7 @@ import { Download, Calculator, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n';
+import { formatCurrency } from '@/lib/intl-utils';
 import { useGuideState } from '../../../hooks/state/useGuideState';
 import {
   exportGuidesToIFC,
@@ -95,7 +96,7 @@ export const ExportTab: React.FC = () => {
             <dt className="text-muted-foreground">{t('guideAnalysis.export.slabArea')}</dt>
             <dd className="text-right font-medium tabular-nums">{takeoff.slabArea_m2.toFixed(1)} m²</dd>
             <dt className="text-muted-foreground">{t('guideAnalysis.export.estimatedCost')}</dt>
-            <dd className="text-right font-medium tabular-nums">€{takeoff.estimatedCost_EUR.toLocaleString()}</dd>
+            <dd className="text-right font-medium tabular-nums">{formatCurrency(takeoff.estimatedCost_EUR)}</dd>
           </dl>
         )}
       </section>

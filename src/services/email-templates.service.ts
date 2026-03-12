@@ -1,4 +1,5 @@
 import type { EmailTemplate, EmailTemplateData, EmailTemplateType } from '@/types/email-templates';
+import { formatCurrency } from '@/lib/intl-utils';
 
 export class EmailTemplatesService {
   
@@ -69,7 +70,7 @@ export class EmailTemplatesService {
                     ${data.propertyPrice ? `
                     <div class="detail-item">
                         <div class="detail-icon">💰</div>
-                        <div class="detail-value">€${data.propertyPrice.toLocaleString()}</div>
+                        <div class="detail-value">${formatCurrency(data.propertyPrice)}</div>
                         <div class="detail-label">Τιμή</div>
                     </div>
                     ` : ''}
@@ -174,7 +175,7 @@ export class EmailTemplatesService {
                     ${data.propertyPrice ? `
                     <div class="business-item">
                         <strong>💰 Επένδυση</strong><br>
-                        €${data.propertyPrice.toLocaleString()}
+                        ${formatCurrency(data.propertyPrice)}
                     </div>
                     ` : ''}
                     
@@ -282,7 +283,7 @@ export class EmailTemplatesService {
                     ${data.propertyPrice ? `
                     <div class="luxury-item">
                         <div class="luxury-icon">💎</div>
-                        <div class="luxury-value">€${data.propertyPrice.toLocaleString()}</div>
+                        <div class="luxury-value">${formatCurrency(data.propertyPrice)}</div>
                         <div class="luxury-label">Investment</div>
                     </div>
                     ` : ''}

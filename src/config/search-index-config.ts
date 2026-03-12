@@ -14,6 +14,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { formatCurrency } from '@/lib/intl-utils';
 import type { PermissionId } from '@/lib/auth/types';
 import {
   SEARCH_ENTITY_TYPES,
@@ -334,7 +335,7 @@ export function extractStats(
           break;
         case 'currency':
           // Format as currency (basic)
-          formattedValue = `€${Number(rawValue).toLocaleString()}`;
+          formattedValue = formatCurrency(Number(rawValue));
           break;
         case 'number':
           formattedValue = Number(rawValue).toLocaleString();

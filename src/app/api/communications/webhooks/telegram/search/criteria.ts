@@ -10,6 +10,7 @@
 
 import type { SearchCriteria, TelegramProperty } from '../shared/types';
 import { getCanonicalType } from '../catalogs/type-catalog';
+import { formatCurrency } from '@/lib/intl-utils';
 
 // ============================================================================
 // CRITERIA EXTRACTION
@@ -123,7 +124,7 @@ export function formatCriteriaDisplay(criteria: SearchCriteria): string {
     parts.push(`Τύπος: ${criteria.type}`);
   }
   if (criteria.maxPrice) {
-    parts.push(`Μέχρι: €${criteria.maxPrice.toLocaleString('el-GR')}`);
+    parts.push(`Μέχρι: ${formatCurrency(criteria.maxPrice)}`);
   }
   if (criteria.rooms) {
     parts.push(`Δωμάτια: ${criteria.rooms}`);

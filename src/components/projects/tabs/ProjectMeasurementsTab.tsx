@@ -59,10 +59,10 @@ interface BuildingAggregation {
 }
 
 // =============================================================================
-// MONEY FORMATTER
+// MONEY FORMATTER — delegates to centralized intl-utils (ADR-215)
 // =============================================================================
 
-const formatCurrency = (amount: number): string =>
+const formatCurrencyWithDecimals = (amount: number): string =>
   formatCurrencyIntl(amount, 'EUR', { minimumFractionDigits: 2 });
 
 // =============================================================================
@@ -278,7 +278,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
               <span className="text-xs font-medium">Εκτίμηση</span>
             </div>
             <p className={cn(typography.heading.lg, 'tabular-nums')}>
-              {formatCurrency(projectSummary.totalEstimatedCost)}
+              {formatCurrencyWithDecimals(projectSummary.totalEstimatedCost)}
             </p>
           </CardContent>
         </Card>
@@ -353,7 +353,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
 
                   {summary && (
                     <span className={cn('font-semibold tabular-nums', typography.body.sm)}>
-                      {formatCurrency(summary.totalEstimatedCost)}
+                      {formatCurrencyWithDecimals(summary.totalEstimatedCost)}
                     </span>
                   )}
                 </button>
@@ -399,7 +399,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
                           {cat.itemCount}
                         </span>
                         <span className="text-right tabular-nums w-24 font-medium">
-                          {formatCurrency(cat.totalEstimatedCost)}
+                          {formatCurrencyWithDecimals(cat.totalEstimatedCost)}
                         </span>
                       </div>
                     ))}

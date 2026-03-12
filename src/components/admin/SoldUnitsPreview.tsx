@@ -8,6 +8,7 @@ import { Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle, Building2 } from 'luc
 import { ContactsService } from '@/services/contacts.service';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -294,7 +295,7 @@ export function SoldUnitsPreview() {
                           {unit.project?.substring(0, 20)}...
                         </TableCell>
                         <TableCell className="text-right">
-                          {unit.price ? `€${unit.price.toLocaleString()}` : '-'}
+                          {formatCurrencyWhole(unit.price)}
                         </TableCell>
                       </TableRow>
                     ))

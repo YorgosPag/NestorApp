@@ -11,6 +11,7 @@ import { CheckCircle2, XCircle, AlertTriangle, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n';
+import { formatCurrency } from '@/lib/intl-utils';
 import { useGuideState } from '../../../hooks/state/useGuideState';
 import {
   estimateMaterial,
@@ -112,7 +113,7 @@ export const SustainabilityTab: React.FC = () => {
             <dt className="text-muted-foreground">{t('guideAnalysis.sustainability.waste')}</dt>
             <dd className="text-right font-medium tabular-nums">{(material.wasteFactor * 100).toFixed(0)}%</dd>
             <dt className="text-muted-foreground">{t('guideAnalysis.sustainability.cost')}</dt>
-            <dd className="text-right font-medium tabular-nums">€{material.totalCost_EUR.toLocaleString()}</dd>
+            <dd className="text-right font-medium tabular-nums">{formatCurrency(material.totalCost_EUR)}</dd>
           </dl>
         </section>
       )}

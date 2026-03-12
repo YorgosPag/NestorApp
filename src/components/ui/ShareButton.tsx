@@ -16,6 +16,7 @@ import { ShareModal, useShareModal } from '@/components/ui/ShareModal';
 import { type ShareData } from '@/lib/share-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrency } from '@/lib/intl-utils';
 
 export interface ShareButtonProps {
   /** Data to share */
@@ -180,7 +181,7 @@ function generatePropertyShareText(property: {
   }
 
   if (property.price) {
-    text += `\n💰 €${property.price.toLocaleString()}`;
+    text += `\n💰 ${formatCurrency(property.price)}`;
   }
 
   if (property.area) {

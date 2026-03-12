@@ -13,7 +13,7 @@ import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-ente
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized floor label formatting (Ισόγειο, Υπόγειο, κλπ.)
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
 
@@ -64,7 +64,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         </header>
 
         <aside className={`text-2xl font-bold ${colors.text.info} mb-3`} role="region" aria-label={t('card.aria.propertyPrice')}>
-          <span itemProp="price">€{property.price?.toLocaleString() || t('card.contactUs')}</span>
+          <span itemProp="price">{property.price ? formatCurrency(property.price) : t('card.contactUs')}</span>
         </aside>
 
         <section className={`flex flex-wrap items-center gap-2 sm:gap-4 ${colors.text.muted} text-sm mb-4`} aria-label={t('card.aria.propertyFeatures')}>

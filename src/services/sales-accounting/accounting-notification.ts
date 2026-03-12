@@ -8,6 +8,7 @@
 import 'server-only';
 
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
+import { formatCurrency } from '@/lib/intl-utils';
 import type { SalesAccountingEvent, SalesAccountingResult } from './types';
 
 // ============================================================================
@@ -254,12 +255,9 @@ export async function notifyAccountingOffice(
 // UTILITY
 // ============================================================================
 
+/** Delegate to centralized formatCurrency (ADR-215) */
 function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatCurrency(amount, 'EUR', { minimumFractionDigits: 2 });
 }
 
 function formatDate(date: Date): string {

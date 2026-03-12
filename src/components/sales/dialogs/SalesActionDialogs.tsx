@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { formatCurrency } from '@/lib/intl-utils';
 import {
   Dialog,
   DialogContent,
@@ -474,7 +475,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             <p className="text-sm text-muted-foreground">
               {t('sales.dialogs.sell.askingWas', { defaultValue: 'Ζητούμενη τιμή' })}:{' '}
               <span className="font-medium text-foreground">
-                €{askingPrice.toLocaleString('el-GR')}
+                {formatCurrency(askingPrice)}
               </span>
             </p>
           )}
@@ -672,7 +673,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
             <p className="text-sm text-muted-foreground">
               {t('sales.dialogs.revert.finalPrice', { defaultValue: 'Τιμή πώλησης' })}:{' '}
               <span className="font-medium text-foreground">
-                €{unit.commercial.finalPrice.toLocaleString('el-GR')}
+                {formatCurrency(unit.commercial.finalPrice)}
               </span>
             </p>
           )}

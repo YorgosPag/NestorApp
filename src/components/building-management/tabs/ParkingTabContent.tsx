@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -408,7 +409,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     { key: 'type', label: t('general.fields.type'), width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className="text-muted-foreground">{t(`types.${s.type || 'standard'}`)}</span> },
     { key: 'floor', label: t('general.fields.floor'), width: 'w-20', sortValue: (s) => s.floor || '', render: (s) => <span className="text-muted-foreground">{s.floor || '—'}</span> },
     { key: 'area', label: 'm²', width: 'w-20', sortValue: (s) => s.area || 0, render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
-    { key: 'price', label: t('general.fields.price'), width: 'w-24', sortValue: (s) => s.price || 0, render: (s) => <span className="font-mono text-xs">{s.price ? `€${s.price.toLocaleString()}` : '—'}</span> },
+    { key: 'price', label: t('general.fields.price'), width: 'w-24', sortValue: (s) => s.price || 0, render: (s) => <span className="font-mono text-xs">{formatCurrencyWhole(s.price)}</span> },
     { key: 'status', label: t('general.fields.status'), width: 'w-28', sortValue: (s) => s.status || '', render: (s) => getStatusBadge(s.status) },
   ], [t]);
 
@@ -416,7 +417,7 @@ export function ParkingTabContent({ building }: ParkingTabContentProps) {
     { label: t('general.fields.type'), render: (s) => t(`types.${s.type || 'standard'}`) },
     { label: t('general.fields.floor'), render: (s) => s.floor || '—' },
     { label: 'm²', render: (s) => s.area || '—' },
-    { label: t('general.fields.price'), render: (s) => s.price ? `€${s.price.toLocaleString()}` : '—' },
+    { label: t('general.fields.price'), render: (s) => formatCurrencyWhole(s.price) },
   ], [t]);
 
   // ============================================================================

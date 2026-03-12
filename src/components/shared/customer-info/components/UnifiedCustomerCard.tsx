@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommonBadge } from '@/core/badges';
+import { formatCurrency } from '@/lib/intl-utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from 'react-i18next';
@@ -204,7 +205,7 @@ export function UnifiedCustomerCard({
         {showTotalValue && extendedInfo.totalValue && (
           <CommonBadge
             status="value"
-            customLabel={`€${extendedInfo.totalValue.toLocaleString()}`}
+            customLabel={formatCurrency(extendedInfo.totalValue)}
             variant="outline"
           />
         )}

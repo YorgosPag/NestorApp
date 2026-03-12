@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
-import { formatFlexibleDateTime } from '@/lib/intl-utils';
+import { formatFlexibleDateTime, formatCurrency } from '@/lib/intl-utils';
 import { User, Mail, Phone, MessageSquare } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
@@ -172,7 +172,7 @@ export function ContactCard({
           title: t('contactCard.estimatedValue'),
           content: (
             <div className="text-lg font-semibold text-green-600 dark:text-green-400">
-              €{typeof lead.estimatedValue === 'number' ? lead.estimatedValue.toLocaleString() : lead.estimatedValue}
+              {typeof lead.estimatedValue === 'number' ? formatCurrency(lead.estimatedValue) : lead.estimatedValue}
             </div>
           )
         },

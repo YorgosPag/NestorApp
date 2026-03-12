@@ -47,6 +47,7 @@ import {
 } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyCompact } from '@/lib/intl-utils';
 import { AddParkingDialog } from '@/components/space-management/ParkingPage/AddParkingDialog';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -174,7 +175,7 @@ function ParkingPageContent() {
     },
     {
       title: t('pages.parking.dashboard.totalValue'),
-      value: `${(stats.totalValue / 1000).toFixed(0)}K€`,
+      value: formatCurrencyCompact(stats.totalValue),
       icon: TrendingUp,
       color: "cyan"
     },

@@ -8,7 +8,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { formatCurrencyCompact } from '@/lib/intl-utils';
+import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
 import { useSalesUnitsViewerState } from '@/hooks/useSalesUnitsViewerState';
 import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
@@ -108,7 +108,7 @@ function SalesAvailableContent() {
     {
       title: t('sales.available.stats.avgPricePerSqm', { defaultValue: 'Μ.Ο. €/m²' }),
       value: dashboardStats.averagePricePerSqm > 0
-        ? `€${Math.round(dashboardStats.averagePricePerSqm).toLocaleString('el-GR')}`
+        ? formatCurrencyWhole(Math.round(dashboardStats.averagePricePerSqm))
         : '—',
       description: t('sales.available.stats.avgPricePerSqmDesc', { defaultValue: 'Μέση τιμή ανά τ.μ.' }),
       icon: Maximize2,
@@ -215,7 +215,7 @@ function SalesAvailableContent() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {unit.commercial?.askingPrice && (unit.areas?.gross ?? unit.area)
-                      ? `€${Math.round(unit.commercial.askingPrice / (unit.areas?.gross ?? unit.area ?? 1)).toLocaleString('el-GR')}/m²`
+                      ? `${formatCurrencyWhole(Math.round(unit.commercial.askingPrice / (unit.areas?.gross ?? unit.area ?? 1)))}/m²`
                       : ''}
                   </p>
                 </div>

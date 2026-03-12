@@ -24,7 +24,7 @@ import { ListContainer, PageContainer } from '@/core/containers';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrencyCompact } from '@/lib/intl-utils';
+import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
 
 // =============================================================================
 // 🏢 MAIN CONTENT
@@ -99,7 +99,7 @@ function SalesParkingContent() {
     {
       title: t('salesParking.stats.avgPricePerSqm', { defaultValue: 'Μ.Ο. €/m²' }),
       value: dashboardStats.averagePricePerSqm > 0
-        ? `€${Math.round(dashboardStats.averagePricePerSqm).toLocaleString('el-GR')}`
+        ? formatCurrencyWhole(Math.round(dashboardStats.averagePricePerSqm))
         : '—',
       description: t('salesParking.stats.avgPricePerSqmDesc', { defaultValue: 'Μέση τιμή ανά τ.μ.' }),
       icon: Maximize2,
@@ -205,7 +205,7 @@ function SalesParkingContent() {
                   </p>
                   {item.area && item.area > 0 && (item.commercial?.askingPrice ?? item.price) ? (
                     <p className="text-xs text-muted-foreground">
-                      €{Math.round((item.commercial?.askingPrice ?? item.price ?? 0) / item.area).toLocaleString('el-GR')}/m²
+                      {formatCurrencyWhole(Math.round((item.commercial?.askingPrice ?? item.price ?? 0) / item.area))}/m²
                     </p>
                   ) : null}
                 </div>

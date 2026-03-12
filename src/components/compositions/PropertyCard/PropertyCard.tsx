@@ -7,6 +7,7 @@ import { BaseCard, CardAction, CardStatus } from '@/components/core/BaseCard';
 import { MapPin, Ruler, Eye, Edit, Trash2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatCurrency } from '@/lib/intl-utils';
 
 import type { StorageUnit } from '@/types/storage';
 
@@ -122,7 +123,7 @@ export function PropertyCard({
             <div className="text-right">
               <p className="text-sm text-muted-foreground">{t('building.storage.form.price')}</p>
               <p className="font-semibold text-primary">
-                €{property.price.toLocaleString()}
+                {formatCurrency(property.price)}
               </p>
             </div>
           )}

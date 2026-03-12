@@ -22,6 +22,7 @@ import {
   type SocialPlatformType
 } from './platform-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { formatCurrency } from '@/lib/intl-utils';
 const logger = createModuleLogger('sharing-service');
 
 // ============================================================================
@@ -230,7 +231,7 @@ export class SharingService {
     }
 
     if (property.price) {
-      text += `\n💰 €${property.price.toLocaleString()}`;
+      text += `\n💰 ${formatCurrency(property.price)}`;
     }
 
     if (property.area) {

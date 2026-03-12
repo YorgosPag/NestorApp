@@ -11,34 +11,10 @@
 import type { FiscalQuarter } from '../../types/common';
 
 // ============================================================================
-// FIRESTORE SANITIZATION (CRITICAL — per MEMORY.md)
+// FIRESTORE SANITIZATION (re-exported from centralized location — ADR-214)
 // ============================================================================
 
-/**
- * Αντικατάσταση `undefined` → `null` σε object (shallow)
- *
- * **ΚΡΙΣΙΜΟ**: Firestore αποδέχεται `null` αλλά **ΑΠΟΡΡΙΠΤΕΙ** `undefined`.
- * Αυτή η function ΠΡΕΠΕΙ να καλείται σε κάθε write operation.
- *
- * @param data - Object to sanitize
- * @returns Sanitized copy (no undefined values)
- */
-export function sanitizeForFirestore<T extends Record<string, unknown>>(data: T): T {
-  const sanitized: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value === undefined) {
-      sanitized[key] = null;
-    } else if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-      // Recursive sanitization for nested objects
-      sanitized[key] = sanitizeForFirestore(value as Record<string, unknown>);
-    } else {
-      sanitized[key] = value;
-    }
-  }
-
-  return sanitized as T;
-}
+export { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 
 // ============================================================================
 // DATE/TIME HELPERS

@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createUnit } from '@/services/units.service';
 import toast from 'react-hot-toast';
@@ -435,7 +436,7 @@ export function UnitsTabContent({ building }: UnitsTabContentProps) {
     { label: 'Τύπος', render: (u) => getTypeLabel(u.type) },
     { label: 'Όροφος', render: (u) => u.floor || '—' },
     { label: 'm²', render: (u) => u.area || '—' },
-    { label: 'Τιμή', render: (u) => u.price ? `€${u.price.toLocaleString()}` : '—' },
+    { label: 'Τιμή', render: (u) => formatCurrencyWhole(u.price) },
   ], []);
 
   // ============================================================================

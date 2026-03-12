@@ -1,6 +1,7 @@
 // /home/user/studio/src/lib/share-utils.ts
 // 🏢 ENTERPRISE: i18n support for share messages
 import i18n from '@/i18n/config';
+import { formatCurrency } from '@/lib/intl-utils';
 
 // 🏢 ENTERPRISE: Company name constant for i18n
 const COMPANY_NAME = 'Nestor Construct';
@@ -212,7 +213,7 @@ function generatePropertyShareText(property: PropertyShareData): string {
   }
   
   if (property.price) {
-    text += `\n💰 €${property.price.toLocaleString()}`;
+    text += `\n💰 ${formatCurrency(property.price)}`;
   }
   
   if (property.area) {
