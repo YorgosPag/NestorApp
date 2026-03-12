@@ -175,29 +175,23 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // 🏢 ENTERPRISE: Full navigation refresh (clears cache and reloads)
+  // 🏢 ENTERPRISE: Full navigation refresh (clears ALL caches and reloads)
   const refreshNavigation = useCallback(async () => {
     logger.info('Refreshing navigation data...');
 
     try {
-      // Clear the companies cache to force fresh data
+      // Clear ALL client-side caches to force fresh data
       NavigationApiService.clearCompaniesCache();
+      (dataHook as ReturnType<typeof useNavigationData> & { clearAllClientCaches: () => void }).clearAllClientCaches();
 
       updateState({ loading: true, projectsLoading: true, error: null });
 
-      // Reload companies
-      const companies = await dataHook.loadCompanies();
-      updateState({ companies, loading: false });
+      // Reload via bootstrap (caches cleared, will fetch fresh from API)
+      const { companies, projects } = await dataHook.loadViaBootstrap();
+      updateState({ companies, projects, loading: false, projectsLoading: false });
 
-      // Reload all projects with fresh data
-      if (companies.length > 0) {
-        const projects = await dataHook.loadAllProjects(companies);
-        updateState({ projects, projectsLoading: false });
-      } else {
-        updateState({ projectsLoading: false });
-      }
-
-      logger.info('Navigation data refreshed');
+      logger.info('Navigation data refreshed', { companies: companies.length, projects: projects.length });
+      return;
     } catch (error) {
       logger.error('Failed to refresh', { error });
       updateState({

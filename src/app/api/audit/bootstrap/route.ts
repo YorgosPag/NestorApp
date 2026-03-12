@@ -197,6 +197,14 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
     : `${CACHE_KEY}:tenant:${ctx.companyId}`;
 
   const cache = EnterpriseAPICache.getInstance();
+
+  // Allow clients to bust server cache (e.g. after adding a navigation company)
+  const bustCache = request.nextUrl.searchParams.has('t');
+  if (bustCache) {
+    cache.delete(tenantCacheKey);
+    logger.info('[Bootstrap] Cache busted by client request');
+  }
+
   const cachedData = cache.get<BootstrapResponse>(tenantCacheKey);
 
   if (cachedData) {
@@ -476,14 +484,14 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   });
 
   // Build companies array with project counts
+  // NOTE: Do NOT filter out companies with 0 projects — user expects to see
+  // all companies they added to navigation, even before creating projects
   const companies: BootstrapCompany[] = Array.from(companyMap.entries())
     .map(([id, company]) => ({
       id,
       name: company.name,
       projectCount: projectCountByCompany.get(id) || 0
     }))
-    // Only include companies with projects (above-the-fold optimization)
-    .filter(company => company.projectCount > 0)
     // Sort by name for consistent ordering
     .sort((a, b) => a.name.localeCompare(b.name, 'el'));
 

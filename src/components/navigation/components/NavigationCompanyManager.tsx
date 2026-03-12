@@ -9,8 +9,8 @@ import React, { useState, useEffect } from 'react';
 import { SelectCompanyContactModal } from '../dialogs/SelectCompanyContactModal';
 import type { Contact } from '@/types/contacts';
 import { addCompanyToNavigation, getNavigationCompanyIds } from '@/services/navigation-companies.service';
-import { NavigationApiService } from '../core/services/navigationApi';
 import { useNavigation } from '../core/NavigationContext';
+import { REALTIME_EVENTS } from '@/services/realtime';
 // 🏢 ENTERPRISE: Use centralized NavigationCompany type
 import type { NavigationCompany } from '../core/types';
 
@@ -27,8 +27,8 @@ interface NavigationCompanyManagerRenderProps {
 }
 
 export function NavigationCompanyManager({ companies, children }: NavigationCompanyManagerProps) {
-  // Navigation context για cache refresh
-  const { loadCompanies } = useNavigation();
+  // Navigation context — not needed directly, refresh via event
+  useNavigation();
 
   // Modal state για επαφές
   const [isContactsModalOpen, setIsContactsModalOpen] = useState(false);
@@ -63,19 +63,14 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
       // Προσθήκη εταιρείας στην πλοήγηση
       await addCompanyToNavigation(contact.id);
 
-      // 🚀 ENTERPRISE CACHE INVALIDATION: Καθαρισμός cache για άμεση εμφάνιση
-      NavigationApiService.clearCompaniesCache();
-
-      // 🔄 ΕΠΑΓΓΕΛΜΑΤΙΚΟ REFRESH: Ανανέωση companies από context
-      await loadCompanies();
-
       // Ενημέρωση local state για το modal filtering
       setNavigationCompanyIds(prev => [...prev, contact.id!]);
 
       // Κλείσιμο modal
       setIsContactsModalOpen(false);
 
-      // Company added to navigation successfully
+      // 🔄 Dispatch NAVIGATION_REFRESH → clears ALL caches + reloads from API
+      window.dispatchEvent(new CustomEvent(REALTIME_EVENTS.NAVIGATION_REFRESH));
     } catch (error) {
       // Error adding company to navigation - fallback to page refresh
       window.location.reload();

@@ -90,6 +90,8 @@ export function useNavigationData(): UseNavigationDataReturn {
   const companiesLoadedRef = useRef(false);
   const companiesDataRef = useRef<NavigationCompany[]>([]);
   const projectsDataRef = useRef<NavigationProject[]>([]);
+  // When true, next bootstrap request bypasses server cache
+  const bustServerCacheRef = useRef(false);
   // Note: bootstrapLoadingRef removed - replaced with module-level inFlightBootstrapPromise for proper de-duplication
 
   /**
@@ -147,7 +149,12 @@ export function useNavigationData(): UseNavigationDataReturn {
 
         // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + error handling)
         // apiClient automatically handles errors (401/403/500) and unwraps response
-        const bootstrapData = await apiClient.get<BootstrapResponse>('/api/audit/bootstrap');
+        // Bust server cache when explicitly refreshing (e.g. after adding a company)
+        const url = bustServerCacheRef.current
+          ? `/api/audit/bootstrap?t=${Date.now()}`
+          : '/api/audit/bootstrap';
+        bustServerCacheRef.current = false;
+        const bootstrapData = await apiClient.get<BootstrapResponse>(url);
         logger.info('Bootstrap loaded', { companiesCount: bootstrapData.companies.length, projectsCount: bootstrapData.projects.length });
 
         // Transform to NavigationCompany format
@@ -269,6 +276,16 @@ export function useNavigationData(): UseNavigationDataReturn {
     inFlightBootstrapPromise = null; // 🏢 Clear in-flight promise too
   };
 
+  /**
+   * Clear ALL client-side caches (bootstrap + refs)
+   * Must be called before re-fetching to get fresh data
+   */
+  const clearAllClientCaches = () => {
+    resetRefs();
+    bustServerCacheRef.current = true;
+    logger.info('All navigation caches cleared (server bust on next request)');
+  };
+
   return {
     loadCompanies,
     loadAllProjects,
@@ -276,7 +293,7 @@ export function useNavigationData(): UseNavigationDataReturn {
     loadViaBootstrap,
     isLoadingCompanies,
     isLoadingProjects,
-    // Expose reset for testing or special cases
-    resetRefs
-  } as UseNavigationDataReturn & { resetRefs: () => void };
+    resetRefs,
+    clearAllClientCaches
+  } as UseNavigationDataReturn & { resetRefs: () => void; clearAllClientCaches: () => void };
 }
