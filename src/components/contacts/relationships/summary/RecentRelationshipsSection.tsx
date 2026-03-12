@@ -23,6 +23,7 @@ import type { ContactRelationship } from '@/types/contacts/relationships';
 import { getRelationshipDisplayProps } from '../utils/relationship-types';
 import type { ContactNamesMap } from '../utils/summary/contact-navigation';
 import type { FlexibleDateInput } from '@/types/common/date-types'; // 🏢 ENTERPRISE: Type-safe dates
+import { formatFlexibleDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting (ADR-208)
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -94,36 +95,11 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
   // ============================================================================
 
   /**
-   * 📅 Format relationship creation date - ENTERPRISE TYPE SAFE
+   * 📅 Format relationship creation date — centralized (ADR-208)
    */
   const formatCreatedDate = (createdAt: FlexibleDateInput): string => {
-    if (!createdAt) return t('relationships.card.recently');
-
-    try {
-      let date: Date;
-
-      if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
-        // Firestore Timestamp {seconds: number, nanoseconds: number}
-        const timestamp = createdAt as { seconds: number };
-        date = new Date(timestamp.seconds * 1000);
-      } else if (typeof createdAt === 'object' && createdAt !== null && 'toDate' in createdAt) {
-        // Firestore Timestamp with toDate() method
-        const timestamp = createdAt as { toDate: () => Date };
-        date = timestamp.toDate();
-      } else {
-        // Regular Date string/object
-        date = new Date(createdAt);
-      }
-
-      return date.toLocaleDateString('el-GR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-    } catch (error) {
-      logger.warn('Error formatting date', { error, createdAt });
-      return t('relationships.card.recently');
-    }
+    const result = formatFlexibleDateTime(createdAt, { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return result === '-' ? t('relationships.card.recently') : result;
   };
 
   /**

@@ -9,6 +9,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 
 const logger = createModuleLogger('StoragesRoute');
 
@@ -81,7 +82,7 @@ function mapFirestoreToStorage(docId: string, data: FirestoreStorageData): Stora
   const status: StorageStatus = isValidStorageStatus(rawStatus) ? rawStatus : 'available';
 
   // Convert timestamps
-  const lastUpdated = parseFirestoreTimestamp(data.lastUpdated);
+  const lastUpdated = normalizeToDate(data.lastUpdated);
 
   return {
     id: docId,
@@ -117,36 +118,6 @@ function isValidStorageStatus(status: string): status is StorageStatus {
   return ['available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable'].includes(status);
 }
 
-/**
- * 🔧 Helper: Parse Firestore Timestamp to Date
- */
-function parseFirestoreTimestamp(timestamp: unknown): Date | null {
-  if (!timestamp) return null;
-
-  // Handle Firestore Timestamp object
-  if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
-    const firestoreTs = timestamp as { toDate: () => Date };
-    return firestoreTs.toDate();
-  }
-
-  // Handle Date object
-  if (timestamp instanceof Date) {
-    return timestamp;
-  }
-
-  // Handle ISO string
-  if (typeof timestamp === 'string') {
-    const parsed = new Date(timestamp);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  // Handle epoch milliseconds
-  if (typeof timestamp === 'number') {
-    return new Date(timestamp);
-  }
-
-  return null;
-}
 
 // ============================================================================
 // RESPONSE TYPES (Type-safe withAuth) - CANONICAL FORMAT

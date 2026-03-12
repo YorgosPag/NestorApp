@@ -82,10 +82,8 @@ function formatFileSize(bytes: number | undefined): string {
 }
 
 const formatTrashDate = (dateInput: string | Date | undefined): string => {
-  const formatted = formatDateTime(dateInput ?? '', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (!dateInput) return 'N/A';
+  const formatted = formatDateTime(dateInput);
   return formatted === '-' ? 'N/A' : formatted;
 };
 

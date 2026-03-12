@@ -28,6 +28,7 @@ import toast from 'react-hot-toast';
 import { useRealtimeTriageCommunications } from '@/hooks/inbox/useRealtimeTriageCommunications';
 import type { Communication, FirestoreishTimestamp, TriageStatus } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
+import { normalizeToDate } from '@/lib/date-local';
 import type { AdminContext } from '@/server/admin/admin-guards';
 import { PageContainer, ListContainer } from '@/core/containers';
 import AIInboxHeader from '@/components/admin/ai-inbox/AIInboxHeader';
@@ -101,13 +102,9 @@ interface TriageStats {
 
 const TRIAGE_STATUS_SET = new Set<TriageStatus>(Object.values(TRIAGE_STATUSES));
 
-const resolveFirestoreTimestamp = (value?: FirestoreishTimestamp | null): Date | null => {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value === 'string') return new Date(value);
-  if (typeof value === 'object' && 'toDate' in value) return value.toDate();
-  return null;
-};
+// 🏢 ENTERPRISE: Use centralized normalizeToDate (ADR-208)
+const resolveFirestoreTimestamp = (value?: FirestoreishTimestamp | null): Date | null =>
+  normalizeToDate(value);
 
 /**
  * 🏢 ENTERPRISE: Safe content extractor

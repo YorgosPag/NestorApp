@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
-import { formatDate } from '@/lib/intl-utils';
+import { formatFlexibleDateTime } from '@/lib/intl-utils';
 import { User, Mail, Phone, MessageSquare } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
@@ -38,12 +38,8 @@ const getStatusBadgeClass = (stage: string): string => {
   return stageClasses[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
 };
 
-const formatContactDate = (date: string | Date | { toDate(): Date }) => {
-  if (typeof date === 'object' && 'toDate' in date) {
-    return formatDate(date.toDate());
-  }
-  return formatDate(new Date(date));
-};
+const formatContactDate = (date: string | Date | { toDate(): Date }) =>
+  formatFlexibleDateTime(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
 
 export function ContactCard({ 
   lead, 

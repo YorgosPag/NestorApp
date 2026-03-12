@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { formatDate } from '@/lib/intl-utils';
+import { formatFlexibleDateTime } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getStatusBadgeClass } from '@/lib/design-system';
 import { badgeVariants } from '@/components/ui/badge';
@@ -106,15 +106,11 @@ export function TaskCard({
     return t(`priority.${priority}`, { defaultValue: priority });
   };
 
-  // 🏢 ENTERPRISE: Localized date formatting
+  // 🏢 ENTERPRISE: Localized date formatting (ADR-208 — centralized)
   const formatLocalizedTaskDate = (date: TaskDateValue): string => {
     if (!date) return t('card.notDefined');
-    const taskDate = typeof date === 'string'
-      ? new Date(date)
-      : (date && typeof date === 'object' && 'toDate' in date)
-        ? date.toDate()
-        : date as Date;
-    return formatDate(taskDate);
+    const result = formatFlexibleDateTime(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return result === '-' ? t('card.notDefined') : result;
   };
 
   const TaskTypeIcon = getTaskTypeIcon(task.type);

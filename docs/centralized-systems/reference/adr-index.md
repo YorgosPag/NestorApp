@@ -230,6 +230,7 @@
 | **ADR-205** | Phase 4 — useInterval, useSortState, truncateText promotion | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-205-phase4-useInterval-useSortState-truncateText.md) |
 | **ADR-206** | Phase 5 — Enterprise ID migration, useDebounce, formatFileSize dedup | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
 | **ADR-207** | Phase 6 — Collection utilities extraction (groupByKey, tallyBy, sumByKey) | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
+| **ADR-208** | Phase 7 — Date formatting deduplication (formatFlexibleDateTime, formatFlexibleTimeOnly) | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

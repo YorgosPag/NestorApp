@@ -5,7 +5,7 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { formatDate as formatIntlDate } from '@/lib/intl-utils';
+import { formatDate as formatIntlDate, formatRelativeTime } from '@/lib/intl-utils';
 import {
   User,
   Mail,
@@ -102,17 +102,7 @@ export function UserCard({
 
   const formatLastActive = (lastActive: string | Date | undefined) => {
     if (!lastActive) return t('card.activity.never');
-
-    const lastActiveDate = typeof lastActive === 'string' ? new Date(lastActive) : lastActive;
-    const now = new Date();
-    const diffMs = now.getTime() - lastActiveDate.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return t('card.activity.today');
-    if (diffDays === 1) return t('card.activity.yesterday');
-    if (diffDays < 7) return t('card.activity.daysAgo', { count: diffDays });
-    if (diffDays < 30) return t('card.activity.weeksAgo', { count: Math.floor(diffDays / 7) });
-    return formatDate(lastActive);
+    return formatRelativeTime(typeof lastActive === 'string' ? new Date(lastActive) : lastActive);
   };
 
   const RoleIcon = getRoleIcon(user.role || 'user');

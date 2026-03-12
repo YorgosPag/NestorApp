@@ -39,7 +39,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
 import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
 import { copyToClipboard } from '@/lib/share-utils'; // 🏢 ENTERPRISE: Centralized clipboard utility
-import { formatDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
+import { formatFlexibleDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notifications
 import {
   Sheet,
@@ -113,22 +113,10 @@ export function FileInspector({
     }
   }, [file.storagePath, success, error, t]);
 
-  // 🏢 ENTERPRISE: Format timestamp using centralized formatDateTime
+  // 🏢 ENTERPRISE: Format timestamp using centralized formatFlexibleDateTime (ADR-208)
   const formatDate = (timestamp: unknown): string => {
-    if (!timestamp) return t('technical.unavailable', { defaultValue: 'N/A' });
-    try {
-      // Handle Firestore Timestamp
-      if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
-        return formatDateTime((timestamp as { toDate: () => Date }).toDate());
-      }
-      // Handle Date object
-      if (timestamp instanceof Date) {
-        return formatDateTime(timestamp);
-      }
-      return t('technical.unavailable', { defaultValue: 'N/A' });
-    } catch {
-      return t('technical.unavailable', { defaultValue: 'N/A' });
-    }
+    const result = formatFlexibleDateTime(timestamp);
+    return result === '-' ? t('technical.unavailable', { defaultValue: 'N/A' }) : result;
   };
 
   return (

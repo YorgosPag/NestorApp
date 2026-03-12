@@ -356,11 +356,8 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
     });
   }, [items, filters]);
 
-  // 🏢 ENTERPRISE: formatDate wrapper using centralized formatDateTime
-  const formatDate = (isoString?: string): string => {
-    if (!isoString) return '-';
-    return formatDateTime(isoString);
-  };
+  // 🏢 ENTERPRISE: Direct use of centralized formatDateTime (ADR-208)
+  const formatDate = formatDateTime;
 
   // ── Loading ──
   if (loading) {

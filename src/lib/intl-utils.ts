@@ -5,6 +5,7 @@
 
 import i18n from '@/i18n/config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 const logger = createModuleLogger('intl-utils');
 
 /**
@@ -531,4 +532,40 @@ export const getDaysUntilCompletion = (completionDate?: string): number | null =
   const diffTime = completion.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
+};
+
+// ============================================================================
+// 🔄 BRIDGE FUNCTIONS: FlexibleDateInput → Intl Formatting (ADR-208)
+// ============================================================================
+
+/**
+ * Format any flexible date input (Firestore Timestamps, strings, Dates, etc.)
+ * into a localized date+time string.
+ *
+ * Bridge: normalizeToDate() → formatDateTime()
+ *
+ * @param value - FlexibleDateInput (Date, string, number, Firestore Timestamp, null, undefined)
+ * @param options - Optional Intl.DateTimeFormatOptions
+ * @returns Formatted date string or '-' for invalid/missing input
+ */
+export const formatFlexibleDateTime = (value: unknown, options?: Intl.DateTimeFormatOptions): string => {
+  const date = normalizeToDate(value);
+  if (!date) return '-';
+  return formatDateTime(date, options);
+};
+
+/**
+ * Format any flexible date input into time-only (HH:mm).
+ * Used by TelegramNotifications and similar real-time feeds.
+ *
+ * Bridge: normalizeToDate() → Intl time-only formatting
+ *
+ * @param value - FlexibleDateInput
+ * @returns "HH:mm" string or '' for invalid/missing input
+ */
+export const formatFlexibleTimeOnly = (value: unknown): string => {
+  const date = normalizeToDate(value);
+  if (!date) return '';
+  const locale = getCurrentLocale();
+  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
 };

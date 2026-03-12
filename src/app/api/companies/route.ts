@@ -7,6 +7,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CompanyContact, ContactStatus } from '@/types/contacts';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 
 const logger = createModuleLogger('CompaniesRoute');
 
@@ -94,8 +95,8 @@ function mapFirestoreToCompanyContact(
 
   // Convert timestamp to Date if needed
   const now = new Date();
-  const createdAt = parseFirestoreTimestamp(data.createdAt) || now;
-  const updatedAt = parseFirestoreTimestamp(data.updatedAt) || now;
+  const createdAt = normalizeToDate(data.createdAt) || now;
+  const updatedAt = normalizeToDate(data.updatedAt) || now;
 
   return {
     // Required fields from BaseContact
@@ -136,37 +137,6 @@ function mapFirestoreToCompanyContact(
  */
 function isValidContactStatus(status: string): status is ContactStatus {
   return ['active', 'inactive', 'archived'].includes(status);
-}
-
-/**
- * 🔧 Helper: Parse Firestore Timestamp to Date
- */
-function parseFirestoreTimestamp(timestamp: unknown): Date | null {
-  if (!timestamp) return null;
-
-  // Handle Firestore Timestamp object
-  if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
-    const firestoreTs = timestamp as { toDate: () => Date };
-    return firestoreTs.toDate();
-  }
-
-  // Handle Date object
-  if (timestamp instanceof Date) {
-    return timestamp;
-  }
-
-  // Handle ISO string
-  if (typeof timestamp === 'string') {
-    const parsed = new Date(timestamp);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  // Handle epoch milliseconds
-  if (typeof timestamp === 'number') {
-    return new Date(timestamp);
-  }
-
-  return null;
 }
 
 // ============================================================================

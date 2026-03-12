@@ -12,6 +12,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { truncateText } from '@/lib/text-utils';
+import { formatFlexibleTimeOnly } from '@/lib/intl-utils';
 
 /** Firestore Timestamp type */
 interface FirestoreTimestamp {
@@ -91,16 +92,8 @@ export function TelegramNotifications() {
     }
   };
 
-  const formatTime = (timestamp: FirestoreTimestamp | Date | string | null) => {
-    if (!timestamp) return '';
-    const date = typeof timestamp === 'object' && 'toDate' in timestamp
-      ? timestamp.toDate()
-      : new Date(timestamp as string | Date);
-    return date.toLocaleTimeString('el-GR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
+  // 🏢 ENTERPRISE: Centralized time formatting (ADR-208)
+  const formatTime = formatFlexibleTimeOnly;
 
   return (
     <div className="relative">
