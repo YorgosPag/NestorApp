@@ -126,29 +126,13 @@ export function ParkingGeneralTab({
   // Building link callbacks
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
-  const saveBuildingLink = useCallback(async (newBuildingId: string | null): Promise<{ success: boolean; error?: string }> => {
-    try {
-      // Reset floor when building changes
-      const payload: Record<string, unknown> = { buildingId: newBuildingId };
-      if (newBuildingId !== linkedBuildingId) {
-        payload.floor = '';
-      }
-      await apiClient.patch<ParkingPatchResult>(`/api/parking/${parking.id}`, payload);
+  // 🏢 ENTERPRISE: No auto-save — building change is part of form, saved with Save button
+  const handleBuildingChange = useCallback((newBuildingId: string | null) => {
+    if (newBuildingId !== linkedBuildingId) {
       setLinkedBuildingId(newBuildingId);
-      if (newBuildingId !== linkedBuildingId) {
-        setForm(prev => ({ ...prev, floor: '' }));
-      }
-      RealtimeService.dispatch('PARKING_UPDATED', {
-        parkingSpotId: parking.id,
-        updates: { buildingId: newBuildingId },
-        timestamp: Date.now(),
-      });
-      return { success: true };
-    } catch (err) {
-      logger.error('Failed to save building link', { error: err instanceof Error ? err.message : String(err) });
-      return { success: false, error: 'Failed to save' };
+      setForm(prev => ({ ...prev, floor: '' }));
     }
-  }, [parking.id, linkedBuildingId]);
+  }, [linkedBuildingId]);
 
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
@@ -165,6 +149,11 @@ export function ParkingGeneralTab({
       if (newArea !== parking.area) payload.area = newArea ?? null;
 
       if (form.notes.trim() !== (parking.notes || '')) payload.notes = form.notes.trim();
+
+      // Include building link change
+      if (linkedBuildingId !== (parking.buildingId ?? null)) {
+        payload.buildingId = linkedBuildingId;
+      }
 
       // Nothing changed
       if (Object.keys(payload).length === 0) {
@@ -183,6 +172,7 @@ export function ParkingGeneralTab({
           status: form.status,
           floor: form.floor.trim() || undefined,
           area: newArea,
+          buildingId: linkedBuildingId,
         },
         timestamp: Date.now(),
       });
@@ -194,7 +184,7 @@ export function ParkingGeneralTab({
       logger.error('Failed to save parking spot', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
-  }, [form, parking, onEditingChange]);
+  }, [form, parking, onEditingChange, linkedBuildingId]);
 
   // Register save ref for header delegation
   useEffect(() => {
@@ -233,7 +223,8 @@ export function ParkingGeneralTab({
           }}
           currentValue={linkedBuildingId ?? undefined}
           loadOptions={loadBuildings}
-          onSave={saveBuildingLink}
+          autoSave={false}
+          onValueChange={handleBuildingChange}
           isEditing={isEditing}
         />
         <Card>

@@ -131,28 +131,13 @@ export function StorageGeneralTab({
   // Building link callbacks
   const loadBuildings = useCallback(() => getBuildingsList(), []);
 
-  const saveBuildingLink = useCallback(async (newBuildingId: string | null): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const payload: Record<string, unknown> = { buildingId: newBuildingId };
-      if (newBuildingId !== linkedBuildingId) {
-        payload.floor = '';
-      }
-      await apiClient.patch<StoragePatchResult>(`/api/storages/${storage.id}`, payload);
+  // 🏢 ENTERPRISE: No auto-save — building change is part of form, saved with Save button
+  const handleBuildingChange = useCallback((newBuildingId: string | null) => {
+    if (newBuildingId !== linkedBuildingId) {
       setLinkedBuildingId(newBuildingId);
-      if (newBuildingId !== linkedBuildingId) {
-        setForm(prev => ({ ...prev, floor: '' }));
-      }
-      RealtimeService.dispatch('STORAGE_UPDATED', {
-        storageId: storage.id,
-        updates: { buildingId: newBuildingId },
-        timestamp: Date.now(),
-      });
-      return { success: true };
-    } catch (err) {
-      logger.error('Failed to save building link', { error: err instanceof Error ? err.message : String(err) });
-      return { success: false, error: 'Failed to save' };
+      setForm(prev => ({ ...prev, floor: '' }));
     }
-  }, [storage.id, linkedBuildingId]);
+  }, [linkedBuildingId]);
 
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
@@ -169,6 +154,11 @@ export function StorageGeneralTab({
 
       if (form.description.trim() !== (storage.description || '')) payload.description = form.description.trim();
       if (form.notes.trim() !== (storage.notes || '')) payload.notes = form.notes.trim();
+
+      // Include building link change
+      if (linkedBuildingId !== (storage.buildingId ?? null)) {
+        payload.buildingId = linkedBuildingId;
+      }
 
       // Nothing changed
       if (Object.keys(payload).length === 0) {
@@ -187,6 +177,7 @@ export function StorageGeneralTab({
           status: form.status,
           floor: form.floor.trim() || undefined,
           area: newArea,
+          buildingId: linkedBuildingId,
         },
         timestamp: Date.now(),
       });
@@ -198,7 +189,7 @@ export function StorageGeneralTab({
       logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
       return false;
     }
-  }, [form, storage, onEditingChange]);
+  }, [form, storage, onEditingChange, linkedBuildingId]);
 
   // Register save ref for header delegation
   useEffect(() => {
@@ -237,7 +228,8 @@ export function StorageGeneralTab({
           }}
           currentValue={linkedBuildingId ?? undefined}
           loadOptions={loadBuildings}
-          onSave={saveBuildingLink}
+          autoSave={false}
+          onValueChange={handleBuildingChange}
           isEditing={isEditing}
         />
         <Card>

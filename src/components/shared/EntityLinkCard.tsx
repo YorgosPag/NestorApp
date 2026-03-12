@@ -70,10 +70,12 @@ export interface EntityLinkCardProps {
   currentValue?: string;
   /** Load available options */
   loadOptions: () => Promise<EntityLinkOption[]>;
-  /** Save the selected value (null = unlink) */
-  onSave: (newId: string | null, name: string) => Promise<{ success: boolean; error?: string }>;
-  /** Callback after successful save */
+  /** Save the selected value (null = unlink). Required when autoSave=true (default). */
+  onSave?: (newId: string | null, name: string) => Promise<{ success: boolean; error?: string }>;
+  /** Callback after successful save (autoSave mode only) */
   onChanged?: (newId: string, name: string) => void;
+  /** Callback on selection change (called in both modes). Use this to sync parent state. */
+  onValueChange?: (newId: string | null, name: string) => void;
   /** Edit mode toggle */
   isEditing?: boolean;
   /** Enable searchable mode with typeahead filter (for large lists) */
@@ -82,6 +84,8 @@ export interface EntityLinkCardProps {
   searchPlaceholder?: string;
   /** Hide the "Τρέχον:" label below the dropdown */
   hideCurrentLabel?: boolean;
+  /** Auto-save on selection change (default: true). Set to false when part of a form with its own Save button. */
+  autoSave?: boolean;
 }
 
 // =============================================================================
@@ -103,6 +107,8 @@ export function EntityLinkCard({
   searchable = false,
   searchPlaceholder = 'Αναζήτηση...',
   hideCurrentLabel = false,
+  autoSave = true,
+  onValueChange,
 }: EntityLinkCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
@@ -186,12 +192,21 @@ export function EntityLinkCard({
     setSelectedId(value);
     setSaveStatus('idle');
 
-    // Auto-save: only if value actually changed from current
-    const effective = savedValue !== undefined ? (savedValue || NONE_VALUE) : (currentValue || NONE_VALUE);
-    if (value !== effective) {
-      performSave(value);
+    const idValue = value === NONE_VALUE ? null : value;
+    const selectedOption = options.find(o => o.id === value);
+    const name = selectedOption?.name || '';
+
+    // Always notify parent of value change
+    onValueChange?.(idValue, name);
+
+    if (autoSave && onSave) {
+      // Auto-save: only if value actually changed from current
+      const effective = savedValue !== undefined ? (savedValue || NONE_VALUE) : (currentValue || NONE_VALUE);
+      if (value !== effective) {
+        performSave(value);
+      }
     }
-  }, [savedValue, currentValue, performSave]);
+  }, [savedValue, currentValue, performSave, autoSave, onSave, onValueChange, options]);
 
   const currentName = options.find(o => o.id === (savedValue ?? currentValue))?.name;
   const selectedName = options.find(o => o.id === selectedId)?.name;
