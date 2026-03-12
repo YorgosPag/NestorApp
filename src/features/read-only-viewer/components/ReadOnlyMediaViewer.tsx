@@ -208,8 +208,12 @@ export function ReadOnlyMediaViewer({
         id: floorFloorplan.fileRecordId || `floor_floorplan_${floorFloorplan.buildingId}_${floorFloorplan.floorId}`,
         originalFilename: floorFloorplan.fileName || 'floor_floorplan',
         displayName: floorFloorplan.fileName || 'Κάτοψη Ορόφου',
-        ext: floorFloorplan.fileType === 'pdf' ? 'pdf' : 'dxf',
-        contentType: floorFloorplan.fileType === 'pdf' ? 'application/pdf' : 'application/dxf',
+        ext: floorFloorplan.fileType === 'pdf' ? 'pdf'
+           : floorFloorplan.fileType === 'image' ? (floorFloorplan.fileName?.split('.').pop()?.toLowerCase() || 'png')
+           : 'dxf',
+        contentType: floorFloorplan.fileType === 'pdf' ? 'application/pdf'
+                   : floorFloorplan.fileType === 'image' ? `image/${floorFloorplan.fileName?.split('.').pop()?.toLowerCase() === 'jpg' ? 'jpeg' : (floorFloorplan.fileName?.split('.').pop()?.toLowerCase() || 'png')}`
+                   : 'application/dxf',
         sizeBytes: 0, // Unknown for legacy data
         storagePath: '',
         downloadUrl: floorFloorplan.pdfImageUrl || '',

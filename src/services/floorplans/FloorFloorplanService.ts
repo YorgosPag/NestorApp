@@ -61,7 +61,7 @@ export interface FloorFloorplanData {
   /** Upload timestamp */
   timestamp: number;
   /** File type discriminator */
-  fileType?: 'dxf' | 'pdf';
+  fileType?: 'dxf' | 'pdf' | 'image';
   /** DXF scene data (present for DXF files) */
   scene?: SceneModel | null;
   /** PDF image URL (present for PDF files) */
@@ -244,8 +244,13 @@ export class FloorFloorplanService {
       const fileRecord = fileRecords[0];
 
       // Check file type from extension or contentType
-      const isPdf = fileRecord.ext?.toLowerCase() === 'pdf' ||
-                    fileRecord.contentType?.includes('pdf');
+      const ext = fileRecord.ext?.toLowerCase() || '';
+      const contentType = fileRecord.contentType?.toLowerCase() || '';
+      const isPdf = ext === 'pdf' || contentType.includes('pdf');
+      const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext)
+                   || contentType.startsWith('image/');
+      // DXF scene JSON = not PDF and not image (saved by DXF wizard as application/json)
+      const isDxfScene = !isPdf && !isImage;
 
       // Extract buildingId from descriptors (first element)
       const buildingId = fileRecord.purpose === 'floor-floorplan' &&
@@ -259,33 +264,35 @@ export class FloorFloorplanService {
         : '';
       const floorNumber = parseInt(floorNumberDescriptor.replace('floor-', ''), 10) || 0;
 
-      if (isPdf) {
-        // PDF floorplan - return URL directly
-        floorplanLogger.debug(`Loaded PDF floorplan`, { floorId, fileId: fileRecord.id });
+      // Helper: build timestamp from FileRecord
+      const getTimestamp = (): number => {
+        if (typeof fileRecord.createdAt === 'string') return new Date(fileRecord.createdAt).getTime();
+        if (fileRecord.createdAt instanceof Date) return fileRecord.createdAt.getTime();
+        return Date.now();
+      };
+
+      // 🏢 ENTERPRISE: PDF and image floorplans — return downloadUrl directly
+      if (isPdf || isImage) {
+        floorplanLogger.debug(`Loaded ${isPdf ? 'PDF' : 'image'} floorplan`, { floorId, fileId: fileRecord.id, ext });
         return {
           buildingId,
           floorId,
           floorNumber,
           type: 'floor',
           fileName: fileRecord.originalFilename,
-          timestamp: typeof fileRecord.createdAt === 'string'
-            ? new Date(fileRecord.createdAt).getTime()
-            : fileRecord.createdAt instanceof Date
-              ? fileRecord.createdAt.getTime()
-              : Date.now(),
-          fileType: 'pdf',
+          timestamp: getTimestamp(),
+          fileType: isPdf ? 'pdf' : 'image',
           pdfImageUrl: fileRecord.downloadUrl,
           fileRecordId: fileRecord.id,
         };
       }
 
-      // DXF floorplan - download scene JSON
+      // DXF scene JSON — download and parse
       if (!fileRecord.downloadUrl) {
         floorplanLogger.warn(`No download URL for DXF floorplan`, { floorId, fileId: fileRecord.id });
         return null;
       }
 
-      // Download scene JSON via downloadUrl (CORS configured on bucket)
       console.error('[FloorFloorplanService] ⬇️ Downloading via downloadUrl', { fileId: fileRecord.id });
       const response = await fetch(fileRecord.downloadUrl);
       if (!response.ok) {
@@ -303,11 +310,7 @@ export class FloorFloorplanService {
         floorNumber,
         type: 'floor',
         fileName: fileRecord.originalFilename,
-        timestamp: typeof fileRecord.createdAt === 'string'
-          ? new Date(fileRecord.createdAt).getTime()
-          : fileRecord.createdAt instanceof Date
-            ? fileRecord.createdAt.getTime()
-            : Date.now(),
+        timestamp: getTimestamp(),
         fileType: 'dxf',
         scene,
         fileRecordId: fileRecord.id,
