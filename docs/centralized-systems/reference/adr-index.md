@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 193 ADRs | Last Updated: 2026-03-12
+**📊 Stats**: 194 ADRs | Last Updated: 2026-03-12
 
 ---
 
@@ -24,7 +24,7 @@
 | 📂 **Entity Systems** | 11 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 7 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 8 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
@@ -231,6 +231,7 @@
 | **ADR-206** | Phase 5 — Enterprise ID migration, useDebounce, formatFileSize dedup | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-206-phase5-enterprise-id-debounce-filesize.md) |
 | **ADR-207** | Phase 6 — Collection utilities extraction (groupByKey, tallyBy, sumByKey) | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-207-phase6-collection-utilities.md) |
 | **ADR-208** | Phase 7 — Date formatting deduplication (formatFlexibleDateTime, formatFlexibleTimeOnly) | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-208-phase7-date-formatting-dedup.md) |
+| **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -415,6 +416,7 @@
 | **ADR-068** | API Rate Limiting System | ✅ APPROVED | [View](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
+| **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ APPROVED | [View](./adrs/ADR-209-id-consistency-audit.md) |
 
 ---
 
