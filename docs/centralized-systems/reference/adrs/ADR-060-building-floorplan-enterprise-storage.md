@@ -128,6 +128,14 @@ loadFloorplan(buildingId, type)
 - PDF floorplans save/load correctly.
 - No 1MB limit errors on large DXF scenes.
 
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-01-11 | Initial migration to enterprise storage |
+| 2026-03-12 | **FIX**: `FloorFloorplanService.loadFloorplan()` — replaced 7 `console.error` debug calls with `floorplanLogger` (respects dev/prod log levels). No functional change. |
+
 ## Related Commits
 
 - `62db9cc` - perf(floorplans): migrate BuildingFloorplanService to enterprise storage architecture
+- `32547fd2` - fix(floorplans): replace console.error debug spam in FloorFloorplanService

@@ -119,3 +119,4 @@ Step 3: "Επιλέξτε Όροφο & Φόρτωση Κάτοψης"
 | Date | Change |
 |------|--------|
 | 2026-02-14 | Initial implementation — IFC 4.3 compliant hierarchy |
+| 2026-03-12 | **FIX: companyId mismatch for super_admin floor floorplan upload/query** — `FloorFloorplanInline` now receives `buildingCompanyId` prop from `FloorsTabContent` to ensure files are stored under the building's tenant, not the super_admin's personal companyId. `useFloorFloorplans` now reads `companyId` from the floor document (authoritative) instead of relying on caller's companyId. Cleaned `console.error` debug spam from `FloorFloorplanService`, `useFloorFloorplans`, and `ReadOnlyMediaViewer`. Fixed empty-string `floorId`/`buildingId`/`companyId` props in `ListLayout` (`?? null` → `\|\| null`). See commits: `7874effb`, `d522394d`, `5371fc71`, `32547fd2`. |

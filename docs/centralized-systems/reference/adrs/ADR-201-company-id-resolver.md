@@ -55,3 +55,22 @@ const companyId = selectedBuilding?.companyId || user?.companyId || selectedComp
 - **Positive**: Single point of truth, traceable via `source` field, testable pure function
 - **Positive**: Eliminates class of save/load companyId mismatch bugs
 - **Neutral**: No breaking changes — external API unchanged
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-03-12 | Initial implementation |
+| 2026-03-12 | **Extended to floor floorplans**: `FloorFloorplanInline` now receives `buildingCompanyId` prop (same pattern as `BuildingFloorplanTab`). `useFloorFloorplans` reads `companyId` from the floor document itself — critical for ReadOnlyMediaViewer where `unit.companyId` may differ from `floor.companyId` in super_admin cross-tenant scenarios. |
+
+## Known Cross-Tenant Data Pattern
+
+Super admin (Γιώργος) operates across multiple tenants. The following entities may have **different companyIds** within the same building hierarchy:
+
+| Entity | companyId source |
+|--------|-----------------|
+| Building | Created by super_admin → super_admin's companyId |
+| Floor | Inherits from building creation context |
+| Unit | May be assigned to a different tenant's companyId |
+
+**Rule**: File queries for floor/building floorplans MUST use the **floor/building's** companyId (from Firestore document), NOT the unit's or user's companyId.
