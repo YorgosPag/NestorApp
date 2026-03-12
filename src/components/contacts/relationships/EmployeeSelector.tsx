@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createPortal } from 'react-dom';
 import { Input } from '@/components/ui/input';
@@ -514,7 +515,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
               {contact.lastActivity && (
                 <span className="text-xs text-muted-foreground">
-                  {new Date(contact.lastActivity).toLocaleDateString('el-GR')}
+                  {formatDateShort(new Date(contact.lastActivity))}
                 </span>
               )}
             </div>

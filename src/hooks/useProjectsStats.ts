@@ -1,7 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+/**
+ * Projects Statistics — thin wrapper over useEntityStats
+ * @module hooks/useProjectsStats
+ */
+
+import { useMemo, useCallback } from 'react';
 import type { Project } from '@/types/project';
+import { useEntityStats, countBy, avgRounded } from './useEntityStats';
 
 export interface ProjectsStats {
   totalProjects: number;
@@ -19,9 +25,25 @@ export interface ProjectsStats {
   projectsByType: { [key: string]: number };
 }
 
+const ACTIVE_STATUSES = ['in_progress', 'planning'];
+const COMPLETED_STATUSES = ['completed'];
+
+const getArea = (p: Project): number =>
+  (p as { totalArea?: number; area?: number }).totalArea
+  ?? (p as { totalArea?: number; area?: number }).area
+  ?? 0;
+
+const getValue = (p: Project): number => p.budget || 0;
+const getStatus = (p: Project): string => p.status || 'unknown';
+const getType = (p: Project): string => p.type || 'unknown';
+
 export function useProjectsStats(projects: Project[]): ProjectsStats {
-  const stats = useMemo(() => {
-    if (!projects || projects.length === 0) {
+  const base = useEntityStats(projects, { getArea, getValue, getStatus, getType });
+
+  const getProgress = useCallback((p: Project) => (p as { progress?: number }).progress ?? 0, []);
+
+  const stats = useMemo<ProjectsStats>(() => {
+    if (base.total === 0) {
       return {
         totalProjects: 0,
         activeProjects: 0,
@@ -32,61 +54,27 @@ export function useProjectsStats(projects: Project[]): ProjectsStats {
         totalArea: 0,
         averageProgress: 0,
         projectsByStatus: {},
-        projectsByType: {}
+        projectsByType: {},
       };
     }
 
-    const activeStatuses = ['in_progress', 'planning'];
-    const completedStatuses = ['completed'];
-
-    const activeProjects = projects.filter(p => activeStatuses.includes(p.status)).length;
-    const completedProjects = projects.filter(p => completedStatuses.includes(p.status)).length;
-
-    const totalBudget = projects.reduce((sum, project) => sum + (project.budget || 0), 0);
-    const averageBudget = projects.length > 0 ? totalBudget / projects.length : 0;
-
-    // Calculate total area (from project totalArea or area property)
-    const totalArea = projects.reduce((sum, project) => {
-      const area = (project as { totalArea?: number; area?: number }).totalArea
-        ?? (project as { totalArea?: number; area?: number }).area
-        ?? 0;
-      return sum + area;
-    }, 0);
-
-    // Calculate average progress (from project progress property)
-    const progressSum = projects.reduce((sum, project) => {
-      const progress = (project as { progress?: number }).progress ?? 0;
-      return sum + progress;
-    }, 0);
-    const averageProgress = projects.length > 0 ? Math.round(progressSum / projects.length) : 0;
-
-    // Count by status
-    const projectsByStatus: { [key: string]: number } = {};
-    projects.forEach(project => {
-      const status = project.status || 'unknown';
-      projectsByStatus[status] = (projectsByStatus[status] || 0) + 1;
-    });
-
-    // Count by type
-    const projectsByType: { [key: string]: number } = {};
-    projects.forEach(project => {
-      const type = project.type || 'unknown';
-      projectsByType[type] = (projectsByType[type] || 0) + 1;
-    });
+    const activeProjects = countBy(projects, p => ACTIVE_STATUSES.includes(p.status));
+    const completedProjects = countBy(projects, p => COMPLETED_STATUSES.includes(p.status));
+    const progressSum = projects.reduce((sum, p) => sum + getProgress(p), 0);
 
     return {
-      totalProjects: projects.length,
+      totalProjects: base.total,
       activeProjects,
       completedProjects,
-      totalBudget,
-      averageBudget,
-      totalValue: totalBudget, // Alias for dashboard display
-      totalArea,
-      averageProgress,
-      projectsByStatus,
-      projectsByType
+      totalBudget: base.totalValue,
+      averageBudget: base.averageValue,
+      totalValue: base.totalValue,
+      totalArea: base.totalArea,
+      averageProgress: avgRounded(progressSum, base.total),
+      projectsByStatus: base.byStatus,
+      projectsByType: base.byType,
     };
-  }, [projects]);
+  }, [base, projects, getProgress]);
 
   return stats;
 }

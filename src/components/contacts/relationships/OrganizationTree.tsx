@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -354,14 +355,14 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
               <p>
                 <strong>{t('relationships.organizationTree.lastUpdated')}:</strong>{' '}
                 {tree.updatedAt
-                  ? new Date(tree.updatedAt).toLocaleDateString('el-GR')
+                  ? formatDateShort(new Date(tree.updatedAt))
                   : t('relationships.organizationTree.unknown')
                 }
               </p>
               <p>
                 <strong>{t('relationships.organizationTree.createdAt')}:</strong>{' '}
                 {tree.createdAt
-                  ? new Date(tree.createdAt).toLocaleDateString('el-GR')
+                  ? formatDateShort(new Date(tree.createdAt))
                   : t('relationships.organizationTree.unknown')
                 }
               </p>

@@ -10,6 +10,7 @@
 
 import ExcelJS from 'exceljs';
 import type { MilestoneExportOptions } from './types';
+import { formatDateShort } from '@/lib/intl-utils';
 import { triggerBlobDownload } from '../gantt-export/gantt-export-utils';
 
 // ─── Styling Constants ───────────────────────────────────────────────────
@@ -97,7 +98,7 @@ export async function exportMilestonesToExcel(options: MilestoneExportOptions): 
       index: i + 1,
       title: m.title,
       description: m.description ?? '',
-      date: new Date(m.date).toLocaleDateString('el-GR'),
+      date: formatDateShort(new Date(m.date)),
       status: statusText,
       progress: m.progress ?? 0,
       type: m.type,
@@ -153,7 +154,7 @@ export async function exportMilestonesToExcel(options: MilestoneExportOptions): 
     summarySheet.addRow({ metric: 'Έργο', value: projectName });
   }
   summarySheet.addRow({ metric: 'Κτίριο', value: buildingName });
-  summarySheet.addRow({ metric: 'Ημ. Εξαγωγής', value: new Date().toLocaleDateString('el-GR') });
+  summarySheet.addRow({ metric: 'Ημ. Εξαγωγής', value: formatDateShort(new Date()) });
   summarySheet.addRow({ metric: 'Σύνολο Ορoσήμων', value: total });
   summarySheet.addRow({ metric: 'Ολοκληρωμένα', value: completed });
   summarySheet.addRow({ metric: 'Σε Εξέλιξη', value: inProgress });

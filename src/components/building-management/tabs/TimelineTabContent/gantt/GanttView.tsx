@@ -21,6 +21,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 import { useTheme } from 'next-themes';
 import { GanttChart, ViewMode } from 'react-modern-gantt';
 import type { Task, TaskColorProps } from 'react-modern-gantt';
@@ -516,8 +517,8 @@ export function GanttView({ building }: GanttViewProps) {
 
         setTooltipData({
           name: matched.name,
-          startDate: start.toLocaleDateString('el-GR'),
-          endDate: end.toLocaleDateString('el-GR'),
+          startDate: formatDateShort(start),
+          endDate: formatDateShort(end),
           duration: durationDays,
           progress: taskProgress,
           x: initialPos.x,
@@ -555,8 +556,8 @@ export function GanttView({ building }: GanttViewProps) {
 
         setTooltipData((prev) => prev ? {
           ...prev,
-          startDate: start.toLocaleDateString('el-GR'),
-          endDate: end.toLocaleDateString('el-GR'),
+          startDate: formatDateShort(start),
+          endDate: formatDateShort(end),
           duration: durationDays,
           progress: taskProgress,
         } : null);

@@ -16,6 +16,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 import {
   FileText,
   Image as ImageIcon,
@@ -394,13 +395,13 @@ export function FilePreviewPanel({ file, onClose, currentUserId, currentUserName
         {file.contentType && <span>{file.contentType}</span>}
         {file.createdAt && (
           <span>
-            {new Date(
+            {formatDateShort(new Date(
               typeof file.createdAt === 'string'
                 ? file.createdAt
                 : file.createdAt instanceof Date
                   ? file.createdAt
                   : (file.createdAt as unknown as { toDate: () => Date }).toDate()
-            ).toLocaleDateString('el-GR')}
+            ))}
           </span>
         )}
         {file.description && (

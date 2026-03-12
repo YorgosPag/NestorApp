@@ -1,11 +1,8 @@
 "use client";
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { FileText, Plus } from 'lucide-react';
-// 🏢 ENTERPRISE: i18n support
+import { FileText } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { EmptyState as SharedEmptyState } from '@/components/shared/EmptyState';
 
 interface EmptyStateProps {
   readOnly: boolean;
@@ -13,26 +10,19 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ readOnly, onAddSection }: EmptyStateProps) {
-  const iconSizes = useIconSizes();
-  // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('common');
-
   return (
-    <Card>
-      <CardContent className="text-center py-12">
-        <FileText className={`${iconSizes.xl12} mx-auto mb-4 text-muted-foreground/50`} /> {/* 🏢 ENTERPRISE: Using xl12 (h-48 w-48) - 'huge' doesn't exist */}
-        <h3 className="font-medium mb-2">{t('obligations.noSections')}</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          {t('obligations.startByAddingSection')}
-        </p>
-        {!readOnly && (
-          <Button onClick={onAddSection}>
-            <Plus className={`${iconSizes.sm} mr-2`} />
-            {t('obligations.addSection')}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+    <SharedEmptyState
+      icon={FileText}
+      iconColor="text-muted-foreground/50"
+      title={t('obligations.noSections')}
+      description={t('obligations.startByAddingSection')}
+      size="lg"
+      variant="card"
+      action={!readOnly ? {
+        label: t('obligations.addSection'),
+        onClick: onAddSection,
+      } : undefined}
+    />
   );
 }
-

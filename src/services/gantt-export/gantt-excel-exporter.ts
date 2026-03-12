@@ -11,6 +11,7 @@
 import ExcelJS from 'exceljs';
 import type { GanttExportOptions } from './types';
 import { designTokens } from '@/styles/design-tokens';
+import { formatDateShort } from '@/lib/intl-utils';
 import { flattenTaskGroupsToRows, triggerBlobDownload } from './gantt-export-utils';
 const toExcelArgb = (hexColor: string): string => {
   const normalized = hexColor.replace('#', '').toUpperCase();
@@ -99,7 +100,7 @@ export async function exportGanttToExcel(options: GanttExportOptions): Promise<v
   const completedTasks = rows.filter((r) => r.progress >= 100).length;
 
   summarySheet.addRow({ metric: 'Κτίριο', value: buildingName });
-  summarySheet.addRow({ metric: 'Ημ. Εξαγωγής', value: new Date().toLocaleDateString('el-GR') });
+  summarySheet.addRow({ metric: 'Ημ. Εξαγωγής', value: formatDateShort(new Date()) });
   summarySheet.addRow({ metric: 'Συνολικές Φάσεις', value: totalPhases });
   summarySheet.addRow({ metric: 'Συνολικές Εργασίες', value: totalTasks });
   summarySheet.addRow({ metric: 'Ολοκληρωμένες Εργασίες', value: completedTasks });

@@ -12,6 +12,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatDateShort } from '@/lib/intl-utils';
 import type { GanttExportOptions } from './types';
 import { captureGanttAsDataUrl, flattenTaskGroupsToRows } from './gantt-export-utils';
 
@@ -64,7 +65,7 @@ export async function exportGanttToPDF(options: GanttExportOptions): Promise<voi
   pdf.text(buildingName, 14, 15);
   pdf.setFontSize(10);
   pdf.text(
-    new Date().toLocaleDateString('el-GR'),
+    formatDateShort(new Date()),
     pageWidth - 14,
     15,
     { align: 'right' },

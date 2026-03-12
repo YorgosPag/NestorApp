@@ -1,87 +1,64 @@
 'use client';
 
+/**
+ * Storage Statistics — thin wrapper over useEntityStats
+ * Includes distribution maps (byFloor, byBuilding) and rate calculations.
+ * @module hooks/useStorageStats
+ */
+
 import { useMemo } from 'react';
 import type { Storage } from '@/types/storage/contracts';
+import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
+
+const getArea = (s: Storage): number => s.area || 0;
+const getValue = (s: Storage): number => s.price || 0;
+const getStatus = (s: Storage): string => s.status || 'unknown';
+const getType = (s: Storage): string => s.type || 'unknown';
 
 export function useStorageStats(storages: Storage[]) {
+  const base = useEntityStats(storages, { getArea, getValue, getStatus, getType });
+
   const stats = useMemo(() => {
-    // Basic counts
-    const totalStorages = storages.length;
-    const availableStorages = storages.filter(s => s.status === 'available').length;
-    const occupiedStorages = storages.filter(s => s.status === 'occupied').length;
-    const maintenanceStorages = storages.filter(s => s.status === 'maintenance').length;
-    const reservedStorages = storages.filter(s => s.status === 'reserved').length;
+    const total = base.total;
 
-    // Area calculations
-    const totalArea = storages.reduce((sum, s) => sum + (s.area || 0), 0);
-    const averageArea = totalStorages > 0 ? totalArea / totalStorages : 0;
+    // Status counts
+    const available = countBy(storages, s => s.status === 'available');
+    const occupied = countBy(storages, s => s.status === 'occupied');
+    const maintenance = countBy(storages, s => s.status === 'maintenance');
+    const reserved = countBy(storages, s => s.status === 'reserved');
 
-    // Price calculations
-    const totalValue = storages.reduce((sum, s) => sum + (s.price || 0), 0);
-    const averagePrice = totalStorages > 0 ? totalValue / totalStorages : 0;
-
-    // Building distribution
+    // Distributions
     const uniqueBuildings = new Set(storages.map(s => s.building).filter(Boolean)).size;
-
-    // Type distribution
-    const storagesByType = storages.reduce((acc, storage) => {
-      const type = storage.type || 'unknown';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Status distribution
-    const storagesByStatus = {
-      available: availableStorages,
-      occupied: occupiedStorages,
-      maintenance: maintenanceStorages,
-      reserved: reservedStorages
-    };
-
-    // Floor distribution
-    const storagesByFloor = storages.reduce((acc, storage) => {
-      const floor = storage.floor || 'Άγνωστος';
-      acc[floor] = (acc[floor] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Building distribution
-    const storagesByBuilding = storages.reduce((acc, storage) => {
-      const building = storage.building || 'Άγνωστο';
-      acc[building] = (acc[building] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const storagesByFloor = groupBy(storages, s => s.floor || 'Άγνωστος');
+    const storagesByBuilding = groupBy(storages, s => s.building || 'Άγνωστο');
 
     return {
-      // Basic metrics
-      totalStorages,
-      availableStorages,
-      occupiedStorages,
-      maintenanceStorages,
-      reservedStorages,
+      totalStorages: total,
+      availableStorages: available,
+      occupiedStorages: occupied,
+      maintenanceStorages: maintenance,
+      reservedStorages: reserved,
 
-      // Area metrics
-      totalArea,
-      averageArea,
+      totalArea: base.totalArea,
+      averageArea: base.averageArea,
+      totalValue: base.totalValue,
+      averagePrice: base.averageValue,
 
-      // Price metrics
-      totalValue,
-      averagePrice,
-
-      // Distribution metrics
       uniqueBuildings,
-      storagesByType,
-      storagesByStatus,
+      storagesByType: base.byType,
+      storagesByStatus: {
+        available,
+        occupied,
+        maintenance,
+        reserved,
+      },
       storagesByFloor,
       storagesByBuilding,
 
-      // Utilization rate
-      utilizationRate: totalStorages > 0 ? Math.round((occupiedStorages / totalStorages) * 100) : 0,
-
-      // Availability rate
-      availabilityRate: totalStorages > 0 ? Math.round((availableStorages / totalStorages) * 100) : 0
+      utilizationRate: rate(occupied, total),
+      availabilityRate: rate(available, total),
     };
-  }, [storages]);
+  }, [base, storages]);
 
   return stats;
 }

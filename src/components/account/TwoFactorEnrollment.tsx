@@ -19,6 +19,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 import {
   Smartphone,
   KeyRound,
@@ -597,7 +598,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
                   {t('twoFactor.enrolledAt')}
                 </dt>
                 <dd className={typography.body.sm}>
-                  {new Date(twoFactorState.enrolledAt).toLocaleDateString('el-GR')}
+                  {formatDateShort(new Date(twoFactorState.enrolledAt))}
                 </dd>
               </div>
             )}

@@ -18,6 +18,7 @@
  * @gdpr-compliant true
  */
 
+import { formatDateShort } from '@/lib/intl-utils';
 import {
   collection,
   doc,
@@ -766,7 +767,7 @@ export class EnterpriseSessionService {
       return `${diffDays} ημέρες πριν`;
     }
 
-    return date.toLocaleDateString('el-GR');
+    return formatDateShort(date);
   }
 }
 

@@ -13,6 +13,7 @@
  */
 
 import jsPDF from 'jspdf';
+import { formatDateShort } from '@/lib/intl-utils';
 import autoTable from 'jspdf-autotable';
 import type { MilestoneExportOptions, MilestoneExportRow } from './types';
 import type { Milestone } from '@/components/building-management/tabs/TimelineTabContent/MilestoneItem';
@@ -87,7 +88,7 @@ function prepareMilestoneRows(milestones: Milestone[]): MilestoneExportRow[] {
     index: i + 1,
     title: m.title,
     description: m.description ?? '',
-    date: new Date(m.date).toLocaleDateString('el-GR'),
+    date: formatDateShort(new Date(m.date)),
     status: STATUS_TEXT[m.status] ?? m.status,
     statusRaw: m.status,
     progress: m.progress ?? 0,
@@ -117,7 +118,7 @@ function drawReportHeader(
   pdf.setFontSize(10);
   pdf.setTextColor(71, 85, 105);
   pdf.text(
-    `Ημ. Αναφοράς: ${new Date().toLocaleDateString('el-GR')}`,
+    `Ημ. Αναφοράς: ${formatDateShort(new Date())}`,
     pageWidth - MARGIN,
     y,
     { align: 'right' },

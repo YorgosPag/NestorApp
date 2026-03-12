@@ -1,27 +1,26 @@
 'use client';
 
+/**
+ * Units Statistics — thin wrapper over useEntityStats
+ * Includes enterprise CoverageStats for Πληρότητα dashboard card.
+ * @module hooks/useUnitsStats
+ */
+
 import { useMemo } from 'react';
 import type { Property } from '@/types/property-viewer';
+import { useEntityStats, countBy, rate } from './useEntityStats';
 
 /**
- * ✅ ENTERPRISE: Unit documentation coverage stats
+ * Unit documentation coverage stats
  * Used for Πληρότητα dashboard card
- * @since PR1.2 - Coverage/Completeness implementation
  */
 export interface CoverageStats {
-  /** Total units evaluated for coverage */
   totalUnits: number;
-  /** Units with photos */
   unitsWithPhotos: number;
-  /** Units with floorplans */
   unitsWithFloorplans: number;
-  /** Units with documents */
   unitsWithDocuments: number;
-  /** % with photos (0-100) */
   photosPercentage: number;
-  /** % with floorplans (0-100) */
   floorplansPercentage: number;
-  /** % with documents (0-100) */
   documentsPercentage: number;
 }
 
@@ -35,13 +34,24 @@ export interface UnitsStats {
   averageArea: number;
   unitsByStatus: { [key: string]: number };
   unitsByType: { [key: string]: number };
-  /** ✅ ENTERPRISE: Coverage stats for Πληρότητα card */
   coverage: CoverageStats;
 }
 
+const AVAILABLE_STATUSES = ['for-sale', 'for-rent'];
+const SOLD_STATUSES = ['sold', 'rented'];
+
+const getArea = (u: Property): number => u.area || 0;
+const getValue = (u: Property): number => u.price || 0;
+const getStatus = (u: Property): string => u.status || 'unknown';
+const getType = (u: Property): string => u.type || 'unknown';
+
 export function useUnitsStats(units: Property[]): UnitsStats {
-  const stats = useMemo(() => {
-    if (!units || units.length === 0) {
+  const base = useEntityStats(units, { getArea, getValue, getStatus, getType });
+
+  const stats = useMemo<UnitsStats>(() => {
+    const total = base.total;
+
+    if (total === 0) {
       return {
         totalUnits: 0,
         availableUnits: 0,
@@ -60,74 +70,39 @@ export function useUnitsStats(units: Property[]): UnitsStats {
           photosPercentage: 0,
           floorplansPercentage: 0,
           documentsPercentage: 0,
-        }
+        },
       };
     }
 
-    const availableStatuses = ['for-sale', 'for-rent'];
-    const soldStatuses = ['sold', 'rented'];
+    const availableUnits = countBy(units, u => !!u.status && AVAILABLE_STATUSES.includes(u.status));
+    const soldUnits = countBy(units, u => !!u.status && SOLD_STATUSES.includes(u.status));
 
-    const totalUnits = units.length;
-    const availableUnits = units.filter(unit =>
-      unit.status && availableStatuses.includes(unit.status)
-    ).length;
-    const soldUnits = units.filter(unit =>
-      unit.status && soldStatuses.includes(unit.status)
-    ).length;
-
-    const totalValue = units.reduce((sum, unit) => sum + (unit.price || 0), 0);
-    const averageValue = totalUnits > 0 ? totalValue / totalUnits : 0;
-
-    const totalArea = units.reduce((sum, unit) => sum + (unit.area || 0), 0);
-    const averageArea = totalUnits > 0 ? totalArea / totalUnits : 0;
-
-    // Group by status
-    const unitsByStatus = units.reduce((acc, unit) => {
-      const status = unit.status || 'unknown';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as { [key: string]: number });
-
-    // Group by type
-    const unitsByType = units.reduce((acc, unit) => {
-      const type = unit.type || 'unknown';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {} as { [key: string]: number });
-
-    // =========================================================================
-    // ✅ ENTERPRISE: Calculate coverage statistics
-    // =========================================================================
-
-    // ⚠️ BACKWARD COMPATIBILITY: Handle missing unitCoverage until backfill completes
-    // Units without coverage data are treated as "missing" (false) for all categories
-    const unitsWithPhotos = units.filter(unit => unit.unitCoverage?.hasPhotos === true).length;
-    const unitsWithFloorplans = units.filter(unit => unit.unitCoverage?.hasFloorplans === true).length;
-    const unitsWithDocuments = units.filter(unit => unit.unitCoverage?.hasDocuments === true).length;
-
-    const coverage: CoverageStats = {
-      totalUnits,
-      unitsWithPhotos,
-      unitsWithFloorplans,
-      unitsWithDocuments,
-      photosPercentage: totalUnits > 0 ? Math.round((unitsWithPhotos / totalUnits) * 100) : 0,
-      floorplansPercentage: totalUnits > 0 ? Math.round((unitsWithFloorplans / totalUnits) * 100) : 0,
-      documentsPercentage: totalUnits > 0 ? Math.round((unitsWithDocuments / totalUnits) * 100) : 0,
-    };
+    // Coverage stats (backward compatible: missing unitCoverage → false)
+    const unitsWithPhotos = countBy(units, u => u.unitCoverage?.hasPhotos === true);
+    const unitsWithFloorplans = countBy(units, u => u.unitCoverage?.hasFloorplans === true);
+    const unitsWithDocuments = countBy(units, u => u.unitCoverage?.hasDocuments === true);
 
     return {
-      totalUnits,
+      totalUnits: total,
       availableUnits,
       soldUnits,
-      totalValue,
-      averageValue,
-      totalArea,
-      averageArea,
-      unitsByStatus,
-      unitsByType,
-      coverage
+      totalValue: base.totalValue,
+      averageValue: base.averageValue,
+      totalArea: base.totalArea,
+      averageArea: base.averageArea,
+      unitsByStatus: base.byStatus,
+      unitsByType: base.byType,
+      coverage: {
+        totalUnits: total,
+        unitsWithPhotos,
+        unitsWithFloorplans,
+        unitsWithDocuments,
+        photosPercentage: rate(unitsWithPhotos, total),
+        floorplansPercentage: rate(unitsWithFloorplans, total),
+        documentsPercentage: rate(unitsWithDocuments, total),
+      },
     };
-  }, [units]);
+  }, [base, units]);
 
   return stats;
 }

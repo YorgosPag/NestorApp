@@ -1,19 +1,14 @@
 'use client';
 
 /**
- * 🅿️ ENTERPRISE PARKING STATISTICS HOOK
- *
- * Υπολογισμός στατιστικών για θέσεις στάθμευσης
- * Ακολουθεί το exact pattern από useStorageStats.ts
- *
- * ΑΡΧΙΤΕΚΤΟΝΙΚΗ (REAL_ESTATE_HIERARCHY_DOCUMENTATION.md):
- * - Parking είναι παράλληλη κατηγορία με Units/Storage μέσα στο Building
- * - ΟΧΙ children των Units
- * - Ισότιμη οντότητα στην πλοήγηση
+ * Parking Statistics — thin wrapper over useEntityStats
+ * Includes distribution maps (byFloor, byBuilding) and rate calculations.
+ * @module hooks/useParkingStats
  */
 
 import { useMemo } from 'react';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
+import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
 
 export interface ParkingStats {
   // Basic metrics
@@ -45,97 +40,59 @@ export interface ParkingStats {
   salesRate: number;
 }
 
+const getArea = (p: ParkingSpot): number => p.area || 0;
+const getValue = (p: ParkingSpot): number => p.price || 0;
+const getStatus = (p: ParkingSpot): string => p.status || 'unknown';
+const getType = (p: ParkingSpot): string => p.type || 'unknown';
+
 export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
-  const stats = useMemo(() => {
-    // Basic counts
-    const totalParkingSpots = parkingSpots.length;
-    const availableParkingSpots = parkingSpots.filter(p => p.status === 'available').length;
-    const occupiedParkingSpots = parkingSpots.filter(p => p.status === 'occupied').length;
-    const reservedParkingSpots = parkingSpots.filter(p => p.status === 'reserved').length;
-    const soldParkingSpots = parkingSpots.filter(p => p.status === 'sold').length;
-    const maintenanceParkingSpots = parkingSpots.filter(p => p.status === 'maintenance').length;
+  const base = useEntityStats(parkingSpots, { getArea, getValue, getStatus, getType });
 
-    // Area calculations
-    const totalArea = parkingSpots.reduce((sum, p) => sum + (p.area || 0), 0);
-    const averageArea = totalParkingSpots > 0 ? totalArea / totalParkingSpots : 0;
+  const stats = useMemo<ParkingStats>(() => {
+    const total = base.total;
 
-    // Price calculations
-    const totalValue = parkingSpots.reduce((sum, p) => sum + (p.price || 0), 0);
-    const averagePrice = totalParkingSpots > 0 ? totalValue / totalParkingSpots : 0;
+    // Status counts
+    const available = countBy(parkingSpots, p => p.status === 'available');
+    const occupied = countBy(parkingSpots, p => p.status === 'occupied');
+    const reserved = countBy(parkingSpots, p => p.status === 'reserved');
+    const sold = countBy(parkingSpots, p => p.status === 'sold');
+    const maintenance = countBy(parkingSpots, p => p.status === 'maintenance');
 
-    // Building distribution
+    // Distributions
     const uniqueBuildings = new Set(parkingSpots.map(p => p.buildingId).filter(Boolean)).size;
-
-    // Type distribution
-    const parkingByType = parkingSpots.reduce((acc, parking) => {
-      const type = parking.type || 'unknown';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Status distribution
-    const parkingByStatus = {
-      available: availableParkingSpots,
-      occupied: occupiedParkingSpots,
-      reserved: reservedParkingSpots,
-      sold: soldParkingSpots,
-      maintenance: maintenanceParkingSpots
-    };
-
-    // Floor distribution
-    const parkingByFloor = parkingSpots.reduce((acc, parking) => {
-      const floor = parking.floor || 'Άγνωστος';
-      acc[floor] = (acc[floor] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Building distribution
-    const parkingByBuilding = parkingSpots.reduce((acc, parking) => {
-      const buildingId = parking.buildingId || 'Άγνωστο';
-      acc[buildingId] = (acc[buildingId] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const parkingByFloor = groupBy(parkingSpots, p => p.floor || 'Άγνωστος');
+    const parkingByBuilding = groupBy(parkingSpots, p => p.buildingId || 'Άγνωστο');
 
     return {
-      // Basic metrics
-      totalParkingSpots,
-      availableParkingSpots,
-      occupiedParkingSpots,
-      reservedParkingSpots,
-      soldParkingSpots,
-      maintenanceParkingSpots,
+      totalParkingSpots: total,
+      availableParkingSpots: available,
+      occupiedParkingSpots: occupied,
+      reservedParkingSpots: reserved,
+      soldParkingSpots: sold,
+      maintenanceParkingSpots: maintenance,
 
-      // Area metrics
-      totalArea,
-      averageArea,
+      totalArea: base.totalArea,
+      averageArea: base.averageArea,
+      totalValue: base.totalValue,
+      averagePrice: base.averageValue,
 
-      // Price metrics
-      totalValue,
-      averagePrice,
-
-      // Distribution metrics
       uniqueBuildings,
-      parkingByType,
-      parkingByStatus,
+      parkingByType: base.byType,
+      parkingByStatus: {
+        available,
+        occupied,
+        reserved,
+        sold,
+        maintenance,
+      },
       parkingByFloor,
       parkingByBuilding,
 
-      // Utilization rate (occupied / total)
-      utilizationRate: totalParkingSpots > 0
-        ? Math.round((occupiedParkingSpots / totalParkingSpots) * 100)
-        : 0,
-
-      // Availability rate (available / total)
-      availabilityRate: totalParkingSpots > 0
-        ? Math.round((availableParkingSpots / totalParkingSpots) * 100)
-        : 0,
-
-      // Sales rate (sold / total)
-      salesRate: totalParkingSpots > 0
-        ? Math.round((soldParkingSpots / totalParkingSpots) * 100)
-        : 0
+      utilizationRate: rate(occupied, total),
+      availabilityRate: rate(available, total),
+      salesRate: rate(sold, total),
     };
-  }, [parkingSpots]);
+  }, [base, parkingSpots]);
 
   return stats;
 }

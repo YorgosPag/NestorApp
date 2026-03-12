@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 import { User, Building2, Briefcase, Calendar, ShieldCheck, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,7 +62,7 @@ export function WorkerCard({ worker, onRemove }: WorkerCardProps) {
         {worker.hireDate && (
           <div className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground">
             <Calendar className={iconSizes.xs} />
-            <span>{new Date(worker.hireDate).toLocaleDateString('el-GR')}</span>
+            <span>{formatDateShort(new Date(worker.hireDate))}</span>
           </div>
         )}
 

@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 import { ChevronDown, Search, Mail, Phone, Building2, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -265,7 +266,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
 
               {contact.lastActivity && (
                 <span className="text-xs text-muted-foreground">
-                  {new Date(contact.lastActivity).toLocaleDateString('el-GR')}
+                  {formatDateShort(new Date(contact.lastActivity))}
                 </span>
               )}
             </div>

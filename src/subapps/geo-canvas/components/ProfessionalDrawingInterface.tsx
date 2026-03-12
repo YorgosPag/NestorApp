@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { formatDateShort } from '@/lib/intl-utils';
 // ✅ ENTERPRISE FIX: Remove mapbox-gl dependency - use local type definition
 interface MapRef {
   current: unknown | null;
@@ -586,7 +587,7 @@ export function ProfessionalDrawingInterface({
             <div className={`${colors.bg.accent} p-3 rounded-md`}>
               <p className={`text-sm font-medium ${colors.text.accent}`}>{t('realEstateMonitoring.stats.lastScan')}</p>
               <p className={`text-sm font-bold ${colors.text.accent}`}>
-                {realEstateStats.lastCheck ? new Date(realEstateStats.lastCheck).toLocaleDateString('el-GR') : '-'}
+                {realEstateStats.lastCheck ? formatDateShort(new Date(realEstateStats.lastCheck)) : '-'}
               </p>
             </div>
           </div>

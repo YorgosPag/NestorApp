@@ -10,6 +10,7 @@
 import { toPng, toSvg } from 'html-to-image';
 import type { TaskGroup } from 'react-modern-gantt';
 import { designTokens } from '@/styles/design-tokens';
+import { formatDateShort } from '@/lib/intl-utils';
 import type { GanttTaskExportRow } from './types';
 
 // ─── DOM Capture ──────────────────────────────────────────────────────────
@@ -89,8 +90,8 @@ export function flattenTaskGroupsToRows(
       rows.push({
         phaseName: group.name,
         taskName: task.name,
-        startDate: start.toLocaleDateString('el-GR'),
-        endDate: end.toLocaleDateString('el-GR'),
+        startDate: formatDateShort(start),
+        endDate: formatDateShort(end),
         duration: durationDays,
         progress: (task.progress as number) ?? 0,
         status: (task.taskStatus as string) ?? 'notStarted',
