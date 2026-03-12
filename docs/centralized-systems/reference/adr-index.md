@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 200 ADRs | Last Updated: 2026-03-12
+**📊 Stats**: 201 ADRs | Last Updated: 2026-03-12
 
 ---
 
@@ -237,6 +237,7 @@
 | **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
 | **ADR-213** | Phone/Email/VAT Validation Centralization | ✅ Implemented | 2026-03-12 | Centralization / Validation | [📄](./adrs/ADR-213-validation-centralization.md) |
 | **ADR-214** | Firestore Query Centralization — Audit & 11-Phase Plan | ✅ APPROVED — Audit Complete | 2026-03-12 | Data Access Layer / Architecture | [📄](./adrs/ADR-214-firestore-query-centralization.md) |
+| **ADR-215** | Phase 10 — chunkArray/isRecord/formatBytes/formatDate/formatCurrency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-215-phase10-chunk-typeguards-formatters.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
