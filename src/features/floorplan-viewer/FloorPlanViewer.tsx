@@ -35,6 +35,7 @@ import type { FloorPlanViewerLayoutProps } from './types';
 import { useZoom } from '@/subapps/dxf-viewer/systems/zoom/hooks/useZoom';
 import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
 import { asArray, ensureFloor, safeGetProperty } from './utils/safeProps';
+import { truncateText } from '@/lib/text-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('FloorPlanViewer');
 
@@ -100,7 +101,7 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
       logger.info('PDF uploaded successfully:', { data: {
         name: file.name,
         size: file.size,
-        url: url.substring(0, 50) + '...'
+        url: truncateText(url, 50)
       } });
       
       // Update floor data safely

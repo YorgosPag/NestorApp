@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useInterval } from '@/hooks/useInterval';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -252,21 +253,11 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     };
   }, [status, channel, pageSize, user, authLoading]);
 
-  // Polling - only when authenticated
-  useEffect(() => {
-    if (polling && user && !authLoading) {
-      pollingRef.current = setInterval(() => {
-        fetchConversations(1, false);
-      }, INBOX_POLL_MS);
-    }
-
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, [polling, fetchConversations, user, authLoading]);
+  // Polling - only when authenticated (ADR-205 Phase 4 — useInterval)
+  useInterval(
+    () => fetchConversations(1, false),
+    polling && user && !authLoading ? INBOX_POLL_MS : null,
+  );
 
   return {
     conversations,
@@ -426,21 +417,11 @@ export function useConversationMessages(
     };
   }, [conversationId, pageSize, order, user, authLoading, realtime, fetchMessages]);
 
-  // Polling - only when authenticated (SKIP if realtime mode)
-  useEffect(() => {
-    if (!realtime && polling && conversationId && user && !authLoading) {
-      pollingRef.current = setInterval(() => {
-        fetchMessages(1, false);
-      }, THREAD_POLL_MS);
-    }
-
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, [polling, conversationId, fetchMessages, realtime]);
+  // Polling - only when authenticated, SKIP if realtime mode (ADR-205 Phase 4 — useInterval)
+  useInterval(
+    () => fetchMessages(1, false),
+    !realtime && polling && conversationId && user && !authLoading ? THREAD_POLL_MS : null,
+  );
 
   return {
     messages,

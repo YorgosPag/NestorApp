@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Car } from 'lucide-react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
@@ -42,8 +43,7 @@ export function ParkingsList({
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortField>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
@@ -149,10 +149,7 @@ export function ParkingsList({
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
-          onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy);
-            setSortOrder(newSortOrder);
-          }}
+          onSortChange={onSortChange}
           onNewItem={() => logger.info('New parking')}
           onEditItem={(id) => logger.info('Edit parking', { id })}
           onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
@@ -173,10 +170,7 @@ export function ParkingsList({
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
-            onSortChange={(newSortBy, newSortOrder) => {
-              setSortBy(newSortBy);
-              setSortOrder(newSortOrder);
-            }}
+            onSortChange={onSortChange}
             onNewItem={() => logger.info('New parking')}
             onEditItem={(id) => logger.info('Edit parking', { id })}
             onDeleteItems={(ids) => logger.info('Delete parking', { ids })}

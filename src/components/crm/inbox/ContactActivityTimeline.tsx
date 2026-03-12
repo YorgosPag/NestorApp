@@ -16,6 +16,7 @@
 import React from 'react';
 import type { ConversationListItem, MessageListItem } from '@/hooks/inbox/useInboxApi';
 import { formatDateTime } from '@/lib/intl-utils';
+import { truncateText } from '@/lib/text-utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
@@ -195,9 +196,7 @@ function buildActivityEvents(
       title: isInbound
         ? t('inbox.activity.messageReceived')
         : t('inbox.activity.messageSent'),
-      description: messageContent.length > 80
-        ? messageContent.slice(0, 80) + '...'
-        : messageContent,
+      description: truncateText(messageContent, 80),
       date: new Date(message.createdAt),
       actor: senderName,
       status: message.deliveryStatus === 'failed' ? 'failed' : 'completed',

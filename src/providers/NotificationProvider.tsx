@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { useInterval } from '@/hooks/useInterval';
 import { toast, Toaster } from 'sonner';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n';
@@ -57,21 +58,17 @@ export function NotificationProvider({
   const recentNotifications = useRef<Map<string, number>>(new Map());
   const notificationQueue = useRef<NotificationData[]>([]);
 
-  // Cleanup old rate limiting entries
-  useEffect(() => {
-    const cleanup = setInterval(() => {
-      const now = Date.now();
-      const fiveMinutesAgo = now - 5 * 60 * 1000;
-      
-      for (const [key, timestamp] of recentNotifications.current.entries()) {
-        if (timestamp < fiveMinutesAgo) {
-          recentNotifications.current.delete(key);
-        }
-      }
-    }, 60000); // Cleanup every minute
+  // Cleanup old rate limiting entries (ADR-205 Phase 4 — useInterval)
+  useInterval(() => {
+    const now = Date.now();
+    const fiveMinutesAgo = now - 5 * 60 * 1000;
 
-    return () => clearInterval(cleanup);
-  }, []);
+    for (const [key, timestamp] of recentNotifications.current.entries()) {
+      if (timestamp < fiveMinutesAgo) {
+        recentNotifications.current.delete(key);
+      }
+    }
+  }, 60_000);
 
   // Accessibility: Announce to screen readers
   const announceToScreenReader = useCallback((message: string, priority: 'polite' | 'assertive' = 'polite') => {

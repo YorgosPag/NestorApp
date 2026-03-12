@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Project } from '@/types/project';
 import type { NavigationCompany } from '@/components/navigation/core/types';
@@ -19,7 +20,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Sort types from CompactToolbar
 import type { SortField } from '@/components/core/CompactToolbar/types';
-type SortDirection = 'asc' | 'desc';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -48,9 +48,8 @@ export function ProjectsList({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
 
-  // 🏢 ENTERPRISE: Sorting state
-  const [sortBy, setSortBy] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  // 🏢 ENTERPRISE: Sort state via centralized hook (ADR-205 Phase 4)
+  const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
 
   const toggleFavorite = (projectId: string) => {
     setFavorites(prev =>
@@ -59,12 +58,6 @@ export function ProjectsList({
         : [...prev, projectId]
     );
   };
-
-  // 🏢 ENTERPRISE: Sort handler
-  const handleSortChange = useCallback((field: SortField, direction: SortDirection) => {
-    setSortBy(field);
-    setSortDirection(direction);
-  }, []);
 
   // 🏢 ENTERPRISE: Sorted projects with memoization
   const displayProjects = useMemo(() => {
@@ -90,11 +83,11 @@ export function ProjectsList({
           comparison = 0;
       }
 
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return sorted;
-  }, [projects, sortBy, sortDirection]);
+  }, [projects, sortBy, sortOrder]);
 
 
   return (
@@ -115,7 +108,7 @@ export function ProjectsList({
           hasSelectedContact={!!selectedProject}
           sortBy={sortBy}
           onFiltersChange={() => {}}
-          onSortChange={handleSortChange}
+          onSortChange={onSortChange}
           onNewItem={onNewProject}
           onEditItem={onEditProject ? (_id: string) => onEditProject() : undefined}
           onDeleteItems={onDeleteProject ? (_ids: string[]) => onDeleteProject() : undefined}
@@ -131,7 +124,7 @@ export function ProjectsList({
             hasSelectedContact={!!selectedProject}
             sortBy={sortBy}
             onFiltersChange={() => {}}
-            onSortChange={handleSortChange}
+            onSortChange={onSortChange}
             onNewItem={onNewProject}
             onEditItem={onEditProject ? (_id: string) => onEditProject() : undefined}
             onDeleteItems={onDeleteProject ? (_ids: string[]) => onDeleteProject() : undefined}

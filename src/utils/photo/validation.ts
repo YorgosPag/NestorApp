@@ -1,4 +1,5 @@
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { truncateText } from '@/lib/text-utils';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PhotoValidation');
@@ -171,7 +172,7 @@ export function validateSinglePhoto(
       isFailed: false,
       debugInfo: {
         source: hasPrimaryURL ? 'primary' : 'fallback',
-        url: (primaryURL || fallbackURL)?.substring(0, 50) + '...',
+        url: truncateText((primaryURL || fallbackURL) ?? '', 50),
         photoType,
         contactType
       }

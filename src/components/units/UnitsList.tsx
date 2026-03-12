@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UnitsListHeader } from './list/UnitsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -42,8 +43,7 @@ export function UnitsList({
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   const [favorites, setFavorites] = useState<string[]>(['prop-1']);
-  const [sortBy, setSortBy] = useState<SortField>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
 
   // CompactToolbar state
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -169,10 +169,7 @@ export function UnitsList({
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
-          onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy);
-            setSortOrder(newSortOrder);
-          }}
+          onSortChange={onSortChange}
           hasSelectedContact={selectedUnitIds.length > 0}
           onNewItem={() => onNewUnit?.()}
           onEditItem={() => onEditUnit?.()}
@@ -195,10 +192,7 @@ export function UnitsList({
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
-            onSortChange={(newSortBy, newSortOrder) => {
-              setSortBy(newSortBy);
-              setSortOrder(newSortOrder);
-            }}
+            onSortChange={onSortChange}
             hasSelectedContact={selectedUnitIds.length > 0}
             onNewItem={() => onNewUnit?.()}
             onEditItem={() => onEditUnit?.()}

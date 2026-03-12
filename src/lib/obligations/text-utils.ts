@@ -2,11 +2,8 @@ import { DEFAULT_READING_SPEED } from '@/core/configuration/business-rules';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('text-utils');
 
-export function truncateText(text: string, maxLength: number = 150): string {
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength).trim() + '...';
-}
+// Re-exported from shared text-utils (ADR-205 Phase 4)
+export { truncateText } from '@/lib/text-utils';
 
 export function highlightSearchTerm(
   text: string,

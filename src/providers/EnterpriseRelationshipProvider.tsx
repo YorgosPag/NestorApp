@@ -13,6 +13,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from 'react';
+import { useInterval } from '@/hooks/useInterval';
 import type {
   EntityType,
   RelationshipOperationResult,
@@ -323,26 +324,21 @@ export function EnterpriseRelationshipProvider({
   // PERIODIC INTEGRITY CHECKS
   // ========================================
 
-  useEffect(() => {
-    if (!performanceMonitoring || !state.isInitialized) return;
-
-    const intervalId = setInterval(async () => {
-      try {
-        const integrityResult = await relationships.validateIntegrity();
-        dispatch({
-          type: 'UPDATE_PERFORMANCE',
-          payload: {
-            integrityScore: integrityResult.isValid ? 100 : calculateIntegrityScore(integrityResult),
-            lastIntegrityCheck: new Date()
-          }
-        });
-      } catch (error) {
-        logger.warn('Periodic integrity check failed', { error });
-      }
-    }, integrityCheckInterval);
-
-    return () => clearInterval(intervalId);
-  }, [relationships, performanceMonitoring, integrityCheckInterval, state.isInitialized]);
+  // Periodic integrity checks (ADR-205 Phase 4 — useInterval)
+  useInterval(async () => {
+    try {
+      const integrityResult = await relationships.validateIntegrity();
+      dispatch({
+        type: 'UPDATE_PERFORMANCE',
+        payload: {
+          integrityScore: integrityResult.isValid ? 100 : calculateIntegrityScore(integrityResult),
+          lastIntegrityCheck: new Date()
+        }
+      });
+    } catch (error) {
+      logger.warn('Periodic integrity check failed', { error });
+    }
+  }, performanceMonitoring && state.isInitialized ? integrityCheckInterval : null);
 
   // ========================================
   // ENHANCED OPERATION WRAPPERS

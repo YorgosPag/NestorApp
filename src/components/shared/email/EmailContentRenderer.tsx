@@ -21,6 +21,7 @@
  */
 
 import { sanitizeEmailHTML, detectEmailSignature } from '@/lib/message-utils';
+import { truncateText } from '@/lib/text-utils';
 
 // ============================================================================
 // TYPES
@@ -121,7 +122,7 @@ const parseTextWithLinks = (text: string): TextPart[] => {
         const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
         displayText = urlObj.hostname.replace('www.', '');
       } catch {
-        displayText = url.length > 40 ? url.slice(0, 40) + '...' : url;
+        displayText = truncateText(url, 40);
       }
 
       links.push({
@@ -261,7 +262,7 @@ export function SafeHTMLContent({ html }: { html: string }) {
           try {
             return new URL(href).hostname.replace('www.', '');
           } catch {
-            return url.length > 40 ? url.substring(0, 40) + '...' : url;
+            return truncateText(url, 40);
           }
         })();
         return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-[hsl(var(--link-color))] underline hover:text-[hsl(var(--link-color-hover))] transition-colors">${displayText}</a>`;

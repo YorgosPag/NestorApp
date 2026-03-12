@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
@@ -42,8 +43,7 @@ export const BuildingsList = React.memo(function BuildingsList({
   // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation('building');
   const [favorites, setFavorites] = useState<string[]>(['1']);
-  const [sortBy, setSortBy] = useState<SortField>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
@@ -140,10 +140,7 @@ export const BuildingsList = React.memo(function BuildingsList({
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
-          onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy);
-            setSortOrder(newSortOrder);
-          }}
+          onSortChange={onSortChange}
           hasSelectedContact={!!selectedBuilding}
           onNewItem={onNewBuilding ? () => onNewBuilding() : undefined}
           onEditItem={onEditBuilding ? () => onEditBuilding() : undefined}

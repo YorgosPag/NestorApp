@@ -11,6 +11,7 @@ import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } fr
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { truncateText } from '@/lib/text-utils';
 
 /** Firestore Timestamp type */
 interface FirestoreTimestamp {
@@ -77,7 +78,7 @@ export function TelegramNotifications() {
   const showBrowserNotification = (message: TelegramMessage) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(t('telegram.newMessage'), {
-        body: message.content.substring(0, 100) + '...',
+        body: truncateText(message.content, 100),
         icon: '/telegram-icon.png',
         tag: 'telegram-message'
       });

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 191 ADRs | Last Updated: 2026-03-12
+**📊 Stats**: 192 ADRs | Last Updated: 2026-03-12
 
 ---
 
@@ -227,6 +227,7 @@
 | **ADR-202** | Floorplan Save Orchestrator | ✅ ✅ APPROVED | 2026-03-12 | Backend Systems / File Storage | [📄](./adrs/ADR-202-floorplan-save-orchestrator.md) |
 | **ADR-203** | Entity Page State Centralization | ✅ ✅ IMPLEMENTED | 2026-03-12 | Data & State / Hooks | [📄](./adrs/ADR-203-entity-page-state-centralization.md) |
 | **ADR-204** | Phase 3 — useEscapeKey, Entity Routes, Safe localStorage | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-204-phase3-escape-routes-storage.md) |
+| **ADR-205** | Phase 4 — useInterval, useSortState, truncateText promotion | ✅ IMPLEMENTED | 2026-03-12 | Code Quality / Centralization | [📄](./adrs/ADR-205-phase4-useInterval-useSortState-truncateText.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

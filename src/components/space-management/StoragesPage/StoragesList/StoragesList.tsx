@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Warehouse } from 'lucide-react';
 import type { Storage } from '@/types/storage/contracts';
@@ -35,8 +36,7 @@ export function StoragesList({
   const { t } = useTranslation('storage');
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortField>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
@@ -143,10 +143,7 @@ export function StoragesList({
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
-          onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy);
-            setSortOrder(newSortOrder);
-          }}
+          onSortChange={onSortChange}
           onNewItem={() => logger.info('New storage')}
           onEditItem={(id) => logger.info('Edit storage', { id })}
           onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
@@ -167,10 +164,7 @@ export function StoragesList({
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
-            onSortChange={(newSortBy, newSortOrder) => {
-              setSortBy(newSortBy);
-              setSortOrder(newSortOrder);
-            }}
+            onSortChange={onSortChange}
             onNewItem={() => logger.info('New storage')}
             onEditItem={(id) => logger.info('Edit storage', { id })}
             onDeleteItems={(ids) => logger.info('Delete storages', { ids })}

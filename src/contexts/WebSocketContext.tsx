@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { useInterval } from '@/hooks/useInterval';
 import WebSocketService, {
   WebSocketEventType,
   WebSocketMessage,
@@ -588,14 +589,8 @@ export function WebSocketDebugPanel() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
 
-  useEffect(() => {
-    if (isOpen) {
-      const interval = setInterval(() => {
-        setStats(getStats());
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isOpen, getStats]);
+  // Debug stats refresh (ADR-205 Phase 4 — useInterval)
+  useInterval(() => setStats(getStats()), isOpen ? 1000 : null);
 
   if (process.env.NODE_ENV !== 'development') {
     return null;

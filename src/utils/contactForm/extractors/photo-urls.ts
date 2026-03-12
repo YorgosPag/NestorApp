@@ -9,6 +9,7 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { truncateText } from '@/lib/text-utils';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('PhotoUrlExtractor');
@@ -27,7 +28,7 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
     photos: formData.multiplePhotos?.map((p, i) => ({
       index: i,
       hasUploadUrl: !!p.uploadUrl,
-      uploadUrl: p.uploadUrl?.substring(0, 50) + '...'
+      uploadUrl: truncateText(p.uploadUrl ?? '', 50)
     }))
   });
 
@@ -49,7 +50,7 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
   logger.info(' EXTRACT MULTIPLE PHOTOS: Final extracted URLs:', {
     urlCount: urls.length,
     isEmpty: urls.length === 0,
-    urls: urls.map((url, i) => `${i}: ${url.substring(0, 50)}...`)
+    urls: urls.map((url, i) => `${i}: ${truncateText(url, 50)}`)
   });
 
   return urls;
@@ -77,7 +78,7 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
     if (formData.photoURL && formData.photoURL.trim() !== '' && !formData.photoURL.startsWith('blob:')) {
       // Accept both Base64 and Firebase Storage URLs
       if (formData.photoURL.startsWith('data:') || formData.photoURL.includes('firebasestorage.googleapis.com')) {
-        logger.info('EXTRACT PHOTO: Using photoURL (company representative):', { url: formData.photoURL.substring(0, 50) + '...' });
+        logger.info('EXTRACT PHOTO: Using photoURL (company representative):', { url: truncateText(formData.photoURL, 50) });
         return formData.photoURL;
       }
     }
@@ -86,7 +87,7 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
     if (formData.photoPreview && formData.photoPreview.trim() !== '' && !formData.photoPreview.startsWith('blob:')) {
       // Accept both Base64 and Firebase Storage URLs
       if (formData.photoPreview.startsWith('data:') || formData.photoPreview.includes('firebasestorage.googleapis.com')) {
-        logger.info('EXTRACT PHOTO: Using photoPreview (company representative fallback):', { url: formData.photoPreview.substring(0, 50) + '...' });
+        logger.info('EXTRACT PHOTO: Using photoPreview (company representative fallback):', { url: truncateText(formData.photoPreview, 50) });
         return formData.photoPreview;
       }
     }
@@ -194,7 +195,7 @@ export function extractLogoURL(formData: ContactFormData, contactType: string): 
   if (formData.logoURL && formData.logoURL.trim() !== '' && !formData.logoURL.startsWith('blob:')) {
     // Accept both Base64 and Firebase Storage URLs
     if (formData.logoURL.startsWith('data:') || formData.logoURL.includes('firebasestorage.googleapis.com')) {
-      logger.info('EXTRACT LOGO: Using logoURL (UnifiedPhotoManager):', { url: formData.logoURL.substring(0, 50) + '...' });
+      logger.info('EXTRACT LOGO: Using logoURL (UnifiedPhotoManager):', { url: truncateText(formData.logoURL, 50) });
       return formData.logoURL;
     }
   }
@@ -203,7 +204,7 @@ export function extractLogoURL(formData: ContactFormData, contactType: string): 
   if (formData.logoPreview && formData.logoPreview.trim() !== '' && !formData.logoPreview.startsWith('blob:')) {
     // Accept both Base64 and Firebase Storage URLs
     if (formData.logoPreview.startsWith('data:') || formData.logoPreview.includes('firebasestorage.googleapis.com')) {
-      logger.info('EXTRACT LOGO: Using legacy logoPreview', { preview: formData.logoPreview.substring(0, 50) + '...' });
+      logger.info('EXTRACT LOGO: Using legacy logoPreview', { preview: truncateText(formData.logoPreview, 50) });
       return formData.logoPreview;
     }
   }
@@ -214,7 +215,7 @@ export function extractLogoURL(formData: ContactFormData, contactType: string): 
     const firstPhoto = multiplePhotoURLs[0];
     // Accept both Base64 and Firebase Storage URLs
     if (firstPhoto.startsWith('data:') || firstPhoto.includes('firebasestorage.googleapis.com')) {
-      logger.info('EXTRACT LOGO: Using centralized multiplePhotos[0] (fallback):', { url: firstPhoto.substring(0, 50) + '...' });
+      logger.info('EXTRACT LOGO: Using centralized multiplePhotos[0] (fallback):', { url: truncateText(firstPhoto, 50) });
       return firstPhoto;
     }
   }

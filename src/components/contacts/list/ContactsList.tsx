@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useSortState } from '@/hooks/useSortState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
@@ -53,9 +54,8 @@ export function ContactsList({
 }: ContactsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
-  // 🏢 ENTERPRISE: Using SortField type for toolbar compatibility
-  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status' | 'type'>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  // 🏢 ENTERPRISE: Sort state via centralized hook (ADR-205 Phase 4)
+  const { sortBy, sortOrder, onSortChange } = useSortState<'name' | 'date' | 'status' | 'type'>('name');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
 
   // 🏢 ENTERPRISE: CompactToolbar state - using string[] for contact IDs
@@ -301,12 +301,11 @@ export function ContactsList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
-            // 🏢 ENTERPRISE: Type narrowing - filter to supported contact sort fields
-            if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
-              setSortBy(newSortBy);
-            }
-            setSortOrder(newSortOrder);
-          }}
+              // Type narrowing: CompactToolbar sends SortField, hook expects narrower type
+              if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
+                onSortChange(newSortBy, newSortOrder);
+              }
+            }}
           hasSelectedContact={selectedContact !== null}
           onNewItem={onNewContact}
           onEditItem={(id) => selectedContact && onEditContact?.()}
@@ -330,12 +329,11 @@ export function ContactsList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
-            // 🏢 ENTERPRISE: Type narrowing - filter to supported contact sort fields
-            if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
-              setSortBy(newSortBy);
-            }
-            setSortOrder(newSortOrder);
-          }}
+              // Type narrowing: CompactToolbar sends SortField, hook expects narrower type
+              if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
+                onSortChange(newSortBy, newSortOrder);
+              }
+            }}
           hasSelectedContact={selectedContact !== null}
           onNewItem={onNewContact}
           onEditItem={(id) => selectedContact && onEditContact?.()}

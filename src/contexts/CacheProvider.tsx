@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { useInterval } from '@/hooks/useInterval';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('CacheProvider');
@@ -72,11 +73,8 @@ export function CacheProvider({
     });
   }, []);
 
-  // Cleanup interval
-  useEffect(() => {
-    const interval = setInterval(cleanup, 60000); // Cleanup every minute
-    return () => clearInterval(interval);
-  }, [cleanup]);
+  // Cleanup interval (ADR-205 Phase 4 — useInterval)
+  useInterval(cleanup, 60_000);
 
   const get = useCallback(<T,>(key: string): CacheEntry<T> | null => {
     const entry = cache.get(key) as CacheEntry<T> | undefined;

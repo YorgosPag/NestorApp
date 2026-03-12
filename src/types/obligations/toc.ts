@@ -1,4 +1,5 @@
 import type { ObligationDocument, TableOfContentsItem } from './contracts';
+import { truncateText } from '@/lib/text-utils';
 
 // Table of Contents generator
 export const generateTableOfContents = (document: ObligationDocument): TableOfContentsItem[] => {
@@ -42,7 +43,7 @@ export const generateTableOfContents = (document: ObligationDocument): TableOfCo
                   const paragraphToc: TableOfContentsItem = {
                     id: paragraph.id,
                     type: 'paragraph',
-                    title: paragraph.content.slice(0, 50) + '...', // First 50 chars as title
+                    title: truncateText(paragraph.content, 50), // First 50 chars as title
                     number: paragraph.number,
                     level: 3,
                     parentId: article.id
