@@ -5,7 +5,7 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { formatPriceWithUnit } from '@/lib/intl-utils';
+import { formatPriceWithUnit, formatFloorString } from '@/lib/intl-utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -96,7 +96,7 @@ export function StorageCard({
     <BaseCard
       // Βασικές ιδιότητες
       title={unit.identifier || unit.name}
-      subtitle={`${localizedGetTypeLabel(unit.type)} ${unit.floor ? `• ${t('card.floor', { floor: unit.floor })}` : ''}`}
+      subtitle={`${localizedGetTypeLabel(unit.type)} ${unit.floor ? `• ${formatFloorString(unit.floor)}` : ''}`}
       
       // Header configuration
       headerConfig={{

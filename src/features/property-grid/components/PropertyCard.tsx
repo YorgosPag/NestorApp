@@ -12,6 +12,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized floor label formatting (Ισόγειο, Υπόγειο, κλπ.)
+import { formatFloorLabel } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
 
@@ -51,7 +53,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
             <p className={`text-sm ${colors.text.muted} flex items-center gap-1 mt-1`}>
               {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
-              <span itemProp="location">{property.project} • {property.building} • {t('card.floor', { floor: property.floor })}</span>
+              <span itemProp="location">{property.project} • {property.building} • {formatFloorLabel(property.floor)}</span>
             </p>
           </section>
           <CommonBadge
