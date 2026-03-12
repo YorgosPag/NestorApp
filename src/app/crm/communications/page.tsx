@@ -336,8 +336,7 @@ export default function CrmCommunicationsPage() {
     },
   ];
 
-  // Dynamic header title with count
-  const headerTitle = t('inbox.title') + ` (${totalCount})`;
+  const headerTitle = t('inbox.title');
 
   return (
     <PageContainer ariaLabel={t('inbox.title')}>

@@ -260,7 +260,6 @@ export function ProjectsPageContent() {
             onNewProject={handleNewProject}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
-            projectCount={projectsStats.totalProjects}
         />
 
         {showDashboard && (

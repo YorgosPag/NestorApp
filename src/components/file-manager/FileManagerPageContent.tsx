@@ -705,8 +705,7 @@ export function FileManagerPageContent() {
     }
   }, [t]);
 
-  // Dynamic header title with count
-  const headerTitle = `${t('header.title')} (${filteredFiles.length})`;
+  const headerTitle = t('header.title');
 
   // Loading state
   if (!companyId) {

@@ -35,8 +35,6 @@ interface ProjectsHeaderProps {
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
-  // 🏢 ENTERPRISE COUNT DISPLAY
-  projectCount?: number;
 }
 
 // 🏢 ENTERPRISE: Type moved to interface section above
@@ -49,18 +47,12 @@ export function ProjectsHeader({
   onNewProject,
   showFilters,
   setShowFilters,
-  projectCount,
 }: ProjectsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
-
-  // 🏢 ENTERPRISE: Dynamic title with optional count
-  const headerTitle = projectCount !== undefined
-    ? t('header.titleWithCount', { count: projectCount })
-    : t('header.title');
 
   return (
     <PageHeader
@@ -69,7 +61,7 @@ export function ProjectsHeader({
       spacing="compact"
       title={{
         icon: NAVIGATION_ENTITIES.building.icon,
-        title: headerTitle,
+        title: t('header.title'),
         subtitle: t('header.subtitle')
       }}
       breadcrumb={<NavigationBreadcrumb />}
