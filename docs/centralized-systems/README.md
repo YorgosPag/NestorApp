@@ -6,7 +6,7 @@
 
 **📊 Quick Stats**: 33 Enterprise Systems + Accounting Subapp (11 ADRs) | 24,000+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-198 Sales-to-Accounting Bridge — Auto invoices, journal entries, email notifications on reserve/sell/cancel (2026-03-11)
+> **🆕 Latest**: ADR-203 Entity Page State Centralization — Generic useEntityPageState<T,F> hook eliminates 207 lines boilerplate across 4 entity pages (2026-03-12)
 
 ---
 
@@ -65,6 +65,7 @@
 - **[✏️ Drawing System](data-systems/drawing-system.md)** - Line drawing, state machine
 - **[🎯 Selection System](data-systems/selection-system.md)** - Multi-selection, marquee selection
 - **[🔍 Filter System](data-systems/filter-system.md)** - Enterprise filtering & search
+- **[📋 Entity Page State (ADR-203)](reference/adrs/ADR-203-entity-page-state-centralization.md)** - Centralized useEntityPageState hook (Projects, Buildings, Parking, Storages)
 - **[🏢 Entity Systems](data-systems/entity-systems.md)** - Entity linking, uploads, ID generation
 - **[🚨 Alert Engine](data-systems/alert-engine.md)** - Real-time monitoring & notifications
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
