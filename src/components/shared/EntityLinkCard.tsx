@@ -124,9 +124,12 @@ export function EntityLinkCard({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Track the last successfully saved value locally
-  // This solves stale props: parent may not re-render with updated building data
+  // Track the last successfully saved value locally (autoSave mode ONLY).
+  // When autoSave=false, parent controls state via currentValue — no internal tracking needed.
   const [savedValue, setSavedValue] = useState<string | undefined>(undefined);
+
+  // Effective saved value: only use savedValue in autoSave mode
+  const effectiveSavedValue = autoSave ? savedValue : undefined;
 
   // Load options on mount
   useEffect(() => {
@@ -200,15 +203,15 @@ export function EntityLinkCard({
     onValueChange?.(idValue, name);
 
     if (autoSave && onSave) {
-      // Auto-save: only if value actually changed from current
-      const effective = savedValue !== undefined ? (savedValue || NONE_VALUE) : (currentValue || NONE_VALUE);
+      // Auto-save: only if value actually changed from current/saved
+      const effective = effectiveSavedValue !== undefined ? (effectiveSavedValue || NONE_VALUE) : (currentValue || NONE_VALUE);
       if (value !== effective) {
         performSave(value);
       }
     }
-  }, [savedValue, currentValue, performSave, autoSave, onSave, onValueChange, options]);
+  }, [effectiveSavedValue, currentValue, performSave, autoSave, onSave, onValueChange, options]);
 
-  const currentName = options.find(o => o.id === (savedValue ?? currentValue))?.name;
+  const currentName = options.find(o => o.id === (effectiveSavedValue ?? currentValue))?.name;
   const selectedName = options.find(o => o.id === selectedId)?.name;
 
   // Searchable mode: filtered options based on search query
@@ -375,7 +378,7 @@ export function EntityLinkCard({
         {!hideCurrentLabel && currentName && (
           <p className={cn('text-sm', colors.text.muted)}>
             {labels.currentLabel} <strong>{
-              options.find(o => o.id === (savedValue ?? currentValue))?.currentLabel || currentName
+              options.find(o => o.id === (effectiveSavedValue ?? currentValue))?.currentLabel || currentName
             }</strong>
           </p>
         )}
