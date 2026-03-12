@@ -9,7 +9,7 @@ import {
   orderBy,
   limit as firestoreLimit,
   getDocs,
-  addDoc,
+  setDoc,
   updateDoc,
   doc,
   onSnapshot,
@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import type { Notification, Severity } from '@/types/notification';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateNotificationId } from '@/services/enterprise-id.service';
 
 const COLLECTION_NAME = COLLECTIONS.NOTIFICATIONS;
 
@@ -91,12 +92,15 @@ export async function fetchNotifications(params: NotificationQuery): Promise<Not
  * Create a new notification in Firestore
  */
 export async function createNotification(notification: Omit<Notification, 'id'>): Promise<string> {
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+  // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+  const id = generateNotificationId();
+  await setDoc(doc(db, COLLECTION_NAME, id), {
     ...notification,
+    id,
     createdAt: Timestamp.now()
   });
 
-  return docRef.id;
+  return id;
 }
 
 /**

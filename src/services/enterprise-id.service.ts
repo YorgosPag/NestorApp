@@ -35,6 +35,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   STORAGE: 'stor',
   PARKING: 'park',
   CONTACT: 'cont',
+  WORKSPACE: 'ws',
+  ADDRESS: 'addr',
+  OPPORTUNITY: 'opp',
   FLOOR: 'flr',
   DOCUMENT: 'doc',
   USER: 'usr',
@@ -48,6 +51,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   ARTICLE: 'art',
   PARAGRAPH: 'par',
   OBLIGATION: 'obl',
+  TRANSMITTAL: 'xmit',
 
   // ==========================================================================
   // RUNTIME & EPHEMERAL
@@ -327,6 +331,30 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.RELATIONSHIP).id;
   }
 
+  /**
+   * 🏢 Generate Workspace ID
+   * Format: ws_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateWorkspaceId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.WORKSPACE).id;
+  }
+
+  /**
+   * 📍 Generate Address ID
+   * Format: addr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAddressId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ADDRESS).id;
+  }
+
+  /**
+   * 💼 Generate Opportunity ID
+   * Format: opp_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateOpportunityId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.OPPORTUNITY).id;
+  }
+
   // ==========================================================================
   // LEGAL DOCUMENTS & OBLIGATIONS
   // ==========================================================================
@@ -361,6 +389,14 @@ export class EnterpriseIdService {
    */
   generateObligationId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.OBLIGATION).id;
+  }
+
+  /**
+   * 📨 Generate Transmittal ID
+   * Format: xmit_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateTransmittalId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.TRANSMITTAL).id;
   }
 
   /**
@@ -853,6 +889,9 @@ export const generateDocumentId = () => enterpriseIdService.generateDocumentId()
 export const generateUserId = () => enterpriseIdService.generateUserId();
 export const generateAssetId = () => enterpriseIdService.generateAssetId();
 export const generateRelationshipId = () => enterpriseIdService.generateRelationshipId();
+export const generateWorkspaceId = () => enterpriseIdService.generateWorkspaceId();
+export const generateAddressId = () => enterpriseIdService.generateAddressId();
+export const generateOpportunityId = () => enterpriseIdService.generateOpportunityId();
 
 // =============================================================================
 // LEGAL DOCUMENTS & OBLIGATIONS
@@ -861,6 +900,7 @@ export const generateSectionId = () => enterpriseIdService.generateSectionId();
 export const generateArticleId = () => enterpriseIdService.generateArticleId();
 export const generateParagraphId = () => enterpriseIdService.generateParagraphId();
 export const generateObligationId = () => enterpriseIdService.generateObligationId();
+export const generateTransmittalId = () => enterpriseIdService.generateTransmittalId();
 
 // =============================================================================
 // RUNTIME & EPHEMERAL

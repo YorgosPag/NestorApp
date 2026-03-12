@@ -23,6 +23,7 @@ import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { CONTACT_INFO, ContactInfoUtils } from '@/config/contact-info-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('UnitsRealUpdateRoute');
@@ -96,8 +97,8 @@ const postHandler = async (request: NextRequest) => {
         // ============================================================================
 
         logger.info('[Units/RealUpdate] Creating real contacts in database');
-        const contacts = ContactInfoUtils.generateSampleContacts(8).map((contact, index) => ({
-          id: `real_contact_${index + 1}`,
+        const contacts = ContactInfoUtils.generateSampleContacts(8).map((contact) => ({
+          id: generateContactId(),
           name: contact.fullName,
           email: contact.email
         }));

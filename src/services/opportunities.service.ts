@@ -4,12 +4,12 @@
 // Future: Consolidate with opportunities-client.service.ts (single source of truth)
 
 import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
-  updateDoc, 
+import {
+  collection,
+  setDoc,
+  getDocs,
+  doc,
+  updateDoc,
   deleteDoc,
   query,
   orderBy,
@@ -18,6 +18,7 @@ import {
   writeBatch,
   getDoc
 } from 'firebase/firestore';
+import { generateOpportunityId } from '@/services/enterprise-id.service';
 import type { Opportunity } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
@@ -42,12 +43,15 @@ const transformOpportunity = (doc: DocumentSnapshot<DocumentData> | QueryDocumen
 // Προσθήκη νέας ευκαιρίας
 export async function addOpportunity(opportunityData: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ id: string; success: boolean }> {
   try {
-    const docRef = await addDoc(collection(db, OPPORTUNITIES_COLLECTION), {
+    // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+    const id = generateOpportunityId();
+    await setDoc(doc(db, OPPORTUNITIES_COLLECTION, id), {
       ...opportunityData,
+      id,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    return { id: docRef.id, success: true };
+    return { id, success: true };
   } catch (error) {
     // Error logging removed //('Σφάλμα κατά την προσθήκη ευκαιρίας:', error);
     throw error;

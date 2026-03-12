@@ -53,6 +53,7 @@ import type {
 } from '@/types/workspace';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { generateWorkspaceId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('WorkspaceService');
 
@@ -316,11 +317,11 @@ export class WorkspaceService {
     }
 
     if (type === 'personal') {
-      return `ws_personal_${Date.now()}`;
+      return generateWorkspaceId();
     }
 
     // Fallback
-    return `ws_${type}_${Date.now()}`;
+    return generateWorkspaceId();
   }
 
   /**

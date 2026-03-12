@@ -10,7 +10,7 @@ import {
   getDocs,
   doc,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -18,7 +18,8 @@ import {
   orderBy,
   QueryConstraint,
 } from 'firebase/firestore';
-import { generateObligationId } from '@/services/enterprise-id.service';
+import { generateObligationId, generateTransmittalId } from '@/services/enterprise-id.service';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { auth, db } from '@/lib/firebase';
 import type {
   ObligationDocument,
@@ -390,26 +391,29 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
             fromStatus: 'draft',
             toStatus: 'draft',
             changedAt: now,
-            changedBy: 'system',
+            changedBy: SYSTEM_IDENTITY.ID,
             reason: 'Initial creation',
           },
         ],
         approvals: data.approvals,
-        auditTrail: [createAuditEvent('created', 'system', 'Obligation created')],
+        auditTrail: [createAuditEvent('created', SYSTEM_IDENTITY.ID, 'Obligation created')],
         distribution: data.distribution,
         issueLog: data.issueLog,
         phaseBinding: data.phaseBinding,
         costBinding: data.costBinding,
       };
 
+      // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+      const id = generateObligationId();
       const createPayload = stripUndefinedDeep({
         ...newObligation,
+        id,
         createdBy: currentUser.uid,
       });
-      const docRef = await addDoc(collection(db, COLLECTIONS.OBLIGATIONS), createPayload);
+      await setDoc(doc(db, COLLECTIONS.OBLIGATIONS, id), createPayload);
 
       return {
-        id: docRef.id,
+        id,
         ...newObligation,
       };
     } catch (error) {
@@ -431,7 +435,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       const now = new Date();
       const auditTrail = [
         ...(current.auditTrail || []),
-        createAuditEvent('updated', 'system', 'Obligation updated'),
+        createAuditEvent('updated', SYSTEM_IDENTITY.ID, 'Obligation updated'),
       ];
 
       const updateData: Partial<ObligationDocument> = {
@@ -496,11 +500,11 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
             fromStatus: 'draft',
             toStatus: 'draft',
             changedAt: new Date(),
-            changedBy: 'system',
+            changedBy: SYSTEM_IDENTITY.ID,
             reason: 'Document duplicated',
           },
         ],
-        auditTrail: [createAuditEvent('created', 'system', `Duplicated from obligation ${original.id}`)],
+        auditTrail: [createAuditEvent('created', SYSTEM_IDENTITY.ID, `Duplicated from obligation ${original.id}`)],
         sections: original.sections.map((section) => ({
           ...section,
           id: `${section.id}-copy-${Date.now()}`,
@@ -632,17 +636,20 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         updatedAt: now,
       };
 
-      const transmittalDocRef = await addDoc(
-        collection(db, COLLECTIONS.OBLIGATION_TRANSMITTALS),
+      // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+      const transmittalId = generateTransmittalId();
+      await setDoc(
+        doc(db, COLLECTIONS.OBLIGATION_TRANSMITTALS, transmittalId),
         stripUndefinedDeep({
           ...transmittalPayload,
+          id: transmittalId,
           createdBy: currentUser.uid,
         })
       );
 
       const issueLogEntry: ObligationIssueLogEntry = {
         id: generateObligationId(),
-        transmittalId: transmittalDocRef.id,
+        transmittalId,
         issuedAt: now,
         issuedBy: currentUser.uid,
         revision: current.revision ?? 1,
@@ -669,8 +676,8 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
           currentUser.uid,
           `Status changed from ${current.status} to issued: Issued via obligation transmittal`
         ),
-        createAuditEvent('issued', currentUser.uid, `Issued obligation with transmittal ${transmittalDocRef.id}`),
-        createAuditEvent('transmittal-created', currentUser.uid, `Created transmittal ${transmittalDocRef.id}`),
+        createAuditEvent('issued', currentUser.uid, `Issued obligation with transmittal ${transmittalId}`),
+        createAuditEvent('transmittal-created', currentUser.uid, `Created transmittal ${transmittalId}`),
       ];
 
       const nextDistribution: ObligationDistributionEntry[] = [
@@ -698,7 +705,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
       return {
         transmittal: {
-          id: transmittalDocRef.id,
+          id: transmittalId,
           ...transmittalPayload,
         },
         issueLogEntry,

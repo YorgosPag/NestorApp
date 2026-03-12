@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where,
+  collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, where,
   orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint,
   writeBatch, serverTimestamp, onSnapshot, Unsubscribe, deleteField, FieldValue,
   QuerySnapshot,
@@ -22,6 +22,7 @@ import type { Unit } from '@/types/unit';
 import { RealtimeService } from '@/services/realtime';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121) — persona form→Firestore mapping
 import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
+import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ContactsService');
@@ -227,18 +228,21 @@ export class ContactsService {
       }
 
       const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
+      const id = generateContactId();
       const createData: ContactFirestoreData = {
         ...sanitizedData,
+        id,
         companyId: userCompanyId, // 🏢 ENTERPRISE: Tenant isolation - CRITICAL for Firestore rules
         createdBy: currentUser.uid, // 🏢 ENTERPRISE: Track creator for authorization
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      // Type assertion needed for addDoc compatibility with FieldValue timestamps
-      const docRef = await addDoc(colRef, createData as unknown as Contact);
+      // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+      const docRef = doc(colRef, id);
+      await setDoc(docRef, createData as unknown as Contact);
 
       logger.info('CONTACT CREATED SUCCESSFULLY', {
-        contactId: docRef.id,
+        contactId: id,
         contactType: sanitizedData.type,
         contactName: this.getContactDisplayName(sanitizedData),
         sanitizationApplied: true
@@ -247,7 +251,7 @@ export class ContactsService {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       // Dispatch event for all components to update their local state
       RealtimeService.dispatch('CONTACT_CREATED',{
-        contactId: docRef.id,
+        contactId: id,
         contact: {
           type: sanitizedData.type,
           firstName: sanitizedData.type === 'individual' ? sanitizedData.firstName : undefined,
@@ -258,7 +262,7 @@ export class ContactsService {
         timestamp: Date.now()
       });
 
-      return docRef.id;
+      return id;
 
     } catch (error) {
       // 🏢 ENTERPRISE ERROR HANDLING με comprehensive error types

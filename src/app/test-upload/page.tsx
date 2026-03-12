@@ -9,6 +9,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+import { generateFileId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('TestUploadPage');
 
@@ -40,7 +41,7 @@ export default function TestUploadPage() {
 
     try {
       // 🔧 FIX: Try root level upload first
-      const fileName = `test_${Date.now()}_${file.name}`;
+      const fileName = `${generateFileId()}_${file.name}`;
       const storagePath = fileName; // Root level upload
       const storageRef = ref(storage, storagePath);
 

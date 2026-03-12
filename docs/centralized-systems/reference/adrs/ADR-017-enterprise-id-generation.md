@@ -13,4 +13,6 @@
 ## Summary
 
 - **Canonical**: `@/services/enterprise-id.service`
-- **Prohibited**: `Math.random()` for ID generation
+- **Prohibited**: `Math.random()`, `Date.now()`, inline `crypto.randomUUID()` for ID generation
+- **54+ generators** covering all entity types
+- **Latest additions (2026-03-12)**: `generateWorkspaceId()` (`ws`), `generateAddressId()` (`addr`), `generateOpportunityId()` (`opp`), `generateTransmittalId()` (`xmit`)

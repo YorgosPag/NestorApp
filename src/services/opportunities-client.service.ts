@@ -11,7 +11,8 @@
  * This file is for client-side operations that need immediate real-time dispatch.
  */
 
-import { collection, getDocs, query, orderBy, limit, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { generateOpportunityId } from '@/services/enterprise-id.service';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Opportunity } from '@/types/crm';
@@ -61,18 +62,21 @@ export async function createOpportunityClient(
   try {
     logger.info('Creating new opportunity');
 
-    const opportunitiesRef = collection(db, COLLECTIONS.OPPORTUNITIES);
-    const docRef = await addDoc(opportunitiesRef, {
+    // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+    const id = generateOpportunityId();
+    const opportunityRef = doc(db, COLLECTIONS.OPPORTUNITIES, id);
+    await setDoc(opportunityRef, {
       ...data,
+      id,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
-    logger.info('Opportunity created', { opportunityId: docRef.id });
+    logger.info('Opportunity created', { opportunityId: id });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatch('OPPORTUNITY_CREATED', {
-      opportunityId: docRef.id,
+      opportunityId: id,
       opportunity: {
         name: data.name,
         stage: data.stage,
@@ -83,7 +87,7 @@ export async function createOpportunityClient(
       timestamp: Date.now()
     });
 
-    return { success: true, opportunityId: docRef.id };
+    return { success: true, opportunityId: id };
 
   } catch (error) {
     logger.error('Error creating opportunity', { error });

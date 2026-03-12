@@ -16,6 +16,7 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('ADMIN_SESSION');
@@ -153,5 +154,5 @@ export function buildAdminIdentifier(
   if (sender.phone) {
     return `phone_${sender.phone}`;
   }
-  return `unknown_${Date.now()}`;
+  return generateTempId();
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { auth, db } from '@/lib/firebase';
-import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, setDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { generateTaskId } from '@/services/enterprise-id.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CrmTask } from '@/types/crm';
 import type { ITasksRepository } from '../contracts';
@@ -77,8 +78,10 @@ export class TasksRepository implements ITasksRepository {
       reminderSent: false,
     };
 
-    const docRef = await addDoc(collection(db, this.collectionName), payload);
-    return { id: docRef.id };
+    // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+    const id = generateTaskId();
+    await setDoc(doc(db, this.collectionName, id), { ...payload, id });
+    return { id };
   }
 
   async getById(taskId: string): Promise<CrmTask | null> {

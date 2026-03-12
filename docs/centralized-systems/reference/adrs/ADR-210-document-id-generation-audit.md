@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ APPROVED |
+| **Status** | ✅ APPROVED — Phase 1 + P1/P2 IMPLEMENTED |
 | **Date** | 2026-03-12 |
 | **Category** | Security / Data Integrity |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -159,18 +159,22 @@
 | `association_links` | `cl_{contactId}_{type}_{targetId}` | Relationship compound key | `association.service.ts` |
 | `dxf_files` | Sanitized filename | Deterministic from filename | `dxf-firestore.service.ts` |
 
-### 3.3 Collections με Firestore Auto-Generated IDs (addDoc) ⚠️
+### 3.3 Collections Migrated to Enterprise IDs ✅ (2026-03-12)
 
-Αυτές οι collections χρησιμοποιούν `addDoc()` = Firestore auto-generated 20-char ID. **Δεν χρησιμοποιούν** το enterprise ID service.
+| Collection | Generator | Migrated From |
+|------------|-----------|---------------|
+| `contacts` | `generateContactId()` | `addDoc` auto-ID |
+| `units` | `generateUnitId()` | `addDoc` auto-ID |
+| `tasks` | `generateTaskId()` | `addDoc` auto-ID |
+| `opportunities` | `generateOpportunityId()` | `addDoc` auto-ID (2 files) |
+| `obligations` | `generateObligationId()` | `addDoc` auto-ID |
+| `obligation_transmittals` | `generateTransmittalId()` | `addDoc` auto-ID |
+| `notifications` | `generateNotificationId()` | `addDoc` auto-ID |
+
+### 3.4 Collections με Firestore Auto-Generated IDs (addDoc) ⚠️ — Remaining
 
 | Collection | Αρχείο | Σχόλιο |
 |------------|--------|--------|
-| `contacts` | `contacts.service.ts:238` | Auto-ID αντί `generateContactId()` |
-| `units` | `units.service.ts:65` | Auto-ID αντί `generateUnitId()` |
-| `opportunities` | `opportunities.service.ts:45`, `opportunities-client.service.ts:65` | Auto-ID (2 σημεία) |
-| `obligations` | `InMemoryObligationsRepository.ts:409` | Auto-ID αντί `generateObligationId()` |
-| `obligation_transmittals` | `InMemoryObligationsRepository.ts:635` | Auto-ID |
-| `notifications` | `notificationService.ts:94` | Auto-ID |
 | `communications` | `communications.service.ts:193` | Auto-ID (legacy) |
 | `messages` (client) | `communications-client.service.ts:65`, `messageRouter.ts:240`, `orchestrator.ts:275` | Auto-ID (3 σημεία) |
 | `file_comments` | `file-comment.service.ts:75` | Auto-ID |
@@ -225,9 +229,9 @@
 
 | Μέτρηση | Αποτέλεσμα | Στόχος |
 |---------|------------|--------|
-| **Collections με Enterprise IDs** | 12/36 (33%) | 100% |
-| **Collections με Firestore Auto-IDs** | 24/36 (67%) | 0% |
-| **Inline ID Generation Violations** | 8 instances | 0 |
+| **Collections με Enterprise IDs** | 19/36 (53%) | 100% |
+| **Collections με Firestore Auto-IDs** | 17/36 (47%) | 0% |
+| **Inline ID Generation Violations** | 0 instances (8 fixed) | 0 ✅ |
 | **Server-side SHA-256 (σωστά)** | 4 generators | ✅ |
 | **Deterministic compound keys (σωστά)** | 6 patterns | ✅ |
 
@@ -241,10 +245,10 @@
 | **Audit Trail** | Logging σε dev mode | ✅ Development audit logging | ✅ 100% (όπου χρησιμοποιείται) |
 | **PII Protection** | No PII σε document IDs | ✅ SHA-256 hashing server-side | 🟡 Partial — **ΕΩΣ ADR-209 Cat.B remediation** (email σε doc keys, fallback IDs, type safety) |
 | **Determinism** | Idempotent server operations | ✅ SHA-256 server-side | ✅ 100% |
-| **Predictability Prevention** | No `Date.now()`, no sequential | ❌ 5 violations found | ❌ 0% |
-| **Consistency** | Single format ανά collection | ❌ Mixed auto-IDs + enterprise | ❌ 33% |
+| **Predictability Prevention** | No `Date.now()`, no sequential | ✅ All 8 violations fixed | ✅ 100% |
+| **Consistency** | Single format ανά collection | 🟡 53% enterprise IDs (P1+P2 done) | 🟡 53% |
 
-**Συνολική Βαθμολογία: 60% Enterprise Compliance**
+**Συνολική Βαθμολογία: 78% Enterprise Compliance** (was 60%, +18% after Phase 1 + P1/P2)
 **Στόχος: 100% (Zero inline ID generation, zero auto-IDs σε business entities)**
 
 ---
@@ -310,15 +314,17 @@ return id; // cont_a1b2c3d4-e5f6-4789-90ab-cdef12345678
 
 Generators που **ΔΕΝ υπάρχουν** ακόμα στο `enterprise-id.service.ts` αλλά χρειάζονται:
 
-| Generator | Prefix | Collection |
-|-----------|--------|------------|
-| `generateOpportunityId()` | `opp` | opportunities |
-| `generateBoqItemId()` | `boq` | boq_items |
-| `generateBankAccountId()` | `bacc` | bank_accounts |
-| `generateFolderId()` | `fold` | file_folders |
-| `generateApprovalId()` | `appr` | file_approvals |
-| `generateCommentId()` | `cmnt` | file_comments |
-| `generateTransmittalId()` | `xmit` | obligation_transmittals |
+| Generator | Prefix | Collection | Status |
+|-----------|--------|------------|--------|
+| ~~`generateOpportunityId()`~~ | `opp` | opportunities | ✅ Added 2026-03-12 |
+| ~~`generateTransmittalId()`~~ | `xmit` | obligation_transmittals | ✅ Added 2026-03-12 |
+| ~~`generateWorkspaceId()`~~ | `ws` | workspaces | ✅ Added 2026-03-12 |
+| ~~`generateAddressId()`~~ | `addr` | address sub-IDs | ✅ Added 2026-03-12 |
+| `generateBoqItemId()` | `boq` | boq_items | Pending (P3) |
+| `generateBankAccountId()` | `bacc` | bank_accounts | Pending (P4) |
+| `generateFolderId()` | `fold` | file_folders | Pending (P3) |
+| `generateApprovalId()` | `appr` | file_approvals | Pending (P3) |
+| `generateCommentId()` | `cmnt` | file_comments | Pending (P3) |
 
 ---
 
@@ -400,3 +406,4 @@ grep -rn "from.*enterprise-id" src/ --include="*.ts" --include="*.tsx" | wc -l
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-12 | Initial full codebase audit — 36 collections, 8 violations, 24 addDoc patterns, remediation roadmap | Claude Code (Anthropic AI) |
+| 2026-03-12 | **Phase 1 + P1/P2 IMPLEMENTED**: 4 new generators (ws, addr, opp, xmit), 8 violations fixed, 7 collections migrated addDoc→setDoc. Compliance: 33%→53% | Claude Code (Anthropic AI) |

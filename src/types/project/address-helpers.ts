@@ -24,6 +24,7 @@ import type {
 } from './addresses';
 import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { generateAddressId } from '@/services/enterprise-id.service';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('address-helpers');
@@ -164,7 +165,7 @@ export function createProjectAddress(
   // 🏢 ENTERPRISE: Use conditional spread to avoid undefined values
   // Firestore REJECTS undefined — omit optional fields entirely if not provided
   return {
-    id: data.id || crypto.randomUUID(),
+    id: data.id || generateAddressId(),
     street: data.street || '',
     city: data.city,
     postalCode: data.postalCode || '',
@@ -224,7 +225,7 @@ export function migrateLegacyAddress(
 
   return [
     createProjectAddress({
-      id: `proj_${crypto.randomUUID()}`,
+      id: generateAddressId(),
       street,
       number,
       city,

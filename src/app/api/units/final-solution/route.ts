@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { generateTempId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('UnitsFinalSolutionRoute');
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
           ).split(',').map(name => name.trim());
 
           availableContacts = Array.from({ length: 8 }, (_, index) => ({
-            id: `temp_contact_${Date.now()}_${index}`,
+            id: generateTempId(),
             name: fallbackNames[index] || `Customer ${index + 1}`
           }));
 

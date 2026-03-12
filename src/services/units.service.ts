@@ -3,7 +3,7 @@
 import { db } from '@/lib/firebase'; // Αλλαγή σε client-side db
 import {
   collection,
-  addDoc,
+  setDoc,
   getDocs,
   doc,
   updateDoc,
@@ -23,6 +23,7 @@ import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { normalizeUnit } from '@/utils/unit-normalizer';
+import { generateUnitId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('UnitsService');
@@ -62,8 +63,11 @@ const transformUnitToProperty = transformUnit;
 // Add a single unit
 export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: string; success: boolean }> {
   try {
-    const docRef = await addDoc(collection(db, UNITS_COLLECTION), {
+    // 🏢 ADR-210: Enterprise ID generation — setDoc with pre-generated ID
+    const id = generateUnitId();
+    await setDoc(doc(db, UNITS_COLLECTION, id), {
       ...unitData,
+      id,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -71,7 +75,7 @@ export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: str
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     // Dispatch event for all components to add the unit to their local state
     RealtimeService.dispatch('UNIT_CREATED',{
-      unitId: docRef.id,
+      unitId: id,
       unit: {
         name: unitData.name,
         type: unitData.type,
@@ -80,7 +84,7 @@ export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: str
       timestamp: Date.now()
     });
 
-    return { id: docRef.id, success: true };
+    return { id, success: true };
   } catch (error) {
     // Error logging removed
     throw error;
