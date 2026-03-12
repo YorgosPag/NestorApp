@@ -37,7 +37,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
-import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation';
+import { formatFileSize } from '@/utils/file-validation';
 import { formatDateTime } from '@/lib/intl-utils';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -76,10 +76,7 @@ export interface TrashViewProps {
 /**
  * Format file size
  */
-function formatFileSize(bytes: number | undefined): string {
-  if (!bytes || bytes === 0) return formatFileSizeUtil(0);
-  return formatFileSizeUtil(bytes);
-}
+// formatFileSize() → direct import from @/utils/file-validation (ADR-212)
 
 const formatTrashDate = (dateInput: string | Date | undefined): string => {
   if (!dateInput) return 'N/A';
@@ -390,7 +387,7 @@ export function TrashView({
                     {/* File size */}
                     <span className="flex items-center gap-1">
                       <HardDrive className={iconSizes.xs} aria-hidden="true" />
-                      {formatFileSize(file.sizeBytes)}
+                      {formatFileSize(file.sizeBytes ?? 0)}
                     </span>
 
                     {/* Trashed date */}

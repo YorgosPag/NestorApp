@@ -19,6 +19,7 @@
  * ```
  */
 
+import { sleep } from '@/lib/async-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('RetryLogic');
@@ -153,14 +154,7 @@ export function isRetryableError(error: Error, config: RetryConfig): boolean {
   });
 }
 
-/**
- * Sleep for a specified duration
- *
- * @param ms - Milliseconds to sleep
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// sleep() → imported from @/lib/async-utils (ADR-212)
 
 /**
  * 🔄 Execute an async operation with retry logic

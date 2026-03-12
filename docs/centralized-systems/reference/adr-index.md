@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 199 ADRs | Last Updated: 2026-03-12
+**📊 Stats**: 200 ADRs | Last Updated: 2026-03-12
 
 ---
 
@@ -234,6 +234,7 @@
 | **ADR-209** | ID Consistency Audit & Remediation Roadmap | ✅ ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-209-id-consistency-audit.md) |
 | **ADR-210** | Document ID Generation — Full Codebase Audit & Compliance Report | ✅ ✅ APPROVED | 2026-03-12 | Security / Data Integrity | [📄](./adrs/ADR-210-document-id-generation-audit.md) |
 | **ADR-211** | Phase 8 — Small Utility Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-211-phase8-small-utility-dedup.md) |
+| **ADR-212** | Phase 9 — Async/Clone/Validation/FileSize/Currency Deduplication | ✅ Implemented | 2026-03-12 | Centralization / Deduplication | [📄](./adrs/ADR-212-phase9-async-clone-url-filesize.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

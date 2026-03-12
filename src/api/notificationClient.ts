@@ -13,7 +13,7 @@ export type ClientOptions = {
   fetchImpl?: typeof fetch;
 };
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+import { sleep } from '@/lib/async-utils';
 const jitter = (ms: number) => Math.round(ms * (0.5 + Math.random()));
 
 export class NotificationClient {

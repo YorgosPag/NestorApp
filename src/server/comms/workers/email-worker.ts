@@ -1,5 +1,6 @@
 // /home/user/studio/src/server/comms/workers/email-worker.ts
 
+import { sleep } from '@/lib/async-utils';
 import { emailAdapter } from '../email-adapter';
 import { isFirebaseAvailable } from '../../../app/api/communications/webhooks/telegram/firebase/availability';
 import { getFirestoreHelpers } from '../../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
@@ -96,7 +97,7 @@ export class EmailWorker {
           }
           
           // Small delay between jobs to be respectful to Mailgun API
-          await this.delay(1000);
+          await sleep(1000);
         } catch (error) {
           logger.error(`❌ Error processing email job ${job.id}:`, error);
         }
@@ -183,12 +184,7 @@ export class EmailWorker {
     };
   }
 
-  /**
-   * Utility delay function
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  // delay() → imported sleep from @/lib/async-utils (ADR-212)
 }
 
 // Export singleton instance

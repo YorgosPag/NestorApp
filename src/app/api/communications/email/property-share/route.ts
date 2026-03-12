@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isValidEmail as isValidEmailFn } from '@/lib/validation/email-validation';
+import { isValidEmail as isValidEmailFn, isValidUrl } from '@/lib/validation/email-validation';
 import { EmailService } from '@/services/email.service';
 import type { EmailRequest } from '@/services/email.service';
 import type { EmailTemplateType } from '@/types/email-templates';
@@ -77,14 +77,7 @@ function isValidEmail(email: string): boolean {
   return isValidEmailFn(email) && email.length <= 254;
 }
 
-function isValidUrl(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url);
-    return ['http:', 'https:'].includes(parsedUrl.protocol);
-  } catch {
-    return false;
-  }
-}
+// isValidUrl() → imported from @/lib/validation/email-validation (ADR-212)
 
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');

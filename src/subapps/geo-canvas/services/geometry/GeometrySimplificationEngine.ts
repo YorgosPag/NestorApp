@@ -7,6 +7,7 @@
  * @module services/geometry/GeometrySimplificationEngine
  */
 
+import { deepClone } from '@/lib/clone-utils';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import type { AdminSearchResult, BoundingBox } from '../../types/administrative-types';
 
@@ -437,7 +438,7 @@ export class GeometrySimplificationEngine {
     tolerance: number,
     lodLevel: LODLevel
   ): SimplificationResult {
-    const originalGeometry = JSON.parse(JSON.stringify(geometry));
+    const originalGeometry = deepClone(geometry);
     const originalPoints = this.countGeometryPoints(geometry);
 
     let simplifiedGeometry: GeoJSON.Geometry;

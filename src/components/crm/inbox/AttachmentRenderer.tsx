@@ -18,7 +18,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
-import { formatFileSize as _formatFileSize } from '@/utils/file-validation';
+import { formatFileSize } from '@/utils/file-validation';
 import {
   Image as ImageIcon,
   FileText,
@@ -56,13 +56,7 @@ interface SingleAttachmentProps {
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Format file size — thin wrapper over canonical formatFileSize to handle undefined
- */
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return '';
-  return _formatFileSize(bytes);
-}
+// formatFileSize() → direct import from @/utils/file-validation (ADR-212)
 
 /**
  * Get file extension from filename or mime type
@@ -202,7 +196,7 @@ function DocumentAttachment({
   const { t } = useTranslation('crm');
 
   const extension = getFileExtension(attachment.filename, attachment.mimeType);
-  const sizeText = formatFileSize(attachment.size);
+  const sizeText = attachment.size ? formatFileSize(attachment.size) : '';
 
   return (
     <div

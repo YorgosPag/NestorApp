@@ -15,6 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { sleep } from '@/lib/async-utils';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
@@ -412,9 +413,7 @@ function formatResult(result: NominatimResult, params: GeocodingRequestBody): Ge
   };
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+// sleep() → imported from @/lib/async-utils (ADR-212)
 
 // =============================================================================
 // VALIDATION

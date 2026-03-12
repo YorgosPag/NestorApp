@@ -1,5 +1,6 @@
 'use client';
 
+import { sleep } from '@/lib/async-utils';
 import { generateJobId, generateOperationId } from '@/services/enterprise-id.service';
 
 // Batch Processing Service for bulk operations
@@ -188,7 +189,7 @@ class BatchProcessingService {
 
       // Delay between batches
       if (batchIndex < batches.length - 1 && options.delayBetweenBatches) {
-        await this.delay(options.delayBetweenBatches);
+        await sleep(options.delayBetweenBatches);
       }
 
       // Stop on error if configured
@@ -372,9 +373,7 @@ class BatchProcessingService {
     }
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  // delay() → imported sleep from @/lib/async-utils (ADR-212)
 
   // Job management methods
   getJob(jobId: string): BatchJob | undefined {

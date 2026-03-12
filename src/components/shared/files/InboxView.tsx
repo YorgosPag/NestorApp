@@ -50,7 +50,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
-import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation';
+import { formatFileSize } from '@/utils/file-validation';
 import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
 import { FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
@@ -113,10 +113,7 @@ interface ChatGroup {
 /**
  * Format file size
  */
-function formatFileSize(bytes: number | undefined): string {
-  if (!bytes || bytes === 0) return formatFileSizeUtil(0);
-  return formatFileSizeUtil(bytes);
-}
+// formatFileSize() → direct import from @/utils/file-validation (ADR-212)
 
 /**
  * Get icon for file category
@@ -483,7 +480,7 @@ export function InboxView({
                             {/* File size */}
                             <span className="flex items-center gap-1">
                               <HardDrive className={iconSizes.xs} />
-                              {formatFileSize(file.sizeBytes)}
+                              {formatFileSize(file.sizeBytes ?? 0)}
                             </span>
                             {/* Category */}
                             {file.category && (

@@ -27,7 +27,7 @@ import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effec
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
-import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
+import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
 import { formatDate } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Toast notifications
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
@@ -75,14 +75,7 @@ export interface FilesListProps {
 // UTILITIES
 // ============================================================================
 
-/**
- * 🏢 ENTERPRISE: Format file size using centralized utility
- * Wrapper για undefined safety
- */
-function formatFileSize(bytes: number | undefined): string {
-  if (!bytes || bytes === 0) return formatFileSizeUtil(0); // Delegate to centralized utility
-  return formatFileSizeUtil(bytes);
-}
+// formatFileSize() → direct import from @/utils/file-validation (ADR-212)
 
 
 
@@ -443,7 +436,7 @@ export function FilesList({
                   {/* File size */}
                   <span className="flex items-center gap-1">
                     <HardDrive className={iconSizes.xs} aria-hidden="true" />
-                    {formatFileSize(file.sizeBytes)}
+                    {formatFileSize(file.sizeBytes ?? 0)}
                   </span>
 
                   {/* Upload date */}

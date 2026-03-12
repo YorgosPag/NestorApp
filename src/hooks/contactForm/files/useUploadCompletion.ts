@@ -11,6 +11,7 @@
 import { useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { deepClone } from '@/lib/clone-utils';
 import { useMemoryCleanup } from './useMemoryCleanup';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -162,7 +163,7 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
   ) => {
     logger.info('Multiple photo upload complete', { index, hasUrl: !!result.url });
 
-    const newPhotos = JSON.parse(JSON.stringify([...formData.multiplePhotos])); // 🔥 Deep copy για να force re-render
+    const newPhotos = deepClone([...formData.multiplePhotos]); // 🔥 Deep copy για να force re-render
 
     if (newPhotos[index]) {
       // ΑΝ ΕΙΝΑΙ ΚΕΝΟ URL → ΚΑΘΑΡΙΖΟΥΜΕ ΤΟ SLOT ΕΝΤΕΛΩΣ

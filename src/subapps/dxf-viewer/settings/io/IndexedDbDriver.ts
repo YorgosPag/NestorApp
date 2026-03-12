@@ -24,6 +24,7 @@
  *  - Module #4
  */
 
+import { sleep } from '@/lib/async-utils';
 import type { StorageDriver } from './StorageDriver';
 import { StorageError, StorageQuotaError, StorageUnavailableError } from './StorageDriver';
 import { validateSettingsState } from './schema';
@@ -520,15 +521,13 @@ export class IndexedDbDriver implements StorageDriver {
 
       // Exponential backoff
       const delay = this.config.retryDelay * Math.pow(2, attempt);
-      await this.sleep(delay);
+      await sleep(delay);
 
       return this.retryOperation(operation, attempt + 1);
     }
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  // sleep() → imported from @/lib/async-utils (ADR-212)
 
   private isQuotaExceeded(error: unknown): boolean {
     if (!error) return false;

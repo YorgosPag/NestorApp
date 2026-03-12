@@ -1,5 +1,6 @@
 'use client';
 
+import { sleep } from '@/lib/async-utils';
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { generateMessageId, generateTemplateId } from '@/services/enterprise-id.service';
 
@@ -159,7 +160,7 @@ class EmailIntegrationService {
       onProgress?.(i + 1, messages.length);
       
       // Add delay to avoid rate limits
-      await this.delay(100);
+      await sleep(100);
     }
     
     return results;
@@ -220,7 +221,7 @@ class EmailIntegrationService {
     // Debug logging removed - Sending email via SMTP
 
     // Simulate network delay
-    await this.delay(Math.random() * 1000 + 500);
+    await sleep(Math.random() * 1000 + 500);
 
     // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     return {
@@ -231,7 +232,7 @@ class EmailIntegrationService {
   }
 
   private async sendViaMailgun(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
-    await this.delay(Math.random() * 800 + 300);
+    await sleep(Math.random() * 800 + 300);
 
     // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     return {
@@ -245,7 +246,7 @@ class EmailIntegrationService {
     // Sample Gmail API implementation
     // Debug logging removed - Sending email via Gmail API
 
-    await this.delay(Math.random() * 600 + 400);
+    await sleep(Math.random() * 600 + 400);
 
     // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     return {
@@ -259,7 +260,7 @@ class EmailIntegrationService {
     // Sample Outlook API implementation
     // Debug logging removed - Sending email via Outlook API
 
-    await this.delay(Math.random() * 700 + 300);
+    await sleep(Math.random() * 700 + 300);
 
     // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     return {
@@ -323,7 +324,7 @@ class EmailIntegrationService {
       }
       
       // Small delay between queue processing
-      await this.delay(50);
+      await sleep(50);
     }
     
     this.isProcessing = false;
@@ -337,10 +338,7 @@ class EmailIntegrationService {
     this.messageQueue = [];
   }
 
-  // Utility methods
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  // delay() → imported sleep from @/lib/async-utils (ADR-212)
 
   // Email analytics (sample)
   async getEmailStats(dateRange?: { from: Date; to: Date }): Promise<EmailStats> {

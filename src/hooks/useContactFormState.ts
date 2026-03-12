@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import { deepClone } from '@/lib/clone-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useContactFormState');
@@ -303,7 +304,7 @@ export function useContactFormState(): UseContactFormStateReturn {
    */
   const handleMultiplePhotoUploadComplete = useCallback((index: number, result: MultiplePhotoUploadResult) => {
     setFormData(prev => {
-      const newPhotos = JSON.parse(JSON.stringify([...prev.multiplePhotos])); // 🔥 Deep copy για να force re-render
+      const newPhotos = deepClone([...prev.multiplePhotos]); // 🔥 Deep copy για να force re-render
 
       if (newPhotos[index]) {
         // ΑΝ ΕΙΝΑΙ ΚΕΝΟ URL → ΚΑΘΑΡΙΖΟΥΜΕ ΤΟ SLOT ΕΝΤΕΛΩΣ

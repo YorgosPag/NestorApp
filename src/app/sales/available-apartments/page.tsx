@@ -8,6 +8,7 @@
  */
 
 import React, { Suspense } from 'react';
+import { formatCurrencyCompact } from '@/lib/intl-utils';
 
 import { useSalesUnitsViewerState } from '@/hooks/useSalesUnitsViewerState';
 import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
@@ -26,19 +27,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Unit } from '@/types/unit';
 
-// =============================================================================
-// 🏢 CURRENCY FORMATTER
-// =============================================================================
-
-function formatCurrencyCompact(value: number): string {
-  if (value >= 1_000_000) {
-    return `€${(value / 1_000_000).toFixed(1)}M`;
-  }
-  if (value >= 1_000) {
-    return `€${(value / 1_000).toFixed(0)}K`;
-  }
-  return `€${value}`;
-}
+// formatCurrencyCompact() → imported from @/lib/intl-utils (ADR-212)
 
 // =============================================================================
 // 🏢 MAIN CONTENT

@@ -7,6 +7,7 @@
  * @module services/administrative-boundaries/OverpassApiService
  */
 
+import { sleep } from '@/lib/async-utils';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
 // ============================================================================
@@ -366,7 +367,7 @@ export class OverpassApiService {
         this.currentEndpointIndex = (this.currentEndpointIndex + 1) % OVERPASS_ENDPOINTS.length;
 
         // Wait before retry
-        await this.delay(2000);
+        await sleep(2000);
       }
     }
 
@@ -807,7 +808,7 @@ export class OverpassApiService {
     if (this.requestHistory.length >= RATE_LIMIT.maxRequestsPerMinute) {
       const waitTime = 60000 - (now - this.requestHistory[0]) + 1000;
       console.debug(`⏱️ Rate limit reached. Waiting ${Math.ceil(waitTime / 1000)}s...`);
-      await this.delay(waitTime);
+      await sleep(waitTime);
     }
 
     // Add current request
@@ -815,7 +816,7 @@ export class OverpassApiService {
 
     // Minimum delay between requests
     if (this.requestHistory.length > 1) {
-      await this.delay(RATE_LIMIT.delayBetweenRequests);
+      await sleep(RATE_LIMIT.delayBetweenRequests);
     }
   }
 
@@ -900,12 +901,7 @@ export class OverpassApiService {
     return tags['is_in:state'] || tags['is_in:region'] || tags.state || 'Unknown';
   }
 
-  /**
-   * Simple delay utility
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  // delay() → imported sleep from @/lib/async-utils (ADR-212)
 
   /**
    * Clear cache

@@ -7,6 +7,7 @@
  * Fortune-500 pattern (SAP, Salesforce, Microsoft, Google).
  *
  * @module lib/api/enterprise-api-client
+ * @see ADR-212 Phase 9 — sleep() centralized
  * @enterprise Zero Duplicates - Canonical API Client
  * @security Automatic Firebase ID token injection με Bearer header
  *
@@ -41,6 +42,7 @@
 import { auth } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { generateRequestId as _generateRequestId } from '@/services/enterprise-id.service';
+import { sleep } from '@/lib/async-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('enterprise-api-client');
 
@@ -324,7 +326,7 @@ export class EnterpriseApiClient {
           // Wait before retry με exponential backoff
           const delay = this.calculateBackoff(attempts);
           logger.warn(`[API] Retrying request (${attempts}/${maxRetries}) after ${delay}ms...`);
-          await this.sleep(delay);
+          await sleep(delay);
           continue;
         }
 
@@ -697,12 +699,7 @@ export class EnterpriseApiClient {
     return _generateRequestId();
   }
 
-  /**
-   * Sleep helper για retries
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
+  // sleep() → imported from @/lib/async-utils (ADR-212)
 
   // ===========================================================================
   // LOGGING HELPERS

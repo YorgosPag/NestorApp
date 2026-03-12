@@ -26,7 +26,7 @@
  * ============================================================================
  */
 
-import { isValidEmail } from '@/lib/validation/email-validation';
+import { isValidEmail, isValidUrl } from '@/lib/validation/email-validation';
 import {
   EnterpriseConfigurationManager,
   ConfigurationAPI,
@@ -214,7 +214,7 @@ export class ConfigurationTestingSuite {
         validationErrors.push('App name is missing');
       }
 
-      if (!system.app.baseUrl || !this.isValidUrl(system.app.baseUrl)) {
+      if (!system.app.baseUrl || !isValidUrl(system.app.baseUrl)) {
         validationErrors.push('App base URL is invalid');
       }
 
@@ -625,14 +625,7 @@ export class ConfigurationTestingSuite {
     return isValidEmail(email);
   }
 
-  private isValidUrl(url: string): boolean {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  // isValidUrl() → imported from @/lib/validation/email-validation (ADR-212)
 
   private getMemoryUsage(): number {
     if (typeof process !== 'undefined' && process.memoryUsage) {
