@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -50,10 +51,6 @@ import type {
 } from './types';
 
 const logger = createModuleLogger('EMAIL_INBOUND_SERVICE');
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 export function normalizeEmail(email: string): string {
   return email.toLowerCase().trim();

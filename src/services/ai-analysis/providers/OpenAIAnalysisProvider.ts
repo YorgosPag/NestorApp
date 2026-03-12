@@ -8,6 +8,7 @@
 
 import 'server-only';
 
+import { isRecord } from '@/lib/type-guards';
 import {
   AI_ANALYSIS_DEFAULTS,
   AI_MULTI_INTENT_SCHEMA,
@@ -79,10 +80,6 @@ interface OpenAIErrorPayload {
     message?: string;
     type?: string;
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 function extractOutputText(payload: unknown): string | null {

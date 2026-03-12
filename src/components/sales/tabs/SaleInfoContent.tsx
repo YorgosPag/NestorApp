@@ -22,7 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { formatCurrencyWhole, formatDate as formatDateIntl } from '@/lib/intl-utils';
+import { normalizeToDate } from '@/lib/date-local';
 import { InfoRow } from '@/components/shared/InfoRow';
 import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
 import type { Unit } from '@/types/unit';
@@ -43,21 +44,8 @@ interface SaleInfoContentProps {
 // =============================================================================
 
 function formatDate(ts: { toDate?: () => Date } | string | null | undefined): string {
-  if (!ts) return '—';
-  let date: Date;
-  if (typeof ts === 'string') {
-    date = new Date(ts);
-  } else if (typeof ts.toDate === 'function') {
-    date = ts.toDate();
-  } else {
-    return '—';
-  }
-  if (isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
+  const d = normalizeToDate(ts);
+  return d ? formatDateIntl(d) : '—';
 }
 
 function computeDaysOnMarket(listedDate: { toDate?: () => Date } | string | null | undefined): string {

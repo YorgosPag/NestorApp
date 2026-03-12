@@ -25,6 +25,7 @@
 
 import 'server-only';
 
+import { chunkArray } from '@/lib/array-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
   claimNextPipelineItems,
@@ -242,7 +243,7 @@ export class AIPipelineWorker {
     let failed = 0;
 
     // Process in chunks based on maxConcurrency
-    const chunks = this.chunkArray(items, this.config.maxConcurrency);
+    const chunks = chunkArray(items, this.config.maxConcurrency);
 
     for (const chunk of chunks) {
       const promises = chunk.map(async (item) => {
@@ -394,16 +395,6 @@ export class AIPipelineWorker {
     return { ...this.stats };
   }
 
-  /**
-   * Utility: Split array into chunks
-   */
-  private chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
-  }
 }
 
 // ============================================================================

@@ -11,7 +11,7 @@ import { Receipt, FileText, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-utils';
+import { formatCurrency, formatDate as formatDateIntl } from '@/lib/intl-utils';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // =============================================================================
@@ -46,11 +46,7 @@ interface InvoiceListResponse {
 
 function formatDate(isoDate: string): string {
   try {
-    return new Intl.DateTimeFormat('el-GR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(new Date(isoDate));
+    return formatDateIntl(new Date(isoDate));
   } catch {
     return isoDate;
   }

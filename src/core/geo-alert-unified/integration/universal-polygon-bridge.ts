@@ -19,8 +19,7 @@ import type {
   GeoPoint
 } from '../database/types';
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
+import { isRecord } from '@/lib/type-guards';
 
 // ============================================================================
 // CONVERSION FUNCTIONS: Universal System → Database

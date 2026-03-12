@@ -33,6 +33,7 @@ import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { CompanyContact } from '@/types/contacts';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { chunkArray } from '@/lib/array-utils';
 
 const logger = createModuleLogger('AuditBootstrapRoute');
 
@@ -81,18 +82,6 @@ const FIRESTORE_IN_LIMIT = 10; // Firestore `in` query max items
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-/**
- * 🔧 Chunk array για Firestore `in` query limit (max 10)
- * Enterprise requirement: Proper chunking για >10 companyIds
- */
-function chunkArray<T>(array: T[], chunkSize: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += chunkSize) {
-    chunks.push(array.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
 
 /**
  * 🔄 Convert Firestore Timestamp to ISO string

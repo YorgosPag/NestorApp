@@ -27,6 +27,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
+import { formatFileSize } from '@/utils/file-validation';
 
 // 🏢 ENTERPRISE: Centralized configs
 import {
@@ -111,14 +112,8 @@ function getMaxSizeForType(fileType: FileType): number {
   return FILE_TYPE_CONFIG[fileType]?.maxSize || UPLOAD_LIMITS.MAX_FILE_SIZE;
 }
 
-/**
- * Format bytes to human readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+/** Format bytes to human readable string — delegates to centralized formatFileSize */
+const formatBytes = formatFileSize;
 
 // ============================================================================
 // COMPONENT

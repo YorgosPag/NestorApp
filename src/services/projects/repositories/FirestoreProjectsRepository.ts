@@ -8,6 +8,7 @@ import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { chunkArray } from '@/lib/array-utils';
 
 const logger = createModuleLogger('FirestoreProjectsRepository');
 
@@ -16,15 +17,6 @@ const PROJECTS_COLLECTION = COLLECTIONS.PROJECTS;
 const BUILDINGS_COLLECTION = COLLECTIONS.BUILDINGS;
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
-
-// Helper function for chunking arrays
-const chunkArray = <T>(arr: T[], size: number): T[][] => {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-};
 
 export class FirestoreProjectsRepository implements IProjectsRepository {
 

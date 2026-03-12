@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
+import { formatCurrency as formatCurrencyIntl } from '@/lib/intl-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectMeasurementsTab');
@@ -61,14 +62,8 @@ interface BuildingAggregation {
 // MONEY FORMATTER
 // =============================================================================
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
+const formatCurrency = (amount: number): string =>
+  formatCurrencyIntl(amount, 'EUR', { minimumFractionDigits: 2 });
 
 // =============================================================================
 // COMPONENT

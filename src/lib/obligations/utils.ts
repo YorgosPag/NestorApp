@@ -1,6 +1,6 @@
 import { ObligationSection, SectionCategory } from '@/types/obligations';
 import { getDefaultTemplate } from './constants';
-import { formatDate } from '@/lib/intl-utils';
+import { formatDate, formatRelativeTime } from '@/lib/intl-utils';
 import {
   generateSectionId as generateEnterpriseSectionId,
   generateArticleId as generateEnterpriseArticleId,
@@ -72,29 +72,8 @@ export const generateFileName = (
 // 📅 DATE UTILITIES
 // ============================================================================
 
-export const getRelativeTime = (date: Date): string => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMinutes < 1) return 'Τώρα';
-  if (diffMinutes < 60) return `${diffMinutes} λεπτά πριν`;
-  if (diffHours < 24) return `${diffHours} ώρα${diffHours > 1 ? 'ες' : ''} πριν`;
-  if (diffDays < 7) return `${diffDays} μέρα${diffDays > 1 ? 'ες' : ''} πριν`;
-  if (diffDays < 30) {
-    const weeks = Math.floor(diffDays / 7);
-    return `${weeks} εβδομάδα${weeks > 1 ? 'ες' : ''} πριν`;
-  }
-  if (diffDays < 365) {
-    const months = Math.floor(diffDays / 30);
-    return `${months} μήνα${months > 1 ? 'ες' : ''} πριν`;
-  }
-
-  const years = Math.floor(diffDays / 365);
-  return `${years} χρόνο${years > 1 ? 'ια' : ''} πριν`;
-};
+// ADR-213 Phase 10: Delegates to centralized formatRelativeTime (Intl-based, locale-aware)
+export const getRelativeTime = (date: Date): string => formatRelativeTime(date);
 
 export const formatGreekDate = (date: Date): string => {
   return formatDate(date, {

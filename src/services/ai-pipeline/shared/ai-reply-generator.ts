@@ -20,6 +20,7 @@
 
 import 'server-only';
 
+import { isRecord } from '@/lib/type-guards';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { PIPELINE_REPLY_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -215,11 +216,6 @@ ${contextBlock}${historyBlock}
 // ============================================================================
 // INTERNAL: OpenAI Responses API call (free-form text, no JSON schema)
 // ============================================================================
-
-/** Type guard for record objects */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 /**
  * Extract output text from OpenAI Responses API payload.

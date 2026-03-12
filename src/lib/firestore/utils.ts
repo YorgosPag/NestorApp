@@ -22,11 +22,8 @@ export const asDate = (v: unknown): Date => {
   return new Date(NaN);
 };
 
-export const chunk = <T>(arr: T[], size: number) => {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-};
+// Re-export from centralized array-utils (ADR-213 Phase 10)
+export { chunkArray as chunk } from '@/lib/array-utils';
 
 // Useful when we accept cursorId string (optional)
 export const startAfterDocId = async (colPath: string, id?: string | null): Promise<DocumentSnapshot | null> => {

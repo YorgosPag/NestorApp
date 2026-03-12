@@ -1,4 +1,5 @@
 import React from 'react';
+import { chunkArray } from '@/lib/array-utils';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
@@ -194,7 +195,7 @@ export class LayerSyncManager {
    */
   public async syncLayersBatch(layers: Layer[]): Promise<void> {
     const batch = writeBatch(db);
-    const chunks = this.chunkArray(layers, this.options.batchSize);
+    const chunks = chunkArray(layers, this.options.batchSize);
 
     try {
       for (const chunk of chunks) {
@@ -322,14 +323,6 @@ export class LayerSyncManager {
     if (this.options.enableLogging) {
       // Debug logging removed
     }
-  }
-
-  private chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
   }
 
   /**
