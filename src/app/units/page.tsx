@@ -15,7 +15,8 @@ import {
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
-import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import type { UnitHierarchyResponse } from '@/app/api/units/[id]/hierarchy/route';
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { CoverageCard } from '@/components/property-management/dashboard/CoverageCard';
@@ -67,8 +68,7 @@ function UnitsPageContent() {
   const getTypeLabel = React.useMemo(() => createTypeLabelGetter(t), [t]);
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
-  const { companies, projects, syncBreadcrumb } = useNavigation();
-  const { buildings } = useFirestoreBuildings();
+  const { syncBreadcrumb } = useNavigation();
 
   const {
     properties,
@@ -199,30 +199,34 @@ function UnitsPageContent() {
     }
   }, [urlUnitId, properties, selectedUnit, handlePolygonSelect]);
 
-  // 🏢 ENTERPRISE: Sync selectedUnit with NavigationContext for breadcrumb display
+  // 🏢 ENTERPRISE: Sync breadcrumb via hierarchy API (robust — no multi-source chain lookup)
   React.useEffect(() => {
-    if (selectedUnit && buildings.length > 0 && companies.length > 0 && projects.length > 0) {
-      // Find the building this unit belongs to
-      const building = buildings.find(b => b.id === selectedUnit.buildingId);
-      if (building && building.projectId) {
-        // Find the project and company
-        const project = projects.find(p => p.id === building.projectId);
-        if (project && project.companyId) {
-          const company = companies.find(c => c.id === project.companyId);
-          if (company) {
-            // Use atomic sync with names - enterprise pattern
-            syncBreadcrumb({
-              company: { id: company.id, name: company.companyName },
-              project: { id: project.id, name: project.name },
-              building: { id: building.id, name: building.name },
-              unit: { id: selectedUnit.id, name: selectedUnit.name || selectedUnit.code || selectedUnit.id },
-              currentLevel: 'units'
-            });
-          }
-        }
+    if (!selectedUnit) return;
+    let cancelled = false;
+
+    async function syncFromHierarchy() {
+      try {
+        const data = await apiClient.get<UnitHierarchyResponse>(
+          `/api/units/${encodeURIComponent(selectedUnit!.id)}/hierarchy`
+        );
+        if (cancelled || !data.company || !data.project) return;
+        syncBreadcrumb({
+          company: { id: data.company.id, name: data.company.name },
+          project: { id: data.project.id, name: data.project.name },
+          building: data.building
+            ? { id: data.building.id, name: data.building.name }
+            : undefined,
+          unit: { id: data.unit.id, name: data.unit.name },
+          currentLevel: 'units',
+        });
+      } catch {
+        // Graceful — breadcrumb won't sync but page still works
       }
     }
-  }, [selectedUnit?.id, buildings.length, companies.length, projects.length, syncBreadcrumb]);
+
+    syncFromHierarchy();
+    return () => { cancelled = true; };
+  }, [selectedUnit?.id, syncBreadcrumb]);
 
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
