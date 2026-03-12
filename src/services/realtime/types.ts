@@ -260,6 +260,7 @@ export interface ProjectUpdatedPayload {
     name?: string;
     title?: string;
     status?: ProjectStatus;
+    companyId?: string | null;
   };
   timestamp: number;
 }
