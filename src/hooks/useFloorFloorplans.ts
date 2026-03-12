@@ -71,6 +71,14 @@ interface FloorDocument {
   buildingId: string;
   name: string;
   number: number;
+  companyId?: string;
+}
+
+/** Resolved floor info — includes companyId from the floor document */
+interface ResolvedFloor {
+  floorId: string;
+  /** CompanyId from the floor document (authoritative for file queries) */
+  floorCompanyId?: string;
 }
 
 // ============================================================================
@@ -93,9 +101,10 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Resolve floorId from buildingId + floorNumber
+   * Resolve floor from buildingId + floorNumber.
+   * Returns both floorId AND the floor's companyId (authoritative for file queries).
    */
-  const findFloorId = useCallback(async (bId: string, fNum: number): Promise<string | null> => {
+  const findFloor = useCallback(async (bId: string, fNum: number): Promise<ResolvedFloor | null> => {
     try {
       const floorsRef = collection(db, 'floors');
       const q = query(
@@ -107,8 +116,9 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
 
       if (!snapshot.empty) {
         const floorDoc = snapshot.docs[0];
-        logger.info('Found floor', { id: floorDoc.id });
-        return floorDoc.id;
+        const data = floorDoc.data() as FloorDocument;
+        logger.info('Found floor', { id: floorDoc.id, companyId: data.companyId });
+        return { floorId: floorDoc.id, floorCompanyId: data.companyId };
       }
 
       return null;
@@ -119,26 +129,24 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   }, []);
 
   /**
-   * PRIMARY: Load via Enterprise FileRecord pattern
+   * PRIMARY: Load via Enterprise FileRecord pattern.
+   * Uses overrideCompanyId (from floor document) when available — critical for
+   * super_admin scenarios where unit.companyId differs from floor/building.companyId.
    */
-  const loadEnterprise = useCallback(async (fId: string): Promise<FloorFloorplanData | null> => {
-    if (!companyId) {
-      console.error('[useFloorFloorplans] ❌ NO companyId — cannot load enterprise path');
+  const loadEnterprise = useCallback(async (fId: string, overrideCompanyId?: string): Promise<FloorFloorplanData | null> => {
+    const effectiveCompanyId = overrideCompanyId || companyId;
+    if (!effectiveCompanyId) {
+      logger.warn('No companyId available — cannot load enterprise path');
       return null;
     }
 
     try {
-      console.error(`[useFloorFloorplans] 🔍 Loading via FloorFloorplanService companyId="${companyId}" floorId="${fId}"`);
-      const result = await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
-      console.error('[useFloorFloorplans] 📦 Enterprise result:', {
-        found: !!result,
-        hasScene: !!result?.scene,
-        fileName: result?.fileName,
-        fileType: result?.fileType,
-      });
+      logger.debug('Loading via FloorFloorplanService', { data: { companyId: effectiveCompanyId, floorId: fId } });
+      const result = await FloorFloorplanService.loadFloorplan({ companyId: effectiveCompanyId, floorId: fId });
+      logger.debug('Enterprise result', { data: { found: !!result, hasScene: !!result?.scene, fileName: result?.fileName, fileType: result?.fileType } });
       return result;
     } catch (err) {
-      console.error('[useFloorFloorplans] ❌ Enterprise load FAILED:', err);
+      logger.error('Enterprise load failed', { error: err });
       return null;
     }
   }, [companyId]);
@@ -192,7 +200,11 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   }, [companyId]);
 
   /**
-   * Main fetch function — enterprise-first strategy
+   * Main fetch function — enterprise-first strategy.
+   *
+   * Uses the floor document's companyId for FileRecord queries when available.
+   * This is critical for super_admin: unit.companyId may differ from floor/building.companyId,
+   * and files are stored under the floor's tenant.
    */
   const fetchFloorplans = useCallback(async () => {
     if (!floorId && (!buildingId || floorNumber === null)) {
@@ -205,10 +217,27 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       setLoading(true);
       setError(null);
 
-      // Step 1: Resolve floorId
+      // Step 1: Resolve floorId + floor's companyId
       let effectiveFloorId = floorId;
+      let floorCompanyId: string | undefined;
+
       if (!effectiveFloorId && buildingId && floorNumber !== null) {
-        effectiveFloorId = await findFloorId(buildingId, floorNumber);
+        const resolved = await findFloor(buildingId, floorNumber);
+        effectiveFloorId = resolved?.floorId ?? null;
+        floorCompanyId = resolved?.floorCompanyId;
+      } else if (effectiveFloorId) {
+        // floorId provided directly — fetch floor doc to get its companyId
+        try {
+          const floorsRef = collection(db, 'floors');
+          const q = query(floorsRef, where('__name__', '==', effectiveFloorId));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const data = snapshot.docs[0].data() as FloorDocument;
+            floorCompanyId = data.companyId;
+          }
+        } catch {
+          // Non-critical — fall back to caller's companyId
+        }
       }
 
       if (!effectiveFloorId) {
@@ -217,10 +246,10 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
         return;
       }
 
-      console.error('[useFloorFloorplans] 🚀 START fetch', { floorId: effectiveFloorId, companyId, buildingId, floorNumber });
+      logger.debug('START fetch', { data: { floorId: effectiveFloorId, floorCompanyId, callerCompanyId: companyId, buildingId, floorNumber } });
 
-      // Step 2: PRIMARY — Enterprise FileRecord path
-      let floorplanData = await loadEnterprise(effectiveFloorId);
+      // Step 2: PRIMARY — Enterprise FileRecord path (use floor's companyId first)
+      let floorplanData = await loadEnterprise(effectiveFloorId, floorCompanyId);
 
       // Step 3: FALLBACK — Legacy floor_floorplans (old PDF data)
       if (!floorplanData) {
@@ -247,7 +276,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
     } finally {
       setLoading(false);
     }
-  }, [floorId, buildingId, floorNumber, companyId, findFloorId, loadEnterprise, searchLegacyFloorFloorplans]);
+  }, [floorId, buildingId, floorNumber, companyId, findFloor, loadEnterprise, searchLegacyFloorFloorplans]);
 
   useEffect(() => {
     fetchFloorplans();
