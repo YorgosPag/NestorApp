@@ -162,10 +162,7 @@ export const BuildingsList = React.memo(function BuildingsList({
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
-            onSortChange={(newSortBy, newSortOrder) => {
-              setSortBy(newSortBy);
-              setSortOrder(newSortOrder);
-            }}
+            onSortChange={onSortChange}
             hasSelectedContact={!!selectedBuilding}
             onNewItem={onNewBuilding ? () => onNewBuilding() : undefined}
             onEditItem={onEditBuilding ? () => onEditBuilding() : undefined}
