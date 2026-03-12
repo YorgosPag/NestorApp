@@ -112,6 +112,66 @@ export function GeneralProjectTab({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // =========================================================================
+  // ADR-200: Centralized entity linking — Company
+  // (must be declared before handleSave which references companyLink)
+  // =========================================================================
+
+  const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
+    const companies = await getAllCompaniesForSelect();
+    return companies
+      .filter(c => c.id)
+      .map(c => ({ id: c.id!, name: c.companyName || '' }));
+  }, []);
+
+  const saveCompanyLink = useCallback(async (newId: string | null) => {
+    try {
+      const result = await updateProject(project.id, {
+        companyId: newId || undefined,
+        company: undefined, // Clear legacy company name
+      });
+      if (result.success) {
+        setProjectData(prev => ({
+          ...prev,
+          companyId: newId || '',
+        }));
+        RealtimeService.dispatch('PROJECT_UPDATED', {
+          projectId: project.id,
+          updates: { companyId: newId },
+          timestamp: Date.now(),
+        });
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Failed to update' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
+    }
+  }, [project.id]);
+
+  const companyLink = useEntityLink({
+    relation: 'project-company',
+    entityId: project.id,
+    initialParentId: project.companyId || null,
+    loadOptions: loadCompanies,
+    saveMode: isCreateMode ? 'local' : 'immediate',
+    onSave: isCreateMode ? undefined : saveCompanyLink,
+    hideCurrentLabel: true,
+    icon: Building2,
+    cardId: 'project-company-link',
+    labels: {
+      title: t('basicInfo.companyLink.title'),
+      label: t('basicInfo.companyLink.label'),
+      placeholder: t('basicInfo.companyLink.placeholder'),
+      noSelection: t('basicInfo.companyLink.noSelection'),
+      loading: t('basicInfo.companyLink.loading'),
+      save: t('basicInfo.companyLink.save'),
+      saving: t('basicInfo.companyLink.saving'),
+      success: t('basicInfo.companyLink.success'),
+      error: t('basicInfo.companyLink.error'),
+      currentLabel: t('basicInfo.companyLink.currentLabel'),
+    },
+  }, isEditing);
+
   const handleSave = useCallback(async () => {
     try {
       setIsSaving(true);
@@ -198,65 +258,6 @@ export function GeneralProjectTab({
       registerSaveCallback(handleSave);
     }
   }, [registerSaveCallback, handleSave]);
-
-  // =========================================================================
-  // ADR-200: Centralized entity linking — Company
-  // =========================================================================
-
-  const loadCompanies = useCallback(async (): Promise<EntityLinkOption[]> => {
-    const companies = await getAllCompaniesForSelect();
-    return companies
-      .filter(c => c.id)
-      .map(c => ({ id: c.id!, name: c.companyName || '' }));
-  }, []);
-
-  const saveCompanyLink = useCallback(async (newId: string | null) => {
-    try {
-      const result = await updateProject(project.id, {
-        companyId: newId || null,
-        company: null, // Clear legacy company name
-      });
-      if (result.success) {
-        setProjectData(prev => ({
-          ...prev,
-          companyId: newId || '',
-        }));
-        RealtimeService.dispatch('PROJECT_UPDATED', {
-          projectId: project.id,
-          updates: { companyId: newId },
-          timestamp: Date.now(),
-        });
-        return { success: true };
-      }
-      return { success: false, error: result.error || 'Failed to update' };
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to update' };
-    }
-  }, [project.id]);
-
-  const companyLink = useEntityLink({
-    relation: 'project-company',
-    entityId: project.id,
-    initialParentId: project.companyId || null,
-    loadOptions: loadCompanies,
-    saveMode: isCreateMode ? 'local' : 'immediate',
-    onSave: isCreateMode ? undefined : saveCompanyLink,
-    hideCurrentLabel: true,
-    icon: Building2,
-    cardId: 'project-company-link',
-    labels: {
-      title: t('basicInfo.companyLink.title'),
-      label: t('basicInfo.companyLink.label'),
-      placeholder: t('basicInfo.companyLink.placeholder'),
-      noSelection: t('basicInfo.companyLink.noSelection'),
-      loading: t('basicInfo.companyLink.loading'),
-      save: t('basicInfo.companyLink.save'),
-      saving: t('basicInfo.companyLink.saving'),
-      success: t('basicInfo.companyLink.success'),
-      error: t('basicInfo.companyLink.error'),
-      currentLabel: t('basicInfo.companyLink.currentLabel'),
-    },
-  }, isEditing);
 
   return (
     <>
