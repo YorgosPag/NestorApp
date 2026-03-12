@@ -141,7 +141,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
       : query(colRef);
 
     const snapshot = await getDocs(q);
-    const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as T);
+    const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
     const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
 
     return {
@@ -260,7 +260,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
 
       unsubscribe = onSnapshot(q,
         snapshot => {
-          const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as T);
+          const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
           const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
           onData({
             documents,
@@ -298,7 +298,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
       const q = query(colRef, where(documentId(), 'in', chunk));
       const snapshot = await getDocs(q);
       for (const docSnap of snapshot.docs) {
-        results.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as T);
+        results.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as unknown as T);
       }
     });
 
