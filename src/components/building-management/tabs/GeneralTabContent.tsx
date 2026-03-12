@@ -218,7 +218,11 @@ export function GeneralTabContent({
 
   const loadProjects = useCallback(async (): Promise<EntityLinkOption[]> => {
     const projects = await getProjectsList();
-    return projects.map(p => ({ id: p.id, name: p.name }));
+    return projects.map(p => ({
+      id: p.id,
+      name: p.name,
+      currentLabel: p.licenseTitle || undefined,
+    }));
   }, []);
 
   // 🏢 ENTERPRISE: In create mode, save projectId locally (no API call — building doesn't exist yet)

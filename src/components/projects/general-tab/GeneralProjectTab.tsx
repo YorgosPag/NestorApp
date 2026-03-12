@@ -262,6 +262,7 @@ export function GeneralProjectTab({
           loadOptions={loadCompanies}
           onSave={isCreateMode ? saveCompanyLocal : saveCompanyLink}
           isEditing={isEditing}
+          hideCurrentLabel
           labels={{
             title: t('basicInfo.companyLink.title'),
             label: t('basicInfo.companyLink.label'),

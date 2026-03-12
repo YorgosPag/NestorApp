@@ -133,9 +133,9 @@ export function PropertyDetailsContent({
         />
       )}
 
-      {/* Building Link + Floor — side by side at the top */}
+      {/* Building Link + Floor + Linked Spaces — top row, 3 columns */}
       {!isReadOnly && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <UnitEntityLinks
             unitId={resolvedProperty?.id ?? ''}
             currentBuildingId={resolvedProperty?.buildingId}
@@ -163,6 +163,14 @@ export function PropertyDetailsContent({
               />
             </CardContent>
           </Card>
+          {resolvedProperty?.buildingId && (
+            <LinkedSpacesCard
+              unitId={resolvedProperty.id ?? ''}
+              buildingId={resolvedProperty.buildingId}
+              currentLinkedSpaces={resolvedProperty.linkedSpaces ?? []}
+              isEditing={isEditMode}
+            />
+          )}
         </div>
       )}
 
@@ -193,15 +201,7 @@ export function PropertyDetailsContent({
 
       <AttachmentsBlock storage={attachedStorage} parking={attachedParking} />
 
-      {/* ADR-199: Linked parking/storage spaces (appurtenances) */}
-      {!isReadOnly && resolvedProperty?.buildingId && (
-        <LinkedSpacesCard
-          unitId={resolvedProperty.id ?? ''}
-          buildingId={resolvedProperty.buildingId}
-          currentLinkedSpaces={resolvedProperty.linkedSpaces ?? []}
-          isEditing={isEditMode}
-        />
-      )}
+      {/* ADR-199: LinkedSpacesCard moved to top-row grid (next to building link + floor) */}
 
       <ContactsBlock owner={resolvedProperty.owner} agent={resolvedProperty.agent} />
 

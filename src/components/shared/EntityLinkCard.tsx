@@ -42,6 +42,8 @@ import { cn } from '@/lib/utils';
 export interface EntityLinkOption {
   id: string;
   name: string;
+  /** Optional alternative label shown in "Τρέχον" line instead of name */
+  currentLabel?: string;
 }
 
 export interface EntityLinkLabels {
@@ -78,6 +80,8 @@ export interface EntityLinkCardProps {
   searchable?: boolean;
   /** Placeholder for search input (only when searchable=true) */
   searchPlaceholder?: string;
+  /** Hide the "Τρέχον:" label below the dropdown */
+  hideCurrentLabel?: boolean;
 }
 
 // =============================================================================
@@ -98,6 +102,7 @@ export function EntityLinkCard({
   isEditing = true,
   searchable = false,
   searchPlaceholder = 'Αναζήτηση...',
+  hideCurrentLabel = false,
 }: EntityLinkCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
@@ -351,9 +356,11 @@ export function EntityLinkCard({
           )}
         </fieldset>
 
-        {!isEditing && currentName && (
+        {!hideCurrentLabel && currentName && (
           <p className={cn('text-sm', colors.text.muted)}>
-            {labels.currentLabel} <strong>{currentName}</strong>
+            {labels.currentLabel} <strong>{
+              options.find(o => o.id === (savedValue ?? currentValue))?.currentLabel || currentName
+            }</strong>
           </p>
         )}
 

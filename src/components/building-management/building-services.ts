@@ -211,6 +211,8 @@ export async function deleteBuilding(
 export interface ProjectListItem {
   id: string;
   name: string;
+  /** License title (τίτλος αδείας) — shown in "Τρέχον έργο" label */
+  licenseTitle?: string;
   companyId: string;
   companyName: string;
 }
@@ -239,7 +241,8 @@ export async function getProjectsList(): Promise<ProjectListItem[]> {
 
     const projects: ProjectListItem[] = result.projects.map(project => ({
       id: project.id,
-      name: project.title || project.name || 'entities.project.unknown',
+      name: project.name || project.title || 'entities.project.unknown',
+      licenseTitle: project.title || '',
       companyId: project.companyId || '',
       companyName: project.company || '',
     }));
