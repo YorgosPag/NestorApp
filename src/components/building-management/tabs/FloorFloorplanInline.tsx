@@ -104,6 +104,7 @@ export function FloorFloorplanInline({
       projectId={projectId}
       domain="construction"
       category="floorplans"
+      purpose="floor-floorplan"
       entryPointCategoryFilter="floorplans"
       displayStyle="floorplan-gallery"
       acceptedTypes={FLOORPLAN_ACCEPT}

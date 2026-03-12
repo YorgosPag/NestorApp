@@ -204,7 +204,7 @@ export class FloorFloorplanService {
       // 🏢 ENTERPRISE: Using positional args as per FileRecordService API
       // 🏢 FIX: Include domain to match the existing Firestore composite index
       // Index: entityType + entityId + status + companyId + domain + category + purpose + isDeleted
-      const fileRecords = await FileRecordService.getFilesByEntity(
+      let fileRecords = await FileRecordService.getFilesByEntity(
         ENTITY_TYPES.FLOOR,
         floorId,
         {
@@ -214,6 +214,21 @@ export class FloorFloorplanService {
           purpose: 'floor-floorplan',
         }
       );
+
+      // 🏢 ENTERPRISE: Fallback — files uploaded via EntityFilesManager before ADR-202
+      // may not have purpose set. Query without purpose filter to catch them.
+      if (!fileRecords || fileRecords.length === 0) {
+        floorplanLogger.info('No records with purpose=floor-floorplan, trying without purpose filter');
+        fileRecords = await FileRecordService.getFilesByEntity(
+          ENTITY_TYPES.FLOOR,
+          floorId,
+          {
+            companyId,
+            domain: FILE_DOMAINS.CONSTRUCTION,
+            category: FILE_CATEGORIES.FLOORPLANS,
+          }
+        );
+      }
 
       console.error('[FloorFloorplanService] 📦 Query result:', {
         count: fileRecords?.length ?? 0,
