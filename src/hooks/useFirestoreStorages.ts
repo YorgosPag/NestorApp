@@ -19,6 +19,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -104,6 +105,28 @@ export function useFirestoreStorages(
       fetchStorages();
     }
   }, [fetchStorages, autoFetch, authLoading, user]);
+
+  // 🏢 ENTERPRISE: Real-time sync — refetch on storage CRUD events
+  useEffect(() => {
+    const unsubCreated = RealtimeService.subscribe('STORAGE_CREATED', () => {
+      logger.debug('Storage created event — refetching list');
+      fetchStorages();
+    });
+    const unsubUpdated = RealtimeService.subscribe('STORAGE_UPDATED', () => {
+      logger.debug('Storage updated event — refetching list');
+      fetchStorages();
+    });
+    const unsubDeleted = RealtimeService.subscribe('STORAGE_DELETED', () => {
+      logger.debug('Storage deleted event — refetching list');
+      fetchStorages();
+    });
+
+    return () => {
+      unsubCreated();
+      unsubUpdated();
+      unsubDeleted();
+    };
+  }, [fetchStorages]);
 
   return {
     storages,

@@ -210,6 +210,10 @@ export const REALTIME_EVENTS = {
   PARKING_CREATED: 'realtime:parking-created',
   PARKING_UPDATED: 'realtime:parking-updated',
   PARKING_DELETED: 'realtime:parking-deleted',
+  // Storage events
+  STORAGE_CREATED: 'realtime:storage-created',
+  STORAGE_UPDATED: 'realtime:storage-updated',
+  STORAGE_DELETED: 'realtime:storage-deleted',
   // Link events
   BUILDING_PROJECT_LINKED: 'realtime:building-project-linked',
   UNIT_BUILDING_LINKED: 'realtime:unit-building-linked',
@@ -899,6 +903,48 @@ export interface ParkingDeletedPayload {
 }
 
 // ============================================================================
+// STORAGE EVENT PAYLOADS
+// ============================================================================
+
+/**
+ * Event payload for storage creation
+ */
+export interface StorageCreatedPayload {
+  storageId: string;
+  storage: {
+    name?: string;
+    buildingId?: string;
+    type?: string;
+    status?: string;
+  };
+  timestamp: number;
+}
+
+/**
+ * Event payload for storage update
+ */
+export interface StorageUpdatedPayload {
+  storageId: string;
+  updates: {
+    name?: string;
+    type?: string;
+    status?: string;
+    floor?: string;
+    area?: number;
+    buildingId?: string | null;
+  };
+  timestamp: number;
+}
+
+/**
+ * Event payload for storage deletion
+ */
+export interface StorageDeletedPayload {
+  storageId: string;
+  timestamp: number;
+}
+
+// ============================================================================
 // ASSOCIATION LINK EVENT PAYLOADS (contact_links, file_links)
 // ============================================================================
 
@@ -1004,7 +1050,8 @@ export interface RealtimeEventMap {
   USER_SETTINGS_UPDATED: UserSettingsUpdatedPayload;
   FLOORPLAN_UPDATED: FloorplanUpdatedPayload;
   PARKING_UPDATED: ParkingUpdatedPayload;
-  // Create events (15)
+  STORAGE_UPDATED: StorageUpdatedPayload;
+  // Create events (15+)
   PROJECT_CREATED: ProjectCreatedPayload;
   BUILDING_CREATED: BuildingCreatedPayload;
   UNIT_CREATED: UnitCreatedPayload;
@@ -1020,7 +1067,8 @@ export interface RealtimeEventMap {
   SESSION_CREATED: SessionCreatedPayload;
   FLOORPLAN_CREATED: FloorplanCreatedPayload;
   PARKING_CREATED: ParkingCreatedPayload;
-  // Delete events (15)
+  STORAGE_CREATED: StorageCreatedPayload;
+  // Delete events (15+)
   PROJECT_DELETED: ProjectDeletedPayload;
   BUILDING_DELETED: BuildingDeletedPayload;
   UNIT_DELETED: UnitDeletedPayload;
@@ -1036,6 +1084,7 @@ export interface RealtimeEventMap {
   SESSION_DELETED: SessionDeletedPayload;
   FLOORPLAN_DELETED: FloorplanDeletedPayload;
   PARKING_DELETED: ParkingDeletedPayload;
+  STORAGE_DELETED: StorageDeletedPayload;
   // File extras (2)
   FILE_TRASHED: FileTrashedPayload;
   FILE_RESTORED: FileRestoredPayload;
