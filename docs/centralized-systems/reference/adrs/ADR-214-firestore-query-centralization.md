@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | APPROVED — Audit Complete, Implementation Pending |
+| **Status** | IN PROGRESS — Phase 1 Complete |
 | **Date** | 2026-03-12 |
 | **Category** | Data Access Layer |
 | **Priority** | P1 — Architectural Foundation |
@@ -203,7 +203,7 @@ Full collection reads:      10+ admin routes
 | Φάση | Περιγραφή | Αρχεία | Ρίσκο | Spec |
 |------|-----------|--------|-------|------|
 | **0** | ADR + Specs (αυτό το αρχείο) | 4 | — | — |
-| **1** | FirestoreQueryService foundation | 2 νέα | LOW | SPEC-164-01 |
+| **1** | FirestoreQueryService foundation | 6 νέα + 1 mod | LOW | ✅ DONE |
 | **2** | Core Services migration (units, contacts) | 3-4 | MEDIUM | SPEC-164-02 |
 | **3** | File services migration | 2-3 | MEDIUM | SPEC-164-03 |
 | **4** | CRM services migration (tasks, appointments, opportunities) | 4-5 | MEDIUM | SPEC-164-04 |
@@ -252,6 +252,7 @@ Full collection reads:      10+ admin routes
 | Ημερομηνία | Αλλαγή |
 |-----------|--------|
 | 2026-03-12 | Initial audit + ADR creation. 400+ queries catalogued across 85+ files |
+| 2026-03-12 | **Phase 1 COMPLETE**: FirestoreQueryService foundation — 6 new files (`src/services/firestore/` + `src/utils/firestore-sanitize.ts`), 1 modified (`accounting/firestore-helpers.ts` → re-export). Singleton service with tenant-aware CRUD, real-time subscriptions, batch reads. Centralized `requireAuthContext()`, `sanitizeForFirestore()`, `getTenantConfig()`. |
 
 ---
 
