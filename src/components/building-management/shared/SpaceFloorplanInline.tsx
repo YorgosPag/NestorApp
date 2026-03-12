@@ -21,6 +21,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { getCompanyById } from '@/services/companies.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { tryResolveCompanyId } from '@/services/company-id-resolver';
 import type { EntityType } from '@/config/domain-constants';
 
 const logger = createModuleLogger('SpaceFloorplanInline');
@@ -38,6 +39,8 @@ interface SpaceFloorplanInlineProps {
   entityLabel: string;
   /** Parent building's projectId (for storage path) */
   projectId?: string;
+  /** Parent building data (for companyId resolution — ADR-200) */
+  building?: { companyId?: string } | null;
 }
 
 // ============================================================================
@@ -57,10 +60,13 @@ export function SpaceFloorplanInline({
   entityId,
   entityLabel,
   projectId,
+  building,
 }: SpaceFloorplanInlineProps) {
   const { user } = useAuth();
 
-  const companyId = user?.companyId;
+  // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
+  // Priority: building.companyId → user.companyId
+  const companyId = tryResolveCompanyId({ building, user })?.companyId;
   const currentUserId = user?.uid;
 
   // Fetch company name for display (same pattern as FloorFloorplanInline)

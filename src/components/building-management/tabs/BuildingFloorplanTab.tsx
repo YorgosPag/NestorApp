@@ -26,6 +26,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getCompanyById } from '@/services/companies.service';
 import type { Building } from '@/types/building/contracts';
+import { tryResolveCompanyId } from '@/services/company-id-resolver';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BuildingFloorplanTab');
@@ -76,9 +77,9 @@ export function BuildingFloorplanTab({
 
   // Get userId from auth context
   const currentUserId = user?.uid;
-  // Use building's companyId (supports super_admin cross-tenant access)
-  // Fallback to auth user's companyId for legacy buildings without companyId field
-  const companyId = (resolvedBuilding?.companyId as string | undefined) || user?.companyId;
+  // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
+  // Priority: building.companyId → user.companyId (supports super_admin cross-tenant)
+  const companyId = tryResolveCompanyId({ building: resolvedBuilding, user })?.companyId;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
   const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);

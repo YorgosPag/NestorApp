@@ -18,16 +18,14 @@
  */
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import pako from 'pako';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
-import { FileRecordService } from '@/services/file-record.service';
+import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
-import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -252,11 +250,7 @@ export class BuildingFloorplanService {
   /**
    * 🏢 ENTERPRISE: Create FileRecord for building floorplan
    *
-   * Follows the 3-step canonical upload pattern (ADR-031):
-   * 1. createPendingFileRecord() → Firestore `files` collection
-   * 2. Upload scene JSON to Firebase Storage
-   * 3. finalizeFileRecord() → status: ready + downloadUrl
-   *
+   * Delegates to centralized FloorplanSaveOrchestrator (ADR-201).
    * This makes the floorplan visible in BuildingFloorplanTab → EntityFilesManager.
    */
   private static async createFileRecord(
@@ -267,119 +261,51 @@ export class BuildingFloorplanService {
   ): Promise<void> {
     try {
       const fileName = data.fileName || `${buildingId}_${type}_floorplan.dxf`;
-
-      // Determine what to upload: original file (DXF/PDF) or fallback to scene JSON
       const hasOriginalFile = !!options.originalFile;
-      // Extract extension from original filename (e.g. "plan.pdf" → "pdf", "plan.dxf" → "dxf")
       const fileExtension = hasOriginalFile
         ? (options.originalFile!.name.split('.').pop()?.toLowerCase() || 'dxf')
         : 'json';
       const contentType = hasOriginalFile
         ? (options.originalFile!.type || (fileExtension === 'pdf' ? 'application/pdf' : 'application/dxf'))
         : 'application/json';
-      const ext = fileExtension;
 
-      // Step 1: Create pending FileRecord
       const purpose = type === 'building' ? 'building-floorplan' : 'storage-floorplan';
       const entityLabel = type === 'building' ? `Building ${buildingId}` : `Storage ${buildingId}`;
 
-      const createResult = await FileRecordService.createPendingFileRecord({
+      // Determine payload
+      let payload: import('@/services/floorplans/floorplan-save-orchestrator').FloorplanPayload;
+      if (hasOriginalFile) {
+        payload = { kind: 'raw-file', file: options.originalFile!, compress: fileExtension === 'dxf' };
+      } else if (data.scene) {
+        payload = { kind: 'gzip-json', data: data.scene };
+      } else {
+        floorplanLogger.warn('No file or scene data for FileRecord creation', { buildingId, type });
+        return;
+      }
+
+      const result = await FloorplanSaveOrchestrator.save({
         companyId: options.companyId,
         projectId: options.projectId,
         entityType: ENTITY_TYPES.BUILDING,
         entityId: buildingId,
-        domain: FILE_DOMAINS.CONSTRUCTION,
-        category: FILE_CATEGORIES.FLOORPLANS,
+        purpose,
+        entityLabel,
+        ext: fileExtension,
+        descriptors: [buildingId, `general-${type}`],
+        createdBy: options.createdBy,
         originalFilename: fileName,
         contentType,
-        createdBy: options.createdBy,
-        entityLabel,
-        purpose,
-        ext,
-        descriptors: [buildingId, `general-${type}`],
+        payload,
+        generateThumbnail: true,
       });
 
-      // Step 2: Upload file to Storage
-      const storageRef = ref(storage, createResult.storagePath);
-      let uploadSize: number;
-      let downloadUrl: string;
-
-      if (hasOriginalFile) {
-        const originalSize = options.originalFile!.size;
-
-        if (ext === 'dxf') {
-          // DXF files: gzip compress before upload (text files compress 80-90%)
-          const arrayBuffer = await options.originalFile!.arrayBuffer();
-          const compressed = pako.gzip(new Uint8Array(arrayBuffer));
-          const uploadResult = await uploadBytes(storageRef, compressed, {
-            contentType,
-            customMetadata: { compressed: 'gzip', originalSize: String(originalSize) },
-          });
-          downloadUrl = await getDownloadURL(uploadResult.ref);
-          // eslint-disable-next-line no-console
-          console.log(`[BuildingFloorplan] DXF compressed: ${originalSize} → ${compressed.length} bytes (${((1 - compressed.length / originalSize) * 100).toFixed(0)}% reduction)`);
-        } else {
-          // PDF/other: upload as-is (already compressed internally)
-          const uploadResult = await uploadBytes(storageRef, options.originalFile!, {
-            contentType,
-          });
-          downloadUrl = await getDownloadURL(uploadResult.ref);
-        }
-        uploadSize = originalSize;
-      } else {
-        // Fallback: scene JSON (also gzip compressed)
-        const sceneJson = JSON.stringify(data.scene);
-        const sceneBytes = new TextEncoder().encode(sceneJson);
-        const compressed = pako.gzip(sceneBytes);
-        const uploadResult = await uploadBytes(storageRef, compressed, {
-          contentType: 'application/json',
-          customMetadata: { compressed: 'gzip', originalSize: String(sceneBytes.length) },
-        });
-        uploadSize = sceneBytes.length;
-        downloadUrl = await getDownloadURL(uploadResult.ref);
-      }
-
-      // Step 3: Generate thumbnail (non-blocking — failure doesn't break upload)
-      let thumbnailUrl: string | undefined;
-      try {
-        const { generateDxfThumbnail, generatePdfThumbnail } = await import('@/services/thumbnail-generator');
-        let thumbnailBlob: Blob | null = null;
-
-        if (data.scene && ext !== 'pdf') {
-          // DXF thumbnail from scene data
-          thumbnailBlob = await generateDxfThumbnail(data.scene, 300, 200);
-        } else if (hasOriginalFile && ext === 'pdf') {
-          // PDF thumbnail from page 1
-          thumbnailBlob = await generatePdfThumbnail(options.originalFile!, 300, 200);
-        }
-
-        if (thumbnailBlob) {
-          const thumbPath = `${createResult.storagePath}_thumb.png`;
-          const thumbRef = ref(storage, thumbPath);
-          await uploadBytes(thumbRef, thumbnailBlob, { contentType: 'image/png' });
-          thumbnailUrl = await getDownloadURL(thumbRef);
-        }
-      } catch (thumbError) {
-        // Thumbnail failure is non-blocking — file works fine without it
-        // eslint-disable-next-line no-console
-        console.warn('[BuildingFloorplan] Thumbnail generation skipped:',
-          thumbError instanceof Error ? thumbError.message : String(thumbError));
-      }
-
-      // Step 4: Finalize FileRecord with downloadUrl + thumbnailUrl
-      await FileRecordService.finalizeFileRecord({
-        fileId: createResult.fileId,
-        sizeBytes: uploadSize,
-        downloadUrl,
-        thumbnailUrl,
+      floorplanLogger.info(`FileRecord created: ${result.fileId}`, {
+        ext: fileExtension,
+        thumb: !!result.thumbnailUrl,
       });
-
-      // eslint-disable-next-line no-console
-      console.log(`[BuildingFloorplan] FileRecord created: ${createResult.fileId} (${ext}, ${uploadSize} bytes, thumb: ${!!thumbnailUrl})`);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(`[BuildingFloorplan] FileRecord creation FAILED for building ${buildingId}:`,
-        error instanceof Error ? error.message : String(error)
+      floorplanLogger.error(`FileRecord creation FAILED for building ${buildingId}`,
+        { error: error instanceof Error ? error.message : String(error) }
       );
     }
   }

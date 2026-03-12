@@ -24,10 +24,11 @@
  */
 
 import { doc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
+import { ref, getBytes } from 'firebase/storage';
 import pako from 'pako';
 import { db, storage } from '@/lib/firebase';
 import { FileRecordService } from '@/services/file-record.service';
+import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
@@ -129,105 +130,37 @@ export class UnitFloorplanService {
         ? (originalFile.type || (fileExtension === 'pdf' ? 'application/pdf' : 'application/dxf'))
         : 'application/json';
 
-      // Step 1: Create pending FileRecord
-      const createResult = await FileRecordService.createPendingFileRecord({
+      // 🏢 ENTERPRISE: Delegate to centralized FloorplanSaveOrchestrator (ADR-201)
+      // Determine payload based on input type
+      const payload = hasOriginalFile
+        ? { kind: 'raw-file' as const, file: originalFile, compress: fileExtension === 'dxf' }
+        : { kind: 'gzip-json' as const, data: data.scene };
+
+      const result = await FloorplanSaveOrchestrator.save({
         companyId,
         projectId,
         entityType: ENTITY_TYPES.UNIT,
         entityId: unitId,
-        domain: FILE_DOMAINS.CONSTRUCTION,
-        category: FILE_CATEGORIES.FLOORPLANS,
-        originalFilename: fileName,
-        contentType,
-        createdBy,
-        entityLabel: `Unit ${unitId}`,
         purpose: 'unit-floorplan',
+        entityLabel: `Unit ${unitId}`,
         ext: fileExtension,
         descriptors: [unitId, buildingId || '', 'unit-floorplan'].filter(Boolean),
-      });
-
-      // Step 2: Upload to Firebase Storage
-      const storageRef = ref(storage, createResult.storagePath);
-      let uploadSize: number;
-      let downloadUrl: string;
-
-      if (hasOriginalFile) {
-        const originalSize = originalFile.size;
-
-        if (fileExtension === 'dxf') {
-          // DXF: gzip compress (text files compress 80-90%)
-          const arrayBuffer = await originalFile.arrayBuffer();
-          const compressed = pako.gzip(new Uint8Array(arrayBuffer));
-          const uploadResult = await uploadBytes(storageRef, compressed, {
-            contentType,
-            customMetadata: { compressed: 'gzip', originalSize: String(originalSize) },
-          });
-          downloadUrl = await getDownloadURL(uploadResult.ref);
-        } else {
-          // PDF/other: upload as-is
-          const uploadResult = await uploadBytes(storageRef, originalFile, {
-            contentType,
-          });
-          downloadUrl = await getDownloadURL(uploadResult.ref);
-        }
-        uploadSize = originalSize;
-      } else {
-        // Fallback: scene JSON (gzip compressed)
-        const sceneJson = JSON.stringify(data.scene);
-        const sceneBytes = new TextEncoder().encode(sceneJson);
-        const compressed = pako.gzip(sceneBytes);
-        const uploadResult = await uploadBytes(storageRef, compressed, {
-          contentType: 'application/json',
-          customMetadata: { compressed: 'gzip', originalSize: String(sceneBytes.length) },
-        });
-        uploadSize = sceneBytes.length;
-        downloadUrl = await getDownloadURL(uploadResult.ref);
-      }
-
-      // Step 3: Thumbnail generation (non-blocking)
-      let thumbnailUrl: string | undefined;
-      try {
-        const { generateDxfThumbnail, generatePdfThumbnail } = await import('@/services/thumbnail-generator');
-        let thumbnailBlob: Blob | null = null;
-
-        if (data.scene && fileExtension !== 'pdf') {
-          // Scene entities are typed as unknown[] but contain {type, layer} objects at runtime
-          const sceneForThumb = data.scene as Parameters<typeof generateDxfThumbnail>[0];
-          thumbnailBlob = await generateDxfThumbnail(sceneForThumb, 300, 200);
-        } else if (hasOriginalFile && fileExtension === 'pdf') {
-          thumbnailBlob = await generatePdfThumbnail(originalFile, 300, 200);
-        }
-
-        if (thumbnailBlob) {
-          const thumbPath = `${createResult.storagePath}_thumb.png`;
-          const thumbRef = ref(storage, thumbPath);
-          await uploadBytes(thumbRef, thumbnailBlob, { contentType: 'image/png' });
-          thumbnailUrl = await getDownloadURL(thumbRef);
-        }
-      } catch (thumbError) {
-        logger.warn('Thumbnail generation skipped', {
-          error: thumbError instanceof Error ? thumbError.message : String(thumbError),
-        });
-      }
-
-      // Step 4: Finalize FileRecord
-      await FileRecordService.finalizeFileRecord({
-        fileId: createResult.fileId,
-        sizeBytes: uploadSize,
-        downloadUrl,
-        thumbnailUrl,
+        createdBy,
+        originalFilename: fileName,
+        contentType,
+        payload,
+        generateThumbnail: true,
       });
 
       logger.info('Enterprise save complete for unit', {
         unitId,
-        fileId: createResult.fileId,
+        fileId: result.fileId,
         ext: fileExtension,
-        sizeBytes: uploadSize,
       });
 
-      // Step 5: Real-time notification
+      // Real-time notification
       RealtimeService.dispatch('FLOORPLAN_CREATED', {
-        floorplanId: createResult.fileId,
+        floorplanId: result.fileId,
         floorplan: {
           entityType: ENTITY_TYPES.UNIT,
           entityId: unitId,

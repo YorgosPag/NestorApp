@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 162 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-11
+**📊 Stats**: 164 ADRs + 11 Accounting ADRs (ACC-xxx) | Last Updated: 2026-03-12
 
 ---
 
@@ -215,6 +215,8 @@
 | **ADR-198** | Sales-to-Accounting Bridge (Transaction Chain Pattern) | ✅ APPROVED | 2026-03-11 | Backend Systems / Accounting Integration | [📄](./adrs/ADR-198-sales-accounting-bridge.md) |
 | **ADR-199** | Παρακολουθήματα Πωλήσεων (Parking & Storage as Sale Appurtenances) | ✅ APPROVED | 2026-03-11 | Domain / Sales Architecture | [📄](./adrs/ADR-199-sales-appurtenances.md) |
 | **ADR-200** | useEntityLink Hook — Centralized Entity Linking | ✅ IMPLEMENTED | 2026-03-12 | Hooks / Entity Systems | [📄](./adrs/ADR-200-useEntityLink-hook.md) |
+| **ADR-201** | Centralized CompanyId Resolution | ✅ APPROVED | 2026-03-12 | Backend Systems / Multi-Tenant | [📄](./adrs/ADR-201-company-id-resolver.md) |
+| **ADR-202** | Floorplan Save Orchestrator | ✅ APPROVED | 2026-03-12 | Backend Systems / File Storage | [📄](./adrs/ADR-202-floorplan-save-orchestrator.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |

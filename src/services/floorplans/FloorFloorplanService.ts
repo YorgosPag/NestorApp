@@ -19,10 +19,11 @@
  * @see FileRecordService for the core file operations
  */
 
-import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
+import { ref, getDownloadURL, getBytes } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { FileRecordService } from '@/services/file-record.service';
+import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { FileRecord } from '@/types/file-record';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
@@ -139,55 +140,33 @@ export class FloorFloorplanService {
 
       floorplanLogger.debug(`Saving DXF floor floorplan via Enterprise storage`, { floorId, buildingId });
 
-      // Step 1: Create pending FileRecord
       const fileName = data.fileName || `floor_${floorId}_floorplan.json`;
 
-      const createResult = await FileRecordService.createPendingFileRecord({
+      // 🏢 ENTERPRISE: Delegate to centralized FloorplanSaveOrchestrator (ADR-201)
+      const result = await FloorplanSaveOrchestrator.save({
         companyId,
         projectId,
         entityType: ENTITY_TYPES.FLOOR,
         entityId: floorId,
-        domain: FILE_DOMAINS.CONSTRUCTION,
-        category: FILE_CATEGORIES.FLOORPLANS,
+        purpose: 'floor-floorplan',
+        entityLabel: `Floor ${data.floorNumber || floorId}`,
+        descriptors: [buildingId, `floor-${data.floorNumber || 0}`],
+        createdBy,
         originalFilename: fileName,
         contentType: 'application/json',
-        createdBy,
-        // 🏢 ENTERPRISE: Naming context for display name generation
-        entityLabel: `Floor ${data.floorNumber || floorId}`,
-        purpose: 'floor-floorplan',
-        // Store buildingId in descriptors for retrieval
-        descriptors: [buildingId, `floor-${data.floorNumber || 0}`],
-      });
-
-      // Step 2: Upload scene JSON to Storage
-      const sceneJson = JSON.stringify(data.scene);
-      const sceneBytes = new TextEncoder().encode(sceneJson);
-
-      const storageRef = ref(storage, createResult.storagePath);
-      const uploadResult = await uploadBytes(storageRef, sceneBytes, {
-        contentType: 'application/json',
-      });
-
-      // Step 3: Get download URL
-      const downloadUrl = await getDownloadURL(uploadResult.ref);
-
-      // Step 4: Finalize FileRecord
-      await FileRecordService.finalizeFileRecord({
-        fileId: createResult.fileId,
-        sizeBytes: sceneBytes.length,
-        downloadUrl,
+        payload: { kind: 'json', data: data.scene },
       });
 
       floorplanLogger.info(`Enterprise save complete for floor`, {
         floorId,
         buildingId,
-        fileId: createResult.fileId,
-        storagePath: createResult.storagePath,
+        fileId: result.fileId,
+        storagePath: result.storagePath,
       });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatch('FLOORPLAN_CREATED', {
-        floorplanId: createResult.fileId,
+        floorplanId: result.fileId,
         floorplan: {
           name: fileName,
           entityType: ENTITY_TYPES.FLOOR,

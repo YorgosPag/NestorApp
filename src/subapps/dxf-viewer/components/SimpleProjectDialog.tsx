@@ -41,6 +41,8 @@ import { UnitFloorplanService, type UnitFloorplanData } from '../../../services/
 import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
 // 🏢 FIX: Use AuthContext (FirebaseAuthUser with companyId), NOT @/hooks/useAuth (Firebase User WITHOUT companyId)
 import { useAuth } from '@/auth/contexts/AuthContext';
+// 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
+import { resolveCompanyIdForBuilding } from '@/services/company-id-resolver';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
 // 🏢 ENTERPRISE: PDF Background support
@@ -470,13 +472,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 FIX: companyId MUST match what load-side uses (property.companyId = inherited from building)
-        // Resolution: building.companyId (Firestore source of truth) → user?.companyId → selectedCompanyId
+        // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
         const createdBy = user?.uid;
-        const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
-        const fileRecordCompanyId = selectedBuilding?.companyId || user?.companyId || selectedCompanyId;
+        const { companyId: unitCompanyId } = resolveCompanyIdForBuilding({
+          buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
+        });
         saved = await UnitFloorplanService.saveFloorplan({
-          companyId: fileRecordCompanyId,
+          companyId: unitCompanyId,
           projectId: selectedProjectId || undefined,
           buildingId: selectedBuildingId,
           unitId: selectedUnitId,
@@ -509,14 +511,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 FIX: companyId MUST match what load-side uses (property.companyId = inherited from building)
-        // Resolution: building.companyId (Firestore source of truth) → user?.companyId → selectedCompanyId
+        // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
         const createdBy = user?.uid;
-        const selectedBuildingObj = buildings.find(b => b.id === selectedBuildingId);
-        const effectiveCompanyId = selectedBuildingObj?.companyId || user?.companyId || selectedCompanyId;
-        if (effectiveCompanyId && createdBy) {
+        const { companyId: floorCompanyId } = resolveCompanyIdForBuilding({
+          buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
+        });
+        if (floorCompanyId && createdBy) {
           saved = await FloorFloorplanService.saveFloorplan({
-            companyId: effectiveCompanyId,
+            companyId: floorCompanyId,
             projectId: selectedProjectId || undefined,
             buildingId: selectedBuildingId,
             floorId: selectedFloorId,
@@ -535,18 +537,18 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
-        // 🏢 FIX: companyId MUST match what load-side uses (inherited from building document)
+        // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200) + FileRecord options
         const createdBy = user?.uid;
-        const buildingObj = buildings.find(b => b.id === selectedBuildingId);
-        const buildingEffectiveCompanyId = buildingObj?.companyId || user?.companyId || selectedCompanyId;
-        const fileRecordOptions = buildingEffectiveCompanyId && createdBy
-          ? { companyId: buildingEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
+        const { companyId: bldgCompanyId } = resolveCompanyIdForBuilding({
+          buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
+        });
+        const fileRecordOptions = bldgCompanyId && createdBy
+          ? { companyId: bldgCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
           : undefined;
         // eslint-disable-next-line no-console
         console.log('[Pipeline→Building] FileRecord options:', {
           hasOptions: !!fileRecordOptions,
-          companyId: buildingEffectiveCompanyId || '(empty)',
+          companyId: bldgCompanyId || '(empty)',
           projectId: selectedProjectId || '(empty)',
           buildingId: selectedBuildingId,
           createdBy: createdBy || '(empty)',
@@ -651,13 +653,15 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       let hasExisting = false;
 
       if (currentStep === 'unit' && type === 'unit') {
-        const checkBuilding = buildings.find(b => b.id === selectedBuildingId);
-        const checkCompanyId = checkBuilding?.companyId || user?.companyId || selectedCompanyId;
+        // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
+        const { companyId: checkCompanyId } = resolveCompanyIdForBuilding({
+          buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
+        });
         hasExisting = await UnitFloorplanService.hasFloorplan(checkCompanyId, selectedUnitId);
       } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
-        // 🏢 ENTERPRISE (2026-01-31): Check for existing floor floorplan
-        const floorCheckBuilding = buildings.find(b => b.id === selectedBuildingId);
-        const floorCheckCompanyId = floorCheckBuilding?.companyId || user?.companyId || selectedCompanyId;
+        const { companyId: floorCheckCompanyId } = resolveCompanyIdForBuilding({
+          buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
+        });
         hasExisting = await FloorFloorplanService.hasFloorplan(floorCheckCompanyId, selectedFloorId);
       } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
         hasExisting = await BuildingFloorplanService.hasFloorplan(selectedBuildingId, type as 'building' | 'storage');
@@ -837,13 +841,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
-      // 🏢 FIX: companyId MUST match building.companyId (load-side uses property.companyId = inherited from building)
+      // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
       const createdBy = user?.uid;
-      const pdfBuilding = buildings.find(b => b.id === selectedBuildingId);
-      const effectivePdfCompanyId = pdfBuilding?.companyId || user?.companyId || selectedCompanyId;
-      if (effectivePdfCompanyId && createdBy) {
+      const { companyId: pdfFloorCompanyId } = resolveCompanyIdForBuilding({
+        buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
+      });
+      if (pdfFloorCompanyId && createdBy) {
         saved = await FloorFloorplanService.saveFloorplan({
-          companyId: effectivePdfCompanyId,
+          companyId: pdfFloorCompanyId,
           projectId: selectedProjectId || undefined,
           buildingId: selectedBuildingId,
           floorId: selectedFloorId,
@@ -865,13 +870,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
-      // 🏢 ENTERPRISE: Pass options for FileRecord creation → visible in BuildingFloorplanTab
-      // 🏢 FIX: companyId MUST match building.companyId (load-side uses building's companyId)
+      // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200) + FileRecord options
       const createdBy = user?.uid;
-      const pdfBldgObj = buildings.find(b => b.id === selectedBuildingId);
-      const pdfBldgEffectiveCompanyId = pdfBldgObj?.companyId || user?.companyId || selectedCompanyId;
-      const pdfFileRecordOptions = pdfBldgEffectiveCompanyId && createdBy
-        ? { companyId: pdfBldgEffectiveCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
+      const { companyId: pdfBldgCompanyId } = resolveCompanyIdForBuilding({
+        buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
+      });
+      const pdfFileRecordOptions = pdfBldgCompanyId && createdBy
+        ? { companyId: pdfBldgCompanyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
         : undefined;
       saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData, pdfFileRecordOptions);
     } else {
