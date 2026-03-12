@@ -198,7 +198,7 @@ export class FloorFloorplanService {
     const { companyId, floorId } = params;
 
     try {
-      console.error(`[FloorFloorplanService] 🔍 loadFloorplan START floorId="${floorId}" companyId="${companyId}"`);
+      floorplanLogger.debug(`loadFloorplan START floorId="${floorId}" companyId="${companyId}"`);
 
       // Query files collection for this floor's floorplans
       // 🏢 ENTERPRISE: Using positional args as per FileRecordService API
@@ -230,13 +230,10 @@ export class FloorFloorplanService {
         );
       }
 
-      console.error('[FloorFloorplanService] 📦 Query result:', {
-        count: fileRecords?.length ?? 0,
-        ids: fileRecords?.map(f => f.id) ?? [],
-      });
+      floorplanLogger.debug('Query result', { count: fileRecords?.length ?? 0 });
 
       if (!fileRecords || fileRecords.length === 0) {
-        console.error(`[FloorFloorplanService] ❌ No FileRecord found for floor floorId="${floorId}" companyId="${companyId}" entityType="${ENTITY_TYPES.FLOOR}" domain="${FILE_DOMAINS.CONSTRUCTION}" category="${FILE_CATEGORIES.FLOORPLANS}"`);
+        floorplanLogger.info(`No FileRecord found for floor floorId="${floorId}" companyId="${companyId}"`);
         return null;
       }
 
@@ -293,16 +290,15 @@ export class FloorFloorplanService {
         return null;
       }
 
-      console.error('[FloorFloorplanService] ⬇️ Downloading via downloadUrl', { fileId: fileRecord.id });
+      floorplanLogger.debug('Downloading DXF scene via downloadUrl', { fileId: fileRecord.id });
       const response = await fetch(fileRecord.downloadUrl);
       if (!response.ok) {
         floorplanLogger.warn(`Download failed: ${response.status}`, { floorId, fileId: fileRecord.id });
         return null;
       }
       const sceneJson = await response.text();
-      console.error('[FloorFloorplanService] ✅ Downloaded', { bytes: sceneJson.length });
+      floorplanLogger.debug('Downloaded + parsing', { bytes: sceneJson.length });
       const scene = JSON.parse(sceneJson) as SceneModel;
-      console.error('[FloorFloorplanService] ✅ Parsed scene', { entities: scene.entities?.length || 0 });
 
       return {
         buildingId,
@@ -316,7 +312,7 @@ export class FloorFloorplanService {
         fileRecordId: fileRecord.id,
       };
     } catch (error) {
-      console.error('[FloorFloorplanService] ❌ EXCEPTION in loadFloorplan:', error);
+      floorplanLogger.error('EXCEPTION in loadFloorplan', error);
       return null;
     }
   }
