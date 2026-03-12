@@ -236,38 +236,38 @@ async function handleMigration(
       let resolvedVia = '';
 
       if (rec.entityType === 'floor') {
-        // Priority: floor.companyId → building.companyId → unit[0].companyId
-        const directFloorCompany = floorCompanyMap.get(rec.entityId);
-        if (directFloorCompany) {
-          correctCompanyId = directFloorCompany;
-          resolvedVia = 'floor.companyId';
+        // Priority: unit.companyId (what ReadOnlyMediaViewer queries with) → floor.companyId → building.companyId
+        // IMPORTANT: The Ευρετήριο Ακινήτων uses property.companyId for load queries,
+        // which comes from units — so unit.companyId MUST take precedence
+        const buildingId = floorToBuildingMap.get(rec.entityId);
+        const unitCompany = buildingId ? unitsByBuilding.get(buildingId) : undefined;
+        if (unitCompany) {
+          correctCompanyId = unitCompany;
+          resolvedVia = 'unit.companyId (via building) — matches Ευρετήριο load query';
         } else {
-          const buildingId = floorToBuildingMap.get(rec.entityId);
-          if (buildingId) {
+          const directFloorCompany = floorCompanyMap.get(rec.entityId);
+          if (directFloorCompany) {
+            correctCompanyId = directFloorCompany;
+            resolvedVia = 'floor.companyId';
+          } else if (buildingId) {
             const buildingCompany = buildingCompanyMap.get(buildingId);
             if (buildingCompany) {
               correctCompanyId = buildingCompany;
               resolvedVia = 'building.companyId';
-            } else {
-              const unitCompany = unitsByBuilding.get(buildingId);
-              if (unitCompany) {
-                correctCompanyId = unitCompany;
-                resolvedVia = 'unit.companyId (via building)';
-              }
             }
           }
         }
       } else if (rec.entityType === 'building') {
-        // Priority: building.companyId → unit[0].companyId
-        const buildingCompany = buildingCompanyMap.get(rec.entityId);
-        if (buildingCompany) {
-          correctCompanyId = buildingCompany;
-          resolvedVia = 'building.companyId';
+        // Priority: unit.companyId → building.companyId
+        const unitCompany = unitsByBuilding.get(rec.entityId);
+        if (unitCompany) {
+          correctCompanyId = unitCompany;
+          resolvedVia = 'unit.companyId (via building) — matches Ευρετήριο load query';
         } else {
-          const unitCompany = unitsByBuilding.get(rec.entityId);
-          if (unitCompany) {
-            correctCompanyId = unitCompany;
-            resolvedVia = 'unit.companyId (via building)';
+          const buildingCompany = buildingCompanyMap.get(rec.entityId);
+          if (buildingCompany) {
+            correctCompanyId = buildingCompany;
+            resolvedVia = 'building.companyId';
           }
         }
       }
